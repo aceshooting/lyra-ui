@@ -140,6 +140,24 @@ describe('lr-time-input segmented field', () => {
     expect(second.value).to.equal('09:04:30');
   });
 
+  it('accepts active-locale digits and localizes range placeholders through the segment presentation', async () => {
+    const el = await fixture<LyraTimeInput>(html`
+      <lr-time-input locale="ar-EG" hour-format="24" min="13:45"></lr-time-input>
+    `);
+    key(segment(el, 'hour'), '١');
+    key(segment(el, 'hour'), '٢');
+    key(segment(el, 'minute'), '٣');
+    key(segment(el, 'minute'), '٠');
+    await el.updateComplete;
+
+    expect(el.value).to.equal('12:30');
+    expect(segment(el, 'hour').textContent?.trim()).to.equal('١٢');
+    expect(segment(el, 'minute').textContent?.trim()).to.equal('٣٠');
+    expect(el.validity.rangeUnderflow).to.equal(true);
+    expect(el.validationMessage).to.include('١٣:٤٥');
+    expect(el.validationMessage).not.to.include('13:45');
+  });
+
   it('fills segments with digits, auto-advances, and emits native plus compatibility events', async () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24"></lr-time-input>`);
     const seen: string[] = [];
@@ -234,6 +252,33 @@ describe('lr-time-input segmented field', () => {
     expect(el.validity.stepMismatch).to.equal(true);
   });
 
+  it('matches native time step-base precedence through live values, invalid bases, and reset', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        <input type="time" value="00:00:30" step="60">
+        <lr-time-input value="00:00:30" step="60"></lr-time-input>
+      </form>
+    `);
+    const native = form.querySelector('input')!;
+    const el = form.querySelector('lr-time-input') as LyraTimeInput;
+    native.value = '00:01:30';
+    el.value = '00:01:30';
+    expect(el.validity.stepMismatch).to.equal(native.validity.stepMismatch).and.to.equal(false);
+
+    native.min = '00:00:15';
+    el.min = '00:00:15';
+    await el.updateComplete;
+    expect(el.validity.stepMismatch).to.equal(native.validity.stepMismatch).and.to.equal(true);
+    native.min = 'invalid';
+    el.min = 'invalid';
+    await el.updateComplete;
+    expect(el.validity.stepMismatch).to.equal(native.validity.stepMismatch).and.to.equal(false);
+
+    form.reset();
+    expect(el.value).to.equal(native.value).and.to.equal('00:00:30');
+    expect(el.validity.stepMismatch).to.equal(native.validity.stepMismatch).and.to.equal(false);
+  });
+
   it('accepts Date/null values and exposes local-clock valueAsDate/valueAsNumber getters', async () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input></lr-time-input>`);
     el.value = new Date(2026, 6, 15, 7, 8, 9);
@@ -323,6 +368,82 @@ describe('lr-time-input popup and actions', () => {
     await readonly.show();
     (readonly.shadowRoot!.querySelector('[data-column="hour"][data-value="9"]') as HTMLButtonElement).click();
     expect(readonly.value).to.equal('10:00');
+  });
+
+  it('provides one roving option per popup column with Arrow, Home, End, and native activation', async () => {
+    const el = await fixture<LyraTimeInput>(html`
+      <lr-time-input hour-format="24" value="10:05"></lr-time-input>
+    `);
+    await el.show();
+    await el.updateComplete;
+    const selected = el.shadowRoot!
+      .querySelector<HTMLButtonElement>('[data-column="minute"][aria-selected="true"]')!;
+    const column = selected.closest<HTMLElement>('[role="listbox"]')!;
+    expect(column.querySelectorAll('[role="option"][tabindex="0"]')).to.have.length(1);
+
+    selected.focus();
+    key(selected, 'ArrowDown');
+    const next = el.shadowRoot!.activeElement as HTMLButtonElement;
+    expect(next.dataset['value']).to.equal('6');
+    expect(column.querySelectorAll('[role="option"][tabindex="0"]')).to.have.length(1);
+
+    key(next, 'End');
+    const last = el.shadowRoot!.activeElement as HTMLButtonElement;
+    expect(last.dataset['value']).to.equal('59');
+    key(last, 'Home');
+    const first = el.shadowRoot!.activeElement as HTMLButtonElement;
+    expect(first.dataset['value']).to.equal('0');
+    expect(first.localName).to.equal('button');
+    expect(first.type).to.equal('button');
+    first.click();
+    await el.updateComplete;
+    expect(el.value).to.equal('10:00');
+    expect(el.shadowRoot!.activeElement === segment(el, 'minute')).to.be.true;
+  });
+
+  it('derives offset, hourly, multi-hour, and overnight popup options from the full valid grid', async () => {
+    const offset = await fixture<LyraTimeInput>(html`
+      <lr-time-input hour-format="24" step="600" min="00:05" value="00:05"></lr-time-input>
+    `);
+    const optionValues = (el: LyraTimeInput, name: string): number[] =>
+      [...el.shadowRoot!.querySelectorAll<HTMLElement>(`[data-column="${name}"]`)]
+        .map((option) => Number(option.dataset['value']));
+    expect(optionValues(offset, 'minute')).to.deep.equal([5, 15, 25, 35, 45, 55]);
+    expect(offset.shadowRoot!.querySelector('[data-column="minute"][data-value="5"][aria-selected="true"]')).to.exist;
+
+    const hourly = await fixture<LyraTimeInput>(html`
+      <lr-time-input hour-format="24" step="3600" min="00:30" value="03:30"></lr-time-input>
+    `);
+    expect(optionValues(hourly, 'minute')).to.deep.equal([30]);
+    expect(optionValues(hourly, 'hour')).to.deep.equal(Array.from({ length: 24 }, (_, hour) => hour));
+
+    const multiHour = await fixture<LyraTimeInput>(html`
+      <lr-time-input hour-format="24" step="7200" min="00:30" value="04:30"></lr-time-input>
+    `);
+    expect(optionValues(multiHour, 'minute')).to.deep.equal([30]);
+    expect(optionValues(multiHour, 'hour')).to.deep.equal(Array.from({ length: 12 }, (_, index) => index * 2));
+
+    const overnight = await fixture<LyraTimeInput>(html`
+      <lr-time-input
+        hour-format="24"
+        step="3600"
+        min="22:30"
+        max="06:30"
+        value="23:30"
+      ></lr-time-input>
+    `);
+    expect(optionValues(overnight, 'minute')).to.deep.equal([30]);
+    expect(optionValues(overnight, 'hour')).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 22, 23]);
+  });
+
+  it('projects disabled state to every popup option and removes all option tab stops', async () => {
+    const el = await fixture<LyraTimeInput>(html`
+      <lr-time-input disabled hour-format="24" value="10:05"></lr-time-input>
+    `);
+    const options = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[role="option"]')];
+    expect(options.length).to.be.greaterThan(0);
+    expect(options.every((option) => option.disabled)).to.equal(true);
+    expect(options.every((option) => option.tabIndex === -1)).to.equal(true);
   });
 
   it('supports localized clear and now actions while a footer slot replaces the default now action', async () => {
@@ -490,6 +611,28 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     native.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.value).to.equal('18:15');
+  });
+
+  it('treats an intentional native autofill empty value as one standard clear transaction', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input value="09:30"></lr-time-input>`);
+    const native = el.shadowRoot!.querySelector<HTMLInputElement>('input[data-autofill]')!;
+    const seen: string[] = [];
+    el.addEventListener('input', () => seen.push('input'));
+    el.addEventListener('lr-input', () => seen.push('lr-input'));
+    el.addEventListener('change', () => seen.push('change'));
+    el.addEventListener('lr-change', () => seen.push('lr-change'));
+
+    native.value = '';
+    native.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      composed: true,
+      inputType: 'deleteContentBackward',
+    }));
+    native.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+
+    expect(el.value).to.equal('');
+    expect(seen).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
   });
 
   it('ignores autofill writes while readonly', async () => {
@@ -894,6 +1037,82 @@ describe('lr-time-input popup and lifecycle edge cases', () => {
       expect(sawShow, 'no announced show event before the element ever connected/updated').to.equal(false);
     } finally {
       detached.remove();
+    }
+  });
+
+  it('recomputes seconds in both step directions and rehomes focus when a segment disappears', async () => {
+    const el = await fixture<LyraTimeInput>(html`
+      <lr-time-input hour-format="24" step="60" value="09:30"></lr-time-input>
+    `);
+    expect(el.shadowRoot!.querySelector('[data-segment="second"]') === null).to.be.true;
+
+    el.step = 30;
+    await el.updateComplete;
+    const second = segment(el, 'second');
+    second.focus();
+    expect(el.shadowRoot!.activeElement === second).to.be.true;
+
+    el.step = 60;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-segment="second"]') === null).to.be.true;
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['segment']).to.equal('hour');
+
+    el.step = 30;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-segment="second"]')).not.to.equal(null);
+  });
+
+  it('reconnects a forced-closed popup with property, DOM, ARIA, and custom state in agreement', async () => {
+    const host = await fixture<HTMLDivElement>(html`
+      <div><lr-time-input value="09:30"></lr-time-input></div>
+    `);
+    const el = host.querySelector('lr-time-input') as LyraTimeInput;
+    await el.show();
+    await el.updateComplete;
+    expect(el.matches(':state(open)')).to.equal(true);
+
+    el.remove();
+    host.append(el);
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector<HTMLElement>('[part="input"]')!;
+    const expand = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="expand-button"]')!;
+    const popup = el.shadowRoot!.querySelector<HTMLElement>('[part="popup"]')!;
+    expect(el.open).to.equal(false);
+    expect(el.hasAttribute('open')).to.equal(false);
+    expect(el.matches(':state(open)')).to.equal(false);
+    expect(input.getAttribute('aria-expanded')).to.equal('false');
+    expect(expand.getAttribute('aria-expanded')).to.equal('false');
+    expect(popup.hasAttribute('data-hidden')).to.equal(true);
+  });
+
+  it('preserves every partial-edit tuple across adoption and reconnect', async () => {
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const cases: Array<{ name: 'hour' | 'minute' | 'second' | 'dayPeriod'; step?: number }> = [
+      { name: 'hour' },
+      { name: 'minute' },
+      { name: 'second', step: 30 },
+      { name: 'dayPeriod' },
+    ];
+
+    for (const entry of cases) {
+      const el = document.createElement('lr-time-input') as LyraTimeInput;
+      el.hourFormat = entry.name === 'dayPeriod' ? '12' : '24';
+      if (entry.step) el.step = entry.step;
+      document.body.append(el);
+      await el.updateComplete;
+      key(segment(el, entry.name), entry.name === 'dayPeriod' ? 'p' : '1');
+      await el.updateComplete;
+      const beforeText = segment(el, entry.name).textContent?.trim();
+      expect(el.value, entry.name).to.equal('');
+      expect(el.validity.badInput, entry.name).to.equal(true);
+
+      el.remove();
+      frame.contentDocument!.body.append(frame.contentDocument!.adoptNode(el));
+      await el.updateComplete;
+      expect(segment(el, entry.name).textContent?.trim(), entry.name).to.equal(beforeText);
+      expect(el.value, entry.name).to.equal('');
+      expect(el.validity.badInput, entry.name).to.equal(true);
+      el.remove();
     }
   });
 

@@ -85,6 +85,46 @@ it('shows a loading skeleton and aria-busy while chart.js/the boxplot plugin loa
   expect(assertiveTexts(), 'a successful initial mount must not announce an error').to.deep.equal([]);
 });
 
+describe('box-plot family-contract regressions', () => {
+  it('clones valid summaries for the peer and rejects non-monotonic five-number data', async () => {
+    const source = { min: 1, q1: 2, median: 3, q3: 4, max: 5 };
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.datasets = [{
+      label: 'S',
+      data: [source, { min: 5, q1: 4, median: 3, q3: 2, max: 1 }],
+    }];
+    const config = (el as unknown as { buildConfig(): any }).buildConfig();
+    expect(config.data.datasets[0].data[0]).to.deep.equal(source);
+    expect(config.data.datasets[0].data[0]).to.not.equal(source);
+    expect(config.data.datasets[0].data[1]).to.equal(null);
+    config.data.datasets[0].data[0].whiskerMin = -1;
+    expect((source as { whiskerMin?: number }).whiskerMin).to.equal(undefined);
+  });
+
+  it('formats CSV summaries and emits the normalized box event before the legacy event', async () => {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'S', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    el.formatter = ({ value, surface }) => `${surface}:${value}`;
+    expect(el.exportData('csv')).to.contain('table:3');
+    const order: string[] = [];
+    let detail: unknown;
+    el.addEventListener('lr-datum-activate', (event) => {
+      order.push('datum');
+      detail = (event as CustomEvent).detail;
+    });
+    el.addEventListener('lr-point-click', () => order.push('legacy'));
+    (el as unknown as { activateBox(value: unknown): void }).activateBox({
+      datasetIndex: 0,
+      index: 0,
+      label: 'A',
+      value: { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
+    });
+    expect(order).to.deep.equal(['datum', 'legacy']);
+    expect(detail).to.deep.include({ kind: 'box', datasetIndex: 0, index: 0 });
+  });
+});
+
 it('normalizes and validates box-plot constructors before registering them', async () => {
   const registrations: unknown[] = [];
   const chart = fakeChartModule((...items) => registrations.push(...items));

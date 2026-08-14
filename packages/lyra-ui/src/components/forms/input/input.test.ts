@@ -1,4 +1,5 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './input.js';
 import '../button/button.js';
 import type { LyraInput } from './input.class.js';
@@ -840,6 +841,60 @@ describe('lr-input', () => {
     expect(css).to.match(
       /\[part='input'\]\[type='time'\]::-webkit-calendar-picker-indicator\s*\{[^}]*cursor:\s*pointer/,
     );
+    expect(css).to.match(/\[type='time'\]:not\(:disabled\):hover::-webkit-calendar-picker-indicator/);
+    expect(css).to.match(/\[type='time'\]:not\(:disabled\):active::-webkit-calendar-picker-indicator/);
+    expect(css).to.match(/\[type='time'\]:not\(:disabled\):focus-visible::-webkit-calendar-picker-indicator/);
+  });
+
+  it('renders canonical focus-ring and distinct pressed tokens on the native time indicator', async () => {
+    const el = await fixture<LyraInput>(html`
+      <lr-input
+        type="time"
+        aria-label="Start time"
+        style="
+          --lr-focus-ring-color: rgb(1, 2, 3);
+          --lr-input-time-picker-active-bg: rgb(4, 5, 6);
+          --lr-transition-fast: 0ms;
+        "
+      ></lr-input>
+    `);
+    const input = el.input!;
+    input.focus();
+    expect(getComputedStyle(input).getPropertyValue('--lr-focus-ring-color').trim()).to.equal('rgb(1, 2, 3)');
+
+    const bounds = input.getBoundingClientRect();
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(bounds.left + bounds.width / 2), Math.round(bounds.top + bounds.height / 2)],
+    });
+    await sendMouse({ type: 'down' });
+    try {
+      await waitUntil(() => input.matches(':active'), 'native time input did not enter its pressed state');
+      expect(getComputedStyle(input).getPropertyValue('--lr-input-time-picker-active-bg').trim())
+        .to.equal('rgb(4, 5, 6)');
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
+  it('normalizes unsupported attribute and property types before native validity and chrome branch', async () => {
+    const el = await fixture<LyraInput>(html`
+      <lr-input type="unsupported" clearable minlength="3" value="x"></lr-input>
+    `);
+    let native = el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;
+    expect(el.type).to.equal('text');
+    expect(el.getAttribute('type')).to.equal('text');
+    expect(native.type).to.equal('text');
+    expect(el.shadowRoot!.querySelector('[part="clear-button"]')).not.to.equal(null);
+
+    el.type = 'also-unsupported' as LyraInput['type'];
+    el.value = 'x';
+    await el.updateComplete;
+    native = el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;
+    expect(el.type).to.equal('text');
+    expect(native.type).to.equal('text');
+    expect(el.validity.tooShort).to.equal(true);
   });
 
   it('supports size="2xs": tighter padding/font-size than xs, and the ladder\'s tightest floor', async () => {

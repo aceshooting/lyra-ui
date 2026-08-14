@@ -13,7 +13,20 @@ const FEED = `<?xml version="1.0"?>
 </channel></rss>`;
 
 export const Default: Story = {
-  render: () => html`<lr-xml-viewer name="feed.rss" .xml=${FEED} copyable></lr-xml-viewer>`,
+  parameters: {
+    docs: {
+      description: {
+        story: 'Inline `xml` owns the document by presence. Read `source` for the current `{ kind: "inline", value }` snapshot; clearing `xml` returns authority to `src`.',
+      },
+    },
+  },
+  render: () => html`<lr-xml-viewer
+    name="feed.rss"
+    .xml=${FEED}
+    copyable
+    @lr-copy=${(event: CustomEvent) => console.info('XML copied', event.detail)}
+    @lr-copy-error=${(event: CustomEvent) => console.warn('XML copy failed', event.detail)}
+  ></lr-xml-viewer>`,
 };
 
 export const CollapsedDepth: Story = {

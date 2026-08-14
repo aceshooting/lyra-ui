@@ -79,10 +79,10 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     font-size: var(--lr-size-0-9375rem);
   }
-  :where([part='title']):hover {
+  :where([part='title']):hover:not(:disabled) {
     color: var(--lr-date-picker-title-hover-color, var(--lr-color-brand));
   }
-  :where([part='title']):active {
+  :where([part='title']):active:not(:disabled) {
     color: var(--lr-date-picker-title-active-color, var(--lr-color-brand));
     background: var(--lr-date-picker-title-active-bg, var(--lr-color-brand-quiet));
     border-radius: var(--lr-date-picker-radius);
@@ -112,15 +112,15 @@ export const styles = css`
      a consumer's own ::part(previous):hover/::part(next):hover can win without !important. The
      background routes through a scoped cssprop so a consumer can retint just this hover state
      without hijacking the shared --lr-color-brand-quiet token used everywhere else. */
-  :where([part='previous']):hover,
-  :where([part='next']):hover {
+  :where([part='previous']):hover:not(:disabled),
+  :where([part='next']):hover:not(:disabled) {
     background: var(--lr-date-picker-nav-hover-bg, var(--lr-color-brand-quiet));
   }
   /* Pressed mixes the hover tint one shared step further toward the text colour -- month paging
      repeats, so "the click landed" has to be legible without waiting for the grid to redraw.
      Wrapped in :where() for the same specificity reason as the hover rule above. */
-  :where([part='previous']):active,
-  :where([part='next']):active {
+  :where([part='previous']):active:not(:disabled),
+  :where([part='next']):active:not(:disabled) {
     background: var(
       --lr-date-picker-nav-active-bg,
       color-mix(
@@ -200,10 +200,10 @@ export const styles = css`
     font: inherit;
     border-radius: var(--lr-date-picker-radius);
   }
-  [part~='day']:hover {
+  [part~='day']:hover:not(:disabled) {
     background: var(--lr-date-picker-day-hover-bg, var(--lr-color-brand-quiet));
   }
-  [part~='day']:active {
+  [part~='day']:active:not(:disabled) {
     background: var(
       --lr-date-picker-day-active-bg,
       color-mix(
@@ -221,7 +221,7 @@ export const styles = css`
      [part~='day']:hover repaints its background; the pressed feedback for these cells is that same
      [part~='day']:active rule above, which they match too. */
   [part~='day-outside'][part~='day-range-inner'],
-  [part~='day-outside'][part~='day-range-inner']:hover {
+  [part~='day-outside'][part~='day-range-inner']:hover:not(:disabled) {
     color: var(--lr-date-picker-range-color, var(--lr-color-text));
   }
   [part='day-placeholder'] {
@@ -274,10 +274,10 @@ export const styles = css`
     font: inherit;
     padding: var(--lr-space-s);
   }
-  :where([part~='view-item']):hover {
+  :where([part~='view-item']):hover:not(:disabled) {
     background: var(--lr-date-picker-view-hover-bg, var(--lr-color-brand-quiet));
   }
-  :where([part~='view-item']):active {
+  :where([part~='view-item']):active:not(:disabled) {
     background: var(
       --lr-date-picker-view-active-bg,
       color-mix(
@@ -302,5 +302,29 @@ export const styles = css`
   [part~='view-item-disabled'] {
     cursor: not-allowed;
     opacity: var(--lr-date-picker-view-disabled-opacity, var(--lr-opacity-disabled));
+  }
+  @media (forced-colors: active) {
+    :where([part='previous'], [part='next'], [part='title'], [part~='day'], [part~='view-item']):hover:not(:disabled) {
+      outline: var(--lr-border-width-thin) dashed Highlight;
+      outline-offset: var(--lr-size-neg-1px);
+    }
+    :where([part='previous'], [part='next'], [part='title'], [part~='day'], [part~='view-item']):active:not(:disabled) {
+      outline: var(--lr-border-width-medium) double Highlight;
+    }
+    [part~='day-selected'],
+    [part~='view-item-selected'] {
+      color: HighlightText;
+      background: Highlight;
+      outline: var(--lr-border-width-medium) solid Highlight;
+    }
+    [part~='day-today'],
+    [part~='view-item-today'] {
+      outline-style: dotted;
+    }
+    [part~='day']:disabled,
+    [part~='view-item-disabled'] {
+      color: GrayText;
+      forced-color-adjust: none;
+    }
   }
 `;

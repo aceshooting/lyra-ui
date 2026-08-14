@@ -5,6 +5,7 @@ import { styles } from './format.styles.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import {
   dateTimeFormatOptions,
+  dateSourceConverter,
   type FormatDateHour,
   type FormatDateMonth,
   type FormatDateNumeric,
@@ -23,7 +24,9 @@ export type {
 } from './format-options.js';
 
 /**
- * `<lr-format-date>` — locale-aware `Intl.DateTimeFormat` output.
+ * `<lr-format-date>` — locale-aware `Intl.DateTimeFormat` output. Numeric `date` attributes are
+ * epoch milliseconds, matching numeric property assignment; nonnumeric attributes remain date
+ * strings.
  * `timeZone` is forwarded to both granular and style-based formatting. An invalid zone falls back
  * to the browser's local time zone instead of making the component fail to render.
  *
@@ -34,7 +37,7 @@ export type {
  */
 export class LyraFormatDate extends LyraElement {
   static override styles = [LyraElement.styles, styles];
-  @property() date: string | number | Date = new Date();
+  @property({ converter: dateSourceConverter }) date: string | number | Date = new Date();
   @property() weekday?: FormatDateText;
   @property() era?: FormatDateText;
   @property() year?: FormatDateNumeric;
@@ -43,11 +46,13 @@ export class LyraFormatDate extends LyraElement {
   @property() hour?: FormatDateNumeric;
   @property() minute?: FormatDateNumeric;
   @property() second?: FormatDateNumeric;
-  @property({ attribute: 'time-zone-name' }) timeZoneName?: FormatDateTimeZoneName;
+  @property({ attribute: 'time-zone-name' })
+  timeZoneName?: FormatDateTimeZoneName;
   @property({ attribute: 'date-style' }) dateStyle?: FormatDateStyle;
   @property({ attribute: 'time-style' }) timeStyle?: FormatDateStyle;
   /** IANA time-zone name forwarded to `Intl.DateTimeFormat` (attribute `time-zone`). */
-  @property({ attribute: 'time-zone' }) timeZone?: Intl.DateTimeFormatOptions['timeZone'];
+  @property({ attribute: 'time-zone' })
+  timeZone?: Intl.DateTimeFormatOptions['timeZone'];
   @property({ attribute: 'hour-format' }) hourFormat: FormatDateHour = 'auto';
 
   override render(): TemplateResult {
@@ -75,9 +80,11 @@ export class LyraFormatDate extends LyraElement {
         }
       }
     }
-    return text
-      ? html`<time datetime=${value.toISOString()}>${text}</time>`
-      : html`<slot></slot>`;
+    return text ? html`<time datetime=${value.toISOString()}>${text}</time>` : html`<slot></slot>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lr-format-date': LyraFormatDate; } }
+declare global {
+  interface HTMLElementTagNameMap {
+    'lr-format-date': LyraFormatDate;
+  }
+}

@@ -7,7 +7,7 @@ import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { styles } from './knowledge-base.styles.js';
 import type { TableColumn } from '../../data/table/table.class.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
-import type { MenuSelectDetail } from '../../layout/menu/menu.class.js';
+import type { MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_knowledgeBaseActionsColumn, LYRA_DEFAULT_knowledgeBaseCreateSource, LYRA_DEFAULT_knowledgeBaseDeleteAction, LYRA_DEFAULT_knowledgeBaseDocumentCount, LYRA_DEFAULT_knowledgeBaseEmptyDescription, LYRA_DEFAULT_knowledgeBaseEmptyHeading, LYRA_DEFAULT_knowledgeBaseHeading, LYRA_DEFAULT_knowledgeBaseHealthColumn, LYRA_DEFAULT_knowledgeBaseHealthDegraded, LYRA_DEFAULT_knowledgeBaseHealthFailed, LYRA_DEFAULT_knowledgeBaseHealthHealthy, LYRA_DEFAULT_knowledgeBaseHealthUnknown, LYRA_DEFAULT_knowledgeBaseNameColumn, LYRA_DEFAULT_knowledgeBaseNeedsAttention, LYRA_DEFAULT_knowledgeBaseNeverSynced, LYRA_DEFAULT_knowledgeBasePauseAction, LYRA_DEFAULT_knowledgeBasePermissionColumn, LYRA_DEFAULT_knowledgeBasePermissionEditor, LYRA_DEFAULT_knowledgeBasePermissionOwner, LYRA_DEFAULT_knowledgeBasePermissionRestricted, LYRA_DEFAULT_knowledgeBasePermissionViewer, LYRA_DEFAULT_knowledgeBaseRowActionsLabel, LYRA_DEFAULT_knowledgeBaseSyncAction, LYRA_DEFAULT_knowledgeBaseSyncColumn, LYRA_DEFAULT_knowledgeBaseSyncError, LYRA_DEFAULT_knowledgeBaseSyncIdle, LYRA_DEFAULT_knowledgeBaseSyncPaused, LYRA_DEFAULT_knowledgeBaseSyncSynced, LYRA_DEFAULT_knowledgeBaseSyncSyncing, LYRA_DEFAULT_knowledgeBaseSyncedSources, LYRA_DEFAULT_knowledgeBaseSyncingSources, LYRA_DEFAULT_knowledgeBaseTotalSources } from '../../../internal/default-strings.generated.js';
@@ -139,10 +139,11 @@ function normalizeTimestamp(value: Date | string | undefined): Date | undefined 
  * `'syncing'`.
  *
  * Composes `<lr-table>` for the source list (its own click/keydown delegation already treats any
- * custom-element or `role="menuitem"` cell content as interactive, so the per-row `<lr-menu>` never
+ * custom-element or `role="menuitem"` cell content as interactive, so the per-row `<lr-dropdown>` never
  * misfires the table's row-click handling), `<lr-badge>` for the sync-status/indexing-health/
- * permission indicators, `<lr-stat>` for the aggregate summary row above the table, and `<lr-menu>`
- * for the per-row action affordances. The table's own `lr-row-click` is intentionally stopped from
+ * permission indicators, `<lr-stat>` for the aggregate summary row above the table, and
+ * `<lr-dropdown>` + `<lr-menu>` for the per-row action affordances. The table's own
+ * `lr-row-click` is intentionally stopped from
  * propagating further (this component doesn't expose row-click/selection semantics -- only the
  * per-row action menu is interactive).
  *
@@ -169,7 +170,7 @@ function normalizeTimestamp(value: Date | string | undefined): Date | undefined 
  * @csspart health-badge - The indexing-health `<lr-badge>`.
  * @csspart document-count - The formatted `documentCount` text, omitted when unset.
  * @csspart permission-badge - The permission `<lr-badge>`, omitted when `permission` is unset.
- * @csspart actions-menu - A row's `<lr-menu>`.
+ * @csspart actions-menu - A row's `<lr-dropdown>` shell.
  * @csspart actions-trigger - The kebab `<button>` opening a row's action menu.
  * @status stable
  * @since 4.1.0
@@ -219,8 +220,8 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   /** The sources to list, in display order. */
   @property({ attribute: false }) sources: KnowledgeSource[] = [];
 
-  /** Heading text and the table's accessible name (unless overridden by a host `aria-label`).
-   *  Falls back to a localized default. */
+  /** Heading text and the nested table's accessible name. A host `aria-label` independently
+   *  names the complete component. Falls back to a localized default. */
   @property() label = '';
 
   /** Hides the aggregate summary row (total/synced/syncing/needs-attention). */
@@ -332,28 +333,29 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     const canSync = source.syncStatus !== 'syncing';
     const label = this.localize('knowledgeBaseRowActionsLabel', undefined, { name: source.name });
     return html`
-      <lr-menu
-        part="actions-menu"
-        label=${label}
-        @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => {
-          e.stopPropagation();
-          this.onRowAction(source, e.detail.value);
-        }}
-      >
+      <lr-dropdown part="actions-menu" placement="bottom-end">
         <button slot="trigger" type="button" part="actions-trigger" aria-label=${label}>${kebabIcon()}</button>
-        <lr-menu-item value="sync" ?disabled=${!canSync}>
-          <span slot="icon">${playIcon()}</span>
-          ${this.localize('knowledgeBaseSyncAction')}
-        </lr-menu-item>
-        <lr-menu-item value="pause" ?disabled=${!canPause}>
-          <span slot="icon">${pauseIcon()}</span>
-          ${this.localize('knowledgeBasePauseAction')}
-        </lr-menu-item>
-        <lr-menu-item value="delete" destructive>
-          <span slot="icon">${trashIcon()}</span>
-          ${this.localize('knowledgeBaseDeleteAction')}
-        </lr-menu-item>
-      </lr-menu>
+        <lr-menu
+          label=${label}
+          @lr-select=${(e: CustomEvent<MenuItemSelectDetail>) => {
+            e.stopPropagation();
+            this.onRowAction(source, e.detail.item.value);
+          }}
+        >
+          <lr-menu-item value="sync" ?disabled=${!canSync}>
+            <span slot="icon">${playIcon()}</span>
+            ${this.localize('knowledgeBaseSyncAction')}
+          </lr-menu-item>
+          <lr-menu-item value="pause" ?disabled=${!canPause}>
+            <span slot="icon">${pauseIcon()}</span>
+            ${this.localize('knowledgeBasePauseAction')}
+          </lr-menu-item>
+          <lr-menu-item value="delete" destructive>
+            <span slot="icon">${trashIcon()}</span>
+            ${this.localize('knowledgeBaseDeleteAction')}
+          </lr-menu-item>
+        </lr-menu>
+      </lr-dropdown>
     `;
   }
 
@@ -427,7 +429,6 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
 
   override render(): TemplateResult {
     const heading = this.label || this.localize('knowledgeBaseHeading');
-    const accessibleHeading = this.hasAttribute('aria-label') ? this.getAttribute('aria-label')! : heading;
     return html`
       <div part="base">
         <div part="toolbar">
@@ -449,7 +450,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
           .columns=${this.tableColumns()}
           .rows=${this.sources}
           .rowKey=${(row: KnowledgeSource) => row.id}
-          aria-label=${accessibleHeading}
+          .accessibleLabel=${heading}
           empty-heading=${this.localize('knowledgeBaseEmptyHeading')}
           empty-description=${this.localize('knowledgeBaseEmptyDescription', undefined,
           )}

@@ -4,6 +4,7 @@ import './timeline-item.js';
 import type { LyraTimeline } from './timeline.js';
 import { styles as timelineStyles } from './timeline.styles.js';
 import { styles as itemStyles } from './timeline-item.styles.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 
 /** Two animation frames, long enough for the overflow controller's `ResizeObserver` callback to
  *  have landed on top of the synchronous measurement it already does in `hostUpdated()`. */
@@ -22,6 +23,17 @@ it('renders with default orientation="vertical" and role="list" on [part="base"]
 it('orientation="horizontal" reflects the attribute', async () => {
   const el = (await fixture(html`<lr-timeline orientation="horizontal"></lr-timeline>`)) as LyraTimeline;
   expect(el.getAttribute('orientation')).to.equal('horizontal');
+});
+
+it('normalizes invalid orientation attributes and property assignments to vertical', async () => {
+  const el = (await fixture(html`<lr-timeline orientation="diagonal"></lr-timeline>`)) as LyraTimeline;
+  expect(el.orientation).to.equal('vertical');
+  expect(el.getAttribute('orientation')).to.equal('vertical');
+
+  el.orientation = 'diagonal' as never;
+  await el.updateComplete;
+  expect(el.orientation).to.equal('vertical');
+  expect(el.getAttribute('orientation')).to.equal('vertical');
 });
 
 it('reflects orientation and item variant when assigned as properties so CSS state follows', async () => {
@@ -92,7 +104,50 @@ it('adds a themeable edge fade to the horizontal scroll strip once it actually o
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   await nextFrames();
   expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
+  expect(getComputedStyle(el).getPropertyValue('--lr-scroll-fade-size').trim()).to.equal('2rem');
   expect(getComputedStyle(base).maskImage).to.contain('linear-gradient');
+
+  el.style.setProperty('--lr-scroll-fade-size', '13px');
+  expect(getComputedStyle(base).maskImage).to.contain('13px');
+});
+
+it('removes forced-colors masks while every scroll position remains visibly reachable in both directions', async () => {
+  try {
+    await setForcedColors('active');
+    for (const direction of ['ltr', 'rtl'] as const) {
+      const el = (await fixture(html`
+        <lr-timeline
+          dir=${direction}
+          orientation="horizontal"
+          style="display: block; max-inline-size: 90px"
+        >
+          <lr-timeline-item style="flex: 0 0 200px">Start</lr-timeline-item>
+          <lr-timeline-item style="flex: 0 0 200px">Middle</lr-timeline-item>
+          <lr-timeline-item style="flex: 0 0 200px">End</lr-timeline-item>
+        </lr-timeline>
+      `)) as LyraTimeline;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const items = Array.from(el.querySelectorAll<HTMLElement>('lr-timeline-item'));
+      await nextFrames();
+
+      const computed = getComputedStyle(base);
+      expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
+      expect(computed.maskImage).to.equal('none');
+      expect(computed.webkitMaskImage).to.equal('none');
+      expect(computed.overflowX).to.equal('auto');
+
+      for (const item of items) {
+        item.scrollIntoView({ block: 'nearest', inline: 'center' });
+        await nextFrames();
+        const viewport = base.getBoundingClientRect();
+        const target = item.getBoundingClientRect();
+        expect(target.right).to.be.greaterThan(viewport.left);
+        expect(target.left).to.be.lessThan(viewport.right);
+      }
+    }
+  } finally {
+    await setForcedColors('none');
+  }
 });
 
 it('leaves a horizontal strip that fits completely unmasked', async () => {

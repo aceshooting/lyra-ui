@@ -2,7 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './sequence-strip.styles.js';
@@ -13,24 +13,29 @@ import { LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripEmpt
 
 
 export interface SequenceStripItem {
-  id: string;
-  category: string;
+  readonly id: string;
+  readonly categoryId: string;
   /** A small marker rendered at the bottom of this cell — a secondary boolean annotation
    *  independent of the primary category color (e.g. a subagent-dispatched turn). */
-  marker?: boolean;
+  readonly marker?: boolean;
   /** Per-item text shown in the hover/focus tooltip and exposed as the item's accessible name
-   *  (falls back to the category's own `label`, or its `key`, when unset). */
-  label?: string;
+   *  (falls back to the category's own `label`, or its `id`, when unset). */
+  readonly label?: string;
 }
 
 export interface SequenceStripCategory {
-  key: string;
+  readonly id: string;
   /** A CSS color. Invalid values and `url()` paint servers render transparently. */
-  color: string;
+  readonly color: string;
   /** Human-readable name used in the auto-generated `aria-label` summary and as the hover-tooltip
-   *  fallback text for items with no `label` of their own. Falls back to `key` itself when unset. */
-  label?: string;
+   *  fallback text for items with no `label` of their own. Falls back to `id` itself when unset. */
+  readonly label?: string;
 }
+
+/** A bounded DOM window keeps high-cardinality strips responsive while the full canonical item
+ * model remains available to roving keyboard navigation and `aria-setsize`. */
+const MAX_RENDERED_ITEMS = 200;
+const MAX_RENDERED_CATEGORIES = 200;
 
 /**
  * `<lr-sequence-strip>` — a compact, one-thin-cell-per-item strip visualizing a sequence of
@@ -39,14 +44,14 @@ export interface SequenceStripCategory {
  * visualization. The strip is a labeled `role="list"` and each cell is a named list item.
  * Exactly one cell is tabbable; Left/Right and Home/End rove through the items and show the same
  * detail tooltip as pointer hover. Cells are inspectable rather than actionable, so they do not
- * emit an activation event. A host `aria-label` names the internal list ahead of the
- * `accessible-label` alias and generated summary. Controlled item refreshes preserve the focused
+ * emit an activation event. A host `aria-label` names the host itself without being duplicated on
+ * the internal list; `accessible-label` names that list, otherwise its category summary does.
+ * Controlled item refreshes preserve the focused
  * item by id, clamp to the nearest survivor, and focus the stable list when the strip becomes empty.
  * A queued arrow/Home/End focus is generation- and identity-bound: replacing `items`, disconnecting,
  * or reconnecting before that update settles cannot focus the same numeric index in a new model.
- * Cells flex below their ordinary 2px visual target when the allocation cannot fit every item;
- * above 320 items the decorative 1px gaps collapse as well. The dense policy keeps the strip
- * contained at the 320px responsive baseline without dropping any listitem or keyboard stop.
+ * At most 200 items around the roving stop are mounted at once; `aria-posinset`/`aria-setsize`
+ * retain positions in the complete canonical sequence and navigation shifts the window.
  *
  * @customElement lr-sequence-strip
  * @csspart base - The root strip wrapper (`role="list"`).
@@ -60,7 +65,9 @@ export interface SequenceStripCategory {
  * @csspart legend-swatch - The color chip of a legend item, matching that category's cell color.
  * @csspart legend-marker-swatch - The chip of the `markerLabel` legend row: a neutral chip carrying
  * the same bottom bar a `marker: true` cell paints, in the same `--lr-sequence-strip-marker-color`.
- * @csspart legend-label - The text of a legend item (the category's `label`, or its `key`).
+ * @csspart legend-label - The text of a legend item (the category's `label`, or its `id`).
+ * @csspart window-range - Visible numeric range/total disclosure when item projection is windowed.
+ * @csspart legend-limit - Visible rendered/total category count when the legend is bounded.
  * @cssprop [--lr-sequence-strip-height=var(--lr-size-1-5rem)] - Block size of the strip.
  * @cssprop [--lr-sequence-strip-marker-color=var(--lr-color-text)] - Color of the bottom marker on a `marker: true` cell, and of the marker legend row's bar.
  * @cssprop [--lr-sequence-strip-legend-swatch-size=var(--lr-size-0-625rem)] - Inline and block size of a legend swatch (category and marker rows alike).
@@ -80,14 +87,56 @@ export class LyraSequenceStrip extends LyraElement {
 
   static override styles = [LyraElement.styles, styles];
 
-  @property({ attribute: false }) items: SequenceStripItem[] = [];
-  @property({ attribute: false }) categories: SequenceStripCategory[] = [];
+  private _items: readonly SequenceStripItem[] = [];
+  private _categories: readonly SequenceStripCategory[] = [];
+
+  /** Canonical item snapshot. Duplicate ids use the first entry. */
+  @property({ attribute: false })
+  get items(): readonly SequenceStripItem[] { return this._items; }
+  set items(value: readonly SequenceStripItem[]) {
+    const previous = this._items;
+    const seen = new Set<string>();
+    const next: SequenceStripItem[] = [];
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (!item || typeof item.id !== 'string' || !item.id || seen.has(item.id)) continue;
+        seen.add(item.id);
+        next.push(Object.freeze({
+          id: item.id,
+          categoryId: typeof item.categoryId === 'string' ? item.categoryId : '',
+          ...(item.marker === undefined ? {} : { marker: Boolean(item.marker) }),
+          ...(typeof item.label === 'string' ? { label: item.label } : {}),
+        }));
+      }
+    }
+    this._items = Object.freeze(next);
+    this.requestUpdate('items', previous);
+  }
+
+  /** Canonical category snapshot. Duplicate ids use the first entry. */
+  @property({ attribute: false })
+  get categories(): readonly SequenceStripCategory[] { return this._categories; }
+  set categories(value: readonly SequenceStripCategory[]) {
+    const previous = this._categories;
+    const seen = new Set<string>();
+    const next: SequenceStripCategory[] = [];
+    if (Array.isArray(value)) {
+      for (const category of value) {
+        if (!category || typeof category.id !== 'string' || !category.id || seen.has(category.id)) continue;
+        seen.add(category.id);
+        next.push(Object.freeze({
+          id: category.id,
+          color: typeof category.color === 'string' ? category.color : '',
+          ...(typeof category.label === 'string' ? { label: category.label } : {}),
+        }));
+      }
+    }
+    this._categories = Object.freeze(next);
+    this.requestUpdate('categories', previous);
+  }
   /** Overrides the auto-generated `aria-label` (a per-category "label: count" summary). Unset
    *  computes the summary from `items`/`categories`. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
-  /** Standard host accessible-name override. Wins over `accessibleLabel` and the generated
-   *  category summary, and is forwarded to the internal list that owns the semantic role. */
-  @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
   /** Renders a static `[part="legend"]` key of every `categories` entry below the strip, so the
    *  color-to-category mapping is readable without hovering each cell. Deliberately
    *  non-interactive: unlike `<lr-graph-legend>` this toggles nothing and emits nothing — the
@@ -115,13 +164,13 @@ export class LyraSequenceStrip extends LyraElement {
     if (changed.has('items')) {
       this.focusRestoreGeneration++;
       this.hoverIndex = null;
-      const renderedCells = [...(this.shadowRoot?.querySelectorAll<HTMLElement>('[part="cell"]') ?? [])];
-      const focusedIndex = renderedCells.indexOf(this.shadowRoot?.activeElement as HTMLElement);
-      if (focusedIndex < 0) {
+      const focusedCell = this.shadowRoot?.activeElement as HTMLElement | null;
+      const focusedIndex = Number(focusedCell?.dataset['index']);
+      if (!Number.isInteger(focusedIndex) || focusedIndex < 0) {
         this.keyboardIndex = null;
         return;
       }
-      const previousItems = (changed.get('items') as SequenceStripItem[] | undefined) ?? [];
+      const previousItems = (changed.get('items') as readonly SequenceStripItem[] | undefined) ?? [];
       const focusedId = previousItems[focusedIndex]?.id;
       const retainedIndex = focusedId == null ? -1 : this.items.findIndex((item) => item.id === focusedId);
       const nextIndex = retainedIndex >= 0
@@ -148,7 +197,7 @@ export class LyraSequenceStrip extends LyraElement {
           this.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();
           return;
         }
-        this.shadowRoot?.querySelectorAll<HTMLElement>('[part="cell"]')[pending]?.focus();
+        this.shadowRoot?.querySelector<HTMLElement>(`[part="cell"][data-index="${pending}"]`)?.focus();
       } finally {
         this.restoringOwnedFocus = false;
       }
@@ -164,16 +213,21 @@ export class LyraSequenceStrip extends LyraElement {
     super.disconnectedCallback();
   }
 
-  private categoryColor(key: string): string {
-    return sanitizeCssColor(this.categories.find((c) => c.key === key)?.color) ?? 'transparent';
+  private categoryMap(): ReadonlyMap<string, SequenceStripCategory> {
+    return new Map(this.categories.map((category) => [category.id, category]));
+  }
+
+  private categoryColor(categoryId: string, categories: ReadonlyMap<string, SequenceStripCategory>): string {
+    return sanitizeCssColor(categories.get(categoryId)?.color) ?? 'transparent';
   }
 
   private autoSummary(): string {
     const counts = new Map<string, number>();
-    for (const item of this.items) counts.set(item.category, (counts.get(item.category) ?? 0) + 1);
+    const categories = this.categoryMap();
+    for (const item of this.items) counts.set(item.categoryId, (counts.get(item.categoryId) ?? 0) + 1);
     if (counts.size === 0) return this.localize('sequenceStripEmpty');
-    const clauses = [...counts.entries()].map(([key, count]) => {
-      const label = this.categories.find((c) => c.key === key)?.label ?? key;
+    const clauses = [...counts.entries()].map(([categoryId, count]) => {
+      const label = categories.get(categoryId)?.label ?? categoryId;
       return this.localize('sequenceStripCategoryCount', undefined, {
         label,
         count: getNumberFormat(this.effectiveLocale).format(count),
@@ -193,12 +247,12 @@ export class LyraSequenceStrip extends LyraElement {
         pluralCount: markerCount,
       }));
     }
-    return clauses.join(', ');
+    return getListFormat(this.effectiveLocale, { style: 'long', type: 'unit' }).format(clauses);
   }
 
-  private itemLabel(item: SequenceStripItem): string {
+  private itemLabel(item: SequenceStripItem, categories = this.categoryMap()): string {
     if (item.label) return item.label;
-    return this.categories.find((c) => c.key === item.category)?.label ?? item.category;
+    return categories.get(item.categoryId)?.label ?? item.categoryId;
   }
 
   private onCellEnter(index: number): void {
@@ -242,7 +296,7 @@ export class LyraSequenceStrip extends LyraElement {
       ) {
         return;
       }
-      const target = this.shadowRoot?.querySelectorAll<HTMLElement>('[part="cell"]')[next];
+      const target = this.shadowRoot?.querySelector<HTMLElement>(`[part="cell"][data-index="${next}"]`);
       if (target?.dataset['itemId'] === targetId) target.focus();
     });
   }
@@ -253,16 +307,18 @@ export class LyraSequenceStrip extends LyraElement {
    *  `aria-hidden` — it is a decorative duplicate rendered outside the list, and hiding it removes
    *  nothing from the inspectable sequence. */
   private renderLegend(): TemplateResult {
+    const renderedCategories = this.categories.slice(0, MAX_RENDERED_CATEGORIES);
+    const number = getNumberFormat(this.effectiveLocale);
     return html`
       <div part="legend" aria-hidden="true">
-        ${this.categories.map(
+        ${renderedCategories.map(
           (category) => html`
             <span part="legend-item">
               <span
                 part="legend-swatch"
                 style=${styleMap({ backgroundColor: sanitizeCssColor(category.color) ?? 'transparent' })}
               ></span>
-              <span part="legend-label">${category.label ?? category.key}</span>
+              <span part="legend-label">${category.label ?? category.id}</span>
             </span>
           `,
         )}
@@ -274,46 +330,60 @@ export class LyraSequenceStrip extends LyraElement {
               </span>
             `
           : nothing}
+        ${this.categories.length > renderedCategories.length
+          ? html`<span part="legend-limit">${number.format(renderedCategories.length)} / ${number.format(this.categories.length)}</span>`
+          : nothing}
       </div>
     `;
   }
 
   override render(): TemplateResult {
-    const ariaLabel = this.hostAriaLabel || this.accessibleLabel || this.autoSummary();
+    const categoryMap = this.categoryMap();
+    const ariaLabel = this.accessibleLabel || this.autoSummary();
     const activeIndex = this.hoverIndex ?? this.keyboardIndex;
     const active = activeIndex !== null ? this.items[activeIndex] : undefined;
     const tabStop = this.keyboardIndex ?? 0;
+    const maxStart = Math.max(0, this.items.length - MAX_RENDERED_ITEMS);
+    const windowStart = Math.min(maxStart, Math.max(0, tabStop - Math.floor(MAX_RENDERED_ITEMS / 2)));
+    const renderedItems = this.items.slice(windowStart, windowStart + MAX_RENDERED_ITEMS);
+    const number = getNumberFormat(this.effectiveLocale);
     return html`
       <div
         part="base"
         role="list"
         aria-label=${ariaLabel}
         tabindex="-1"
-        ?data-dense=${this.items.length > 320}
+        ?data-dense=${renderedItems.length >= MAX_RENDERED_ITEMS}
         @focusout=${this.onStripFocusOut}
       >
-        ${this.items.map(
-          (item, index) => html`
+        ${renderedItems.map(
+          (item, localIndex) => {
+            const index = windowStart + localIndex;
+            return html`
             <span
               part="cell"
               data-item-id=${item.id}
+              data-index=${index}
               role="listitem"
-              aria-label=${this.itemLabel(item)}
+              aria-label=${this.itemLabel(item, categoryMap)}
               aria-posinset=${index + 1}
               aria-setsize=${this.items.length}
               tabindex=${index === tabStop ? '0' : '-1'}
-              style=${styleMap({ backgroundColor: this.categoryColor(item.category) })}
+              style=${styleMap({ backgroundColor: this.categoryColor(item.categoryId, categoryMap) })}
               @pointerenter=${() => this.onCellEnter(index)}
               @pointerleave=${() => this.onCellLeave()}
               @focus=${() => this.onCellFocus(index)}
               @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, index)}
             >
               ${item.marker ? html`<span part="marker"></span>` : nothing}
-            </span>
-          `,
+            </span>`;
+          },
         )}
-        <div id="sequence-strip-tooltip" part="tooltip" ?hidden=${!active}>${active ? this.itemLabel(active) : ''}</div>
+        <div id="sequence-strip-tooltip" part="tooltip" ?hidden=${!active}>${active ? this.itemLabel(active, categoryMap) : ''}</div>
       </div>
+      ${this.items.length > renderedItems.length
+        ? html`<div part="window-range" aria-hidden="true">${number.format(windowStart + 1)}–${number.format(windowStart + renderedItems.length)} / ${number.format(this.items.length)}</div>`
+        : nothing}
       ${this.showLegend ? this.renderLegend() : nothing}
     `;
   }

@@ -19,6 +19,33 @@ function restoreOwnProperty(target: object, name: PropertyKey, descriptor?: Prop
   else delete (target as Record<PropertyKey, unknown>)[name];
 }
 
+function parsedColor(value: string): [number, number, number, number] {
+  const channels = value.match(/[\d.]+/gu)?.map(Number) ?? [];
+  return [channels[0] ?? 0, channels[1] ?? 0, channels[2] ?? 0, channels[3] ?? 1];
+}
+
+function relativeLuminance([red, green, blue]: readonly number[]): number {
+  const linear = [red, green, blue].map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * linear[0]! + 0.7152 * linear[1]! + 0.0722 * linear[2]!;
+}
+
+function contrastRatio(foreground: string, overlay: string): number {
+  const [red, green, blue, alpha] = parsedColor(overlay);
+  // White is the worst underlying pixel for a black media scrim: prove the semantic foreground
+  // remains readable even when the source frame beneath the overlay is maximally bright.
+  const composited = [red, green, blue].map((channel) => channel * alpha + 255 * (1 - alpha));
+  const foregroundLuminance = relativeLuminance(parsedColor(foreground));
+  const backgroundLuminance = relativeLuminance(composited);
+  const lighter = Math.max(foregroundLuminance, backgroundLuminance);
+  const darker = Math.min(foregroundLuminance, backgroundLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 async function hover(target: HTMLElement): Promise<void> {
   target.scrollIntoView({ block: 'center', inline: 'center' });
   await aTimeout(0);
@@ -176,6 +203,93 @@ describe('lr-video public contract', () => {
       expect(el.getVideoElement() === media).to.be.true;
     } finally {
       (el as unknown as { mediaRef: (element?: Element) => void }).mediaRef(undefined);
+      iframe.remove();
+    }
+  });
+
+  it('uses owner-realm fullscreen/PiP probes and owner-branded unsupported errors across adoption', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    const ambientFullscreenEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
+    const frameFullscreenEnabled = Object.getOwnPropertyDescriptor(frameDocument, 'fullscreenEnabled');
+    const ambientPipEnabled = Object.getOwnPropertyDescriptor(document, 'pictureInPictureEnabled');
+    const framePipEnabled = Object.getOwnPropertyDescriptor(frameDocument, 'pictureInPictureEnabled');
+    const ambientRequestFullscreen = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      'requestFullscreen',
+    );
+    const frameRequestFullscreen = Object.getOwnPropertyDescriptor(
+      frameWindow.HTMLElement.prototype,
+      'requestFullscreen',
+    );
+    const ambientRequestPip = Object.getOwnPropertyDescriptor(
+      HTMLVideoElement.prototype,
+      'requestPictureInPicture',
+    );
+    const frameRequestPip = Object.getOwnPropertyDescriptor(
+      frameWindow.HTMLVideoElement.prototype,
+      'requestPictureInPicture',
+    );
+    const el = document.createElement('lr-video') as LyraVideo;
+    el.controls = 'full';
+    const capabilities = el as unknown as {
+      canRenderFullscreen: () => boolean;
+      canRenderPictureInPicture: () => boolean;
+    };
+
+    try {
+      Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: false });
+      Object.defineProperty(document, 'pictureInPictureEnabled', { configurable: true, value: false });
+      Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', {
+        configurable: true,
+        value: undefined,
+      });
+      Object.defineProperty(HTMLVideoElement.prototype, 'requestPictureInPicture', {
+        configurable: true,
+        value: undefined,
+      });
+      Object.defineProperty(frameDocument, 'fullscreenEnabled', { configurable: true, value: true });
+      Object.defineProperty(frameDocument, 'pictureInPictureEnabled', { configurable: true, value: true });
+      Object.defineProperty(frameWindow.HTMLElement.prototype, 'requestFullscreen', {
+        configurable: true,
+        value: () => Promise.resolve(),
+      });
+      Object.defineProperty(frameWindow.HTMLVideoElement.prototype, 'requestPictureInPicture', {
+        configurable: true,
+        value: () => Promise.resolve(),
+      });
+
+      frameDocument.adoptNode(el);
+      expect(capabilities.canRenderFullscreen()).to.be.true;
+      expect(capabilities.canRenderPictureInPicture()).to.be.true;
+      let rejection: unknown;
+      try {
+        await el.requestFullscreen();
+      } catch (error) {
+        rejection = error;
+      }
+      expect(rejection instanceof frameWindow.DOMException).to.be.true;
+      expect(rejection instanceof DOMException, 'the error is not ambient-branded').to.be.false;
+      expect((rejection as DOMException).name).to.equal('NotSupportedError');
+
+      document.adoptNode(el);
+      expect(capabilities.canRenderFullscreen()).to.be.false;
+      expect(capabilities.canRenderPictureInPicture()).to.be.false;
+    } finally {
+      restoreOwnProperty(document, 'fullscreenEnabled', ambientFullscreenEnabled);
+      restoreOwnProperty(frameDocument, 'fullscreenEnabled', frameFullscreenEnabled);
+      restoreOwnProperty(document, 'pictureInPictureEnabled', ambientPipEnabled);
+      restoreOwnProperty(frameDocument, 'pictureInPictureEnabled', framePipEnabled);
+      restoreOwnProperty(HTMLElement.prototype, 'requestFullscreen', ambientRequestFullscreen);
+      restoreOwnProperty(frameWindow.HTMLElement.prototype, 'requestFullscreen', frameRequestFullscreen);
+      restoreOwnProperty(HTMLVideoElement.prototype, 'requestPictureInPicture', ambientRequestPip);
+      restoreOwnProperty(
+        frameWindow.HTMLVideoElement.prototype,
+        'requestPictureInPicture',
+        frameRequestPip,
+      );
       iframe.remove();
     }
   });
@@ -358,6 +472,49 @@ describe('lr-video public contract', () => {
     expect(getComputedStyle(controls).color).to.equal('rgb(4, 5, 6)');
     expect(getComputedStyle(overlay).backgroundImage).to.include('rgb(1, 2, 3)');
     expect(getComputedStyle(posterButton).backgroundColor).to.equal('rgb(7, 8, 9)');
+  });
+
+  it('uses the semantic strong-overlay foreground with contrast in light/dark themes and system control in forced colors', async function () {
+    for (const themeClass of ['lr-light', 'lr-dark']) {
+      const themed = await fixture<HTMLElement>(html`
+        <div class=${themeClass}>
+          <lr-video title="Contrast title"></lr-video>
+        </div>
+      `);
+      const el = themed.querySelector('lr-video') as LyraVideo;
+      (el as unknown as { captionText: string }).captionText = 'Contrast caption';
+      el.requestUpdate();
+      await el.updateComplete;
+      const wrapper = el.shadowRoot!.querySelector<HTMLElement>('[part~="video-wrapper"]')!;
+      const controls = el.shadowRoot!.querySelector<HTMLElement>('[part="controls"]')!;
+      const title = el.shadowRoot!.querySelector<HTMLElement>('[part="video-title-overlay"]')!;
+      const caption = el.shadowRoot!.querySelector<HTMLElement>('[part="caption"]')!;
+      const foreground = getComputedStyle(controls).color;
+      const overlay = getComputedStyle(wrapper).backgroundColor;
+
+      expect(getComputedStyle(title).color, `${themeClass} title`).to.equal(foreground);
+      expect(getComputedStyle(caption).color, `${themeClass} caption`).to.equal(foreground);
+      expect(contrastRatio(foreground, overlay), `${themeClass} contrast`).to.be.at.least(4.5);
+      if (CSS.supports('forced-color-adjust', 'auto')) {
+        expect(getComputedStyle(controls).forcedColorAdjust).to.equal('auto');
+        expect(getComputedStyle(caption).forcedColorAdjust).to.equal('auto');
+      }
+    }
+
+    const overridden = await fixture<LyraVideo>(html`
+      <lr-video
+        title="Override"
+        style="--controls-color: rgb(12, 34, 56)"
+      ></lr-video>
+    `);
+    (overridden as unknown as { captionText: string }).captionText = 'Override caption';
+    overridden.requestUpdate();
+    await overridden.updateComplete;
+    for (const selector of ['[part="controls"]', '[part="video-title-overlay"]', '[part="caption"]']) {
+      expect(getComputedStyle(overridden.shadowRoot!.querySelector(selector)!).color).to.equal(
+        'rgb(12, 34, 56)',
+      );
+    }
   });
 
   it('uses default and ancestor-themed poster hover hooks for rendered button ink', async () => {
@@ -878,7 +1035,7 @@ describe('lr-video public contract', () => {
     select.value = '1';
     select.dispatchEvent(new Event('change'));
     expect(first.mode).to.equal('disabled');
-    expect(second.mode).to.equal('showing');
+    expect(second.mode).to.equal('hidden');
   });
 
   it('renders caption and rate selects with themed decorative chevrons', async () => {
@@ -1127,11 +1284,11 @@ describe('lr-video public contract', () => {
     expect(el.shadowRoot!.querySelector('[data-control="volume"]')?.getAttribute('aria-label')).to.equal('Volume vidéo');
   });
 
-  it('gives a host aria-label precedence over title and localized video names', async () => {
+  it('keeps a host label on the host and gives the nested native video a purpose-specific name', async () => {
     const el = await fixture<LyraVideo>(html`
       <lr-video aria-label="Host-provided name" title="Visible title"></lr-video>
     `);
-    expect(nativeVideo(el).getAttribute('aria-label')).to.equal('Host-provided name');
+    expect(nativeVideo(el).getAttribute('aria-label')).to.equal('Video player');
   });
 
   it('lays out at a 320px allocation and remains accessible when populated', async () => {
@@ -1257,7 +1414,33 @@ describe('lr-video public contract', () => {
 });
 
 describe('lr-video control surface', () => {
-  it('announces the timeline position as localized clock time, not raw seconds', async () => {
+  it('keeps one progress range identity while disabling unknown, errored, and reset durations', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video src=${VIDEO_SRC}></lr-video>`);
+    const media = nativeVideo(el);
+    const progress = el.shadowRoot!.querySelector<HTMLInputElement>('[part="progress"]')!;
+    expect(progress.disabled, 'unknown duration').to.be.true;
+
+    Object.defineProperties(media, {
+      duration: { configurable: true, value: 60 },
+      currentTime: { configurable: true, value: 5, writable: true },
+    });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="progress"]') === progress).to.be.true;
+    expect(progress.disabled, 'known positive duration').to.be.false;
+
+    media.dispatchEvent(new Event('error'));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="progress"]') === progress).to.be.true;
+    expect(progress.disabled, 'native error').to.be.true;
+
+    el.src = 'https://example.test/replacement.mp4';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="progress"]') === progress).to.be.true;
+    expect(progress.disabled, 'source reset').to.be.true;
+  });
+
+  it('describes the native timeline with localized clock time instead of ignored aria-valuetext', async () => {
     const el = await fixture<LyraVideo>(html`
       <lr-video lang="ar-EG" .strings=${{ avPlayerPosition: '{current} sur {duration}' }}></lr-video>
     `);
@@ -1271,7 +1454,9 @@ describe('lr-video control surface', () => {
     await el.updateComplete;
 
     const progress = el.shadowRoot!.querySelector('[part="progress"]') as HTMLInputElement;
-    expect(progress.getAttribute('aria-valuetext')).to.equal('٠:٠٥ sur ١:٠١');
+    expect(progress.hasAttribute('aria-valuetext')).to.be.false;
+    const descriptionId = progress.getAttribute('aria-describedby')!;
+    expect(el.shadowRoot!.getElementById(descriptionId)?.textContent).to.equal('٠:٠٥ sur ١:٠١');
 
     const plain = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
     const plainMedia = nativeVideo(plain);
@@ -1283,7 +1468,9 @@ describe('lr-video control surface', () => {
     plainMedia.dispatchEvent(new Event('timeupdate'));
     await plain.updateComplete;
     expect(
-      plain.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-valuetext'),
+      plain.shadowRoot!.getElementById(
+        plain.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-describedby')!,
+      )?.textContent,
       'the English fallback renders with no locale registered',
     ).to.equal('0:05 of 1:01');
   });
@@ -1369,9 +1556,17 @@ describe('lr-video control surface', () => {
     `);
     const stub = stubPlayback(nativeVideo(el));
     const poster = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="poster-play-button"]')!;
+    const controlPlay = button(el, 'play')!;
+    expect(controlPlay.closest<HTMLElement>('.icon-button-stack')?.hidden).to.be.true;
+    expect(poster.hidden).to.be.false;
     poster.click();
     await stub.playResult;
     expect(stub.playCalls).to.equal(1);
+
+    nativeVideo(el).dispatchEvent(new Event('play'));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="poster-play-button"]') === null).to.be.true;
+    expect(controlPlay.closest<HTMLElement>('.icon-button-stack')?.hidden).to.be.false;
   });
 
   it('drives fullscreen and picture-in-picture from their controls and document events', async () => {
@@ -1754,11 +1949,18 @@ describe('lr-video coverage gap-filling', () => {
     try {
       const el = await fixture<LyraVideo>(html`<lr-video autoplay-on-visible></lr-video>`);
       expect(observerCount).to.equal(1);
+      const playback = stubPlayback(nativeVideo(el), false);
+      callback(
+        [{ isIntersecting: false } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(playback.pauseCalls, 'visibility owns the pause').to.equal(1);
 
       el.autoplayOnVisible = false;
       await el.updateComplete;
       await aTimeout(0);
       expect(disconnectCount, 'turning the feature off disconnects the existing observer').to.be.greaterThan(0);
+      expect(playback.playCalls, 'disabling the feature releases its owned pause').to.equal(1);
 
       el.autoplayOnVisible = true;
       await el.updateComplete;

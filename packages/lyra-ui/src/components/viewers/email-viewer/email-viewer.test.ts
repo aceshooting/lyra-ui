@@ -12,7 +12,7 @@ const SAMPLE_EML = [
   'Date: Tue, 14 Jul 2026 09:30:00 +0000', 'Content-Type: text/html; charset=utf-8', '', '<p>Totals are <strong>up 12%</strong>.</p>', '',
 ].join('\r\n');
 const TEXT_EML = ['From: Ada <ada@example.test>', 'Subject: Plain note', 'Content-Type: text/plain; charset=utf-8', '', 'See you at noon.', ''].join('\r\n');
-const EVIL_EML = ['Subject: Evil', 'Content-Type: text/html; charset=utf-8', '', '<p onclick="bad()">Click</p><script>bad()</script>', ''].join('\r\n');
+const EVIL_EML = ['Subject: Evil', 'Content-Type: text/html; charset=utf-8', '', '<style>@import url(https://example.test/a.css)</style><p onclick="bad()" style="background:url(https://example.test/bg.png)">Click</p><img src="https://example.test/pixel.png"><a href="https://example.test/nav">link</a><form action="https://example.test/post"><input><button>send</button></form><script>bad()</script>', ''].join('\r\n');
 
 const LONG_FILENAME = 'ThisIsAnIntentionallyVeryLongUnbrokenAttachmentFileNameWithoutAnySpacesOrHyphensForcingOverflow.txt';
 const LONG_FILENAME_ATTACHMENT_EML = [
@@ -156,12 +156,17 @@ describe('lr-email-viewer', () => {
     } finally { restore(); }
   });
 
-  it('removes scripts and event handlers from HTML', async () => {
+  it('makes HTML bodies network-silent and non-interactive after sanitization', async () => {
     const { el, restore } = await loaded(EVIL_EML);
     try {
       const body = el.shadowRoot!.querySelector('[part="body-html"]')!;
       expect((body.querySelector('script')) == null).to.equal(true);
       expect(body.querySelector('p')!.getAttribute('onclick')).to.be.null;
+      expect(body.querySelector('p')!.hasAttribute('style')).to.equal(false);
+      expect(body.querySelectorAll('style,a,form,input,button').length).to.equal(0);
+      expect(body.querySelector('img')!.hasAttribute('src')).to.equal(false);
+      expect(body.textContent).to.contain('link');
+      expect(body.textContent).to.contain('send');
     } finally { restore(); }
   });
 

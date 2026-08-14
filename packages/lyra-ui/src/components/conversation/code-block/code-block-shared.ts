@@ -24,6 +24,11 @@ import { prefersReducedMotion } from "../../../internal/motion.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { sanitizeCssLength } from "../../../internal/safe-css.js";
 import {
+  writeClipboardText,
+  type LyraClipboardWriteFailure,
+  type LyraClipboardWriteSuccess,
+} from "../../../internal/clipboard.js";
+import {
   normalizeShikiLanguage,
   SHIKI_THEMES,
   type ShikiHighlighterCore,
@@ -34,7 +39,7 @@ import type {
   LyraAnchor,
   LyraHighlight,
 } from "../../viewers/document-viewer/anchors.js";
-import { resolveIsDarkTheme, watchDarkTheme } from "./shiki-dark-theme.js";
+import { resolveIsDarkTheme } from "./shiki-dark-theme.js";
 
 /** Matches `LyraElement.localize()`'s signature so either component's bound
  *  method can be passed straight through. */
@@ -55,8 +60,10 @@ export function codeBlockToggleLabel(
 /** The copy-to-clipboard header button's `aria-label`. */
 export function codeBlockCopyLabel(
   localize: LyraLocalizeFn,
-  justCopied: boolean
+  justCopied: boolean,
+  copyFailed: boolean
 ): string {
+  if (copyFailed) return localize("copyFailed");
   return justCopied ? localize("copiedToClipboard") : localize("copyCode");
 }
 
@@ -334,7 +341,9 @@ export function codeBlockSelectionAnchor(
   if (!text.trim()) return null;
   const lineOf = (node: Node): number | null => {
     const el =
-      node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as Element);
+      node.nodeType === Node.ELEMENT_NODE
+        ? (node as Element)
+        : node.parentElement;
     const lineEl = el?.closest("[data-line]");
     const attr = lineEl?.getAttribute("data-line");
     return attr === null || attr === undefined ? null : Number(attr);
@@ -353,28 +362,7 @@ export function codeBlockSelectionAnchor(
   };
 }
 
-/** Best-effort clipboard write. `navigator.clipboard` is absent in insecure contexts / older
- *  browsers, and some engines throw synchronously rather than rejecting -- either way the caller
- *  still emits `lr-copy` regardless of whether the OS clipboard was actually reached, the same
- *  convention `<lr-json-viewer>`'s own copy button follows. */
-export function writeCodeBlockClipboard(
-  text: string,
-  ownerWindow: Window | null
-): void {
-  if (!ownerWindow) return;
-  try {
-    void ownerWindow.navigator.clipboard?.writeText(text)?.catch(() => {});
-  } catch {
-    // see above
-  }
-}
-
-/** Every property whose change invalidates the cached `highlightedHtml`. `code`/`language`/
- *  `languages`/`languagesOnly` change *what* is tokenized; `highlightLines`/`highlights`/
- *  `activeHighlightId`/`lineNumbers`/`interactiveLines` all feed `codeBlockLineTransformer()`'s
- *  options, so a change to any of them needs a re-tokenize to stay in sync even when the code
- *  itself is untouched. `languagesOnly` is listed for `<lr-code-block>`; `<lr-code-block-core>` has
- *  no such property, so it simply never appears in that component's changed map. */
+/** Every property whose change invalidates the cached `highlightedHtml`. */
 export function codeBlockNeedsHighlightResync(
   changed: PropertyValues
 ): boolean {
@@ -386,8 +374,7 @@ export function codeBlockNeedsHighlightResync(
     changed.has("highlights") ||
     changed.has("activeHighlightId") ||
     changed.has("lineNumbers") ||
-    changed.has("interactiveLines") ||
-    changed.has("languagesOnly")
+    changed.has("activatableLines")
   );
 }
 
@@ -395,7 +382,7 @@ export function codeBlockNeedsHighlightResync(
  * Whether the `<lr-skeleton>` placeholder stands in for the code this render. Both components gate
  * it on "a highlighter this instance is actually waiting for hasn't settled yet, and there's a
  * `language` worth highlighting" -- they differ only in *which* loader that is, which is what
- * `loaderPending` carries: `<lr-code-block>` passes `!languagesOnly && !preSuppliedGrammar` (it is
+ * `loaderPending` carries: `<lr-code-block>` passes `!preSuppliedGrammar` (it is
  * waiting on the shared full-table singleton), `<lr-code-block-core>` passes `!!preSuppliedGrammar`
  * (it is waiting on the fine-grained `languages` highlighter, its only one). Called from both
  * `updated()` and `render()` on each class so the `aria-busy` host attribute can never disagree
@@ -480,11 +467,12 @@ export function parseHighlightLines(
 
 export interface CodeBlockLineTransformerOptions {
   lineNumbers: boolean;
-  interactiveLines: boolean;
+  activatableLines: boolean;
   focusedLine: number;
   highlightedLines: Set<number>;
   activeLines: Set<number>;
-  lineDescription: (line: number) => string;
+  lineLabel: (line: number) => string;
+  lineNumberText: (line: number) => string;
 }
 
 /**
@@ -519,14 +507,46 @@ export function codeBlockLineTransformer(
     line(node, line: number) {
       node.properties["data-line"] = String(line);
       const parts: string[] = [];
-      if (options.interactiveLines && options.lineNumbers) {
-        parts.push("line-button");
-        node.properties.role = "button";
-        node.properties["tabindex"] = String(
-          options.focusedLine === line ? 0 : -1
-        );
-        node.properties["aria-description"] = options.lineDescription(line);
+      const contentNode = node as unknown as { children?: unknown[] };
+      const children = contentNode.children ?? [];
+      contentNode.children = children;
+      let gutter: unknown;
+      if (options.activatableLines && options.lineNumbers) {
+        gutter = {
+          type: "element",
+          tagName: "button",
+          properties: {
+            type: "button",
+            class: ["line-gutter"],
+            part: ["line-button"],
+            "data-line": String(line),
+            tabindex: String(options.focusedLine === line ? 0 : -1),
+            "aria-label": options.lineLabel(line),
+          },
+          children: [{ type: "text", value: options.lineNumberText(line) }],
+        };
+      } else if (options.lineNumbers) {
+        gutter = {
+          type: "element",
+          tagName: "span",
+          properties: {
+            class: ["line-number"],
+            "aria-hidden": "true",
+          },
+          children: [{ type: "text", value: options.lineNumberText(line) }],
+        };
       }
+      const source = {
+        type: "element",
+        tagName: "span",
+        properties: { class: ["line-source"] },
+        children: [...children],
+      };
+      children.splice(
+        0,
+        children.length,
+        ...(gutter ? [gutter, source] : [source])
+      );
       if (options.highlightedLines.has(line)) {
         parts.push("line-highlight");
         node.properties["data-highlighted"] = "";
@@ -540,11 +560,13 @@ export function codeBlockLineTransformer(
 export interface CodeBlockPlainCodeOptions {
   code: string;
   lineNumbers: boolean;
-  interactiveLines: boolean;
+  activatableLines: boolean;
   focusedLine: number;
   highlightedLines: Set<number>;
   activeLines: Set<number>;
   localize: LyraLocalizeFn;
+  lineLabel: (line: number) => string;
+  lineNumberText: (line: number) => string;
   onLineActivate: (line: number) => void;
   onLineKeyDown: (e: KeyboardEvent, line: number) => void;
 }
@@ -554,20 +576,18 @@ export interface CodeBlockPlainCodeOptions {
  * `<lr-code-block-core>` -- previously a byte-for-byte-duplicated private method on both classes,
  * moved here for the same drift-prevention reason as `codeBlockLineTransformer` above. Always
  * splits into per-line spans/buttons (not just while `lineNumbers` is set) -- the per-line wrapper
- * is what `highlight-lines`/`highlights`/`interactive-lines` attach to. `.split()` consumes each
+ * is what `highlight-lines`/`highlights`/`activatable-lines` attach to. `.split()` consumes each
  * newline character, so a literal `'\n'` text node is re-inserted between lines to keep the
  * non-line-numbered case's visual output (relying on `[part='pre']`'s `white-space: pre`) identical
  * to a single-text-node rendering -- the line-numbered case's `.line` elements are already
- * `display: block` (`code-block.styles.ts`) so that text node is inert there. `interactiveLines`
- * only takes effect alongside `lineNumbers` -- the shiki-highlighted path doesn't render gutter
- * buttons (see each component's own class doc), only `data-line`/`data-highlighted`/`data-active`/
- * `part="line-highlight"` from `codeBlockLineTransformer` above.
+ * `display: block` (`code-block.styles.ts`) so that text node is inert there. The gutter is a
+ * separate real button, leaving source text selectable in both plain and highlighted output.
  */
 export function renderCodeBlockPlainCode(
   options: CodeBlockPlainCodeOptions
 ): TemplateResult {
   const lines = options.code.split(/\r\n|\r|\n/);
-  const interactive = options.interactiveLines && options.lineNumbers;
+  const interactive = options.activatableLines && options.lineNumbers;
   // The `>` sits on its own line right before the expression (and `</code` right after it, closing
   // on the following line) so no incidental whitespace text node lands inside <code> -- its
   // textContent must be exactly the concatenated line text, matching a single-text-node rendering.
@@ -578,48 +598,36 @@ export function renderCodeBlockPlainCode(
       const lineNumber = index + 1;
       const isHighlighted = options.highlightedLines.has(lineNumber);
       const isActive = options.activeLines.has(lineNumber);
-      const part = interactive
-        ? isHighlighted
-          ? "line-button line-highlight"
-          : "line-button"
-        : isHighlighted
-        ? "line-highlight"
-        : nothing;
-      const lineTemplate = interactive
+      const part = isHighlighted ? "line-highlight" : nothing;
+      const gutter = interactive
         ? html`<button
             type="button"
-            class="line"
-            part=${part}
+            class="line-gutter"
+            part="line-button"
             data-line=${lineNumber}
-            ?data-highlighted=${isHighlighted}
-            ?data-active=${isActive}
-            aria-description=${options.localize(
-              "codeBlockLineLabel",
-              undefined,
-              { line: lineNumber }
-            )}
+            data-inline-handler
+            aria-label=${options.lineLabel(lineNumber)}
             tabindex=${options.focusedLine === lineNumber ? 0 : -1}
             @click=${() => options.onLineActivate(lineNumber)}
             @keydown=${(e: KeyboardEvent) =>
               options.onLineKeyDown(e, lineNumber)}
           >
-            ${line}
+            ${options.lineNumberText(lineNumber)}
           </button>`
-        : html`<span
-            class="line"
-            part=${part}
-            data-line=${lineNumber}
-            ?data-highlighted=${isHighlighted}
-            ?data-active=${isActive}
-            >${line}</span
-          >`;
-      // Only the non-line-numbered case needs the newline text node re-inserted -- the
-      // line-numbered case's .line elements are already display:block (code-block.styles.ts),
-      // and each component's own test asserts textContent has no embedded newlines between
-      // lines.
-      return index > 0 && !options.lineNumbers
-        ? html` ${lineTemplate}`
-        : lineTemplate;
+        : options.lineNumbers
+        ? html`<span class="line-number" aria-hidden="true"
+            >${options.lineNumberText(lineNumber)}</span
+          >`
+        : nothing;
+      const lineTemplate = html`<span
+        class="line"
+        part=${part}
+        data-line=${lineNumber}
+        ?data-highlighted=${isHighlighted}
+        ?data-active=${isActive}
+        >${gutter}<span class="line-source">${line}</span></span
+      >`;
+      return index > 0 ? html`${"\n"}${lineTemplate}` : lineTemplate;
     })}</code
   >`;
 }
@@ -633,6 +641,7 @@ export interface CodeBlockHeaderOptions {
   language: string;
   copyable: boolean;
   justCopied: boolean;
+  copyFailed: boolean;
   localize: LyraLocalizeFn;
   onToggle: () => void;
   onCopy: () => void;
@@ -674,10 +683,18 @@ export function renderCodeBlockHeader(
               <button
                 part="copy-button"
                 type="button"
-                aria-label=${codeBlockCopyLabel(options.localize, options.justCopied)}
+                aria-label=${codeBlockCopyLabel(
+                  options.localize,
+                  options.justCopied,
+                  options.copyFailed
+                )}
                 @click=${options.onCopy}
               >
-                ${options.justCopied ? options.localize('copied') : options.localize('copy')}
+                ${options.copyFailed
+                  ? options.localize('copyFailed')
+                  : options.justCopied
+                    ? options.localize('copied')
+                    : options.localize('copy')}
               </button>
             `
           : nothing}
@@ -692,9 +709,10 @@ export interface CodeBlockShellOptions {
   collapsible: boolean;
   collapsed: boolean;
   justCopied: boolean;
+  copyFailed: boolean;
   bodyId: string;
   /** Wins over the filename/language-derived default -- the host's own `aria-label`. */
-  accessibleLabel: string;
+  accessibleLabel: string | null;
   maxHeight: string;
   isDarkTheme: boolean;
   showSkeleton: boolean;
@@ -733,7 +751,7 @@ export function renderCodeBlockShell(
     options.collapsible;
   const bodyHidden = options.collapsible && options.collapsed;
   const bodyLabel =
-    options.accessibleLabel ||
+    options.accessibleLabel ??
     codeBlockBodyLabel(options.localize, options.filename, options.language);
 
   // Indentation preserved from both class files' own render() -- see renderCodeBlockHeader() above.
@@ -749,6 +767,7 @@ export function renderCodeBlockShell(
               language: options.language,
               copyable: options.copyable,
               justCopied: options.justCopied,
+              copyFailed: options.copyFailed,
               localize: options.localize,
               onToggle: options.onToggle,
               onCopy: options.onCopy,
@@ -775,7 +794,7 @@ export function renderCodeBlockShell(
           @focusin=${options.onBodyFocusIn}
         >
           ${options.showSkeleton
-            ? html`<lr-skeleton variant="rect" .announce=${false}></lr-skeleton>`
+            ? html`<lr-skeleton shape="rect" .announce=${false}></lr-skeleton>`
             : options.highlightedHtml !== null
               ? unsafeHTML(options.highlightedHtml)
               : html`<pre part="pre" class=${options.lineNumbers ? 'line-numbers' : nothing}>${options.renderPlainCode()}</pre>`}
@@ -801,9 +820,13 @@ export interface CodeBlockInteractionOptions {
   host: CodeBlockInteractionHost;
   setFocusedLine: (line: number) => void;
   setJustCopied: (value: boolean) => void;
+  setCopyFailed: (value: boolean) => void;
   setDarkTheme: (value: boolean) => void;
-  emitLineClick: (line: number) => void;
-  emitCopy: (text: string) => void;
+  emitLineActivate: (line: number) => void;
+  emitCopy: (outcome: LyraClipboardWriteSuccess) => void;
+  emitError: () => void;
+  emitCopyError: (outcome: LyraClipboardWriteFailure) => void;
+  requestToggle: (collapsed: boolean) => boolean;
   emitToggle: (collapsed: boolean) => void;
   emitTextSelect: (selection: CodeBlockSelection) => void;
 }
@@ -823,25 +846,13 @@ export interface CodeBlockInteractionOptions {
  */
 export class CodeBlockInteractionController {
   private copyTimer?: { owner: Window; handle: number };
-  private stopWatchingTheme?: () => void;
+  private copyGeneration = 0;
 
   constructor(private readonly options: CodeBlockInteractionOptions) {}
 
-  /** Applies the currently resolved theme and keeps it applied. Safe to call on every connect:
-   *  it retires any previous watcher first. */
-  startThemeWatcher(): void {
-    const { host, setDarkTheme } = this.options;
-    this.stopThemeWatcher();
-    setDarkTheme(resolveIsDarkTheme(host));
-    this.stopWatchingTheme = watchDarkTheme(host, () => setDarkTheme(resolveIsDarkTheme(host)));
-  }
-
-  /** Retires the theme watcher. Clears the handle *before* invoking it, so a re-entrant callback
-   *  can never run the same teardown twice. */
-  stopThemeWatcher(): void {
-    const stop = this.stopWatchingTheme;
-    this.stopWatchingTheme = undefined;
-    stop?.();
+  /** Re-resolves token colors after an imperative CSSOM/adopted-stylesheet theme change. */
+  refreshTheme(): void {
+    this.options.setDarkTheme(resolveIsDarkTheme(this.options.host));
   }
 
   /** Retires an in-flight copy-confirmation timer against the window that scheduled it. */
@@ -849,6 +860,19 @@ export class CodeBlockInteractionController {
     const timer = this.copyTimer;
     this.copyTimer = undefined;
     if (timer) timer.owner.clearTimeout(timer.handle);
+  }
+
+  /** Invalidates pending writes and feedback when the host disconnects or changes owner. */
+  disconnect(): void {
+    this.copyGeneration++;
+    this.cancelCopyTimer();
+    this.options.setJustCopied(false);
+    this.options.setCopyFailed(false);
+  }
+
+  private setCopyStatus(status: "rest" | "success" | "error"): void {
+    this.options.setJustCopied(status === "success");
+    this.options.setCopyFailed(status === "error");
   }
 
   /** Moves the roving tab stop to `line`, both in the component's state and on the rendered
@@ -864,14 +888,18 @@ export class CodeBlockInteractionController {
 
   onLineActivate = (line: number): void => {
     this.setFocusedLine(line);
-    this.options.emitLineClick(line);
+    this.options.emitLineActivate(line);
   };
 
   // Roving-tabindex keyboard navigation across the gutter's line buttons (only rendered by
-  // renderCodeBlockPlainCode() while interactiveLines && lineNumbers are both set).
+  // renderCodeBlockPlainCode() while activatableLines && lineNumbers are both set).
   onLineKeyDown = (e: KeyboardEvent, line: number): void => {
     const { host } = this.options;
-    const action = codeBlockLineKeyAction(e.key, line, codeBlockLineCount(host.code));
+    const action = codeBlockLineKeyAction(
+      e.key,
+      line,
+      codeBlockLineCount(host.code)
+    );
     if (action === null) return;
     e.preventDefault();
     if (action.kind === "activate") {
@@ -881,18 +909,32 @@ export class CodeBlockInteractionController {
     const next = action.line;
     this.setFocusedLine(next);
     void host.updateComplete.then(() => {
-      host.renderRoot.querySelector<HTMLElement>(`[data-line="${next}"]`)?.focus();
+      host.renderRoot
+        .querySelector<HTMLElement>(
+          `[part~="line-button"][data-line="${next}"]`
+        )
+        ?.focus();
     });
   };
 
   onBodyClick = (e: MouseEvent): void => {
-    if ((e.composedPath()[0] as Element | undefined)?.closest?.("button.line")) return;
+    if (
+      (e.composedPath()[0] as Element | undefined)?.closest?.(
+        "button[data-inline-handler]"
+      )
+    )
+      return;
     const line = codeBlockEventLine(e);
     if (line !== null) this.onLineActivate(line);
   };
 
   onBodyKeyDown = (e: KeyboardEvent): void => {
-    if ((e.composedPath()[0] as Element | undefined)?.closest?.("button.line")) return;
+    if (
+      (e.composedPath()[0] as Element | undefined)?.closest?.(
+        "button[data-inline-handler]"
+      )
+    )
+      return;
     const line = codeBlockEventLine(e);
     if (line !== null) this.onLineKeyDown(e, line);
   };
@@ -909,32 +951,50 @@ export class CodeBlockInteractionController {
     if (selection) this.options.emitTextSelect(selection);
   };
 
-  copy = (): void => {
+  copy = async (): Promise<void> => {
     const { host } = this.options;
     const owner = host.isConnected ? host.ownerDocument.defaultView : null;
-    writeCodeBlockClipboard(host.code, owner);
-    this.options.emitCopy(host.code);
-    if (!owner) return;
-    this.options.setJustCopied(true);
+    const text = host.code;
+    const generation = ++this.copyGeneration;
     this.cancelCopyTimer();
+    this.setCopyStatus("rest");
+    const outcome = await writeClipboardText(owner, text);
+    if (
+      !owner ||
+      !host.isConnected ||
+      host.ownerDocument.defaultView !== owner ||
+      generation !== this.copyGeneration
+    )
+      return;
+    if (!outcome.ok) {
+      this.setCopyStatus("error");
+      this.options.emitError();
+      this.options.emitCopyError(outcome);
+    } else {
+      this.options.emitCopy(outcome);
+      this.setCopyStatus("success");
+    }
     let handle = 0;
     handle = owner.setTimeout(() => {
       if (
         this.copyTimer?.owner !== owner ||
         this.copyTimer.handle !== handle ||
         !host.isConnected ||
-        host.ownerDocument.defaultView !== owner
+        host.ownerDocument.defaultView !== owner ||
+        generation !== this.copyGeneration
       )
         return;
       this.copyTimer = undefined;
-      this.options.setJustCopied(false);
+      this.setCopyStatus("rest");
     }, CODE_BLOCK_COPY_CONFIRM_MS);
     this.copyTimer = { owner, handle };
   };
 
   toggleCollapsed = (): void => {
     const { host } = this.options;
-    host.collapsed = !host.collapsed;
+    const collapsed = !host.collapsed;
+    if (!this.options.requestToggle(collapsed)) return;
+    host.collapsed = collapsed;
     this.options.emitToggle(host.collapsed);
   };
 }

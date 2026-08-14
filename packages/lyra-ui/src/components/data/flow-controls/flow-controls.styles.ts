@@ -3,10 +3,16 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='base'] {
+    box-sizing: border-box;
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     gap: var(--lr-space-2xs);
     padding: var(--lr-space-2xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -18,11 +24,12 @@ export const styles = css`
   }
   :host([orientation='vertical']) [part='base'] {
     flex-direction: column;
+    flex-wrap: nowrap;
   }
   /* Chrome-less escape, mirroring the shared LyraFrame vocabulary's frame="plain" (and lr-callout's [inline]): the
      cluster is often placed directly inside a host toolbar or panel that already draws its own
      border/background, where this floating-surface chrome doubles the frame. The box-shadow goes
-     with the rest of the box decoration, exactly as lr-flow-run-overlay's plain does -- a lift
+     with the rest of the box decoration, exactly as lr-flow-run-status's plain does -- a lift
      shadow with no surface under it reads as a stray smudge. Only the decoration goes: the flex
      layout, the gap, every button's --lr-icon-button-size hit-area floor, and their hover/focus
      affordances all stay.
@@ -103,12 +110,15 @@ export const styles = css`
     justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
+    max-inline-size: 100%;
     padding: 0;
     border: none;
     border-radius: var(--lr-radius);
     background: transparent;
     color: var(--lr-color-text);
     font: inherit;
+    white-space: normal;
+    overflow-wrap: anywhere;
     cursor: pointer;
   }
   ::slotted(button:hover:not(:disabled)) {

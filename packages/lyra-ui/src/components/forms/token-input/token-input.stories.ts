@@ -1,6 +1,26 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html } from 'lit'; import './token-input.js'; import type { LyraTokenInput, LyraTokenInputSize } from './token-input.class.js';
 const meta: Meta = { title: 'Token Input', component: 'lr-token-input', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
 export const Default: Story = { render: () => html`<lr-token-input label="Recipients" placeholder="Add a recipient…" .value=${['Ada', 'Grace']}></lr-token-input>` };
+
+export const BatchedPaste: Story = {
+  name: 'Batched paste / delimiter commit',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Paste or type several comma-separated values and press Enter. The control deduplicates and commits once; lr-add reports the final token plus the complete ordered added batch in detail.values.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-token-input
+      label="Recipients"
+      hint="Try Ada,Grace,Ada,Linus and press Enter."
+      @lr-add=${(event: CustomEvent<{ value: string; values: readonly string[] }>) =>
+        console.log('batched lr-add', event.detail)}
+    ></lr-token-input>
+  `,
+};
 /**
  * The `size` property scales the input-wrapper's row height across six tiers, matching `lr-input`'s
  * own height ladder (`2xs`–`xl`), and automatically adjusts padding and text size to stay visually

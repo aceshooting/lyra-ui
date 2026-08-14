@@ -32,7 +32,7 @@ export const SupportingTextAliases: Story = {
   render: () => html`
     <div style="display:grid; gap:var(--lr-space-m);">
       <lr-checkbox hint="Required for account recovery">Recovery email</lr-checkbox>
-      <lr-checkbox default-checked>
+      <lr-checkbox checked>
         Product updates
         <span slot="help-text">Shoelace-compatible supporting-text slot</span>
       </lr-checkbox>

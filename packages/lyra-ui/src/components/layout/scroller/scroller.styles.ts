@@ -23,12 +23,10 @@ export const styles = css`
     scrollbar-width: auto;
   }
 
-  :host([hide-scrollbar]) [part="viewport"],
   :host([without-scrollbar]) [part="viewport"] {
     scrollbar-width: none;
   }
 
-  :host([hide-scrollbar]) [part="viewport"]::-webkit-scrollbar,
   :host([without-scrollbar]) [part="viewport"]::-webkit-scrollbar {
     display: none;
   }
@@ -103,7 +101,7 @@ export const styles = css`
     background: linear-gradient(to top, var(--shadow-color, var(--lr-color-surface)), transparent);
   }
 
-  [part="control"] {
+  [part~="control"] {
     /* Keep the glyph-sized control compact by default (--lr-scroller-control-size
        is a consumer-tunable custom property, not this floor) while still giving the
        interactive box the shared minimum target size -- same "small glyph, padded hit
@@ -123,13 +121,13 @@ export const styles = css`
     cursor: pointer;
   }
 
-  [part="control"]:hover {
+  [part~="control"]:hover:not(:disabled) {
     background: var(--lr-color-brand-quiet);
   }
 
   /* Held down, the control scrolls repeatedly, so the press is the long-lived state here rather
      than an instant -- the deeper mix of the same brand-quiet fill marks it for its duration. */
-  [part="control"]:active {
+  [part~="control"]:active:not(:disabled) {
     background: color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
@@ -156,12 +154,12 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
   }
 
-  [part="control"]:disabled {
+  [part~="control"]:disabled {
     cursor: default;
     opacity: var(--lr-opacity-disabled);
   }
 
-  [part="control"]:focus-visible,
+  [part~="control"]:focus-visible,
   [part="viewport"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -172,11 +170,11 @@ export const styles = css`
     transform: scaleX(-1);
   }
 
-  :host([orientation="vertical"]) [part="previous"] {
+  :host([orientation="vertical"]) [part~="previous"] {
     grid-row: 1;
   }
 
-  :host([orientation="vertical"]) [part="next"] {
+  :host([orientation="vertical"]) [part~="next"] {
     grid-row: 3;
   }
 

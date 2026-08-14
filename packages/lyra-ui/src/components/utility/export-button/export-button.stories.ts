@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { CsvColumn } from '../../../lyra.js';
-import type { ExportFormatDescriptor, LyraExportButton } from './export-button.js';
+import type { LyraCsvColumn } from '../../../lyra.js';
+import type { LyraExportFormatDescriptor, LyraExportButton } from './export-button.js';
 
 const rows = [
   { id: 'a', name: 'Alpha', score: 92 },
@@ -9,7 +9,7 @@ const rows = [
   { id: 'c', name: 'Gamma', score: 76 },
 ];
 
-const columns: CsvColumn[] = [
+const columns: LyraCsvColumn[] = [
   { key: 'id', label: 'ID' },
   { key: 'name', label: 'Name' },
   { key: 'score', label: 'Score' },
@@ -48,15 +48,15 @@ export const Disabled: Story = {
 
 export const CustomFormats: Story = {
   render: () => {
-    const formats: ExportFormatDescriptor[] = [
+    const formats: LyraExportFormatDescriptor[] = [
       {
-        id: 'xlsx',
+        formatId: 'xlsx',
         label: 'Excel workbook',
         description: 'Preserves spreadsheet columns and data types',
         extension: 'xlsx',
       },
       {
-        id: 'pdf',
+        formatId: 'pdf',
         label: 'PDF report',
         description: 'Produces a presentation-ready document',
         extension: 'pdf',
@@ -109,11 +109,11 @@ export const NarrowLongContent: Story = {
         aria-label="Download the complete quarterly performance report"
         .formats=${[
           {
-            id: 'spreadsheet',
+            formatId: 'spreadsheet',
             label: 'Spreadsheet with all regional performance metrics',
             description: 'Includes every measured category and the complete reporting history',
           },
-          { id: 'json', label: 'Machine-readable JSON data' },
+          { formatId: 'json', label: 'Machine-readable JSON data' },
         ]}
       ></lr-export-button>
     </div>

@@ -3,23 +3,47 @@ import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import type { AgentStatus, AgentStatusKind, Citation, GroundingAssessment } from '../../../ai/types.js';
+import type { AgentStatusKind, Citation, GroundedClaim, GroundingAssessment } from '../../../ai/types.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import type { LyraDetailsEventMap } from '../../layout/details/details.class.js';
 import type { LyraGroundingSummaryEventMap } from '../../retrieval/grounding-summary/grounding-summary.class.js';
-import type { ToolTimelineEntry, ToolTimelineApprovalDetail, LyraToolTimelineEventMap } from '../tool-timeline/tool-timeline.class.js';
+import type {
+  ToolTimelineActivateDetail,
+  ToolTimelineEntry,
+  ToolTimelineApprovalDetail,
+  ToolTimelineRenderErrorDetail,
+  LyraToolTimelineEventMap,
+} from '../tool-timeline/tool-timeline.class.js';
+import { firstByIdentity } from '../collection-identity.js';
 import { styles } from './evaluation-run.styles.js';
+import {
+  agentStatusKind,
+  agentStatusLabel,
+  agentStatusMessage,
+  agentStatusVariant,
+  isAgentStatusTerminal,
+  type AgentStatusPresentation,
+} from '../agent-status-presentation.js';
+import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_evaluationRunExampleCancelledAnnounce, LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce, LYRA_DEFAULT_evaluationRunExampleFailedAnnounce, LYRA_DEFAULT_evaluationRunExampleLabel, LYRA_DEFAULT_evaluationRunExampleStartedAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingApprovalAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingInputAnnounce, LYRA_DEFAULT_evaluationRunFailedCount, LYRA_DEFAULT_evaluationRunGroundingHeading, LYRA_DEFAULT_evaluationRunInputHeading, LYRA_DEFAULT_evaluationRunLabel, LYRA_DEFAULT_evaluationRunOutputHeading, LYRA_DEFAULT_evaluationRunProgressLabel, LYRA_DEFAULT_evaluationRunProgressSummary, LYRA_DEFAULT_evaluationRunRunningCount, LYRA_DEFAULT_evaluationRunStatusCancelled, LYRA_DEFAULT_evaluationRunStatusIdle, LYRA_DEFAULT_evaluationRunStatusWaitingApproval, LYRA_DEFAULT_evaluationRunStatusWaitingInput, LYRA_DEFAULT_evaluationRunToolTraceHeading, LYRA_DEFAULT_noData, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** How an example's `input`/`output` text is rendered -- `'markdown'` (the default) through
- *  `<lr-markdown>`, `'code'` through `<lr-code-block>` (consulting the matching `*Language`
- *  property for shiki highlighting). */
+/** How evaluation content is rendered -- `'markdown'` (the default) through `<lr-markdown>`, or
+ *  `'code'` through `<lr-code-block>`. */
 export type EvaluationContentFormat = 'markdown' | 'code';
+
+/** One self-contained input/output payload in an evaluation example. */
+export interface EvaluationContent {
+  text: string;
+  /** `'markdown'` is used when unset. */
+  format?: EvaluationContentFormat;
+  /** A shiki-recognized language id, consulted only when `format` is `'code'`. */
+  language?: string;
+}
 
 /**
  * One example's result within an evaluation batch. `status` reuses the shared `AgentStatus`
@@ -35,15 +59,9 @@ export interface EvaluationExampleResult {
   id: string;
   /** Falls back to a localized "Example {index}" (1-based, in array order) when unset. */
   label?: string;
-  status: AgentStatus;
-  input: string;
-  /** `'markdown'` (the default, when unset) renders via `<lr-markdown>`. */
-  inputFormat?: EvaluationContentFormat;
-  /** A shiki-recognized language id, consulted only when `inputFormat` is `'code'`. */
-  inputLanguage?: string;
-  output: string;
-  outputFormat?: EvaluationContentFormat;
-  outputLanguage?: string;
+  status: AgentStatusPresentation;
+  input: EvaluationContent;
+  output: EvaluationContent;
   /** This example's grounding/citation-support assessment, when the run computed one. Omitted
    *  entirely means no grounding section renders for this example. */
   grounding?: GroundingAssessment;
@@ -57,7 +75,7 @@ export interface EvaluationExampleResult {
 
 /** `detail` for `lr-example-toggle`. */
 export interface EvaluationExampleToggleDetail {
-  id: string;
+  exampleId: string;
   expanded: boolean;
 }
 
@@ -76,10 +94,26 @@ export interface EvaluationToolApprovalDetail extends ToolTimelineApprovalDetail
   exampleId: string;
 }
 
+export interface EvaluationToolActivateDetail extends ToolTimelineActivateDetail {
+  exampleId: string;
+}
+
+export interface EvaluationToolRenderErrorDetail extends ToolTimelineRenderErrorDetail {
+  exampleId: string;
+}
+
+export interface EvaluationClaimSelectDetail {
+  exampleId: string;
+  claim: GroundedClaim;
+}
+
 export interface LyraEvaluationRunEventMap {
   'lr-example-toggle': CustomEvent<EvaluationExampleToggleDetail>;
   'lr-example-citation-select': CustomEvent<EvaluationCitationSelectDetail>;
+  'lr-example-claim-select': CustomEvent<EvaluationClaimSelectDetail>;
   'lr-example-tool-approval-decide': CustomEvent<EvaluationToolApprovalDetail>;
+  'lr-example-tool-activate': CustomEvent<EvaluationToolActivateDetail>;
+  'lr-example-tool-render-error': CustomEvent<EvaluationToolRenderErrorDetail>;
 }
 
 /** Badge tone per `AgentStatusKind` -- mirrors `<lr-span-waterfall>`'s own status-to-tone
@@ -100,18 +134,11 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
 const RUNNING_ERROR_KINDS = ['running', 'error'] as const;
 type CountKind = (typeof RUNNING_ERROR_KINDS)[number];
 
-/** The subset of `AgentStatusKind` that marks an example as no longer in flight -- counted
- *  against the batch's own `total` for the progress bar/summary, regardless of whether the
- *  outcome was a success. */
-function isTerminal(kind: AgentStatusKind): boolean {
-  return kind === 'done' || kind === 'error' || kind === 'cancelled';
-}
-
 /**
  * `<lr-evaluation-run>` — an evaluation batch's live progress: an overall `<lr-progress-bar>`
  * counting terminal (done/error/cancelled) examples against the batch total, plus one
  * `<lr-details>` disclosure per example showing its input/output (`<lr-markdown>` or
- * `<lr-code-block>`, per `inputFormat`/`outputFormat`), a `<lr-grounding-summary>` when the
+ * `<lr-code-block>`, per each payload's `format`), a `<lr-grounding-summary>` when the
  * example carries a `GroundingAssessment`, and a `<lr-tool-timeline>` when it carries
  * `toolTrace` entries. Controlled: `examples` mirrors this package's other data-driven
  * components' own convention (a plain prop the host replaces wholesale to update, never mutated
@@ -125,13 +152,18 @@ function isTerminal(kind: AgentStatusKind): boolean {
  * or approval decision came from.
  *
  * @customElement lr-evaluation-run
- * @event lr-example-toggle - An example's disclosure was expanded or collapsed. `detail: { id,
+ * @event lr-example-toggle - An example's disclosure was expanded or collapsed. `detail: { exampleId,
  *   expanded }`.
  * @event lr-example-citation-select - An evidence citation in a nested `<lr-grounding-summary>`
  *   was activated. `detail: { exampleId, citation }`.
  * @event lr-example-tool-approval-decide - A pending tool call in a nested `<lr-tool-timeline>`
  *   was approved or denied. `detail: { exampleId, invocationId, approved, args? }`. Cancelable:
  *   preventing this correlated event vetoes the nested decision and preserves its pending dialog.
+ * @event lr-example-claim-select - A grounded claim was activated. `detail: { exampleId, claim }`.
+ * @event lr-example-tool-activate - A nested tool entry was activated. `detail: { exampleId,
+ *   invocationId, sourceKey? }`.
+ * @event lr-example-tool-render-error - A nested tool renderer failed. `detail: { exampleId,
+ *   invocationId, sourceKey?, toolName, error }`.
  * @csspart base - The root wrapper.
  * @csspart header - The batch-progress header row.
  * @csspart header-label - The run's label, defaulting to a localized "Evaluation run".
@@ -146,6 +178,7 @@ function isTerminal(kind: AgentStatusKind): boolean {
  *   `<lr-details>` `summary` slot.
  * @csspart example-label - An example's label text.
  * @csspart example-status - An example's status badge.
+ * @csspart example-status-message - Optional caller-supplied detail for an example status.
  * @csspart input-section - Wrapper around an example's input heading + rendered content.
  * @csspart output-section - Wrapper around an example's output heading + rendered content.
  * @csspart grounding-section - Wrapper around an example's `<lr-grounding-summary>`, only
@@ -200,7 +233,8 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** The batch's examples so far. Controlled -- never mutated by this component; pass a new array
-   *  to update it (e.g. as each example finishes, or as the whole batch streams in). */
+   *  to update it (e.g. as each example finishes, or as the whole batch streams in). Duplicate ids
+   *  normalize first-wins before expansion, counts, announcements, rendering, and events. */
   @property({ attribute: false }) examples: EvaluationExampleResult[] = [];
 
   /** The batch's expected total example count. `null` (the default) derives it from
@@ -227,10 +261,14 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
    *  update to decide what to announce. */
   private previousStatusById = new Map<string, AgentStatusKind>();
 
+  private get normalizedExamples(): EvaluationExampleResult[] {
+    return firstByIdentity(Array.isArray(this.examples) ? this.examples : [], (example) => example.id);
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!changed.has('examples')) return;
-    const ids = new Set(this.examples.map((example) => example.id));
+    const ids = new Set(this.normalizedExamples.map((example) => example.id));
     let pruned: Set<string> | undefined;
     for (const id of this.expandedIds) {
       if (!ids.has(id)) {
@@ -250,7 +288,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
 
   private statusCounts(): Partial<Record<AgentStatusKind, number>> {
     const counts: Partial<Record<AgentStatusKind, number>> = {};
-    for (const example of this.examples) counts[example.status.kind] = (counts[example.status.kind] ?? 0) + 1;
+    for (const example of this.normalizedExamples) counts[example.status.kind] = (counts[example.status.kind] ?? 0) + 1;
     return counts;
   }
 
@@ -260,7 +298,10 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     });
   }
 
-  private statusLabel(kind: AgentStatusKind): string {
+  private statusText(status: AgentStatusPresentation): string {
+    const override = agentStatusLabel(status);
+    if (override !== undefined) return override;
+    const kind = agentStatusKind(status);
     switch (kind) {
       case 'idle':
         return this.localize('evaluationRunStatusIdle');
@@ -288,7 +329,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   private diffAndAnnounce(firstSight: boolean): void {
     const region = this.liveRegion;
     const nextStatusById = new Map<string, AgentStatusKind>();
-    this.examples.forEach((example, index) => {
+    this.normalizedExamples.forEach((example, index) => {
       nextStatusById.set(example.id, example.status.kind);
       if (firstSight || !region) return;
       const previous = this.previousStatusById.get(example.id);
@@ -336,12 +377,17 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     if (expanded) next.add(id);
     else next.delete(id);
     this.expandedIds = next;
-    this.emit('lr-example-toggle', { id, expanded });
+    this.emit('lr-example-toggle', { exampleId: id, expanded });
   }
 
   private onCitationSelect(exampleId: string, event: CustomEvent<LyraGroundingSummaryEventMap['lr-citation-select']['detail']>): void {
     event.stopPropagation();
     this.emit('lr-example-citation-select', { exampleId, citation: event.detail.citation });
+  }
+
+  private onClaimSelect(exampleId: string, event: CustomEvent<LyraGroundingSummaryEventMap['lr-claim-select']['detail']>): void {
+    event.stopPropagation();
+    this.emit('lr-example-claim-select', { exampleId, claim: event.detail.claim });
   }
 
   private onToolApprovalDecide(exampleId: string, event: CustomEvent<LyraToolTimelineEventMap['lr-tool-approval-decide']['detail']>): void {
@@ -354,16 +400,25 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     if (correlatedEvent.defaultPrevented) event.preventDefault();
   }
 
-  private renderContent(
-    text: string,
-    format: EvaluationContentFormat | undefined,
-    language: string | undefined,
-    part: 'input' | 'output',
-  ): TemplateResult {
-    if (format === 'code') {
-      return html`<lr-code-block part=${part} code=${text} language=${language ?? ''}></lr-code-block>`;
+  private onToolActivate(exampleId: string, event: CustomEvent<ToolTimelineActivateDetail>): void {
+    event.stopPropagation();
+    this.emit('lr-example-tool-activate', { exampleId, ...event.detail });
+  }
+
+  private onToolRenderError(exampleId: string, event: CustomEvent<ToolTimelineRenderErrorDetail>): void {
+    event.stopPropagation();
+    this.emit('lr-example-tool-render-error', { exampleId, ...event.detail });
+  }
+
+  private stopOwnedEvent(event: Event): void {
+    event.stopPropagation();
+  }
+
+  private renderContent(content: EvaluationContent, part: 'input' | 'output'): TemplateResult {
+    if (content.format === 'code') {
+      return html`<lr-code-block part=${part} code=${content.text} language=${content.language ?? ''}></lr-code-block>`;
     }
-    return html`<lr-markdown part=${part} content=${text}></lr-markdown>`;
+    return html`<lr-markdown part=${part} content=${content.text}></lr-markdown>`;
   }
 
   private renderGrounding(example: EvaluationExampleResult, grounding: GroundingAssessment): TemplateResult {
@@ -374,8 +429,11 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
           part="grounding-summary"
           .assessment=${grounding}
           .citations=${example.citations ?? []}
+          @lr-citation-activate=${this.stopOwnedEvent}
           @lr-citation-select=${(e: CustomEvent<LyraGroundingSummaryEventMap['lr-citation-select']['detail']>) =>
             this.onCitationSelect(example.id, e)}
+          @lr-claim-select=${(e: CustomEvent<LyraGroundingSummaryEventMap['lr-claim-select']['detail']>) =>
+            this.onClaimSelect(example.id, e)}
         ></lr-grounding-summary>
       </section>
     `;
@@ -390,34 +448,43 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
           .entries=${toolTrace}
           @lr-tool-approval-decide=${(e: CustomEvent<LyraToolTimelineEventMap['lr-tool-approval-decide']['detail']>) =>
             this.onToolApprovalDecide(example.id, e)}
+          @lr-tool-activate=${(e: CustomEvent<ToolTimelineActivateDetail>) => this.onToolActivate(example.id, e)}
+          @lr-tool-render-error=${(e: CustomEvent<ToolTimelineRenderErrorDetail>) =>
+            this.onToolRenderError(example.id, e)}
         ></lr-tool-timeline>
       </section>
     `;
   }
 
   private renderExample(example: EvaluationExampleResult, index: number): TemplateResult {
-    const kind = example.status.kind;
+    const kind = agentStatusKind(example.status);
+    const message = agentStatusMessage(example.status);
     const expanded = this.expandedIds.has(example.id);
     return html`
       <lr-details
         part="example"
         data-status=${kind}
         .open=${expanded}
+        @lr-show=${this.stopOwnedEvent}
+        @lr-after-show=${this.stopOwnedEvent}
+        @lr-hide=${this.stopOwnedEvent}
+        @lr-after-hide=${this.stopOwnedEvent}
         @lr-toggle=${(e: LyraDetailsEventMap['lr-toggle']) => this.onExampleToggle(example.id, e)}
       >
         <span slot="summary" part="example-summary">
           <span part="example-label">${this.exampleLabel(example, index)}</span>
-          <lr-badge part="example-status" variant=${STATUS_VARIANT[kind]}>${this.statusLabel(kind)}</lr-badge>
+          <lr-badge part="example-status" variant=${agentStatusVariant(example.status, STATUS_VARIANT[kind] ?? 'neutral')}>${this.statusText(example.status)}</lr-badge>
+          ${message !== undefined ? html`<span part="example-status-message">${message}</span>` : nothing}
         </span>
         ${expanded
           ? html`
               <section part="input-section">
                 <h4 part="section-heading">${this.localize('evaluationRunInputHeading')}</h4>
-                ${this.renderContent(example.input, example.inputFormat, example.inputLanguage, 'input')}
+                ${this.renderContent(example.input, 'input')}
               </section>
               <section part="output-section">
                 <h4 part="section-heading">${this.localize('evaluationRunOutputHeading')}</h4>
-                ${this.renderContent(example.output, example.outputFormat, example.outputLanguage, 'output')}
+                ${this.renderContent(example.output, 'output')}
               </section>
               ${example.grounding ? this.renderGrounding(example, example.grounding) : nothing}
               ${example.toolTrace && example.toolTrace.length > 0 ? this.renderToolTrace(example, example.toolTrace) : nothing}
@@ -428,19 +495,25 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   }
 
   override render(): TemplateResult {
+    const examples = this.normalizedExamples;
     const configuredTotal = this.total != null
-      ? finiteCount(this.total, this.examples.length)
-      : this.examples.length;
-    const resolvedTotal = Math.max(configuredTotal, this.examples.length);
+      ? finiteCount(this.total, examples.length)
+      : examples.length;
+    const resolvedTotal = Math.max(configuredTotal, examples.length);
     const counts = this.statusCounts();
-    const completed = this.examples.filter((example) => isTerminal(example.status.kind)).length;
-    const headerLabel = this.getAttribute('aria-label') || this.label || this.localize('evaluationRunLabel');
+    const completed = examples.filter((example) => isAgentStatusTerminal(example.status)).length;
+    const visibleLabel = this.label || this.localize('evaluationRunLabel');
+    const headerLabel = overallSemanticLabel(this, visibleLabel);
     const number = getNumberFormat(this.effectiveLocale);
 
     return html`
-      <div part="base" role="region" aria-label=${headerLabel}>
+      <div
+        part="base"
+        role=${overallSemanticRole(this, 'region') ?? nothing}
+        aria-label=${headerLabel ?? nothing}
+      >
         <div part="header">
-          <span part="header-label">${headerLabel}</span>
+          <span part="header-label">${visibleLabel}</span>
           <lr-progress-bar
             part="progress"
             value=${completed}
@@ -468,9 +541,9 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
             })}
           </span>
         </div>
-        ${this.examples.length === 0
+        ${examples.length === 0
           ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
-          : html`<div part="examples">${this.examples.map((example, index) => this.renderExample(example, index))}</div>`}
+          : html`<div part="examples">${examples.map((example, index) => this.renderExample(example, index))}</div>`}
       </div>
       <lr-live-region part="live-region" mode="polite"></lr-live-region>
     `;

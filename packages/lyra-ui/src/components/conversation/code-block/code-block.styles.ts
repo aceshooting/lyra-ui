@@ -3,16 +3,6 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    /* Consumer-tunable scroll cap -- 'none' means the block grows with its
-       content, matching every other block-level component in this library
-       until a caller opts in via the max-height attribute (same convention
-       as --lr-json-viewer-max-height). */
-    --lr-code-block-max-height: none;
-    /* Contained here rather than left as a bare font-family literal so a
-       host page can retheme it -- same rationale as --lr-markdown-font-mono
-       and --lr-json-viewer-font, no shared --lr-* monospace token
-       exists to resolve through. */
-    --lr-code-block-font: var(--lr-font-mono);
     font-size: var(--lr-font-size-sm);
   }
   [part='base'] {
@@ -60,7 +50,11 @@ export const styles = css`
     color: var(--lr-color-brand);
   }
   [part='toggle']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
     color: var(--lr-color-brand);
   }
   [part='toggle'] .chevron {
@@ -88,7 +82,7 @@ export const styles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-family: var(--lr-code-block-font);
+    font-family: var(--lr-code-block-font, var(--lr-font-mono));
     font-size: var(--lr-font-size-xs);
     font-weight: var(--lr-font-weight-semibold);
     color: var(--lr-color-text);
@@ -138,7 +132,11 @@ export const styles = css`
     color: var(--lr-color-brand);
   }
   [part='copy-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
     color: var(--lr-color-brand);
   }
   [part='toggle']:focus-visible,
@@ -148,7 +146,7 @@ export const styles = css`
   }
   [part='body'] {
     display: block;
-    max-block-size: var(--lr-code-block-max-height);
+    max-block-size: var(--lr-code-block-max-height, none);
     overflow: auto;
   }
   [part='body'][hidden] {
@@ -194,7 +192,7 @@ export const styles = css`
        since an element's own style attribute always wins over an external
        stylesheet rule at equal or lower specificity. */
     background: var(--lr-color-surface);
-    font-family: var(--lr-code-block-font);
+    font-family: var(--lr-code-block-font, var(--lr-font-mono));
     font-size: inherit;
     line-height: var(--lr-line-height-normal);
     white-space: pre;
@@ -211,15 +209,10 @@ export const styles = css`
   [part='code'] {
     font-family: inherit;
   }
-  [part='pre'].line-numbers {
-    counter-reset: lr-code-line;
-  }
   [part='pre'].line-numbers .line {
     display: block;
-    counter-increment: lr-code-line;
   }
-  [part='pre'].line-numbers .line::before {
-    content: counter(lr-code-line);
+  [part='pre'] .line-number {
     display: inline-block;
     min-inline-size: var(--lr-size-2-5ch);
     margin-inline-end: var(--lr-space-s);
@@ -247,18 +240,18 @@ export const styles = css`
      any ancestor/theme-level value, which is exactly what a state-styling override hook must not
      do. Unset, it resolves to --lr-color-brand -- byte-identical to before it existed. */
   [part='pre'] [data-active] {
-    outline: var(--lr-border-width-thin) solid
-      var(--lr-code-block-active-line-outline-color, var(--lr-color-brand));
+    outline: var(--lr-border-width-thin) solid var(--lr-code-block-active-line-outline-color, var(--lr-color-brand));
     outline-offset: calc(-1 * var(--lr-border-width-thin));
   }
-  /* Native button reset for interactive-lines' gutter-button rendering (renderPlainCode() only --
-     the shiki-highlighted path doesn't render gutter buttons, see the class doc) -- an interactive
-     line's <button class="line"> must look like the plain <span class="line"> it replaces. */
-  [part='pre'] button.line,
-  [part='pre'] [role='button'].line {
-    display: block;
-    inline-size: 100%;
+  /* The gutter alone is interactive; source remains ordinary selectable text. */
+  [part='pre'] button.line-gutter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: end;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     margin: 0;
+    margin-inline-end: var(--lr-space-s);
     padding: 0;
     border: none;
     background: none;
@@ -267,19 +260,17 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
-     -- (0,1,0) total, functionally identical selection to \`[part='pre'] button.line:hover\`
-     ((0,3,1)) but now losing (on the pseudo-element tiebreak) to a consumer's own
-     \`::part(line-button):hover\` override ((0,1,1)) without that consumer needing !important --
-     same fix shape as lr-attachment-trigger's/lr-copy-button's own :where()-wrapped hover rule. */
-  :where([part='pre']) :where(button.line, [role='button'].line):hover {
+  :where([part='pre']) :where(button.line-gutter):hover {
     background: var(--lr-color-brand-quiet);
   }
-  :where([part='pre']) :where(button.line, [role='button'].line):active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  :where([part='pre']) :where(button.line-gutter):active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='pre'] button.line:focus-visible,
-  [part='pre'] [role='button'].line:focus-visible {
+  [part='pre'] button.line-gutter:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
@@ -298,8 +289,8 @@ export const styles = css`
    * a --lr-* token" in this file: these values come from shiki's theme
    * data, not this library's design tokens.
    */
-  /* Gated on [part='body'][data-dark-theme='true'] (kept live by shiki-dark-theme.ts's
-     watchDarkTheme(), off the component's own resolved --lr-color-text/--lr-color-surface) rather
+  /* Gated on [part='body'][data-dark-theme='true'] (kept live by the shared ThemeWatcher, off the
+     component's own resolved --lr-color-text/--lr-color-surface) rather
      than the OS-level prefers-color-scheme media query directly -- a consumer who sets
      --lr-theme-color-* explicitly, independent of the OS's own setting, must still get the dark
      shiki theme, matching every other --lr-color-* token's consumer-overrides-first resolution. */

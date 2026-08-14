@@ -33,7 +33,9 @@ export interface LyraHighlightLayerEventMap {
  * `<lr-highlight-layer>` — a presentational overlay that paints highlight rectangles
  * (percent-of-box coordinates) over positioned content and owns their activation, active/flash
  * styling, and keyboard access. `items` order is the caller's own reading order; the layer does not
- * re-sort geometrically. Fills its nearest positioned ancestor.
+ * re-sort geometrically. Fills its nearest positioned ancestor. With `interactive=false`, the
+ * overlay remains pure paint (`aria-hidden`, no group owner or controls). If no item has a valid
+ * rectangle, the component renders no subtree at all.
  *
  * @customElement lr-highlight-layer
  * @event lr-highlight-activate - A rect was activated (click, or Enter/Space while focused).
@@ -126,7 +128,8 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     this.clearFlash();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.clearFlash();
   }
 
@@ -268,18 +271,26 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
 
   override render(): TemplateResult | typeof nothing {
     if (this.items.length === 0) return nothing;
+    const renderedIndexes = this.itemIndexesWithRects();
+    if (renderedIndexes.length === 0) return nothing;
     const tabStop = this.tabStopIndex();
     const activeIndex = this.activeId
       ? this.items.findIndex(
           (item) => item.id === this.activeId && this.safeRects(item).length > 0,
         )
       : -1;
-    const renderedIndexes = this.itemIndexesWithRects();
     const renderedPosition = new Map(renderedIndexes.map((itemIndex, position) => [itemIndex, position]));
     const useActionList = this.interactive && renderedIndexes.length > 1;
-    const ariaLabel = hostAriaLabel(this) ?? this.localize('highlightLayerLabel');
+    const ariaLabel = this.interactive
+      ? hostAriaLabel(this) ?? this.localize('highlightLayerLabel')
+      : undefined;
     return html`
-      <div part="base" role="group" aria-label=${ariaLabel}>
+      <div
+        part="base"
+        role=${this.interactive ? 'group' : nothing}
+        aria-label=${ariaLabel ?? nothing}
+        aria-hidden=${!this.interactive ? 'true' : nothing}
+      >
         ${this.items.map((item, index) => {
           const isActive = activeIndex === index;
           const isFlash = this.flashingItem === item;

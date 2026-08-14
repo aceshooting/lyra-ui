@@ -63,6 +63,13 @@ export const styles = css`
     color: var(--lr-color-fill-loud);
     font-size: var(--lr-font-size-lg);
     line-height: var(--lr-line-height-none);
+    min-inline-size: 0;
+    max-inline-size: var(--lr-icon-button-size);
+    overflow: hidden;
+  }
+
+  [part='icon'] ::slotted(*) {
+    max-inline-size: 100%;
   }
 
   [part='icon'][hidden] {

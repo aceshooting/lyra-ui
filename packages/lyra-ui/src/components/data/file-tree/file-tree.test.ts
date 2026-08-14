@@ -46,6 +46,48 @@ describe('lr-file-tree', () => {
     expect(description).to.include(new Intl.NumberFormat('ar').format(56));
   });
 
+  it('normalizes diff metadata once to finite nonnegative integers', async () => {
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree></lr-file-tree>`);
+    el.nodes = [{ path: 'changed.ts', additions: Number.NaN, deletions: Number.POSITIVE_INFINITY }];
+    await el.updateComplete;
+    const description = el.shadowRoot!.querySelector('lr-tree')!.data[0].description as string;
+
+    expect(description).to.include('+0');
+    expect(description).to.include('-0');
+    expect(description).to.not.include('NaN');
+    expect(description).to.not.include('∞');
+  });
+
+  it('clone-owns a frozen, duplicate-safe, cycle/depth-bounded node snapshot', async () => {
+    const duplicate = { path: 'root', name: 'ignored duplicate' };
+    const root: Record<string, unknown> = { path: 'root', name: 'Root', kind: 'directory' };
+    root['children'] = [root];
+    const deepRoot: Record<string, unknown> = { path: 'deep-0', kind: 'directory' };
+    let cursor = deepRoot;
+    for (let depth = 1; depth < 200; depth++) {
+      const child: Record<string, unknown> = { path: `deep-${depth}`, kind: 'directory' };
+      cursor['children'] = [child];
+      cursor = child;
+    }
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree></lr-file-tree>`);
+    el.nodes = [root, duplicate, deepRoot] as never;
+    root['name'] = 'Mutated';
+    await el.updateComplete;
+
+    expect(el.nodes.map((node) => node.path)).to.deep.equal(['root', 'deep-0']);
+    expect(el.nodes[0]!.name).to.equal('Root');
+    expect(el.nodes[0]!.children).to.deep.equal([]);
+    expect(Object.isFrozen(el.nodes)).to.be.true;
+    expect(Object.isFrozen(el.nodes[0]!)).to.be.true;
+    let depth = 0;
+    let node: FileTreeNode | undefined = el.nodes[1];
+    while (node) {
+      depth++;
+      node = node.children?.[0];
+    }
+    expect(depth).to.be.at.most(65);
+  });
+
   it('forwards a live host aria-label to the internal tree with author precedence', async () => {
     const el = (await fixture(
       html`<lr-file-tree label="Files" aria-label="Workspace files"></lr-file-tree>`,

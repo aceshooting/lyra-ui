@@ -4,13 +4,6 @@ export const styles = css`
   :host {
     display: block;
     overflow-wrap: break-word;
-    /* Not derived from any --lr-* token in tokens.styles.ts -- there's no
-       shared "inline cursor bar" token to resolve through, so this component
-       defines its own scoped custom properties, exactly the way
-       lr-typing-indicator's --lr-typing-cursor-width/-height do for its
-       own (near-identical) blinking cursor. */
-    --lr-streaming-text-cursor-width: var(--lr-size-0-125rem);
-    --lr-streaming-text-cursor-height: var(--lr-size-1em);
   }
 
   [part='base'] {
@@ -31,11 +24,11 @@ export const styles = css`
   [part='cursor'] {
     display: inline-block;
     vertical-align: text-bottom;
-    inline-size: var(--lr-streaming-text-cursor-width);
-    block-size: var(--lr-streaming-text-cursor-height);
+    inline-size: var(--lr-inline-cursor-width, var(--lr-size-0-125rem));
+    block-size: var(--lr-inline-cursor-height, var(--lr-size-1em));
     margin-inline-start: var(--lr-space-xs);
     background: currentColor;
-    border-radius: var(--lr-streaming-text-cursor-width);
+    border-radius: var(--lr-inline-cursor-width, var(--lr-size-0-125rem));
     /* Ambient, infinite "still alive" indicator, not a discrete state flip --
        same reasoning as lr-typing-indicator's own cursor variant, which
        uses this same token for the identical blink pattern. */

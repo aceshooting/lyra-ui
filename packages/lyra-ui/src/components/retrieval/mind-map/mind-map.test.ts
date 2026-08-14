@@ -390,7 +390,7 @@ it('resolves the default svg accessible name through a .strings override for min
   expect(el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('aria-label')).to.equal('Carte mentale');
 });
 
-it('preserves an explicitly empty host aria-label across semantic owners and the implicit hub, then restores label after removal', async () => {
+it('keeps explicit-empty and dynamic host naming distinct from the SVG, tree, and implicit hub', async () => {
   const roots: LyraTopic[] = [
     { id: 'research', label: 'Research' },
     { id: 'sources', label: 'Sources' },
@@ -405,16 +405,24 @@ it('preserves an explicitly empty host aria-label across semantic owners and the
       (node) => node.textContent ?? '',
     );
 
-  for (const owner of [svg(), tree()]) {
-    expect(owner.hasAttribute('aria-label')).to.equal(true);
-    expect(owner.getAttribute('aria-label')).to.equal('');
-  }
-  expect(nodeLabels()).to.include('');
+  expect(el.hasAttribute('aria-label')).to.equal(true);
+  expect(el.getAttribute('aria-label')).to.equal('');
+  expect(svg().getAttribute('aria-label')).to.equal('Knowledge topics');
+  expect(tree().getAttribute('aria-label')).to.equal(null);
+  expect(nodeLabels()).to.include('Knowledge topics');
+
+  el.setAttribute('aria-label', 'Author map');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Author map');
+  expect(svg().getAttribute('aria-label')).to.equal('Knowledge topics');
+  expect(tree().getAttribute('aria-label')).to.equal(null);
+  expect(nodeLabels()).to.include('Knowledge topics');
 
   el.removeAttribute('aria-label');
   await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal(null);
   expect(svg().getAttribute('aria-label')).to.equal('Knowledge topics');
-  expect(tree().getAttribute('aria-label')).to.equal('Knowledge topics');
+  expect(tree().getAttribute('aria-label')).to.equal(null);
   expect(nodeLabels()).to.include('Knowledge topics');
 });
 

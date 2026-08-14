@@ -21,6 +21,55 @@ function sanitizeDecorativeSeparatorClone(clone: Element): void {
   }
 }
 
+function decorativeSeparatorClone(source: Element): Element {
+  const clone = source.cloneNode(true) as Element;
+  sanitizeDecorativeSeparatorClone(clone);
+  clone.setAttribute('slot', 'separator');
+  return clone;
+}
+
+/** Patch a generated decorative tree without replacing identity-compatible custom elements. */
+function patchDecorativeSeparator(source: Element, clone: Element): void {
+  const desired = decorativeSeparatorClone(source);
+  const patch = (next: Node, current: Node): void => {
+    if (next.nodeType === 3 && current.nodeType === 3) {
+      if (current.textContent !== next.textContent) current.textContent = next.textContent;
+      return;
+    }
+    if (next.nodeType !== 1 || current.nodeType !== 1) return;
+    const nextElement = next as Element;
+    const currentElement = current as Element;
+    for (const name of currentElement.getAttributeNames()) {
+      if (!nextElement.hasAttribute(name)) currentElement.removeAttribute(name);
+    }
+    for (const name of nextElement.getAttributeNames()) {
+      const value = nextElement.getAttribute(name)!;
+      if (currentElement.getAttribute(name) !== value) currentElement.setAttribute(name, value);
+    }
+    const nextChildren = [...nextElement.childNodes];
+    for (let index = 0; index < nextChildren.length; index += 1) {
+      const nextChild = nextChildren[index];
+      const currentChild = currentElement.childNodes[index];
+      if (!nextChild) continue;
+      if (!currentChild) {
+        currentElement.append(nextChild.cloneNode(true));
+        continue;
+      }
+      const compatible = nextChild.nodeType === currentChild.nodeType &&
+        (nextChild.nodeType !== 1 ||
+          (currentChild.nodeType === 1 &&
+            (nextChild as Element).localName === (currentChild as Element).localName &&
+            (nextChild as Element).namespaceURI === (currentChild as Element).namespaceURI));
+      if (compatible) patch(nextChild, currentChild);
+      else currentChild.replaceWith(nextChild.cloneNode(true));
+    }
+    while (currentElement.childNodes.length > nextChildren.length) {
+      currentElement.lastChild?.remove();
+    }
+  };
+  patch(desired, clone);
+}
+
 /**
  * `<lr-breadcrumb>` — a responsive navigation trail.
  *
@@ -28,8 +77,8 @@ function sanitizeDecorativeSeparatorClone(clone: Element): void {
  * @slot - `<lr-breadcrumb-item>` children.
  * @slot separator - Decorative visual separator copied into each item that does not provide its own
  *   separator. Generated copies are inert and aria-hidden, with identifiers, ID references, form
- *   associations, and submission attributes removed; do not use this slot for interactive content or
- *   form controls.
+ *   associations, and submission attributes removed. Source mutations patch identity-compatible
+ *   copies in place; do not use this slot for interactive content or form controls.
  * @csspart base - Compatibility name for the navigation wrapper; use `breadcrumb`.
  * @csspart breadcrumb - The navigation wrapper. It is the same node as `base`.
  * @csspart list - The `role="list"` flex row wrapping the slotted items.
@@ -59,7 +108,10 @@ export class LyraBreadcrumb extends LyraElement {
    * remains the highest-priority override. */
   @property() label = '';
 
-  private generatedSeparators = new Map<Element, Element[]>();
+  private generatedSeparators = new Map<Element, Array<{ source: Element; clone: Element }>>();
+  private separatorObserver?: MutationObserver;
+  private separatorObserverDocument?: Document;
+  private firstItem?: Element;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -68,31 +120,86 @@ export class LyraBreadcrumb extends LyraElement {
 
   override disconnectedCallback(): void {
     this.clearGeneratedSeparators();
+    this.separatorObserver?.disconnect();
+    this.separatorObserver = undefined;
+    this.separatorObserverDocument = undefined;
+    this.setFirstItem(undefined);
     super.disconnectedCallback();
   }
 
   private clearGeneratedSeparators(): void {
-    for (const nodes of this.generatedSeparators.values()) nodes.forEach((node) => node.remove());
+    for (const records of this.generatedSeparators.values()) {
+      records.forEach(({ clone }) => clone.remove());
+    }
     this.generatedSeparators.clear();
   }
 
-  private syncSeparators = (): void => {
-    this.clearGeneratedSeparators();
-    const separatorSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="separator"]');
-    const sources = separatorSlot?.assignedElements({ flatten: true });
-    if (!sources?.length) return;
+  private setFirstItem(item: Element | undefined): void {
+    if (this.firstItem === item) return;
+    this.firstItem?.removeAttribute('data-lr-breadcrumb-first');
+    this.firstItem = item;
+    item?.setAttribute('data-lr-breadcrumb-first', '');
+  }
 
-    for (const item of this.children) {
-      if (item.localName !== tag('breadcrumb-item')) continue;
-      if (item.querySelector(':scope > [slot=separator]')) continue;
-      const clones = sources.map((source) => {
-        const clone = source.cloneNode(true) as Element;
-        sanitizeDecorativeSeparatorClone(clone);
-        clone.setAttribute('slot', 'separator');
-        item.append(clone);
-        return clone;
+  private observeSeparatorSources(sources: Element[]): void {
+    const ownerDocument = this.ownerDocument;
+    if (!this.separatorObserver || this.separatorObserverDocument !== ownerDocument) {
+      this.separatorObserver?.disconnect();
+      const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
+      if (!MutationObserverCtor) return;
+      this.separatorObserver = new MutationObserverCtor(this.syncSeparators);
+      this.separatorObserverDocument = ownerDocument;
+    } else {
+      this.separatorObserver.disconnect();
+    }
+    for (const source of sources) {
+      this.separatorObserver.observe(source, {
+        attributes: true,
+        characterData: true,
+        childList: true,
+        subtree: true,
       });
-      this.generatedSeparators.set(item, clones);
+    }
+  }
+
+  private syncSeparators = (): void => {
+    const separatorSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="separator"]');
+    const sources = separatorSlot?.assignedElements({ flatten: true }) ?? [];
+    this.observeSeparatorSources(sources);
+    const items = [...this.children].filter((item) => item.localName === tag('breadcrumb-item'));
+    this.setFirstItem(items[0]);
+    const owned = new Set(items);
+
+    for (const [item, records] of this.generatedSeparators) {
+      if (owned.has(item)) continue;
+      records.forEach(({ clone }) => clone.remove());
+      this.generatedSeparators.delete(item);
+    }
+
+    for (const item of items) {
+      const existing = this.generatedSeparators.get(item) ?? [];
+      const generated = new Set(existing.map(({ clone }) => clone));
+      const hasAuthoredSeparator = [...item.children].some(
+        (child) => child.getAttribute('slot') === 'separator' && !generated.has(child),
+      );
+      if (hasAuthoredSeparator || sources.length === 0) {
+        existing.forEach(({ clone }) => clone.remove());
+        this.generatedSeparators.delete(item);
+        continue;
+      }
+      const next = sources.map((source, index) => {
+        const record = existing[index];
+        if (record?.source === source) {
+          patchDecorativeSeparator(source, record.clone);
+          return record;
+        }
+        record?.clone.remove();
+        const clone = decorativeSeparatorClone(source);
+        item.append(clone);
+        return { source, clone };
+      });
+      for (const record of existing.slice(sources.length)) record.clone.remove();
+      this.generatedSeparators.set(item, next);
     }
   };
 

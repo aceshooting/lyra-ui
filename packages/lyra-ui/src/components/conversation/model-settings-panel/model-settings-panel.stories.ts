@@ -22,7 +22,7 @@ export const Vertical: Story = {
   render: () => html`
     <lr-model-settings-panel
       provider="ollama"
-      model-value="mistral"
+      model="mistral"
       .catalog=${OLLAMA_CATALOG}
       temperature="0.7"
     ></lr-model-settings-panel>
@@ -34,7 +34,7 @@ export const Compact: Story = {
     <lr-model-settings-panel
       layout="compact"
       provider="openai"
-      model-value="gpt-4.1"
+      model="gpt-4.1"
       .catalog=${OPENAI_CATALOG}
       temperature="1"
     ></lr-model-settings-panel>
@@ -51,7 +51,7 @@ export const CompactNarrow: Story = {
       <lr-model-settings-panel
         layout="compact"
         provider="openai"
-        model-value="gpt-4.1"
+        model="gpt-4.1"
         .catalog=${OPENAI_CATALOG}
         temperature="1"
       ></lr-model-settings-panel>
@@ -71,12 +71,12 @@ export const AllowCustomModel: Story = {
   `,
 };
 
-/** A `model-value` absent from the current `catalog` still renders, as `lr-model-select`'s own stale-value row. */
+/** A `model` absent from the current `catalog` still renders, as `lr-model-select`'s own stale-value row. */
 export const StaleModelValue: Story = {
   render: () => html`
     <lr-model-settings-panel
       provider="ollama"
-      model-value="llama2-uncensored"
+      model="llama2-uncensored"
       .catalog=${OLLAMA_CATALOG}
       temperature="0.9"
     ></lr-model-settings-panel>
@@ -87,7 +87,7 @@ export const WideTemperatureRange: Story = {
   render: () => html`
     <lr-model-settings-panel
       provider="anthropic"
-      model-value="claude"
+      model="claude"
       temperature="0.5"
       temperature-min="0"
       temperature-max="1"
@@ -101,7 +101,7 @@ export const ListensForConsolidatedChange: Story = {
     <div style="display: flex; flex-direction: column; gap: 1rem;">
       <lr-model-settings-panel
         provider="ollama"
-        model-value="mistral"
+        model="mistral"
         .catalog=${OLLAMA_CATALOG}
         temperature="0.7"
         @lr-change=${(e: CustomEvent) => {

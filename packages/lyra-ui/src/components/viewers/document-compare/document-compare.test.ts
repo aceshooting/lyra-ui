@@ -6,6 +6,15 @@ import type { LyraDocumentPreview } from '../document-preview/document-preview.c
 import { styles } from './document-compare.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
+function stubClipboard(target: Navigator, value: unknown): () => void {
+  const descriptor = Object.getOwnPropertyDescriptor(target, 'clipboard');
+  Object.defineProperty(target, 'clipboard', { configurable: true, value });
+  return () => {
+    if (descriptor) Object.defineProperty(target, 'clipboard', descriptor);
+    else Reflect.deleteProperty(target, 'clipboard');
+  };
+}
+
 describe('lr-document-compare', () => {
   describe('view="diff" (default)', () => {
     it('renders an internal lr-diff-view forwarding oldVersion.text/newVersion.text', async () => {
@@ -61,18 +70,28 @@ describe('lr-document-compare', () => {
     });
 
     it('bubbles lr-copy unchanged from the internal lr-diff-view', async () => {
-      const el = (await fixture(html`
-        <lr-document-compare
-          copyable
-          .oldVersion=${{ id: 'v1', name: 'v1', text: 'a' }}
-          .newVersion=${{ id: 'v2', name: 'v2', text: 'b' }}
-        ></lr-document-compare>
-      `)) as LyraDocumentCompare;
-      await el.updateComplete;
-      const button = el.shadowRoot!.querySelector('lr-diff-view')!.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
-      setTimeout(() => button.click());
-      const ev = await oneEvent(el, 'lr-copy');
-      expect(ev.detail.text).to.equal('- a\n+ b');
+      const restoreClipboard = stubClipboard(navigator, { writeText: () => Promise.resolve() });
+      try {
+        const el = (await fixture(html`
+          <lr-document-compare
+            copyable
+            .oldVersion=${{ id: 'v1', name: 'v1', text: 'a' }}
+            .newVersion=${{ id: 'v2', name: 'v2', text: 'b' }}
+          ></lr-document-compare>
+        `)) as LyraDocumentCompare;
+        await el.updateComplete;
+        const diff = el.shadowRoot!.querySelector('lr-diff-view') as HTMLElement & {
+          updateComplete: Promise<unknown>;
+        };
+        await diff.updateComplete;
+        const copied = oneEvent(el, 'lr-copy');
+        (diff.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+        const event = await copied;
+        expect(event.detail).to.deep.equal({ ok: true, text: '- a\n+ b' });
+        expect(Object.isFrozen(event.detail)).to.equal(true);
+      } finally {
+        restoreClipboard();
+      }
     });
   });
 
@@ -198,6 +217,66 @@ describe('lr-document-compare', () => {
       paneOld.scrollTop = oldMax;
       paneOld.dispatchEvent(new Event('scroll'));
       expect(paneNew.scrollTop).to.equal(0);
+    });
+
+    it('resets both panes when one source identity changes while scroll sync is enabled', async () => {
+      const el = await sideBySideFixture();
+      const paneOld = el.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;
+      const paneNew = el.shadowRoot!.querySelector('[part="pane-new"]') as HTMLElement;
+      paneOld.scrollTop = 60;
+      paneNew.scrollTop = 40;
+      el.oldVersion = { id: 'replacement', name: 'Replacement', mimeType: 'application/octet-stream' };
+      await el.updateComplete;
+      expect(paneOld.scrollTop).to.equal(0);
+      expect(paneNew.scrollTop).to.equal(0);
+    });
+
+    it('resets only the replaced pane when scroll sync is disabled', async () => {
+      const el = await sideBySideFixture(false);
+      const paneOld = el.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;
+      const paneNew = el.shadowRoot!.querySelector('[part="pane-new"]') as HTMLElement;
+      paneOld.scrollTop = 60;
+      paneNew.scrollTop = 40;
+      el.oldVersion = { id: 'replacement', name: 'Replacement', mimeType: 'application/octet-stream' };
+      await el.updateComplete;
+      expect(paneOld.scrollTop).to.equal(0);
+      expect(paneNew.scrollTop).to.equal(40);
+    });
+
+    it('preserves reading position across a same-identity model refresh', async () => {
+      const el = await sideBySideFixture(false);
+      const paneOld = el.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;
+      const paneNew = el.shadowRoot!.querySelector('[part="pane-new"]') as HTMLElement;
+      paneOld.scrollTop = 60;
+      paneNew.scrollTop = 40;
+      el.oldVersion = {
+        id: 'v1',
+        name: 'Old',
+        mimeType: 'application/octet-stream',
+        highlights: [{ id: 'fresh', anchor: { kind: 'region', rect: { x: 1, y: 1, width: 1, height: 1 } } }],
+      };
+      await el.updateComplete;
+      expect(paneOld.scrollTop).to.equal(60);
+      expect(paneNew.scrollTop).to.equal(40);
+    });
+
+    it('lets an active shared anchor win over source-replacement scroll reset', async () => {
+      const el = await sideBySideFixture();
+      const paneOld = el.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;
+      const paneNew = el.shadowRoot!.querySelector('[part="pane-new"]') as HTMLElement;
+      const previewOld = paneOld.querySelector('lr-document-preview') as LyraDocumentPreview;
+      const previewNew = paneNew.querySelector('lr-document-preview') as LyraDocumentPreview;
+      paneOld.scrollTop = 60;
+      paneNew.scrollTop = 40;
+      let jumps = 0;
+      previewOld.scrollToAnchor = async () => { jumps++; return true; };
+      previewNew.scrollToAnchor = async () => { jumps++; return true; };
+      el.anchor = 'target';
+      el.oldVersion = { id: 'replacement', name: 'Replacement', mimeType: 'application/octet-stream' };
+      await el.updateComplete;
+      expect(jumps).to.equal(2);
+      expect(paneOld.scrollTop).to.equal(60);
+      expect(paneNew.scrollTop).to.equal(40);
     });
 
     it('suppresses the immediate echo so mirroring pane-old -> pane-new does not bounce back to pane-old', async () => {

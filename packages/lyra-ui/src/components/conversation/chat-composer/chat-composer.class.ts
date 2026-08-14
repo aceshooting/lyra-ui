@@ -5,27 +5,39 @@ import {
   type TemplateResult,
   type SVGTemplateResult,
   type PropertyValues,
-} from 'lit';
-import { property, state, query } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraFrame } from '../../../internal/variants.js';
-import type { LyraSelectionDirection, LyraTextWrap } from '../../../internal/shared-unions.js';
-import { FormAssociated } from '../../../internal/form-associated.js';
-import { finiteInteger } from '../../../internal/numbers.js';
-import { styles } from './chat-composer.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+} from "lit";
+import { property, state, query } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import type { LyraFrame } from "../../../internal/variants.js";
+import type {
+  LyraSelectionDirection,
+  LyraTextWrap,
+} from "../../../internal/shared-unions.js";
+import {
+  FormAssociated,
+  isBarredFromValidation,
+} from "../../../internal/form-associated.js";
+import { SET_ANCHORED_VALIDITY } from "../../../internal/anchored-validity.js";
+import { lengthViolations } from "../../../internal/length-constraints.js";
+import { finiteCount, finiteInteger } from "../../../internal/numbers.js";
+import { styles } from "./chat-composer.styles.js";
+import {
+  autocorrectConverter,
+  normalizeAutocorrect,
+  trueDefaultBooleanConverter,
+} from "../../../internal/converters.js";
+import { relayNativeEvent } from "../../../internal/native-event-relay.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_composerLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_sendMessage, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_composerLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_sendMessage, LYRA_DEFAULT_stopGenerating, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** Whether the root draws itself as a bounded card — an alias of the shared {@linkcode LyraFrame},
  *  so there is one definition. Named `frame`, not `appearance`: `appearance` is the library's
  *  vocabulary for how a *control fills itself*, and using it for container chrome as well made one
  *  property name mean two unrelated things. */
 export type ChatComposerFrame = LyraFrame;
-export type ChatComposerStatus = 'idle' | 'sending' | 'streaming';
+export type ChatComposerStatus = "idle" | "sending" | "streaming";
 /** Retained name for the shared native `<textarea wrap>` vocabulary. */
 export type ChatComposerWrap = LyraTextWrap;
 /** Retained name for the shared native `selectionDirection` vocabulary. */
@@ -37,8 +49,8 @@ export type ChatComposerSelectionDirection = LyraSelectionDirection;
 // one-off icons still read as part of the same visual language as the rest
 // of the library's inline icons. Same approach lr-checkbox's and
 // lr-chat-message's own local glyphs take for the identical reason.
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
+const ICON_VIEW_BOX = "0 0 24 24";
+const ICON_STROKE_WIDTH = "1.75";
 
 function sendIcon(): SVGTemplateResult {
   return svg`
@@ -73,12 +85,17 @@ function stopIcon(): SVGTemplateResult {
 }
 
 export interface LyraChatComposerEventMap {
-  'lr-invalid': CustomEvent<undefined>;
-  'lr-input': CustomEvent<{ value: string }>;
-  'lr-stop': CustomEvent<undefined>;
-  'lr-submit': CustomEvent<{ value: string }>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  input: InputEvent;
+  change: Event;
+  "lr-invalid": CustomEvent<null>;
+  "lr-input": CustomEvent<{ value: string }>;
+  "lr-change": CustomEvent<{ value: string }>;
+  "lr-stop": CustomEvent<null>;
+  "lr-submit": CustomEvent<{ value: string }>;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  "lr-blur": CustomEvent<null>;
+  "lr-focus": CustomEvent<null>;
 }
 class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
 
@@ -128,26 +145,31 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  *
  * @customElement lr-chat-composer
  * @slot start - Content rendered before the textarea (e.g. an attach-file trigger button).
- * @slot leading - Deprecated compatibility alias for `start`; both spellings may coexist.
  * @slot chips - An attachment tray rendered above the input row (e.g. files queued for this message).
  * @slot end - Overrides the built-in send/stop button entirely when it has assigned content.
- * @slot trailing - Deprecated compatibility alias for `end`; either spelling suppresses the built-in action.
+ * @event input - One realm-correct native `InputEvent` relayed from the textarea for each user edit.
+ * @event change - One native `Event` relayed from the textarea when its edit is committed.
  * @event lr-input - Fired on every user-driven edit of the textarea (not a programmatic `.value` assignment). `detail: { value }`.
+ * @event lr-change - Fired with `detail: { value }` beside the native `change` event.
  * @event lr-submit - Fired by Enter (per `submit-on-enter`) or the built-in button while `status="idle"` and `submitDisabled` is false. `detail: { value }`.
  * @event lr-stop - Fired by the built-in button while `status` is `"sending"` or `"streaming"` and `stoppable` is `true` (the default). No detail.
- * @event blur - Re-dispatched from the internal native textarea as a bubbling, composed event.
- * @event focus - Re-dispatched from the internal native textarea as a bubbling, composed event.
+ * @event blur - One realm-correct native `FocusEvent` relayed from the textarea, preserving `relatedTarget`.
+ * @event focus - One realm-correct native `FocusEvent` relayed from the textarea, preserving `relatedTarget`.
+ * @event lr-blur - Prefixed notification paired with native `blur`.
+ * @event lr-focus - Prefixed notification paired with native `focus`.
  * @event lr-invalid - The composer failed a validity check. Cancelable — preventing this alias
  *   also prevents the native `invalid` event that produced it.
  * @csspart base - The bordered root container. Drops its card chrome (border, background, padding,
  * radius) under `frame="plain"`, where the focus affordance becomes an underline on this same
  * part instead of the border-color shift.
  * @csspart chips - The wrapper around the `chips` slot. Hidden entirely when the slot is empty.
- * @csspart row - The row holding the start/leading slots, textarea, and end/trailing slots/button.
- * @csspart leading - The wrapper around the `start` and `leading` slots. Hidden entirely when both are empty.
+ * @csspart row - The row holding the start slot, textarea, and end slot/button.
+ * @csspart start - The wrapper around the `start` slot. Hidden entirely when empty.
  * @csspart textarea - The auto-resizing `<textarea>` itself.
- * @csspart trailing - The wrapper around the `end` and `trailing` slots and the built-in `action-button`.
- * @csspart action-button - The built-in send/stop button. Absent whenever `end` or `trailing` has assigned content. Style its busy treatment via `:host([status='sending'])`/`:host([status='streaming'])`, or the dedicated `--lr-chat-composer-busy-bg` cssprop below.
+ * @csspart end - The wrapper around the `end` slot and the built-in `action-button`.
+ * @csspart send-glyph - Directional send glyph wrapper; mirrored automatically in RTL.
+ * @csspart stop-glyph - Symmetric stop glyph wrapper.
+ * @csspart action-button - The built-in send/stop button. Absent whenever `end` has assigned content. Style its busy treatment via `:host([status='sending'])`/`:host([status='streaming'])`, or the dedicated `--lr-chat-composer-busy-bg` cssprop below.
  * @cssprop [--lr-chat-composer-busy-bg=var(--lr-color-text-quiet)] - `action-button` background while `status` is `"sending"` or `"streaming"`. Scoped separately from the shared `--lr-color-text-quiet` token, which the `textarea` part's placeholder also reads -- overriding this recolors only the busy button, not the placeholder text too.
  * @status stable
  * @since 4.0.0
@@ -161,65 +183,85 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     sendMessage: LYRA_DEFAULT_sendMessage,
     stopGenerating: LYRA_DEFAULT_stopGenerating,
+    valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
 
-  @property() placeholder = '';
-  @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
-  @property({ type: Number, attribute: 'max-rows' }) maxRows = 8;
-  @property({ reflect: true }) status: ChatComposerStatus = 'idle';
+  @property() placeholder = "";
+  @property({ type: Number, attribute: "min-rows" }) minRows = 1;
+  @property({ type: Number, attribute: "max-rows" }) maxRows = 8;
+  @property({ reflect: true }) status: ChatComposerStatus = "idle";
   /** Visual chrome, on the library-wide `frame` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
    *  radius, so a composer docked inside a chat panel, dialog footer or toolbar that already draws
    *  its own border doesn't double the frame. Focus stays visible either way: `plain` swaps the
    *  border-color shift for an underline across the input row, since there is no border left to
    *  recolor. */
-  @property({ reflect: true }) frame: ChatComposerFrame = 'card';
-  
+  @property({ reflect: true }) frame: ChatComposerFrame = "card";
+
   @property({
     type: Boolean,
     reflect: true,
-    attribute: 'submit-on-enter',
+    attribute: "submit-on-enter",
     converter: trueDefaultBooleanConverter,
   })
   submitOnEnter = true;
   /** Consumer-controlled validation gate for submission. While idle, disables the built-in Send
    * button and suppresses Enter/click submission without disabling the textarea. Busy Stop behavior
    * remains governed by `status` and `stoppable`. */
-  @property({ type: Boolean, reflect: true, attribute: 'submit-disabled' }) submitDisabled = false;
-  
-  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) stoppable = true;
+  @property({ type: Boolean, reflect: true, attribute: "submit-disabled" })
+  submitDisabled = false;
+
+  @property({
+    type: Boolean,
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
+  stoppable = true;
+  /** Native read-only state. The textarea remains focusable/submittable but cannot be user-edited,
+   * and intrinsic constraints are barred just like a native read-only textarea. */
+  @property({ type: Boolean, reflect: true, attribute: "readonly" }) readOnly =
+    false;
+  /** Native minimum text length. Unset or invalid values impose no lower bound. */
+  // numeric-guard-exempt: every consumer routes through effectiveLengthLimit(), which rejects
+  // non-finite/negative values and finiteCount-normalizes the integer before validation or DOM use.
+  @property({ type: Number, attribute: "minlength" }) minLength?: number;
+  /** Native maximum text length. Unset or invalid values impose no upper bound. */
+  // numeric-guard-exempt: same effectiveLengthLimit() finite normalization as minLength above.
+  @property({ type: Number, attribute: "maxlength" }) maxLength?: number;
   /** Accessible name for the internal textarea. Takes precedence over the placeholder-derived name. */
-  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
-  
-  @property({ converter: trueDefaultBooleanConverter }) override spellcheck = true;
+  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
+
+  @property({ converter: trueDefaultBooleanConverter }) override spellcheck =
+    true;
   /** Forwarded to the internal `<textarea>`'s own `autocapitalize`. Empty string omits the
    *  attribute (browser default). */
-  @property() override autocapitalize = '';
-  /** Forwarded to the internal `<textarea>`'s own `autocorrect` (Safari/WebKit-specific). Empty
-   *  string omits the attribute (browser default).
-   *
-   *  Named `autoCorrect` (capital `C`), not `autocorrect`, purely to dodge a TS `lib.dom.d.ts`
-   *  collision: newer DOM typings declare a `boolean`-typed `HTMLElement.autocorrect` IDL member,
-   *  which a same-named `string`-typed reactive property here would override unsoundly from the
-   *  type checker's point of view (even though the browser itself would happily let this class's
-   *  own accessor win at runtime). The explicit attribute mapping preserves the standard
-   *  lowercase `autocorrect` wire name in both Lit and generated component metadata. */
-  @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  @property() override autocapitalize = "";
+  private autocorrectValue = true;
+  /** Native autocorrect state. Reads are boolean; writes accept boolean or the legacy
+   * `'off'`/`'false'` string vocabulary and reflect canonical `on`/`off`. */
+  @property({ converter: autocorrectConverter })
+  override get autocorrect(): boolean {
+    return this.autocorrectValue;
+  }
+  override set autocorrect(next: boolean | string) {
+    this.autocorrectValue = normalizeAutocorrect(next);
+    this.requestUpdate();
+  }
   /** Native editing-assistance attributes forwarded to the internal textarea. */
-  @property() wrap: ChatComposerWrap = 'soft';
-  @property() autocomplete = '';
-  @property({ attribute: 'inputmode' }) override inputMode = '';
-  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
+  @property() wrap: ChatComposerWrap = "soft";
+  @property() autocomplete = "";
+  @property({ attribute: "inputmode" }) override inputMode = "";
+  @property({ attribute: "enterkeyhint" }) override enterKeyHint = "";
 
-  @state() private hasLeadingSlot = false;
+  @state() private hasStartSlot = false;
   @state() private hasChipsSlot = false;
-  @state() private hasTrailingSlot = false;
+  @state() private hasEndSlot = false;
   @state() private touched = false;
 
-  @query('textarea') private textareaEl?: HTMLTextAreaElement;
+  @query("textarea") private textareaEl?: HTMLTextAreaElement;
   private textareaResizeObserver?: ResizeObserver;
   private textareaResizeObserverDocument?: Document;
   private textareaResizeObserverTarget?: HTMLTextAreaElement;
@@ -240,12 +282,23 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
    *  produces a usable, non-collapsed range instead of clipping the textarea to less than its own
    *  minimum. */
   private get effectiveMaxRows(): number {
-    return Math.max(this.effectiveMinRows, finiteInteger(this.maxRows, this.effectiveMinRows, 1));
+    return Math.max(
+      this.effectiveMinRows,
+      finiteInteger(this.maxRows, this.effectiveMinRows, 1)
+    );
+  }
+
+  private effectiveLengthLimit(
+    declared: number | undefined
+  ): number | undefined {
+    if (declared === undefined || !Number.isFinite(declared) || declared < 0)
+      return undefined;
+    return finiteCount(Math.trunc(declared), 0);
   }
 
   constructor() {
     super();
-    this.addEventListener('invalid', () => {
+    this.addEventListener("invalid", () => {
       this.touched = true;
     });
   }
@@ -272,11 +325,12 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   }
 
   get selectionDirection(): ChatComposerSelectionDirection | null {
-    return this.textareaEl?.selectionDirection as ChatComposerSelectionDirection | null;
+    return this.textareaEl
+      ?.selectionDirection as ChatComposerSelectionDirection | null;
   }
 
   set selectionDirection(value: ChatComposerSelectionDirection | null) {
-    if (this.textareaEl) this.textareaEl.selectionDirection = value ?? 'none';
+    if (this.textareaEl) this.textareaEl.selectionDirection = value ?? "none";
   }
 
   override focus(options?: FocusOptions): void {
@@ -299,14 +353,24 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   setSelectionRange(
     start: number | null,
     end: number | null,
-    direction?: ChatComposerSelectionDirection,
+    direction?: ChatComposerSelectionDirection
   ): void {
     this.textareaEl?.setSelectionRange(start, end, direction);
   }
 
   setRangeText(replacement: string): void;
-  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
-  setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
+  setRangeText(
+    replacement: string,
+    start: number,
+    end: number,
+    selectMode?: SelectionMode
+  ): void;
+  setRangeText(
+    replacement: string,
+    start?: number,
+    end?: number,
+    selectMode?: SelectionMode
+  ): void {
     const textarea = this.textareaEl;
     if (!textarea) return;
     if (start === undefined || end === undefined) {
@@ -323,9 +387,9 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     // A server render sees no light-DOM children, so a hydrating composer reproduces the server's
     // slot-less rendering first and adopts the real adornment slots on the next update.
     this.seedFirstRenderState(() => {
-      this.syncLeadingSlots();
-      this.hasChipsSlot = this.hasSlotted('chips');
-      this.syncTrailingSlots();
+      this.syncStartSlot();
+      this.hasChipsSlot = this.hasSlotted("chips");
+      this.syncEndSlot();
     });
   }
 
@@ -357,15 +421,63 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     this.resetTextareaResizeWork();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.resetTextareaResizeWork();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('value') || changed.has('minRows') || changed.has('maxRows')) {
+    if (
+      changed.has("value") ||
+      changed.has("minRows") ||
+      changed.has("maxRows")
+    ) {
       this.resizeTextarea();
     }
+    if (
+      changed.has("minLength") ||
+      changed.has("maxLength") ||
+      changed.has("readOnly")
+    ) {
+      this.updateValidity();
+    }
+  }
+
+  protected updateValidity(): void {
+    if (
+      isBarredFromValidation(
+        { effectiveDisabled: this.effectiveDisabled, readonly: this.readOnly },
+        this.internals
+      )
+    ) {
+      this[SET_ANCHORED_VALIDITY]({});
+      return;
+    }
+    if (this.required && this.value === "") {
+      this[SET_ANCHORED_VALIDITY](
+        { valueMissing: true },
+        this.localize("fieldRequired")
+      );
+      return;
+    }
+    const textarea = this.textareaEl;
+    if (textarea && textarea.value !== this.value) textarea.value = this.value;
+    const own = lengthViolations(
+      this.value,
+      this.effectiveLengthLimit(this.minLength),
+      this.effectiveLengthLimit(this.maxLength)
+    );
+    const tooShort = Boolean(textarea?.validity.tooShort) || own.tooShort;
+    const tooLong = Boolean(textarea?.validity.tooLong) || own.tooLong;
+    if (!tooShort && !tooLong) {
+      this[SET_ANCHORED_VALIDITY]({});
+      return;
+    }
+    this[SET_ANCHORED_VALIDITY](
+      { tooShort, tooLong },
+      textarea?.validationMessage || this.localize("valueInvalid")
+    );
   }
 
   override formResetCallback(): void {
@@ -374,7 +486,9 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   }
 
   private hasSlotted(name: string): boolean {
-    return Array.from(this.children).some((el) => el.getAttribute('slot') === name);
+    return Array.from(this.children).some(
+      (el) => el.getAttribute("slot") === name
+    );
   }
 
   /**
@@ -389,9 +503,12 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     const ta = this.textareaEl;
     if (!ta) return;
     const cs = this.ownerDocument.defaultView?.getComputedStyle(ta) ?? ta.style;
-    const lineHeight = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.2;
-    const paddingBlock = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-    const borderBlock = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+    const lineHeight =
+      parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.2;
+    const paddingBlock =
+      parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const borderBlock =
+      parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
     const minRows = this.effectiveMinRows;
     const maxRows = this.effectiveMaxRows;
     const minHeight = lineHeight * minRows + paddingBlock + borderBlock;
@@ -400,7 +517,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     // Collapse first so a shrinking edit (e.g. deleting a wrapped line)
     // reports its true scrollHeight rather than the previous, taller,
     // explicitly-set height.
-    ta.style.height = 'auto';
+    ta.style.height = "auto";
     // scrollHeight never includes border, so it's added back in to compare
     // apples-to-apples against min/maxHeight, both of which are border-box
     // figures (this component inherits box-sizing: border-box from
@@ -408,7 +525,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     const contentHeight = ta.scrollHeight + borderBlock;
     const next = Math.min(Math.max(contentHeight, minHeight), maxHeight);
     ta.style.height = `${next}px`;
-    ta.style.overflowY = contentHeight > maxHeight ? 'auto' : 'hidden';
+    ta.style.overflowY = contentHeight > maxHeight ? "auto" : "hidden";
   }
 
   /**
@@ -466,13 +583,17 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
         return;
       }
       const box = entries[0]?.contentBoxSize?.[0];
-      const width = box ? box.inlineSize : (entries[0]?.contentRect.width ?? lastWidth);
+      const width = box
+        ? box.inlineSize
+        : entries[0]?.contentRect.width ?? lastWidth;
       // A sub-pixel-only difference (common with fractional layout/zoom)
       // isn't worth a recompute.
       if (Math.abs(width - lastWidth) < 0.5) return;
       lastWidth = width;
       if (this.textareaResizeRaf !== undefined) {
-        this.textareaResizeRafOwner?.cancelAnimationFrame(this.textareaResizeRaf);
+        this.textareaResizeRafOwner?.cancelAnimationFrame(
+          this.textareaResizeRaf
+        );
       }
       const handle = ownerWindow.requestAnimationFrame(() => {
         if (
@@ -515,13 +636,29 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     this.textareaResizeRafDocument = undefined;
   }
 
-  private onTextareaInput = (e: Event): void => {
-    this.value = (e.target as HTMLTextAreaElement).value;
-    this.emit('lr-input', { value: this.value });
+  private onTextareaInput = (event: InputEvent): void => {
+    if (this.effectiveDisabled || this.readOnly) {
+      event.stopPropagation();
+      return;
+    }
+    this.value = (event.target as HTMLTextAreaElement).value;
+    this.resizeTextarea();
+    relayNativeEvent(this, event);
+    this.emit("lr-input", { value: this.value });
+  };
+
+  private onTextareaChange = (event: Event): void => {
+    if (this.effectiveDisabled || this.readOnly) {
+      event.stopPropagation();
+      return;
+    }
+    this.value = (event.target as HTMLTextAreaElement).value;
+    relayNativeEvent(this, event);
+    this.emit("lr-change", { value: this.value });
   };
 
   private onTextareaKeyDown = (e: KeyboardEvent): void => {
-    if (e.key !== 'Enter') return;
+    if (e.key !== "Enter") return;
     // Shift+Enter always inserts a newline, regardless of submit-on-enter --
     // leave the browser's own default action alone.
     if (e.shiftKey) return;
@@ -535,17 +672,17 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     // Nothing meaningful to (re-)submit while already sending/streaming --
     // fall through to the default newline insertion instead, so the
     // textarea stays a normal place to keep composing the next message.
-    if (this.status !== 'idle') return;
+    if (this.status !== "idle") return;
     e.preventDefault();
     this.submit();
   };
 
   private onActionClick = (): void => {
     if (this.effectiveDisabled) return;
-    if (this.status === 'idle') {
+    if (this.status === "idle") {
       this.submit();
     } else if (this.stoppable) {
-      this.emit('lr-stop');
+      this.emit("lr-stop", null);
     }
     // Busy and non-stoppable: the button already renders `disabled` above, so
     // this is unreachable via a real click; guarded here too in case a
@@ -553,23 +690,26 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   };
 
   private submit(): void {
-    if (this.submitDisabled || this.effectiveDisabled || this.status !== 'idle') return;
-    this.emit('lr-submit', { value: this.value });
+    if (this.submitDisabled || this.effectiveDisabled || this.status !== "idle")
+      return;
+    this.emit("lr-submit", { value: this.value });
   }
 
-  private syncLeadingSlots = (): void => {
-    this.hasLeadingSlot = this.hasSlotted('start') || this.hasSlotted('leading');
+  private syncStartSlot = (): void => {
+    this.hasStartSlot = this.hasSlotted("start");
   };
 
   private onChipsSlotChange = (e: Event): void => {
-    this.hasChipsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasChipsSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
 
-  private syncTrailingSlots = (): void => {
-    this.hasTrailingSlot = this.hasSlotted('end') || this.hasSlotted('trailing');
+  private syncEndSlot = (): void => {
+    this.hasEndSlot = this.hasSlotted("end");
   };
 
-  private onTextareaBlur = (): void => {
+  private onTextareaBlur = (event: FocusEvent): void => {
     // Disabling this control while its internal textarea holds focus force-blurs that textarea as
     // plain platform behavior, not a real user interaction -- that blur can land synchronously
     // nested inside the very property write that disabled the control (before this render has even
@@ -579,25 +719,36 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     // after an update completed" warning for a state flip nothing observable needed -- a disabled
     // control is barred from validation regardless.
     if (!this.effectiveDisabled) this.touched = true;
-    this.emit('blur');
+    relayNativeEvent(this, event);
+    this.emit("lr-blur", null);
   };
 
-  private onTextareaFocus = (): void => {
-    this.emit('focus');
+  private onTextareaFocus = (event: FocusEvent): void => {
+    if (this.effectiveDisabled) {
+      event.stopPropagation();
+      return;
+    }
+    relayNativeEvent(this, event);
+    this.emit("lr-focus", null);
   };
 
   private renderActionButton(): TemplateResult {
-    const busy = this.status !== 'idle';
+    const busy = this.status !== "idle";
     const showStop = busy && this.stoppable;
     return html`
       <button
         part="action-button"
         type="button"
-        aria-label=${showStop ? this.localize('stopGenerating') : this.localize('sendMessage')}
-        ?disabled=${this.effectiveDisabled || (busy ? !this.stoppable : this.submitDisabled)}
+        aria-label=${showStop
+          ? this.localize("stopGenerating")
+          : this.localize("sendMessage")}
+        ?disabled=${this.effectiveDisabled ||
+        (busy ? !this.stoppable : this.submitDisabled)}
         @click=${this.onActionClick}
       >
-        ${showStop ? stopIcon() : sendIcon()}
+        <span part=${showStop ? "stop-glyph" : "send-glyph"}>
+          ${showStop ? stopIcon() : sendIcon()}
+        </span>
       </button>
     `;
   }
@@ -609,36 +760,45 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
           <slot name="chips" @slotchange=${this.onChipsSlotChange}></slot>
         </div>
         <div part="row">
-          <span part="leading" ?hidden=${!this.hasLeadingSlot}>
-            <slot name="start" @slotchange=${this.syncLeadingSlots}></slot>
-            <slot name="leading" @slotchange=${this.syncLeadingSlots}></slot>
+          <span part="start" ?hidden=${!this.hasStartSlot}>
+            <slot name="start" @slotchange=${this.syncStartSlot}></slot>
           </span>
           <textarea
             part="textarea"
-            aria-label=${this.accessibleLabel || this.placeholder || this.localize('composerLabel')}
-            aria-required=${this.required ? 'true' : 'false'}
-            aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
+            aria-label=${this.accessibleLabel ??
+            (this.placeholder || this.localize("composerLabel"))}
+            aria-required=${this.required ? "true" : "false"}
+            aria-invalid=${this.touched && !this.internals.validity.valid
+              ? "true"
+              : "false"}
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
-            autocorrect=${this.autoCorrect || nothing}
+            autocorrect=${this.hasAttribute("autocorrect") || !this.autocorrect
+              ? this.autocorrect
+                ? "on"
+                : "off"
+              : nothing}
             wrap=${this.wrap}
             autocomplete=${this.autocomplete || nothing}
             inputmode=${this.inputMode || nothing}
             enterkeyhint=${this.enterKeyHint || nothing}
+            minlength=${this.effectiveLengthLimit(this.minLength) ?? nothing}
+            maxlength=${this.effectiveLengthLimit(this.maxLength) ?? nothing}
             .value=${this.value}
             placeholder=${this.placeholder}
             rows=${this.effectiveMinRows}
             ?required=${this.required}
             ?disabled=${this.effectiveDisabled}
+            ?readonly=${this.readOnly}
             @input=${this.onTextareaInput}
+            @change=${this.onTextareaChange}
             @keydown=${this.onTextareaKeyDown}
             @focus=${this.onTextareaFocus}
             @blur=${this.onTextareaBlur}
           ></textarea>
-          <span part="trailing">
-            <slot name="end" @slotchange=${this.syncTrailingSlots}></slot>
-            <slot name="trailing" @slotchange=${this.syncTrailingSlots}></slot>
-            ${this.hasTrailingSlot ? nothing : this.renderActionButton()}
+          <span part="end">
+            <slot name="end" @slotchange=${this.syncEndSlot}></slot>
+            ${this.hasEndSlot ? nothing : this.renderActionButton()}
           </span>
         </div>
       </div>
@@ -648,6 +808,6 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-chat-composer': LyraChatComposer;
+    "lr-chat-composer": LyraChatComposer;
   }
 }

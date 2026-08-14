@@ -16,7 +16,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Experimental inline native video with none, standard, and full custom-control presets. Safe light-DOM sources and tracks are cloned into the private media element; full controls add playback rate and capability-gated picture in picture. Play-control focus transitions relay exactly one native `FocusEvent` plus the `lr-focus`/`lr-blur` alias.',
+          'Experimental inline native video with none, standard, and full custom-control presets. Safe light-DOM sources and tracks are cloned into the private media element; full controls add playback rate and owner-realm capability-gated picture in picture. `getState()` returns the mirrored canonical `VideoState` snapshot. Poster and control-bar play actions are mutually exclusive, and all strong-overlay text defaults to the semantic `--lr-color-on-strong-overlay` foreground. Play-control focus transitions relay exactly one native `FocusEvent` plus the `lr-focus`/`lr-blur` alias.',
       },
     },
   },
@@ -26,6 +26,14 @@ export default meta;
 type Story = StoryObj;
 
 export const Standard: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'While the poster is visible, only its play button is exposed; the duplicate control-bar play toggle remains hidden until playback starts.',
+      },
+    },
+  },
   render: () => html`
     <lr-video src=${VIDEO_SRC} poster=${POSTER} title="Lyra video demo"></lr-video>
   `,
@@ -110,6 +118,14 @@ export const RightToLeft: Story = {
 };
 
 export const CustomControlTheme: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--controls-color` retains final mirrored override precedence. Without it, controls, title, captions, and selectors use the theme-wide semantic on-strong-overlay foreground in both light and dark themes.',
+      },
+    },
+  },
   render: () => html`
     <lr-video
       controls="full"

@@ -2,7 +2,7 @@ import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './lightbox.js';
-import type { LyraLightbox } from './lightbox.js';
+import type { LyraLightbox, LyraLightboxImage } from './lightbox.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 
 const image = {
@@ -21,6 +21,118 @@ it('renders the image frame and exposes a dialog when opened', async () => {
   expect(el.shadowRoot!.querySelector('[part="panel"]')!.getAttribute('role')).to.equal('dialog');
   expect(el.shadowRoot!.querySelector('[part="caption"]')!.textContent).to.contain('A blue square');
   el.open = false;
+});
+
+it('owns a bounded immutable image snapshot and skips malformed or hostile records', async () => {
+  const authored = { ...image };
+  const input = [authored];
+  const el = (await fixture(html`<lr-lightbox></lr-lightbox>`)) as LyraLightbox;
+
+  el.images = input;
+  authored.caption = 'Mutated after assignment';
+  input.push({ ...image, caption: 'Late alias' });
+  await el.updateComplete;
+
+  expect(el.images.length).to.equal(1);
+  expect(el.images[0]?.caption).to.equal('A blue square');
+  expect(Object.isFrozen(el.images)).to.equal(true);
+  expect(Object.isFrozen(el.images[0])).to.equal(true);
+
+  const hostile = Object.defineProperty({}, 'src', {
+    get(): never { throw new Error('hostile src'); },
+  });
+  el.images = [
+    hostile as LyraLightboxImage,
+    { src: image.src, alt: 42 as unknown as string, caption: 'Retained valid field' },
+  ];
+  await el.updateComplete;
+  expect(el.images.length).to.equal(1);
+  expect(el.images[0]?.alt).to.equal(undefined);
+  expect(el.images[0]?.caption).to.equal('Retained valid field');
+
+  el.images = Array.from({ length: 10_005 }, (_, index) => ({ src: `${image.src}#${index}` }));
+  await el.updateComplete;
+  expect(el.images.length).to.equal(10_000);
+});
+
+it('runs one promise-based show/hide lifecycle in order and keeps vetoed state reflected', async () => {
+  const el = (await fixture(html`<lr-lightbox .images=${[image]}></lr-lightbox>`)) as LyraLightbox;
+  const lifecycle: string[] = [];
+  const phaseDetails: unknown[] = [];
+  let hideSource: Element | undefined;
+  el.addEventListener('lr-show', (event) => {
+    lifecycle.push('show');
+    phaseDetails.push((event as CustomEvent).detail);
+  });
+  el.addEventListener('lr-after-show', (event) => {
+    lifecycle.push('after-show');
+    phaseDetails.push((event as CustomEvent).detail);
+  });
+  el.addEventListener('lr-hide', (event) => {
+    lifecycle.push('hide');
+    hideSource = (event as CustomEvent<{ source: Element }>).detail.source;
+  });
+  el.addEventListener('lr-lightbox-close', () => lifecycle.push('close'));
+  el.addEventListener('lr-after-hide', (event) => {
+    lifecycle.push('after-hide');
+    phaseDetails.push((event as CustomEvent).detail);
+  });
+
+  await el.show();
+  expect(el.open).to.be.true;
+  expect(el.hasAttribute('open')).to.be.true;
+  expect(lifecycle).to.deep.equal(['show', 'after-show']);
+
+  await el.hide();
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+  expect(hideSource === el).to.be.true;
+  expect(lifecycle).to.deep.equal(['show', 'after-show', 'hide', 'close', 'after-hide']);
+  expect(phaseDetails).to.deep.equal([null, null, null]);
+
+  const vetoShow = (event: Event): void => event.preventDefault();
+  el.addEventListener('lr-show', vetoShow, { once: true });
+  await el.show();
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+
+  await el.show();
+  const vetoHide = (event: Event): void => event.preventDefault();
+  el.addEventListener('lr-hide', vetoHide, { once: true });
+  await el.hide();
+  expect(el.open).to.be.true;
+  expect(el.hasAttribute('open')).to.be.true;
+  el.removeEventListener('lr-hide', vetoHide);
+  el.open = false;
+  await el.updateComplete;
+});
+
+it('routes post-render open writes through the lifecycle but treats initial open state as silent', async () => {
+  const initial = document.createElement('lr-lightbox') as LyraLightbox;
+  let initialShows = 0;
+  initial.addEventListener('lr-show', () => initialShows++);
+  initial.open = true;
+  document.body.append(initial);
+  await initial.updateComplete;
+  expect(initialShows).to.equal(0);
+  initial.remove();
+
+  const el = (await fixture(html`<lr-lightbox .images=${[image]}></lr-lightbox>`)) as LyraLightbox;
+  const lifecycle: string[] = [];
+  el.addEventListener('lr-show', () => lifecycle.push('show'));
+  el.addEventListener('lr-after-show', () => lifecycle.push('after-show'));
+  el.addEventListener('lr-hide', () => lifecycle.push('hide'));
+  el.addEventListener('lr-lightbox-close', () => lifecycle.push('close'));
+  el.addEventListener('lr-after-hide', () => lifecycle.push('after-hide'));
+
+  el.open = true;
+  await el.updateComplete;
+  await Promise.resolve();
+  el.open = false;
+  await el.updateComplete;
+  await Promise.resolve();
+
+  expect(lifecycle).to.deep.equal(['show', 'after-show', 'hide', 'close', 'after-hide']);
 });
 
 it('is accessible while open', async () => {
@@ -261,6 +373,134 @@ it('jumps to the first/last image on Home/End', async () => {
   expect(el.index).to.equal(0);
 
   el.open = false;
+});
+
+it('leaves Arrow/Home/End with the focused pan-zoom viewport while panel chrome owns gallery navigation', async () => {
+  const images = [image, { ...image, caption: 'Second' }];
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const el = (await fixture(
+      html`<lr-lightbox dir=${direction} .images=${images} open></lr-lightbox>`,
+    )) as LyraLightbox;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    const frame = el.shadowRoot!.querySelector('lr-pan-zoom') as HTMLElement & {
+      shadowRoot: ShadowRoot;
+      zoom: number;
+      updateComplete: Promise<boolean>;
+    };
+    const viewport = frame.shadowRoot.querySelector('[part="viewport"]') as HTMLElement;
+    const forward = direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+
+    frame.zoom = 2;
+    await frame.updateComplete;
+    viewport.focus();
+    expect(frame.shadowRoot.activeElement === viewport, `${direction}: the real scroll owner is focused`).to.be.true;
+    for (const key of [forward, 'Home', 'End']) {
+      const event = new KeyboardEvent('keydown', {
+        key,
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      viewport.dispatchEvent(event);
+      await el.updateComplete;
+      expect(el.index, `${direction}: ${key} remains owned by the viewport`).to.equal(0);
+      expect(event.defaultPrevented, `${direction}: lightbox does not consume ${key}`).to.be.false;
+    }
+
+    const closeButton = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
+    closeButton.focus();
+    const chromeKey = new KeyboardEvent('keydown', {
+      key: forward,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    closeButton.dispatchEvent(chromeKey);
+    await el.updateComplete;
+    expect(el.index, `${direction}: panel chrome keeps gallery shortcuts`).to.equal(1);
+    expect(chromeKey.defaultPrevented).to.be.true;
+
+    el.index = 0;
+    await el.updateComplete;
+    const panelKey = new KeyboardEvent('keydown', { key: forward, cancelable: true });
+    panel.dispatchEvent(panelKey);
+    await el.updateComplete;
+    expect(el.index, `${direction}: the panel itself keeps gallery shortcuts`).to.equal(1);
+    expect(panelKey.defaultPrevented).to.be.true;
+    el.open = false;
+    await el.updateComplete;
+  }
+});
+
+it('contains synthetic child focus aliases while deliberately allowing zoom changes through', async () => {
+  const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
+  const frame = el.shadowRoot!.querySelector('lr-pan-zoom') as HTMLElement & {
+    focus(): void;
+    blur(): void;
+    zoomIn(): void;
+  };
+  const escaped: string[] = [];
+  for (const type of ['focus', 'blur', 'lr-focus', 'lr-blur']) {
+    el.addEventListener(type, () => escaped.push(type));
+  }
+  let zoomChanges = 0;
+  el.addEventListener('lr-zoom-change', () => zoomChanges++);
+
+  frame.focus();
+  frame.blur();
+  frame.zoomIn();
+  await el.updateComplete;
+
+  expect(escaped).to.deep.equal([]);
+  expect(zoomChanges).to.equal(1);
+  el.open = false;
+  await el.updateComplete;
+});
+
+it('forwards collision-resistant frame parts to outer consumers', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <style>
+        lr-lightbox.forwarded-frame-test::part(frame-viewport) {
+          outline: 3px dashed rgb(1, 2, 3);
+        }
+      </style>
+      <lr-lightbox class="forwarded-frame-test" .images=${[image]} open></lr-lightbox>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-lightbox') as LyraLightbox;
+  const frame = el.shadowRoot!.querySelector('lr-pan-zoom') as HTMLElement & { shadowRoot: ShadowRoot };
+  const viewport = frame.shadowRoot.querySelector('[part="viewport"]') as HTMLElement;
+
+  expect(frame.getAttribute('exportparts')).to.equal(
+    'viewport:frame-viewport,content:frame-content,controls:frame-controls',
+  );
+  expect(getComputedStyle(viewport).outlineStyle).to.equal('dashed');
+  expect(getComputedStyle(viewport).outlineWidth).to.equal('3px');
+  el.open = false;
+  await el.updateComplete;
+});
+
+it('seeds a populated actions slot before first render and preserves the projected node', async () => {
+  const el = document.createElement('lr-lightbox') as LyraLightbox;
+  const action = document.createElement('button');
+  action.slot = 'actions';
+  action.textContent = 'Download';
+  el.append(action);
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+    const slot = wrapper.querySelector('slot') as HTMLSlotElement;
+    expect(wrapper.hidden, 'populated first output is not serialized as empty chrome').to.be.false;
+    expect(slot.assignedElements()[0] === action, 'the original projected node is retained').to.be.true;
+
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(slot.assignedElements()[0] === action, 'a follow-up render reuses the node').to.be.true;
+  } finally {
+    el.remove();
+  }
 });
 
 // Regression coverage for the shared finite-number normalization layer (`src/internal/numbers.ts`)
@@ -603,7 +843,7 @@ it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired
 // default presence-based `type: Boolean` converter can never clear a `true`-defaulting property
 // from a plain-HTML attribute (`show-counter="false"` still counts as "present"), so showCounter
 // needs a custom converter that checks the literal string, matching every other `show*`
-// true-defaulting boolean in this library (e.g. <lr-generation-status>'s showStop).
+// true-defaulting boolean in this library (e.g. <lr-generation-metrics>'s showStop).
 describe('showCounter', () => {
   it('defaults to true and renders the counter', async () => {
     const el = (await fixture(html`<lr-lightbox .images=${[image, { ...image, caption: 'Second' }]} open></lr-lightbox>`)) as LyraLightbox;

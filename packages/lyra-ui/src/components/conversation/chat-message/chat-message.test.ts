@@ -1,394 +1,642 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import './chat-message.js';
-import '../../utility/live-region/live-region.js';
-import '../markdown/markdown-core.js';
-import type { LyraChatMessage } from './chat-message.js';
-import type { LyraLiveRegion } from '../../utility/live-region/live-region.js';
-import { styles } from './chat-message.styles.js';
+import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import "./chat-message.js";
+import "../../utility/live-region/live-region.js";
+import "../markdown/markdown-core.js";
+import type { LyraChatMessage } from "./chat-message.js";
+import type { LyraLiveRegion } from "../../utility/live-region/live-region.js";
+import { styles } from "./chat-message.styles.js";
 
 function liveRegionText(el: LyraChatMessage): string {
-  const region = el.shadowRoot!.querySelector('lr-live-region') as LyraLiveRegion;
-  return region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
+  const region = el.shadowRoot!.querySelector(
+    "lr-live-region"
+  ) as LyraLiveRegion;
+  return region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? "";
 }
 
-it('defaults to role="assistant" and status="sent", reflecting role to data-role (never the bare role attribute)', async () => {
-  const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
-  expect(el.role).to.equal('assistant');
-  expect(el.status).to.equal('sent');
-  expect(el.getAttribute('data-role')).to.equal('assistant');
-  expect(el.getAttribute('status')).to.equal('sent');
-  // `role="user"`/`"assistant"`/`"system"` are not valid ARIA role tokens --
-  // reflecting there would collide with the element's real ARIA role and
-  // fail an automated accessibility check, so this must never be set.
-  expect(el.hasAttribute('role')).to.be.false;
+it('defaults to messageRole="assistant" and status="sent" without taking over the native role property', async () => {
+  const el = (await fixture(
+    html`<lr-chat-message>hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  expect(el.messageRole).to.equal("assistant");
+  expect(el.status).to.equal("sent");
+  expect(el.getAttribute("message-role")).to.equal("assistant");
+  expect(el.getAttribute("status")).to.equal("sent");
+  expect(el.hasAttribute("role")).to.be.false;
 });
 
-it('reflects an explicit data-role attribute back to the role property', async () => {
-  const el = (await fixture(html`<lr-chat-message data-role="user">hi</lr-chat-message>`)) as LyraChatMessage;
-  expect(el.role).to.equal('user');
-  expect(el.getAttribute('data-role')).to.equal('user');
+it("reflects an explicit message-role attribute back to messageRole", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message message-role="user">hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  expect(el.messageRole).to.equal("user");
+  expect(el.getAttribute("message-role")).to.equal("user");
 });
 
-it('ignores a plain role="..." attribute entirely (it is not the attribute this component watches)', async () => {
-  const el = (await fixture(html`<lr-chat-message role="user">hi</lr-chat-message>`)) as LyraChatMessage;
-  expect(el.role).to.equal('assistant');
+it("keeps native host role semantics independent from messageRole", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message role="region" message-role="user"
+      >hi</lr-chat-message
+    >`
+  )) as LyraChatMessage;
+  expect(el.role).to.equal("region");
+  expect(el.messageRole).to.equal("user");
 });
 
-it('normalizes a Date, an ISO string, and an invalid string for timestamp', async () => {
-  const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
-  expect((el.shadowRoot!.querySelector('[part="timestamp"]')) == null).to.be.true;
+it("names the message article with localized author identity and honors a host aria-label override", async () => {
+  const el = (await fixture(html`
+    <lr-chat-message
+      message-role="system"
+      .strings=${{ promptStudioRoleSystem: "Système" }}
+      >hi</lr-chat-message
+    >
+  `)) as LyraChatMessage;
+  const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+  expect(bubble.getAttribute("role")).to.equal("article");
+  expect(bubble.hasAttribute("aria-label")).to.be.false;
+  expect(bubble.querySelector(".sr-only")?.textContent).to.equal("Système");
 
-  const date = new Date('2024-03-01T10:30:00Z');
+  el.setAttribute("aria-label", "Release assistant");
+  await el.updateComplete;
+  expect(bubble.getAttribute("aria-label")).to.equal("Release assistant");
+
+  el.setAttribute("aria-label", "");
+  await el.updateComplete;
+  expect(bubble.getAttribute("aria-label")).to.equal("");
+});
+
+it("normalizes a Date, an ISO string, and an invalid string for timestamp", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message>hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  expect(el.shadowRoot!.querySelector('[part="timestamp"]') == null).to.be.true;
+
+  const date = new Date("2024-03-01T10:30:00Z");
   el.timestamp = date;
   await el.updateComplete;
   let time = el.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement;
-  expect((time) != null).to.equal(true);
-  expect(time.getAttribute('datetime')).to.equal(date.toISOString());
+  expect(time != null).to.equal(true);
+  expect(time.getAttribute("datetime")).to.equal(date.toISOString());
 
-  el.timestamp = '2024-03-01T10:30:00Z';
+  el.timestamp = "2024-03-01T10:30:00Z";
   await el.updateComplete;
   time = el.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement;
-  expect(time.getAttribute('datetime')).to.equal(date.toISOString());
+  expect(time.getAttribute("datetime")).to.equal(date.toISOString());
 
-  el.timestamp = 'not a date';
+  el.timestamp = "not a date";
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="timestamp"]') == null, 'invalid input renders nothing, like unset').to.be
-    .true;
+  expect(
+    el.shadowRoot!.querySelector('[part="timestamp"]') == null,
+    "invalid input renders nothing, like unset"
+  ).to.be.true;
 });
 
-it('uses the default hour:minute formatter, overridable via formatTimestamp', async () => {
-  const date = new Date('2024-03-01T10:30:00Z');
-  const el = (await fixture(html`<lr-chat-message .timestamp=${date}>hi</lr-chat-message>`)) as LyraChatMessage;
-  const time = el.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement;
+it("uses the default hour:minute formatter, overridable via formatTimestamp", async () => {
+  const date = new Date("2024-03-01T10:30:00Z");
+  const el = (await fixture(
+    html`<lr-chat-message .timestamp=${date}>hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  const time = el.shadowRoot!.querySelector(
+    '[part="timestamp"]'
+  ) as HTMLElement;
   expect(time.textContent!.trim().length).to.be.greaterThan(0);
 
   el.formatTimestamp = (d) => `custom:${d.getUTCFullYear()}`;
   await el.updateComplete;
-  expect((el.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement).textContent).to.equal('custom:2024');
+  expect(
+    (el.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement)
+      .textContent
+  ).to.equal("custom:2024");
 });
 
-it('formats the default timestamp with the effective locale', async () => {
-  const date = new Date('2024-03-01T10:30:00Z');
+it("formats the default timestamp with the effective locale", async () => {
+  const date = new Date("2024-03-01T10:30:00Z");
   const el = (await fixture(
-    html`<lr-chat-message locale="ar-EG" .timestamp=${date}>hi</lr-chat-message>`,
+    html`<lr-chat-message locale="ar-EG" .timestamp=${date}
+      >hi</lr-chat-message
+    >`
   )) as LyraChatMessage;
-  const expected = new Intl.DateTimeFormat('ar-EG', {
-    hour: 'numeric',
-    minute: '2-digit',
+  const expected = new Intl.DateTimeFormat("ar-EG", {
+    hour: "numeric",
+    minute: "2-digit",
   }).format(date);
 
-  expect((el.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement).textContent).to.equal(
-    expected,
-  );
+  expect(
+    (el.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement)
+      .textContent
+  ).to.equal(expected);
 });
 
-it('does not render the collapse button unless collapsible, and hides the body only while collapsed', async () => {
-  const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
-  expect((el.shadowRoot!.querySelector('[part="collapse-button"]')) == null).to.be.true;
-  expect((el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
+it("does not render the collapse button unless collapsible, and hides the body only while collapsed", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message>hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  expect(el.shadowRoot!.querySelector('[part="collapse-button"]') == null).to.be
+    .true;
+  expect(
+    (el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).hasAttribute(
+      "hidden"
+    )
+  ).to.be.false;
 
   el.collapsible = true;
   el.collapsed = true;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="collapse-button"]')).to.exist;
-  expect((el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
+  expect(
+    (el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).hasAttribute(
+      "hidden"
+    )
+  ).to.be.true;
 });
 
-it('toggles collapsed and emits lr-collapse-toggle with the new value on collapse-button click', async () => {
+it("emits a cancelable collapse request followed by lr-toggle only after commit", async () => {
   const el = (await fixture(
-    html`<lr-chat-message collapsible>hi</lr-chat-message>`,
+    html`<lr-chat-message collapsible>hi</lr-chat-message>`
   )) as LyraChatMessage;
   let detail: unknown;
-  el.addEventListener('lr-collapse-toggle', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener("lr-toggle", (e) => (detail = (e as CustomEvent).detail));
 
-  const button = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
+  const button = el.shadowRoot!.querySelector(
+    '[part="collapse-button"]'
+  ) as HTMLButtonElement;
   button.click();
   await el.updateComplete;
 
   expect(el.collapsed).to.be.true;
-  expect(detail).to.equal(true);
-  expect(button.getAttribute('aria-expanded')).to.equal('false');
+  expect(detail).to.deep.equal({ collapsed: true });
+  expect(button.getAttribute("aria-expanded")).to.equal("false");
 
   button.click();
   await el.updateComplete;
   expect(el.collapsed).to.be.false;
-  expect(detail).to.equal(false);
+  expect(detail).to.deep.equal({ collapsed: false });
 });
 
-it('only renders the built-in retry button when status="failed", and it emits lr-retry', async () => {
-  const el = (await fixture(html`<lr-chat-message status="sent">hi</lr-chat-message>`)) as LyraChatMessage;
-  expect((el.shadowRoot!.querySelector('[part="retry-button"]')) == null).to.be.true;
-
-  el.status = 'failed';
+it("honors preventDefault on lr-toggle-request without mutating collapse state", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message collapsible>hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  let committed = false;
+  el.addEventListener("lr-toggle-request", (event) => event.preventDefault());
+  el.addEventListener("lr-toggle", () => (committed = true));
+  (
+    el.shadowRoot!.querySelector(
+      '[part="collapse-button"]'
+    ) as HTMLButtonElement
+  ).click();
   await el.updateComplete;
-  const button = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLButtonElement;
-  expect((button) != null).to.equal(true);
+  expect(el.collapsed).to.equal(false);
+  expect(committed).to.equal(false);
+});
+
+it('only renders the built-in retry button when status="failed", and it emits lr-message-retry', async () => {
+  const el = (await fixture(
+    html`<lr-chat-message status="sent">hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  expect(el.shadowRoot!.querySelector('[part="retry-button"]') == null).to.be
+    .true;
+
+  el.status = "failed";
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector(
+    '[part="retry-button"]'
+  ) as HTMLButtonElement;
+  expect(button != null).to.equal(true);
 
   let fired = false;
-  el.addEventListener('lr-retry', () => (fired = true));
+  el.addEventListener("lr-message-retry", () => (fired = true));
   button.click();
   expect(fired).to.be.true;
 });
 
-it('includes the optional stable message id in lr-retry detail', async () => {
-  const el = (await fixture(html`<lr-chat-message message-id="message-42" status="failed">hi</lr-chat-message>`)) as LyraChatMessage;
-  const event = oneEvent(el, 'lr-retry');
-  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="retry-button"]')!.click();
-  expect((await event).detail).to.deep.equal({ messageId: 'message-42' });
+it("includes the optional stable message id in lr-message-retry detail", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message message-id="message-42" status="failed"
+      >hi</lr-chat-message
+    >`
+  )) as LyraChatMessage;
+  const event = oneEvent(el, "lr-message-retry");
+  el.shadowRoot!.querySelector<HTMLButtonElement>(
+    '[part="retry-button"]'
+  )!.click();
+  expect((await event).detail).to.deep.equal({ messageId: "message-42" });
 });
 
-it('keeps focus inside the message when a lr-retry listener flips status away from failed', async () => {
-  const el = (await fixture(html`<lr-chat-message status="failed">hi</lr-chat-message>`)) as LyraChatMessage;
-  // The documented, expected response to `lr-retry`.
-  el.addEventListener('lr-retry', () => {
-    el.status = 'sent';
+it("keeps focus inside the message when a lr-message-retry listener flips status away from failed", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message status="failed">hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  el.addEventListener("lr-message-retry", () => {
+    el.status = "sent";
   });
 
-  const button = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLButtonElement;
+  const button = el.shadowRoot!.querySelector(
+    '[part="retry-button"]'
+  ) as HTMLButtonElement;
   button.focus();
   button.click();
   await el.updateComplete;
 
   expect(
     el.shadowRoot!.querySelector('[part="retry-button"]') == null,
-    'the retry button is gone once status flips'
+    "the retry button is gone once status flips"
   ).to.be.true;
-  expect((el.shadowRoot!.activeElement) !== null, 'focus must not have silently reverted to <body>').to.equal(true);
-  expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="bubble"]'))).to.equal(true);
+  expect(
+    el.shadowRoot!.activeElement !== null,
+    "focus must not have silently reverted to <body>"
+  ).to.equal(true);
+  expect(
+    el.shadowRoot!.activeElement ===
+      el.shadowRoot!.querySelector('[part="bubble"]')
+  ).to.equal(true);
 });
 
-it('does not steal focus from retry when the host leaves the failed state unchanged', async () => {
-  const el = (await fixture(html`<lr-chat-message status="failed">hi</lr-chat-message>`)) as LyraChatMessage;
-  const button = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLButtonElement;
+it("does not steal focus from retry when the host leaves the failed state unchanged", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message status="failed">hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  const button = el.shadowRoot!.querySelector(
+    '[part="retry-button"]'
+  ) as HTMLButtonElement;
   button.focus();
   button.click();
   await el.updateComplete;
-  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('retry-button');
+  expect(
+    (el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute("part")
+  ).to.equal("retry-button");
 });
 
-it('shows visible status text (not color alone) for sending/streaming/failed, and none for sent', async () => {
-  const el = (await fixture(html`<lr-chat-message status="sending">hi</lr-chat-message>`)) as LyraChatMessage;
-  expect((el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement).textContent).to.equal('Sending…');
+it("shows visible status text (not color alone) for sending/streaming/failed, and none for sent", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message status="sending">hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  expect(
+    (el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement)
+      .textContent
+  ).to.equal("Sending…");
 
-  el.status = 'streaming';
+  el.status = "streaming";
   await el.updateComplete;
-  expect((el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement).textContent).to.equal('Responding…');
+  expect(
+    (el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement)
+      .textContent
+  ).to.equal("Responding…");
 
-  el.status = 'failed';
+  el.status = "failed";
   await el.updateComplete;
-  expect((el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement).textContent).to.equal(
-    'Failed to send',
-  );
+  expect(
+    (el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement)
+      .textContent
+  ).to.equal("Failed to send");
 
-  el.status = 'sent';
+  el.status = "sent";
   await el.updateComplete;
-  expect((el.shadowRoot!.querySelector('[part="status-text"]')) == null).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="status-text"]') == null).to.be
+    .true;
 });
 
-it('does not announce whatever status a message happens to mount with', async () => {
-  const el = (await fixture(html`<lr-chat-message status="failed">hi</lr-chat-message>`)) as LyraChatMessage;
-  expect(liveRegionText(el)).to.equal('');
+it("does not announce whatever status a message happens to mount with", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message status="failed">hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  expect(liveRegionText(el)).to.equal("");
+});
+
+it("does not announce a status transition that happened while detached", async () => {
+  const wrapper = (await fixture(
+    html`<div><lr-chat-message status="sent">hi</lr-chat-message></div>`
+  )) as HTMLElement;
+  const el = wrapper.querySelector("lr-chat-message") as LyraChatMessage;
+  wrapper.removeChild(el);
+  el.status = "failed";
+  wrapper.appendChild(el);
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  expect(liveRegionText(el)).to.equal("");
+
+  el.status = "streaming";
+  await el.updateComplete;
+  el.status = "sent";
+  await el.updateComplete;
+  expect(
+    liveRegionText(el),
+    "a transition after reconnect must not remain suppressed"
+  ).to.equal("Message complete.");
 });
 
 it('announces a transition to status="failed" assertively via the internal live-region', async () => {
-  const el = (await fixture(html`<lr-chat-message status="streaming">hi</lr-chat-message>`)) as LyraChatMessage;
-  el.status = 'failed';
+  const el = (await fixture(
+    html`<lr-chat-message status="streaming">hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  el.status = "failed";
   await el.updateComplete;
 
-  expect(liveRegionText(el)).to.equal('Message failed to send.');
-  const region = el.shadowRoot!.querySelector('lr-live-region') as LyraLiveRegion;
-  expect(region.mode).to.equal('assertive');
+  expect(liveRegionText(el)).to.equal("Message failed to send.");
+  const region = el.shadowRoot!.querySelector(
+    "lr-live-region"
+  ) as LyraLiveRegion;
+  expect(region.mode).to.equal("assertive");
 });
 
 it('announces a streaming -> sent transition politely, but not other transitions into "sent"', async () => {
-  const el = (await fixture(html`<lr-chat-message status="streaming">hi</lr-chat-message>`)) as LyraChatMessage;
+  const el = (await fixture(
+    html`<lr-chat-message status="streaming">hi</lr-chat-message>`
+  )) as LyraChatMessage;
 
-  el.status = 'sending';
+  el.status = "sending";
   await el.updateComplete;
-  expect(liveRegionText(el), 'streaming -> sending is not an announced transition').to.equal('');
+  expect(
+    liveRegionText(el),
+    "streaming -> sending is not an announced transition"
+  ).to.equal("");
 
-  el.status = 'sent';
+  el.status = "sent";
   await el.updateComplete;
-  expect(liveRegionText(el), 'sending -> sent (not streaming -> sent) is not announced').to.equal('');
+  expect(
+    liveRegionText(el),
+    "sending -> sent (not streaming -> sent) is not announced"
+  ).to.equal("");
 });
 
-it('announces streaming -> sent directly', async () => {
-  const el = (await fixture(html`<lr-chat-message status="streaming">hi</lr-chat-message>`)) as LyraChatMessage;
-  el.status = 'sent';
+it("announces streaming -> sent directly", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message status="streaming">hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  el.status = "sent";
   await el.updateComplete;
 
-  expect(liveRegionText(el)).to.equal('Message complete.');
-  const region = el.shadowRoot!.querySelector('lr-live-region') as LyraLiveRegion;
-  expect(region.mode).to.equal('polite');
+  expect(liveRegionText(el)).to.equal("Message complete.");
+  const region = el.shadowRoot!.querySelector(
+    "lr-live-region"
+  ) as LyraLiveRegion;
+  expect(region.mode).to.equal("polite");
 });
 
-it('still announces streaming -> sent when both are set within the same task, with no render in between', async () => {
-  const el = (await fixture(html`<lr-chat-message status="sending">hi</lr-chat-message>`)) as LyraChatMessage;
+it("still announces streaming -> sent when both are set within the same task, with no render in between", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message status="sending">hi</lr-chat-message>`
+  )) as LyraChatMessage;
 
   // No `await` between these two assignments -- both land in the same
   // update batch, so Lit's own coalesced `changedProperties` would only
   // ever remember "sending" (the value before the first of the two sets)
   // as `status`'s old value, losing the "streaming" transition entirely.
-  el.status = 'streaming';
-  el.status = 'sent';
+  el.status = "streaming";
+  el.status = "sent";
   await el.updateComplete;
 
-  expect(liveRegionText(el)).to.equal('Message complete.');
+  expect(liveRegionText(el)).to.equal("Message complete.");
 });
 
-it('hides the header/footer/avatar/badges/attachments/actions wrappers until something is slotted', async () => {
-  const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
-  expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
-  expect((el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
-  expect((el.shadowRoot!.querySelector('[part="avatar"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
-  expect((el.shadowRoot!.querySelector('[part="attachments"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
-});
-
-it('shows the header once an avatar is slotted, detected on first paint (not just via slotchange)', async () => {
+it("hides the header/footer/avatar/badges/attachments/actions wrappers until something is slotted", async () => {
   const el = (await fixture(
-    html`<lr-chat-message><span slot="avatar">A</span>hi</lr-chat-message>`,
+    html`<lr-chat-message>hi</lr-chat-message>`
   )) as LyraChatMessage;
-  expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
-  expect((el.shadowRoot!.querySelector('[part="avatar"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="header"]') as HTMLElement
+    ).hasAttribute("hidden")
+  ).to.be.true;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement
+    ).hasAttribute("hidden")
+  ).to.be.true;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="avatar"]') as HTMLElement
+    ).hasAttribute("hidden")
+  ).to.be.true;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="attachments"]') as HTMLElement
+    ).hasAttribute("hidden")
+  ).to.be.true;
 });
 
-it('hides the badges wrapper by default', async () => {
-  const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
-  expect((el.shadowRoot!.querySelector('[part="badges"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
-});
-
-it('shows the header and badges once a badge is slotted, detected on first paint (not just via slotchange)', async () => {
+it("shows the header once an avatar is slotted, detected on first paint (not just via slotchange)", async () => {
   const el = (await fixture(
-    html`<lr-chat-message><span slot="badges">gpt-5.4</span>hi</lr-chat-message>`,
+    html`<lr-chat-message><span slot="avatar">A</span>hi</lr-chat-message>`
   )) as LyraChatMessage;
-  expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
-  expect((el.shadowRoot!.querySelector('[part="badges"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="header"]') as HTMLElement
+    ).hasAttribute("hidden")
+  ).to.be.false;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="avatar"]') as HTMLElement
+    ).hasAttribute("hidden")
+  ).to.be.false;
 });
 
-it('shows/hides the badges wrapper as badges content is added/removed via slotchange', async () => {
-  const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
-  const badgesWrapper = el.shadowRoot!.querySelector('[part="badges"]') as HTMLElement;
-  const badgesSlot = el.shadowRoot!.querySelector('slot[name="badges"]') as HTMLSlotElement;
-  expect(badgesWrapper.hasAttribute('hidden')).to.be.true;
+it("hides the badges wrapper by default", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message>hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="badges"]') as HTMLElement
+    ).hasAttribute("hidden")
+  ).to.be.true;
+});
 
-  const badge = document.createElement('span');
-  badge.slot = 'badges';
+it("shows the header and badges once a badge is slotted, detected on first paint (not just via slotchange)", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message
+      ><span slot="badges">gpt-5.4</span>hi</lr-chat-message
+    >`
+  )) as LyraChatMessage;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="header"]') as HTMLElement
+    ).hasAttribute("hidden")
+  ).to.be.false;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="badges"]') as HTMLElement
+    ).hasAttribute("hidden")
+  ).to.be.false;
+});
+
+it("shows/hides the badges wrapper as badges content is added/removed via slotchange", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message>hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  const badgesWrapper = el.shadowRoot!.querySelector(
+    '[part="badges"]'
+  ) as HTMLElement;
+  const badgesSlot = el.shadowRoot!.querySelector(
+    'slot[name="badges"]'
+  ) as HTMLSlotElement;
+  expect(badgesWrapper.hasAttribute("hidden")).to.be.true;
+
+  const badge = document.createElement("span");
+  badge.slot = "badges";
   el.appendChild(badge);
-  badgesSlot.dispatchEvent(new Event('slotchange'));
+  badgesSlot.dispatchEvent(new Event("slotchange"));
   await el.updateComplete;
 
-  expect(badgesWrapper.hasAttribute('hidden')).to.be.false;
+  expect(badgesWrapper.hasAttribute("hidden")).to.be.false;
   // The header itself must also now be visible, purely because of the badges content.
-  expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="header"]') as HTMLElement
+    ).hasAttribute("hidden")
+  ).to.be.false;
 });
 
-it('shows/hides the footer actions wrapper as actions content is added/removed via slotchange', async () => {
-  const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
-  const actionsWrapper = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
-  const actionsSlot = el.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement;
-  expect(actionsWrapper.hasAttribute('hidden')).to.be.true;
+it("shows/hides the footer actions wrapper as actions content is added/removed via slotchange", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message>hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  const actionsWrapper = el.shadowRoot!.querySelector(
+    '[part="actions"]'
+  ) as HTMLElement;
+  const actionsSlot = el.shadowRoot!.querySelector(
+    'slot[name="actions"]'
+  ) as HTMLSlotElement;
+  expect(actionsWrapper.hasAttribute("hidden")).to.be.true;
 
-  const button = document.createElement('button');
-  button.slot = 'actions';
+  const button = document.createElement("button");
+  button.slot = "actions";
   el.appendChild(button);
-  actionsSlot.dispatchEvent(new Event('slotchange'));
+  actionsSlot.dispatchEvent(new Event("slotchange"));
   await el.updateComplete;
 
-  expect(actionsWrapper.hasAttribute('hidden')).to.be.false;
+  expect(actionsWrapper.hasAttribute("hidden")).to.be.false;
   // The footer itself must also now be visible, purely because of the actions content.
-  expect((el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement
+    ).hasAttribute("hidden")
+  ).to.be.false;
 });
 
-it('renders actions inside the footer, inside the bubble, by default (actionsOutsideBubble unset)', async () => {
+it("renders actions inside the footer, inside the bubble, by default", async () => {
   const el = (await fixture(
-    html`<lr-chat-message><button slot="actions">Copy</button>hi</lr-chat-message>`,
+    html`<lr-chat-message
+      ><button slot="actions">Copy</button>hi</lr-chat-message
+    >`
   )) as LyraChatMessage;
-  expect(el.actionsOutsideBubble).to.equal(false);
+  expect(el.actionsPosition).to.equal("inside");
   const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
-  const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector(
+    '[part="actions"]'
+  ) as HTMLElement;
   expect(bubble.contains(actions)).to.be.true;
   expect(actions.closest('[part="footer"]')).to.exist;
 });
 
-it('renders actions as a sibling after the bubble when actionsOutsideBubble is set', async () => {
+it('renders actions as a sibling after the bubble when actions-position="outside"', async () => {
   const el = (await fixture(
-    html`<lr-chat-message actions-outside-bubble
+    html`<lr-chat-message actions-position="outside"
       ><button slot="actions">Copy</button>hi</lr-chat-message
-    >`,
+    >`
   )) as LyraChatMessage;
-  expect(el.getAttribute('actions-outside-bubble')).to.equal('');
+  expect(el.actionsPosition).to.equal("outside");
   const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
-  const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector(
+    '[part="actions"]'
+  ) as HTMLElement;
   expect(bubble.contains(actions)).to.be.false;
-  expect(actions.previousElementSibling === bubble || bubble.nextElementSibling === actions).to.be.true;
+  expect(
+    actions.previousElementSibling === bubble ||
+      bubble.nextElementSibling === actions
+  ).to.be.true;
 });
 
-it('keeps the footer hidden when actionsOutsideBubble is set and there is no status/timestamp, even with actions slotted', async () => {
+it("keeps the footer hidden for outside actions when there is no status/timestamp", async () => {
   const el = (await fixture(
-    html`<lr-chat-message actions-outside-bubble
+    html`<lr-chat-message actions-position="outside"
       ><button slot="actions">Copy</button>hi</lr-chat-message
-    >`,
+    >`
   )) as LyraChatMessage;
   const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
-  expect(footer.hasAttribute('hidden')).to.be.true;
-  const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
-  expect(actions.hasAttribute('hidden')).to.be.false;
+  expect(footer.hasAttribute("hidden")).to.be.true;
+  const actions = el.shadowRoot!.querySelector(
+    '[part="actions"]'
+  ) as HTMLElement;
+  expect(actions.hasAttribute("hidden")).to.be.false;
 });
 
-it('shows attachments once slotted', async () => {
-  const el = (await fixture(
-    html`<lr-chat-message><span slot="attachments">file.png</span>hi</lr-chat-message>`,
-  )) as LyraChatMessage;
-  expect((el.shadowRoot!.querySelector('[part="attachments"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
-});
-
-it('localizes the visible status text via this.localize(), not a hardcoded English map', async () => {
+it("shows attachments once slotted", async () => {
   const el = (await fixture(
     html`<lr-chat-message
-      .strings=${{ chatSending: 'Envoi…', chatResponding: 'Réponse…', chatFailedToSend: "Échec de l'envoi" }}
-      >hi</lr-chat-message
-    >`,
+      ><span slot="attachments">file.png</span>hi</lr-chat-message
+    >`
   )) as LyraChatMessage;
-  el.status = 'sending';
-  await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Envoi…');
-  el.status = 'streaming';
-  await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Réponse…');
-  el.status = 'failed';
-  await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal("Échec de l'envoi");
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="attachments"]') as HTMLElement
+    ).hasAttribute("hidden")
+  ).to.be.false;
 });
 
-it('defaults to English status text when no strings override is set', async () => {
-  const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
-  el.status = 'sending';
+it("localizes the visible status text via this.localize(), not a hardcoded English map", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message
+      .strings=${{
+        chatSending: "Envoi…",
+        chatResponding: "Réponse…",
+        chatFailedToSend: "Échec de l'envoi",
+      }}
+      >hi</lr-chat-message
+    >`
+  )) as LyraChatMessage;
+  el.status = "sending";
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Sending…');
+  expect(
+    el.shadowRoot!.querySelector('[part="status-text"]')!.textContent
+  ).to.equal("Envoi…");
+  el.status = "streaming";
+  await el.updateComplete;
+  expect(
+    el.shadowRoot!.querySelector('[part="status-text"]')!.textContent
+  ).to.equal("Réponse…");
+  el.status = "failed";
+  await el.updateComplete;
+  expect(
+    el.shadowRoot!.querySelector('[part="status-text"]')!.textContent
+  ).to.equal("Échec de l'envoi");
 });
 
-it('uses themeable ambient motion for streaming and wraps crowded footer content', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
+it("defaults to English status text when no strings override is set", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message>hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  el.status = "sending";
+  await el.updateComplete;
+  expect(
+    el.shadowRoot!.querySelector('[part="status-text"]')!.textContent
+  ).to.equal("Sending…");
+});
+
+it("uses themeable ambient motion for streaming and wraps crowded footer content", () => {
+  const css = styles.cssText.replace(/\s+/g, " ");
   expect(css).to.include(
-    "animation: lr-chat-message-pulse var(--lr-transition-ambient) infinite;",
+    "animation: lr-chat-message-pulse var(--lr-transition-ambient) infinite;"
   );
   expect(css).to.match(/\[part='footer'\]\s*\{[^}]*flex-wrap:\s*wrap;/);
 });
 
-it('allows the ambient motion token to retime the streaming indicator', async () => {
+it("allows the ambient motion token to retime the streaming indicator", async () => {
   const el = (await fixture(html`
     <lr-chat-message
       status="streaming"
       style="--lr-transition-ambient: 3s linear"
-    >hi</lr-chat-message>
+      >hi</lr-chat-message
+    >
   `)) as LyraChatMessage;
   const indicator = el.shadowRoot!.querySelector('[part="status-indicator"]')!;
 
-  expect(getComputedStyle(indicator).animationDuration).to.equal('3s');
-  expect(getComputedStyle(indicator).animationTimingFunction).to.equal('linear');
+  expect(getComputedStyle(indicator).animationDuration).to.equal("3s");
+  expect(getComputedStyle(indicator).animationTimingFunction).to.equal(
+    "linear"
+  );
 });
 
-it('actually wraps a footer crowded with status text, timestamp, retry button, and actions onto multiple lines', async () => {
+it("actually wraps a footer crowded with status text, timestamp, retry button, and actions onto multiple lines", async () => {
   // The cssText-regex assertion above only proves the literal declaration exists in the
   // stylesheet source, never that it reaches a real rendered footer -- a rule that got silently
   // overridden or dropped elsewhere in the cascade would leave this test suite green while a real
@@ -410,72 +658,86 @@ it('actually wraps a footer crowded with status text, timestamp, retry button, a
   await el.updateComplete;
 
   const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
-  expect(getComputedStyle(footer).flexWrap).to.equal('wrap');
+  expect(getComputedStyle(footer).flexWrap).to.equal("wrap");
 
   const children = Array.from(footer.children) as HTMLElement[];
   const tops = new Set(children.map((child) => child.offsetTop));
   expect(
     tops.size,
-    'a crowded footer this narrow must actually wrap onto more than one row, not just parse flex-wrap: wrap',
+    "a crowded footer this narrow must actually wrap onto more than one row, not just parse flex-wrap: wrap"
   ).to.be.greaterThan(1);
 });
 
-it('routes the bubble fill/text through the new role-scoped cssprops, leaving [part="collapse-button"]:hover keyed directly to --lr-color-brand-quiet', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include('--lr-chat-message-bubble-bg: var(--lr-color-surface);');
-  expect(css).to.include('--lr-chat-message-bubble-color: var(--lr-color-text);');
-  expect(css).to.include('--lr-chat-message-user-bubble-bg: var(--lr-color-brand-quiet);');
-  expect(css).to.include('--lr-chat-message-user-bubble-color: var(--lr-color-text);');
-  expect(css).to.match(/\[part='bubble'\] \{[^}]*background: var\(--lr-chat-message-bubble-bg\);/);
-  expect(css).to.match(/\[part='bubble'\] \{[^}]*color: var\(--lr-chat-message-bubble-color\);/);
-  expect(css).to.match(
-    /data-role='user'\]\) \[part='bubble'\] \{[^}]*background: var\(--lr-chat-message-user-bubble-bg\);[^}]*color: var\(--lr-chat-message-user-bubble-color\);/,
-  );
-  // Unrelated consumer of the same shared token this component used to
-  // wire the user bubble to directly -- must stay untouched by this change.
-  expect(css).to.include(
-    "[part='collapse-button']:hover { background: var(--lr-color-brand-quiet); color: var(--lr-color-brand); }",
-  );
+it("inherits component theme hooks from an ancestor and lets direct-host values override them", async () => {
+  const wrapper = (await fixture(html`
+    <div
+      style="--lr-chat-message-bubble-bg: rgb(1, 2, 3); --lr-chat-message-bubble-color: rgb(4, 5, 6)"
+    >
+      <lr-chat-message>hi</lr-chat-message>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector("lr-chat-message") as LyraChatMessage;
+  const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+  expect(getComputedStyle(bubble).backgroundColor).to.equal("rgb(1, 2, 3)");
+  expect(getComputedStyle(bubble).color).to.equal("rgb(4, 5, 6)");
+
+  el.style.setProperty("--lr-chat-message-bubble-bg", "rgb(7, 8, 9)");
+  expect(getComputedStyle(bubble).backgroundColor).to.equal("rgb(7, 8, 9)");
 });
 
-it('defaults the generic bubble fill/text to --lr-color-surface/--lr-color-text, unchanged now that they route through cssprops', async () => {
-  const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
+it("defaults the generic bubble fill/text to --lr-color-surface/--lr-color-text, unchanged now that they route through cssprops", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message>hi</lr-chat-message>`
+  )) as LyraChatMessage;
   const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
-  const probe = document.createElement('div');
-  probe.style.cssText = 'background: var(--lr-color-surface); color: var(--lr-color-text);';
+  const probe = document.createElement("div");
+  probe.style.cssText =
+    "background: var(--lr-color-surface); color: var(--lr-color-text);";
   el.shadowRoot!.appendChild(probe);
 
-  expect(getComputedStyle(bubble).backgroundColor).to.equal(getComputedStyle(probe).backgroundColor);
-  expect(getComputedStyle(bubble).color).to.equal(getComputedStyle(probe).color);
+  expect(getComputedStyle(bubble).backgroundColor).to.equal(
+    getComputedStyle(probe).backgroundColor
+  );
+  expect(getComputedStyle(bubble).color).to.equal(
+    getComputedStyle(probe).color
+  );
 });
 
-it('defaults the user-role bubble fill/text to --lr-color-brand-quiet/--lr-color-text, unchanged now that they route through cssprops', async () => {
-  const el = (await fixture(html`<lr-chat-message data-role="user">hi</lr-chat-message>`)) as LyraChatMessage;
+it("defaults the user-role bubble fill/text to --lr-color-brand-quiet/--lr-color-text, unchanged now that they route through cssprops", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message message-role="user">hi</lr-chat-message>`
+  )) as LyraChatMessage;
   const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
-  const probe = document.createElement('div');
-  probe.style.cssText = 'background: var(--lr-color-brand-quiet); color: var(--lr-color-text);';
+  const probe = document.createElement("div");
+  probe.style.cssText =
+    "background: var(--lr-color-brand-quiet); color: var(--lr-color-text);";
   el.shadowRoot!.appendChild(probe);
 
-  expect(getComputedStyle(bubble).backgroundColor).to.equal(getComputedStyle(probe).backgroundColor);
-  expect(getComputedStyle(bubble).color).to.equal(getComputedStyle(probe).color);
+  expect(getComputedStyle(bubble).backgroundColor).to.equal(
+    getComputedStyle(probe).backgroundColor
+  );
+  expect(getComputedStyle(bubble).color).to.equal(
+    getComputedStyle(probe).color
+  );
 });
 
-it('retints the generic bubble fill/text via --lr-chat-message-bubble-bg/-color', async () => {
+it("retints the generic bubble fill/text via --lr-chat-message-bubble-bg/-color", async () => {
   const el = (await fixture(html`
     <lr-chat-message
       style="--lr-chat-message-bubble-bg: rgb(1, 2, 3); --lr-chat-message-bubble-color: rgb(4, 5, 6);"
-    >hi</lr-chat-message>
+      >hi</lr-chat-message
+    >
   `)) as LyraChatMessage;
   const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
 
-  expect(getComputedStyle(bubble).backgroundColor).to.equal('rgb(1, 2, 3)');
-  expect(getComputedStyle(bubble).color).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(bubble).backgroundColor).to.equal("rgb(1, 2, 3)");
+  expect(getComputedStyle(bubble).color).to.equal("rgb(4, 5, 6)");
 });
 
-it('retints streaming, failed, system, footer, and indicator states through component hooks', async () => {
+it("retints streaming, failed, system, footer, and indicator states through component hooks", async () => {
   const el = (await fixture(html`
     <lr-chat-message
-      data-role="system"
+      message-role="system"
       status="failed"
       style="
         --lr-chat-message-system-color: rgb(1, 2, 3);
@@ -485,69 +747,96 @@ it('retints streaming, failed, system, footer, and indicator states through comp
         --lr-chat-message-failed-indicator-color: rgb(13, 14, 15);
         --lr-chat-message-failed-status-color: rgb(16, 17, 18);
       "
-    >hi</lr-chat-message>
+      >hi</lr-chat-message
+    >
   `)) as LyraChatMessage;
   const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
   const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
-  const indicator = el.shadowRoot!.querySelector('[part="status-indicator"]') as HTMLElement;
-  const status = el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement;
-  expect(getComputedStyle(bubble).color).to.equal('rgb(1, 2, 3)');
-  expect(getComputedStyle(bubble).borderColor).to.equal('rgb(4, 5, 6)');
-  expect(getComputedStyle(bubble).backgroundColor).to.equal('rgb(7, 8, 9)');
-  expect(getComputedStyle(footer).color).to.equal('rgb(10, 11, 12)');
-  expect(getComputedStyle(indicator).backgroundColor).to.equal('rgb(13, 14, 15)');
-  expect(getComputedStyle(status).color).to.equal('rgb(16, 17, 18)');
+  const indicator = el.shadowRoot!.querySelector(
+    '[part="status-indicator"]'
+  ) as HTMLElement;
+  const status = el.shadowRoot!.querySelector(
+    '[part="status-text"]'
+  ) as HTMLElement;
+  expect(getComputedStyle(bubble).color).to.equal("rgb(1, 2, 3)");
+  expect(getComputedStyle(bubble).borderColor).to.equal("rgb(4, 5, 6)");
+  expect(getComputedStyle(bubble).backgroundColor).to.equal("rgb(7, 8, 9)");
+  expect(getComputedStyle(footer).color).to.equal("rgb(10, 11, 12)");
+  expect(getComputedStyle(indicator).backgroundColor).to.equal(
+    "rgb(13, 14, 15)"
+  );
+  expect(getComputedStyle(status).color).to.equal("rgb(16, 17, 18)");
 
-  el.status = 'streaming';
+  el.status = "streaming";
   await el.updateComplete;
-  el.style.setProperty('--lr-chat-message-streaming-border-color', 'rgb(19, 20, 21)');
-  el.style.setProperty('--lr-chat-message-streaming-indicator-color', 'rgb(22, 23, 24)');
-  expect(getComputedStyle(bubble).borderColor).to.equal('rgb(19, 20, 21)');
-  expect(getComputedStyle(indicator).backgroundColor).to.equal('rgb(22, 23, 24)');
+  el.style.setProperty(
+    "--lr-chat-message-streaming-border-color",
+    "rgb(19, 20, 21)"
+  );
+  el.style.setProperty(
+    "--lr-chat-message-streaming-indicator-color",
+    "rgb(22, 23, 24)"
+  );
+  expect(getComputedStyle(bubble).borderColor).to.equal("rgb(19, 20, 21)");
+  expect(getComputedStyle(indicator).backgroundColor).to.equal(
+    "rgb(22, 23, 24)"
+  );
 });
 
-it('retints the user-role bubble fill/text via --lr-chat-message-user-bubble-bg/-color, independent of the generic pair', async () => {
+it("retints the user-role bubble fill/text via --lr-chat-message-user-bubble-bg/-color, independent of the generic pair", async () => {
   const el = (await fixture(html`
     <lr-chat-message
-      data-role="user"
+      message-role="user"
       style="
         --lr-chat-message-user-bubble-bg: rgb(7, 8, 9);
         --lr-chat-message-user-bubble-color: rgb(10, 11, 12);
         --lr-chat-message-bubble-bg: rgb(1, 2, 3);
         --lr-chat-message-bubble-color: rgb(4, 5, 6);
       "
-    >hi</lr-chat-message>
+      >hi</lr-chat-message
+    >
   `)) as LyraChatMessage;
   const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
 
-  expect(getComputedStyle(bubble).backgroundColor).to.equal('rgb(7, 8, 9)');
-  expect(getComputedStyle(bubble).color).to.equal('rgb(10, 11, 12)');
+  expect(getComputedStyle(bubble).backgroundColor).to.equal("rgb(7, 8, 9)");
+  expect(getComputedStyle(bubble).color).to.equal("rgb(10, 11, 12)");
 });
 
-it('localizes the live-region status-change announcements via this.localize()', async () => {
+it("localizes the live-region status-change announcements via this.localize()", async () => {
   const el = (await fixture(
-    html`<lr-chat-message .strings=${{ chatFailedAnnounce: 'Échec.', chatCompleteAnnounce: 'Terminé.' }}
+    html`<lr-chat-message
+      .strings=${{
+        chatFailedAnnounce: "Échec.",
+        chatCompleteAnnounce: "Terminé.",
+      }}
       >hi</lr-chat-message
-    >`,
+    >`
   )) as LyraChatMessage;
-  el.status = 'streaming';
+  el.status = "streaming";
   await el.updateComplete;
-  el.status = 'sent';
+  el.status = "sent";
   await el.updateComplete;
-  expect(liveRegionText(el)).to.equal('Terminé.');
-  el.status = 'failed';
+  expect(liveRegionText(el)).to.equal("Terminé.");
+  el.status = "failed";
   await el.updateComplete;
-  expect(liveRegionText(el)).to.equal('Échec.');
+  expect(liveRegionText(el)).to.equal("Échec.");
 });
 
-it('is accessible in the default, empty state', async () => {
-  const el = (await fixture(html`<lr-chat-message>A plain message.</lr-chat-message>`)) as LyraChatMessage;
+it("is accessible in the default, empty state", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message>A plain message.</lr-chat-message>`
+  )) as LyraChatMessage;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible fully populated: avatar, badges, attachments, actions, timestamp, and status="failed"', async () => {
   const el = (await fixture(html`
-    <lr-chat-message data-role="user" status="failed" .timestamp=${new Date()} collapsible>
+    <lr-chat-message
+      message-role="user"
+      status="failed"
+      .timestamp=${new Date()}
+      collapsible
+    >
       <span slot="avatar">A</span>
       <span slot="badges">gpt-5.4</span>
       Something went wrong.
@@ -558,23 +847,27 @@ it('is accessible fully populated: avatar, badges, attachments, actions, timesta
   await expect(el).to.be.accessible();
 });
 
-it('is accessible with actionsOutsideBubble set and actions populated', async () => {
+it("is accessible with outside actions populated", async () => {
   const el = (await fixture(
-    html`<lr-chat-message actions-outside-bubble
+    html`<lr-chat-message actions-position="outside"
       ><button slot="actions">Copy</button>hi</lr-chat-message
-    >`,
+    >`
   )) as LyraChatMessage;
   await expect(el).to.be.accessible();
 });
 
-describe('attachments-position', () => {
+describe("attachments-position", () => {
   it('defaults to "after" -- attachments render after the body in DOM order', async () => {
     const el = (await fixture(html`
-      <lr-chat-message><span slot="attachments">file.png</span>Hello</lr-chat-message>
+      <lr-chat-message
+        ><span slot="attachments">file.png</span>Hello</lr-chat-message
+      >
     `)) as LyraChatMessage;
     const bubble = el.shadowRoot!.querySelector('[part="bubble"]')!;
-    const parts = Array.from(bubble.children).map((c) => c.getAttribute('part'));
-    expect(parts.indexOf('body')).to.be.lessThan(parts.indexOf('attachments'));
+    const parts = Array.from(bubble.children).map((c) =>
+      c.getAttribute("part")
+    );
+    expect(parts.indexOf("body")).to.be.lessThan(parts.indexOf("attachments"));
   });
 
   it('renders attachments before the body when attachments-position="before"', async () => {
@@ -584,18 +877,22 @@ describe('attachments-position', () => {
       >
     `)) as LyraChatMessage;
     const bubble = el.shadowRoot!.querySelector('[part="bubble"]')!;
-    const parts = Array.from(bubble.children).map((c) => c.getAttribute('part'));
-    expect(parts.indexOf('attachments')).to.be.lessThan(parts.indexOf('body'));
+    const parts = Array.from(bubble.children).map((c) =>
+      c.getAttribute("part")
+    );
+    expect(parts.indexOf("attachments")).to.be.lessThan(parts.indexOf("body"));
   });
 
-  it('reflects attachments-position onto the property', async () => {
-    const el = (await fixture(html`<lr-chat-message attachments-position="before"></lr-chat-message>`)) as LyraChatMessage;
-    expect(el.attachmentsPosition).to.equal('before');
+  it("reflects attachments-position onto the property", async () => {
+    const el = (await fixture(
+      html`<lr-chat-message attachments-position="before"></lr-chat-message>`
+    )) as LyraChatMessage;
+    expect(el.attachmentsPosition).to.equal("before");
   });
 });
 
-describe('failure slot', () => {
-  it('renders exactly the consumer failure presentation -- not the built-in one -- once populated', async () => {
+describe("failure slot", () => {
+  it("renders exactly the consumer failure presentation -- not the built-in one -- once populated", async () => {
     const el = (await fixture(html`
       <lr-chat-message status="failed">
         <lr-markdown-core>Message body</lr-markdown-core>
@@ -607,25 +904,30 @@ describe('failure slot', () => {
     `)) as LyraChatMessage;
 
     // Built-in failed UI is suppressed -- there is exactly one failure presentation, the consumer's.
-    expect((el.shadowRoot!.querySelector('[part="status-text"]')) == null, 'built-in status text is suppressed').to.be.true;
+    expect(
+      el.shadowRoot!.querySelector('[part="status-text"]') == null,
+      "built-in status text is suppressed"
+    ).to.be.true;
     expect(
       el.shadowRoot!.querySelector('[part="status-indicator"]') == null,
-      'built-in status dot is suppressed'
+      "built-in status dot is suppressed"
     ).to.be.true;
     expect(
       el.shadowRoot!.querySelector('[part="retry-button"]') == null,
-      'built-in retry button is suppressed'
+      "built-in retry button is suppressed"
     ).to.be.true;
 
-    const slot = el.shadowRoot!.querySelector('slot[name="failure"]') as HTMLSlotElement;
+    const slot = el.shadowRoot!.querySelector(
+      'slot[name="failure"]'
+    ) as HTMLSlotElement;
     const assigned = slot.assignedElements({ flatten: true });
     expect(assigned).to.have.lengthOf(1);
-    expect(assigned[0].getAttribute('role')).to.equal('alert');
-    expect(assigned[0].textContent).to.contain('Send failed');
-    expect((assigned[0].querySelector('button')) != null).to.equal(true);
+    expect(assigned[0].getAttribute("role")).to.equal("alert");
+    expect(assigned[0].textContent).to.contain("Send failed");
+    expect(assigned[0].querySelector("button") != null).to.equal(true);
   });
 
-  it('lets the consumer failure content lay out exactly as authored, without any ::part(failure) override', async () => {
+  it("lets the consumer failure content lay out exactly as authored, without any ::part(failure) override", async () => {
     const el = (await fixture(html`
       <lr-chat-message status="failed">
         <div slot="failure" role="alert" style="display: flex; gap: 4px;">
@@ -636,84 +938,121 @@ describe('failure slot', () => {
     `)) as LyraChatMessage;
 
     const failureContent = el.querySelector('[slot="failure"]') as HTMLElement;
-    expect(getComputedStyle(failureContent).display).to.equal('flex');
+    expect(getComputedStyle(failureContent).display).to.equal("flex");
     // [part="failure"] itself contributes no box (display: contents), so it never constrains or
     // wraps the consumer's own element -- no ::part(failure) reach-through is needed to get there.
-    const slotPart = el.shadowRoot!.querySelector('[part="failure"]') as HTMLElement;
-    expect(getComputedStyle(slotPart).display).to.equal('contents');
+    const slotPart = el.shadowRoot!.querySelector(
+      '[part="failure"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(slotPart).display).to.equal("contents");
   });
 
   it('is not present in the DOM at all unless status="failed", regardless of pre-existing slot="failure" content', async () => {
     const el = (await fixture(html`
-      <lr-chat-message><div slot="failure" role="alert">Send failed</div>hi</lr-chat-message>
+      <lr-chat-message
+        ><div slot="failure" role="alert">Send failed</div>
+        hi</lr-chat-message
+      >
     `)) as LyraChatMessage;
-      expect(el.shadowRoot!.querySelector('slot[name="failure"]') === null).to.be.true;
+    expect(el.shadowRoot!.querySelector('slot[name="failure"]') === null).to.be
+      .true;
     // The status is "sent" -- the content sits inert in the light DOM, unslotted, exactly like any
     // other slot="..." content this component doesn't currently have a matching <slot> for.
-    expect((el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
+    expect(
+      (
+        el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement
+      ).hasAttribute("hidden")
+    ).to.be.true;
 
-    el.status = 'sent';
+    el.status = "sent";
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('slot[name="failure"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('slot[name="failure"]') == null).to.be
+      .true;
   });
 
   it('detects pre-existing failure-slot content on first paint when mounting directly into status="failed", not just via slotchange', async () => {
     const el = (await fixture(html`
-      <lr-chat-message status="failed"><div slot="failure" role="alert">Send failed</div>hi</lr-chat-message>
+      <lr-chat-message status="failed"
+        ><div slot="failure" role="alert">Send failed</div>
+        hi</lr-chat-message
+      >
     `)) as LyraChatMessage;
-    expect((el.shadowRoot!.querySelector('[part="status-text"]')) == null).to.be.true;
-    expect((el.shadowRoot!.querySelector('[part="retry-button"]')) == null).to.be.true;
-    const slot = el.shadowRoot!.querySelector('slot[name="failure"]') as HTMLSlotElement;
+    expect(el.shadowRoot!.querySelector('[part="status-text"]') == null).to.be
+      .true;
+    expect(el.shadowRoot!.querySelector('[part="retry-button"]') == null).to.be
+      .true;
+    const slot = el.shadowRoot!.querySelector(
+      'slot[name="failure"]'
+    ) as HTMLSlotElement;
     expect(slot.assignedElements({ flatten: true })).to.have.lengthOf(1);
   });
 
   it('detects pre-existing failure-slot content when entering "failed" after mount (not just via slotchange)', async () => {
     const el = (await fixture(html`
-      <lr-chat-message><div slot="failure" role="alert">Send failed</div>hi</lr-chat-message>
+      <lr-chat-message
+        ><div slot="failure" role="alert">Send failed</div>
+        hi</lr-chat-message
+      >
     `)) as LyraChatMessage;
 
-    el.status = 'failed';
+    el.status = "failed";
     await el.updateComplete;
 
-    expect((el.shadowRoot!.querySelector('[part="status-text"]')) == null).to.be.true;
-    expect((el.shadowRoot!.querySelector('[part="retry-button"]')) == null).to.be.true;
-    const slot = el.shadowRoot!.querySelector('slot[name="failure"]') as HTMLSlotElement;
+    expect(el.shadowRoot!.querySelector('[part="status-text"]') == null).to.be
+      .true;
+    expect(el.shadowRoot!.querySelector('[part="retry-button"]') == null).to.be
+      .true;
+    const slot = el.shadowRoot!.querySelector(
+      'slot[name="failure"]'
+    ) as HTMLSlotElement;
     expect(slot.assignedElements({ flatten: true })).to.have.lengthOf(1);
   });
 
-  it('restores the built-in failed UI via slotchange once failure-slot content is removed', async () => {
+  it("restores the built-in failed UI via slotchange once failure-slot content is removed", async () => {
     const el = (await fixture(html`
-      <lr-chat-message status="failed"><div slot="failure" role="alert">Send failed</div>hi</lr-chat-message>
+      <lr-chat-message status="failed"
+        ><div slot="failure" role="alert">Send failed</div>
+        hi</lr-chat-message
+      >
     `)) as LyraChatMessage;
-    expect((el.shadowRoot!.querySelector('[part="status-text"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="status-text"]') == null).to.be
+      .true;
 
     const failureContent = el.querySelector('[slot="failure"]')!;
     el.removeChild(failureContent);
-    const slot = el.shadowRoot!.querySelector('slot[name="failure"]') as HTMLSlotElement;
-    slot.dispatchEvent(new Event('slotchange'));
+    const slot = el.shadowRoot!.querySelector(
+      'slot[name="failure"]'
+    ) as HTMLSlotElement;
+    slot.dispatchEvent(new Event("slotchange"));
     await el.updateComplete;
 
-    expect((el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement).textContent).to.equal(
-      'Failed to send',
-    );
+    expect(
+      (el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement)
+        .textContent
+    ).to.equal("Failed to send");
     expect(el.shadowRoot!.querySelector('[part="retry-button"]')).to.exist;
   });
 
-  it('suppresses the built-in chatFailedAnnounce live-region announcement once the failure slot is used', async () => {
-    const el = (await fixture(html`<lr-chat-message status="streaming">hi</lr-chat-message>`)) as LyraChatMessage;
-    const failureContent = document.createElement('div');
-    failureContent.slot = 'failure';
-    failureContent.setAttribute('role', 'alert');
-    failureContent.textContent = 'Send failed';
+  it("suppresses the built-in chatFailedAnnounce live-region announcement once the failure slot is used", async () => {
+    const el = (await fixture(
+      html`<lr-chat-message status="streaming">hi</lr-chat-message>`
+    )) as LyraChatMessage;
+    const failureContent = document.createElement("div");
+    failureContent.slot = "failure";
+    failureContent.setAttribute("role", "alert");
+    failureContent.textContent = "Send failed";
     el.appendChild(failureContent);
 
-    el.status = 'failed';
+    el.status = "failed";
     await el.updateComplete;
 
-    expect(liveRegionText(el), 'the host owns announcing its own alert content').to.equal('');
+    expect(
+      liveRegionText(el),
+      "the host owns announcing its own alert content"
+    ).to.equal("");
   });
 
-  it('fires lr-retry when a custom failure-slot control dispatches it, same event contract as the built-in retry button', async () => {
+  it("fires lr-message-retry when a custom failure-slot control dispatches it, same event contract as the built-in retry button", async () => {
     const el = (await fixture(html`
       <lr-chat-message status="failed">
         <div slot="failure" role="alert">
@@ -723,16 +1062,18 @@ describe('failure slot', () => {
       </lr-chat-message>
     `)) as LyraChatMessage;
     let fired = false;
-    el.addEventListener('lr-retry', () => (fired = true));
-    const button = el.querySelector('#custom-retry') as HTMLButtonElement;
-    button.addEventListener('click', () => {
-      button.dispatchEvent(new CustomEvent('lr-retry', { bubbles: true, composed: true }));
+    el.addEventListener("lr-message-retry", () => (fired = true));
+    const button = el.querySelector("#custom-retry") as HTMLButtonElement;
+    button.addEventListener("click", () => {
+      button.dispatchEvent(
+        new CustomEvent("lr-message-retry", { bubbles: true, composed: true })
+      );
     });
     button.click();
     expect(fired).to.be.true;
   });
 
-  it('keeps focus inside the message (never document.body) when a custom failure-slot control clears the failed state', async () => {
+  it("keeps focus inside the message (never document.body) when a custom failure-slot control clears the failed state", async () => {
     const el = (await fixture(html`
       <lr-chat-message status="failed">
         <div slot="failure" role="alert">
@@ -741,23 +1082,32 @@ describe('failure slot', () => {
         </div>
       </lr-chat-message>
     `)) as LyraChatMessage;
-    const button = el.querySelector('#custom-retry') as HTMLButtonElement;
+    const button = el.querySelector("#custom-retry") as HTMLButtonElement;
     // The documented, expected response to a retry action.
-    button.addEventListener('click', () => {
-      el.status = 'sent';
+    button.addEventListener("click", () => {
+      el.status = "sent";
     });
 
     button.focus();
-    expect((document.activeElement) === (button)).to.equal(true);
+    expect(document.activeElement === button).to.equal(true);
     button.click();
     await el.updateComplete;
 
-    expect((el.shadowRoot!.querySelector('slot[name="failure"]')) == null, 'the failure slot is gone once status flips').to.be.true;
-    expect((document.activeElement) !== (document.body), 'focus must not have silently reverted to <body>').to.equal(true);
-    expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="bubble"]'))).to.equal(true);
+    expect(
+      el.shadowRoot!.querySelector('slot[name="failure"]') == null,
+      "the failure slot is gone once status flips"
+    ).to.be.true;
+    expect(
+      document.activeElement !== document.body,
+      "focus must not have silently reverted to <body>"
+    ).to.equal(true);
+    expect(
+      el.shadowRoot!.activeElement ===
+        el.shadowRoot!.querySelector('[part="bubble"]')
+    ).to.equal(true);
   });
 
-  it('rescues focus through the adopted owner document when iframe failure content is removed', async () => {
+  it("rescues focus through the adopted owner document when iframe failure content is removed", async () => {
     const el = (await fixture(html`
       <lr-chat-message status="failed">
         <div slot="failure" role="alert">
@@ -767,60 +1117,83 @@ describe('failure slot', () => {
       </lr-chat-message>
     `)) as LyraChatMessage;
     el.remove();
-    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const iframe = (await fixture(
+      html`<iframe></iframe>`
+    )) as HTMLIFrameElement;
     const frameDocument = iframe.contentDocument!;
 
     try {
       frameDocument.body.append(frameDocument.adoptNode(el));
       await el.updateComplete;
-      const button = el.querySelector('#custom-retry') as HTMLButtonElement;
+      const button = el.querySelector("#custom-retry") as HTMLButtonElement;
       button.focus();
-      expect(frameDocument.activeElement?.id).to.equal('custom-retry');
-      expect(document.activeElement === iframe, 'the parent document sees only the iframe boundary').to.be.true;
+      expect(frameDocument.activeElement?.id).to.equal("custom-retry");
+      expect(
+        document.activeElement === iframe,
+        "the parent document sees only the iframe boundary"
+      ).to.be.true;
 
-      el.status = 'sent';
+      el.status = "sent";
       await el.updateComplete;
 
-      expect(el.shadowRoot!.querySelector('slot[name="failure"]') === null).to.be.true;
-      expect(frameDocument.activeElement?.localName, 'focus must stay inside the adopted message').to.equal(
-        'lr-chat-message',
-      );
-      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('bubble');
+      expect(el.shadowRoot!.querySelector('slot[name="failure"]') === null).to
+        .be.true;
+      expect(
+        frameDocument.activeElement?.localName,
+        "focus must stay inside the adopted message"
+      ).to.equal("lr-chat-message");
+      expect(
+        (el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute(
+          "part"
+        )
+      ).to.equal("bubble");
     } finally {
       el.remove();
       iframe.remove();
     }
   });
 
-  it('leaves the default (no failure slot) status text, retry button, and live-region announcement byte-identical', async () => {
-    const el = (await fixture(html`<lr-chat-message status="streaming">hi</lr-chat-message>`)) as LyraChatMessage;
-    el.status = 'failed';
+  it("leaves the default (no failure slot) status text, retry button, and live-region announcement byte-identical", async () => {
+    const el = (await fixture(
+      html`<lr-chat-message status="streaming">hi</lr-chat-message>`
+    )) as LyraChatMessage;
+    el.status = "failed";
     await el.updateComplete;
 
-    expect((el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement).textContent).to.equal(
-      'Failed to send',
-    );
+    expect(
+      (el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement)
+        .textContent
+    ).to.equal("Failed to send");
     expect(el.shadowRoot!.querySelector('[part="status-indicator"]')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="retry-button"]')).to.exist;
-    expect(liveRegionText(el)).to.equal('Message failed to send.');
-    const region = el.shadowRoot!.querySelector('lr-live-region') as LyraLiveRegion;
-    expect(region.mode).to.equal('assertive');
+    expect(liveRegionText(el)).to.equal("Message failed to send.");
+    const region = el.shadowRoot!.querySelector(
+      "lr-live-region"
+    ) as LyraLiveRegion;
+    expect(region.mode).to.equal("assertive");
   });
 
-  it('leaves actionsOutsideBubble behavior unaffected when the failure slot is also in use', async () => {
+  it("leaves outside-actions behavior unaffected when the failure slot is also in use", async () => {
     const el = (await fixture(html`
-      <lr-chat-message status="failed" actions-outside-bubble>
+      <lr-chat-message status="failed" actions-position="outside">
         <div slot="failure" role="alert">Send failed</div>
         <button slot="actions">Copy</button>
       </lr-chat-message>
     `)) as LyraChatMessage;
-    const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
-    const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+    const bubble = el.shadowRoot!.querySelector(
+      '[part="bubble"]'
+    ) as HTMLElement;
+    const actions = el.shadowRoot!.querySelector(
+      '[part="actions"]'
+    ) as HTMLElement;
     expect(bubble.contains(actions)).to.be.false;
-    expect(actions.previousElementSibling === bubble || bubble.nextElementSibling === actions).to.be.true;
+    expect(
+      actions.previousElementSibling === bubble ||
+        bubble.nextElementSibling === actions
+    ).to.be.true;
   });
 
-  it('is accessible with a custom failure-slot alert banner', async () => {
+  it("is accessible with a custom failure-slot alert banner", async () => {
     const el = (await fixture(html`
       <lr-chat-message status="failed">
         Message body
@@ -834,125 +1207,145 @@ describe('failure slot', () => {
   });
 });
 
-// The bubble's padding/radius were hardcoded, so the only way to reshape it was a
-// `::part(bubble)` override in the consumer's own tree -- and an outer-tree ::part declaration
-// beats every rule in this shadow tree, which silently suppressed the per-status border/background
-// treatments below. These two cssprops let the geometry be retuned with the status styling intact.
-describe('bubble geometry cssprops', () => {
-  it('routes the bubble padding/radius through --lr-chat-message-bubble-padding/-radius', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    // Each default is carried as the var() fallback arm at the point of use, NOT as a :host
-    // declaration. A :host rule is re-stamped on every instance and shadows any inherited value,
-    // so declaring these would make an ancestor-level override impossible -- which is precisely
-    // the reach problem these props exist to solve.
-    expect(css).to.not.include('--lr-chat-message-bubble-padding:');
-    expect(css).to.not.include('--lr-chat-message-bubble-radius:');
-    expect(css).to.match(
-      /\[part='bubble'\] \{[^}]*padding: var\(--lr-chat-message-bubble-padding, var\(--lr-space-m\)\);/,
-    );
-    expect(css).to.match(
-      /\[part='bubble'\] \{[^}]*border-radius: var\(--lr-chat-message-bubble-radius, var\(--lr-radius\)\);/,
-    );
-  });
-
-  it('lets an ancestor set the bubble geometry, since the props are never :host-declared', async () => {
+// The named hooks are the stable geometry inputs. Rendered checks cover inheritance, defaults,
+// direct overrides, and independence from the bubble's unrelated status paint.
+describe("bubble geometry cssprops", () => {
+  it("lets an ancestor set the bubble geometry, since the props are never :host-declared", async () => {
     const host = (await fixture(html`
-      <div style="--lr-chat-message-bubble-padding: 3px; --lr-chat-message-bubble-radius: 11px;">
+      <div
+        style="--lr-chat-message-bubble-padding: 3px; --lr-chat-message-bubble-radius: 11px;"
+      >
         <lr-chat-message>hi</lr-chat-message>
       </div>
     `)) as HTMLElement;
-    const bubble = host.querySelector('lr-chat-message')!.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
-    expect(getComputedStyle(bubble).paddingTop).to.equal('3px');
-    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal('11px');
+    const bubble = host
+      .querySelector("lr-chat-message")!
+      .shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+    expect(getComputedStyle(bubble).paddingTop).to.equal("3px");
+    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal("11px");
   });
 
-  it('defaults the bubble padding/radius to --lr-space-m/--lr-radius, byte-identical to before', async () => {
-    const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
-    const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
-    const probe = document.createElement('div');
-    probe.style.cssText = 'padding: var(--lr-space-m); border-radius: var(--lr-radius);';
+  it("defaults the bubble padding/radius to --lr-space-m/--lr-radius, byte-identical to before", async () => {
+    const el = (await fixture(
+      html`<lr-chat-message>hi</lr-chat-message>`
+    )) as LyraChatMessage;
+    const bubble = el.shadowRoot!.querySelector(
+      '[part="bubble"]'
+    ) as HTMLElement;
+    const probe = document.createElement("div");
+    probe.style.cssText =
+      "padding: var(--lr-space-m); border-radius: var(--lr-radius);";
     el.shadowRoot!.appendChild(probe);
 
-    expect(getComputedStyle(bubble).paddingTop).to.equal(getComputedStyle(probe).paddingTop);
-    expect(getComputedStyle(bubble).paddingInlineStart).to.equal(getComputedStyle(probe).paddingInlineStart);
-    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal(getComputedStyle(probe).borderTopLeftRadius);
+    expect(getComputedStyle(bubble).paddingTop).to.equal(
+      getComputedStyle(probe).paddingTop
+    );
+    expect(getComputedStyle(bubble).paddingInlineStart).to.equal(
+      getComputedStyle(probe).paddingInlineStart
+    );
+    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal(
+      getComputedStyle(probe).borderTopLeftRadius
+    );
   });
 
-  it('reshapes the bubble via both props', async () => {
+  it("reshapes the bubble via both props", async () => {
     const el = (await fixture(html`
       <lr-chat-message
         style="--lr-chat-message-bubble-padding: 7px 9px; --lr-chat-message-bubble-radius: 13px;"
-      >hi</lr-chat-message>
+        >hi</lr-chat-message
+      >
     `)) as LyraChatMessage;
-    const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+    const bubble = el.shadowRoot!.querySelector(
+      '[part="bubble"]'
+    ) as HTMLElement;
 
-    expect(getComputedStyle(bubble).paddingTop).to.equal('7px');
-    expect(getComputedStyle(bubble).paddingLeft).to.equal('9px');
-    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal('13px');
+    expect(getComputedStyle(bubble).paddingTop).to.equal("7px");
+    expect(getComputedStyle(bubble).paddingLeft).to.equal("9px");
+    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal("13px");
   });
 
-  // The whole point of the props: geometry is retunable *without* an outer-tree ::part(bubble)
-  // declaration, which would outrank these internal per-status rules and erase them.
-  it('keeps the failed-status danger tint applying with both geometry props set', async () => {
+  // Geometry and status paint are independent contracts: changing the named padding/radius hooks
+  // must leave the unrelated failed/streaming colors and borders intact.
+  it("keeps the failed-status danger tint applying with both geometry props set", async () => {
     const el = (await fixture(html`
       <lr-chat-message
         status="failed"
         style="--lr-chat-message-bubble-padding: 7px 9px; --lr-chat-message-bubble-radius: 13px;"
-      >hi</lr-chat-message>
+        >hi</lr-chat-message
+      >
     `)) as LyraChatMessage;
-    const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
-    const probe = document.createElement('div');
-    probe.style.cssText = 'background: var(--lr-color-danger-quiet); color: var(--lr-color-danger);';
+    const bubble = el.shadowRoot!.querySelector(
+      '[part="bubble"]'
+    ) as HTMLElement;
+    const probe = document.createElement("div");
+    probe.style.cssText =
+      "background: var(--lr-color-danger-quiet); color: var(--lr-color-danger);";
     el.shadowRoot!.appendChild(probe);
 
-    expect(getComputedStyle(bubble).backgroundColor).to.equal(getComputedStyle(probe).backgroundColor);
-    expect(getComputedStyle(bubble).borderTopColor).to.equal(getComputedStyle(probe).color);
-    expect(getComputedStyle(bubble).paddingTop).to.equal('7px');
-    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal('13px');
+    expect(getComputedStyle(bubble).backgroundColor).to.equal(
+      getComputedStyle(probe).backgroundColor
+    );
+    expect(getComputedStyle(bubble).borderTopColor).to.equal(
+      getComputedStyle(probe).color
+    );
+    expect(getComputedStyle(bubble).paddingTop).to.equal("7px");
+    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal("13px");
   });
 
-  it('keeps the streaming-status brand border applying with both geometry props set', async () => {
+  it("keeps the streaming-status brand border applying with both geometry props set", async () => {
     const el = (await fixture(html`
       <lr-chat-message
         status="streaming"
         style="--lr-chat-message-bubble-padding: 7px 9px; --lr-chat-message-bubble-radius: 13px;"
-      >hi</lr-chat-message>
+        >hi</lr-chat-message
+      >
     `)) as LyraChatMessage;
-    const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
-    const probe = document.createElement('div');
-    probe.style.cssText = 'color: var(--lr-color-brand);';
+    const bubble = el.shadowRoot!.querySelector(
+      '[part="bubble"]'
+    ) as HTMLElement;
+    const probe = document.createElement("div");
+    probe.style.cssText = "color: var(--lr-color-brand);";
     el.shadowRoot!.appendChild(probe);
 
-    expect(getComputedStyle(bubble).borderTopColor).to.equal(getComputedStyle(probe).color);
-    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal('13px');
+    expect(getComputedStyle(bubble).borderTopColor).to.equal(
+      getComputedStyle(probe).color
+    );
+    expect(getComputedStyle(bubble).borderTopLeftRadius).to.equal("13px");
   });
 
-  it('leaves the other rounded parts on --lr-radius -- the radius prop is bubble-only', async () => {
+  it("leaves the other rounded parts on --lr-radius -- the radius prop is bubble-only", async () => {
     const el = (await fixture(html`
       <lr-chat-message
         collapsible
         status="failed"
         style="--lr-chat-message-bubble-radius: 13px;"
-      >hi</lr-chat-message>
+        >hi</lr-chat-message
+      >
     `)) as LyraChatMessage;
-    const probe = document.createElement('div');
-    probe.style.cssText = 'border-radius: var(--lr-radius);';
+    const probe = document.createElement("div");
+    probe.style.cssText = "border-radius: var(--lr-radius);";
     el.shadowRoot!.appendChild(probe);
     const shared = getComputedStyle(probe).borderTopLeftRadius;
 
-    for (const part of ['collapse-button', 'retry-button']) {
-      const node = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
-      expect((node) != null, `[part="${part}"] must be rendered for this assertion to mean anything`).to.equal(true);
+    for (const part of ["collapse-button", "retry-button"]) {
+      const node = el.shadowRoot!.querySelector(
+        `[part="${part}"]`
+      ) as HTMLElement;
+      expect(
+        node != null,
+        `[part="${part}"] must be rendered for this assertion to mean anything`
+      ).to.equal(true);
       expect(getComputedStyle(node).borderTopLeftRadius, part).to.equal(shared);
     }
   });
 
-  it('is accessible with the bubble geometry props set on a failed message', async () => {
+  it("is accessible with the bubble geometry props set on a failed message", async () => {
     const el = (await fixture(html`
       <lr-chat-message
         status="failed"
         style="--lr-chat-message-bubble-padding: 7px 9px; --lr-chat-message-bubble-radius: 13px;"
-      >hi</lr-chat-message>
+        >hi</lr-chat-message
+      >
     `)) as LyraChatMessage;
     await expect(el).to.be.accessible();
   });

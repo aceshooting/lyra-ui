@@ -1,29 +1,28 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { nextId } from '../../../internal/a11y.js';
-import { chevronIcon } from '../../../internal/icons.js';
-import { tag } from '../../../internal/prefix.js';
-import { styles } from './source-list.styles.js';
+import { html, type TemplateResult, type PropertyValues } from "lit";
+import { property, state } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { nextId } from "../../../internal/a11y.js";
+import { chevronIcon } from "../../../internal/icons.js";
+import { tag } from "../../../internal/prefix.js";
+import { styles } from "./source-list.styles.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_sourceListDefaultLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export interface SourceListToggleDetail {
   expanded: boolean;
 }
 
 export interface LyraSourceListEventMap {
-  'lr-toggle': CustomEvent<SourceListToggleDetail>;
+  "lr-toggle": CustomEvent<SourceListToggleDetail>;
 }
 
 /**
  * `<lr-source-list>` — a collapsible "Sources" panel for one chat message,
  * grouping a set of `<lr-source-card>` children (its default-slot light-DOM
  * children, plain composition — no `.items` array prop, the same shape
- * `<lr-split>`'s panels take) behind a single clickable header.
+ * `<lr-multi-split>`'s panels take) behind a single clickable header.
  *
  * This library has no built-in pluralization (see `<lr-empty>`'s plain
  * `description` prop for a similar stance), so anything beyond the final
@@ -73,44 +72,54 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   @property({ type: Boolean, reflect: true }) expanded = false;
 
   /** Header text used when `label-plural` isn't set, e.g. `"Sources"`. */
-  @property() label = '';
+  @property() label = "";
 
   /** Fully consumer-built, already-pluralized header summary, e.g. `"3 sources"`
    *  or `"1 source"` — this component never counts or pluralizes on its own
    *  (see the class doc). Takes precedence over `label` when both are set. */
-  @property({ attribute: 'label-plural' }) labelPlural = '';
+  @property({ attribute: "label-plural" }) labelPlural = "";
 
   // Tracks the default slot's assigned-element count purely for the
-  // `sourceCount` convenience getter below -- unlike `<lr-split>`'s
+  // `sourceCount` convenience getter below -- unlike `<lr-multi-split>`'s
   // `panelCount` this never drives layout math, so it's plain @state rather
   // than something read back out of `updated()`.
   @state() private slottedCount = 0;
 
-  private readonly listId = nextId('source-list-region');
+  private readonly listId = nextId("source-list-region");
   private readonly previousRoles = new Map<Element, string | null>();
   private roleObserver?: MutationObserver;
   private roleObserverDocument?: Document;
   private roleObserverGeneration = 0;
 
   private isCompatibleListItem(element: Element): boolean {
-    const existingRole = element.getAttribute('role')?.trim();
+    const existingRole = element.getAttribute("role")?.trim();
     const ownsListItem =
-      existingRole === 'listitem' &&
+      existingRole === "listitem" &&
       this.previousRoles.has(element) &&
-      this.previousRoles.get(element) !== 'listitem';
+      this.previousRoles.get(element) !== "listitem";
     const role = ownsListItem ? undefined : existingRole;
-    if (role === 'listitem') return true;
-    if (role || element.hasAttribute('tabindex') || (element as HTMLElement).isContentEditable) return false;
+    if (role === "listitem") return true;
+    if (
+      role ||
+      element.hasAttribute("tabindex") ||
+      (element as HTMLElement).isContentEditable
+    )
+      return false;
     const localName = element.localName;
-    return localName === tag('source-card') || localName === 'div' || localName === 'span';
+    return (
+      localName === tag("source-card") ||
+      localName === "div" ||
+      localName === "span"
+    );
   }
 
   private onRoleMutations(records: MutationRecord[]): void {
     for (const record of records) {
       const element = record.target as Element;
-      if (element.parentElement !== this || element.getAttribute('slot')) continue;
-      if (record.attributeName === 'role' && this.previousRoles.has(element)) {
-        this.previousRoles.set(element, element.getAttribute('role'));
+      if (element.parentElement !== this || element.getAttribute("slot"))
+        continue;
+      if (record.attributeName === "role" && this.previousRoles.has(element)) {
+        this.previousRoles.set(element, element.getAttribute("role"));
       }
       this.reconcileAssignedItems();
       return;
@@ -141,7 +150,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
     }
     this.roleObserver.observe(this, {
       attributes: true,
-      attributeFilter: ['role', 'tabindex', 'contenteditable'],
+      attributeFilter: ["role", "tabindex", "contenteditable"],
       subtree: true,
     });
   }
@@ -149,33 +158,40 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   private syncItemRoles(elements: Element[]): void {
     this.roleObserver?.disconnect();
     const assigned = new Set(elements);
-    const hasListSemantics = elements.every((element) => this.isCompatibleListItem(element));
+    const hasListSemantics = elements.every((element) =>
+      this.isCompatibleListItem(element)
+    );
     const list = this.shadowRoot?.querySelector('[part="list"]');
-    if (this.isConnected && hasListSemantics) list?.setAttribute('role', 'list');
-    else list?.removeAttribute('role');
+    if (this.isConnected && hasListSemantics)
+      list?.setAttribute("role", "list");
+    else list?.removeAttribute("role");
     for (const [element, role] of this.previousRoles) {
       if (
         hasListSemantics &&
         assigned.has(element) &&
-        element.getAttribute('role') === 'listitem' &&
-        role !== 'listitem'
-      ) continue;
-      if (role === null) element.removeAttribute('role');
-      else element.setAttribute('role', role);
+        element.getAttribute("role") === "listitem" &&
+        role !== "listitem"
+      )
+        continue;
+      if (role === null) element.removeAttribute("role");
+      else element.setAttribute("role", role);
       this.previousRoles.delete(element);
     }
     if (hasListSemantics) {
       for (const element of elements) {
-        if (element.getAttribute('role')?.trim()) continue;
-        if (!this.previousRoles.has(element)) this.previousRoles.set(element, element.getAttribute('role'));
-        element.setAttribute('role', 'listitem');
+        if (element.getAttribute("role")?.trim()) continue;
+        if (!this.previousRoles.has(element))
+          this.previousRoles.set(element, element.getAttribute("role"));
+        element.setAttribute("role", "listitem");
       }
     }
     this.observeRoleChanges();
   }
 
   private reconcileAssignedItems(): void {
-    const slot = this.shadowRoot?.querySelector('slot') as HTMLSlotElement | null;
+    const slot = this.shadowRoot?.querySelector(
+      "slot"
+    ) as HTMLSlotElement | null;
     if (!slot) return;
     const elements = slot.assignedElements({ flatten: true });
     this.slottedCount = elements.length;
@@ -208,7 +224,8 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.resetRoleObserver();
   }
 
@@ -230,7 +247,9 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
       // An explicit `slot=""` still assigns to the default slot per the HTML
       // slot algorithm, so check the attribute's value rather than its mere
       // presence.
-      const elements = Array.from(this.children).filter((el) => !el.getAttribute('slot'));
+      const elements = Array.from(this.children).filter(
+        (el) => !el.getAttribute("slot")
+      );
       this.slottedCount = elements.length;
     }
   }
@@ -252,27 +271,29 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   }
 
   private onSlotChange = (e: Event): void => {
-    const elements = (e.target as HTMLSlotElement).assignedElements({ flatten: true });
+    const elements = (e.target as HTMLSlotElement).assignedElements({
+      flatten: true,
+    });
     this.slottedCount = elements.length;
     this.syncItemRoles(elements);
   };
 
   private toggle = (): void => {
     this.expanded = !this.expanded;
-    this.emit('lr-toggle', { expanded: this.expanded });
+    this.emit("lr-toggle", { expanded: this.expanded });
   };
 
   override render(): TemplateResult {
     const headerText =
-      this.labelPlural || this.label || this.localize('sourceListDefaultLabel');
+      this.labelPlural || this.label || this.localize("sourceListDefaultLabel");
 
     return html`
       <div part="base">
         <button
           part="header"
           type="button"
-          aria-label=${this.getAttribute('aria-label') || headerText}
-          aria-expanded=${this.expanded ? 'true' : 'false'}
+          aria-label=${headerText}
+          aria-expanded=${this.expanded ? "true" : "false"}
           aria-controls=${this.listId}
           @click=${this.toggle}
         >
@@ -287,9 +308,8 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   }
 }
 
-
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-source-list': LyraSourceList;
+    "lr-source-list": LyraSourceList;
   }
 }

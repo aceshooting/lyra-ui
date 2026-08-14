@@ -1,6 +1,8 @@
 import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './zoomable-frame.js';
 import type { LyraZoomableFrame } from './zoomable-frame.js';
+import * as classModule from './zoomable-frame.class.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const INLINE_DOCUMENT = '<!doctype html><html><body><p>Inline preview</p></body></html>';
@@ -8,6 +10,14 @@ const INLINE_DOCUMENT = '<!doctype html><html><body><p>Inline preview</p></body>
 function frameOf(el: LyraZoomableFrame): HTMLIFrameElement {
   return el.shadowRoot!.querySelector('[part="iframe"]') as HTMLIFrameElement;
 }
+
+it('keeps implementation constants and sink-policy helpers private', () => {
+  const exportedNames = Object.keys(classModule);
+  expect(exportedNames.includes('DEFAULT_ZOOM_LEVELS')).to.be.false;
+  expect(exportedNames.includes('DEFAULT_IFRAME_SANDBOX')).to.be.false;
+  expect(exportedNames.includes('safeZoomableFrameSrc')).to.be.false;
+  expect(exportedNames.includes('safeZoomableFrameSandbox')).to.be.false;
+});
 
 async function eventually(condition: () => boolean): Promise<void> {
   const deadline = Date.now() + 1000;
@@ -33,7 +43,7 @@ describe('mapped iframe surface', () => {
     expect(frame.getAttribute('loading')).to.equal('lazy');
     expect(frame.getAttribute('referrerpolicy')).to.equal('same-origin');
     expect(frame.getAttribute('sandbox')).to.equal('allow-forms allow-same-origin');
-    expect(frame.title).to.equal('Component preview');
+    expect(frame.title).to.equal('Zoomable content');
   });
 
   it('gives present srcdoc precedence and omits src entirely', async () => {
@@ -179,6 +189,44 @@ describe('zoom controls and interaction', () => {
       el.zoomIn();
       expect(el.zoom, String(zoomLevels)).to.equal(1.25);
     }
+  });
+
+  it('bounds zoom-level source scanning before a valid million-character tail can affect controls', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`<lr-zoomable-frame zoom="1"></lr-zoomable-frame>`);
+    el.zoomLevels = `${'x'.repeat(1_000_000)} 200%`;
+    el.zoomIn();
+    expect(el.zoom).to.equal(1.25);
+  });
+
+  it('accepts a complete boundary token but discards one cut at the source ceiling', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`<lr-zoomable-frame zoom="1"></lr-zoomable-frame>`);
+
+    el.zoomLevels = `${' '.repeat(16_380)}200% 300%`;
+    el.zoomIn();
+    expect(el.zoom).to.equal(2);
+
+    el.zoom = 1;
+    el.zoomLevels = `${' '.repeat(16_381)}200%`;
+    el.zoomIn();
+    expect(el.zoom).to.equal(1.25);
+  });
+
+  it('caps and caches the sorted zoom-level projection across getter reads and actions', () => {
+    const el = document.createElement('lr-zoomable-frame') as LyraZoomableFrame;
+    const withZoomCache = el as unknown as { readonly availableZoomLevels: readonly number[] };
+    el.zoomLevels = Array.from({ length: 300 }, (_, index) => `${index + 1}%`).join(' ');
+
+    const first = withZoomCache.availableZoomLevels;
+    const second = withZoomCache.availableZoomLevels;
+    expect(first).to.have.lengthOf(256);
+    expect(second).to.equal(first);
+    el.zoom = 1;
+    el.zoomIn();
+    el.zoomOut();
+    expect(withZoomCache.availableZoomLevels).to.equal(first);
+
+    el.zoomLevels = '25% 50% 100%';
+    expect(withZoomCache.availableZoomLevels).to.not.equal(first);
   });
 
   it('does not move below the lowest configured zoom stop', async () => {
@@ -383,7 +431,15 @@ describe('zoom controls and interaction', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="controls"]').length).to.equal(0);
     const frame = frameOf(el);
     expect(frame.tabIndex).to.equal(-1);
+    expect(frame.inert).to.be.true;
+    expect(frame.hasAttribute('aria-disabled')).to.be.false;
     expect(getComputedStyle(frame).pointerEvents).to.equal('none');
+    let clicks = 0;
+    frame.addEventListener('click', () => clicks++);
+    el.focus();
+    el.click();
+    expect(el.shadowRoot!.activeElement === null).to.be.true;
+    expect(clicks).to.equal(0);
   });
 
   it('routes the iframe and toolbar accessible names through .strings', async () => {
@@ -399,6 +455,13 @@ describe('zoom controls and interaction', () => {
     expect(el.shadowRoot!.querySelector('[part="controls"]')!.getAttribute('aria-label')).to.equal('Échelle');
     expect(el.shadowRoot!.querySelector('[part="zoom-in-button"]')!.getAttribute('aria-label')).to.equal('Agrandir');
     expect(el.shadowRoot!.querySelector('[part="zoom-out-button"]')!.getAttribute('aria-label')).to.equal('Réduire');
+  });
+
+  it('preserves an explicit empty host name without restoring a fallback iframe title', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`
+      <lr-zoomable-frame aria-label="" .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+    `);
+    expect(frameOf(el).title).to.equal('');
   });
 });
 
@@ -666,6 +729,10 @@ it('forwards host focus()/blur()/click() to the frame and re-dispatches its focu
 
   el.focus();
   expect(el.shadowRoot!.activeElement === frame).to.equal(true);
+  expect(el.hasAttribute('data-frame-focused')).to.be.true;
+  const focusedStyle = getComputedStyle(el);
+  expect(focusedStyle.outlineStyle).to.equal('solid');
+  expect(Number.parseFloat(focusedStyle.outlineWidth)).to.be.greaterThan(0);
 
   let clicks = 0;
   frame.addEventListener('click', () => {
@@ -676,11 +743,85 @@ it('forwards host focus()/blur()/click() to the frame and re-dispatches its focu
 
   el.blur();
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
+  expect(el.hasAttribute('data-frame-focused')).to.be.false;
   expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
   expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
   expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
   expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
   expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
+});
+
+it('tracks sequential Tab/Shift+Tab and pointer entry at the browsing-context boundary', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="before" type="button">Before</button>
+      <lr-zoomable-frame without-controls .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+      <button id="after" type="button">After</button>
+    </div>
+  `);
+  const before = wrapper.querySelector<HTMLButtonElement>('#before')!;
+  const el = wrapper.querySelector('lr-zoomable-frame') as LyraZoomableFrame;
+  const frame = frameOf(el);
+
+  before.focus();
+  await sendKeys({ press: 'Tab' });
+  await eventually(() => el.hasAttribute('data-frame-focused'));
+  expect(el.shadowRoot!.activeElement === frame).to.be.true;
+  expect(getComputedStyle(el).outlineStyle).to.equal('solid');
+
+  await sendKeys({ press: 'Shift+Tab' });
+  await eventually(() => !el.hasAttribute('data-frame-focused'));
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
+  expect(document.activeElement === el).to.be.false;
+
+  try {
+    await resetMouse();
+    const rect = frame.getBoundingClientRect();
+    await sendMouse({
+      type: 'click',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await eventually(() => el.hasAttribute('data-frame-focused'));
+    expect(el.shadowRoot!.activeElement === frame).to.be.true;
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('clears the browsing-context focus ring on navigation rekey and true interaction disablement', async () => {
+  const el = await fixture<LyraZoomableFrame>(html`
+    <lr-zoomable-frame .srcdoc=${'<p>first</p>'}></lr-zoomable-frame>
+  `);
+  const first = frameOf(el);
+  el.focus();
+  expect(el.hasAttribute('data-frame-focused')).to.be.true;
+
+  el.srcdoc = '<p>second</p>';
+  await el.updateComplete;
+  const second = frameOf(el);
+  expect(second === first).to.be.false;
+  expect(el.hasAttribute('data-frame-focused')).to.be.false;
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
+
+  el.focus();
+  expect(el.hasAttribute('data-frame-focused')).to.be.true;
+  el.withoutInteraction = true;
+  await el.updateComplete;
+  expect(frameOf(el).inert).to.be.true;
+  expect(frameOf(el).tabIndex).to.equal(-1);
+  expect(el.hasAttribute('data-frame-focused')).to.be.false;
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
+});
+
+it('does not invent focus transitions before a live iframe exists', () => {
+  const el = document.createElement('lr-zoomable-frame') as LyraZoomableFrame;
+  const events: string[] = [];
+  el.addEventListener('focus', () => events.push('focus'));
+  el.addEventListener('blur', () => events.push('blur'));
+  el.focus();
+  el.blur();
+  expect(events).to.deep.equal([]);
+  expect(el.hasAttribute('data-frame-focused')).to.be.false;
 });
 
 it('constructs iframe focus relays in the host owner realm and preserves payload', async () => {
@@ -721,14 +862,17 @@ it('constructs iframe focus relays in the host owner realm and preserves payload
       sequence.push('lr-blur');
     });
 
-    frameOf(el).dispatchEvent(new frameWindow.FocusEvent('focusin', {
+    const internal = el as unknown as {
+      dispatchHostFocusEvent: (type: 'focus' | 'blur', source: FocusEvent) => void;
+    };
+    internal.dispatchHostFocusEvent('focus', new frameWindow.FocusEvent('focusin', {
       bubbles: true,
       composed: true,
       relatedTarget: related,
       view: frameWindow,
       detail: 3,
     }));
-    frameOf(el).dispatchEvent(new frameWindow.FocusEvent('focusout', {
+    internal.dispatchHostFocusEvent('blur', new frameWindow.FocusEvent('focusout', {
       bubbles: true,
       composed: true,
       relatedTarget: related,

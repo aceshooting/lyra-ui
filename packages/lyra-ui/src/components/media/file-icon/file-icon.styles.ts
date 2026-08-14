@@ -2,7 +2,7 @@ import { css } from 'lit';
 
 export const styles = css`
   :host { display: inline-flex; vertical-align: middle; min-inline-size: 0; max-inline-size: 100%; }
-  :host([variant='label']) { inline-size: 100%; }
+  :host([mode='label']) { inline-size: 100%; }
   [part='base'] {
     display: inline-flex;
     align-items: center;
@@ -34,6 +34,7 @@ export const styles = css`
     flex: 0 0 auto;
   }
   [part='label'],
+  [part='description'],
   [part='size'] {
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -41,5 +42,6 @@ export const styles = css`
   }
   [part='label'] { color: var(--lr-color-text); }
   [part='label'] { flex: 1 1 0; }
+  [part='description'] { color: var(--lr-color-text-quiet); flex: 1 1 100%; }
   [part='size'] { flex: 0 1 auto; }
 `;

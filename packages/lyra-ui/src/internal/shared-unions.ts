@@ -5,13 +5,12 @@
  * `variants.ts`, and `scripts/check-style-vocabulary.mjs` polices component-local copies of those
  * specific member sets. What lives here is the smaller set of *value* vocabularies that several
  * components had each spelled out for themselves character-for-character — two native-platform
- * ones forwarded straight to a wrapped `<input>`/`<textarea>`, and two agent-domain ones.
+ * ones forwarded straight to a wrapped `<input>`/`<textarea>`, one layout primitive, and two
+ * agent-domain ones.
  *
- * Every component keeps its own exported alias name: those names are published API, and renaming
- * one to import this module's name instead would break consumers for no benefit. Each alias is now
- * `export type X = <the name below>` rather than a re-typed literal union, so the member sets can
- * no longer drift apart the way ten copies of the tone vocabulary once did. Adding a member here is
- * therefore, correctly, a change to every alias at once.
+ * Mirrored component names remain where an upstream contract requires them. Lyra-original APIs use
+ * these canonical `Lyra*` names directly so application type namespaces do not accumulate aliases
+ * for identical literal sets.
  */
 
 /**
@@ -26,6 +25,9 @@ export type LyraSelectionDirection = 'forward' | 'backward' | 'none';
  * native multi-line text surface. Platform vocabulary, never extended.
  */
 export type LyraTextWrap = 'hard' | 'soft' | 'off';
+
+/** Logical block/inline layout axis used by Lyra-original components. */
+export type LyraOrientation = 'horizontal' | 'vertical';
 
 /**
  * The lifecycle a single tool/function call (or the span standing in for one) moves through. One

@@ -1,8 +1,8 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
-    --lr-accordion-item-spacing: var(--lr-details-spacing, var(--lr-form-control-padding-inline));
+    --lr-accordion-item-spacing: var(--lr-form-control-padding-inline);
     --lr-accordion-item-show-duration: var(--lr-duration-base);
     --lr-accordion-item-hide-duration: var(--lr-duration-base);
     --lr-accordion-item-easing: var(--lr-easing-standard);
@@ -10,25 +10,31 @@ export const styles = css`
     min-inline-size: 0;
     color: var(--lr-color-text);
   }
-  [part~='accordion-item'] {
+  [part~="accordion-item"] {
     min-inline-size: 0;
     background: transparent;
-    font-size: var(--lr-details-font-size, var(--lr-form-control-font-size));
+    font-size: var(--lr-form-control-font-size);
   }
-  :host([appearance='outlined']) [part~='accordion-item'] {
+  [part~="accordion-item"][data-appearance="outlined"] {
     background: var(--lr-accordion-item-outlined-bg, var(--lr-color-surface));
   }
-  :host([appearance='filled']) [part~='accordion-item'] {
-    background: var(--lr-accordion-item-filled-bg, var(--lr-color-surface-raised));
+  [part~="accordion-item"][data-appearance="filled"] {
+    background: var(
+      --lr-accordion-item-filled-bg,
+      var(--lr-color-surface-raised)
+    );
   }
-  :host([appearance='filled-outlined']) [part~='accordion-item'] {
-    background: var(--lr-accordion-item-filled-outlined-bg, var(--lr-color-surface-raised));
+  [part~="accordion-item"][data-appearance="filled-outlined"] {
+    background: var(
+      --lr-accordion-item-filled-outlined-bg,
+      var(--lr-color-surface-raised)
+    );
   }
-  [part~='heading'] {
+  [part~="heading"] {
     margin: 0;
     font: inherit;
   }
-  [part~='button'] {
+  [part~="button"] {
     display: flex;
     align-items: center;
     gap: var(--spacing, var(--lr-accordion-item-spacing));
@@ -45,10 +51,13 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
-  [part~='button']:where(:hover):where(:not(:disabled)) {
-    background: var(--lr-accordion-item-button-hover-bg, var(--lr-color-brand-quiet));
+  [part~="button"]:where(:hover):where(:not(:disabled)) {
+    background: var(
+      --lr-accordion-item-button-hover-bg,
+      var(--lr-color-brand-quiet)
+    );
   }
-  [part~='button']:where(:active):where(:not(:disabled)) {
+  [part~="button"]:where(:active):where(:not(:disabled)) {
     background: var(
       --lr-accordion-item-button-active-bg,
       color-mix(
@@ -58,33 +67,32 @@ export const styles = css`
       )
     );
   }
-  [part~='button']:where(:focus-visible) {
+  [part~="button"]:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-width) * -1);
   }
-  [part~='button']:disabled {
+  [part~="button"]:disabled {
     cursor: not-allowed;
   }
-  :host([disabled]) [part~='accordion-item'] {
+  :host([disabled]) [part~="accordion-item"] {
     opacity: var(--lr-opacity-disabled);
   }
-  [part~='label'] {
+  [part~="label"] {
     flex: 1 1 auto;
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
-  [part~='icon'] {
+  [part~="icon"] {
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
     color: var(--lr-color-text-quiet);
-    transition:
-      rotate
+    transition: rotate
       var(--hide-duration, var(--lr-accordion-item-hide-duration))
       var(--easing, var(--lr-accordion-item-easing));
   }
-  :host([icon-placement='start']) [part~='icon'] {
+  [part~="accordion-item"][data-icon-placement="start"] [part~="icon"] {
     order: -1;
   }
   .default-icon {
@@ -98,57 +106,55 @@ export const styles = css`
   :host(:dir(rtl)) .default-icon {
     transform: rotate(45deg);
   }
-  :host(:where([open], [expanded])) [part~='icon'] {
+  :host([expanded]) [part~="icon"] {
     rotate: 90deg;
-    transition-duration: var(--show-duration, var(--lr-accordion-item-show-duration));
+    transition-duration: var(
+      --show-duration,
+      var(--lr-accordion-item-show-duration)
+    );
   }
-  :host(:where([open], [expanded]):dir(rtl)) [part~='icon'] {
+  :host([expanded]:dir(rtl)) [part~="icon"] {
     rotate: -90deg;
   }
-  [part~='panel'] {
+  [part~="panel"] {
     display: grid;
     grid-template-rows: 0fr;
     visibility: hidden;
     opacity: 0;
     color: var(--lr-color-text-quiet);
-    transition:
-      grid-template-rows
+    transition: grid-template-rows
         var(--hide-duration, var(--lr-accordion-item-hide-duration))
         var(--easing, var(--lr-accordion-item-easing)),
-      opacity
-        var(--hide-duration, var(--lr-accordion-item-hide-duration))
+      opacity var(--hide-duration, var(--lr-accordion-item-hide-duration))
         var(--easing, var(--lr-accordion-item-easing)),
-      visibility var(--hide-duration, var(--lr-accordion-item-hide-duration)) step-end;
+      visibility var(--hide-duration, var(--lr-accordion-item-hide-duration))
+        step-end;
   }
-  :host([open]) [part~='panel'],
-  :host([expanded]) [part~='panel'] {
+  :host([expanded]) [part~="panel"] {
     grid-template-rows: 1fr;
     visibility: visible;
     opacity: 1;
-    transition:
-      grid-template-rows
+    transition: grid-template-rows
         var(--show-duration, var(--lr-accordion-item-show-duration))
         var(--easing, var(--lr-accordion-item-easing)),
-      opacity
-        var(--show-duration, var(--lr-accordion-item-show-duration))
+      opacity var(--show-duration, var(--lr-accordion-item-show-duration))
         var(--easing, var(--lr-accordion-item-easing)),
-      visibility var(--show-duration, var(--lr-accordion-item-show-duration)) step-start;
+      visibility var(--show-duration, var(--lr-accordion-item-show-duration))
+        step-start;
   }
   .panel-clip {
     min-block-size: 0;
     overflow: hidden;
   }
-  [part~='content'] {
+  [part~="content"] {
     display: block;
-    padding:
-      0
-      var(--spacing, var(--lr-accordion-item-spacing))
+    padding: 0 var(--spacing, var(--lr-accordion-item-spacing))
       var(--spacing, var(--lr-accordion-item-spacing));
     overflow-wrap: anywhere;
   }
   @media (prefers-reduced-motion: reduce) {
-    [part~='panel'],
-    [part~='icon'] {
+    [part~="panel"],
+    [part~="icon"] {
       transition: none;
     }
   }

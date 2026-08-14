@@ -1,9 +1,9 @@
 import { css } from 'lit';
 
 export const styles = css`
-  /* Fully transparent to layout, matching lr-menu's own :host — the
+  /* Fully transparent to layout, matching the nested dropdown/menu shell — the
      visible/clickable surface is entirely the rendered button (or, in the
-     multi-capability case, lr-menu's own display:contents trigger wrapper
+     multi-capability case, lr-dropdown's trigger wrapper
      around that same button), so this host never contributes a stray box a
      composer's leading slot would otherwise have to fight with margin/
      inline-block quirks to line up against the textarea. */
@@ -23,7 +23,7 @@ export const styles = css`
 
   /* Shared visual treatment for both the single-capability button
      ([part='trigger']) and the multi-capability button ([part='menu-trigger'])
-     slotted into lr-menu's own trigger slot -- the latter can't reuse
+     slotted into lr-dropdown's trigger slot -- the latter can't reuse
      part='trigger' itself (that name is reserved for the single-capability
      case, so a consumer's ::part(trigger) selector unambiguously targets
      exactly one button), so both buttons share this plain class for the
@@ -56,10 +56,8 @@ export const styles = css`
       background-color var(--lr-transition-fast),
       color var(--lr-transition-fast);
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
-     -- (0,1,0) total, functionally identical selection to \`.trigger-button:hover:not(:disabled)\`
-     ((0,3,0)) but now losing (on the pseudo-element tiebreak) to a consumer's own
-     \`::part(trigger):hover\` override ((0,1,1)) without that consumer needing !important. */
+  /* Keep internal state qualifiers low-specificity so sibling rules in this sheet remain easy to
+     compose. Consumer ::part() authority follows the shadow cascade independently. */
   :where(.trigger-button):hover:where(:not(:disabled)) {
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
     color: var(--lr-color-text);

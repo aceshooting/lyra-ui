@@ -1,15 +1,21 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
 import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../attachment-chip/file-size.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import { getFileTypeMetadata, type LyraFileTypeIcon } from './file-type-metadata.js';
+import {
+  defaultFileTypeMetadataRegistry,
+  type LyraFileTypeIcon,
+  type LyraFileTypeMetadataRegistry,
+  type LyraResolvedFileTypeMetadata,
+} from './file-type-metadata.js';
 import { styles } from './file-icon.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_fileTypeArchive, LYRA_DEFAULT_fileTypeAudio, LYRA_DEFAULT_fileTypeCode, LYRA_DEFAULT_fileTypeFile, LYRA_DEFAULT_fileTypeImage, LYRA_DEFAULT_fileTypePdf, LYRA_DEFAULT_fileTypePresentation, LYRA_DEFAULT_fileTypeSpreadsheet, LYRA_DEFAULT_fileTypeText, LYRA_DEFAULT_fileTypeVideo, LYRA_DEFAULT_fileTypeWithSize, LYRA_DEFAULT_fileTypeWord } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_fileTypeArchive, LYRA_DEFAULT_fileTypeAudio, LYRA_DEFAULT_fileTypeCode, LYRA_DEFAULT_fileTypeFile, LYRA_DEFAULT_fileTypeImage, LYRA_DEFAULT_fileTypePdf, LYRA_DEFAULT_fileTypePresentation, LYRA_DEFAULT_fileTypeSpreadsheet, LYRA_DEFAULT_fileTypeText, LYRA_DEFAULT_fileTypeVideo, LYRA_DEFAULT_fileTypeWithSize, LYRA_DEFAULT_fileTypeWord, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -27,12 +33,8 @@ const ICON_LABELS: Record<LyraFileTypeIcon, LyraMessageKey> = {
   video: 'fileTypeVideo',
 };
 
-/**
- * How much of the badge is rendered. Deliberately NOT the shared `LyraVariant`: these are two
- * render modes (glyph only vs. glyph plus its localized label), not semantic tones, so they share
- * only the property name with the rest of the library's `variant`.
- */
-export type LyraFileIconVariant = 'icon' | 'label';
+/** How much of the badge is rendered: glyph only, or glyph plus file metadata. */
+export type LyraFileIconMode = 'icon' | 'label';
 
 /**
  * Displays a localized, tokenized file-type badge from a MIME type.
@@ -40,8 +42,9 @@ export type LyraFileIconVariant = 'icon' | 'label';
  * @customElement lr-file-icon
  * @csspart base - The outer presentation wrapper.
  * @csspart icon - The format badge.
- * @csspart label - The localized format label in `variant="label"` mode.
- * @csspart size - The formatted `bytes` count, shown alongside `label` in `variant="label"` mode when `bytes` is non-zero.
+ * @csspart label - The localized or consumer-authored format label in `mode="label"` mode.
+ * @csspart description - Consumer-authored metadata description in `mode="label"` mode.
+ * @csspart size - The formatted `bytes` count, shown alongside `label` in `mode="label"` mode when `bytes` is non-zero.
  * @cssprop [--lr-file-icon-size=var(--lr-size-2rem)] - Inline/block size of the format badge.
  * @status stable
  * @since 4.0.0
@@ -51,6 +54,8 @@ export class LyraFileIcon extends LyraElement {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
     fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
     fileSizeUnitGb: LYRA_DEFAULT_fileSizeUnitGb,
     fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
@@ -68,6 +73,11 @@ export class LyraFileIcon extends LyraElement {
     fileTypeVideo: LYRA_DEFAULT_fileTypeVideo,
     fileTypeWithSize: LYRA_DEFAULT_fileTypeWithSize,
     fileTypeWord: LYRA_DEFAULT_fileTypeWord,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -77,21 +87,42 @@ export class LyraFileIcon extends LyraElement {
   @property({ attribute: 'mime-type' }) mimeType = '';
   /** Optional filename used for fallback detection with an empty or generic MIME type. */
   @property() name = '';
-  /** File size **in bytes**, shown alongside the label in `variant="label"` mode. `0` (the default)
+  /** File size **in bytes**, shown alongside the label in `mode="label"` mode. `0` (the default)
    *  renders no size. Named `bytes`, not `size`: everywhere else in this library `size` names a tier
    *  on the shared size ladder, and a numeric byte count answering to the same property name is the
    *  kind of collision a consumer only discovers at runtime. */
   @property({ type: Number }) bytes = 0;
   /** Whether the badge is decorative and hidden from assistive technology. */
   @property({ type: Boolean, reflect: true }) decorative = false;
-  /** Shows only the icon or the icon together with its localized label. */
-  @property({ reflect: true }) variant: LyraFileIconVariant = 'icon';
-  /** Optional visible/accessibility label override. */
-  @property() label = '';
+  /** Shows only the icon or the icon together with its label and optional description. */
+  @property({ reflect: true }) mode: LyraFileIconMode = 'icon';
+  /** Optional visible/accessibility label override. Explicit empty text is preserved. */
+  @property() label?: string;
+  /** Immutable metadata authority for this instance. */
+  @property({ attribute: false }) registry: LyraFileTypeMetadataRegistry = defaultFileTypeMetadataRegistry;
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (changed.has('mode') && this.mode !== 'icon' && this.mode !== 'label') this.mode = 'icon';
+  }
+
+  private resolveMetadata(): LyraResolvedFileTypeMetadata {
+    try {
+      if (this.registry && typeof this.registry.resolve === 'function') {
+        return this.registry.resolve(this.mimeType, this.name);
+      }
+    } catch {
+      // Invalid injected registries fail closed to the complete built-in generic record.
+    }
+    return defaultFileTypeMetadataRegistry.resolve('', '');
+  }
 
   override render(): TemplateResult {
-    const metadata = getFileTypeMetadata(this.mimeType, this.name);
-    const localizedLabel = this.label || this.localize(ICON_LABELS[metadata.icon]);
+    const metadata = this.resolveMetadata();
+    const metadataLabel = metadata.provenance === 'consumer'
+      ? metadata.label
+      : this.localize(ICON_LABELS[metadata.icon]);
+    const renderedLabel = this.label ?? metadataLabel;
     // A NaN/negative `bytes` (e.g. an invalid `bytes` attribute) would otherwise make `bytes > 0`
     // false anyway (so no crash), but normalizing here keeps it explicit and consistent with
     // this library's other numeric guards, rather than relying on that comparison quirk.
@@ -105,20 +136,27 @@ export class LyraFileIcon extends LyraElement {
           )
         : '';
     const fallbackLabel = sizeText
-      ? this.localize('fileTypeWithSize', undefined, { label: localizedLabel, size: sizeText })
-      : localizedLabel;
-    const accessibleLabel = this.getAttribute('aria-label') || fallbackLabel;
+      ? this.localize('fileTypeWithSize', undefined, { label: renderedLabel, size: sizeText })
+      : renderedLabel;
+    const accessibleLabel = hostAriaLabel(this) ?? fallbackLabel;
+    const descriptionId = metadata.provenance === 'consumer' && metadata.description
+      ? 'metadata-description'
+      : undefined;
     return html`
       <span
         part="base"
         role=${this.decorative ? 'presentation' : 'img'}
         aria-hidden=${this.decorative ? 'true' : nothing}
         aria-label=${this.decorative ? nothing : accessibleLabel}
+        aria-describedby=${this.decorative || !descriptionId ? nothing : descriptionId}
         title=${this.mimeType || nothing}
       >
-        <span part="icon" aria-hidden="true">${this.localize(ICON_LABELS[metadata.icon])}</span>
-        ${this.variant === 'label' ? html`<span part="label">${localizedLabel}</span>` : nothing}
-        ${this.variant === 'label' && sizeText ? html`<span part="size">${sizeText}</span>` : nothing}
+        <span part="icon" aria-hidden="true">${metadata.provenance === 'consumer' ? metadata.label : this.localize(ICON_LABELS[metadata.icon])}</span>
+        ${this.mode === 'label' ? html`<span part="label">${renderedLabel}</span>` : nothing}
+        ${this.mode === 'label' && descriptionId
+          ? html`<span id=${descriptionId} part="description">${metadata.description}</span>`
+          : nothing}
+        ${this.mode === 'label' && sizeText ? html`<span part="size">${sizeText}</span>` : nothing}
       </span>
     `;
   }

@@ -22,10 +22,26 @@ const strings: LyraLocaleStrings = {
   terminalDownload: 'Скачать журнал',
   terminalHighlightLine: 'Строка {line}',
   schemaViewerIssueLimit: 'Показаны только первые {count} проблем проверки.',
-  toolParamMissingProperty: 'Для обязательного ключа «{key}» нет соответствующего свойства схемы.',
+  toolParamMissingProperty:
+    'Для обязательного ключа «{key}» нет соответствующего свойства схемы.',
+  toolParamBooleanUnset: 'Не задано',
+  toolParamBooleanTrue: 'Истина',
+  toolParamBooleanFalse: 'Ложь',
+  toolParamSchemaLimit:
+    'Схемы параметров инструментов поддерживают не более {fields} полей и {options} вариантов на поле.',
+  testResultsLimit: 'Показаны только первые {count} результатов тестов.',
+  toolTimelineLimit: 'Отображается не более {count} вызовов инструментов.',
+  toolSelectLimit: 'Показаны только первые {count} инструментов.',
   sequenceStripEmpty: 'Нет элементов',
   sequenceStripCategoryCount: '{label}: {count}',
   noColumns: 'Столбцы не настроены',
+  dataGridColumnMenu: 'Параметры для {label}',
+  dataGridPinStart: 'Закрепить {label} в начале',
+  dataGridPinEnd: 'Закрепить {label} в конце',
+  dataGridUnpin: 'Открепить {label}',
+  dataGridRowsPerPage: 'Строк на странице',
+  dataGridTreeLimitReached:
+    'Дополнительные вложенные строки опущены, поскольку достигнут предел дерева таблицы данных.',
   loadMore: 'Загрузить ещё',
   viewerSearchMatchCount: {
     one: '{count} совпадение',
@@ -137,6 +153,9 @@ const strings: LyraLocaleStrings = {
   chartPrimaryAxis: 'Основная ось',
   chartSecondaryAxis: 'Вспомогательная ось',
   chartPointLabel: 'Точка {n}',
+  chartPointCoordinates: 'x: {x}, y: {y}',
+  chartBubblePointCoordinates: 'x: {x}, y: {y}, радиус: {radius}',
+  chartLabeledPoint: '{label} — {coordinates}',
   resetZoom: 'Сбросить масштаб',
   chatSending: 'Отправка…',
   chatResponding: 'Отвечает…',
@@ -179,7 +198,8 @@ const strings: LyraLocaleStrings = {
     many: '{count} ключей',
     other: '{count} ключа',
   },
-  jsonViewerLimit: 'Показаны и доступны для поиска только первые {count} узлов JSON и {depth} уровней вложенности.',
+  jsonViewerLimit:
+    'Показаны и доступны для поиска только первые {count} узлов JSON и {depth} уровней вложенности.',
   untitledSource: 'Источник без названия',
   sourcePageSuffix: '{base} — с. {page}',
   toolCall: 'Вызов инструмента',
@@ -244,7 +264,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewAlt: 'Предварительный просмотр документа',
   documentPreviewUrlNotAllowed: 'Этот URL документа недопустим.',
   documentPreviewFailedToLoad: 'Не удалось загрузить документ.',
-  documentPreviewResourceTooLarge: 'Документ слишком велик для предварительного просмотра.',
+  documentPreviewResourceTooLarge:
+    'Документ слишком велик для предварительного просмотра.',
   documentPreviewGenericError: 'Что-то пошло не так.',
   ebookViewerLoadError: 'Не удалось загрузить электронную книгу.',
   ebookViewerRegionLabel: 'Содержимое электронной книги',
@@ -271,12 +292,15 @@ const strings: LyraLocaleStrings = {
   documentViewerLabel: 'Просмотр документа',
   attachmentPreviewName: 'Просмотреть {name}',
   attachmentPreviewFile: 'Просмотреть файл',
-  documentViewerMissingSanitizer: 'Для безопасного отображения нужно установить дополнительный пакет «dompurify».',
+  documentViewerMissingSanitizer:
+    'Для безопасного отображения нужно установить дополнительный пакет «dompurify».',
   docxViewerLabel: 'Документ Word',
-  docxViewerMissingConverter: 'Для преобразования этого документа нужно установить дополнительный пакет «mammoth».',
+  docxViewerMissingConverter:
+    'Для преобразования этого документа нужно установить дополнительный пакет «mammoth».',
   svgViewerLabel: 'Изображение SVG',
   htmlViewerLabel: 'Документ HTML',
-  datasetViewerMissingParser: 'Для разбора этого файла нужно установить дополнительный пакет «papaparse».',
+  datasetViewerMissingParser:
+    'Для разбора этого файла нужно установить дополнительный пакет «papaparse».',
   datasetViewerEmpty: 'В этом наборе данных нет строк.',
   datasetViewerCaption: 'Строк: {count}',
   datasetViewerCaptionNamed: '{name}, строк: {count}',
@@ -288,7 +312,8 @@ const strings: LyraLocaleStrings = {
   contactViewerAddressLabel: 'Адрес',
   contactViewerOrganization: 'Организация: {value}',
   contactViewerTypedValue: '{value} ({types})',
-  contactViewerAddressFormat: '{poBox}\n{extendedAddress}\n{streetAddress}\n{locality} {region} {postalCode}\n{country}',
+  contactViewerAddressFormat:
+    '{poBox}\n{extendedAddress}\n{streetAddress}\n{locality} {region} {postalCode}\n{country}',
   contactViewerTypeHome: 'Домашний',
   contactViewerTypeWork: 'Рабочий',
   contactViewerTypeCell: 'Мобильный',
@@ -313,16 +338,21 @@ const strings: LyraLocaleStrings = {
   chartTrendIncreasing: 'возрастающий',
   chartTrendDecreasing: 'убывающий',
   chartTrendFlat: 'ровный',
-  chartSummary: '{label}: значений {count}, диапазон от {min} до {max}, тренд {trend}',
+  chartSummary:
+    '{label}: значений {count}, диапазон от {min} до {max}, тренд {trend}',
   chartSeriesNoData: '{label}: нет данных',
   chartSummaryWithData: 'Диаграмма: {type}. {summaries}.',
   chartSummaryEmpty: 'Диаграмма: {type}. Нет данных.',
   chartSummarySeparator: '. ',
   chartData: 'Данные диаграммы',
-  chartDataSampled: 'Сгенерированная таблица данных показывает выборку до 1 000 записей. Предоставьте пользовательскую таблицу данных, чтобы получить доступ ко всем данным диаграммы.',
-  chartZoomUnavailable: 'Масштабирование недоступно, но основная диаграмма остаётся доступной.',
-  chartDataLabelsUnavailable: 'Подписи данных недоступны, но основная диаграмма остаётся доступной.',
-  chartStackTotalsUnavailable: 'Итоги накопления недоступны, но основная диаграмма остаётся доступной.',
+  chartDataSampled:
+    'Сгенерированная таблица данных показывает выборку до 1 000 записей. Предоставьте пользовательскую таблицу данных, чтобы получить доступ ко всем данным диаграммы.',
+  chartZoomUnavailable:
+    'Масштабирование недоступно, но основная диаграмма остаётся доступной.',
+  chartDataLabelsUnavailable:
+    'Подписи данных недоступны, но основная диаграмма остаётся доступной.',
+  chartStackTotalsUnavailable:
+    'Итоги накопления недоступны, но основная диаграмма остаётся доступной.',
   chart: 'Диаграмма',
   chartTypeLine: 'Линейная',
   chartTypeBar: 'Столбчатая',
@@ -332,7 +362,8 @@ const strings: LyraLocaleStrings = {
   chartTypeRadar: 'Лепестковая',
   chartTypePolarArea: 'Полярная',
   chartTypeBubble: 'Пузырьковая',
-  boxPlotSeriesSummary: '{label}: распределений {count}, медиана от {min} до {max}, тренд медианы {trend}',
+  boxPlotSeriesSummary:
+    '{label}: распределений {count}, медиана от {min} до {max}, тренд медианы {trend}',
   boxPlotSummaryWithData: 'Диаграмма размаха. {summaries}.',
   boxPlotSummaryEmpty: 'Диаграмма размаха без данных.',
   boxPlotData: 'Данные диаграммы размаха',
@@ -380,7 +411,8 @@ const strings: LyraLocaleStrings = {
   timeInputInvalid: 'Введите время полностью.',
   timeInputMinMessage: 'Время должно быть не раньше {min}.',
   timeInputMaxMessage: 'Время должно быть не позже {max}.',
-  timeInputRangeMessage: 'Время должно быть между {min} и {max} с переходом через полночь.',
+  timeInputRangeMessage:
+    'Время должно быть между {min} и {max} с переходом через полночь.',
   timeInputStepMessage: 'Введите время с требуемым интервалом.',
   documentPreviewEmpty: 'Нет {type} для отображения.',
   convertingDocument: 'Преобразование документа…',
@@ -390,7 +422,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeImage: 'изображения',
   documentPreviewTypeEmail: 'письма',
   documentPreviewTypeCalendar: 'календаря',
-  archiveViewerUnavailable: 'Предварительный просмотр архива недоступен.',
   archiveViewerEmpty: 'Этот архив пуст.',
   archiveViewerFolder: 'Папка',
   archiveViewerFile: 'Файл',
@@ -414,6 +445,8 @@ const strings: LyraLocaleStrings = {
   fileInputRejectedType: '{filename}: файлы этого типа не принимаются.',
   fileInputRejectedSize: '{filename}: файл слишком большой.',
   fileInputRejectedCount: '{filename}: можно выбрать только один файл за раз.',
+  fileInputRejectedRead: '{filename}: не удалось прочитать файл.',
+  fileInputRejectedLimit: '{filename}: в папке слишком много элементов.',
   elapsedMinutesSecondsTemplate: '{minutes} мин {seconds} с',
   graphNode: 'Узел {label}',
   graphLink: 'Связь от {source} к {target}',
@@ -426,13 +459,19 @@ const strings: LyraLocaleStrings = {
   graphCommunity: 'Сообщество {label}, узлов: {count}',
   heatmapValueLabel: 'значение',
   heatmapMatrixCellLabel: 'Строка {row}, столбец {col}: {value}',
-  heatmapCalendarLabel: 'Календарная тепловая карта за {days} дн., {label}: диапазон {range}',
-  heatmapMatrixLabel: 'Тепловая карта {rows} × {cols} ячеек, {label}: диапазон {range}',
+  heatmapCalendarLabel:
+    'Календарная тепловая карта за {days} дн., {label}: диапазон {range}',
+  heatmapMatrixLabel:
+    'Тепловая карта {rows} × {cols} ячеек, {label}: диапазон {range}',
   heatmapCalendarCellLabel: '{date}: {value}',
   heatmapNoDataValue: 'нет данных',
   heatmapDefaultRowLabel: 'строка {n}',
   heatmapDefaultColLabel: 'столбец {n}',
   heatmapSelectedCellLabel: 'Выбрано: {cell}.',
+  heatmapProjectionLimit:
+    'Показаны только первые {count} ячеек тепловой карты.',
+  heatmapDecorationLimit:
+    'Показаны только первые {count} цветов, отметок легенды и аннотаций тепловой карты.',
   inputLabel: 'Текст',
   showPassword: 'Показать пароль',
   hidePassword: 'Скрыть пароль',
@@ -642,7 +681,8 @@ const strings: LyraLocaleStrings = {
   },
   copyFailed: 'Не удалось скопировать',
   colorPickerSaturationBrightness: 'Насыщенность и яркость',
-  colorPickerSaturationBrightnessValue: 'Насыщенность {saturation}%, яркость {brightness}%',
+  colorPickerSaturationBrightnessValue:
+    'Насыщенность {saturation}%, яркость {brightness}%',
   colorPickerHue: 'Оттенок',
   colorPickerHueValue: '{hue} градусов',
   colorPickerOpacity: 'Непрозрачность',
@@ -656,7 +696,8 @@ const strings: LyraLocaleStrings = {
   selectSelectedOverflow: 'ещё {n}',
   iconLoadError: 'Не удалось загрузить значок.',
   iconTooLarge: 'Файл значка слишком велик для отображения.',
-  iconSanitizerMissing: 'Для безопасного отображения этого значка нужно установить дополнительный пакет «dompurify».',
+  iconSanitizerMissing:
+    'Для безопасного отображения этого значка нужно установить дополнительный пакет «dompurify».',
   paginationFirstPage: 'Первая страница',
   paginationLastPage: 'Последняя страница',
   accessibleLabelSeparator: ' — ',
@@ -711,7 +752,8 @@ const strings: LyraLocaleStrings = {
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Shift',
   emailViewerLabel: 'Просмотр почты',
-  emailViewerMissingParser: 'Для разбора этого сообщения нужно установить дополнительный пакет «postal-mime».',
+  emailViewerMissingParser:
+    'Для разбора этого сообщения нужно установить дополнительный пакет «postal-mime».',
   emailViewerFrom: 'От',
   emailViewerTo: 'Кому',
   emailViewerSubject: 'Тема',
@@ -723,17 +765,29 @@ const strings: LyraLocaleStrings = {
   emailViewerHideQuoted: 'Скрыть цитируемый текст',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Просмотр календаря',
-  calendarViewerMissingParser: 'Для разбора этого календаря нужно установить дополнительный пакет «ical.js».',
+  calendarViewerMissingParser:
+    'Для разбора этого календаря нужно установить дополнительный пакет «ical.js».',
   calendarViewerEmpty: 'В этом календаре нет событий.',
   calendarViewerNoSummary: '(без названия)',
   pdfViewerLabel: 'Документ PDF',
-  pdfViewerMissingLibrary: 'Для отображения файлов PDF нужно установить дополнительный пакет «pdfjs-dist».',
-  qrCodeMissingLibrary: 'Для создания QR-кодов нужно установить дополнительный пакет «qrcode».',
+  pdfViewerMissingLibrary:
+    'Для отображения файлов PDF нужно установить дополнительный пакет «pdfjs-dist».',
+  qrCodeMissingLibrary:
+    'Для создания QR-кодов нужно установить дополнительный пакет «qrcode».',
   qrCodeGenerationFailed: 'Не удалось закодировать это значение в QR-код.',
-  mapMissingLibrary: 'Для отображения карты нужно установить дополнительный пакет «maplibre-gl».',
-  chartMissingLibrary: 'Для отображения диаграмм нужно установить дополнительный пакет «chart.js».',
-  boxPlotMissingLibrary: 'Для отображения диаграмм размаха нужно установить соответствующий дополнительный пакет.',
-  graphMissingLibrary: 'Для отображения графа нужно установить дополнительный пакет «d3».',
+  mapMissingLibrary:
+    'Для отображения карты нужно установить дополнительный пакет «maplibre-gl».',
+  mapStyleRequired: 'Укажите стиль карты, чтобы отобразить карту.',
+  mapWebglUnavailable:
+    'Этот браузер не может предоставить графическую поддержку, необходимую для отображения карты.',
+  mapInitializationFailed: 'Не удалось инициализировать карту.',
+  mapLegend: 'Легенда карты',
+  chartMissingLibrary:
+    'Для отображения диаграмм нужно установить дополнительный пакет «chart.js».',
+  boxPlotMissingLibrary:
+    'Для отображения диаграмм размаха нужно установить соответствующий дополнительный пакет.',
+  graphMissingLibrary:
+    'Для отображения графа нужно установить дополнительный пакет «d3».',
   pdfViewerPageOf: 'Страница {page} из {total}',
   pdfViewerZoomIn: 'Увеличить',
   pdfViewerZoomOut: 'Уменьшить',
@@ -786,6 +840,7 @@ const strings: LyraLocaleStrings = {
   traceTree: 'Дерево трассировки',
   traceTreeSpanStatus: '{name} — {status}',
   traceTreeMetricLabel: '{label}: {value}',
+  spanProjectionLimit: 'Показаны только первые {count} участков трассировки.',
   agentTraceFilterLabel: 'Типы участков трассировки',
   spanKindAgent: 'Агент',
   spanKindLlm: 'LLM',
@@ -835,8 +890,10 @@ const strings: LyraLocaleStrings = {
   imageViewerAnnotate: 'Разметить',
   imageViewerHighlightsLabel: 'Выделенные области',
   imageViewerUnlabeledHighlight: 'Выделение {index}',
-  imageViewerAnnotationHint: 'Режим разметки включён. Нажмите Enter, чтобы поставить область, затем перемещайте её стрелками, изменяйте размер стрелками с Shift, сохраните на Enter или отмените на Escape.',
-  imageViewerAnnotationBoxPosition: 'Область: {x}% по горизонтали, {y}% по вертикали, ширина {width}%, высота {height}%.',
+  imageViewerAnnotationHint:
+    'Режим разметки включён. Нажмите Enter, чтобы поставить область, затем перемещайте её стрелками, изменяйте размер стрелками с Shift, сохраните на Enter или отмените на Escape.',
+  imageViewerAnnotationBoxPosition:
+    'Область: {x}% по горизонтали, {y}% по вертикали, ширина {width}%, высота {height}%.',
   imageViewerAnnotationAdded: 'Область добавлена.',
   imageViewerAnnotationCancelled: 'Создание области отменено.',
   transcriptFeedLabel: 'Расшифровка',
@@ -848,6 +905,8 @@ const strings: LyraLocaleStrings = {
   commitCardShowFiles: 'Показать изменённые файлы ({count})',
   commitCardHideFiles: 'Скрыть изменённые файлы ({count})',
   stackTraceLabel: 'Стек вызовов',
+  stackTraceLimit:
+    'Часть стека вызовов пропущена, поскольку достигнут предел отображения.',
   stackTraceShowFrames: 'Показать внутренние кадры ({count})',
   stackTraceHideFrames: 'Скрыть внутренние кадры ({count})',
   statusSkipped: 'Пропущено',
@@ -857,7 +916,8 @@ const strings: LyraLocaleStrings = {
   testResultsSkipped: 'пропущено: {count}',
   testResultsRunning: 'выполняется: {count}',
   testResultsFilterLabel: 'Фильтр по статусу',
-  testResultsCompleteAnnounce: 'успешно: {passed}, с ошибкой: {failed}, пропущено: {skipped}',
+  testResultsCompleteAnnounce:
+    'успешно: {passed}, с ошибкой: {failed}, пропущено: {skipped}',
   testResultsExpandTest: 'Развернуть {name}',
   testResultsCollapseTest: 'Свернуть {name}',
   envListLabel: 'Переменные среды',
@@ -893,8 +953,10 @@ const strings: LyraLocaleStrings = {
   browserFrameControllerUser: 'Пользователь',
   notebookViewerLabel: 'Просмотр блокнота',
   notebookViewerInvalid: 'Этот файл не является корректным блокнотом Jupyter.',
-  notebookViewerUnsupportedVersion: 'Формат блокнота {version} не поддерживается.',
-  notebookViewerTooManyCells: 'В этом блокноте слишком много ячеек для отображения.',
+  notebookViewerUnsupportedVersion:
+    'Формат блокнота {version} не поддерживается.',
+  notebookViewerTooManyCells:
+    'В этом блокноте слишком много ячеек для отображения.',
   notebookViewerInPrompt: 'In [{count}]',
   notebookViewerInPromptEmpty: 'In [ ]',
   notebookViewerCodeCell: 'Ячейка кода {index}',
@@ -906,7 +968,8 @@ const strings: LyraLocaleStrings = {
   notebookViewerUnrenderedOutput: 'Этот тип вывода не отображается.',
   xmlViewerLabel: 'Просмотр XML',
   xmlViewerParseError: 'Не удалось разобрать этот документ как XML.',
-  xmlViewerTooManyNodes: 'В этом документе слишком много узлов для отображения.',
+  xmlViewerTooManyNodes:
+    'В этом документе слишком много узлов для отображения.',
   xmlViewerChildCount: {
     one: '{count} дочерний узел',
     few: '{count} дочерних узла',
@@ -934,7 +997,8 @@ const strings: LyraLocaleStrings = {
     many: '{count} объектов',
     other: '{count} объекта',
   },
-  geojsonViewMissingMapLibrary: 'Установите дополнительный пакет maplibre-gl, чтобы показать этот файл на карте. Пока отображается исходный GeoJSON.',
+  geojsonViewMissingMapLibrary:
+    'Установите дополнительный пакет maplibre-gl, чтобы показать этот файл на карте. Пока отображается исходный GeoJSON.',
   mindMapLabel: 'Интеллект-карта',
   mindMapTopicStatus: '{label}, уровень {level}, подтем: {count}',
   mindMapLeafStatus: '{label}, уровень {level}',
@@ -962,13 +1026,16 @@ const strings: LyraLocaleStrings = {
   scoreTierLow: 'Низкая релевантность',
   chunkInspectorEmpty: 'Фрагменты не найдены',
   flowCanvasLabel: 'Холст рабочего процесса',
+  flowCanvasLayoutLimit:
+    'Некоторые детали упорядочивания связей опущены, поскольку достигнут предел вычислений раскладки рабочего процесса.',
   flowCanvasSummary: 'Рабочий процесс: узлов {nodeCount}, связей {edgeCount}',
   flowNode: 'Узел {label}',
   flowEdge: 'Связь от {source} к {target}',
   flowEdgeWithLabel: '{label}, связь от {source} к {target}',
   flowItemAnnouncement: '{item} ({index} из {total})',
   dashboardGridLabel: 'Сетка панели мониторинга',
-  dashboardCellCollisionRejected: '{label} нельзя разместить здесь: перекрытие с другой ячейкой.',
+  dashboardCellCollisionRejected:
+    '{label} нельзя разместить здесь: перекрытие с другой ячейкой.',
   dashboardCellMoved: '{label} перемещён в столбец {x}, строку {y}.',
   dashboardCellResized: 'Размер {label} изменён: ширина {w}, высота {h}.',
   flowEdgeList: 'Связи рабочего процесса',
@@ -976,7 +1043,8 @@ const strings: LyraLocaleStrings = {
   flowNodeDeselected: 'С {label} снято выделение',
   flowSelectionCleared: 'Выделение снято',
   flowNodeMoved: '{label} перемещён в {x}, {y}',
-  flowConnectStarted: 'Соединение от {label}. Выберите цель стрелками, Enter — соединить, Escape — отменить.',
+  flowConnectStarted:
+    'Соединение от {label}. Выберите цель стрелками, Enter — соединить, Escape — отменить.',
   flowConnectTarget: 'Соединение {source} с {target} ({index} из {total})',
   flowConnectCommitted: '{source} соединён с {target}',
   flowConnectCancelled: 'Соединение отменено',
@@ -985,12 +1053,14 @@ const strings: LyraLocaleStrings = {
   flowControlsLabel: 'Управление холстом',
   flowMinimapLabel: 'Обзор рабочего процесса',
   flowMinimapViewport: 'Видимая область',
-  flowMinimapInstructions: 'Стрелки — перемещение. Плюс и минус — масштаб. Enter или Home — вписать процесс.',
+  flowMinimapInstructions:
+    'Стрелки — перемещение. Плюс и минус — масштаб. Enter или Home — вписать процесс.',
   flowMinimapViewportChanged: 'Положение {x}, {y}. Масштаб {zoom}.',
   nodePaletteLabel: 'Палитра узлов',
   nodePalettePlaceholder: 'Поиск узлов…',
   nodePaletteEmpty: 'Подходящих узлов нет.',
-  nodePaletteDragHint: 'Перетащите на холст или нажмите Enter, чтобы разместить',
+  nodePaletteDragHint:
+    'Перетащите на холст или нажмите Enter, чтобы разместить',
   nodePaletteResultCount: {
     one: '{count} элемент',
     few: '{count} элемента',
@@ -1013,7 +1083,7 @@ const strings: LyraLocaleStrings = {
   neighborExpand: 'Развернуть {label} в графе',
   neighborListEmpty: 'Связей нет',
   neighborGroupHeader: '{relation} ({count})',
-  flowRunOverlayLabel: 'Статус выполнения',
+  flowRunStatusLabel: 'Статус выполнения',
   flowRunSummary: 'Выполнено шагов: {done} из {total}',
   flowRunStepStatus: '{label}: {status}',
   flowRunStatusCount: '{status}: {count}',
@@ -1082,7 +1152,8 @@ const strings: LyraLocaleStrings = {
   memoryPanelConfirmAddHeading: 'Добавить это в долговременную память?',
   memoryPanelConfirmRemoveHeading: 'Удалить этот элемент?',
   memoryPanelConfirmForgetHeading: 'Забыть всю долговременную память?',
-  memoryPanelConfirmForgetBody: 'Все записи долговременной памяти ({count}) будут удалены безвозвратно.',
+  memoryPanelConfirmForgetBody:
+    'Все записи долговременной памяти ({count}) будут удалены безвозвратно.',
   graphExplorerLabel: 'Обозреватель графа знаний',
   graphExplorerSearchPlaceholder: 'Поиск сущностей…',
   graphExplorerSearchResultsLabel: 'Результаты поиска',
@@ -1115,7 +1186,8 @@ const strings: LyraLocaleStrings = {
   claimEvidenceConfidence: 'достоверность {percent}',
   retrievalCompareLabel: 'Сравнение результатов поиска',
   retrievalCompareEmpty: 'Нет наборов результатов для сравнения',
-  retrievalCompareOverlap: 'Пересечение top-k между {left} и {right}: {percent}',
+  retrievalCompareOverlap:
+    'Пересечение top-k между {left} и {right}: {percent}',
   retrievalCompareRank: 'Ранг {rank}',
   retrievalCompareDenseScore: 'Плотный',
   retrievalCompareSparseScore: 'Разреженный',
@@ -1164,7 +1236,8 @@ const strings: LyraLocaleStrings = {
   realtimeSessionMute: 'Выключить микрофон',
   realtimeSessionUnmute: 'Включить микрофон',
   realtimeSessionInterrupt: 'Прервать ответ',
-  realtimeSessionConnectionFailed: 'Не удалось установить соединение в реальном времени.',
+  realtimeSessionConnectionFailed:
+    'Не удалось установить соединение в реальном времени.',
   contextInspectorRedacted: 'Скрыто',
   contextInspectorTruncated: 'Обрезано',
   contextInspectorLabel: 'Инспектор контекста',
@@ -1232,7 +1305,8 @@ const strings: LyraLocaleStrings = {
   documentCompareNoVersion: 'Версия не указана.',
   documentCompareLabel: 'Сравнение документов',
   agentRunCurrentStepLabel: 'Текущий шаг',
-  graphQueryHopRangeInvalid: 'Максимум переходов не может быть меньше минимума.',
+  graphQueryHopRangeInvalid:
+    'Максимум переходов не может быть меньше минимума.',
   graphQueryRelationshipTypeLabel: 'Тип связи',
   graphQueryNodeTypeLabel: 'Тип узла',
   graphQueryBuilderLabel: 'Конструктор запросов к графу',
@@ -1268,7 +1342,8 @@ const strings: LyraLocaleStrings = {
   contextInspectorSegmentTokens: 'токенов: {tokens}',
   knowledgeBaseDocumentCount: 'проиндексировано: {count}',
   knowledgeBaseRowActionsLabel: 'Действия: {name}',
-  knowledgeBaseEmptyDescription: 'Добавьте источник, чтобы начать индексацию содержимого.',
+  knowledgeBaseEmptyDescription:
+    'Добавьте источник, чтобы начать индексацию содержимого.',
   ingestionChunkCount: {
     one: '{count} фрагмент',
     few: '{count} фрагмента',
@@ -1276,7 +1351,8 @@ const strings: LyraLocaleStrings = {
     other: '{count} фрагмента',
   },
   ingestionItemProgressLabel: '{name} — {stage}',
-  ingestionEmbeddedOfTotal: 'Построены эмбеддинги для {embedded} из {total} фрагментов',
+  ingestionEmbeddedOfTotal:
+    'Построены эмбеддинги для {embedded} из {total} фрагментов',
   ingestionAttemptCount: 'Попытка {count}',
   ingestionRetryWithContext: 'Повторить {label}',
   ingestionCancelWithContext: 'Отменить {label}',
@@ -1289,7 +1365,8 @@ const strings: LyraLocaleStrings = {
   evaluationRunExampleFailedAnnounce: '{label}: ошибка',
   evaluationRunExampleCancelledAnnounce: '{label}: отменено',
   evaluationRunExampleWaitingInputAnnounce: '{label}: требуется ввод',
-  evaluationRunExampleWaitingApprovalAnnounce: '{label}: требуется подтверждение',
+  evaluationRunExampleWaitingApprovalAnnounce:
+    '{label}: требуется подтверждение',
   evaluationRunProgressSummary: 'Готово примеров: {completed} из {total}',
   evaluationRunRunningCount: 'выполняется: {count}',
   evaluationRunFailedCount: 'с ошибкой: {count}',
@@ -1313,6 +1390,8 @@ const strings: LyraLocaleStrings = {
   flagLoadError: 'Флаг недоступен',
   moveUp: 'Переместить вверх',
   moveDown: 'Переместить вниз',
+  reorderMovePending: 'Переупорядочивание ожидает завершения.',
+  reorderMoveCancelled: 'Переупорядочивание отменено.',
   reorderItemMoved: 'Перемещено на позицию {index} из {total}',
 };
 

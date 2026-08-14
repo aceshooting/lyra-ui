@@ -15,6 +15,24 @@ function rows(el: LyraLocalePicker): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll('[part="option"]');
 }
 
+it('rejects direct open writes while disabled or synchronously fieldset-disabled', async () => {
+  const fieldset = await fixture<HTMLFieldSetElement>(html`
+    <fieldset><lr-locale-picker .locales=${['en', 'fr']}></lr-locale-picker></fieldset>
+  `);
+  const el = fieldset.querySelector('lr-locale-picker') as LyraLocalePicker;
+  el.disabled = true;
+  el.open = true;
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+
+  el.disabled = false;
+  fieldset.disabled = true;
+  el.setAttribute('open', '');
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+});
+
 it('inherits public trigger geometry from an ancestor across a size tier', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div style="--lr-locale-picker-trigger-padding: 7px 11px; --lr-locale-picker-trigger-min-height: 49px; --lr-locale-picker-font-size: 18px; --lr-locale-picker-expand-size: 22px; --lr-locale-picker-gap: 13px; --lr-locale-picker-radius: 17px">
@@ -187,6 +205,35 @@ it('locales set as a plain string[] overrides the auto-discovered list', async (
   expect(rows(el).length).to.equal(2);
   expect(rows(el)[0].dataset.value).to.equal('fr');
   expect(rows(el)[1].dataset.value).to.equal('de');
+});
+
+it('treats an explicit empty locale catalog as authoritative and undefined as automatic', async () => {
+  const el = await fixture<LyraLocalePicker>(html`
+    <lr-locale-picker .locales=${[]}></lr-locale-picker>
+  `);
+  el.open = true;
+  await el.updateComplete;
+  expect(rows(el)).to.have.length(0);
+
+  el.locales = undefined;
+  await el.updateComplete;
+  expect(rows(el).length).to.equal(getRegisteredLyraLocales().length);
+});
+
+it('owns a bounded readonly snapshot of an explicit locale catalog', async () => {
+  const source = [{ tag: 'fr', label: 'Français' }];
+  const el = await fixture<LyraLocalePicker>(html`
+    <lr-locale-picker .locales=${source}></lr-locale-picker>
+  `);
+  el.open = true;
+  await el.updateComplete;
+  source[0]!.label = 'Forged';
+  source.push({ tag: 'de', label: 'Deutsch' });
+  expect(el.locales).to.deep.equal([{ tag: 'fr', label: 'Français' }]);
+  expect(Object.isFrozen(el.locales)).to.be.true;
+  expect(Object.isFrozen(el.locales![0])).to.be.true;
+  expect(rows(el)).to.have.length(1);
+  expect(rows(el)[0]!.textContent).to.contain('Français');
 });
 
 it('locales set as {tag,label}[] overrides the auto-discovered list and honors a custom label', async () => {
@@ -434,6 +481,41 @@ it('Home/End jump to the first/last row', async () => {
   );
   await oneEvent(el, 'lr-change');
   expect(el.value).to.equal('it');
+});
+
+it('scrolls Arrow, Home, End, typeahead, and replacement active rows into view safely', async () => {
+  const catalog = Array.from({ length: 60 }, (_, index) => ({
+    tag: `x-scroll-${index}`,
+    label: index === 59 ? 'Zulu last locale' : `Locale ${String(index).padStart(2, '0')}`,
+  }));
+  const el = await fixture<LyraLocalePicker>(html`
+    <lr-locale-picker .locales=${catalog} .showFlags=${false}></lr-locale-picker>
+  `);
+  el.open = true;
+  await el.updateComplete;
+  const btn = trigger(el);
+  const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(listbox.scrollTop).to.be.greaterThan(0);
+  const endScrollTop = listbox.scrollTop;
+
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(listbox.scrollTop).to.be.lessThan(endScrollTop);
+
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(listbox.scrollTop).to.be.greaterThan(0);
+
+  el.locales = catalog.slice(0, 2);
+  await el.updateComplete;
+  expect(btn.getAttribute('aria-activedescendant')).to.equal(rows(el)[1]?.id);
+  expect(listbox.scrollTop).to.be.at.least(0);
+
+  el.remove();
+  await Promise.resolve();
 });
 
 it('rehomes the active option immediately when an open locale catalog shrinks', async () => {

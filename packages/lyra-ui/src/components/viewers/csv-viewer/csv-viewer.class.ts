@@ -2,8 +2,8 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { assertTableSize, isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
-import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import { parseCellRange, type ParsedCellRange } from '../../../internal/cell-range.js';
@@ -19,6 +19,8 @@ import {
 import { LatestTask } from '../../../internal/latest-task.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_csvViewerLabel, LYRA_DEFAULT_csvViewerUnavailable, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
@@ -68,9 +70,13 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * `search()` is a locale-aware case-insensitive substring match over the same stringified cell
  * values `cell()` already renders, ordered row then column.
  *
+ * A quote-aware structural scan enforces the 10,000-raw-row, 1,000-column, 1,000,000-cell, and
+ * 100-diagnostic ceilings before PapaParse can materialize an amplified result. The peer then runs
+ * with streaming row callbacks and the same limits as a second boundary.
+ *
  * @customElement lr-csv-viewer
- * @event lr-render-error - Fired when fetching or parsing fails, a parser is unavailable, or the
- *   parsed grid exceeds a resource ceiling.
+ * @event lr-render-error - Fired when fetching or parsing fails, a parser is unavailable, the
+ *   bounded parse exceeds a resource ceiling, or PapaParse returns recoverable diagnostics.
  * @event lr-highlight-activate - A `highlights` cell was clicked, or activated via Enter/Space
  *   while focused. `detail: { id }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -78,7 +84,7 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
- * @csspart base - The root wrapper.
+ * @csspart base - The root wrapper with explicit `aria-busy` loading state.
  * @csspart body - The scrollable wrapper around the fetched-state content, capped by `max-height`.
  * @csspart sheet - The wrapper around the header row and virtualized body.
  * @csspart rows - The virtualized row list.
@@ -89,7 +95,7 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * @csspart cell-highlight-action - The native button filling a highlighted cell; emits
  *   `lr-highlight-activate` when activated. Its accessible name localizes the complete cell-value
  *   and annotation message through separate `{value}` and `{label}` placeholders.
- * @csspart spinner - The loading status region.
+ * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
  * @csspart error - The error message region.
  * @cssprop [--lr-csv-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a highlighted
  *   cell. The active highlight sets it inline to `var(--lr-color-warning, var(--lr-color-brand))`.
@@ -120,11 +126,12 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
   /** URL to fetch and parse. */
   @property() src = '';
-  /** Source filename or display name, used as the viewer's accessible name when the host has no
-   *  `aria-label`. Host `aria-label` wins by attribute presence, including an empty value. */
+  /** Source filename or display name used on the shadow viewer owner when host `aria-label` is
+   *  absent. A non-empty host label remains on the host; an explicitly empty one is preserved on
+   *  the shadow owner. */
   @property() name = '';
   /** Whether the first parsed row is rendered as a sticky header. */
   @property({ attribute: 'has-header-row', converter: trueDefaultBooleanConverter }) hasHeaderRow = true;
@@ -164,7 +171,8 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.cancelPendingAnimationFrames();
     this.announcements.adopted();
   }
@@ -246,7 +254,6 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
       const source = await readResponseText(response);
       if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
       const result = parseDelimitedGrid(library, source);
-      assertTableSize(result.data);
       if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
       this.fetchState = { kind: 'loaded', rows: result.data };
       if (this.searchQuery) await this.search(this.searchQuery);
@@ -423,7 +430,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   private stopInternalEvent = (event: Event): void => { event.stopPropagation(); };
 
   override render(): TemplateResult {
-    const label = hostAriaLabel(this) ?? (this.name || this.localize('csvViewerLabel'));
+    const label = viewerSemanticLabel(this, this.name || this.localize('csvViewerLabel'));
     let content: TemplateResult;
     if (this.fetchState.kind === 'loaded') {
       const rows = this.fetchState.rows;
@@ -432,7 +439,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
         const header = this.hasHeaderRow ? rows[0] : undefined;
         const body = this.hasHeaderRow ? rows.slice(1) : rows;
         const count = columns(rows);
-        content = html`<div part="sheet" role="table" aria-label=${label} aria-rowcount=${rows.length} aria-colcount=${count}>${header ? this.renderRow(header, count, 'header-row', 1) : nothing}<lr-virtual-list
+        content = html`<div part="sheet" role="table" aria-rowcount=${rows.length} aria-colcount=${count}>${header ? this.renderRow(header, count, 'header-row', 1) : nothing}<lr-virtual-list
           part="rows"
           exportparts="data-row:data-row, cell:cell, cell-highlight:cell-highlight, cell-highlight-action:cell-highlight-action"
           .items=${body}
@@ -443,14 +450,14 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
           row-index-offset=${this.hasHeaderRow ? '1' : '0'}
           @lr-load-more=${this.stopInternalEvent}
           @lr-visible-range-changed=${this.stopInternalEvent}
-          @lr-scroll=${this.stopInternalEvent}
+          @lr-virtual-scroll=${this.stopInternalEvent}
         ></lr-virtual-list></div>`;
       }
-    } else if (this.fetchState.kind === 'loading') content = html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+    } else if (this.fetchState.kind === 'loading') content = renderViewerLoading(this.localize('loadingDocument'));
     else if (this.fetchState.kind === 'error') content = html`<div part="error">${this.fetchState.message}</div>`;
     else content = html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-csv-viewer-max-height': maxHeight }) : nothing} aria-label=${label}><div part="body">${content}</div>${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div part="base" role=${viewerSemanticRole(this, 'region') ?? nothing} style=${maxHeight ? styleMap({ '--lr-csv-viewer-max-height': maxHeight }) : nothing} aria-label=${label ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'}><div part="body">${content}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

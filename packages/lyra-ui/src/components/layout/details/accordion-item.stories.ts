@@ -26,7 +26,7 @@ export const CustomLabelAndIcon: StoryObj = {
     docs: {
       description: {
         story:
-          'Rich label markup remains visible and names the sole trigger. The label, compatibility summary, and icon slots are decorative layers: their flattened content is inert, and the trigger remains the only action.',
+          'Rich label markup remains visible and names the sole trigger. The label and icon slots are decorative layers: their flattened content is inert, and the trigger remains the only action.',
       },
     },
   },
@@ -34,19 +34,5 @@ export const CustomLabelAndIcon: StoryObj = {
     <span slot="label"><strong>Rich label</strong> with supporting text</span>
     <span slot="icon" aria-hidden="true">+</span>
     The rich label names the trigger; the decorative icon accepts visible, non-actionable markup.
-  </lr-accordion-item>`,
-};
-
-export const DetailsCompatibility: StoryObj = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          '`open`, `summary`, the `summary` slot, and `show()`/`hide()` remain aliases for existing Details-style markup.',
-      },
-    },
-  },
-  render: () => html`<lr-accordion-item summary="Legacy Details vocabulary" open>
-    Existing markup remains expandable.
   </lr-accordion-item>`,
 };

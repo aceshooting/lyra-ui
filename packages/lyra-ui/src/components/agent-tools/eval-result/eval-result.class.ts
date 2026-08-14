@@ -3,6 +3,8 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './eval-result.styles.js';
 import type { RubricKey, RubricValue } from '../../forms/rubric-form/rubric-form.class.js';
+import type { AgentRunActivateDetail } from '../run-events.js';
+import { firstByIdentity } from '../collection-identity.js';
 import type { TableColumn } from '../../data/table/table.class.js';
 import '../../forms/rubric-form/rubric-form.class.js';
 import '../../data/table/table.class.js';
@@ -37,7 +39,7 @@ export interface EvalRunResult {
 }
 
 export interface LyraEvalResultEventMap {
-  'lr-run-select': CustomEvent<{ runId: string }>;
+  'lr-run-activate': CustomEvent<AgentRunActivateDetail<EvalRunResult>>;
   'lr-review-input': CustomEvent<{ runId: string; value: RubricValue }>;
   'lr-review-validity-change': CustomEvent<{ runId: string; valid: boolean; errors: Record<string, string> }>;
   'lr-review-submit': CustomEvent<{ runId: string; value: RubricValue }>;
@@ -46,7 +48,9 @@ export interface LyraEvalResultEventMap {
 
 /**
  * `<lr-eval-result>` — rubric scoring, human review, and comparison across a single evaluation
- * example's runs (one per model or prompt version), LangSmith/Arize-eval-result style.
+ * example's runs (one per model or prompt version), LangSmith/Arize-eval-result style. Duplicate
+ * run ids normalize before fallback selection, lookup, table row keys, review events, and
+ * comparison; the first occurrence wins.
  *
  * Composes three existing primitives directly rather than re-deriving any of their behavior:
  * `<lr-table>` renders the `runs` comparison table (`columns` is a plain pass-through to its
@@ -64,12 +68,12 @@ export interface LyraEvalResultEventMap {
  * property itself. Each one falls back to `runs[0]?.id` purely for *rendering* whenever the
  * property is unset, so the component renders something useful with zero configuration beyond
  * `runs` -- but moving the selection for real requires the host to set `selectedRunId` in
- * response to `lr-run-select`, the same shape `<lr-rubric-form>`'s own `itemId` already uses. A
+ * response to `lr-run-activate`, the same shape `<lr-rubric-form>`'s own `itemId` already uses. A
  * `selectedRunId`/`baselineRunId` that doesn't match any entry in `runs` degrades gracefully: the
  * comparison grid still renders, and the review/diff sections simply don't (no error, no crash).
  *
  * @customElement lr-eval-result
- * @event lr-run-select - A comparison-grid row was activated. `detail: { runId }`.
+ * @event lr-run-activate - A comparison-grid row was activated. `detail: { runId, run }`.
  * @event lr-review-input - The selected run's rubric value changed. `detail: { runId, value }`.
  * @event lr-review-validity-change - The selected run's rubric validity changed. `detail: { runId, valid, errors }`.
  * @event lr-review-submit - The selected run's rubric form was submitted. `detail: { runId, value }`.
@@ -99,22 +103,37 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The runs (one per model or prompt version) being compared for this evaluation example. */
+  /** The runs (one per model or prompt version) being compared for this evaluation example.
+   *  Duplicate ids normalize first-wins before selection, diff, grid, and review events. */
   @property({ attribute: false }) runs: EvalRunResult[] = EMPTY_RUNS;
 
-  /** Column definitions for the comparison grid -- forwarded verbatim to `<lr-table>`'s own `columns`.
+  /** Column definitions for the comparison grid -- forwarded to `<lr-table>` after duplicate keys
+   *  normalize first-wins.
    *  Each column now needs a `cell(row)` accessor (`<lr-table>`'s `TableColumn` shape), not the old
    *  `<lr-data-grid>` `DataGridColumn`'s optional `value(row)`. */
   @property({ attribute: false }) columns: TableColumn<EvalRunResult>[] = EMPTY_COLUMNS;
 
-  /** Rubric field definitions for the review form -- forwarded verbatim to `<lr-rubric-form>`'s own `keys`. */
+  /** Rubric field definitions for the review form. Duplicate keys normalize first-wins before the
+   *  review form receives them. */
   @property({ attribute: false }) rubricKeys: RubricKey[] = EMPTY_KEYS;
 
-  /** The run currently open for review, and the diff's "new" side. Falls back to `runs[0]?.id` when unset. */
-  @property({ attribute: 'selected-run-id' }) selectedRunId = '';
+  private get normalizedRuns(): EvalRunResult[] {
+    return firstByIdentity(Array.isArray(this.runs) ? this.runs : [], (run) => run.id);
+  }
+  private get normalizedColumns(): TableColumn<EvalRunResult>[] {
+    return firstByIdentity(Array.isArray(this.columns) ? this.columns : [], (column) => String(column.key));
+  }
+  private get normalizedRubricKeys(): RubricKey[] {
+    return firstByIdentity(Array.isArray(this.rubricKeys) ? this.rubricKeys : [], (key) => key.key);
+  }
 
-  /** The run compared against, and the diff's "old" side. Falls back to `runs[0]?.id` when unset. */
-  @property({ attribute: 'baseline-run-id' }) baselineRunId = '';
+  /** The run currently open for review, and the diff's "new" side. `null` falls back to
+   *  `runs[0]?.id`; empty string remains a valid run identity. */
+  @property({ attribute: 'selected-run-id' }) selectedRunId: string | null = null;
+
+  /** The run compared against, and the diff's "old" side. `null` falls back to `runs[0]?.id`;
+   *  empty string remains a valid run identity. */
+  @property({ attribute: 'baseline-run-id' }) baselineRunId: string | null = null;
 
   /** Shows a Skip control on the review form (forwarded to `<lr-rubric-form>`'s own `skippable`). */
   @property({ type: Boolean, attribute: 'review-skippable' }) reviewSkippable = false;
@@ -123,31 +142,40 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   private get effectiveSelectedRunId(): string {
-    return this.selectedRunId || this.runs[0]?.id || '';
+    return this.selectedRunId ?? this.normalizedRuns[0]?.id ?? '';
   }
 
   private get selectedRun(): EvalRunResult | undefined {
     const id = this.effectiveSelectedRunId;
-    return this.runs.find((run) => run.id === id);
+    return this.normalizedRuns.find((run) => run.id === id);
   }
 
   private get effectiveBaselineRunId(): string {
-    return this.baselineRunId || this.runs[0]?.id || '';
+    return this.baselineRunId ?? this.normalizedRuns[0]?.id ?? '';
   }
 
   private get baselineRun(): EvalRunResult | undefined {
     const id = this.effectiveBaselineRunId;
-    return this.runs.find((run) => run.id === id);
+    return this.normalizedRuns.find((run) => run.id === id);
+  }
+
+  private stopOwnedEvent(event: Event): void {
+    event.stopPropagation();
   }
 
   private renderReview(selected: EvalRunResult): TemplateResult {
     return html`<lr-rubric-form
       part="review"
-      .keys=${this.rubricKeys}
+      .keys=${this.normalizedRubricKeys}
       .value=${selected.review ?? EMPTY_VALUE}
       item-id=${selected.id}
       ?skippable=${this.reviewSkippable}
       ?disabled=${this.disabled}
+      @input=${this.stopOwnedEvent}
+      @change=${this.stopOwnedEvent}
+      @focus=${this.stopOwnedEvent}
+      @blur=${this.stopOwnedEvent}
+      @lr-invalid=${this.stopOwnedEvent}
       @lr-input=${(e: CustomEvent<{ value: RubricValue }>) => {
         e.stopPropagation();
         this.emit('lr-review-input', { runId: selected.id, value: e.detail.value });
@@ -181,12 +209,16 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
         layout=${comparing ? 'split' : 'unified'}
         .oldText=${baseline?.output ?? selected.output}
         .newText=${selected.output}
+        @lr-copy=${this.stopOwnedEvent}
+        @lr-error=${this.stopOwnedEvent}
+        @lr-copy-error=${this.stopOwnedEvent}
       ></lr-diff-view>
     </div>`;
   }
 
   override render(): TemplateResult {
-    if (this.runs.length === 0) {
+    const runs = this.normalizedRuns;
+    if (runs.length === 0) {
       return html`<div part="base"><p part="empty">${this.localize('noData')}</p></div>`;
     }
     const selected = this.selectedRun;
@@ -194,14 +226,28 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
       <div part="base">
         <lr-table
           part="grid"
-          .columns=${this.columns}
-          .rows=${this.runs}
+          .columns=${this.normalizedColumns}
+          .rows=${runs}
           .rowKey=${(row: EvalRunResult) => row.id}
-          .selectedKey=${this.effectiveSelectedRunId}
-          aria-label=${this.getAttribute('aria-label') || this.localize('evaluationDashboardRunsLabel')}
+          .selectionMode=${'single'}
+          .selectedKeys=${new Set([this.effectiveSelectedRunId])}
+          aria-label=${this.localize('evaluationDashboardRunsLabel')}
+          @input=${this.stopOwnedEvent}
+          @change=${this.stopOwnedEvent}
+          @focus=${this.stopOwnedEvent}
+          @blur=${this.stopOwnedEvent}
+          @lr-priority-columns-visibility-change=${this.stopOwnedEvent}
+          @lr-sort=${this.stopOwnedEvent}
+          @lr-row-expand-toggle=${this.stopOwnedEvent}
+          @lr-load-more=${this.stopOwnedEvent}
+          @lr-selection-change=${this.stopOwnedEvent}
+          @lr-filter-change=${this.stopOwnedEvent}
+          @lr-page-change=${this.stopOwnedEvent}
+          @lr-cell-edit=${this.stopOwnedEvent}
+          @lr-column-resize=${this.stopOwnedEvent}
           @lr-row-click=${(e: CustomEvent<{ row: EvalRunResult }>) => {
             e.stopPropagation();
-            this.emit('lr-run-select', { runId: e.detail.row.id });
+            this.emit('lr-run-activate', { runId: e.detail.row.id, run: e.detail.row });
           }}
         ></lr-table>
         ${selected ? this.renderReview(selected) : nothing}

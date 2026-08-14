@@ -466,22 +466,16 @@ it('reacts to hint/error slot content added after the initial render, not just a
   expect(errorPart.hasAttribute('hidden')).to.be.false;
 });
 
-it('warns when `value` is assigned from outside, because the children are the only source of truth', async () => {
-  const el = (await fixture(html`<lr-checkbox-group name="topics"><lr-checkbox value="a">A</lr-checkbox><lr-checkbox value="b">B</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
-  await el.updateComplete;
-  const calls: unknown[][] = [];
-  const originalWarn = console.warn;
-  console.warn = (...args: unknown[]) => calls.push(args);
-  try {
-    el.value = ['a'];
-  } finally {
-    console.warn = originalWarn;
-  }
-  expect(calls.some((args) => String(args[0]).includes('`value`'))).to.be.true;
-  // The assignment is discarded by the next sync(), exactly as the warning says.
-  (el.querySelectorAll('lr-checkbox')[1] as HTMLElement).shadowRoot!.querySelector('[part~="base"]')!
-    .dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  expect(el.value).to.deep.equal(['b']);
+it('exposes value as a defensive readonly snapshot of child state', async () => {
+  const el = await fixture<LyraCheckboxGroup>(html`
+    <lr-checkbox-group name="topics">
+      <lr-checkbox value="a" checked>A</lr-checkbox>
+      <lr-checkbox value="b">B</lr-checkbox>
+    </lr-checkbox-group>
+  `);
+  const snapshot = el.value as string[];
+  snapshot.push('forged');
+  expect(el.value).to.deep.equal(['a']);
 });
 
 it('warns when two children share a value, because their FormData entries are indistinguishable', async () => {
@@ -566,18 +560,10 @@ it('syncs value and FormData silently when a child is checked or renamed program
   group.addEventListener('lr-change', (event) => events.push(event));
 
   child.checked = true;
-  await child.updateComplete;
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await group.updateComplete;
-
   expect(group.value).to.deep.equal(['a']);
   expect(new FormData(form).getAll('picks')).to.deep.equal(['a']);
 
   child.value = 'b';
-  await child.updateComplete;
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await group.updateComplete;
-
   expect(group.value).to.deep.equal(['b']);
   expect(new FormData(form).getAll('picks')).to.deep.equal(['b']);
   expect(events, 'programmatic child changes are silent').to.deep.equal([]);
@@ -961,11 +947,11 @@ describe('size', () => {
     return el;
   }
 
-  it('defaults to the "m" tier and reflects it', async () => {
+  it('leaves size unset by default so authored child tiers remain authoritative', async () => {
     const el = (await fixture(html`<lr-checkbox-group name="pick" label="Pick"></lr-checkbox-group>`)) as LyraCheckboxGroup;
     await el.updateComplete;
-    expect(el.size).to.equal('m');
-    expect(el.getAttribute('size')).to.equal('m');
+    expect(el.size).to.equal(undefined);
+    expect(el.hasAttribute('size')).to.be.false;
   });
 
   it('grows the rendered group box from size="s" to size="l"', async () => {
@@ -1026,6 +1012,44 @@ describe('size', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     await option.updateComplete;
     expect(option.size).to.equal('l');
+
+    el.removeAttribute('size');
+    await el.updateComplete;
+    await option.updateComplete;
+    expect(option.size, 'removing group authority restores the latest author tier').to.equal('s');
+  });
+
+  it('restores an authored child tier when the option leaves or the group disconnects', async () => {
+    const container = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-checkbox-group size="l"><lr-checkbox size="xs">Alpha</lr-checkbox></lr-checkbox-group>
+      </div>
+    `);
+    const group = container.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+    const option = group.querySelector('lr-checkbox') as LyraCheckbox;
+    expect(option.size).to.equal('l');
+    container.append(option);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(option.size).to.equal('xs');
+
+    group.append(option);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(option.size).to.equal('l');
+    group.remove();
+    expect(option.size).to.equal('xs');
+  });
+
+  it('resets native fieldset and legend UA chrome', async () => {
+    const el = await fixture<LyraCheckboxGroup>(html`
+      <lr-checkbox-group label="Choices"><lr-checkbox>A</lr-checkbox></lr-checkbox-group>
+    `);
+    const fieldset = el.shadowRoot!.querySelector('fieldset')!;
+    const legend = el.shadowRoot!.querySelector('legend')!;
+    const fieldsetStyle = getComputedStyle(fieldset);
+    expect(fieldsetStyle.borderTopWidth).to.equal('0px');
+    expect(fieldsetStyle.paddingInlineStart).to.equal('0px');
+    expect(fieldsetStyle.marginInlineStart).to.equal('0px');
+    expect(getComputedStyle(legend).paddingInlineStart).to.equal('0px');
   });
 
   it('is accessible at a non-default tier', async () => {

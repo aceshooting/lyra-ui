@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Form-associated file selection with writable `files`, `fileCount`, and `dragging` state. Real file and drag interactions resynchronize the published count and drag state.',
+          'Form-associated file selection with writable `files` and readonly derived `fileCount`/`dragging` state. Directory mode is intrinsically multi-file.',
       },
     },
   },
@@ -20,6 +20,44 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`<lr-file-input multiple accept=".csv,.xlsx"></lr-file-input>`,
+};
+
+export const OutcomeMessageOverrides: Story = {
+  render: () => html`
+    <lr-file-input
+      multiple
+      accept=".csv,.xlsx"
+      accepted-message="{count} upload(s) ready."
+      rejected-message="{count} upload(s) need attention."
+    ></lr-file-input>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Optional accepted/rejected outcome templates. Leaving either attribute absent uses its localized singular/plural message; every explicit string, including an empty value or the former English default, remains caller-owned.',
+      },
+    },
+  },
+};
+
+export const MimePolicySnapshots: Story = {
+  render: () => html`
+    <lr-file-input
+      multiple
+      label="Upload supporting media"
+      .allowedMimeTypes=${['image/png', 'image/jpeg', 'application/pdf']}
+      .forbiddenMimeTypes=${['image/svg+xml']}
+    ></lr-file-input>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`allowedMimeTypes` and `forbiddenMimeTypes` are property-only, bounded readonly snapshots. Reassign a new collection to update the policy; the denylist wins when a MIME type appears in both.',
+      },
+    },
+  },
 };
 
 export const FormAssociatedSurface: Story = {

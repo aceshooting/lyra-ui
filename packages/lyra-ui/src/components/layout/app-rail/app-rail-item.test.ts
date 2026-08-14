@@ -304,15 +304,15 @@ it('keeps flattened interactive icon content visible but inert and outside the f
   await expect(el).to.be.accessible();
 });
 
-it('marks the base part aria-current="page" when active', async () => {
+it('marks the base part aria-current="page" when current', async () => {
   const el = (await fixture(
-    html`<lr-app-rail-item href="/home" active>Home</lr-app-rail-item>`
+    html`<lr-app-rail-item href="/home" current>Home</lr-app-rail-item>`
   )) as LyraAppRailItem;
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
   expect(base.getAttribute("aria-current")).to.equal("page");
 });
 
-it("omits aria-current when not active", async () => {
+it("omits aria-current when not current", async () => {
   const el = (await fixture(
     html`<lr-app-rail-item href="/home">Home</lr-app-rail-item>`
   )) as LyraAppRailItem;
@@ -320,20 +320,20 @@ it("omits aria-current when not active", async () => {
   expect(base.hasAttribute("aria-current")).to.be.false;
 });
 
-it("reflects active as a host attribute", async () => {
+it("reflects current as a host attribute", async () => {
   const el = (await fixture(
-    html`<lr-app-rail-item href="/home" active>Home</lr-app-rail-item>`
+    html`<lr-app-rail-item href="/home" current>Home</lr-app-rail-item>`
   )) as LyraAppRailItem;
-  expect(el.hasAttribute("active")).to.be.true;
-  el.active = false;
+  expect(el.hasAttribute("current")).to.be.true;
+  el.current = false;
   await el.updateComplete;
-  expect(el.hasAttribute("active")).to.be.false;
+  expect(el.hasAttribute("current")).to.be.false;
 });
 
-describe("active", () => {
+describe("current", () => {
   it('reflects aria-current="page" onto [part=base] when true', async () => {
     const el = (await fixture(
-      html`<lr-app-rail-item href="/inbox" active>Inbox</lr-app-rail-item>`
+      html`<lr-app-rail-item href="/inbox" current>Inbox</lr-app-rail-item>`
     )) as LyraAppRailItem;
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
     expect(base.getAttribute("aria-current")).to.equal("page");
@@ -343,14 +343,14 @@ describe("active", () => {
     const el = (await fixture(
       html`<lr-app-rail-item href="/inbox">Inbox</lr-app-rail-item>`
     )) as LyraAppRailItem;
-    expect(el.active).to.be.false;
+    expect(el.current).to.be.false;
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
     expect(base.hasAttribute("aria-current")).to.be.false;
   });
 
   it("reflects on the button-rendering path too (no href)", async () => {
     const el = (await fixture(
-      html`<lr-app-rail-item active>Settings</lr-app-rail-item>`
+      html`<lr-app-rail-item current>Settings</lr-app-rail-item>`
     )) as LyraAppRailItem;
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
     expect(base.tagName).to.equal("BUTTON");
@@ -443,6 +443,22 @@ describe("tooltip", () => {
     await el.updateComplete;
     const flyout = el.shadowRoot!.querySelector('[part="tooltip"]');
     expect(flyout!.textContent!.trim()).to.equal("Dashboard");
+    expect(base.contains(flyout)).to.be.false;
+    expect(flyout!.getAttribute("aria-hidden")).to.equal("true");
+  });
+
+  it("refreshes an open flyout when a slotted label subtree mutates", async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item tooltip icon-only><span>Inbox</span></lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    await el.updateComplete;
+    const label = el.querySelector("span")!;
+    label.textContent = "Archive";
+    await new Promise((resolve) => queueMicrotask(resolve));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()).to.equal("Archive");
   });
 
   it("reads a destination-realm element label after adoption", async () => {
@@ -540,7 +556,7 @@ describe("current-state cssprops", () => {
   async function themed(style: string): Promise<LyraAppRailItem> {
     const wrapper = (await fixture(
       html`<div style=${style}>
-        <lr-app-rail-item href="/home" active>Home</lr-app-rail-item>
+        <lr-app-rail-item href="/home" current>Home</lr-app-rail-item>
       </div>`
     )) as HTMLElement;
     const el = wrapper.querySelector("lr-app-rail-item") as LyraAppRailItem;

@@ -55,6 +55,32 @@ describe('lr-agent-trace', () => {
     expect(legend.types.map((t) => t.label)).to.deep.equal(['Agent', 'LLM', 'Tool', 'Retriever']);
   });
 
+  it('shares trace-tree normalization: invalid/duplicate spans cannot escape the 500-row projection', async () => {
+    const many = Array.from({ length: 520 }, (_, index): LyraSpan => ({
+      id: `span-${index}`,
+      name: `Span ${index}`,
+      kind: index === 1 ? ('foreign-kind' as LyraSpan['kind']) : index === 0 ? 'agent' : 'tool',
+      status: index === 2 ? ('foreign-status' as LyraSpan['status']) : 'success',
+      startMs: index,
+    }));
+    const malformed = [
+      many[0],
+      { ...many[0]!, name: 'duplicate must be ignored' },
+      { ...many[3]!, id: 'not-finite', startMs: Number.NaN },
+      null,
+      ...many.slice(1),
+    ] as unknown as LyraSpan[];
+    const el = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${malformed}></lr-agent-trace>`);
+    await el.updateComplete;
+    const tree = el.shadowRoot!.querySelector('lr-trace-tree') as LyraTraceTree;
+    expect(tree.spans.length).to.be.at.most(500);
+    expect(tree.spans.filter((span) => span.id === 'span-0')).to.have.length(1);
+    expect(tree.spans.find((span) => span.id === 'span-1')!.kind).to.equal('other');
+    expect(tree.spans.find((span) => span.id === 'span-2')!.status).to.equal('pending');
+    expect(tree.spans.some((span) => span.id === 'not-finite')).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="handoff"]')).to.have.length(1);
+  });
+
   it('names the span-kind filter as a trace filter instead of a graph legend', async () => {
     const el = (await fixture(html`
       <lr-agent-trace
@@ -86,17 +112,20 @@ describe('lr-agent-trace', () => {
     expect(tree.spans.length).to.equal(SPANS.length - 1);
   });
 
-  it('bubbles lr-visibility-change from the composed lr-graph-legend out through lr-agent-trace', async () => {
+  it('contains the graph event and emits the agent-owned span visibility contract', async () => {
     const el = (await fixture(html`<lr-agent-trace .spans=${SPANS}></lr-agent-trace>`)) as LyraAgentTrace;
     await el.updateComplete;
     const legend = el.shadowRoot!.querySelector('lr-graph-legend') as LyraGraphLegend;
     const toolItem = [...legend.shadowRoot!.querySelectorAll('[part~="item"]')].find((i) =>
       i.textContent!.includes('Tool'),
     ) as HTMLButtonElement;
-    const listener = oneEvent(el, 'lr-visibility-change');
+    let rawEvents = 0;
+    el.addEventListener('lr-visibility-change', () => rawEvents++);
+    const listener = oneEvent(el, 'lr-span-visibility-change');
     toolItem.click();
     const ev = await listener;
-    expect(ev.detail.hiddenTypes).to.deep.equal(['tool']);
+    expect(ev.detail.hiddenKinds).to.deep.equal(['tool']);
+    expect(rawEvents).to.equal(0);
   });
 
   it('renders one handoff quick-jump entry per visible agent-kind span, composing lr-handoff-divider', async () => {
@@ -107,9 +136,9 @@ describe('lr-agent-trace', () => {
     const dividers = el.shadowRoot!.querySelectorAll('lr-handoff-divider') as NodeListOf<LyraHandoffDivider>;
     expect(dividers.length).to.equal(2);
     // 'root' has no resolvable parent -> agent only. 'sub-agent's parent is 'root' -> from+to.
-    const rootHandoff = [...dividers].find((d) => d.agent === 'Trip Planner')!;
+    const rootHandoff = [...dividers].find((d) => d.toAgent === 'Trip Planner')!;
     expect(rootHandoff.fromAgent).to.equal('');
-    const subAgentHandoff = [...dividers].find((d) => d.agent === 'Research Agent')!;
+    const subAgentHandoff = [...dividers].find((d) => d.toAgent === 'Research Agent')!;
     expect(subAgentHandoff.fromAgent).to.equal('Trip Planner');
     // Decorative here -- this component's own [part="handoff"] button already carries the
     // accessible name, so the divider itself is hidden from the accessibility tree rather than
@@ -221,6 +250,39 @@ describe('lr-agent-trace', () => {
     expect(tree.showTokens).to.be.true;
     expect(tree.showCost).to.be.true;
     expect(tree.hideBars).to.be.true;
+  });
+
+  it('keeps a controlled active path beyond the shared projection boundary in the composed tree', async () => {
+    const fillers: LyraSpan[] = Array.from({ length: 500 }, (_, index) => ({
+      id: `filler-${index}`,
+      name: `Filler ${index}`,
+      kind: 'tool',
+      status: 'success',
+      startMs: index,
+    }));
+    const el = await fixture<LyraAgentTrace>(html`
+      <lr-agent-trace
+        .spans=${[
+          ...fillers,
+          { id: 'reserved-parent', name: 'Reserved parent', kind: 'agent', status: 'success', startMs: 501 },
+          {
+            id: 'reserved-active',
+            parentId: 'reserved-parent',
+            name: 'Reserved active',
+            kind: 'tool',
+            status: 'running',
+            startMs: 502,
+          },
+        ]}
+        .activeSpanId=${'reserved-active'}
+      ></lr-agent-trace>
+    `);
+    const tree = el.shadowRoot!.querySelector('lr-trace-tree') as LyraTraceTree;
+    await tree.updateComplete;
+
+    expect(tree.shadowRoot!.querySelectorAll('[part="row"]')).to.have.length(500);
+    expect(tree.shadowRoot!.querySelector('[data-id="reserved-parent"]') !== null).to.equal(true);
+    expect(tree.shadowRoot!.querySelector('[data-id="reserved-active"]')?.getAttribute('aria-current')).to.equal('true');
   });
 
   it('renders lr-trace-tree even with an empty spans array, deferring to its own empty state', async () => {

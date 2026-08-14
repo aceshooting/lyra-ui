@@ -22,15 +22,16 @@ export const styles = css`
   }
 
   [part='controls'] > * {
-    /* --lr-control-width is never declared anywhere (unlike lr-model-select's own
+    /* The prompt-scoped width hook avoids an ancestor-wide generic control collision. Unlike
+       lr-model-select's own
        min-inline-size, which resolves through --lr-size-12rem directly) -- an unset custom
        property makes var() invalid at computed-value time, which invalidates this whole
        declaration (min-inline-size falls back to its auto initial value; flex-basis, below,
        falls back to auto too) rather than merely omitting the min/basis. --lr-size-12rem
        mirrors the min-inline-size lr-model-select's own popover uses for the same "one control
        row item" sizing purpose. */
-    min-inline-size: min(100%, var(--lr-control-width, var(--lr-size-12rem)));
-    flex: 1 1 var(--lr-control-width, var(--lr-size-12rem));
+    min-inline-size: min(100%, var(--lr-prompt-input-control-width, var(--lr-size-12rem)));
+    flex: 1 1 var(--lr-prompt-input-control-width, var(--lr-size-12rem));
   }
 
   [part='sources'] {
@@ -72,7 +73,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
   }
 
-  [part='leading'] {
+  [part='start'] {
     display: inline-flex;
   }
 

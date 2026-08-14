@@ -189,6 +189,72 @@ test('the migration contract fails closed on accessibility profile drift', () =>
   assert.equal(buildMigrationContract(runtime).mappings.size, inventory.mappings.length);
 });
 
+test('C-576 packaged migration preserves and validates method-edge warning evidence', () => {
+  const runtime = createMigrationRuntimeInventory(inventory);
+  const mapping = runtime.mappings.find(
+    (entry) => entry.upstreamTag === 'wa-include',
+  );
+  mapping.rationale =
+    'The reviewed null edge returns a finite 0 instead of null.';
+  mapping.parity.behaviorReviewFlags.push(
+    'method-edge-return-sentinel-divergence',
+  );
+  mapping.parity.methodEdges = [
+    {
+      method: 'syntheticEdge',
+      evidence: {
+        upstream: 'pinned-package-black-box',
+        target: 'lyra-authored-contract-and-automated-tests',
+      },
+      cases: [
+        {
+          case: 'null-argument',
+          arguments: ['null'],
+          upstream: { kind: 'sentinel', value: null },
+          target: { kind: 'sentinel', value: 0 },
+          status: 'different',
+        },
+      ],
+      rationale: 'The reviewed null edge returns a finite 0 instead of null.',
+    },
+  ];
+
+  const contract = buildMigrationContract(runtime);
+  assert.deepEqual(
+    contract.mappings.get('wa-include').parity.methodEdges,
+    mapping.parity.methodEdges,
+  );
+  const report = migrateText('<wa-include></wa-include>\n', contract, {
+    file: 'method-edge.html',
+  });
+  assert.equal(report.content, '<wa-include></wa-include>\n');
+  assert.deepEqual(
+    report.warnings[0].behaviorReviewFlags,
+    mapping.parity.behaviorReviewFlags,
+  );
+  assert.match(report.warnings[0].message, /finite 0 instead of null/u);
+
+  const falselyExact = structuredClone(runtime);
+  const falselyExactMapping = falselyExact.mappings.find(
+    (entry) => entry.upstreamTag === 'wa-include',
+  );
+  falselyExactMapping.classification = 'exact';
+  falselyExactMapping.rationale = null;
+  assert.throws(
+    () => buildMigrationContract(falselyExact),
+    /method-edge divergence requires warning-required classification/u,
+  );
+
+  const malformed = structuredClone(runtime);
+  delete malformed.mappings.find(
+    (entry) => entry.upstreamTag === 'wa-include',
+  ).parity.methodEdges[0].cases[0].arguments;
+  assert.throws(
+    () => buildMigrationContract(malformed),
+    /malformed method-edge parity case/u,
+  );
+});
+
 test('free and Pro package identities share the Web Awesome ecosystem without conflating tiers', () => {
   assert.deepEqual(
     contract.packageIdentities.get('@awesome.me/webawesome'),
@@ -1628,6 +1694,34 @@ test('directory targets include standalone CSS in the default scan set', () => {
   }
 });
 
+test('C-567 accordion migrates automatically after the legacy-details exception becomes stale', () => {
+  const result = migrateText(
+    '<wa-accordion></wa-accordion>\n',
+    buildMigrationContract(checkedInventory),
+    { file: 'accordion.html' },
+  );
+  assert.equal(result.content, '<lr-accordion></lr-accordion>\n');
+  assert.deepEqual(result.warnings, []);
+});
+
+test('C-576 page stays unchanged with its method-edge divergence in the migration report', () => {
+  const input = '<wa-page></wa-page>\n';
+  const result = migrateText(input, buildMigrationContract(checkedInventory), {
+    file: 'page.html',
+  });
+  assert.equal(result.content, input);
+  assert.deepEqual(result.changes, []);
+  assert.equal(result.warnings.length, 1);
+  assert.equal(result.warnings[0].warningCode, 'WARNING_REQUIRED');
+  assert.deepEqual(result.warnings[0].behaviorReviewFlags, [
+    'method-edge-return-sentinel-divergence',
+  ]);
+  assert.match(
+    result.warnings[0].message,
+    /finite 0.*null.*detached.*ambient page viewport/iu,
+  );
+});
+
 test('manual mappings report one tag warning and every optional peer requirement', () => {
   const markdown = checkedInventory.mappings.find((mapping) => mapping.upstreamTag === 'wa-markdown');
   assert.ok(markdown?.parity.runtime.optionalPeers.length > 0);
@@ -1789,22 +1883,90 @@ test('the checked-in inventory rewrites free-tier QR code imports from both ecos
   );
 });
 
-test('the checked-in inventory reports a warning-required tag and no peer requirements for random-content', () => {
-  const randomContent = checkedInventory.mappings.find(
+test('random-content rewrites known-equivalent uses and aggregates only exercised behavior reviews', () => {
+  const conditionalInventory = structuredClone(checkedInventory);
+  const randomContent = conditionalInventory.mappings.find(
     (mapping) => mapping.upstreamTag === 'wa-random-content',
   );
-  assert.deepEqual(randomContent?.parity.runtime.optionalPeers, []);
-  const input = '<wa-random-content></wa-random-content>\n';
-  const result = migrateText(input, buildMigrationContract(checkedInventory), {
-    file: 'random-content.html',
+  randomContent.classification = 'rewritten';
+  randomContent.rationale =
+    'The member rewrite is deterministic and behavior-sensitive uses receive conditional review diagnostics.';
+  randomContent.parity.lightDom = 'warning-required';
+  randomContent.parity.behaviorReviewFlags = [
+    'host-layout',
+    'multi-item-layout',
+    'unique-retry-bound',
+    'forwarded-slot-candidates',
+    'autoplay-semantics',
+  ];
+  const conditionalContract = buildMigrationContract(conditionalInventory);
+  assert.deepEqual(randomContent.parity.runtime.optionalPeers, []);
+
+  const empty = migrateText('<wa-random-content></wa-random-content>\n', conditionalContract, {
+    file: 'empty-random-content.html',
   });
-  assert.equal(result.content, input);
-  assert.equal(
-    result.warnings.filter((entry) => entry.warningCode === 'WARNING_REQUIRED').length,
-    1,
+  assert.equal(empty.content, '<lr-random-content></lr-random-content>\n');
+  assert.deepEqual(empty.warnings, []);
+
+  const behaviorSensitive = migrateText(
+    '<wa-random-content items="2" mode="unique" autoplay><div>One</div><slot></slot><div>Two</div></wa-random-content>\n',
+    conditionalContract,
+    { file: 'behavior-sensitive-random-content.html' },
+  );
+  assert.match(behaviorSensitive.content, /^<lr-random-content/);
+  const behaviorWarnings = behaviorSensitive.warnings.filter(
+    (entry) => entry.warningCode === 'BEHAVIOR_REVIEW_REQUIRED',
+  );
+  assert.equal(behaviorWarnings.length, 1);
+  assert.deepEqual(behaviorWarnings[0].behaviorReviewFlags, [
+    'host-layout',
+    'multi-item-layout',
+    'unique-retry-bound',
+    'forwarded-slot-candidates',
+    'autoplay-semantics',
+  ]);
+  for (const flag of behaviorWarnings[0].behaviorReviewFlags) {
+    assert.match(behaviorWarnings[0].message, new RegExp(flag));
+  }
+
+  const dynamic = migrateText(
+    '<wa-random-content .items=${count} .mode=${mode} ?autoplay=${enabled}>${children}</wa-random-content>\n',
+    conditionalContract,
+    { file: 'dynamic-random-content.ts' },
   );
   assert.deepEqual(
-    result.warnings.filter((entry) => entry.warningCode === 'OPTIONAL_PEER_REQUIRED'),
+    dynamic.warnings.find((entry) => entry.warningCode === 'BEHAVIOR_REVIEW_REQUIRED')
+      ?.behaviorReviewFlags,
+    [
+      'host-layout',
+      'multi-item-layout',
+      'unique-retry-bound',
+      'forwarded-slot-candidates',
+      'autoplay-semantics',
+    ],
+  );
+
+  const svgAnimation = migrateText(
+    '<wa-random-content items="1" mode="random" animation="fade"><svg></svg></wa-random-content>\n',
+    conditionalContract,
+    { file: 'equivalent-svg-animation.html' },
+  );
+  assert.equal(svgAnimation.warnings.length, 1, 'only the host-layout difference applies');
+  assert.deepEqual(svgAnimation.warnings[0].behaviorReviewFlags, ['host-layout']);
+  assert.doesNotMatch(svgAnimation.warnings[0].message, /svg|animation/iu);
+
+  const stylesheet = migrateText(
+    'wa-random-content { display: flex; gap: 1rem; }\n',
+    conditionalContract,
+    { file: 'random-content.css' },
+  );
+  assert.equal(stylesheet.content, 'lr-random-content { display: flex; gap: 1rem; }\n');
+  assert.deepEqual(stylesheet.warnings[0].behaviorReviewFlags, [
+    'host-layout',
+    'multi-item-layout',
+  ]);
+  assert.deepEqual(
+    behaviorSensitive.warnings.filter((entry) => entry.warningCode === 'OPTIONAL_PEER_REQUIRED'),
     [],
   );
 });

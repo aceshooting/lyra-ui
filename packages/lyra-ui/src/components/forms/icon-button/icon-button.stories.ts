@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html } from 'lit'; import './icon-button.js'; import '../../media/flag/flag-peer.js';
+import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html } from 'lit'; import './icon-button.js'; import '../button/button.js'; import '../../media/flag/flag-peer.js';
 const meta: Meta = { title: 'Icon Button', component: 'lr-icon-button', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
 export const Actions: Story = { render: () => html`<div style="display:flex;gap:0.5rem"><lr-icon-button icon="search" aria-label="Search"></lr-icon-button><lr-icon-button icon="close" aria-label="Close"></lr-icon-button></div>` };
 export const BorderedTinted: Story = {
@@ -55,6 +55,23 @@ export const ShoelaceAliasesAndLink: Story = {
         target="_blank"
       ></lr-icon-button>
     </div>
+  `,
+};
+
+export const FormActionsUseButton: Story = {
+  name: 'Form actions use lr-button',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Icon button is a pure icon action/link. A circular lr-button owns the complete submitter contract for icon-only form actions.',
+      },
+    },
+  },
+  render: () => html`
+    <form @submit=${(event: SubmitEvent) => event.preventDefault()}>
+      <lr-button circle type="submit" aria-label="Save"><lr-icon name="check"></lr-icon></lr-button>
+    </form>
   `,
 };
 

@@ -47,8 +47,7 @@ type TooltipElement = HTMLElement & {
   updateComplete: Promise<unknown>;
 };
 
-const tooltip = (el: LyraCopyButton): TooltipElement =>
-  el.shadowRoot!.querySelector('lr-tooltip') as TooltipElement;
+const tooltip = (el: LyraCopyButton): TooltipElement => el.shadowRoot!.querySelector('lr-tooltip') as TooltipElement;
 
 const partTokens = (el: Element): string[] => (el.getAttribute('part') ?? '').split(/\s+/).filter(Boolean);
 
@@ -174,6 +173,36 @@ describe('lr-copy-button', () => {
     expect(writes).to.deep.equal(['source text', 'attribute text', 'property text']);
   });
 
+  it('prefers a shadow-local source and otherwise falls back to the owner document', async () => {
+    const documentSource = document.createElement('span');
+    documentSource.id = 'copy-boundary-source';
+    documentSource.textContent = 'document source';
+    document.body.append(documentSource);
+    const host = document.createElement('div');
+    const shadow = host.attachShadow({ mode: 'open' });
+    const el = document.createElement('lr-copy-button') as LyraCopyButton;
+    el.from = 'copy-boundary-source';
+    shadow.append(el);
+    document.body.append(host);
+    try {
+      await el.updateComplete;
+      baseButton(el).click();
+      await settle(el);
+      expect(writes).to.deep.equal(['document source']);
+
+      const localSource = document.createElement('span');
+      localSource.id = documentSource.id;
+      localSource.textContent = 'shadow source';
+      shadow.prepend(localSource);
+      baseButton(el).click();
+      await settle(el);
+      expect(writes).to.deep.equal(['document source', 'shadow source']);
+    } finally {
+      host.remove();
+      documentSource.remove();
+    }
+  });
+
   it('uses foreign shadow content, the owner clipboard, and the exact owner feedback timer', async () => {
     const frame = document.createElement('iframe');
     document.body.append(frame);
@@ -203,11 +232,21 @@ describe('lr-copy-button', () => {
     const frameWrites: string[] = [];
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
-      value: { writeText: () => { mainWrites++; return Promise.resolve(); } },
+      value: {
+        writeText: () => {
+          mainWrites++;
+          return Promise.resolve();
+        },
+      },
     });
     Object.defineProperty(frameWindow.navigator, 'clipboard', {
       configurable: true,
-      value: { writeText: (text: string) => { frameWrites.push(text); return Promise.resolve(); } },
+      value: {
+        writeText: (text: string) => {
+          frameWrites.push(text);
+          return Promise.resolve();
+        },
+      },
     });
     frameWindow.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
       const handle = nativeSetTimeout(handler, timeout, ...args);
@@ -273,7 +312,12 @@ describe('lr-copy-button', () => {
     let frameWrites = 0;
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
-      value: { writeText: () => { mainWrites++; return Promise.reject(new Error('wrong realm')); } },
+      value: {
+        writeText: () => {
+          mainWrites++;
+          return Promise.reject(new Error('wrong realm'));
+        },
+      },
     });
     Object.defineProperty(frameWindow.navigator, 'clipboard', {
       configurable: true,
@@ -311,7 +355,12 @@ describe('lr-copy-button', () => {
     let writes = 0;
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
-      value: { writeText: () => { writes++; return Promise.resolve(); } },
+      value: {
+        writeText: () => {
+          writes++;
+          return Promise.resolve();
+        },
+      },
     });
     const el = (await fixture(html`<lr-copy-button value="ownerless"></lr-copy-button>`)) as LyraCopyButton;
     const button = baseButton(el);
@@ -364,12 +413,7 @@ describe('lr-copy-button', () => {
 
   it('configures full, copy-only, and disabled tooltip modes with placement and hoisting', async () => {
     const el = (await fixture(html`
-      <lr-copy-button
-        value="hello"
-        tooltip="copy"
-        tooltip-placement="right"
-        hoist
-      ></lr-copy-button>
+      <lr-copy-button value="hello" tooltip="copy" tooltip-placement="right" hoist></lr-copy-button>
     `)) as LyraCopyButton;
     let tip = tooltip(el);
     expect(tip.trigger).to.equal('manual');
@@ -432,13 +476,52 @@ describe('lr-copy-button', () => {
     expect(writes).to.deep.equal(['custom trigger']);
   });
 
+  it('exposes one stable logical copy action backed by the active trigger', async () => {
+    const el = (await fixture(html`<lr-copy-button value="toolbar"></lr-copy-button>`)) as LyraCopyButton;
+    const button = baseButton(el);
+    const [action] = el.getToolbarActions();
+
+    expect(action).to.equal(el.getToolbarActions()[0]);
+    expect(action!.id).to.equal('copy');
+    expect(action!.disabled).to.be.false;
+    expect(action!.matchesEventPath([button])).to.be.true;
+    expect(action!.matchesEventPath([el])).to.be.false;
+
+    action!.setTabIndex(-1);
+    expect(button.tabIndex).to.equal(-1);
+    action!.setTabIndex(0);
+    action!.focus();
+    expect(el.shadowRoot!.activeElement === button).to.be.true;
+
+    const changed = oneEvent(el, 'lr-toolbar-actions-change');
+    el.disabled = true;
+    const event = await changed;
+    expect(event.bubbles).to.be.true;
+    expect(event.composed).to.be.true;
+    expect(action!.disabled).to.be.true;
+  });
+
+  it('keeps the logical copy action stable when a custom trigger replaces the built-in button', async () => {
+    const el = (await fixture(html`<lr-copy-button value="toolbar"></lr-copy-button>`)) as LyraCopyButton;
+    const action = el.getToolbarActions()[0]!;
+    const changed = oneEvent(el, 'lr-toolbar-actions-change');
+    const trigger = document.createElement('button');
+    trigger.textContent = 'Copy toolbar value';
+    el.append(trigger);
+    await changed;
+    await el.updateComplete;
+
+    expect(el.getToolbarActions()[0]).to.equal(action);
+    expect(action.matchesEventPath([trigger])).to.be.true;
+    action.setTabIndex(-1);
+    expect(trigger.tabIndex).to.equal(-1);
+    action.focus();
+    expect(document.activeElement === trigger).to.be.true;
+  });
+
   it('publishes the success custom state and applies --success-color', async () => {
     const el = (await fixture(html`
-      <lr-copy-button
-        value="hello"
-        feedback-duration="10000"
-        style="--success-color: rgb(1, 120, 45)"
-      ></lr-copy-button>
+      <lr-copy-button value="hello" feedback-duration="10000" style="--success-color: rgb(1, 120, 45)"></lr-copy-button>
     `)) as LyraCopyButton;
     baseButton(el).click();
     await settle(el);
@@ -456,7 +539,8 @@ describe('lr-copy-button', () => {
     const listener = oneEvent(el, 'lr-copy');
     baseButton(el).click();
     const { detail } = await listener;
-    expect(detail).to.deep.equal({ text: 'hello' });
+    expect(detail).to.deep.equal({ ok: true, text: 'hello' });
+    expect(Object.isFrozen(detail)).to.be.true;
     expect(writes).to.deep.equal(['hello']);
   });
 
@@ -496,8 +580,7 @@ describe('lr-copy-button', () => {
     const second = (await fixture(html`<lr-copy-button value="b"></lr-copy-button>`)) as LyraCopyButton;
     expect(sinkElement('polite') !== null, 'a connected copy button holds the sink').to.be.true;
     first.remove();
-    expect(sinkElement('polite') !== null, 'a still-connected copy button keeps it mounted').to.be
-      .true;
+    expect(sinkElement('polite') !== null, 'a still-connected copy button keeps it mounted').to.be.true;
     second.remove();
     expect(sinkElement('polite') === null, 'the last disconnect unmounts it').to.be.true;
   });
@@ -529,9 +612,7 @@ describe('lr-copy-button', () => {
   });
 
   it('disables the internal button and suppresses activation', async () => {
-    const el = (await fixture(html`
-      <lr-copy-button disabled value="secret"></lr-copy-button>
-    `)) as LyraCopyButton;
+    const el = (await fixture(html` <lr-copy-button disabled value="secret"></lr-copy-button> `)) as LyraCopyButton;
     const button = baseButton(el);
     let copies = 0;
     let failures = 0;
@@ -554,7 +635,7 @@ describe('lr-copy-button', () => {
     el.focus();
     expect(el.shadowRoot!.activeElement === button).to.be.true;
     el.blur();
-    expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
+    expect(el.shadowRoot!.activeElement === null).to.equal(true);
   });
 
   it('forwards host click() to the internal button and respects disabled state', async () => {
@@ -562,7 +643,9 @@ describe('lr-copy-button', () => {
     let copies = 0;
     el.addEventListener('lr-copy', () => copies++);
 
+    const copied = oneEvent(el, 'lr-copy');
     el.click();
+    await copied;
     expect(copies).to.equal(1);
 
     el.disabled = true;
@@ -697,9 +780,11 @@ describe('lr-copy-button clipboard failure', () => {
       const failed = oneEvent(el, 'lr-copy-error');
       baseButton(el).click();
       const event = await failed;
+      expect(event.detail.ok).to.be.false;
       expect(event.detail.text).to.equal('hello');
       expect(event.detail.reason).to.equal('denied');
       expect(event.detail.error === error).to.be.true;
+      expect(Object.isFrozen(event.detail)).to.be.true;
       expect(event.bubbles).to.be.true;
       expect(event.composed).to.be.true;
     });
@@ -708,11 +793,9 @@ describe('lr-copy-button clipboard failure', () => {
   it('also emits the mapped lr-error event and uses error-label/--error-color', async () => {
     await withClipboard(rejectingClipboard(new Error('boom')), async () => {
       const el = (await fixture(html`
-        <lr-copy-button
-          value="hello"
-          error-label="Could not copy token"
-          style="--error-color: rgb(190, 10, 20)"
-        ><span slot="error-icon">E</span></lr-copy-button>
+        <lr-copy-button value="hello" error-label="Could not copy token" style="--error-color: rgb(190, 10, 20)"
+          ><span slot="error-icon">E</span></lr-copy-button
+        >
       `)) as LyraCopyButton;
       const mappedError = oneEvent(el, 'lr-error');
       baseButton(el).click();
@@ -778,13 +861,15 @@ describe('lr-copy-button clipboard failure', () => {
     );
   });
 
-  it('still announces the activation through lr-copy so consumers keep their existing wiring', async () => {
+  it('does not emit the success-only lr-copy event when clipboard writing fails', async () => {
     await withClipboard(rejectingClipboard(new Error('boom')), async () => {
       const el = (await fixture(html`<lr-copy-button value="hello"></lr-copy-button>`)) as LyraCopyButton;
-      const copied = oneEvent(el, 'lr-copy');
+      let copies = 0;
+      el.addEventListener('lr-copy', () => copies++);
+      const failed = oneEvent(el, 'lr-copy-error');
       baseButton(el).click();
-      const { detail } = await copied;
-      expect(detail).to.deep.equal({ text: 'hello' });
+      await failed;
+      expect(copies).to.equal(0);
     });
   });
 
@@ -886,9 +971,7 @@ describe('lr-copy-button clipboard failure', () => {
       expect(errorIcon.getAttribute('aria-hidden')).to.equal('true');
       expect(baseButton(el).getAttribute('aria-label')).to.not.equal(restingLabel);
       expect(feedbackText(el).length).to.be.greaterThan(0);
-      expect(getComputedStyle(baseButton(el)).color).to.not.equal(
-        getComputedStyle(baseButton(resting)).color,
-      );
+      expect(getComputedStyle(baseButton(el)).color).to.not.equal(getComputedStyle(baseButton(resting)).color);
       await expect(el).to.be.accessible();
     });
   });

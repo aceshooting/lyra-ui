@@ -51,7 +51,27 @@ describe('theme presets', () => {
     const detail = (await event as CustomEvent).detail;
     expect(detail.id).to.equal('sapphire');
     expect(detail.theme).to.deep.equal({ mode: 'auto', accent: '#4f8ff7' });
+    expect(detail.theme).to.deep.equal(getLyraTheme());
     expect(getLyraTheme().accent).to.equal('#4f8ff7');
+  });
+
+  it('does not claim a preset marker or preset event when runtime color validation changes the snapshot', () => {
+    let presetEvents = 0;
+    const onPreset = (): void => {
+      presetEvents++;
+    };
+    window.addEventListener('lr-theme-preset-change', onPreset);
+    try {
+      applyLyraThemePreset({
+        id: 'invalid-accent',
+        theme: { mode: 'dark', accent: 'definitely-not-a-color' },
+      });
+      expect(getLyraTheme()).to.deep.equal({ mode: 'dark', accent: null });
+      expect(document.documentElement.hasAttribute('data-lr-theme-preset')).to.be.false;
+      expect(presetEvents).to.equal(0);
+    } finally {
+      window.removeEventListener('lr-theme-preset-change', onPreset);
+    }
   });
 
   it('rejects malformed application ids and unknown built-in keys', () => {

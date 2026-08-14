@@ -1,4 +1,5 @@
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './voice-picker.js';
 import type { LyraVoicePicker } from './voice-picker.js';
 import { styles } from './voice-picker.styles.js';
@@ -13,6 +14,17 @@ const OBJECT_CATALOG = [
     previewUrl: 'https://example.test/aria.mp3',
   },
   { id: 'sage', label: 'Sage', language: 'en-GB' },
+];
+const SILENT_AUDIO_DATA_URL =
+  'data:audio/wav;base64,UklGRiUAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQEAAACA';
+const PREVIEW_CATALOG = [
+  { ...OBJECT_CATALOG[0]!, previewUrl: SILENT_AUDIO_DATA_URL },
+  OBJECT_CATALOG[1]!,
+  {
+    id: 'nova',
+    label: 'Nova',
+    previewUrl: SILENT_AUDIO_DATA_URL,
+  },
 ];
 
 function trigger(el: LyraVoicePicker): HTMLButtonElement {
@@ -475,6 +487,46 @@ describe('size', () => {
   });
 });
 
+it('inherits component-scoped gap and radius hooks across both modes and the compact/large tiers', async () => {
+  const wrapper = (await fixture(html`
+    <div style="--lr-voice-picker-gap:13px;--lr-voice-picker-radius:17px">
+      <lr-voice-picker
+        size="2xs"
+        value="aria"
+        .catalog=${OBJECT_CATALOG}
+      ></lr-voice-picker>
+      <lr-voice-picker
+        size="xl"
+        value="aria"
+        allow-custom
+        .catalog=${OBJECT_CATALOG}
+      ></lr-voice-picker>
+    </div>
+  `)) as HTMLDivElement;
+  const pickers = Array.from(wrapper.querySelectorAll('lr-voice-picker')) as LyraVoicePicker[];
+  const closed = pickers[0]!;
+  const freeText = pickers[1]!;
+  closed.open = true;
+  freeText.open = true;
+  await Promise.all([closed.updateComplete, freeText.updateComplete]);
+
+  for (const picker of [closed, freeText]) {
+    const control = picker.shadowRoot!.querySelector(
+      picker === closed ? '[part="trigger"]' : '[part="combobox"]',
+    ) as HTMLElement;
+    const controlRow = picker.shadowRoot!.querySelector('.control-row') as HTMLElement;
+    const option = rows(picker)[0]!;
+    const optionPreview = option.querySelector('[part="option-preview"]') as HTMLElement;
+
+    expect(getComputedStyle(controlRow).gap).to.equal('13px');
+    expect(getComputedStyle(control).gap).to.equal('13px');
+    expect(getComputedStyle(option).gap).to.equal('13px');
+    for (const rounded of [control, previewButton(picker), listbox(picker), option, optionPreview]) {
+      expect(getComputedStyle(rounded).borderTopLeftRadius).to.equal('17px');
+    }
+  }
+});
+
 it('clicking preview fires cancelable lr-preview-request with the resolved previewUrl', async () => {
   const el = (await fixture(
     html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`
@@ -506,6 +558,249 @@ it('an unprevented request with a previewUrl plays through an internal <audio>, 
     const stopEv = await stopPromise;
     expect(stopEv.detail).to.deep.equal({ voiceId: null });
     expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+  } finally {
+    restore();
+  }
+});
+
+it('publishes internal preview start only after the current play() promise fulfills', async () => {
+  let resolvePlay!: () => void;
+  const restore = stubMediaPlay(
+    () =>
+      new Promise<void>((resolve) => {
+        resolvePlay = resolve;
+      }),
+  );
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const changes: Array<string | null> = [];
+    el.addEventListener('lr-preview-change', (event) => changes.push(event.detail.voiceId));
+
+    previewButton(el).click();
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(changes).to.deep.equal([]);
+    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+
+    const started = oneEvent(el, 'lr-preview-change');
+    resolvePlay();
+    expect((await started).detail).to.deep.equal({ voiceId: 'aria' });
+    await el.updateComplete;
+    expect(changes).to.deep.equal(['aria']);
+    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('true');
+  } finally {
+    restore();
+  }
+});
+
+it('keeps a rejected pending play silent and never exposes a false playing state', async () => {
+  const restore = stubMediaPlay(() => Promise.reject(new Error('play blocked')));
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const changes: Array<string | null> = [];
+    el.addEventListener('lr-preview-change', (event) => changes.push(event.detail.voiceId));
+
+    previewButton(el).click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+
+    expect(changes).to.deep.equal([]);
+    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
+  } finally {
+    restore();
+  }
+});
+
+it('retires the playing voice before dispatching a prevented request for another candidate', async () => {
+  const restore = stubMediaPlay(() => Promise.resolve());
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${PREVIEW_CATALOG} value="aria"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const started = oneEvent(el, 'lr-preview-change');
+    previewButton(el).click();
+    await started;
+
+    el.open = true;
+    await el.updateComplete;
+    const sequence: string[] = [];
+    el.addEventListener('lr-preview-change', (event) => sequence.push(`preview:${event.detail.voiceId}`));
+    el.addEventListener('lr-preview-request', (event) => {
+      if (event.detail.voiceId === 'nova') {
+        sequence.push('request:nova');
+        event.preventDefault();
+      }
+    });
+
+    const novaPreview = rows(el)[2]!.querySelector('[part="option-preview"]') as HTMLElement;
+    novaPreview.click();
+    await el.updateComplete;
+
+    expect(sequence).to.deep.equal(['preview:null', 'request:nova']);
+    expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
+    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+  } finally {
+    restore();
+  }
+});
+
+it('retires the playing voice before committing a no-preview candidate', async () => {
+  const restore = stubMediaPlay(() => Promise.resolve());
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${PREVIEW_CATALOG} value="aria"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const started = oneEvent(el, 'lr-preview-change');
+    previewButton(el).click();
+    await started;
+
+    el.open = true;
+    await el.updateComplete;
+    const sequence: string[] = [];
+    el.addEventListener('lr-preview-change', (event) => sequence.push(`preview:${event.detail.voiceId}`));
+    el.addEventListener('lr-change', (event) => sequence.push(`value:${event.detail.value}`));
+    rows(el)[1]!.click();
+    await el.updateComplete;
+
+    expect(sequence).to.deep.equal(['preview:null', 'value:sage']);
+    expect(el.value).to.equal('sage');
+    expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
+
+    const requested = oneEvent(el, 'lr-preview-request');
+    previewButton(el).click();
+    expect((await requested).detail).to.deep.equal({ voiceId: 'sage', previewUrl: undefined });
+    expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
+  } finally {
+    restore();
+  }
+});
+
+it('retires the playing voice before catalog replacement changes the rendered candidate', async () => {
+  const restore = stubMediaPlay(() => Promise.resolve());
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${PREVIEW_CATALOG} value="aria"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const started = oneEvent(el, 'lr-preview-change');
+    previewButton(el).click();
+    await started;
+    const changes: Array<string | null> = [];
+    el.addEventListener('lr-preview-change', (event) => changes.push(event.detail.voiceId));
+
+    el.catalog = [OBJECT_CATALOG[1]!];
+    await el.updateComplete;
+
+    expect(changes).to.deep.equal([null]);
+    expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
+    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+  } finally {
+    restore();
+  }
+});
+
+it('retires a row preview when closing hides it while no option is keyboard-active', async () => {
+  const restore = stubMediaPlay(() => Promise.resolve());
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${PREVIEW_CATALOG} value="sage"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    el.open = true;
+    await el.updateComplete;
+    const changes: Array<string | null> = [];
+    el.addEventListener('lr-preview-change', (event) => changes.push(event.detail.voiceId));
+
+    const ariaPreview = rows(el)[0]!.querySelector('[part="option-preview"]') as HTMLElement;
+    ariaPreview.click();
+    await waitUntil(() => changes.length === 1, 'the row preview never started');
+    trigger(el).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+    );
+    await el.updateComplete;
+
+    expect(changes).to.deep.equal(['aria', null]);
+    expect(el.open).to.be.false;
+    expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
+  } finally {
+    restore();
+  }
+});
+
+it('retires a row preview when free-text filtering removes it with no active descendant', async () => {
+  const restore = stubMediaPlay(() => Promise.resolve());
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker
+        allow-custom
+        .catalog=${PREVIEW_CATALOG}
+        value="sage"
+      ></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const editor = input(el);
+    editor.focus();
+    editor.value = '';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    const changes: Array<string | null> = [];
+    el.addEventListener('lr-preview-change', (event) => changes.push(event.detail.voiceId));
+
+    const ariaRow = Array.from(rows(el)).find((row) => row.dataset['value'] === 'aria')!;
+    (ariaRow.querySelector('[part="option-preview"]') as HTMLElement).click();
+    await waitUntil(() => changes.length === 1, 'the filtered row preview never started');
+    editor.value = 'nova';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+
+    expect(Array.from(rows(el), (row) => row.dataset['value'])).to.deep.equal(['nova']);
+    expect(changes).to.deep.equal(['aria', null]);
+    expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
+  } finally {
+    restore();
+  }
+});
+
+it('retires a row preview when a live mode switch restores a filter that hides it', async () => {
+  const restore = stubMediaPlay(() => Promise.resolve());
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker
+        allow-custom
+        .catalog=${PREVIEW_CATALOG}
+        value="sage"
+      ></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const editor = input(el);
+    editor.focus();
+    editor.value = 'nova';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    expect(Array.from(rows(el), (row) => row.dataset['value'])).to.deep.equal(['nova']);
+
+    el.allowCustom = false;
+    await el.updateComplete;
+    await el.updateComplete;
+    expect(Array.from(rows(el), (row) => row.dataset['value'])).to.deep.equal([
+      'aria',
+      'sage',
+      'nova',
+    ]);
+    const changes: Array<string | null> = [];
+    el.addEventListener('lr-preview-change', (event) => changes.push(event.detail.voiceId));
+    const ariaPreview = rows(el)[0]!.querySelector('[part="option-preview"]') as HTMLElement;
+    ariaPreview.click();
+    await waitUntil(() => changes.length === 1, 'the closed-mode row preview never started');
+
+    el.allowCustom = true;
+    await el.updateComplete;
+    await el.updateComplete;
+
+    expect(Array.from(rows(el), (row) => row.dataset['value'])).to.deep.equal(['nova']);
+    expect(changes).to.deep.equal(['aria', null]);
+    expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
   } finally {
     restore();
   }
@@ -568,6 +863,93 @@ it('per-row option-preview icons are pointer-only (tabindex=-1, aria-hidden) and
   icon.click();
   const ev = await reqPromise;
   expect(ev.detail.voiceId).to.equal('aria');
+});
+
+it('keeps a closed picker open and pristine when real Tab moves from its trigger to the preview action', async () => {
+  const wrapper = (await fixture(html`
+    <div>
+      <lr-voice-picker required .catalog=${PREVIEW_CATALOG}></lr-voice-picker>
+      <button id="after-closed" type="button">After</button>
+    </div>
+  `)) as HTMLDivElement;
+  const el = wrapper.querySelector('lr-voice-picker') as LyraVoicePicker;
+  const after = wrapper.querySelector('#after-closed') as HTMLButtonElement;
+  let boundaryBlurs = 0;
+  el.addEventListener('blur', (event) => {
+    if (event instanceof CustomEvent) boundaryBlurs++;
+  });
+
+  trigger(el).focus();
+  trigger(el).click();
+  await el.updateComplete;
+  await sendKeys({ press: 'ArrowDown' });
+  await el.updateComplete;
+  const activeDescendant = trigger(el).getAttribute('aria-activedescendant');
+  expect(activeDescendant).to.not.equal('');
+
+  await sendKeys({ press: 'Tab' });
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement === previewButton(el)).to.be.true;
+  expect(previewButton(el).disabled).to.be.false;
+  expect(previewButton(el).getAttribute('aria-label')).to.equal('Preview Aria');
+  expect(el.open).to.be.true;
+  expect(trigger(el).getAttribute('aria-activedescendant')).to.equal(activeDescendant);
+  expect((el as unknown as { touched: boolean }).touched).to.be.false;
+  expect(boundaryBlurs).to.equal(0);
+
+  const requested = oneEvent(el, 'lr-preview-request');
+  el.addEventListener('lr-preview-request', (event) => event.preventDefault(), { once: true });
+  previewButton(el).click();
+  expect((await requested).detail.voiceId).to.equal('aria');
+
+  await sendKeys({ press: 'Tab' });
+  await el.updateComplete;
+  expect(document.activeElement === after).to.be.true;
+  expect(el.open).to.be.false;
+  expect((el as unknown as { touched: boolean }).touched).to.be.true;
+  expect(boundaryBlurs).to.equal(1);
+});
+
+it('keeps a free-text picker open and pristine when real Tab moves from its input to the preview action', async () => {
+  const wrapper = (await fixture(html`
+    <div>
+      <lr-voice-picker
+        required
+        allow-custom
+        value="aria"
+        .catalog=${PREVIEW_CATALOG}
+      ></lr-voice-picker>
+      <button id="after-free-text" type="button">After</button>
+    </div>
+  `)) as HTMLDivElement;
+  const el = wrapper.querySelector('lr-voice-picker') as LyraVoicePicker;
+  const after = wrapper.querySelector('#after-free-text') as HTMLButtonElement;
+  let boundaryBlurs = 0;
+  el.addEventListener('blur', (event) => {
+    if (event instanceof CustomEvent) boundaryBlurs++;
+  });
+
+  input(el).focus();
+  await el.updateComplete;
+  await sendKeys({ press: 'ArrowDown' });
+  await el.updateComplete;
+  const activeDescendant = input(el).getAttribute('aria-activedescendant');
+  expect(activeDescendant).to.not.equal('');
+
+  await sendKeys({ press: 'Tab' });
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement === previewButton(el)).to.be.true;
+  expect(el.open).to.be.true;
+  expect(input(el).getAttribute('aria-activedescendant')).to.equal(activeDescendant);
+  expect((el as unknown as { touched: boolean }).touched).to.be.false;
+  expect(boundaryBlurs).to.equal(0);
+
+  await sendKeys({ press: 'Tab' });
+  await el.updateComplete;
+  expect(document.activeElement === after).to.be.true;
+  expect(el.open).to.be.false;
+  expect((el as unknown as { touched: boolean }).touched).to.be.true;
+  expect(boundaryBlurs).to.equal(1);
 });
 
 // -- Form association (mirrors lr-model-select) ----------------------------
@@ -1039,6 +1421,46 @@ it("previewCandidateId (and the trigger's aria-activedescendant) tracks the high
   expect(previewButton(el).getAttribute('aria-label')).to.equal('Preview verse');
 });
 
+it('retires playback before active-option navigation changes the visible preview candidate', async () => {
+  const restore = stubMediaPlay(() => Promise.resolve());
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${PREVIEW_CATALOG} value="aria"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const started = oneEvent(el, 'lr-preview-change');
+    previewButton(el).click();
+    await started;
+
+    el.open = true;
+    await el.updateComplete;
+    const btn = trigger(el);
+    const move = () =>
+      btn.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'ArrowDown',
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    const changes: Array<string | null> = [];
+    el.addEventListener('lr-preview-change', (event) => changes.push(event.detail.voiceId));
+
+    move();
+    await el.updateComplete;
+    expect(changes).to.deep.equal([]);
+    expect(previewButton(el).getAttribute('aria-label')).to.equal('Stop preview');
+    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('true');
+
+    move();
+    await el.updateComplete;
+    expect(changes).to.deep.equal([null]);
+    expect(previewButton(el).getAttribute('aria-label')).to.equal('Preview Sage');
+    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+  } finally {
+    restore();
+  }
+});
+
 it('uses the committed voice as the preview candidate when keyboard navigation has no matching row', async () => {
   const el = (await fixture(
     html`<lr-voice-picker allow-custom .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`
@@ -1101,10 +1523,10 @@ it('a previewUrl with a disallowed scheme is silently dropped by safeMediaSrc --
 });
 
 it('stopping an active internal preview via the standalone button releases the <audio> element', async () => {
-  // Real playback against a fake domain can fail (and auto-release the resource) before a second,
-  // synchronous click gets a chance to -- stub play() so it never settles, making the explicit-stop
-  // path (audioEl still set) deterministic.
-  const restore = stubMediaPlay(() => new Promise(() => {}));
+  // Real playback against a fake domain can fail (and auto-release the resource) before a second
+  // click gets a chance to. Resolve play() deterministically so the published active state and its
+  // explicit terminal stop can both be observed.
+  const restore = stubMediaPlay(() => Promise.resolve());
   try {
     const el = (await fixture(
       html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`
@@ -1115,7 +1537,7 @@ it('stopping an active internal preview via the standalone button releases the <
     expect(previewButton(el).getAttribute('aria-pressed')).to.equal('true');
 
     const stopPromise = oneEvent(el, 'lr-preview-change');
-    previewButton(el).click(); // audioEl is still set (play() never settled) -- exercises the cleanup branch
+    previewButton(el).click(); // audioEl is still set after fulfilled playback -- cleanup branch
     const stopEv = await stopPromise;
     expect(stopEv.detail).to.deep.equal({ voiceId: null });
     expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
@@ -1124,7 +1546,7 @@ it('stopping an active internal preview via the standalone button releases the <
   }
 });
 
-it('a play() rejection that resolves after the preview was already stopped is a no-op (does not resurrect state)', async () => {
+it('a pending play rejection after the same candidate was canceled stays silent', async () => {
   let rejectPlay!: (e: unknown) => void;
   const pending = new Promise<void>((_resolve, reject) => {
     rejectPlay = reject;
@@ -1134,23 +1556,51 @@ it('a play() rejection that resolves after the preview was already stopped is a 
     const el = (await fixture(
       html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`
     )) as LyraVoicePicker;
-    const startPromise = oneEvent(el, 'lr-preview-change');
+    const changes: Array<string | null> = [];
+    el.addEventListener('lr-preview-change', (event) => changes.push(event.detail.voiceId));
     previewButton(el).click();
-    await startPromise;
+    await Promise.resolve();
 
-    const stopPromise = oneEvent(el, 'lr-preview-change');
-    previewButton(el).click(); // explicit stop -- clears audioEl synchronously
-    await stopPromise;
+    previewButton(el).click(); // cancel the same still-pending target synchronously
 
-    // The stale play() promise now rejects, after the resource was already released by the
-    // explicit stop above -- onAudioLoadFailure must see audioEl already undefined and no-op.
-    let unexpectedChange = false;
-    el.addEventListener('lr-preview-change', () => (unexpectedChange = true));
+    // The stale promise now rejects after its resource was released. Neither the pending attempt
+    // nor its cancellation was ever public playing state, so neither may publish a change.
     rejectPlay(new Error('network unreachable'));
     await new Promise((r) => setTimeout(r, 0));
-    await new Promise((r) => setTimeout(r, 0));
-    expect(unexpectedChange, 'a stale rejection must not emit another preview-change').to.be.false;
+    expect(changes).to.deep.equal([]);
+    expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
     expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+  } finally {
+    restore();
+  }
+});
+
+it('ignores a stale play fulfillment after the pending candidate was superseded', async () => {
+  let resolvePlay!: () => void;
+  const restore = stubMediaPlay(
+    () =>
+      new Promise<void>((resolve) => {
+        resolvePlay = resolve;
+      }),
+  );
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const changes: Array<string | null> = [];
+    el.addEventListener('lr-preview-change', (event) => changes.push(event.detail.voiceId));
+    previewButton(el).click();
+    await Promise.resolve();
+
+    el.value = 'sage';
+    await el.updateComplete;
+    resolvePlay();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(changes).to.deep.equal([]);
+    expect(el.value).to.equal('sage');
+    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
   } finally {
     restore();
   }
@@ -1187,17 +1637,39 @@ it('the standalone preview button handler no-ops when there is no candidate (def
 
 // -- Shared listbox click guards ---------------------------------------------
 
-it('the listbox click handler no-ops when effectiveDisabled (defensive; normally unreachable via the disabled trigger)', async () => {
+it('direct open writes cannot reopen an effectively disabled picker', async () => {
   const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
-  el.disabled = true; // el.open is false here, so the setter's own hide() call is a no-op
-  el.open = true; // bypasses show()'s effectiveDisabled guard by setting the property directly
+  el.open = true;
   await el.updateComplete;
+  const firstRow = rows(el)[0]!;
   let changed = false;
   el.addEventListener('lr-change', () => (changed = true));
-  (rows(el)[0] as HTMLElement).click();
+
+  el.disabled = true;
+  el.open = true;
+  expect(el.open).to.be.false;
+  firstRow.click();
   await el.updateComplete;
   expect(changed).to.be.false;
   expect(el.value).to.equal('');
+  expect(el.hasAttribute('open')).to.be.false;
+});
+
+it('rejects a same-task direct open write after a fieldset becomes disabled', async () => {
+  const fieldset = (await fixture(html`
+    <fieldset>
+      <lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>
+    </fieldset>
+  `)) as HTMLFieldSetElement;
+  const el = fieldset.querySelector('lr-voice-picker') as LyraVoicePicker;
+
+  fieldset.disabled = true;
+  el.open = true;
+
+  expect(el.open).to.be.false;
+  await el.updateComplete;
+  expect(el.effectiveDisabled).to.be.true;
+  expect(el.hasAttribute('open')).to.be.false;
 });
 
 it('the listbox click handler ignores clicks outside an option row (e.g. the empty-state message)', async () => {
@@ -1293,7 +1765,7 @@ describe('touched state — blur guard against platform-forced blur', () => {
   it('does not mark touched from a blur caused by the trigger itself becoming disabled', async () => {
     // Regression test for the same disabled-forced-blur behavior (see lr-input's identical fix).
     // The browser force-blurs a focused native control when it becomes disabled -- not a user
-    // interaction -- so onTriggerBlur() unconditionally marking `touched = true` for it could reenter an
+    // interaction -- so onControlBlur() unconditionally marking `touched = true` for it could reenter an
     // in-flight update and trip Lit's dev-mode "scheduled an update after an update completed"
     // warning for a state flip nothing observable needed (a disabled control is barred from
     // validation regardless). Proven observably here: re-enabling afterwards must still see the
@@ -1318,7 +1790,7 @@ describe('touched state — blur guard against platform-forced blur', () => {
   });
 
   it('does not mark touched from a blur caused by the free-text combobox input itself becoming disabled', async () => {
-    // Same regression, for the free-text mode's internal <input> (onInputBlur).
+    // Same regression, for the free-text mode's internal <input> (onControlBlur).
     const el = (await fixture(html`<lr-voice-picker allow-custom required></lr-voice-picker>`)) as LyraVoicePicker;
     const isTouched = () => (el as unknown as { touched: boolean }).touched;
     input(el).focus();

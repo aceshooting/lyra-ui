@@ -4,25 +4,24 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './attachment-trigger.styles.js';
-import type { LyraMenu, MenuSelectDetail } from '../../layout/menu/menu.class.js';
-import '../../layout/menu/menu.class.js';
-import '../../layout/menu/menu-item.class.js';
+import type { MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
+import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_attachmentAdd, LYRA_DEFAULT_attachmentMenuAudio, LYRA_DEFAULT_attachmentMenuCamera, LYRA_DEFAULT_attachmentMenuFiles, LYRA_DEFAULT_attachmentMenuImage, LYRA_DEFAULT_attachmentTriggerAudio, LYRA_DEFAULT_attachmentTriggerCamera, LYRA_DEFAULT_attachmentTriggerFiles, LYRA_DEFAULT_attachmentTriggerImage, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_attachmentAdd, LYRA_DEFAULT_attachmentMenuAudio, LYRA_DEFAULT_attachmentMenuCamera, LYRA_DEFAULT_attachmentMenuFiles, LYRA_DEFAULT_attachmentMenuImage, LYRA_DEFAULT_attachmentTriggerAudio, LYRA_DEFAULT_attachmentTriggerCamera, LYRA_DEFAULT_attachmentTriggerFiles, LYRA_DEFAULT_attachmentTriggerImage, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type AttachmentCapability = 'files' | 'image' | 'camera' | 'audio';
+export type LyraAttachmentCapability = 'files' | 'image' | 'camera' | 'audio';
 
 /** The capabilities that resolve to a real file selection (as opposed to `camera`/`audio`, which
  *  never touch the hidden file input -- see the class doc). */
-export type FileBackedCapability = Exclude<AttachmentCapability, 'camera' | 'audio'>;
+export type LyraFileBackedCapability = Exclude<LyraAttachmentCapability, 'camera' | 'audio'>;
 
-export interface AttachmentPickDetail {
-  capability: FileBackedCapability;
-  files: FileList;
+export interface LyraAttachmentFilesDetail {
+  capability: LyraFileBackedCapability;
+  files: readonly File[];
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions
@@ -99,21 +98,63 @@ interface CapabilityMeta {
   menuKey: string;
 }
 
-const CAPABILITY_META: Record<AttachmentCapability, CapabilityMeta> = {
+const CAPABILITY_META: Record<LyraAttachmentCapability, CapabilityMeta> = {
   files: { icon: paperclipIcon, triggerKey: 'attachmentTriggerFiles', menuKey: 'attachmentMenuFiles' },
   image: { icon: imageIcon, triggerKey: 'attachmentTriggerImage', menuKey: 'attachmentMenuImage' },
   camera: { icon: cameraIcon, triggerKey: 'attachmentTriggerCamera', menuKey: 'attachmentMenuCamera' },
   audio: { icon: audioIcon, triggerKey: 'attachmentTriggerAudio', menuKey: 'attachmentMenuAudio' },
 };
 
+const OWNED_CAPABILITY_SNAPSHOTS = new WeakSet<object>();
+
+function ownCapabilitySnapshot(values: LyraAttachmentCapability[]): readonly LyraAttachmentCapability[] {
+  const snapshot = Object.freeze(values);
+  OWNED_CAPABILITY_SNAPSHOTS.add(snapshot);
+  return snapshot;
+}
+
+const DEFAULT_CAPABILITIES: readonly LyraAttachmentCapability[] = ownCapabilitySnapshot(['files']);
+
+function normalizeCapabilities(value: unknown): readonly LyraAttachmentCapability[] {
+  try {
+    if (!Array.isArray(value)) return DEFAULT_CAPABILITIES;
+    if (OWNED_CAPABILITY_SNAPSHOTS.has(value)) return value as readonly LyraAttachmentCapability[];
+    const normalized: LyraAttachmentCapability[] = [];
+    const length = Math.min(value.length, 4);
+    for (let index = 0; index < length; index++) {
+      const candidate: unknown = value[index];
+      if (
+        typeof candidate === 'string' &&
+        Object.prototype.hasOwnProperty.call(CAPABILITY_META, candidate) &&
+        !normalized.includes(candidate as LyraAttachmentCapability)
+      ) {
+        normalized.push(candidate as LyraAttachmentCapability);
+      }
+    }
+    return ownCapabilitySnapshot(normalized);
+  } catch {
+    return DEFAULT_CAPABILITIES;
+  }
+}
+
+function isCanonicalCapabilitySnapshot(
+  source: unknown,
+): source is readonly LyraAttachmentCapability[] {
+  try {
+    return typeof source === 'object' && source !== null && OWNED_CAPABILITY_SNAPSHOTS.has(source);
+  } catch {
+    return false;
+  }
+}
+
 export interface LyraAttachmentTriggerEventMap {
-  'lr-camera-request': CustomEvent<undefined>;
-  'lr-audio-request': CustomEvent<undefined>;
-  'lr-pick': CustomEvent<AttachmentPickDetail>;
+  'lr-camera-request': CustomEvent<null>;
+  'lr-audio-request': CustomEvent<null>;
+  'lr-files': CustomEvent<LyraAttachmentFilesDetail>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
 }
 /**
  * `<lr-attachment-trigger>` — a compact attach affordance designed for a
@@ -124,12 +165,12 @@ export interface LyraAttachmentTriggerEventMap {
  *  - Exactly one capability: a single plain icon button ([part='trigger']).
  *    Activating it performs that capability's action directly.
  *  - More than one: a small anchored menu ([part='menu'], composed from
- *    `<lr-menu>`/`<lr-menu-item>`) listing each capability as a row.
+ *    `<lr-dropdown>`/`<lr-menu>`/`<lr-menu-item>`) listing each capability as a row.
  *
  * Two of the four capabilities (`files`, `image`) are file-picker-backed:
  * activating them opens a hidden native `<input type="file">` via a
  * synthetic `.click()`, and the resulting selection is re-emitted as
- * `lr-pick`. `accept` is shared across both — `image` defaults it to
+ * `lr-files`. `accept` is shared across both — `image` defaults it to
  * `'image/*'` unless the `accept` prop overrides it, `files` always uses
  * `accept` as-is (empty means "any file type", matching a bare native
  * `<input type="file">` with no `accept` attribute).
@@ -145,12 +186,9 @@ export interface LyraAttachmentTriggerEventMap {
  * handing the resulting blob to something like `<lr-attachment-chip>`.
  *
  * @customElement lr-attachment-trigger
- * @event lr-pick - A file-backed capability's hidden file input produced a
- * real selection. `detail: { capability: 'files' | 'image', files }` — a
- * real `FileList` (not a plain array), matching the native input's own
- * `.files` shape, but an independent snapshot rather than that same live
- * object — see `onInputChange`'s own doc for why a live reference would be
- * unsafe to hand out here.
+ * @event lr-files - A file-backed capability's hidden file input produced a real selection.
+ * `detail: { capability: 'files' | 'image', files }`; `files` is a fresh readonly owner-realm
+ * `File[]` snapshot rather than the native input's live `FileList`.
  * @event lr-camera-request - The `camera` capability was activated. No
  * detail payload — see the class doc's scope note; the host implements the
  * actual capture flow.
@@ -164,16 +202,15 @@ export interface LyraAttachmentTriggerEventMap {
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart trigger - The single-capability icon button. Only rendered when `capabilities.length === 1`.
- * @csspart menu - The `<lr-menu>` wrapper. Only rendered when `capabilities.length > 1`.
- * @csspart menu-trigger - The multi-capability button slotted into `<lr-menu>`'s own `trigger` slot. Only rendered when `capabilities.length > 1`.
+ * @csspart menu - The `<lr-dropdown>` shell. Only rendered when `capabilities.length > 1`.
+ * @csspart menu-trigger - The multi-capability button slotted into `<lr-dropdown>`'s `trigger` slot. Only rendered when `capabilities.length > 1`.
  * @csspart expand-icon - The disclosure chevron inside the multi-capability trigger button. Only rendered when `capabilities.length > 1`.
  * @csspart hidden-input - The internal native `<input type="file">` that actually opens the OS file
  *   picker. Hidden (`display: none`) by default; exposed as a part only so a consumer can override
  *   that with `::part(hidden-input)` in the unlikely case their integration needs to.
  *
- * `triggerLabel` supplies a fallback for the single-capability trigger button's
- * accessible name (i18n) — see that property's own doc for exactly what it
- * does and doesn't affect. A host `aria-label` wins on either trigger shape.
+ * `accessibleLabel` supplies an accessible-name override for either trigger shape. A host
+ * `aria-label`, including an explicit empty value, wins over it.
  * @status stable
  * @since 4.0.0
  */
@@ -193,7 +230,11 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     attachmentTriggerImage: LYRA_DEFAULT_attachmentTriggerImage,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -201,22 +242,18 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   /** Which attachment capabilities to offer, in display order. A single
    *  entry renders a plain button; more than one renders a menu. */
-  @property({ attribute: false }) capabilities: AttachmentCapability[] = ['files'];
+  @property({ attribute: false }) capabilities: readonly LyraAttachmentCapability[] = DEFAULT_CAPABILITIES;
 
   /** Native-file-input-style accept string (e.g. `'image/*'` or
    *  `'.pdf,.docx'`), forwarded to the hidden file input for the
    *  `files`/`image` capabilities — see the class doc for how each uses it. */
   @property() accept = '';
 
-  /** Accessible-name fallback for the single-capability trigger button when the host has no
-   *  `aria-label`; otherwise the name comes from `this.localize()` (e.g. `'Attach files'`,
-   *  localizable via `.strings`/`registerLyraLocale()`). Only affects the single-capability button
-   *  (`[part='trigger']`) — the multi-capability menu uses its own localized `'Add attachment'`
-   *  fallback. */
-  @property({ attribute: 'trigger-label' }) triggerLabel?: string;
+  /** Accessible-name override for the semantic trigger button. */
+  @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
 
   /** Forwards to the internal trigger button(s)' native `title` attribute — a sighted mouse
-   *  user's hover tooltip, distinct from `triggerLabel`'s accessible-name (`aria-label`) role.
+   *  user's hover tooltip, distinct from `accessibleLabel`'s accessible-name (`aria-label`) role.
    *  Applies to both the single-capability `[part=trigger]` button and the multi-capability
    *  `[part=menu-trigger]` button. Unset (the default): no `title` attribute, unchanged from
    *  before this property existed. */
@@ -228,38 +265,49 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   @query('input[type="file"]') private inputEl?: HTMLInputElement;
-  @query('lr-menu') private menuEl?: LyraMenu;
+  @query('lr-dropdown') private dropdownEl?: LyraDropdown;
 
   // Which file-backed capability the hidden input's next 'change' event
   // belongs to -- set synchronously right before the synthetic .click(), so
   // one shared <input> can serve both 'files' and 'image' (each wanting a
   // different `accept`) without needing two separate hidden inputs.
-  private pendingCapability: FileBackedCapability = 'files';
+  private pendingCapability: LyraFileBackedCapability = 'files';
+  private pickerGeneration = 0;
+  private pendingPickerGeneration = -1;
+
+  private get effectiveCapabilities(): readonly LyraAttachmentCapability[] {
+    return normalizeCapabilities(this.capabilities);
+  }
 
   private get hasFileCapability(): boolean {
-    return this.capabilities.includes('files') || this.capabilities.includes('image');
+    return this.effectiveCapabilities.includes('files') || this.effectiveCapabilities.includes('image');
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (changed.has('disabled') && this.disabled) this.menuEl?.hide();
+    if (changed.has('disabled') && this.disabled) void this.dropdownEl?.hide();
+    if (changed.has('capabilities')) {
+      const normalized = normalizeCapabilities(this.capabilities);
+      if (!isCanonicalCapabilitySnapshot(this.capabilities)) this.capabilities = normalized;
+    }
   }
 
-  private effectiveAccept(capability: FileBackedCapability): string {
+  private effectiveAccept(capability: LyraFileBackedCapability): string {
     return capability === 'image' ? this.accept || 'image/*' : this.accept;
   }
 
-  private activateCapability(capability: AttachmentCapability): void {
+  private activateCapability(capability: LyraAttachmentCapability): void {
     if (this.disabled) return;
     if (capability === 'camera') {
-      this.emit('lr-camera-request');
+      this.emit('lr-camera-request', null);
       return;
     }
     if (capability === 'audio') {
-      this.emit('lr-audio-request');
+      this.emit('lr-audio-request', null);
       return;
     }
     this.pendingCapability = capability;
+    this.pendingPickerGeneration = ++this.pickerGeneration;
     const input = this.inputEl;
     if (!input) return;
     input.accept = this.effectiveAccept(capability);
@@ -267,36 +315,38 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   }
 
   private onTriggerClick = (): void => {
-    const capability = this.capabilities[0];
+    const capability = this.effectiveCapabilities[0];
     if (capability === undefined) return;
     this.activateCapability(capability);
   };
 
-  private onMenuSelect = (e: CustomEvent<MenuSelectDetail>): void => {
+  private onMenuSelect = (e: CustomEvent<MenuItemSelectDetail>): void => {
     e.stopPropagation();
-    this.activateCapability(e.detail.value as AttachmentCapability);
+    const capability = e.detail.item.value;
+    if (Object.prototype.hasOwnProperty.call(CAPABILITY_META, capability)
+      && this.effectiveCapabilities.includes(capability as LyraAttachmentCapability)) {
+      this.activateCapability(capability as LyraAttachmentCapability);
+    }
   };
 
   private onInputChange = (e: Event): void => {
+    e.stopPropagation();
     const input = e.target as HTMLInputElement;
     const selected = input.files;
-    if (!this.disabled && selected && selected.length > 0) {
-      // `input.files` is a *live* view of the input's own current
-      // selection, not a frozen snapshot -- clearing `.value` below (so
-      // re-picking the exact same file still fires another 'change' next
-      // time) mutates this very object back to empty in place. A listener
-      // that reads `detail.files` synchronously (a plain `addEventListener`
-      // callback) would never notice, but anything that reads it even one
-      // microtask later (an `async` handler, a queued upload) would see an
-      // empty list. Rehoming the selected files into a fresh `DataTransfer`
-      // produces an independent `FileList` — still the real `FileList` type
-      // the `lr-pick` contract promises, just no longer tied to this
-      // input's own live state.
-      const snapshot = new DataTransfer();
-      for (const file of selected) snapshot.items.add(file);
-      this.emit('lr-pick', {
+    const generation = this.pendingPickerGeneration;
+    this.pendingPickerGeneration = -1;
+    if (
+      this.isConnected
+      && generation === this.pickerGeneration
+      && !this.disabled
+      && selected
+      && selected.length > 0
+    ) {
+      const OwnerArray = this.ownerDocument.defaultView?.Array ?? Array;
+      const files = Object.freeze(OwnerArray.from(selected)) as readonly File[];
+      this.emit('lr-files', {
         capability: this.pendingCapability,
-        files: snapshot.files,
+        files,
       });
     }
     // Clearing `.value` (not just leaving the stale selection in place)
@@ -304,13 +354,20 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     // event next time, matching <lr-file-input>'s identical reset.
     input.value = '';
   };
+
+  override disconnectedCallback(): void {
+    this.pendingPickerGeneration = -1;
+    this.pickerGeneration++;
+    void this.dropdownEl?.hide();
+    super.disconnectedCallback();
+  }
   private onControlFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
+    this.emit('lr-focus', null);
   };
   private onControlBlur = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
+    this.emit('lr-blur', null);
   };
   private stopInternalEvent = (event: Event): void => {
     event.stopPropagation();
@@ -346,10 +403,10 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     `;
   }
 
-  private renderSingleTrigger(capability: AttachmentCapability): TemplateResult {
+  private renderSingleTrigger(capability: LyraAttachmentCapability): TemplateResult {
     const meta = CAPABILITY_META[capability];
-    const label =
-      this.getAttribute('aria-label') || this.localize(meta.triggerKey, this.triggerLabel);
+    const hostLabel = this.hasAttribute('aria-label') ? (this.getAttribute('aria-label') ?? '') : null;
+    const label = hostLabel ?? this.accessibleLabel ?? this.localize(meta.triggerKey);
     return html`
       <button
         part="trigger"
@@ -369,12 +426,11 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private renderMenu(): TemplateResult {
     const addLabel = this.localize('attachmentAdd');
-    const accessibleLabel = this.getAttribute('aria-label') || addLabel;
+    const hostLabel = this.hasAttribute('aria-label') ? (this.getAttribute('aria-label') ?? '') : null;
+    const accessibleLabel = hostLabel ?? this.accessibleLabel ?? addLabel;
     return html`
-      <lr-menu
+      <lr-dropdown
         part="menu"
-        label=${accessibleLabel}
-        @lr-menu-select=${this.onMenuSelect}
         @lr-show=${this.stopInternalEvent}
         @lr-hide=${this.stopInternalEvent}
       >
@@ -392,24 +448,27 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
           ${paperclipIcon()}
           <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>
         </button>
-        ${this.capabilities.map((capability) => {
-          const meta = CAPABILITY_META[capability];
-          return html`
-            <lr-menu-item value=${capability} ?disabled=${this.disabled}>
-              <span slot="icon">${meta.icon()}</span>
-              ${this.localize(meta.menuKey)}
-            </lr-menu-item>
-          `;
-        })}
-      </lr-menu>
+        <lr-menu label=${accessibleLabel} @lr-select=${this.onMenuSelect}>
+          ${this.effectiveCapabilities.map((capability) => {
+            const meta = CAPABILITY_META[capability];
+            return html`
+              <lr-menu-item value=${capability} ?disabled=${this.disabled}>
+                <span slot="icon">${meta.icon()}</span>
+                ${this.localize(meta.menuKey)}
+              </lr-menu-item>
+            `;
+          })}
+        </lr-menu>
+      </lr-dropdown>
     `;
   }
 
   override render(): TemplateResult {
-    const single = this.capabilities.length === 1; // safe below: capabilities[0]! is guarded by this length === 1
-    const multi = this.capabilities.length > 1;
+    const capabilities = this.effectiveCapabilities;
+    const single = capabilities.length === 1;
+    const multi = capabilities.length > 1;
     return html`
-      ${single ? this.renderSingleTrigger(this.capabilities[0]!) : nothing}
+      ${single ? this.renderSingleTrigger(capabilities[0]!) : nothing}
       ${multi ? this.renderMenu() : nothing}
       ${this.hasFileCapability ? this.renderHiddenInput() : nothing}
     `;

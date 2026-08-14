@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import { html } from 'lit';
+import { html, type TemplateResult } from 'lit';
 import type { LyraPagination } from './pagination.js';
 
 const meta: Meta = {
@@ -19,19 +19,23 @@ function controlledPagination(total = 237) {
   ></lr-pagination>`;
 }
 
-function controlled(template: (apply: (event: Event) => void) => unknown) {
+function controlled(template: (apply: (event: Event) => void) => TemplateResult): TemplateResult {
   return template((event: Event) => {
     const detail = (event as CustomEvent<{ page: number }>).detail;
     (event.currentTarget as LyraPagination).page = detail.page;
   });
 }
 
+function focusSiblingPagination(event: Event): void {
+  (event.currentTarget as HTMLElement).parentElement
+    ?.querySelector<LyraPagination>('lr-pagination')
+    ?.focus();
+}
+
 export const Default: Story = {
   render: () => controlledPagination(),
 };
 
-/** `focus()` and `blur()` target the editable page-jump input of the compact layout, and surface
- *  host focus events. */
 /** The default `standard` layout: every page is its own control, with elided runs collapsed into an
  *  interactive jump so the control keeps a constant width as the reader pages through. */
 export const Elided: Story = {
@@ -123,19 +127,19 @@ export const Links: Story = {
   `,
 };
 
-/** `format="compact"` swaps the page list for the editable page-jump field, for toolbars and card
- *  footers where a full list does not fit. */
+/** `format="compact"` swaps only the numbered list for the editable page-jump field. This example
+ *  also enables link mode: previous/next and first/last remain real anchors while the field keeps
+ *  the controlled request-event contract. */
 export const Compact: Story = {
-  render: () =>
-    controlled(
-      (apply) => html`<lr-pagination
-        format="compact"
-        total="237"
-        page-size="20"
-        with-summary
-        @lr-page-change=${apply}
-      ></lr-pagination>`
-    ),
+  render: () => html`<lr-pagination
+    format="compact"
+    total="237"
+    page-size="20"
+    page="4"
+    with-summary
+    with-edges
+    href-template="#page/{page}"
+  ></lr-pagination>`,
 };
 
 export const CancelableRequest: Story = {
@@ -185,27 +189,39 @@ export const VisibilityFlags: Story = {
 };
 
 export const ProgrammaticFocus: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`focus()`, `blur()`, and `click()` resolve the current format at call time: standard targets the applied page control, while compact targets the page-jump input. `totalPages` is the sole public derived-total getter.',
+      },
+    },
+  },
   render: () => html`
-    <div style="display: grid; gap: 0.75rem; justify-items: start;">
-      ${controlled(
-        (apply) => html`<lr-pagination
-          format="compact"
-          total="237"
-          page-size="20"
-          @lr-page-change=${apply}
-        ></lr-pagination>`
-      )}
-      <button
-        type="button"
-        @click=${(event: Event) => {
-          const pagination = (event.currentTarget as HTMLElement).parentElement!.querySelector(
-            'lr-pagination'
-          ) as LyraPagination;
-          pagination.focus();
-        }}
-      >
-        Focus the page field
-      </button>
+    <div style="display: grid; gap: 1rem; justify-items: start;">
+      <section style="display: grid; gap: 0.5rem; justify-items: start;">
+        ${controlled(
+          (apply) => html`<lr-pagination
+            total="237"
+            page-size="20"
+            page="4"
+            @lr-page-change=${apply}
+          ></lr-pagination>`
+        )}
+        <button type="button" @click=${focusSiblingPagination}>Focus the applied page</button>
+      </section>
+      <section style="display: grid; gap: 0.5rem; justify-items: start;">
+        ${controlled(
+          (apply) => html`<lr-pagination
+            format="compact"
+            total="237"
+            page-size="20"
+            page="4"
+            @lr-page-change=${apply}
+          ></lr-pagination>`
+        )}
+        <button type="button" @click=${focusSiblingPagination}>Focus the page field</button>
+      </section>
     </div>
   `,
 };

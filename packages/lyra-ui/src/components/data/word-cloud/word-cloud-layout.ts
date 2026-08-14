@@ -1,30 +1,28 @@
 /** One word to place, before layout. */
 export interface WordCloudWord {
-  text: string;
-  weight: number;
-  color?: string;
-  group?: string;
+  readonly text: string;
+  readonly weight: number;
+  readonly color?: string;
+  readonly group?: string;
 }
 
-/** A word after layout — its original data (weight untouched, even if it was
- *  negative/non-finite in the input — see `effectiveWeight` internally) plus
- *  computed geometry. */
+/** A word after layout — its normalized finite, nonnegative weight plus computed geometry. */
 export interface PlacedWord extends WordCloudWord {
   /** Index of this word in the original (pre-sort) `words` array — stable
    *  across layout re-runs, so callers can key a color/group map off it
    *  instead of off placement order (which is sorted by weight). */
-  originalIndex: number;
+  readonly originalIndex: number;
   /** Center x, in an unbounded coordinate space centered on the origin. */
-  x: number;
+  readonly x: number;
   /** Center y, in the same space as `x`. */
-  y: number;
-  fontSize: number;
+  readonly y: number;
+  readonly fontSize: number;
   /** `true` if rotated 90°. */
-  rotated: boolean;
+  readonly rotated: boolean;
   /** Unrotated rendered width, in px. */
-  width: number;
+  readonly width: number;
   /** Unrotated rendered height, in px (== fontSize; layout doesn't model ascent/descent). */
-  height: number;
+  readonly height: number;
 }
 
 /** Weight-to-font-size mapping curve. `sqrt` compresses it so one heavy word
@@ -32,37 +30,41 @@ export interface PlacedWord extends WordCloudWord {
 export type WordCloudScale = 'linear' | 'sqrt';
 
 /** Rotation mode for placed words. `mixed` lets some render rotated 90° for denser packing. */
-export type WordCloudOrientations = 'horizontal' | 'mixed';
+export type WordCloudRotation = 'none' | 'mixed';
 
 export interface WordCloudLayoutOptions {
-  minFontSize: number;
-  maxFontSize: number;
-  scale: WordCloudScale;
-  orientations: WordCloudOrientations;
+  readonly minFontSize: number;
+  readonly maxFontSize: number;
+  readonly scale: WordCloudScale;
+  readonly wordRotation: WordCloudRotation;
   /** Measures the rendered width of `text` set at `fontSize`, e.g. via a canvas 2D
    *  context — the font string passed to the context must match the actual
    *  rendered `[part="word"]` font (weight included), or collision boxes end
    *  up narrower than what's actually painted. */
-  measureText: (text: string, fontSize: number) => number;
+  readonly measureText: (text: string, fontSize: number) => number;
   /** `[0, 1)` — defaults to `Math.random`; inject a stub for deterministic tests. */
-  random?: () => number;
+  readonly random?: () => number;
 }
 
 export interface WordCloudLayoutResult {
-  placed: PlacedWord[];
+  readonly placed: readonly PlacedWord[];
   /** Words left out of `placed`, for any of three reasons: blank/whitespace-only
    *  `text`; capacity overflow (input has more than `MAX_WORDS` entries, so the
    *  lowest-weight excess is dropped, regardless of where it fell in the input
    *  array); or the spiral search exhausted its radius bound (pathological
    *  inputs only, e.g. one huge word repeated many times). */
-  skipped: WordCloudWord[];
+  readonly skipped: readonly WordCloudWord[];
+  /** Complete omitted count; `skipped` itself is a bounded diagnostic sample. */
+  readonly skippedCount: number;
   /** Gap-padded bounding box of `placed` — 0 if nothing was placed. */
-  width: number;
-  height: number;
+  readonly width: number;
+  readonly height: number;
 }
 
 /** DOM-node/compute-time safety cap — mirrors lr-sparkline's `MAX_BARS`. */
 export const MAX_WORDS = 150;
+/** Maximum retained omitted records; diagnostics must never become a second unbounded collection. */
+export const MAX_SKIPPED_DIAGNOSTICS = 32;
 /** Largest accepted font size in CSS pixels. This keeps measurement and
  *  placement geometry finite enough for an interactive render even when a
  *  caller supplies an otherwise-valid but impractically large number. */
@@ -101,10 +103,48 @@ function resolveFontSizeBounds(minFontSize: number, maxFontSize: number): [numbe
   return min <= max ? [min, max] : [max, min];
 }
 
-/** Clamps a (possibly negative/non-finite) input weight for scale math only —
- *  never fed back to callers, who should still see their own original `weight`. */
+/** Clamps a possibly negative/non-finite input weight to the layout's canonical public value. */
 function effectiveWeight(weight: number): number {
   return Number.isFinite(weight) ? Math.max(0, weight) : 0;
+}
+
+interface DecoratedWord extends WordCloudWord { originalIndex: number }
+type MutablePlacedWord = { -readonly [Key in keyof PlacedWord]: PlacedWord[Key] };
+
+/** True when `a` is a worse top-K survivor than `b`: lower weight, or a later declaration for a
+ * tie. The heap root is therefore always the next survivor to evict. */
+function isWorse(a: DecoratedWord, b: DecoratedWord): boolean {
+  const aw = effectiveWeight(a.weight);
+  const bw = effectiveWeight(b.weight);
+  return aw < bw || (aw === bw && a.originalIndex > b.originalIndex);
+}
+
+function heapPushWorstFirst(heap: DecoratedWord[], value: DecoratedWord): void {
+  heap.push(value);
+  let index = heap.length - 1;
+  while (index > 0) {
+    const parent = Math.floor((index - 1) / 2);
+    if (!isWorse(heap[index]!, heap[parent]!)) break;
+    [heap[index], heap[parent]] = [heap[parent]!, heap[index]!];
+    index = parent;
+  }
+}
+
+function heapReplaceWorst(heap: DecoratedWord[], value: DecoratedWord): DecoratedWord {
+  const removed = heap[0]!;
+  heap[0] = value;
+  let index = 0;
+  for (;;) {
+    const left = index * 2 + 1;
+    const right = left + 1;
+    let worst = index;
+    if (left < heap.length && isWorse(heap[left]!, heap[worst]!)) worst = left;
+    if (right < heap.length && isWorse(heap[right]!, heap[worst]!)) worst = right;
+    if (worst === index) break;
+    [heap[index], heap[worst]] = [heap[worst]!, heap[index]!];
+    index = worst;
+  }
+  return removed;
 }
 
 function scaledWeight(weight: number, minWeight: number, maxWeight: number, scale: WordCloudScale): number {
@@ -132,29 +172,41 @@ function rectsOverlap(
  * outward spiral from the center until it finds a gap that doesn't overlap
  * any word already placed). Deterministic given a deterministic `random`.
  */
-export function layoutWordCloud(words: WordCloudWord[], options: WordCloudLayoutOptions): WordCloudLayoutResult {
-  const { scale, orientations, measureText } = options;
+export function layoutWordCloud(words: readonly WordCloudWord[], options: WordCloudLayoutOptions): WordCloudLayoutResult {
+  const { scale, wordRotation, measureText } = options;
   const [minFontSize, maxFontSize] = resolveFontSizeBounds(options.minFontSize, options.maxFontSize);
   const random = options.random ?? Math.random;
 
   const skipped: WordCloudWord[] = [];
+  let skippedCount = 0;
+  const recordSkip = (word: WordCloudWord): void => {
+    skippedCount++;
+    if (skipped.length < MAX_SKIPPED_DIAGNOSTICS) skipped.push({ ...word, weight: effectiveWeight(word.weight) });
+  };
 
-  const decorated = words
-    .map((w, originalIndex) => ({ ...w, originalIndex }))
-    .filter((w) => {
-      const blank = w.text.trim().length === 0;
-      if (blank) skipped.push(w);
-      return !blank;
-    });
+  // One pass, O(MAX_WORDS) retained memory. This avoids cloning/sorting the full hostile input and
+  // avoids spreading an unbounded omitted suffix into `skipped`.
+  const heap: DecoratedWord[] = [];
+  for (let originalIndex = 0; originalIndex < words.length; originalIndex++) {
+    const word = words[originalIndex]!;
+    if (word.text.trim().length === 0) {
+      recordSkip(word);
+      continue;
+    }
+    const decorated: DecoratedWord = { ...word, weight: effectiveWeight(word.weight), originalIndex };
+    if (heap.length < MAX_WORDS) {
+      heapPushWorstFirst(heap, decorated);
+      continue;
+    }
+    if (isWorse(heap[0]!, decorated)) recordSkip(heapReplaceWorst(heap, decorated));
+    else recordSkip(word);
+  }
+  const eligible = heap.sort((a, b) => {
+    const weight = effectiveWeight(b.weight) - effectiveWeight(a.weight);
+    return weight || a.originalIndex - b.originalIndex;
+  });
 
-  // Cap placement eligibility by actual weight (heaviest MAX_WORDS survive),
-  // not by array position — a heavy word late in the input must not be
-  // dropped just because lighter words happened to come first.
-  const byWeightDesc = [...decorated].sort((a, b) => effectiveWeight(b.weight) - effectiveWeight(a.weight));
-  const eligible = byWeightDesc.slice(0, MAX_WORDS);
-  skipped.push(...byWeightDesc.slice(MAX_WORDS));
-
-  if (eligible.length === 0) return { placed: [], skipped, width: 0, height: 0 };
+  if (eligible.length === 0) return { placed: [], skipped, skippedCount, width: 0, height: 0 };
 
   let minWeight = effectiveWeight(eligible[0]!.weight);
   let maxWeight = minWeight;
@@ -166,7 +218,7 @@ export function layoutWordCloud(words: WordCloudWord[], options: WordCloudLayout
 
   // eligible is already weight-descending (a suffix of byWeightDesc), which
   // is also the placement order the algorithm wants (heaviest first).
-  const placed: PlacedWord[] = [];
+  const placed: MutablePlacedWord[] = [];
   let totalArea = 0;
 
   for (const word of eligible) {
@@ -174,7 +226,7 @@ export function layoutWordCloud(words: WordCloudWord[], options: WordCloudLayout
     const fontSize = minFontSize + t * (maxFontSize - minFontSize);
     const measuredWidth = Math.max(1, measureText(word.text, fontSize));
     const measuredHeight = fontSize;
-    const rotated = orientations === 'mixed' && random() < ROTATE_PROBABILITY;
+    const rotated = wordRotation === 'mixed' && random() < ROTATE_PROBABILITY;
     const boxW = rotated ? measuredHeight : measuredWidth;
     const boxH = rotated ? measuredWidth : measuredHeight;
     totalArea += boxW * boxH;
@@ -209,7 +261,7 @@ export function layoutWordCloud(words: WordCloudWord[], options: WordCloudLayout
     }
 
     if (!foundSpot) {
-      skipped.push(word);
+      recordSkip(word);
       continue;
     }
 
@@ -224,7 +276,7 @@ export function layoutWordCloud(words: WordCloudWord[], options: WordCloudLayout
     });
   }
 
-  if (placed.length === 0) return { placed, skipped, width: 0, height: 0 };
+  if (placed.length === 0) return { placed, skipped, skippedCount, width: 0, height: 0 };
 
   let minX = Infinity;
   let maxX = -Infinity;
@@ -256,6 +308,7 @@ export function layoutWordCloud(words: WordCloudWord[], options: WordCloudLayout
   return {
     placed,
     skipped,
+    skippedCount,
     width: maxX - minX,
     height: maxY - minY,
   };

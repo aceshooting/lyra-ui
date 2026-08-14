@@ -87,6 +87,16 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
   }
+  [part='window-range'],
+  [part='legend-limit'] {
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+    font-variant-numeric: tabular-nums;
+  }
+  [part='window-range'] {
+    margin-block-start: var(--lr-space-2xs);
+    text-align: end;
+  }
   [part='legend-item'] {
     display: inline-flex;
     align-items: center;

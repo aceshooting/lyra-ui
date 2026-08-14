@@ -8,3 +8,7 @@ export const Default: StoryObj = { render: () => html`<lr-relative-time date="20
 export const NarrowSynchronized: StoryObj = {
   render: () => html`<lr-relative-time date="2030-01-01" format="narrow" numeric="always" sync></lr-relative-time>`,
 };
+export const EpochAttribute: StoryObj = {
+  name: 'Numeric markup is epoch milliseconds',
+  render: () => html`<lr-relative-time date="0" unit="year" numeric="always"></lr-relative-time>`,
+};

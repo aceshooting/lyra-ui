@@ -29,17 +29,14 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
-     so a consumer's ::part(add-button):hover / ::part(remove-button):hover override ((0,1,1))
-     wins without needing !important. */
+  /* Hover changes the border while the distinct pressed step below changes the surface fill. */
   :where([part='add-button']):hover:where(:not(:disabled)),
   :where([part='remove-button']):hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }
   /* The hover recolours the border only, which leaves the pressed step nothing to deepen -- so
      pressed tints the button's own surface fill toward --lr-color-mix-partner (which follows the
-     text colour) instead, darkening in a light theme and lightening in a dark one. Same :where()
-     wrapping as the hover above, for the same reason. */
+     text colour) instead, darkening in a light theme and lightening in a dark one. */
   :where([part='add-button']):active:where(:not(:disabled)),
   :where([part='remove-button']):active:where(:not(:disabled)) {
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
@@ -65,6 +62,8 @@ export const styles = css`
   [part='search-input'] {
     box-sizing: border-box;
     inline-size: 100%;
+    -webkit-appearance: none;
+    appearance: none;
     padding-inline: var(--lr-space-s);
     padding-block: var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -79,7 +78,9 @@ export const styles = css`
   }
   [part='search-input']::-webkit-search-cancel-button,
   [part='search-input']::-webkit-search-decoration {
+    -webkit-appearance: none;
     appearance: none;
+    display: none;
   }
   [part='search-input']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

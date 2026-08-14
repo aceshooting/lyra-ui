@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   MAX_NATIVE_PLAYBACK_RATE,
@@ -27,7 +28,7 @@ import { LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, L
 export type LyraVideoControls = 'none' | 'standard' | 'full';
 export type LyraVideoPreload = 'auto' | 'metadata' | 'none';
 
-export interface LyraVideoState {
+export interface VideoState {
   playing: boolean;
   currentTime: number;
   duration: number;
@@ -35,9 +36,6 @@ export interface LyraVideoState {
   muted: boolean;
   playbackRate: number;
 }
-
-/** Upstream-compatible name for {@linkcode LyraVideoState}. */
-export type VideoState = LyraVideoState;
 
 export interface LyraVideoEventMap {
   ended: Event;
@@ -170,8 +168,9 @@ function formatTime(seconds: number, locale: string): string {
   return `${regular.format(minutes)}:${padded.format(remaining)}`;
 }
 
-function unsupportedPromise(message: string): Promise<never> {
-  return Promise.reject(new DOMException(message, 'NotSupportedError'));
+function unsupportedPromise(host: Element, message: string): Promise<never> {
+  const DOMExceptionConstructor = host.ownerDocument.defaultView?.DOMException ?? DOMException;
+  return Promise.reject(new DOMExceptionConstructor(message, 'NotSupportedError'));
 }
 
 /**
@@ -180,6 +179,11 @@ function unsupportedPromise(message: string): Promise<never> {
  * previews. Its elapsed-time timeline stays on a physical left-to-right axis in either text
  * direction, so native ArrowRight advances and ArrowLeft rewinds. Mirrors the public `<wa-video>`
  * surface under the `lr-` prefix.
+ * While a poster is visible, its poster-play button is the only exposed play action; the ordinary
+ * control-bar play toggle stays hidden until playback begins. Decorative icon-slot subtrees remain
+ * projected through inert, accessibility-hidden siblings rather than entering their native
+ * buttons. A declarative host name stays on the host while the native video uses a purpose label;
+ * an explicitly empty host name is preserved exactly on the native semantic owner.
  *
  * @customElement lr-video
  * @slot - Native `<source>` and `<track>` children. Consumer nodes remain in light DOM; safe
@@ -229,7 +233,7 @@ function unsupportedPromise(message: string): Promise<never> {
  * @csspart video-wrapper - Alias on the same root node as `base`.
  * @cssprop [--controls-background=var(--lr-color-overlay-strong)] - Controls, captions, and title
  *   overlay background.
- * @cssprop [--controls-color=var(--lr-color-text)] - Custom-control foreground color.
+ * @cssprop [--controls-color=var(--lr-color-on-strong-overlay)] - Custom-control foreground color.
  * @cssprop [--poster-play-button-background=var(--lr-color-surface-overlay)] - Poster play-button
  *   background.
  * @cssprop [--lr-video-poster-play-button-hover-background=color-mix(...)] - Poster play-button
@@ -262,7 +266,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   static override get observedAttributes(): string[] {
     // The pinned public manifest spells this attribute `currentTime`. HTML normalizes authored
@@ -339,10 +343,11 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     return media?.localName === 'video' ? media as HTMLVideoElement : undefined;
   }
 
-  /** The play/pause control: this component's primary interactive affordance, and the target the
-   *  host's own focus/blur/click forward to. Absent while `controls="none"`. */
+  /** The one currently-visible play action: poster button first, then the control-bar toggle. */
   private get playControl(): HTMLButtonElement | null {
-    return this.renderRoot.querySelector<HTMLButtonElement>('[data-control="play"]');
+    return this.renderRoot.querySelector<HTMLButtonElement>(
+      '[part="poster-play-button"], [data-control="play"]',
+    );
   }
 
   /** Focus the play/pause control. A `controls="none"` player renders none, so this is a no-op
@@ -400,7 +405,6 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     this.thumbnailAbort = undefined;
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
-    this.visibilityPaused = false;
     this.unbindCaptionTracks();
     if (this.captionTracks.length) this.captionTracks = [];
     if (this.captionText) this.captionText = '';
@@ -580,7 +584,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   /** Requests fullscreen for the wrapper so custom overlays remain visible. */
   override requestFullscreen(): Promise<void> {
     if (!canRequestFullscreen(this.wrapperEl)) {
-      return unsupportedPromise('Fullscreen is unavailable for this video.');
+      return unsupportedPromise(this, 'Fullscreen is unavailable for this video.');
     }
     return this.wrapperEl!.requestFullscreen();
   }
@@ -588,7 +592,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   /** Exits document fullscreen and preserves the platform promise/rejection. */
   exitFullscreen(): Promise<void> {
     if (!canExitFullscreen(this.ownerDocument)) {
-      return unsupportedPromise('Fullscreen exit is unavailable for this video.');
+      return unsupportedPromise(this, 'Fullscreen exit is unavailable for this video.');
     }
     return this.ownerDocument.exitFullscreen();
   }
@@ -610,6 +614,11 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
       case 'pause':
       case 'ended':
         this.playing = false;
+        break;
+      case 'error':
+        this.playing = false;
+        this.duration = 0;
+        this.currentTime = 0;
         break;
       case 'timeupdate':
       case 'seeked':
@@ -641,6 +650,23 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   private onPosterPlay = (): void => {
     void this.play().catch(() => undefined);
   };
+
+  /** Platform capability read from this element's current owner realm, including before refs are
+   * populated on first render. Public methods separately re-check their concrete live targets. */
+  private canRenderFullscreen(): boolean {
+    const ownerWindow = this.ownerDocument.defaultView;
+    return typeof ownerWindow?.HTMLElement.prototype.requestFullscreen === 'function' &&
+      this.ownerDocument.fullscreenEnabled !== false;
+  }
+
+  /** Picture-in-picture capability read from the current owner realm for the full preset. */
+  private canRenderPictureInPicture(): boolean {
+    const ownerWindow = this.ownerDocument.defaultView;
+    const documentRef = this.ownerDocument as Document & { pictureInPictureEnabled?: boolean };
+    return this.controls === 'full' &&
+      typeof ownerWindow?.HTMLVideoElement.prototype.requestPictureInPicture === 'function' &&
+      documentRef.pictureInPictureEnabled !== false;
+  }
 
   private onFullscreenButton = (): void => {
     const operation = this.fullscreen ? this.exitFullscreen() : this.requestFullscreen();
@@ -675,12 +701,19 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   }
 
   private configureVisibilityObserver(): void {
+    const visibilityOwnedPause = this.visibilityPaused;
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
-    this.visibilityPaused = false;
     const ownerWindow = this.ownerDocument.defaultView;
     const IntersectionObserverCtor = ownerWindow?.IntersectionObserver;
-    if (!this.autoplayOnVisible || !IntersectionObserverCtor) return;
+    if (!this.autoplayOnVisible || !IntersectionObserverCtor) {
+      if (visibilityOwnedPause) {
+        this.visibilityPaused = false;
+        void this.mediaController.play().catch(() => undefined);
+      }
+      return;
+    }
+    this.visibilityPaused = visibilityOwnedPause;
     let observer: IntersectionObserver | undefined;
     observer = new IntersectionObserverCtor((entries) => {
       if (
@@ -721,6 +754,9 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     const selectable = textTracks(this.videoEl).filter(
       (track) => track.kind === 'captions' || track.kind === 'subtitles',
     );
+    for (const track of selectable) {
+      if (track.mode === 'showing') track.mode = 'hidden';
+    }
     this.captionTracks = selectable.map((track) => ({
       track,
       label: track.label || track.language || this.localize('videoCaptions'),
@@ -737,7 +773,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   private syncActiveCaption(): void {
     const lines: string[] = [];
     for (const { track } of this.captionTracks) {
-      if (track.mode !== 'showing' || !track.activeCues) continue;
+      if (track.mode !== 'hidden' || !track.activeCues) continue;
       for (let index = 0; index < track.activeCues.length; index += 1) {
         const cue = track.activeCues[index] as VTTCue | undefined;
         if (cue && typeof cue.text === 'string') lines.push(cue.text);
@@ -749,7 +785,9 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   private onCaptionChange = (event: Event): void => {
     const selected = Number((event.currentTarget as HTMLSelectElement).value);
     this.captionTracks.forEach(({ track }, index) => {
-      track.mode = index === selected ? 'showing' : 'disabled';
+      // `hidden` keeps cue activity available to the custom overlay without asking the user agent
+      // to paint the same captions a second time.
+      track.mode = index === selected ? 'hidden' : 'disabled';
     });
     this.syncActiveCaption();
   };
@@ -876,26 +914,20 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     `;
   }
 
-  private renderControls(): TemplateResult | typeof nothing {
+  private renderControls(posterActive: boolean): TemplateResult | typeof nothing {
     if (this.controls === 'none') return nothing;
     // The first render happens before ref/query directives populate their targets. Gate the
     // affordances from the same platform capabilities as the public methods, then have the methods
     // re-check the concrete target before invoking it.
-    const canFullscreen =
-      typeof HTMLElement.prototype.requestFullscreen === 'function' &&
-      this.ownerDocument.fullscreenEnabled !== false;
-    const documentRef = this.ownerDocument as Document & { pictureInPictureEnabled?: boolean };
-    const canPip =
-      this.controls === 'full' &&
-      typeof HTMLVideoElement.prototype.requestPictureInPicture === 'function' &&
-      documentRef.pictureInPictureEnabled !== false;
+    const canFullscreen = this.canRenderFullscreen();
+    const canPip = this.canRenderPictureInPicture();
     const max = this.duration > 0 ? this.duration : 0;
     const progress = max > 0 ? finiteRange((this.currentTime / max) * 100, 0, 0, 100) : 0;
     return html`
       <div part="controls-overlay">
         <div part="controls">
           <slot name="controls-start"></slot>
-          <span class="icon-button-stack">
+          <span class="icon-button-stack" ?hidden=${posterActive}>
             <button
               type="button"
               data-control="play"
@@ -920,12 +952,18 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
               step="any"
               .value=${String(this.currentTime)}
               aria-label=${this.localize('playbackPosition')}
-              aria-valuetext=${this.localize('avPlayerPosition', undefined, {
-                current: formatTime(this.currentTime, this.effectiveLocale),
-                duration: formatTime(this.duration, this.effectiveLocale),
-              })}
+              aria-describedby="video-progress-description"
+              ?disabled=${max <= 0}
               @input=${this.onTimelineInput}
             >
+            <span id="video-progress-description" class="sr-only">${this.localize(
+              'avPlayerPosition',
+              undefined,
+              {
+                current: formatTime(this.currentTime, this.effectiveLocale),
+                duration: formatTime(this.duration, this.effectiveLocale),
+              },
+            )}</span>
             <span part="timeline-track">
               <span part="timeline-indicator" style=${styleMap({ 'inline-size': `${progress}%` })}></span>
             </span>
@@ -966,7 +1004,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
                     <option
                       value=${String(index)}
                       lang=${language || nothing}
-                      ?selected=${track.mode === 'showing'}
+                      ?selected=${track.mode !== 'disabled'}
                     >${label}</option>
                   `)}
                 </select>
@@ -1023,7 +1061,14 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
 
   override render(): TemplateResult {
     const safePoster = safeNativeMediaSource(this.poster);
-    const label = this.getAttribute('aria-label') || this.title || this.localize('videoPlayerLabel');
+    const explicitHostLabel = hostAriaLabel(this);
+    const hostAlreadyOwnsName = explicitHostLabel !== null || this.hasAttribute('title');
+    const label = explicitHostLabel === ''
+      ? ''
+      : hostAlreadyOwnsName
+        ? this.localize('videoPlayerLabel')
+        : this.title || this.localize('videoPlayerLabel');
+    const posterActive = Boolean(safePoster && this.posterVisible);
     return html`
       <div part="base video-wrapper">
         <video
@@ -1038,7 +1083,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
           poster=${safePoster ?? nothing}
           aria-label=${label}
         ></video>
-        ${safePoster && this.posterVisible
+        ${posterActive
           ? html`<div part="poster-overlay">
               <img src=${safePoster} alt="">
               <span class="icon-button-stack">
@@ -1047,6 +1092,8 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
                   type="button"
                   aria-label=${this.localize('play')}
                   @click=${this.onPosterPlay}
+                  @focus=${this.onControlFocus}
+                  @blur=${this.onControlBlur}
                 ></button>
                 ${this.renderDecorativeIconLayer(html`
                   <slot name="poster-icon">${this.renderIcon('video-poster-play', 'M8 5v14l11-7Z')}</slot>
@@ -1058,7 +1105,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
         ${this.captionText
           ? html`<div part="caption-overlay"><div part="caption">${this.captionText}</div></div>`
           : nothing}
-        ${this.renderControls()}
+        ${this.renderControls(posterActive)}
         <span hidden><slot @slotchange=${this.onSourceSlotChange}></slot></span>
       </div>
     `;

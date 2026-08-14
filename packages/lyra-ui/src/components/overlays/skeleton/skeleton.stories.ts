@@ -6,6 +6,14 @@ const meta: Meta = {
   title: 'Skeleton',
   component: 'lr-skeleton',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'A Web Awesome/Shoelace-compatible loading placeholder, decorative by default. Set `announce` on one meaningful loading owner to add a localized status. `shape` is the canonical geometry axis. An absent label localizes, while any supplied label remains literal.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;
@@ -13,16 +21,14 @@ type Story = StoryObj;
 export const Gallery: Story = {
   render: () => html`
     <div style="display:flex; gap:1rem; align-items:center;">
-      <lr-skeleton label="Loading profile" width="10rem" height="1rem"></lr-skeleton>
+      <lr-skeleton announce label="Loading profile" width="10rem" height="1rem"></lr-skeleton>
       <lr-skeleton
-        .announce=${false}
-        variant="circle"
+        shape="circle"
         width="3rem"
         height="3rem"
       ></lr-skeleton>
       <lr-skeleton
-        .announce=${false}
-        variant="rect"
+        shape="rect"
         effect="sheen"
         width="6rem"
         height="3rem"
@@ -33,7 +39,7 @@ export const Gallery: Story = {
 
 export const CustomLabel: Story = {
   render: () =>
-    html`<lr-skeleton label="Loading chart" width="10rem" height="1rem"></lr-skeleton>`,
+    html`<lr-skeleton announce label="Loading chart" width="10rem" height="1rem"></lr-skeleton>`,
 };
 
 export const RetimedMotion: Story = {

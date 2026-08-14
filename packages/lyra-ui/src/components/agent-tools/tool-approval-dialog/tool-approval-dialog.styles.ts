@@ -110,7 +110,7 @@ export const styles = css`
      treatment would render for one frame between the hover border and the focus ring and read as a
      flicker; focus is this control's real "you are acting on me" state (mirrors lr-textarea's
      identical reasoning for its own [part='textarea']). */
-  :host(:not([pending])) [part='args-editor']:hover {
+  :host(:not([pending])) [part='args-editor']:not([aria-invalid='true']):hover {
     border-color: var(--lr-tool-approval-dialog-hover-border-color, var(--lr-color-brand));
   }
   [part='args-editor'][aria-invalid='true'] {
@@ -156,14 +156,14 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
   }
-  [part='edit-button']:hover {
+  :where([part='edit-button']):not(:disabled):hover {
     background: var(--lr-color-brand-quiet);
   }
   /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
      --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
      than hover in both light and dark themes rather than repeating it. The lr-button-hosted
      Deny/Approve siblings get the equivalent step from lr-button's own styles. */
-  [part='edit-button']:active {
+  :where([part='edit-button']):not(:disabled):active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='edit-button']:disabled {

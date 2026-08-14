@@ -16,13 +16,26 @@ describe('lr-html-viewer', () => {
   });
   it('fetches and sanitizes HTML markup', async () => {
     const original = window.fetch;
-    window.fetch = (() => Promise.resolve(response('<h1>Safe</h1><script>alert(1)</script>'))) as typeof window.fetch;
+    window.fetch = (() => Promise.resolve(response(`
+      <style>@import url(https://example.test/a.css)</style>
+      <h1 style="background:url(https://example.test/bg.png)">Safe</h1>
+      <img src="https://example.test/pixel.png">
+      <a href="https://example.test/nav">link</a>
+      <form action="https://example.test/post"><input><button>send</button></form>
+      <script>alert(1)</script>
+    `))) as typeof window.fetch;
     try {
       const el = (await fixture(html`<lr-html-viewer src="https://example.test/a.html" name="Report"></lr-html-viewer>`)) as LyraHtmlViewer;
       await waitUntil(() => el.shadowRoot!.querySelector('[part="html"] h1') !== null);
       await el.updateComplete;
       expect(el.shadowRoot!.querySelector('[part="html"] h1')!.textContent).to.equal('Safe');
       expect((el.shadowRoot!.querySelector('[part="html"] script')) == null).to.be.true;
+      const surface = el.shadowRoot!.querySelector('[part="html"]')!;
+      expect(surface.querySelectorAll('style,a,form,input,button').length).to.equal(0);
+      expect(surface.querySelector('h1')!.hasAttribute('style')).to.equal(false);
+      expect(surface.querySelector('img')!.hasAttribute('src')).to.equal(false);
+      expect(surface.textContent).to.contain('link');
+      expect(surface.textContent).to.contain('send');
       expect(el.shadowRoot!.querySelector('[part="html"]')!.getAttribute('aria-label')).to.equal('Report');
     } finally { window.fetch = original; }
   });

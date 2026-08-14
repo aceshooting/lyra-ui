@@ -3,9 +3,13 @@ import { css } from "lit";
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part="base"] {
     display: flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     gap: var(--lr-space-m);
     /* overflow-y is paired explicitly (never left implicit) alongside every overflow-x here and
        below: per the CSS overflow spec, pinning one axis to a non-'visible' value forces the
@@ -109,10 +113,7 @@ export const styles = css`
      -- (0,1,0) total, so a consumer's own ::part(step):hover override ((0,1,1)) always wins
      without needing !important (mirrors lr-attachment-trigger's identical fix). */
   :where([part="step"]):hover:where(:not([aria-disabled="true"])) {
-    background: var(
-      --lr-stepper-hover-bg,
-      var(--lr-color-brand-quiet)
-    );
+    background: var(--lr-stepper-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-stepper-hover-color, var(--lr-color-text));
   }
   /* The same brand-quiet fill, mixed further toward --lr-color-mix-partner: a step being pressed
@@ -184,16 +185,26 @@ export const styles = css`
     white-space: nowrap;
   }
   :host([wrap-labels][orientation="vertical"]) [part="step-label"],
-  :host([wrap-labels][data-effective-orientation="vertical"]) [part="step-label"] {
+  :host([wrap-labels][data-effective-orientation="vertical"])
+    [part="step-label"] {
     min-inline-size: 0;
     white-space: normal;
     overflow-wrap: anywhere;
   }
   /* An active breakpoint can temporarily make an authored vertical stepper horizontal. Keep the
      opt-in vertical-only, and let the later effective-axis rule win over the authored-axis rule. */
-  :host([wrap-labels][data-effective-orientation="horizontal"]) [part="step-label"] {
+  :host([wrap-labels][data-effective-orientation="horizontal"])
+    [part="step-label"] {
     min-inline-size: auto;
     white-space: nowrap;
     overflow-wrap: normal;
+  }
+  @media (forced-colors: active) {
+    [part="base"],
+    :host([data-effective-orientation="horizontal"])
+      [part="base"][data-scroll-overflow] {
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
   }
 `;

@@ -61,11 +61,11 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  :where([part='toolbar'] button, [part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version']):hover { background: var(--lr-color-surface-raised); }
+  :where([part='toolbar'] button, [part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version']):where(:hover:not(:disabled)) { background: var(--lr-color-surface-raised); }
   /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
      --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
      than hover in both light and dark themes rather than repeating it. */
-  :where([part='toolbar'] button, [part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version']):active {
+  :where([part='toolbar'] button, [part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version']):where(:active:not(:disabled)) {
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='move-message-up'] { transform: rotate(-90deg); }
@@ -75,16 +75,14 @@ export const styles = css`
     background: var(--lr-prompt-studio-version-selected-bg, var(--lr-color-brand-quiet));
     color: var(--lr-prompt-studio-version-selected-color, var(--lr-color-text));
   }
-  /* Keep the internal pressed-state qualifier inside :where() so consumer ::part(version)
-     rules can still win. The part selector retains the base control's specificity; the pseudo
-     class makes hover/pressed more specific than rest. */
-  [part='version']:where([aria-pressed='true']):hover {
+  /* Compose selected and pointer states without changing the part selector itself. */
+  [part='version']:where([aria-pressed='true']):where(:hover:not(:disabled)) {
     background: var(
       --lr-prompt-studio-version-selected-hover-bg,
       color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
     );
   }
-  [part='version']:where([aria-pressed='true']):active {
+  [part='version']:where([aria-pressed='true']):where(:active:not(:disabled)) {
     background: color-mix(
       in oklab,
       var(

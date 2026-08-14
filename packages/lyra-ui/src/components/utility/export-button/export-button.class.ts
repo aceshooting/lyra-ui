@@ -3,7 +3,7 @@ import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
-import { buildCsv, downloadBlob, type CsvColumn } from './csv.js';
+import { buildCsv, downloadBlob, type LyraCsvColumn } from './csv.js';
 import { styles } from './export-button.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -12,25 +12,25 @@ import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFormatMenuLabel } fr
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type ExportFormat = 'csv' | 'json';
+export type LyraExportFormat = 'csv' | 'json';
 
-export interface ExportFormatDescriptor {
-  /** Stable id carried through `lr-export`. */
-  id: string;
+export interface LyraExportFormatDescriptor {
+  /** Stable format id carried through `lr-export`. */
+  readonly formatId: string;
   /** Consumer-supplied, already-localized menu label. */
-  label: string;
+  readonly label: string;
   /** Optional consumer-supplied secondary menu text. */
-  description?: string;
+  readonly description?: string;
   /** Optional metadata for the external export handler. */
-  extension?: string;
+  readonly extension?: string;
 }
 
-export type ExportFormatOption = ExportFormat | ExportFormatDescriptor;
+export type LyraExportFormatOption = LyraExportFormat | LyraExportFormatDescriptor;
 
 export interface LyraExportButtonEventMap {
-  'lr-export': CustomEvent<{ format: string }>;
-  'lr-export-complete': CustomEvent<{ format: ExportFormat }>;
-  'lr-export-error': CustomEvent<{ format: ExportFormat; error: unknown }>;
+  'lr-export': CustomEvent<{ readonly format: string }>;
+  'lr-export-complete': CustomEvent<{ readonly format: LyraExportFormat }>;
+  'lr-export-error': CustomEvent<{ readonly format: LyraExportFormat; readonly error: unknown }>;
   'lr-show': CustomEvent<undefined>;
   'lr-hide': CustomEvent<undefined>;
 }
@@ -70,25 +70,65 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  @property({ attribute: false }) rows: Record<string, unknown>[] = [];
+  static override properties = {
+    rows: { attribute: false, noAccessor: true },
+    columns: { attribute: false, noAccessor: true },
+    formats: { attribute: false, noAccessor: true },
+  };
+
+  private _rows: readonly Readonly<Record<string, unknown>>[] = Object.freeze([]);
+
+  /** Shallow frozen row snapshots. Nested cell values remain caller-owned opaque data. */
+  get rows(): readonly Readonly<Record<string, unknown>>[] {
+    return this._rows;
+  }
+
+  set rows(next: readonly Readonly<Record<string, unknown>>[]) {
+    const previous = this._rows;
+    const source = Array.isArray(next) ? next : [];
+    this._rows = Object.freeze(source.map((row) => Object.freeze({ ...row })));
+    this.requestUpdate('rows', previous);
+  }
+
   /** Column allow-list (and CSV header labels) for both export formats. Left
    *  at its default empty array, both formats fall back to the union of the
    *  rows' own keys instead (see `effectiveColumns()`), rather than CSV
    *  degrading to a blank file while only JSON had a fallback. */
-  @property({ attribute: false }) columns: CsvColumn[] = [];
+  private _columns: readonly Readonly<LyraCsvColumn>[] = Object.freeze([]);
+
+  get columns(): readonly Readonly<LyraCsvColumn>[] {
+    return this._columns;
+  }
+
+  set columns(next: readonly LyraCsvColumn[]) {
+    const previous = this._columns;
+    const source = Array.isArray(next) ? next : [];
+    this._columns = Object.freeze(source.map((column) => Object.freeze({ ...column })));
+    this.requestUpdate('columns', previous);
+  }
+
   @property() filename = 'export';
-  @property({ attribute: false }) formats: ExportFormatOption[] = ['csv'];
+  private _formats: readonly LyraExportFormatOption[] = Object.freeze(['csv']);
+
+  get formats(): readonly LyraExportFormatOption[] {
+    return this._formats;
+  }
+
+  set formats(next: readonly LyraExportFormatOption[]) {
+    const previous = this._formats;
+    const source = Array.isArray(next) ? next : [];
+    this._formats = Object.freeze(
+      source.map((format) => (typeof format === 'string' ? format : Object.freeze({ ...format }))),
+    );
+    this.requestUpdate('formats', previous);
+  }
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Controlled busy state for async/server-generated exports. */
   @property({ type: Boolean, reflect: true }) loading = false;
-  /** Visible trigger button text. It also feeds the format menu's `aria-label`
-   *  when no host `aria-label` supplies a more specific accessible name.
-   *  Left at its default English `'Export'`, the rendered text instead
-   *  comes from `this.localize('exportButtonLabel', ...)` -- override-able
-   *  via `.strings`/`registerLyraLocale()` -- same convention as
-   *  `lr-attachment-chip`'s `removeLabel`/`retryLabel`. Set this
-   *  attribute explicitly for a one-off override that always wins. */
-  @property() label = 'Export';
+  /** Visible trigger button text. It also feeds the format menu's `aria-label` when no host
+   * `aria-label` supplies a more specific name. `undefined` uses the localized default; every
+   * supplied string, including `''` and `'Export'`, is caller-owned. */
+  @property() label?: string;
   /** Accessible name forwarded from the host to the native trigger button.
    * When unset, the trigger's visible `label` provides its name. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
@@ -255,7 +295,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       const active = activeElementIn(this.shadowRoot);
       const items = this.menuItemEls();
       const index = items.indexOf(active as HTMLButtonElement);
-      const previousFormats = changed.get('formats') as ExportFormatOption[] | undefined;
+      const previousFormats = changed.get('formats') as readonly LyraExportFormatOption[] | undefined;
       const previous = previousFormats?.[index];
       this.formatsFocusSnapshot =
         index >= 0 && previous ? { index, id: this.formatId(previous) } : undefined;
@@ -263,7 +303,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     if (this.open && this.formats.length <= 1) {
       const previousOpen = changed.get('open');
       this.forcedMenuClose =
-        changed.has('formats') && (changed.get('formats') as ExportFormatOption[] | undefined)?.length
+        changed.has('formats') && (changed.get('formats') as readonly LyraExportFormatOption[] | undefined)?.length
           ? 'formats'
           : previousOpen === false || previousOpen === undefined
             ? 'invalid-open'
@@ -343,7 +383,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    *  proper header + data file instead of blank lines. Both `rowsForExport()`
    *  and the CSV branch of `doExport()` share this same fallback, rather than
    *  only the JSON path having one. */
-  private effectiveColumns(): CsvColumn[] {
+  private effectiveColumns(): readonly Readonly<LyraCsvColumn>[] {
     if (this.columns.length > 0) return this.columns;
     const keys = new Set<string>();
     for (const row of this.rows) {
@@ -362,20 +402,20 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     });
   }
 
-  private formatId(format: ExportFormatOption): string {
-    return typeof format === 'string' ? format : format.id;
+  private formatId(format: LyraExportFormatOption): string {
+    return typeof format === 'string' ? format : format.formatId;
   }
 
-  private formatLabel(format: ExportFormatOption): string {
+  private formatLabel(format: LyraExportFormatOption): string {
     return typeof format === 'string' ? format.toUpperCase() : format.label;
   }
 
-  private doExport(formatOption: ExportFormatOption): void {
+  private doExport(formatOption: LyraExportFormatOption): void {
     if (this.disabled || this.loading) return;
     this.closeMenu();
     this.triggerEl?.focus();
     const format = this.formatId(formatOption);
-    const ev = this.emit('lr-export', { format }, { cancelable: true });
+    const ev = this.emit('lr-export', Object.freeze({ format }), { cancelable: true });
     if (ev.defaultPrevented) return;
 
     if (format !== 'csv' && format !== 'json') {
@@ -399,9 +439,9 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
           this.ownerDocument,
         );
       }
-      this.emit('lr-export-complete', { format });
+      this.emit('lr-export-complete', Object.freeze({ format }));
     } catch (error) {
-      this.emit('lr-export-error', { format, error });
+      this.emit('lr-export-error', Object.freeze({ format, error }));
     }
   }
 
@@ -430,7 +470,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    *  built-in default it instead routes through `this.localize()` so a locale/`.strings`
    *  override applies without requiring `label` itself to be set. */
   private get effectiveLabel(): string {
-    return this.localize('exportButtonLabel', this.label === 'Export' ? undefined : this.label);
+    return this.label === undefined ? this.localize('exportButtonLabel') : this.label;
   }
 
   override render(): TemplateResult {

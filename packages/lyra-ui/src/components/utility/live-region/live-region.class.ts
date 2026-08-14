@@ -11,7 +11,7 @@ import {
 } from '../../../internal/announcer.js';
 import { styles } from './live-region.styles.js';
 
-export type LiveRegionMode = 'polite' | 'assertive';
+export type LyraLiveRegionMode = 'polite' | 'assertive';
 
 /**
  * `<lr-live-region>` — a visually-hidden ARIA live region that throttles
@@ -83,7 +83,7 @@ export class LyraLiveRegion extends LyraElement {
    *  force-announces in the same synchronous turn -- e.g. a stream-status
    *  transition -- gets the new urgency and the new text landing together,
    *  rather than the text beating Lit's re-render to the DOM. */
-  @property({ reflect: true }) mode: LiveRegionMode = 'polite';
+  @property({ reflect: true }) mode: LyraLiveRegionMode = 'polite';
 
   /** Throttle window in ms — see `Announcer` in `internal/announcer.ts`. */
   @property({ type: Number, attribute: 'throttle-ms' }) throttleMs = 500;
@@ -94,7 +94,7 @@ export class LyraLiveRegion extends LyraElement {
   // The shared light-DOM region this element currently holds a reference on,
   // and the politeness it was acquired for.
   private sink?: AnnouncementSink;
-  private sinkPoliteness?: LiveRegionMode;
+  private sinkPoliteness?: LyraLiveRegionMode;
   // A flush can land before `firstUpdated()` has ever run -- e.g. a
   // consumer that creates+appends the element and calls `announce()`
   // synchronously right after, mirroring how `toaster.ts` mounts a region

@@ -5,6 +5,7 @@ import "./accordion.js";
 import "./accordion-item.js";
 import type { LyraDetails } from "./details.js";
 import type { LyraAccordion } from "./accordion.js";
+import type { LyraAccordionItem } from "./accordion-item.js";
 import { styles as detailsStyles } from "./details.styles.js";
 import { styles as accordionStyles } from "./accordion.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
@@ -67,122 +68,87 @@ it("does not toggle for an interactive summary child created in another realm", 
   }
 });
 
-it("closes sibling panels when multiple is false", async () => {
-  const el = await fixture(html`<lr-accordion multiple="false">
-    <lr-accordion-item open summary="One">A</lr-accordion-item>
-    <lr-accordion-item summary="Two">B</lr-accordion-item>
+it("closes sibling items in single-collapsible mode", async () => {
+  const el = await fixture(html`<lr-accordion mode="single-collapsible">
+    <lr-accordion-item expanded label="One">A</lr-accordion-item>
+    <lr-accordion-item label="Two">B</lr-accordion-item>
   </lr-accordion>`);
-  const panels = [...el.querySelectorAll("lr-accordion-item")] as LyraDetails[];
-  panels[1].open = true;
-  panels[1].dispatchEvent(
-    new CustomEvent("lr-toggle", {
-      detail: { open: true },
-      bubbles: true,
-      composed: true,
-    })
-  );
+  const panels = [...el.querySelectorAll("lr-accordion-item")] as LyraAccordionItem[];
+  await panels[1].expand();
   await Promise.all(panels.map((panel) => panel.updateComplete));
-  expect(panels[0].open).to.be.false;
+  expect(panels[0].expanded).to.be.false;
 });
 
-it("reconciles multiple initially-open panels when multiple is false", async () => {
-  const el = await fixture(html`<lr-accordion multiple="false">
-    <lr-accordion-item open summary="One">A</lr-accordion-item>
-    <lr-accordion-item open summary="Two">B</lr-accordion-item>
+it("reconciles multiple initially-expanded items in a single mode", async () => {
+  const el = await fixture(html`<lr-accordion mode="single-collapsible">
+    <lr-accordion-item expanded label="One">A</lr-accordion-item>
+    <lr-accordion-item expanded label="Two">B</lr-accordion-item>
   </lr-accordion>`);
-  const panels = [...el.querySelectorAll("lr-accordion-item")] as LyraDetails[];
+  const panels = [...el.querySelectorAll("lr-accordion-item")] as LyraAccordionItem[];
   await Promise.all(panels.map((panel) => panel.updateComplete));
 
-  expect(panels.map((panel) => panel.open)).to.deep.equal([true, false]);
+  expect(panels.map((panel) => panel.expanded)).to.deep.equal([true, false]);
 });
 
-it("reconciles open panels when multiple changes from true to false", async () => {
-  const el = (await fixture(html`<lr-accordion multiple>
-    <lr-accordion-item open summary="One">A</lr-accordion-item>
-    <lr-accordion-item open summary="Two">B</lr-accordion-item>
+it("reconciles expanded items when mode changes from multiple to single", async () => {
+  const el = (await fixture(html`<lr-accordion mode="multiple">
+    <lr-accordion-item expanded label="One">A</lr-accordion-item>
+    <lr-accordion-item expanded label="Two">B</lr-accordion-item>
   </lr-accordion>`)) as LyraAccordion;
-  el.multiple = false;
+  el.mode = "single-collapsible";
   await el.updateComplete;
-  const panels = [...el.querySelectorAll("lr-accordion-item")] as LyraDetails[];
+  const panels = [...el.querySelectorAll("lr-accordion-item")] as LyraAccordionItem[];
   await Promise.all(panels.map((panel) => panel.updateComplete));
 
-  expect(panels.map((panel) => panel.open)).to.deep.equal([true, false]);
+  expect(panels.map((panel) => panel.expanded)).to.deep.equal([true, false]);
 });
 
 it("reconciles accordion listener ownership when panels are appended, removed, or moved", async () => {
-  const first = await fixture(html`<lr-accordion multiple="false">
-    <lr-accordion-item open summary="One">A</lr-accordion-item>
+  const first = await fixture(html`<lr-accordion mode="single-collapsible">
+    <lr-accordion-item expanded label="One">A</lr-accordion-item>
   </lr-accordion>`);
-  const second = await fixture(html`<lr-accordion multiple="false">
-    <lr-accordion-item open summary="Other">Other</lr-accordion-item>
+  const second = await fixture(html`<lr-accordion mode="single-collapsible">
+    <lr-accordion-item expanded label="Other">Other</lr-accordion-item>
   </lr-accordion>`);
-  const original = first.querySelector("lr-accordion-item") as LyraDetails;
-  const appended = document.createElement("lr-accordion-item") as LyraDetails;
-  appended.summary = "Two";
+  const original = first.querySelector("lr-accordion-item") as LyraAccordionItem;
+  const appended = document.createElement("lr-accordion-item") as LyraAccordionItem;
+  appended.label = "Two";
   first.append(appended);
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  appended.open = true;
-  appended.dispatchEvent(
-    new CustomEvent("lr-toggle", {
-      detail: { open: true },
-      bubbles: true,
-      composed: true,
-    })
-  );
-  expect(original.open).to.be.false;
+  await appended.expand();
+  expect(original.expanded).to.be.false;
 
   const secondSibling = second.querySelector(
     "lr-accordion-item"
-  ) as LyraDetails;
+  ) as LyraAccordionItem;
   second.append(appended);
-  original.open = true;
-  secondSibling.open = true;
+  original.expanded = true;
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  appended.open = true;
-  appended.dispatchEvent(
-    new CustomEvent("lr-toggle", {
-      detail: { open: true },
-      bubbles: true,
-      composed: true,
-    })
-  );
-  expect(original.open).to.be.true;
-  expect(secondSibling.open).to.be.false;
+  await appended.expand();
+  expect(original.expanded).to.be.true;
+  expect(secondSibling.expanded).to.be.false;
 
   appended.remove();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  secondSibling.open = true;
-  appended.dispatchEvent(
-    new CustomEvent("lr-toggle", {
-      detail: { open: true },
-      bubbles: true,
-      composed: true,
-    })
-  );
-  expect(secondSibling.open).to.be.true;
+  secondSibling.expanded = true;
+  await appended.expand();
+  expect(secondSibling.expanded).to.be.true;
 });
 
 it("does not treat panels owned by a nested accordion as direct siblings", async () => {
   const outer = await fixture(html`<lr-accordion>
-    <lr-accordion-item open summary="Outer">Outer</lr-accordion-item>
+    <lr-accordion-item expanded label="Outer">Outer</lr-accordion-item>
     <lr-accordion>
-      <lr-accordion-item summary="Inner">Inner</lr-accordion-item>
+      <lr-accordion-item label="Inner">Inner</lr-accordion-item>
     </lr-accordion>
   </lr-accordion>`);
   const panels = [
     ...outer.querySelectorAll("lr-accordion-item"),
-  ] as LyraDetails[];
-  panels[1].open = true;
-  panels[1].dispatchEvent(
-    new CustomEvent("lr-toggle", {
-      detail: { open: true },
-      bubbles: true,
-      composed: true,
-    })
-  );
-  expect(panels[0].open).to.be.true;
+  ] as LyraAccordionItem[];
+  await panels[1].expand();
+  expect(panels[0].expanded).to.be.true;
 });
 
 it('suppresses the localized "Details" fallback once rich content is slotted into summary', async () => {
@@ -692,6 +658,65 @@ describe("Web Awesome disclosure surface", () => {
     expect(
       (two.shadowRoot!.querySelector('[part~="base"]') as HTMLDetailsElement).name
     ).to.equal("faq");
+  });
+
+  it("reconciles a live name change with changed-disclosure-wins semantics", async () => {
+    const wrapper = await fixture(html`<div>
+      <lr-details id="rename-first" name="faq" summary="One" open style="--hide-duration: 1ms">One</lr-details>
+      <lr-details id="rename-winner" name="other" summary="Two" open>Two</lr-details>
+    </div>`);
+    const first = wrapper.querySelector<LyraDetails>('#rename-first')!;
+    const winner = wrapper.querySelector<LyraDetails>('#rename-winner')!;
+    const peerToggle = oneEvent(first, 'lr-toggle') as Promise<CustomEvent<{ open: boolean; source: string }>>;
+
+    winner.name = 'faq';
+    await winner.updateComplete;
+
+    expect(first.open).to.be.false;
+    expect(winner.open).to.be.true;
+    expect(winner.name).to.equal('faq');
+    expect((await peerToggle).detail).to.deep.equal({ open: false, source: 'peer' });
+  });
+
+  it("rejects a live name change when a conflicting peer vetoes its close", async () => {
+    const wrapper = await fixture(html`<div>
+      <lr-details name="locked" summary="Locked" open>Locked</lr-details>
+      <lr-details name="other" summary="Candidate" open>Candidate</lr-details>
+    </div>`);
+    const [locked, candidate] = [...wrapper.querySelectorAll('lr-details')] as LyraDetails[];
+    locked.addEventListener('lr-hide', (event) => event.preventDefault());
+
+    candidate.name = 'locked';
+    await candidate.updateComplete;
+
+    expect(locked.open).to.be.true;
+    expect(candidate.open).to.be.true;
+    expect(candidate.name).to.equal('other');
+    expect(candidate.getAttribute('name')).to.equal('other');
+  });
+
+  it("reconciles open named disclosures after moving into another shadow root", async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div>
+      <div id="details-root"></div>
+      <lr-details id="details-moving" name="faq" summary="Moving" open>Moving</lr-details>
+    </div>`);
+    const host = wrapper.querySelector<HTMLElement>('#details-root')!;
+    const shadow = host.attachShadow({ mode: 'open' });
+    const incumbent = document.createElement('lr-details') as LyraDetails;
+    incumbent.name = 'faq';
+    incumbent.summary = 'Incumbent';
+    incumbent.open = true;
+    incumbent.style.setProperty('--hide-duration', '1ms');
+    shadow.append(incumbent);
+    await incumbent.updateComplete;
+    const moving = wrapper.querySelector<LyraDetails>('#details-moving')!;
+
+    shadow.append(moving);
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    await Promise.all([incumbent.updateComplete, moving.updateComplete]);
+
+    expect(incumbent.open).to.be.false;
+    expect(moving.open).to.be.true;
   });
 
   it("keeps a named group single-open when an existing peer vetoes its hide", async () => {

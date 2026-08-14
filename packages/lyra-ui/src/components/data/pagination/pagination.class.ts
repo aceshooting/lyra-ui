@@ -13,23 +13,22 @@ import { styles } from './pagination.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_paginationPage, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_previous, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_paginationPage, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_previous, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-/** The canonical size ladder. Kept as a local name so existing imports keep resolving; the
- *  `size` property itself accepts the upstream `small`/`medium`/`large` spellings too. */
-export type LyraPaginationSize = LyraSizeStep;
 /** `standard` renders the numbered page list; `compact` collapses it to the page-jump field. */
 export type LyraPaginationFormat = 'standard' | 'compact';
-/** The shared fill vocabulary. Kept as a local name so existing imports keep resolving. */
-export type LyraPaginationAppearance = LyraAppearance;
+
+function normalizePaginationFormat(value: unknown): LyraPaginationFormat {
+  return value === 'compact' ? 'compact' : 'standard';
+}
 
 export interface LyraPaginationChangeDetail {
-  page: number;
-  pageSize: number;
+  readonly page: number;
+  readonly pageSize: number;
 }
 
 export interface LyraPaginationEventMap {
@@ -44,7 +43,7 @@ type PaginationItem =
   | { readonly type: 'page'; readonly page: number }
   | { readonly type: 'gap'; readonly target: number };
 
-/** Upper bound on rendered page slots. `pageCount` is derived from consumer-supplied item counts
+/** Upper bound on rendered page slots. `totalPages` is derived from consumer-supplied item counts
  *  and can be arbitrarily large (a million items at one per page), so the list length is capped
  *  rather than trusted; `siblingCount`/`boundaryCount` are clamped to keep it reachable. */
 const MAX_PAGE_SLOTS = 101;
@@ -66,18 +65,18 @@ function pageSequence(from: number, to: number): number[] {
  */
 function paginationItems(
   current: number,
-  pageCount: number,
+  totalPages: number,
   siblingCount: number,
   boundaryCount: number
 ): PaginationItem[] {
-  if (pageCount <= 0) return [];
+  if (totalPages <= 0) return [];
   const asPage = (page: number): PaginationItem => ({ type: 'page', page });
   // Both boundaries, both sibling runs, the current page, and one slot per potential gap.
   const budget = Math.min(boundaryCount * 2 + siblingCount * 2 + 3, MAX_PAGE_SLOTS);
-  if (pageCount <= budget) return pageSequence(1, pageCount).map(asPage);
+  if (totalPages <= budget) return pageSequence(1, totalPages).map(asPage);
 
   const windowFloor = boundaryCount + 1; // first page after the leading boundary
-  const windowCeiling = pageCount - boundaryCount; // last page before the trailing boundary
+  const windowCeiling = totalPages - boundaryCount; // last page before the trailing boundary
   let from = current - siblingCount;
   let to = current + siblingCount;
   // Push the window back inside the boundaries, spending the overflow on the opposite side rather
@@ -120,7 +119,7 @@ function paginationItems(
           } as const,
         ]
       : []),
-    ...pageSequence(pageCount - boundaryCount + 1, pageCount).map(asPage),
+    ...pageSequence(totalPages - boundaryCount + 1, totalPages).map(asPage),
   ];
 }
 
@@ -130,17 +129,21 @@ function paginationItems(
  * item-range summary, and a compact layout that swaps the list for an
  * editable page jump.
  *
- * The component never mutates `page`. Activating a control emits
- * `lr-page-change`; the consumer applies the requested page after its own
- * routing or data-fetch decision. Once the `page` property changes, a polite
+ * The component never mutates `page`. Button and compact-field activation emits
+ * `lr-page-change`; link-mode anchors navigate without either page-change event. The consumer
+ * applies a button/field request after its own routing or data-fetch decision. Once the `page` property changes, a polite
  * live region announces the applied page and focus follows the newly current
  * page control (or the compact page field).
+ * Public `focus()`, `blur()`, and `click()` resolve the primary control for the active format:
+ * the applied page control in standard format, or the page-jump input in compact format.
  *
  * @customElement lr-pagination
- * @event lr-before-page-change - Fired before a valid page request. `detail: { page, pageSize }`.
- *   Cancelable; vetoing it suppresses `lr-page-change`.
- * @event lr-page-change - Fired when a user requests a valid page. `detail: { page, pageSize }`.
- *   The component remains controlled and never mutates `page` itself.
+ * @event lr-before-page-change - Fired before a valid button or compact-field page request.
+ *   `detail: { page, pageSize }`. Cancelable; vetoing it suppresses `lr-page-change`. Link-mode
+ *   anchors navigate without emitting.
+ * @event lr-page-change - Fired when a button or compact field requests a valid page.
+ *   `detail: { page, pageSize }`. The component remains controlled and never mutates `page`
+ *   itself; link-mode anchors navigate without emitting.
  * @slot first-icon - Replacement for the first-page icon.
  * @slot previous-icon - Replacement for the previous-page icon.
  * @slot next-icon - Replacement for the next-page icon.
@@ -219,6 +222,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     item: LYRA_DEFAULT_item,
     items: LYRA_DEFAULT_items,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     next: LYRA_DEFAULT_next,
     open: LYRA_DEFAULT_open,
     paginationApplied: LYRA_DEFAULT_paginationApplied,
@@ -231,6 +236,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     paginationSummary: LYRA_DEFAULT_paginationSummary,
     previous: LYRA_DEFAULT_previous,
     restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -256,9 +263,19 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
    *  `small`/`medium`/`large` spellings are accepted as exact synonyms of `s`/`m`/`l`, so
    *  migrating from either is a tag rename with no attribute rewrite. */
   @property({ reflect: true }) size: LyraSize = 'm';
+  private _format: LyraPaginationFormat = 'standard';
   /** `standard` renders the numbered page list; `compact` swaps it for the editable page jump,
-   *  which fits a toolbar or a card footer where a full list would not. */
-  @property({ reflect: true }) format: LyraPaginationFormat = 'standard';
+   *  which fits a toolbar or a card footer where a full list would not. Unknown runtime values
+   *  normalize to `standard`. */
+  @property({ reflect: true })
+  get format(): LyraPaginationFormat {
+    return this._format;
+  }
+  set format(value: LyraPaginationFormat) {
+    const previous = this._format;
+    this._format = normalizePaginationFormat(value);
+    this.requestUpdate('format', previous);
+  }
   /** Pages shown either side of the current page in the numbered list. */
   @property({ type: Number, attribute: 'sibling-count' }) siblingCount = 2;
   /** Pages always pinned at the start and at the end of the numbered list. */
@@ -333,19 +350,26 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     super.disconnectedCallback();
   }
 
-  /** Focus the editable page-jump input. */
+  /** The primary page control for the active format. */
+  private get primaryControl(): HTMLElement | undefined {
+    return this.format === 'compact'
+      ? this.pageInput
+      : (this.renderRoot.querySelector<HTMLElement>('[part~="page-current"]') ?? undefined);
+  }
+
+  /** Focus the current-page button/link, or the editable page-jump input in compact format. */
   override focus(options?: FocusOptions): void {
-    this.pageInput?.focus(options);
+    this.primaryControl?.focus(options);
   }
 
-  /** Blur the editable page-jump input. */
+  /** Blur the primary page control for the active format. */
   override blur(): void {
-    this.pageInput?.blur();
+    this.primaryControl?.blur();
   }
 
-  /** Forward host activation to the primary editable page control. */
+  /** Forward host activation to the primary page control for the active format. */
   override click(): void {
-    if (!this.controlsDisabled) this.pageInput?.click();
+    if (!this.controlsDisabled) this.primaryControl?.click();
   }
 
   /** Read-time-safe view of `total` -- non-negative, finite, truncated to a whole item count. */
@@ -358,28 +382,27 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     return finiteCount(this.pageSize);
   }
 
-  /** Total page count derived from `total` and `pageSize`. */
-  get pageCount(): number {
+  /** Private total-page calculation used by rendering and navigation. */
+  private get calculatedTotalPages(): number {
     if (this.normalizedTotalItems === 0 || this.normalizedPageSize === 0) return 0;
     return Math.ceil(this.normalizedTotalItems / this.normalizedPageSize);
   }
 
-  /** The total number of pages, derived from `total` and `pageSize`. This upstream-compatible
-   *  spelling aliases the established `pageCount` getter. */
+  /** The total number of pages, derived from `total` and `pageSize`. */
   get totalPages(): number {
-    return this.pageCount;
+    return this.calculatedTotalPages;
   }
 
-  /** Read-time-safe view of the controlled `page` property, clamped to `[1, pageCount]` (the
+  /** Read-time-safe view of the controlled `page` property, clamped to `[1, totalPages]` (the
    *  page count itself depending on the now-safe `total`/`pageSize` above) -- never mutates
    *  `page` itself, matching this component's fully controlled contract. */
   private get currentPage(): number {
-    if (this.pageCount === 0) return 0;
-    return finiteInteger(this.page, 1, 1, this.pageCount);
+    if (this.calculatedTotalPages === 0) return 0;
+    return finiteInteger(this.page, 1, 1, this.calculatedTotalPages);
   }
 
   private get controlsDisabled(): boolean {
-    return this.disabled || this.loading || this.pageCount === 0;
+    return this.disabled || this.loading || this.calculatedTotalPages === 0;
   }
 
   /** Read-time-safe view of `siblingCount`, clamped so the rendered list stays bounded. */
@@ -411,7 +434,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
    * controls as anchors without invoking a consumer callback or exposing an `href`. */
   private pageLink(page: number, inactive: boolean): { href: string | null; renderAnchor: boolean } {
     if (!this.hasHrefTemplate) return { href: null, renderAnchor: false };
-    if (inactive || page < 1 || page > this.pageCount) {
+    if (inactive || page < 1 || page > this.calculatedTotalPages) {
       return { href: null, renderAnchor: true };
     }
     const href = this.pageHref(page);
@@ -429,7 +452,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   private summaryText(): string {
     const total = this.normalizedTotalItems;
     const itemLabel = this.itemLabel || this.localize(total === 1 ? 'item' : 'items');
-    if (this.pageCount === 0) {
+    if (this.calculatedTotalPages === 0) {
       return this.localize('paginationEmptySummary', undefined, {
         total: this.formatNumber(0),
         itemLabel,
@@ -449,13 +472,13 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     super.willUpdate(changed);
     setCustomState(this.internals, 'disabled', this.disabled);
     if (changed.has('page') || changed.has('pageSize') || changed.has('total')) {
-      this.draftPage = this.pageCount === 0 ? '' : String(this.currentPage);
+      this.draftPage = this.calculatedTotalPages === 0 ? '' : String(this.currentPage);
       this.invalidDraft = false;
     }
-    if (this.initialized && changed.has('page') && this.pageCount > 0) {
+    if (this.initialized && changed.has('page') && this.calculatedTotalPages > 0) {
       this.liveText = this.localize('paginationApplied', undefined, {
         page: this.formatNumber(this.currentPage),
-        totalPages: this.formatNumber(this.pageCount),
+        totalPages: this.formatNumber(this.calculatedTotalPages),
       });
       // Announced from the computation, not from a rendered text change: the shared region appends
       // each announcement as its own node, so returning to a page already announced is read again
@@ -485,18 +508,18 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   private validRequestedPage(value: string): number | null {
     if (value.trim() === '') return null;
     const page = Number(value);
-    if (!Number.isInteger(page) || page < 1 || page > this.pageCount) return null;
+    if (!Number.isInteger(page) || page < 1 || page > this.calculatedTotalPages) return null;
     return page;
   }
 
   private requestPage(page: number): void {
-    if (this.controlsDisabled || page === this.currentPage || page < 1 || page > this.pageCount) {
+    if (this.controlsDisabled || page === this.currentPage || page < 1 || page > this.calculatedTotalPages) {
       return;
     }
     const focusOrigin = deepActiveElementIn(this.ownerDocument);
-    const detail = { page, pageSize: this.normalizedPageSize };
+    const detail: LyraPaginationChangeDetail = Object.freeze({ page, pageSize: this.normalizedPageSize });
     if (this.emit('lr-before-page-change', detail, { cancelable: true }).defaultPrevented) {
-      this.draftPage = this.pageCount === 0 ? '' : String(this.currentPage);
+      this.draftPage = this.calculatedTotalPages === 0 ? '' : String(this.currentPage);
       this.invalidDraft = false;
       return;
     }
@@ -504,7 +527,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     this.pendingFocusOrigin = focusOrigin;
     this.emit('lr-page-change', detail);
     // A controlled input reflects the applied property again after a request.
-    this.draftPage = this.pageCount === 0 ? '' : String(this.currentPage);
+    this.draftPage = this.calculatedTotalPages === 0 ? '' : String(this.currentPage);
     this.invalidDraft = false;
   }
 
@@ -545,7 +568,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     const label = isPrevious
       ? this.localizedProperty('previous', 'Previous', this.previousLabel)
       : this.localizedProperty('next', 'Next', this.nextLabel);
-    const spent = isPrevious ? current <= 1 : current >= this.pageCount;
+    const spent = isPrevious ? current <= 1 : current >= this.calculatedTotalPages;
     const target = isPrevious ? current - 1 : current + 1;
     const inactive = this.controlsDisabled || spent;
     const { href, renderAnchor } = this.pageLink(target, inactive);
@@ -587,8 +610,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     const label = isFirst
       ? this.localizedProperty('paginationFirstPage', 'First page', this.firstLabel)
       : this.localizedProperty('paginationLastPage', 'Last page', this.lastLabel);
-    const spent = isFirst ? current <= 1 : current >= this.pageCount;
-    const target = isFirst ? 1 : this.pageCount;
+    const spent = isFirst ? current <= 1 : current >= this.calculatedTotalPages;
+    const target = isFirst ? 1 : this.calculatedTotalPages;
     const inactive = this.controlsDisabled || spent;
     const { href, renderAnchor } = this.pageLink(target, inactive);
     const part = isFirst ? 'button first-button' : 'button last-button';
@@ -694,7 +717,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   private renderPageList(): TemplateResult {
     const items = paginationItems(
       this.currentPage,
-      this.pageCount,
+      this.calculatedTotalPages,
       this.normalizedSiblingCount,
       this.normalizedBoundaryCount
     );
@@ -717,7 +740,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
         type="number"
         inputmode="numeric"
         min="1"
-        max=${Math.max(1, this.pageCount)}
+        max=${Math.max(1, this.calculatedTotalPages)}
         step="1"
         required
         aria-label=${pageLabel}
@@ -730,12 +753,12 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
         @focus=${this.onControlFocus}
         @blur=${this.onControlBlur}
       />
-      <span part="page-count" aria-hidden="true"> / ${this.formatNumber(this.pageCount)}</span>
+      <span part="page-count" aria-hidden="true"> / ${this.formatNumber(this.calculatedTotalPages)}</span>
     </span>`;
   }
 
   override render(): TemplateResult | typeof nothing {
-    if (this.hideSinglePage && this.pageCount <= 1) return nothing;
+    if (this.hideSinglePage && this.calculatedTotalPages <= 1) return nothing;
     const navigationLabel = this.accessibleLabel || this.label || this.localize('paginationLabel');
 
     return html`

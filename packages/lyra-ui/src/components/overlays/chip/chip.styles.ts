@@ -12,15 +12,15 @@ export const styles = css`
        everywhere in the library. These are the 'neutral' values: neutral
        deliberately opts out of the semantic grid's own neutral row (see the
        class doc) and reads as a plain bordered surface instead. */
-    --lr-chip-accent: var(--lr-color-text);
-    --lr-chip-bg: var(--lr-color-surface);
-    --lr-chip-border: var(--lr-color-border);
+    --_lr-chip-accent: var(--lr-color-text);
+    --_lr-chip-bg: var(--lr-color-surface);
+    --_lr-chip-border: var(--lr-color-border);
     /* The medium defaults exactly reproduce the original fixed chip treatment. */
-    --lr-chip-font-size: var(--lr-font-size-sm);
-    --lr-chip-padding-block: var(--lr-size-0-25rem);
-    --lr-chip-padding-inline: var(--lr-space-s);
-    --lr-chip-gap: var(--lr-space-xs);
-    --lr-chip-icon-size: var(--lr-font-size-sm);
+    --_lr-chip-font-size: var(--lr-font-size-sm);
+    --_lr-chip-padding-block: var(--lr-size-0-25rem);
+    --_lr-chip-padding-inline: var(--lr-space-s);
+    --_lr-chip-gap: var(--lr-space-xs);
+    --_lr-chip-icon-size: var(--lr-font-size-sm);
     /* Doesn't vary by size tier, so it's declared once here rather than re-assigned per
        :host([size='…']) block -- same precedent as lr-button's --lr-button-radius. Consumed on
        both [part='base'] and [part='remove-button'] below so a consumer retuning the chip's
@@ -28,10 +28,10 @@ export const styles = css`
        The rounded rectangle is the default and the pill is opt-in via [pill] below, matching
        lr-badge/lr-tag: while this was unconditionally --lr-radius-pill, a 'pill' attribute would
        have been indistinguishable from its own absence. */
-    --lr-chip-radius: var(--lr-radius);
+    --_lr-chip-radius: var(--lr-radius);
     /* Component density floor. Interactive controls also enforce the shared
        --lr-icon-button-size hit target; non-interactive display chips get no floor. */
-    --lr-chip-min-height: var(--lr-size-1-5rem);
+    --_lr-chip-min-height: var(--lr-size-1-5rem);
     /* --lr-chip-height is intentionally NOT declared here. It is a consumer-facing exact-height
        escape hatch consumed only through the var() fallbacks on [part='base'] below; declaring
        any value for it (even 'auto') would make those fallback arms unreachable and turn
@@ -40,7 +40,7 @@ export const styles = css`
   }
 
   :host([pill]) {
-    --lr-chip-radius: var(--lr-radius-pill);
+    --_lr-chip-radius: var(--lr-radius-pill);
   }
 
   :host([disabled]) {
@@ -48,51 +48,51 @@ export const styles = css`
   }
 
   :host([size='3xs']) {
-    --lr-chip-font-size: var(--lr-font-size-3xs);
-    --lr-chip-padding-block: 0;
+    --_lr-chip-font-size: var(--lr-font-size-3xs);
+    --_lr-chip-padding-block: 0;
     /* Below --lr-space-2xs (the space scale's own floor, still used by the 2xs tier) --
        same precedent as 2xs's own padding-block above, which already bottoms out below
        the space scale via a raw --lr-size-* token rather than reusing --lr-space-2xs. */
-    --lr-chip-padding-inline: var(--lr-size-0-0625rem);
-    --lr-chip-gap: var(--lr-space-2xs);
-    --lr-chip-icon-size: var(--lr-font-size-3xs);
+    --_lr-chip-padding-inline: var(--lr-size-0-0625rem);
+    --_lr-chip-gap: var(--lr-space-2xs);
+    --_lr-chip-icon-size: var(--lr-font-size-3xs);
   }
   :host([size='2xs']) {
-    --lr-chip-font-size: var(--lr-font-size-2xs);
-    --lr-chip-padding-block: var(--lr-size-0-0625rem);
-    --lr-chip-padding-inline: var(--lr-space-2xs);
-    --lr-chip-gap: var(--lr-space-2xs);
-    --lr-chip-icon-size: var(--lr-font-size-2xs);
+    --_lr-chip-font-size: var(--lr-font-size-2xs);
+    --_lr-chip-padding-block: var(--lr-size-0-0625rem);
+    --_lr-chip-padding-inline: var(--lr-space-2xs);
+    --_lr-chip-gap: var(--lr-space-2xs);
+    --_lr-chip-icon-size: var(--lr-font-size-2xs);
   }
   :host([size='xs']) {
-    --lr-chip-font-size: var(--lr-font-size-xs);
-    --lr-chip-padding-block: var(--lr-size-0-125rem);
-    --lr-chip-padding-inline: var(--lr-space-xs);
-    --lr-chip-gap: var(--lr-space-2xs);
-    --lr-chip-icon-size: var(--lr-font-size-xs);
+    --_lr-chip-font-size: var(--lr-font-size-xs);
+    --_lr-chip-padding-block: var(--lr-size-0-125rem);
+    --_lr-chip-padding-inline: var(--lr-space-xs);
+    --_lr-chip-gap: var(--lr-space-2xs);
+    --_lr-chip-icon-size: var(--lr-font-size-xs);
   }
   :host([size='s']) {
-    --lr-chip-font-size: var(--lr-font-size-xs);
-    --lr-chip-padding-block: var(--lr-size-0-125rem);
-    --lr-chip-padding-inline: var(--lr-size-0-375rem);
-    --lr-chip-gap: var(--lr-space-2xs);
-    --lr-chip-icon-size: var(--lr-font-size-xs);
+    --_lr-chip-font-size: var(--lr-font-size-xs);
+    --_lr-chip-padding-block: var(--lr-size-0-125rem);
+    --_lr-chip-padding-inline: var(--lr-size-0-375rem);
+    --_lr-chip-gap: var(--lr-space-2xs);
+    --_lr-chip-icon-size: var(--lr-font-size-xs);
   }
   :host([size='l']) {
-    --lr-chip-font-size: var(--lr-font-size-m);
-    --lr-chip-padding-block: var(--lr-size-0-375rem);
-    --lr-chip-padding-inline: var(--lr-space-m);
-    --lr-chip-gap: var(--lr-size-0-375rem);
-    --lr-chip-icon-size: var(--lr-font-size-m);
-    --lr-chip-min-height: var(--lr-size-1-75rem);
+    --_lr-chip-font-size: var(--lr-font-size-m);
+    --_lr-chip-padding-block: var(--lr-size-0-375rem);
+    --_lr-chip-padding-inline: var(--lr-space-m);
+    --_lr-chip-gap: var(--lr-size-0-375rem);
+    --_lr-chip-icon-size: var(--lr-font-size-m);
+    --_lr-chip-min-height: var(--lr-size-1-75rem);
   }
   :host([size='xl']) {
-    --lr-chip-font-size: var(--lr-font-size-lg);
-    --lr-chip-padding-block: var(--lr-space-s);
-    --lr-chip-padding-inline: var(--lr-space-l);
-    --lr-chip-gap: var(--lr-space-s);
-    --lr-chip-icon-size: var(--lr-font-size-lg);
-    --lr-chip-min-height: var(--lr-size-2rem);
+    --_lr-chip-font-size: var(--lr-font-size-lg);
+    --_lr-chip-padding-block: var(--lr-space-s);
+    --_lr-chip-padding-inline: var(--lr-space-l);
+    --_lr-chip-gap: var(--lr-space-s);
+    --_lr-chip-icon-size: var(--lr-font-size-lg);
+    --_lr-chip-min-height: var(--lr-size-2rem);
   }
 
   /* One rule for all four non-neutral variants, in place of the four near-identical blocks that
@@ -103,25 +103,25 @@ export const styles = css`
      [variant] as well as :not([variant='neutral']) keeps a host that has not yet reflected its
      default attribute on the same neutral values. */
   :host([variant]:not([variant='neutral'])) {
-    --lr-chip-accent: var(--lr-color-fill-loud);
-    --lr-chip-bg: var(--lr-color-fill-quiet);
-    --lr-chip-border: transparent;
+    --_lr-chip-accent: var(--lr-color-fill-loud);
+    --_lr-chip-bg: var(--lr-color-fill-quiet);
+    --_lr-chip-border: transparent;
   }
 
   [part='base'] {
     position: relative;
     display: inline-flex;
     align-items: center;
-    gap: var(--lr-chip-gap);
+    gap: var(--lr-chip-gap, var(--_lr-chip-gap));
     max-inline-size: 100%;
     box-sizing: border-box;
-    padding: var(--lr-chip-padding-block) var(--lr-chip-padding-inline);
-    border: var(--lr-border-width-thin) solid var(--lr-chip-border);
-    border-radius: var(--lr-chip-radius);
-    background: var(--lr-chip-bg);
-    color: var(--lr-chip-accent);
+    padding: var(--lr-chip-padding-block, var(--_lr-chip-padding-block)) var(--lr-chip-padding-inline, var(--_lr-chip-padding-inline));
+    border: var(--lr-border-width-thin) solid var(--lr-chip-border, var(--_lr-chip-border));
+    border-radius: var(--lr-chip-radius, var(--_lr-chip-radius));
+    background: var(--lr-chip-bg, var(--_lr-chip-bg));
+    color: var(--lr-chip-accent, var(--_lr-chip-accent));
     font: inherit;
-    font-size: var(--lr-chip-font-size);
+    font-size: var(--lr-chip-font-size, var(--_lr-chip-font-size));
     font-weight: var(--lr-font-weight-medium);
     line-height: var(--lr-line-height-snug);
     /* Pinned only when --lr-chip-height is set; 'auto' otherwise, so a display chip keeps growing
@@ -130,13 +130,16 @@ export const styles = css`
     block-size: var(--lr-chip-height, auto);
   }
 
+  :host(:where([toggleable], [removable])) [part='base'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-chip-height, max(var(--lr-chip-min-height, var(--_lr-chip-min-height)), var(--lr-icon-button-size)));
+  }
   :host([toggleable]:not([removable])) [part='base'] {
-    min-block-size: var(--lr-chip-height, max(var(--lr-chip-min-height), var(--lr-icon-button-size)));
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
   }
   :host([toggleable]:not([removable]):not([disabled])) [part='base']:hover {
-    background: color-mix(in srgb, var(--lr-chip-accent) 8%, var(--lr-chip-bg));
+    background: color-mix(in srgb, var(--lr-chip-accent, var(--_lr-chip-accent)) 8%, var(--lr-chip-bg, var(--_lr-chip-bg)));
   }
   /* Pressed deepens the hover's own accent wash to the shared --lr-color-mix-active share --
      roughly triple the hover's 8%, so the press is unmistakably a step past it. The accent, not
@@ -146,39 +149,44 @@ export const styles = css`
      of the click. :active matches here even though the actual button is [part='toggle-button']
      stretched over the base, because :active applies to the activated element's ancestors too. */
   :host([toggleable]:not([removable]):not([disabled])) [part='base']:active {
-    background: color-mix(in srgb, var(--lr-chip-accent) var(--lr-color-mix-active), var(--lr-chip-bg));
+    background: color-mix(in srgb, var(--lr-chip-accent, var(--_lr-chip-accent)) var(--lr-color-mix-active), var(--lr-chip-bg, var(--_lr-chip-bg)));
   }
   [part='toggle-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  :host([selected]:not([removable])) [part='base'] {
+  :host([toggleable][selected]:not([removable])) [part='base'] {
     /* Falls back to --lr-chip-bg (today's exact value) so every existing consumer renders
        byte-identical when unset. A consumer wanting a distinct "active" tint independent of the
        resting background sets --lr-chip-pressed-bg directly. */
-    background: var(--lr-chip-pressed-bg, var(--lr-chip-bg));
+    background: var(--lr-chip-pressed-bg, var(--lr-chip-bg, var(--_lr-chip-bg)));
     /* Falls back to --lr-chip-accent (today's exact value) so every
        existing consumer, including all four non-neutral variants, renders
        byte-identical when unset. A consumer with a per-item arbitrary
        color sets --lr-chip-pressed-border directly, leaving
        --lr-chip-accent (and therefore the label text color) untouched. */
-    border-color: var(--lr-chip-pressed-border, var(--lr-chip-accent));
+    border-color: var(--lr-chip-pressed-border, var(--lr-chip-accent, var(--_lr-chip-accent)));
   }
 
-  [part='icon'] {
+  [part='start'] {
     display: inline-flex;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
     align-items: center;
     justify-content: center;
-    font-size: var(--lr-chip-icon-size);
+    font-size: var(--lr-chip-icon-size, var(--_lr-chip-icon-size));
   }
-  [part='icon'] ::slotted(*) {
+  [part='start'] ::slotted(*) {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
-  /* Defeats [part='icon']'s own 'display: inline-flex' above -- the native
+  /* Defeats [part='start']'s own 'display: inline-flex' above -- the native
      [hidden] UA rule alone would lose to it at equal specificity. Same fix
-     lr-stat's identical [part='icon'][hidden] override already applies. */
-  [part='icon'][hidden] {
+     lr-stat's identical slotted-adornment hidden override already applies. */
+  [part='start'][hidden] {
     display: none;
   }
 
@@ -192,16 +200,21 @@ export const styles = css`
 
   [part='end'] {
     display: inline-flex;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
     align-items: center;
     justify-content: center;
-    font-size: var(--lr-chip-icon-size);
+    font-size: var(--lr-chip-icon-size, var(--_lr-chip-icon-size));
   }
   [part='end'] ::slotted(*) {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   /* Defeats [part='end']'s own 'display: inline-flex' above -- the native [hidden] UA rule alone
-     would lose to it at equal specificity. Same fix [part='icon'][hidden] above already applies. */
+     would lose to it at equal specificity. Same fix [part='start'][hidden] above already applies. */
   [part='end'][hidden] {
     display: none;
   }
@@ -213,7 +226,7 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     padding: 0;
     border: none;
-    border-radius: var(--lr-chip-radius);
+    border-radius: var(--lr-chip-radius, var(--_lr-chip-radius));
     background: transparent;
     color: inherit;
     cursor: pointer;
@@ -223,14 +236,8 @@ export const styles = css`
     cursor: not-allowed;
   }
 
-  /* The interactive hit target meets the shared minimum tappable size (same --lr-icon-button-size
-     floor as lr-swatch-picker's [part='swatch']/lr-token-input's [part='remove']), while the
-     *visible* glyph stays a compact 0.75em × close icon -- a chip is a small horizontal pill, and
-     growing the whole button box to 40px would visually balloon the row. Since the button sits at
-     the pill's trailing edge with nothing after it, the extra hit-target growth is pulled back via
-     a matching negative margin (rather than growing outward into the next chip in a wrapped row) so
-     the *visible* pill footprint is unchanged -- the enlarged hit area simply overlaps into the
-     pill's own padding/background rather than expanding the row's layout box. */
+  /* Keep the full target inside the chip's layout box. Negative margins made compact/custom-height
+     chips overlap adjacent controls and could let the target escape its painted owner. */
   [part='remove-button'] {
     flex: 0 0 auto;
     display: inline-flex;
@@ -238,12 +245,10 @@ export const styles = css`
     justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
-    margin-block: calc((var(--lr-icon-button-size) - var(--lr-size-1-25rem)) / -2);
-    margin-inline-start: calc(var(--lr-size-1-25rem) - var(--lr-icon-button-size));
-    margin-inline-end: 0;
+    margin: 0;
     padding: 0;
     border: none;
-    border-radius: var(--lr-chip-radius);
+    border-radius: var(--lr-chip-radius, var(--_lr-chip-radius));
     background: transparent;
     color: inherit;
     font-size: var(--lr-size-0-75em);

@@ -15,6 +15,34 @@
  */
 export type MenuFocusTarget = 'first' | 'last' | 'none';
 
+/** Private activation bridge between a menu item and the menu that currently owns it. Keeping
+ * this behind a symbol avoids publishing a second selection event solely for child-to-parent
+ * plumbing. */
+export const menuItemOwner = Symbol('lyra-menu-item-owner');
+
+export interface MenuItemOwner {
+  activate(item: HTMLElement): void;
+}
+
+export interface MenuItemOwned {
+  [menuItemOwner](
+    owner: MenuItemOwner | null,
+    expectedOwner?: MenuItemOwner
+  ): void;
+}
+
+/** Private submenu presentation bridge. Root menus stay the exact inline semantic controller
+ * mapped from Shoelace; only a menu item can attach this internal floating presentation. */
+export const submenuPanelController = Symbol('lyra-submenu-panel-controller');
+
+export interface SubmenuPanelController {
+  readonly open: boolean;
+  attach(anchor: HTMLElement, onStateChange: (open: boolean) => void): void;
+  detach(anchor: HTMLElement): void;
+  show(focus?: MenuFocusTarget): Promise<void>;
+  hide(options?: { focusTrigger?: boolean }): Promise<void>;
+}
+
 /**
  * The slice of `<lr-menu>`'s API an `<lr-menu-item>` drives when a menu is assigned to its
  * `submenu` slot. Declared structurally rather than imported for the cycle reason above; the
@@ -22,11 +50,8 @@ export type MenuFocusTarget = 'first' | 'last' | 'none';
  * treated as a submenu.
  */
 export interface SubmenuPanel extends HTMLElement {
-  open: boolean;
-  anchor: HTMLElement | null;
+  readonly [submenuPanelController]: SubmenuPanelController;
   updateComplete?: Promise<unknown>;
-  show(focus?: MenuFocusTarget): void | Promise<void>;
-  hide(options?: { focusTrigger?: boolean }): void | Promise<void>;
 }
 
 /** The small owner surface used when `<lr-menu>` supplies its interaction engine to another

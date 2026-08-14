@@ -16,16 +16,16 @@ export const Default: Story = {
     <lr-heatmap
       cell-size="24"
       value-label="events"
-      .rowLabels=${['Mon', 'Tue', 'Wed', 'Thu', 'Fri']}
-      .colLabels=${['0h', '6h', '12h', '18h']}
-      .values=${[
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], colLabels: ['0h', '6h', '12h', '18h'], values: [
         [1, 4, 9, 2],
         [0, 2, 6, 3],
         [5, 8, 3, 1],
         [-1, 1, 4, 7],
         [2, 3, 5, 6],
-      ]}
-    ></lr-heatmap>
+      ] }}></lr-heatmap>
   `,
 };
 
@@ -35,14 +35,14 @@ export const SqrtScaleFitToWidth: Story = {
       scale="sqrt"
       fit-to-width
       value-label="requests"
-      .rowLabels=${['Mon', 'Tue', 'Wed']}
-      .colLabels=${['0h', '6h', '12h', '18h']}
-      .values=${[
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['Mon', 'Tue', 'Wed'], colLabels: ['0h', '6h', '12h', '18h'], values: [
         [1, 8, 400, 20],
         [0, 2, 6, 3],
         [-1, 1, 4, 7],
-      ]}
-    ></lr-heatmap>
+      ] }}></lr-heatmap>
   `,
 };
 
@@ -56,7 +56,7 @@ export const CalendarMode: Story = {
       days.push({ date, value });
     }
     return html`
-      <lr-heatmap mode="calendar" value-label="commits" bucket-count="5" .days=${days}></lr-heatmap>
+      <lr-heatmap value-label="commits" bucket-count="5"  .data=${{ kind: 'calendar', days: days }}></lr-heatmap>
     `;
   },
 };
@@ -72,14 +72,14 @@ export const CustomTheme: Story = {
       "
       cell-size="24"
       value-label="events"
-      .rowLabels=${['Mon', 'Tue', 'Wed']}
-      .colLabels=${['0h', '6h', '12h']}
-      .values=${[
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['Mon', 'Tue', 'Wed'], colLabels: ['0h', '6h', '12h'], values: [
         [1, 4, 9],
         [0, 2, 6],
         [-1, 1, 4],
-      ]}
-    ></lr-heatmap>
+      ] }}></lr-heatmap>
   `,
 };
 
@@ -100,17 +100,17 @@ export const HoverFocusClick: Story = {
       <lr-heatmap
         cell-size="28"
         value-label="events"
-        .rowLabels=${['Mon', 'Tue', 'Wed', 'Thu', 'Fri']}
-        .colLabels=${['0h', '6h', '12h', '18h']}
-        .values=${[
+
+
+
+        @lr-cell-click=${onCellClick}
+       .data=${{ kind: 'matrix', rowLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], colLabels: ['0h', '6h', '12h', '18h'], values: [
           [1, 4, 9, 2],
           [0, 2, 6, 3],
           [5, 8, 3, 1],
           [-1, 1, 4, 7],
           [2, 3, 5, 6],
-        ]}
-        @lr-cell-click=${onCellClick}
-      ></lr-heatmap>
+        ] }}></lr-heatmap>
       <p>Last <code>lr-cell-click</code> detail: <code id="cell-click-out">(none yet)</code></p>
     `;
   },
@@ -119,7 +119,7 @@ export const HoverFocusClick: Story = {
 /**
  * Opts into persistent native buttons over the canvas for consumers that need
  * one accessible control per cell. The overlay keeps a roving tab stop and
- * exposes the controlled `selectedCell` as `aria-pressed`. Focus a cell and press R to replace the
+ * exposes the controlled `selectedCell` as `aria-selected`. Focus a cell and press R to replace the
  * value matrix; the same semantic cell remains the sole roving stop.
  */
 export const AccessibleCells: Story = {
@@ -128,20 +128,24 @@ export const AccessibleCells: Story = {
       accessible-cells
       cell-size="28"
       value-label="events"
-      .rowLabels=${['Mon', 'Tue', 'Wed']}
-      .colLabels=${['0h', '6h', '12h', '18h']}
-      .values=${[
-        [1, 4, 9, 2],
-        [0, 2, 6, 3],
-        [5, 8, 3, 1],
-      ]}
+
+
+
       .selectedCell=${{ row: 1, col: 2 }}
       @keydown=${(event: KeyboardEvent) => {
         if (event.key.toLocaleLowerCase() !== 'r') return;
         const heatmap = event.currentTarget as LyraHeatmap;
-        heatmap.values = heatmap.values.map((row) => row.map((value) => value + 1));
+        if (heatmap.data.kind !== 'matrix') return;
+        heatmap.data = {
+          ...heatmap.data,
+          values: heatmap.data.values.map((row) => row.map((value) => value + 1)),
+        };
       }}
-    ></lr-heatmap>
+     .data=${{ kind: 'matrix', rowLabels: ['Mon', 'Tue', 'Wed'], colLabels: ['0h', '6h', '12h', '18h'], values: [
+        [1, 4, 9, 2],
+        [0, 2, 6, 3],
+        [5, 8, 3, 1],
+      ] }}></lr-heatmap>
   `,
 };
 
@@ -154,35 +158,35 @@ export const Annotations: Story = {
     <lr-heatmap
       cell-size="24"
       value-label="events"
-      .rowLabels=${['Mon', 'Tue', 'Wed', 'Thu', 'Fri']}
-      .colLabels=${['0h', '6h', '12h', '18h']}
-      .values=${[
+
+
+
+      .annotations=${[
+        { row: 0, col: 2, label: 'Peak load' },
+        { row: 2, col: 1, label: 'Incident' },
+      ]}
+     .data=${{ kind: 'matrix', rowLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], colLabels: ['0h', '6h', '12h', '18h'], values: [
         [1, 4, 9, 2],
         [0, 2, 6, 3],
         [5, 8, 3, 1],
         [-1, 1, 4, 7],
         [2, 3, 5, 6],
-      ]}
-      .annotations=${[
-        { row: 0, col: 2, label: 'Peak load' },
-        { row: 2, col: 1, label: 'Incident' },
-      ]}
-    ></lr-heatmap>
+      ] }}></lr-heatmap>
   `,
 };
 
 export const Selection: Story = {
   render: () => html`
     <lr-heatmap
-      .rowLabels=${['Mon', 'Tue', 'Wed']}
-      .colLabels=${['00h', '06h', '12h', '18h']}
-      .values=${[
+
+
+
+      .selectedCell=${{ row: 1, col: 2 }}
+     .data=${{ kind: 'matrix', rowLabels: ['Mon', 'Tue', 'Wed'], colLabels: ['00h', '06h', '12h', '18h'], values: [
         [3, 8, 12, 4],
         [1, 2, 9, 5],
         [0, 4, 6, 2],
-      ]}
-      .selectedCell=${{ row: 1, col: 2 }}
-    ></lr-heatmap>
+      ] }}></lr-heatmap>
   `,
 };
 
@@ -196,20 +200,20 @@ export const CustomCellText: Story = {
     <lr-heatmap
       cell-size="28"
       value-label="évènements"
-      .rowLabels=${['Lun', 'Mar', 'Mer']}
-      .colLabels=${['0h', '6h', '12h']}
-      .values=${[
-        [1, 4, 9],
-        [0, 2, 6],
-        [-1, 1, 4],
-      ]}
+
+
+
       .cellText=${(pos: { row?: number; col?: number }, value: number) => {
         const rows = ['Lun', 'Mar', 'Mer'];
         const cols = ['0h', '6h', '12h'];
         const valueText = value < 0 ? 'aucune donnée' : String(value);
         return `Ligne ${rows[pos.row!]}, Col ${cols[pos.col!]} : ${valueText}`;
       }}
-    ></lr-heatmap>
+     .data=${{ kind: 'matrix', rowLabels: ['Lun', 'Mar', 'Mer'], colLabels: ['0h', '6h', '12h'], values: [
+        [1, 4, 9],
+        [0, 2, 6],
+        [-1, 1, 4],
+      ] }}></lr-heatmap>
   `,
 };
 
@@ -231,12 +235,11 @@ export const CalendarColumnAlignment: Story = {
     const columnX = (week: number) => 32 + week * 20;
     return html`
       <lr-heatmap
-        mode="calendar"
         value-label="commits"
         bucket-count="5"
-        .days=${days}
-        .columnX=${columnX}
-      ></lr-heatmap>
+
+
+       .data=${{ kind: 'calendar', days: days, columnX: columnX }}></lr-heatmap>
     `;
   },
 };
@@ -266,9 +269,8 @@ export const CustomScaleLegend: Story = {
       `color-mix(in srgb, var(--lr-color-brand) ${Math.round(Math.max(0.12, ratio) * 100)}%, transparent)`;
     return html`
       <lr-heatmap
-        mode="calendar"
         value-label="events"
-        .days=${days}
+
         .cellColor=${(_pos: unknown, value: number) => (value > 0 ? shade(value / max) : undefined)}
         .legendStops=${[
           { value: 0, color: 'var(--lr-color-no-data)', label: 'none' },
@@ -277,7 +279,7 @@ export const CustomScaleLegend: Story = {
           { value: Math.round(max * 0.75), color: shade(0.75) },
           { value: max, color: shade(1) },
         ]}
-      ></lr-heatmap>
+       .data=${{ kind: 'calendar', days: days }}></lr-heatmap>
     `;
   },
 };
@@ -300,9 +302,8 @@ export const CaptionOnlyLegendStops: Story = {
       `color-mix(in srgb, var(--lr-color-brand) ${Math.round(ratio * 100)}%, transparent)`;
     return html`
       <lr-heatmap
-        mode="calendar"
         value-label="commits"
-        .days=${days}
+
         .legendStops=${[
           { value: 0, label: 'Less' },
           { value: 3, color: shade(0.25) },
@@ -311,7 +312,7 @@ export const CaptionOnlyLegendStops: Story = {
           { value: 10, color: shade(1) },
           { value: 11, label: 'More' },
         ]}
-      ></lr-heatmap>
+       .data=${{ kind: 'calendar', days: days }}></lr-heatmap>
     `;
   },
 };
@@ -335,27 +336,25 @@ export const ClampedFitToWidth: Story = {
       <div style="display: grid; gap: 1.5rem;">
         <div>
           <p style="margin: 0 0 0.25rem; font: 0.75rem system-ui;">fit-to-width, unclamped</p>
-          <lr-heatmap mode="calendar" fit-to-width value-label="commits" .days=${days}></lr-heatmap>
+          <lr-heatmap fit-to-width value-label="commits"  .data=${{ kind: 'calendar', days: days }}></lr-heatmap>
         </div>
         <div>
           <p style="margin: 0 0 0.25rem; font: 0.75rem system-ui;">fit-to-width, max-cell-size="26"</p>
           <lr-heatmap
-            mode="calendar"
             fit-to-width
             max-cell-size="26"
             value-label="commits"
-            .days=${days}
-          ></lr-heatmap>
+
+           .data=${{ kind: 'calendar', days: days }}></lr-heatmap>
         </div>
         <div style="inline-size: 180px;">
           <p style="margin: 0 0 0.25rem; font: 0.75rem system-ui;">narrow host, min-cell-size="14"</p>
           <lr-heatmap
-            mode="calendar"
             fit-to-width
             min-cell-size="14"
             value-label="commits"
-            .days=${days}
-          ></lr-heatmap>
+
+           .data=${{ kind: 'calendar', days: days }}></lr-heatmap>
         </div>
       </div>
     `;
@@ -380,14 +379,13 @@ export const DateAwareCallbacks: Story = {
     const lastDay = days[days.length - 1]!.date;
     return html`
       <lr-heatmap
-        mode="calendar"
         value-label="commits"
-        .days=${days}
+
         .cellInteractive=${(pos: MatrixCellPos | CalendarCellPos) =>
           (pos as CalendarCellPos).date <= lastDay}
         .cellText=${(pos: MatrixCellPos | CalendarCellPos, value: number) =>
           `${(pos as CalendarCellPos).date}: ${value < 0 ? 'no data' : value}`}
-      ></lr-heatmap>
+       .data=${{ kind: 'calendar', days: days }}></lr-heatmap>
     `;
   },
 };
@@ -404,12 +402,11 @@ export const CalendarAnnotations: Story = {
     }
     return html`
       <lr-heatmap
-        mode="calendar"
         value-label="commits"
         bucket-count="5"
-        .days=${days}
+
         .annotations=${[{ date: '2026-02-14', label: 'Release day' }]}
-      ></lr-heatmap>
+       .data=${{ kind: 'calendar', days: days }}></lr-heatmap>
     `;
   },
 };

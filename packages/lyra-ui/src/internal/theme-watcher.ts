@@ -3,7 +3,7 @@ import type { ReactiveController, ReactiveControllerHost } from 'lit';
 export type LyraThemeRoot = Document | ShadowRoot | Element;
 
 type BrowserRealm = Window & typeof globalThis;
-type ThemeSubscriber = () => void;
+type ThemeSubscriber = (mutationSubject?: unknown) => void;
 
 interface RealmPatch {
   target: object;
@@ -77,8 +77,8 @@ function hubFor(realm: BrowserRealm): SharedThemeHub {
   }
 }
 
-function notifyHub(hub: SharedThemeHub): void {
-  for (const subscriber of [...hub.subscribers]) subscriber();
+function notifyHub(hub: SharedThemeHub, mutationSubject?: unknown): void {
+  for (const subscriber of [...hub.subscribers]) subscriber(mutationSubject);
 }
 
 function findPropertyOwner(start: object | null, key: PropertyKey): object | undefined {
@@ -95,14 +95,15 @@ function patchMethod(hub: SharedThemeHub, target: object, key: PropertyKey, asyn
   if (!original || typeof original.value !== 'function') return;
   const originalMethod = original.value as (...args: unknown[]) => unknown;
   const installedValue = function (this: unknown, ...args: unknown[]): unknown {
+    const mutationSubject = this;
     const result = Reflect.apply(originalMethod, this, args);
     if (asyncResult && result && typeof (result as PromiseLike<unknown>).then === 'function') {
       void Promise.resolve(result).then(
-        () => notifyHub(hub),
+        () => notifyHub(hub, mutationSubject),
         () => undefined,
       );
     } else {
-      notifyHub(hub);
+      notifyHub(hub, mutationSubject);
     }
     return result;
   };
@@ -124,7 +125,7 @@ function patchAdoptedStyleSheets(hub: SharedThemeHub, prototype: object | undefi
   const originalSetter = original.set;
   const installedSetter = function (this: unknown, value: unknown): void {
     Reflect.apply(originalSetter, this, [value]);
-    notifyHub(hub);
+    notifyHub(hub, this);
   };
   try {
     Object.defineProperty(target, 'adoptedStyleSheets', { ...original, set: installedSetter });
@@ -148,7 +149,7 @@ function patchSetter(hub: SharedThemeHub, prototype: object | undefined, key: Pr
   const originalSetter = original.set;
   const installedSetter = function (this: unknown, value: unknown): void {
     Reflect.apply(originalSetter, this, [value]);
-    notifyHub(hub);
+    notifyHub(hub, this);
   };
   try {
     Object.defineProperty(target, key, { ...original, set: installedSetter });
@@ -245,18 +246,26 @@ function containsStyleCarrier(node: Node): boolean {
   return node.nodeType === ELEMENT_NODE && Boolean((node as Element).querySelector('style, link'));
 }
 
+/** The flattened-tree parent whose inherited custom properties can reach `element`. A distributed
+ * node inherits through its slot, not through its light-DOM parent; once a shadow tree's top is
+ * reached, inheritance continues through that tree's host. */
+function flattenedParentElement(element: Element): Element | null {
+  if (element.assignedSlot) return element.assignedSlot;
+  if (element.parentElement) return element.parentElement;
+  const root = element.getRootNode();
+  return root.nodeType === DOCUMENT_FRAGMENT_NODE && 'host' in root
+    ? (root as ShadowRoot).host
+    : null;
+}
+
 function isComposedAncestor(candidate: Element, descendant: Element): boolean {
   let current: Element | null = descendant;
+  const seen = new Set<Element>();
   while (current) {
+    if (seen.has(current)) return false;
+    seen.add(current);
     if (current === candidate) return true;
-    if (current.parentElement) {
-      current = current.parentElement;
-      continue;
-    }
-    const root = current.getRootNode();
-    current = root.nodeType === DOCUMENT_FRAGMENT_NODE && 'host' in root
-      ? (root as ShadowRoot).host
-      : null;
+    current = flattenedParentElement(current);
   }
   return false;
 }
@@ -264,12 +273,17 @@ function isComposedAncestor(candidate: Element, descendant: Element): boolean {
 function observationRoots(host: Element): Array<Document | ShadowRoot> {
   const roots = new Set<Document | ShadowRoot>([host.ownerDocument]);
   let current: Element | null = host;
+  const seen = new Set<Element>();
   while (current) {
+    if (seen.has(current)) break;
+    seen.add(current);
+    // A watcher's own `:host` rules and adopted sheets can resolve tokens on the host itself.
+    if (current === host && current.shadowRoot) roots.add(current.shadowRoot);
     const root = current.getRootNode();
-    if (root.nodeType !== DOCUMENT_FRAGMENT_NODE || !('host' in root)) break;
-    const shadowRoot = root as ShadowRoot;
-    roots.add(shadowRoot);
-    current = shadowRoot.host;
+    if (root.nodeType === DOCUMENT_FRAGMENT_NODE && 'host' in root) {
+      roots.add(root as ShadowRoot);
+    }
+    current = flattenedParentElement(current);
   }
   return [...roots];
 }
@@ -302,6 +316,41 @@ function collectMediaQueries(rules: CSSRuleList, output: Set<string>): void {
       }
     }
   }
+}
+
+function isInlineDeclarationOnComposedAncestry(
+  declaration: CSSStyleDeclaration,
+  host: Element,
+): boolean {
+  let current: Element | null = host;
+  const seen = new Set<Element>();
+  while (current) {
+    if (seen.has(current)) return false;
+    seen.add(current);
+    if (
+      'style' in current &&
+      (current as Element & { readonly style?: CSSStyleDeclaration }).style === declaration
+    ) {
+      return true;
+    }
+    current = flattenedParentElement(current);
+  }
+  return false;
+}
+
+function rulesContainMediaList(rules: CSSRuleList, target: MediaList): boolean {
+  for (const rule of Array.from(rules)) {
+    if ('media' in rule && (rule as CSSMediaRule | CSSImportRule).media === target) return true;
+    if ('cssRules' in rule) {
+      try {
+        if (rulesContainMediaList((rule as CSSGroupingRule).cssRules, target)) return true;
+      } catch {
+        // Opaque nested rules cannot expose an identity to match. Explicit invalidation remains
+        // the fallback for cross-origin CSSOM changes the browser does not surface.
+      }
+    }
+  }
+  return false;
 }
 
 /**
@@ -437,9 +486,51 @@ export class ThemeWatcher implements ReactiveController {
     }
   };
 
-  private onStylesheetMutation = (): void => {
+  private onStylesheetMutation = (mutationSubject?: unknown): void => {
+    if (mutationSubject !== undefined && !this.mutationCanAffectHost(mutationSubject)) return;
     this.queueChange(true);
   };
+
+  private mutationCanAffectHost(subject: unknown): boolean {
+    const realm = this.realm;
+    if (!realm) return false;
+    const relevantSheets = new Set(this.roots.flatMap((root) => sheetsForRoot(root)));
+
+    if (realm.CSSStyleDeclaration && subject instanceof realm.CSSStyleDeclaration) {
+      if (isInlineDeclarationOnComposedAncestry(subject, this.host)) return true;
+      const sheet = subject.parentRule?.parentStyleSheet;
+      return Boolean(sheet && relevantSheets.has(sheet));
+    }
+    if (realm.CSSStyleSheet && subject instanceof realm.CSSStyleSheet) {
+      return relevantSheets.has(subject);
+    }
+    const CSSRuleCtor = (realm as unknown as { CSSRule?: typeof CSSRule }).CSSRule;
+    if (CSSRuleCtor && subject instanceof CSSRuleCtor) {
+      return Boolean(subject.parentStyleSheet && relevantSheets.has(subject.parentStyleSheet));
+    }
+    if (realm.MediaList && subject instanceof realm.MediaList) {
+      for (const sheet of relevantSheets) {
+        if (sheet.media === subject) return true;
+        try {
+          if (rulesContainMediaList(sheet.cssRules, subject)) return true;
+        } catch {
+          // A relevant cross-origin sheet is intentionally treated as opaque. Its DOM load/media
+          // signals and invalidateLyraTheme() remain the conservative invalidation paths.
+        }
+      }
+      return false;
+    }
+    if (
+      (realm.Document && subject instanceof realm.Document) ||
+      (realm.ShadowRoot && subject instanceof realm.ShadowRoot)
+    ) {
+      return this.roots.includes(subject as Document | ShadowRoot);
+    }
+
+    // Unknown platform objects are rare and cannot be scoped safely. Preserve the conservative
+    // behavior for those opaque cases; known inline declarations and sheets above are filtered.
+    return true;
+  }
 
   private onMediaQueryChange = (): void => {
     this.queueChange(false);

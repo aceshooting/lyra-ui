@@ -47,6 +47,20 @@ describe('lr-highlight-layer', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]') === null).to.be.true;
   });
 
+  it('renders no paint or semantic subtree when every rectangle is invalid', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`
+      <lr-highlight-layer
+        aria-label="Ignored invalid overlay"
+        .items=${[
+          { id: 'empty', rects: [] },
+          { id: 'negative', rects: [{ x: 1, y: 1, width: -2, height: 3 }] },
+          { id: 'nan', rects: [{ x: Number.NaN, y: 1, width: 2, height: 3 }] },
+        ]}
+      ></lr-highlight-layer>
+    `);
+    expect(el.shadowRoot!.childElementCount).to.equal(0);
+  });
+
   it('renders one rect per item at percent-of-box coordinates', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
     const rects = el.shadowRoot!.querySelectorAll('[part="rect"]');
@@ -254,6 +268,10 @@ describe('lr-highlight-layer', () => {
     );
     const rect = el.shadowRoot!.querySelector('[part="rect"]') as HTMLElement;
     expect(el.shadowRoot!.querySelector('[part="rect-target"]') === null).to.be.true;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute('role')).to.be.false;
+    expect(base.hasAttribute('aria-label')).to.be.false;
+    expect(base.getAttribute('aria-hidden')).to.equal('true');
     expect(rect.hasAttribute('role')).to.be.false;
     expect(rect.hasAttribute('tabindex')).to.be.false;
   });
@@ -265,6 +283,7 @@ describe('lr-highlight-layer', () => {
     expect(el.interactive).to.be.false;
     const rect = el.shadowRoot!.querySelector('[part="rect"]') as HTMLElement;
     expect(el.shadowRoot!.querySelector('[part="rect-target"]') === null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.hasAttribute('role')).to.be.false;
     expect(rect.hasAttribute('role')).to.be.false;
     expect(rect.hasAttribute('tabindex')).to.be.false;
   });

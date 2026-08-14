@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './media-card.js';
+import type { LyraMediaCardKind, LyraMediaCardOpenDetail } from './media-card.js';
 // Side-effect import of an already-landed component, purely for the
 // "inside a rendered message" demo story below (this component isn't in
 // the barrel yet, so both are imported directly by relative path).
@@ -23,6 +24,7 @@ export default meta;
 type Story = StoryObj;
 
 const SAMPLE_IMAGE = 'https://picsum.photos/seed/lr-media-card/640/400';
+const IMAGE_KIND: LyraMediaCardKind = 'image';
 // A local fixture (not an external URL like SAMPLE_IMAGE above) -- see .storybook/main.js's
 // staticDirs entry for why.
 const SAMPLE_VIDEO = '/fixtures/sample-video.mp4';
@@ -33,7 +35,7 @@ export const Image: Story = {
   render: () => html`
     <lr-media-card
       src=${SAMPLE_IMAGE}
-      kind="image"
+      .kind=${IMAGE_KIND}
       filename="roof-photo.jpg"
       alt="Aerial photo of a rooftop solar installation"
     ></lr-media-card>
@@ -46,7 +48,7 @@ export const AccessibleActionLabel: Story = {
     docs: {
       description: {
         story:
-          'The host `aria-label` names the internal actionable element directly. It overrides the generated open action without replacing the image alt text.',
+          'The host `aria-label` names the card as a whole; its nested button keeps a purpose-specific generated open action so one label is not duplicated across semantic owners.',
       },
     },
   },
@@ -251,19 +253,38 @@ export const Narrow320ChatAttachments: Story = {
 };
 
 export const OpenEvent: Story = {
-  name: 'lr-open event',
+  name: 'lr-media-open event',
   render: () => html`
     <div>
       <lr-media-card
         src=${SAMPLE_IMAGE}
         kind="image"
         filename="roof-photo.jpg"
-        @lr-open=${(e: CustomEvent<{ src: string; filename: string }>) => {
+        @lr-media-open=${(e: CustomEvent<LyraMediaCardOpenDetail>) => {
           const out = document.getElementById('media-card-log');
-          if (out) out.textContent = `lr-open: ${JSON.stringify(e.detail)}`;
+          if (out) out.textContent = `lr-media-open: ${JSON.stringify(e.detail)}`;
         }}
       ></lr-media-card>
       <p id="media-card-log" style="font-family: monospace; margin-top: 0.5rem;">No event fired yet.</p>
+    </div>
+  `,
+};
+
+export const BeforeDownloadEvent: Story = {
+  name: 'lr-before-media-download veto',
+  render: () => html`
+    <div>
+      <lr-media-card
+        src="https://example.com/reports/summary.pdf"
+        kind="file"
+        filename="summary.pdf"
+        @lr-before-media-download=${(event: CustomEvent<LyraMediaCardOpenDetail>) => {
+          event.preventDefault();
+          const output = document.getElementById('media-card-download-log');
+          if (output) output.textContent = `Download intercepted: ${event.detail.filename}`;
+        }}
+      ></lr-media-card>
+      <p id="media-card-download-log">Activate the file to intercept its native download.</p>
     </div>
   `,
 };

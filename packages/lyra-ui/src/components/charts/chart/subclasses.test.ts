@@ -20,7 +20,7 @@ const TAGS_WITH_TYPE: [string, string][] = [
 ];
 
 for (const [tag, expectedType] of TAGS_WITH_TYPE) {
-  it(`${tag} hardcodes its Chart.js type to "${expectedType}"`, async () => {
+  it(`${tag} defaults its Chart.js type to "${expectedType}"`, async () => {
     const el = (await fixture(`<${tag}></${tag}>`)) as any;
     el.datasets = [{ label: 'x', data: [1, 2, 3] }];
     await el.updateComplete;
@@ -28,10 +28,16 @@ for (const [tag, expectedType] of TAGS_WITH_TYPE) {
     expect(el.chart.config.type).to.equal(expectedType);
   });
 
-  it(`${tag} locks .type — assigning a different value at runtime is a no-op`, async () => {
+  it(`${tag} keeps the mirrored writable .type surface`, async () => {
     const el = (await fixture(`<${tag}></${tag}>`)) as any;
-    el.type = 'somethingElse';
-    expect(el.type).to.equal(expectedType);
+    const nextType = expectedType === 'line' ? 'bar' : 'line';
+    el.type = nextType;
+    await el.updateComplete;
+    await waitUntil(() => el.chart != null && el.chart.config.type === nextType, `${tag} did not apply its writable type`, {
+      timeout: 2000,
+    });
+    expect(el.type).to.equal(nextType);
+    expect(el.chart.config.type).to.equal(nextType);
   });
 
   it(`${tag} is accessible`, async () => {

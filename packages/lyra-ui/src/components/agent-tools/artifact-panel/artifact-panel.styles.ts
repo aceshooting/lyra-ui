@@ -88,6 +88,12 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     margin-inline-start: auto;
   }
+  [part='version-label'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+    color: var(--lr-color-text-quiet);
+  }
   [part='version-previous'],
   [part='version-next'] {
     display: inline-flex;

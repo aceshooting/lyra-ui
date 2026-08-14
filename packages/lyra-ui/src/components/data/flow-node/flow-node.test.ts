@@ -43,6 +43,29 @@ it('renders the heading text and reflects selected/status', async () => {
   expect(el.hasAttribute('selected')).to.be.true;
 });
 
+it('normalizes an invalid runtime or attribute status to the canonical empty state', async () => {
+  const el = (await fixture(html`<lr-flow-node status="not-a-status"></lr-flow-node>`)) as LyraFlowNode;
+  await el.updateComplete;
+  expect(el.status).to.equal(null);
+  expect(el.hasAttribute('status')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="status"]') === null).to.be.true;
+});
+
+it('owns detached deeply frozen handle inputs and exposes the consumer node type', async () => {
+  const source = [{ id: 'source', label: 'Original' }];
+  const el = (await fixture(html`<lr-flow-node></lr-flow-node>`)) as LyraFlowNode;
+  el.inputs = source;
+  el.flowType = 'retrieval';
+  source[0]!.label = 'Mutated';
+  source.push({ id: 'late', label: 'Late' });
+  await el.updateComplete;
+
+  expect(el.inputs).to.deep.equal([{ id: 'source', label: 'Original' }]);
+  expect(Object.isFrozen(el.inputs)).to.be.true;
+  expect(Object.isFrozen(el.inputs[0])).to.be.true;
+  expect(el.getAttribute('data-node-type')).to.equal('retrieval');
+});
+
 it('shows a visible status chip with text (never color-only) for each status', async () => {
   const el = (await fixture(html`<lr-flow-node status="error"></lr-flow-node>`)) as LyraFlowNode;
   expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.include('Error');
@@ -52,11 +75,11 @@ it('lets each status-dot color be rethemed independently', async () => {
   const el = (await fixture(html`
     <lr-flow-node
       style="
-        --lr-flow-node-status-pending-color: rgb(1, 2, 3);
-        --lr-flow-node-status-running-color: rgb(4, 5, 6);
-        --lr-flow-node-status-success-color: rgb(7, 8, 9);
-        --lr-flow-node-status-error-color: rgb(10, 11, 12);
-        --lr-flow-node-status-denied-color: rgb(13, 14, 15);
+        --lr-flow-status-pending-color: rgb(1, 2, 3);
+        --lr-flow-status-running-color: rgb(4, 5, 6);
+        --lr-flow-status-success-color: rgb(7, 8, 9);
+        --lr-flow-status-error-color: rgb(10, 11, 12);
+        --lr-flow-status-denied-color: rgb(13, 14, 15);
       "
     ></lr-flow-node>
   `)) as LyraFlowNode;
@@ -137,15 +160,39 @@ it('renders icon/header/toolbar slots and the default body slot', async () => {
   expect(el.shadowRoot!.querySelector('slot:not([name])')).to.exist;
 });
 
-it('header slot replaces the built-in heading row entirely', async () => {
+it('suppresses empty header, body, and toolbar rows and updates them after slot churn', async () => {
+  const el = (await fixture(html`<lr-flow-node></lr-flow-node>`)) as LyraFlowNode;
+  const row = (part: string) => el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+  expect(row('header').hidden).to.be.true;
+  expect(row('body').hidden).to.be.true;
+  expect(row('toolbar').hidden).to.be.true;
+
+  const body = document.createElement('span');
+  body.textContent = 'Body';
+  const action = document.createElement('button');
+  action.slot = 'toolbar';
+  action.textContent = 'Run';
+  el.append(body, action);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  expect(row('body').hidden).to.be.false;
+  expect(row('toolbar').hidden).to.be.false;
+
+  body.remove();
+  action.remove();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  expect(row('body').hidden).to.be.true;
+  expect(row('toolbar').hidden).to.be.true;
+});
+
+it('header slot suppresses the built-in heading row while keeping a hydration-stable slot tree', async () => {
   const el = (await fixture(
     html`<lr-flow-node heading="Ignored"><span slot="header">Custom header</span></lr-flow-node>`
   )) as LyraFlowNode;
-  // Removed from the DOM outright (not merely hidden), so it never visually stacks with the
-  // slotted replacement -- an author stylesheet's unconditional `[part='header']{display:flex}`
-  // rule always beats a `[hidden]` override at equal specificity/origin, so hiding via attribute
-  // alone would leave both rows rendered.
-  expect((el.shadowRoot!.querySelector('[part="header"]')) == null).to.be.true;
+  const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+  expect(header.hidden).to.be.true;
+  expect(getComputedStyle(header).display).to.equal('none');
   expect(el.shadowRoot!.querySelector('slot[name="header"]')).to.exist;
 });
 
@@ -161,7 +208,7 @@ it('a header child appended after the initial render still replaces the built-in
   await new Promise((r) => setTimeout(r, 0));
   await el.updateComplete;
 
-  expect((el.shadowRoot!.querySelector('[part="header"]')) == null).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hidden).to.be.true;
   const slot = el.shadowRoot!.querySelector('slot[name="header"]') as HTMLSlotElement;
   const assigned = slot.assignedElements({ flatten: true });
   expect(assigned.length).to.equal(1);
@@ -171,6 +218,7 @@ it('a header child appended after the initial render still replaces the built-in
 it('keeps server-only header and pulse state for the first hydrating update, then corrects in place', async () => {
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
   const el = document.createElement('lr-flow-node') as LyraFlowNode;
+  el.heading = 'Server fallback';
   el.status = 'running';
   // A pre-existing root is LyraElement's hydration signal. The repository-wide hydration gate
   // supplies real declarative shadow DOM and proves server-node claiming; this focused fixture
@@ -182,22 +230,22 @@ it('keeps server-only header and pulse state for the first hydrating update, the
   await el.updateComplete;
   const card = el.shadowRoot!.querySelector('[part~="card"]') as HTMLElement;
   expect(card.hasAttribute('data-pulse')).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="header"]') !== null).to.equal(true);
+  expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hidden).to.equal(false);
 
   // Firefox can settle the first update promise before the deferred seed queues its correction.
   await new Promise((resolve) => setTimeout(resolve, 0));
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part~="card"]') === card).to.be.true;
   expect(card.hasAttribute('data-pulse')).to.be.true;
-  expect(el.shadowRoot!.querySelector('[part="header"]') === null).to.equal(true);
+  expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hidden).to.equal(true);
 });
 
 it('resamples header-slot state after delayed detached mutations on reconnect', async () => {
   const mount = (await fixture(html`<div>
-    <lr-flow-node><span slot="header">Custom header</span></lr-flow-node>
+    <lr-flow-node heading="Fallback"><span slot="header">Custom header</span></lr-flow-node>
   </div>`)) as HTMLDivElement;
   const el = mount.querySelector('lr-flow-node') as LyraFlowNode;
-  expect(el.shadowRoot!.querySelector('[part="header"]') === null).to.equal(true);
+  expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hidden).to.equal(true);
 
   el.remove();
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -205,7 +253,7 @@ it('resamples header-slot state after delayed detached mutations on reconnect', 
   await new Promise((resolve) => setTimeout(resolve, 0));
   mount.append(el);
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="header"]') !== null).to.equal(true);
+  expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hidden).to.equal(false);
 
   el.remove();
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -216,7 +264,7 @@ it('resamples header-slot state after delayed detached mutations on reconnect', 
   await new Promise((resolve) => setTimeout(resolve, 0));
   mount.append(el);
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="header"]') === null).to.equal(true);
+  expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hidden).to.equal(true);
 });
 
 it('is accessible with a status, progress, and handles', async () => {
@@ -385,46 +433,45 @@ describe('reduced-motion running pulse', () => {
   });
 });
 
-describe('--lr-flow-node-selected-border', () => {
-  it('retints the selected card border via the cssprop', async () => {
+describe('--lr-flow-node-selected-outline-color', () => {
+  it('retints the selected card outline via the cssprop', async () => {
     const el = (await fixture(html`<lr-flow-node heading="Fetch" selected></lr-flow-node>`)) as LyraFlowNode;
-    el.style.setProperty('--lr-flow-node-selected-border', 'rgb(10, 20, 30)');
+    el.style.setProperty('--lr-flow-node-selected-outline-color', 'rgb(10, 20, 30)');
     await el.updateComplete;
     const card = el.shadowRoot!.querySelector('.card') as HTMLElement;
-    expect(getComputedStyle(card).borderTopColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(card).outlineColor).to.equal('rgb(10, 20, 30)');
   });
 
   it('renders byte-identically to the brand token default when unset', async () => {
     const el = (await fixture(html`<lr-flow-node heading="Fetch" selected></lr-flow-node>`)) as LyraFlowNode;
     await el.updateComplete;
     const card = el.shadowRoot!.querySelector('.card') as HTMLElement;
-    const unset = getComputedStyle(card).borderTopColor;
-    el.style.setProperty('--lr-flow-node-selected-border', 'var(--lr-color-brand)');
-    expect(getComputedStyle(card).borderTopColor).to.equal(unset);
+    const unset = getComputedStyle(card).outlineColor;
+    el.style.setProperty('--lr-flow-node-selected-outline-color', 'var(--lr-color-brand)');
+    expect(getComputedStyle(card).outlineColor).to.equal(unset);
   });
 
   it('is accessible with a selected, retinted card', async () => {
     const el = (await fixture(
       html`<lr-flow-node heading="Fetch" status="success" selected></lr-flow-node>`
     )) as LyraFlowNode;
-    el.style.setProperty('--lr-flow-node-selected-border', 'var(--lr-color-brand)');
+    el.style.setProperty('--lr-flow-node-selected-outline-color', 'var(--lr-color-brand)');
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
 });
 
 describe('--lr-flow-node-running-border / --lr-flow-node-running-glow', () => {
-  it('retints the running card border via --lr-flow-node-running-border, independent of --lr-flow-node-selected-border', async () => {
+  it('keeps running border and selected outline as orthogonal visible channels', async () => {
     const el = (await fixture(
       html`<lr-flow-node heading="Fetch" status="running" selected></lr-flow-node>`
     )) as LyraFlowNode;
     el.style.setProperty('--lr-flow-node-running-border', 'rgb(10, 20, 30)');
-    el.style.setProperty('--lr-flow-node-selected-border', 'rgb(40, 50, 60)');
+    el.style.setProperty('--lr-flow-node-selected-outline-color', 'rgb(40, 50, 60)');
     await el.updateComplete;
     const card = el.shadowRoot!.querySelector('.card') as HTMLElement;
-    // Both rules are `:host([x]) .card`, equal specificity -- the running rule sits later in the
-    // stylesheet than the selected rule, so it wins when a node is both selected and running.
     expect(getComputedStyle(card).borderTopColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(card).outlineColor).to.equal('rgb(40, 50, 60)');
   });
 
   it('retints the running-state glow via --lr-flow-node-running-glow', async () => {
@@ -435,6 +482,18 @@ describe('--lr-flow-node-running-border / --lr-flow-node-running-glow', () => {
     await el.updateComplete;
     expect(getComputedStyle(card).boxShadow).to.not.equal(defaultShadow);
     expect(getComputedStyle(card).boxShadow).to.contain('rgb(70, 80, 90)');
+  });
+
+  it('preserves the selection outline for every lifecycle status', async () => {
+    const el = (await fixture(html`<lr-flow-node heading="Fetch" selected></lr-flow-node>`)) as LyraFlowNode;
+    el.style.setProperty('--lr-flow-node-selected-outline-color', 'rgb(40, 50, 60)');
+    for (const status of ['pending', 'running', 'success', 'error', 'denied'] as const) {
+      el.status = status;
+      await el.updateComplete;
+      const card = el.shadowRoot!.querySelector('.card') as HTMLElement;
+      expect(getComputedStyle(card).outlineColor, status).to.equal('rgb(40, 50, 60)');
+      expect(el.shadowRoot!.querySelector('[part="status"]')!.getAttribute('data-status')).to.equal(status);
+    }
   });
 
   it('renders byte-identically to the brand-quiet token default when unset', async () => {
@@ -508,9 +567,9 @@ describe('compact density and the card part', () => {
     const selected = (await fixture(
       html`<lr-flow-node compact heading="Fetch" selected></lr-flow-node>`
     )) as LyraFlowNode;
-    selected.style.setProperty('--lr-flow-node-selected-border', 'rgb(10, 20, 30)');
+    selected.style.setProperty('--lr-flow-node-selected-outline-color', 'rgb(10, 20, 30)');
     await selected.updateComplete;
-    expect(getComputedStyle(cardOf(selected)).borderTopColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(cardOf(selected)).outlineColor).to.equal('rgb(10, 20, 30)');
     expect(getComputedStyle(cardOf(selected)).paddingTop).to.equal('4px');
 
     const running = (await fixture(

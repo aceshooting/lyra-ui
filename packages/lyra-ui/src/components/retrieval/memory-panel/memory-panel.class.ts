@@ -1,26 +1,25 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { nextId } from '../../../internal/a11y.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
-import type { LyraProvenance } from '../provenance-panel/provenance-panel.class.js';
-import type { ConfirmBarVariant } from '../../agent-tools/confirm-bar/confirm-bar.class.js';
-import '../provenance-panel/provenance-panel.class.js';
-import '../../agent-tools/confirm-bar/confirm-bar.class.js';
-import '../../overlays/empty/empty.class.js';
-import { styles } from './memory-panel.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
+import { property, state } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { nextId } from "../../../internal/a11y.js";
+import { getNumberFormat } from "../../../internal/intl-cache.js";
+import type { LyraProvenance } from "../provenance-panel/provenance-panel.class.js";
+import type { ConfirmBarVariant } from "../../agent-tools/confirm-bar/confirm-bar.class.js";
+import "../provenance-panel/provenance-panel.class.js";
+import "../../agent-tools/confirm-bar/confirm-bar.class.js";
+import "../../overlays/empty/empty.class.js";
+import { styles } from "./memory-panel.styles.js";
+import {
+  retrievalSemanticLabel,
+  retrievalSemanticRole,
+} from "../retrieval-semantic-owner.js";
+import { activeElementIn } from "../../../internal/active-element.js";
+import type { LyraNodeTypeStyle } from "../../../internal/node-type-style.js";
+import type { LyraScoreThresholds } from "../graph/graph.class.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-
-/** A local, non-exported structural copy of `lr-provenance-panel`'s own (also un-exported)
- *  `NodeTypeStyle` shape, declared here rather than imported so this component has no build-time
- *  coupling to that module's internals -- a `types` array assigned onto either component's `types`
- *  property interops with no mapping needed. */
-type NodeTypeStyle = { id: string; label: string; color?: string; shape?: 'circle' | 'square' | 'diamond' };
 
 /**
  * One item held in a memory panel's short-term or long-term list. `provenance` reuses
@@ -41,16 +40,16 @@ export interface LyraMemoryItem {
   provenance?: LyraProvenance;
 }
 
-type MemoryScope = 'short-term' | 'long-term';
+type MemoryScope = "short-term" | "long-term";
 
 interface ItemPending {
-  kind: 'add' | 'remove';
+  kind: "add" | "remove";
   item: LyraMemoryItem;
   scope: MemoryScope;
 }
 
 interface ForgetAllPending {
-  kind: 'forget-all';
+  kind: "forget-all";
   longTerm: LyraMemoryItem[];
 }
 
@@ -71,30 +70,30 @@ export interface LyraMemoryExpandDetail {
 }
 
 export interface LyraMemoryPanelEventMap {
-  'lr-add': CustomEvent<LyraMemoryAddDetail>;
-  'lr-remove': CustomEvent<LyraMemoryRemoveDetail>;
-  'lr-forget': CustomEvent<undefined>;
-  'lr-expand': CustomEvent<LyraMemoryExpandDetail>;
+  "lr-add": CustomEvent<LyraMemoryAddDetail>;
+  "lr-remove": CustomEvent<LyraMemoryRemoveDetail>;
+  "lr-forget": CustomEvent<undefined>;
+  "lr-expand": CustomEvent<LyraMemoryExpandDetail>;
 }
 
-type Tier = 'high' | 'medium' | 'low';
+type Tier = "high" | "medium" | "low";
 
-const CONFIRM_HEADING_KEY: Record<'add' | 'remove' | 'forget-all', string> = {
-  add: 'memoryPanelConfirmAddHeading',
-  remove: 'memoryPanelConfirmRemoveHeading',
-  'forget-all': 'memoryPanelConfirmForgetHeading',
+const CONFIRM_HEADING_KEY: Record<"add" | "remove" | "forget-all", string> = {
+  add: "memoryPanelConfirmAddHeading",
+  remove: "memoryPanelConfirmRemoveHeading",
+  "forget-all": "memoryPanelConfirmForgetHeading",
 };
 
 const TIER_LABEL_KEY: Record<Tier, string> = {
-  high: 'citationHighConfidence',
-  medium: 'citationMediumConfidence',
-  low: 'citationLowConfidence',
+  high: "citationHighConfidence",
+  medium: "citationMediumConfidence",
+  low: "citationLowConfidence",
 };
 
-const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
-  high: 'success',
-  medium: 'warning',
-  low: 'danger',
+const TIER_TONE: Record<Tier, "success" | "warning" | "danger"> = {
+  high: "success",
+  medium: "warning",
+  low: "danger",
 };
 
 /**
@@ -177,12 +176,15 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    approve: LYRA_DEFAULT_approve,
     citationHighConfidence: LYRA_DEFAULT_citationHighConfidence,
     citationLowConfidence: LYRA_DEFAULT_citationLowConfidence,
     citationMediumConfidence: LYRA_DEFAULT_citationMediumConfidence,
     collapse: LYRA_DEFAULT_collapse,
+    deny: LYRA_DEFAULT_deny,
     details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
+    map: LYRA_DEFAULT_map,
     memoryPanelAdd: LYRA_DEFAULT_memoryPanelAdd,
     memoryPanelAddWithContext: LYRA_DEFAULT_memoryPanelAddWithContext,
     memoryPanelConfirmAddHeading: LYRA_DEFAULT_memoryPanelConfirmAddHeading,
@@ -193,11 +195,14 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     memoryPanelLabel: LYRA_DEFAULT_memoryPanelLabel,
     memoryPanelLongTermHeading: LYRA_DEFAULT_memoryPanelLongTermHeading,
     memoryPanelShortTermHeading: LYRA_DEFAULT_memoryPanelShortTermHeading,
+    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
     remove: LYRA_DEFAULT_remove,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
     restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     showLess: LYRA_DEFAULT_showLess,
     showMore: LYRA_DEFAULT_showMore,
   };
@@ -212,39 +217,44 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   @property({ attribute: false }) longTerm: LyraMemoryItem[] = [];
 
   /** `lr-provenance-panel` `types` pass-through, forwarded verbatim to every expanded item's panel. */
-  @property({ attribute: false }) types: NodeTypeStyle[] = [];
+  @property({ attribute: false }) types: LyraNodeTypeStyle[] = [];
 
   /** Confidence-tier and (forwarded) provenance relevance-tier boundaries. */
-  @property({ attribute: false }) thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 };
+  @property({ attribute: false }) thresholds: LyraScoreThresholds = {
+    high: 0.75,
+    medium: 0.5,
+  };
 
-  /** Overall accessible label override. */
-  @property() label = '';
+  /** Fallback overall group name. A non-empty host `aria-label` makes the host the sole owner; an
+   *  explicitly empty host label stays empty on the group. */
+  @property() label = "";
 
   @state() private expandedIds = new Set<string>();
   @state() private pending: PendingAction | null = null;
 
-  private readonly idBase = nextId('memory-panel');
+  private readonly idBase = nextId("memory-panel");
   private readonly itemIds = new WeakMap<LyraMemoryItem, string>();
   private nextItemId = 0;
   private pendingControlledFocus:
     | { scope: MemoryScope; index: number }
-    | 'base'
-    | 'forget-all'
+    | "base"
+    | "forget-all"
     | undefined;
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     this.captureControlledFocus(changed);
     if (!this.pending) return;
-    if (this.pending.kind === 'forget-all') {
+    if (this.pending.kind === "forget-all") {
       // The confirmation applies to the exact controlled collection the user saw. If the host
       // replaces that collection while the prompt is open, approving the stale prompt must not
       // authorize clearing newly supplied memories.
-      if (changed.has('longTerm')) this.pending = null;
+      if (changed.has("longTerm")) this.pending = null;
       return;
     }
-    if (!changed.has('shortTerm') && !changed.has('longTerm')) return;
-    const items = this.pending.scope === 'short-term' ? this.shortTerm : this.longTerm;
+    if (!changed.has("shortTerm") && !changed.has("longTerm")) return;
+    const items =
+      this.pending.scope === "short-term" ? this.shortTerm : this.longTerm;
     if (!items.includes(this.pending.item)) this.pending = null;
   }
 
@@ -253,12 +263,14 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     const pending = this.pendingControlledFocus;
     if (pending === undefined) return;
     this.pendingControlledFocus = undefined;
-    if (pending === 'base') {
+    if (pending === "base") {
       this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.focus();
       return;
     }
-    if (pending === 'forget-all') {
-      const button = this.renderRoot.querySelector<HTMLElement>('[part="forget-all-button"]');
+    if (pending === "forget-all") {
+      const button = this.renderRoot.querySelector<HTMLElement>(
+        '[part="forget-all-button"]'
+      );
       if (button) button.focus();
       else this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.focus();
       return;
@@ -267,37 +279,44 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   }
 
   private captureControlledFocus(changed: PropertyValues<this>): void {
-    if (!changed.has('shortTerm') && !changed.has('longTerm')) return;
+    if (!changed.has("shortTerm") && !changed.has("longTerm")) return;
     const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
     if (!active) return;
 
     const row = active.closest<HTMLElement>('[part="item"]');
     if (row) {
-      const scope = row.dataset['scope'] as MemoryScope | undefined;
+      const scope = row.dataset["scope"] as MemoryScope | undefined;
       if (!scope) return;
-      const property = scope === 'short-term' ? 'shortTerm' : 'longTerm';
+      const property = scope === "short-term" ? "shortTerm" : "longTerm";
       if (!changed.has(property)) return;
       const oldRows = [
         ...this.renderRoot.querySelectorAll<HTMLElement>(
-          `[part="section"][data-scope="${scope}"] [part="item"]`,
+          `[part="section"][data-scope="${scope}"] [part="item"]`
         ),
       ];
       const oldIndex = oldRows.indexOf(row);
       const previousItems =
         (changed.get(property) as LyraMemoryItem[] | undefined) ?? [];
       const focusedItem = previousItems[oldIndex];
-      const nextItems = scope === 'short-term' ? this.shortTerm : this.longTerm;
+      const nextItems = scope === "short-term" ? this.shortTerm : this.longTerm;
       const survivingIndex = focusedItem ? nextItems.indexOf(focusedItem) : -1;
       if (survivingIndex === oldIndex) return;
-      if (nextItems.length === 0 && this.shortTerm.length === 0 && this.longTerm.length === 0) {
-        this.pendingControlledFocus = 'base';
+      if (
+        nextItems.length === 0 &&
+        this.shortTerm.length === 0 &&
+        this.longTerm.length === 0
+      ) {
+        this.pendingControlledFocus = "base";
       } else {
         this.pendingControlledFocus = {
           scope,
           index:
             survivingIndex >= 0
               ? survivingIndex
-              : Math.min(Math.max(oldIndex, 0), Math.max(0, nextItems.length - 1)),
+              : Math.min(
+                  Math.max(oldIndex, 0),
+                  Math.max(0, nextItems.length - 1)
+                ),
         };
       }
       return;
@@ -307,17 +326,21 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     // <lr-confirm-bar> host, and that bar sits outside every [part="item"], so neither branch
     // above can see it -- a controlled `longTerm` replacement unmounted the bar and dropped focus
     // to <body>.
-    if (active.getAttribute('part') === 'forget-all-confirm' && changed.has('longTerm')) {
-      this.pendingControlledFocus = this.longTerm.length === 0 ? 'base' : 'forget-all';
+    if (
+      active.getAttribute("part") === "forget-all-confirm" &&
+      changed.has("longTerm")
+    ) {
+      this.pendingControlledFocus =
+        this.longTerm.length === 0 ? "base" : "forget-all";
       return;
     }
 
     if (
-      active.getAttribute('part') === 'forget-all-button' &&
-      changed.has('longTerm') &&
+      active.getAttribute("part") === "forget-all-button" &&
+      changed.has("longTerm") &&
       this.longTerm.length === 0
     ) {
-      this.pendingControlledFocus = 'base';
+      this.pendingControlledFocus = "base";
     }
   }
 
@@ -331,9 +354,9 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   }
 
   private tier(score: number): Tier {
-    if (score >= this.thresholds.high) return 'high';
-    if (score >= this.thresholds.medium) return 'medium';
-    return 'low';
+    if (score >= this.thresholds.high) return "high";
+    if (score >= this.thresholds.medium) return "medium";
+    return "low";
   }
 
   private toggleExpand(item: LyraMemoryItem, scope: MemoryScope): void {
@@ -343,16 +366,20 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     if (expanded) next.add(key);
     else next.delete(key);
     this.expandedIds = next;
-    this.emit('lr-expand', { id: item.id, expanded });
+    this.emit("lr-expand", { id: item.id, expanded });
   }
 
-  private startItemPending(kind: 'add' | 'remove', item: LyraMemoryItem, scope: MemoryScope): void {
+  private startItemPending(
+    kind: "add" | "remove",
+    item: LyraMemoryItem,
+    scope: MemoryScope
+  ): void {
     this.pending = { kind, item, scope };
     this.focusPendingConfirmation();
   }
 
   private startForgetAllPending(): void {
-    this.pending = { kind: 'forget-all', longTerm: this.longTerm };
+    this.pending = { kind: "forget-all", longTerm: this.longTerm };
     this.focusPendingConfirmation();
   }
 
@@ -369,7 +396,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   private focusPendingConfirmation(): void {
     const started = this.pending;
     void this.updateComplete.then(async () => {
-      const bar = this.renderRoot.querySelector('lr-confirm-bar');
+      const bar = this.renderRoot.querySelector("lr-confirm-bar");
       if (!bar) return;
       await bar.updateComplete;
       const deny = bar.shadowRoot?.querySelector('[part="deny-button"]') as
@@ -377,7 +404,9 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
         | null;
       await deny?.updateComplete;
       if (this.pending !== started || !bar.isConnected) return;
-      (deny ?? bar.shadowRoot?.querySelector<HTMLElement>('[part="status"]'))?.focus();
+      (
+        deny ?? bar.shadowRoot?.querySelector<HTMLElement>('[part="status"]')
+      )?.focus();
     });
   }
 
@@ -385,7 +414,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
    *  (none), same focus return. Scoped to the bar rather than the document: this is an inline,
    *  non-modal confirmation, so it must not swallow Escape for an enclosing dialog or popover. */
   private onConfirmKeyDown(event: KeyboardEvent, cancel: () => void): void {
-    if (event.key !== 'Escape') return;
+    if (event.key !== "Escape") return;
     // Stop propagation only when the cancel actually closed something. `resolveItemDecision()`
     // bails when the pending item is no longer in its array, so stopping first would swallow
     // Escape while doing nothing -- and an enclosing dialog would refuse to close for no reason.
@@ -398,10 +427,11 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     void this.updateComplete.then(() => {
       const rows = [
         ...this.renderRoot.querySelectorAll<HTMLElement>(
-          `[part="section"][data-scope="${scope}"] [part="item"]`,
+          `[part="section"][data-scope="${scope}"] [part="item"]`
         ),
       ];
-      const target = rows[Math.min(index, rows.length - 1)] ??
+      const target =
+        rows[Math.min(index, rows.length - 1)] ??
         this.renderRoot.querySelector<HTMLElement>('[part="item"]') ??
         this.renderRoot.querySelector<HTMLElement>('[part="base"]');
       target?.focus();
@@ -410,21 +440,24 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
 
   private resolveItemDecision(p: ItemPending, approved: boolean): void {
     if (this.pending !== p) return;
-    const items = p.scope === 'short-term' ? this.shortTerm : this.longTerm;
+    const items = p.scope === "short-term" ? this.shortTerm : this.longTerm;
     const index = items.indexOf(p.item);
     if (index < 0) return;
     this.pending = null;
     if (approved) {
-      if (p.kind === 'add') this.emit('lr-add', { item: p.item });
-      else this.emit('lr-remove', { id: p.item.id, scope: p.scope });
+      if (p.kind === "add") this.emit("lr-add", { item: p.item });
+      else this.emit("lr-remove", { id: p.item.id, scope: p.scope });
     }
     this.refocusItem(p.scope, index);
   }
 
-  private resolveForgetAllDecision(pending: ForgetAllPending, approved: boolean): void {
+  private resolveForgetAllDecision(
+    pending: ForgetAllPending,
+    approved: boolean
+  ): void {
     if (this.pending !== pending || this.longTerm !== pending.longTerm) return;
     this.pending = null;
-    if (approved) this.emit('lr-forget');
+    if (approved) this.emit("lr-forget");
     void this.updateComplete.then(() => {
       (
         (this.renderRoot.querySelector('[part="forget-all-button"]') ??
@@ -433,18 +466,25 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     });
   }
 
-  private renderConfidence(item: LyraMemoryItem): TemplateResult | typeof nothing {
+  private renderConfidence(
+    item: LyraMemoryItem
+  ): TemplateResult | typeof nothing {
     if (item.confidence == null) return nothing;
     const tier = this.tier(item.confidence);
-    return html`<span part="confidence" data-tone=${TIER_TONE[tier]}>${this.localize(TIER_LABEL_KEY[tier])}</span>`;
+    return html`<span part="confidence" data-tone=${TIER_TONE[tier]}
+      >${this.localize(TIER_LABEL_KEY[tier])}</span
+    >`;
   }
 
   private renderItemConfirm(p: ItemPending): TemplateResult {
     return html`
       <lr-confirm-bar
-        variant=${p.kind === 'add' ? ('neutral' as ConfirmBarVariant) : ('danger' as ConfirmBarVariant)}
+        variant=${p.kind === "add"
+          ? ("neutral" as ConfirmBarVariant)
+          : ("danger" as ConfirmBarVariant)}
         heading=${this.localize(CONFIRM_HEADING_KEY[p.kind])}
-        @keydown=${(e: KeyboardEvent) => this.onConfirmKeyDown(e, () => this.resolveItemDecision(p, false))}
+        @keydown=${(e: KeyboardEvent) =>
+          this.onConfirmKeyDown(e, () => this.resolveItemDecision(p, false))}
         @lr-approve=${(e: CustomEvent) => {
           e.stopPropagation();
           this.resolveItemDecision(p, true);
@@ -461,7 +501,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   private renderItem(item: LyraMemoryItem, scope: MemoryScope): TemplateResult {
     const itemPending =
       this.pending &&
-      this.pending.kind !== 'forget-all' &&
+      this.pending.kind !== "forget-all" &&
       this.pending.item === item &&
       this.pending.scope === scope
         ? this.pending
@@ -471,7 +511,13 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     const bodyId = `${this.idBase}-${itemKey}`;
 
     return html`
-      <div part="item" role="listitem" data-id=${item.id} data-scope=${scope} tabindex="-1">
+      <div
+        part="item"
+        role="listitem"
+        data-id=${item.id}
+        data-scope=${scope}
+        tabindex="-1"
+      >
         <div part="item-row">
           <p part="item-text">${item.text}</p>
           ${this.renderConfidence(item)}
@@ -481,11 +527,11 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
               <button
                 part="expand-toggle"
                 type="button"
-                aria-expanded=${expanded ? 'true' : 'false'}
+                aria-expanded=${expanded ? "true" : "false"}
                 aria-controls=${bodyId}
                 @click=${() => this.toggleExpand(item, scope)}
               >
-                ${this.localize(expanded ? 'showLess' : 'showMore')}
+                ${this.localize(expanded ? "showLess" : "showMore")}
               </button>
             `
           : nothing}
@@ -493,32 +539,43 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
           ${itemPending
             ? this.renderItemConfirm(itemPending)
             : html`
-                ${scope === 'short-term'
+                ${scope === "short-term"
                   ? html`
                       <button
                         part="add-button"
                         type="button"
-                        aria-label=${this.localize('memoryPanelAddWithContext', undefined, { label: item.text })}
-                        @click=${() => this.startItemPending('add', item, scope)}
+                        aria-label=${this.localize(
+                          "memoryPanelAddWithContext",
+                          undefined,
+                          { label: item.text }
+                        )}
+                        @click=${() =>
+                          this.startItemPending("add", item, scope)}
                       >
-                        ${this.localize('memoryPanelAdd')}
+                        ${this.localize("memoryPanelAdd")}
                       </button>
                     `
                   : nothing}
                 <button
                   part="remove-button"
                   type="button"
-                  aria-label=${this.localize('removeWithContext', undefined, { label: item.text })}
-                  @click=${() => this.startItemPending('remove', item, scope)}
+                  aria-label=${this.localize("removeWithContext", undefined, {
+                    label: item.text,
+                  })}
+                  @click=${() => this.startItemPending("remove", item, scope)}
                 >
-                  ${this.localize('remove')}
+                  ${this.localize("remove")}
                 </button>
               `}
         </div>
         ${item.provenance
           ? html`
               <div part="item-body" id=${bodyId} ?hidden=${!expanded}>
-                <lr-provenance-panel .provenance=${item.provenance} .types=${this.types} .thresholds=${this.thresholds}></lr-provenance-panel>
+                <lr-provenance-panel
+                  .provenance=${item.provenance}
+                  .types=${this.types}
+                  .thresholds=${this.thresholds}
+                ></lr-provenance-panel>
               </div>
             `
           : nothing}
@@ -527,15 +584,18 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   }
 
   private renderForgetAllControl(): TemplateResult {
-    const forgetPending = this.pending?.kind === 'forget-all' ? this.pending : null;
+    const forgetPending =
+      this.pending?.kind === "forget-all" ? this.pending : null;
     if (forgetPending) {
       return html`
         <lr-confirm-bar
           part="forget-all-confirm"
           variant="danger"
-          heading=${this.localize('memoryPanelConfirmForgetHeading')}
+          heading=${this.localize("memoryPanelConfirmForgetHeading")}
           @keydown=${(e: KeyboardEvent) =>
-            this.onConfirmKeyDown(e, () => this.resolveForgetAllDecision(forgetPending, false))}
+            this.onConfirmKeyDown(e, () =>
+              this.resolveForgetAllDecision(forgetPending, false)
+            )}
           @lr-approve=${(e: CustomEvent) => {
             e.stopPropagation();
             this.resolveForgetAllDecision(forgetPending, true);
@@ -544,46 +604,84 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
             e.stopPropagation();
             this.resolveForgetAllDecision(forgetPending, false);
           }}
-          >${this.localize('memoryPanelConfirmForgetBody', undefined, {
-            count: getNumberFormat(this.effectiveLocale).format(this.longTerm.length),
+          >${this.localize("memoryPanelConfirmForgetBody", undefined, {
+            count: getNumberFormat(this.effectiveLocale).format(
+              this.longTerm.length
+            ),
           })}</lr-confirm-bar
         >
       `;
     }
     return html`
-      <button part="forget-all-button" type="button" @click=${() => this.startForgetAllPending()}>
-        ${this.localize('memoryPanelForgetAll')}
+      <button
+        part="forget-all-button"
+        type="button"
+        @click=${() => this.startForgetAllPending()}
+      >
+        ${this.localize("memoryPanelForgetAll")}
       </button>
     `;
   }
 
-  private renderSection(scope: MemoryScope, headingKey: string, items: LyraMemoryItem[]): TemplateResult {
+  private renderSection(
+    scope: MemoryScope,
+    headingKey: string,
+    items: LyraMemoryItem[]
+  ): TemplateResult {
     const headingId = `${this.idBase}-${scope}-heading`;
     return html`
       <section part="section" data-scope=${scope}>
         <div part="section-header">
           <h3 part="heading" id=${headingId}>${this.localize(headingKey)}</h3>
-          ${scope === 'long-term' && this.longTerm.length > 0 ? this.renderForgetAllControl() : nothing}
+          ${scope === "long-term" && this.longTerm.length > 0
+            ? this.renderForgetAllControl()
+            : nothing}
         </div>
         ${items.length === 0
-          ? html`<p part="section-empty">${this.localize('noData')}</p>`
-          : html`<div part="list" role="list" aria-labelledby=${headingId}>${items.map((item) => this.renderItem(item, scope))}</div>`}
+          ? html`<p part="section-empty">${this.localize("noData")}</p>`
+          : html`<div part="list" role="list" aria-labelledby=${headingId}>
+              ${items.map((item) => this.renderItem(item, scope))}
+            </div>`}
       </section>
     `;
   }
 
   override render(): TemplateResult {
     const allEmpty = this.shortTerm.length === 0 && this.longTerm.length === 0;
-    const groupLabel = this.getAttribute('aria-label') ?? (this.label || this.localize('memoryPanelLabel'));
+    const groupLabel = retrievalSemanticLabel(
+      this,
+      this.label || this.localize("memoryPanelLabel")
+    );
+    const groupRole = retrievalSemanticRole(this, "group");
 
     if (allEmpty) {
-      return html`<div part="base" tabindex="-1" aria-label=${groupLabel}><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;
+      return html`<div
+        part="base"
+        role=${groupRole ?? nothing}
+        tabindex="-1"
+        aria-label=${groupLabel ?? nothing}
+      >
+        <lr-empty part="empty" heading=${this.localize("noData")}></lr-empty>
+      </div>`;
     }
 
     return html`
-      <div part="base" role="group" tabindex="-1" aria-label=${groupLabel}>
-        ${this.renderSection('short-term', 'memoryPanelShortTermHeading', this.shortTerm)}
-        ${this.renderSection('long-term', 'memoryPanelLongTermHeading', this.longTerm)}
+      <div
+        part="base"
+        role=${groupRole ?? nothing}
+        tabindex="-1"
+        aria-label=${groupLabel ?? nothing}
+      >
+        ${this.renderSection(
+          "short-term",
+          "memoryPanelShortTermHeading",
+          this.shortTerm
+        )}
+        ${this.renderSection(
+          "long-term",
+          "memoryPanelLongTermHeading",
+          this.longTerm
+        )}
       </div>
     `;
   }
@@ -591,6 +689,6 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-memory-panel': LyraMemoryPanel;
+    "lr-memory-panel": LyraMemoryPanel;
   }
 }

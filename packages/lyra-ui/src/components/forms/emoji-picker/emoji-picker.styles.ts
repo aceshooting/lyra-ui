@@ -191,29 +191,46 @@ export const styles = css`
     border: none;
     border-radius: var(--lr-emoji-picker-item-radius, var(--_lr-emoji-picker-item-radius-default));
     background: transparent;
+    color: var(--lr-color-text);
     font-size: var(--lr-emoji-picker-glyph-size, var(--_lr-emoji-picker-glyph-size-default));
     cursor: pointer;
   }
-  /* Inline var() fallback rather than a :host-declared property, so a consumer can set it on any
-     ancestor without a :host declaration shadowing that. ::part(emoji)[data-active] is invalid CSS
-     (an attribute selector cannot follow ::part), so highlighting the active/hovered emoji used to
-     require hijacking the shared --lr-color-brand-quiet token, repainting everything else that reads
-     it. Hover and keyboard-active deliberately share this one rule (one declaration), so a single
-     hook backs both -- overriding it retints both consistently. Unset, it falls back to the token
-     the rule used before, so the rendering is unchanged. */
-  [part='emoji']:hover,
-  [part='emoji'][data-active] {
-    background: var(--lr-emoji-picker-active-bg, var(--lr-color-brand-quiet));
-  }
-  /* The pressed cell mixes the hover tint (not the bare token) one shared step further toward the
-     text colour, so a consumer who retinted --lr-emoji-picker-active-bg still owns both states.
-     Picking is a grid of near-identical targets, so "which one did I just hit" is the point. */
-  [part='emoji']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-emoji-picker-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+  /* State hooks are inline fallbacks rather than :host declarations, so an ancestor theme can
+     customize one state without being shadowed. The former active-bg hook remains a compatibility
+     fallback for hover and roving-active; committed selection and pointer press are independent. */
+  [part='emoji']:hover:not(:disabled) {
+    background: var(
+      --lr-emoji-picker-hover-bg,
+      var(--lr-emoji-picker-active-bg, var(--lr-color-brand-quiet))
     );
+  }
+  [part='emoji'][aria-selected='true'] {
+    background: var(--lr-emoji-picker-selected-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-emoji-picker-selected-color, var(--lr-color-text));
+    outline: var(--lr-border-width-thin) solid
+      var(--lr-emoji-picker-selected-outline-color, var(--lr-color-brand));
+    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+  }
+  [part='emoji'][data-active] {
+    background: var(
+      --lr-emoji-picker-keyboard-active-bg,
+      var(--lr-emoji-picker-active-bg, var(--lr-color-brand-quiet))
+    );
+    outline: var(--lr-border-width-thin) dotted
+      var(--lr-emoji-picker-keyboard-active-outline-color, var(--lr-color-brand));
+    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+  }
+  [part='emoji']:active:not(:disabled) {
+    background: var(
+      --lr-emoji-picker-pressed-bg,
+      color-mix(
+        in oklab,
+        var(--lr-emoji-picker-hover-bg, var(--lr-emoji-picker-active-bg, var(--lr-color-brand-quiet))),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+    outline-color: var(--lr-emoji-picker-pressed-outline-color, var(--lr-color-brand));
+    outline-style: double;
   }
   /* Negative offset (matches [part='textarea']:focus-visible in code-editor.styles.ts), not the
      usual positive one -- the grid's own gap is only --lr-emoji-picker-gap-default (2px), the same
@@ -243,5 +260,24 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
+  }
+  @media (forced-colors: active) {
+    [part='emoji']:hover:not(:disabled) {
+      outline: var(--lr-border-width-thin) dashed Highlight;
+      outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+    }
+    [part='emoji'][data-active] {
+      outline: var(--lr-border-width-thin) dotted Highlight;
+    }
+    [part='emoji'][aria-selected='true'] {
+      color: HighlightText;
+      background: Highlight;
+      outline: var(--lr-border-width-medium) solid Highlight;
+    }
+    [part='emoji']:active:not(:disabled) {
+      color: HighlightText;
+      background: Highlight;
+      outline: var(--lr-border-width-medium) double Highlight;
+    }
   }
 `;

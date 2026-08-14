@@ -68,6 +68,43 @@ export const SyncedWithSelection: Story = {
   },
 };
 
+export const ActiveBeyondProjection: Story = {
+  name: 'Active path beyond the projection boundary',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The controlled active span and its parent remain mounted and current even when both arrive after 500 ordinary rows.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-trace-tree
+      style="max-width: 40rem"
+      .spans=${[
+        ...Array.from({ length: 500 }, (_, index): LyraSpan => ({
+          id: `ordinary-${index}`,
+          name: `Ordinary ${index + 1}`,
+          kind: 'tool',
+          startMs: index,
+          endMs: index + 1,
+          status: 'success',
+        })),
+        { id: 'late-parent', name: 'Late parent', kind: 'agent', startMs: 501, status: 'running' },
+        {
+          id: 'late-active',
+          parentId: 'late-parent',
+          name: 'Late active tool',
+          kind: 'tool',
+          startMs: 502,
+          status: 'running',
+        },
+      ]}
+      .activeSpanId=${'late-active'}
+    ></lr-trace-tree>
+  `,
+};
+
 export const Empty: Story = {
   render: () => html`<lr-trace-tree style="max-width: 40rem"></lr-trace-tree>`,
 };

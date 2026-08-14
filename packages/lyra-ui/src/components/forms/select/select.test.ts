@@ -6,6 +6,10 @@ import '../combobox/option.js';
 import type { LyraSelect } from './select.js';
 import type { LyraOption } from '../combobox/option.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  RESET_OPTION_SELECTED_FROM_OWNER,
+  SET_OPTION_SELECTED_FROM_OWNER,
+} from '../../../internal/option-selection.js';
 import { styles } from './select.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
@@ -16,6 +20,48 @@ const basic = () => html`
     <lr-option value="c">Cherry</lr-option>
   </lr-select>
 `;
+
+it('collects an option constructed by a same-origin foreign custom-element realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameWindow = frame.contentWindow;
+  const frameDocument = frame.contentDocument;
+  if (!frameWindow || !frameDocument) {
+    frame.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+
+  class ForeignOption extends frameWindow.HTMLElement {
+    value = 'foreign';
+    label = 'Foreign option';
+    selected = true;
+    defaultSelected = false;
+    disabled = false;
+
+    [SET_OPTION_SELECTED_FROM_OWNER](selected: boolean): void {
+      this.selected = selected;
+    }
+
+    [RESET_OPTION_SELECTED_FROM_OWNER](selected: boolean): void {
+      this.selected = selected;
+    }
+  }
+
+  frameWindow.customElements.define('lr-option', ForeignOption);
+  const foreign = frameDocument.createElement('lr-option');
+  const el = await fixture<LyraSelect>(html`<lr-select></lr-select>`);
+  try {
+    const LocalOption = customElements.get('lr-option')!;
+    expect(foreign instanceof LocalOption, 'the fixture must not satisfy the ambient class guard').to.equal(false);
+    el.append(document.adoptNode(foreign));
+    await aTimeout(0);
+    await el.updateComplete;
+
+    expect(el.value).to.equal('foreign');
+  } finally {
+    frame.remove();
+  }
+});
 
 it('emits one cancelable lr-invalid alias when a validity check fails', async () => {
   const el = (await fixture(html`
@@ -2701,7 +2747,7 @@ it('preserves rendered error behavior while shared slot presence changes', async
   expect(error.hidden).to.be.true;
 });
 
-it('prevents mousedown on an option so the trigger keeps focus, but not on listbox chrome', async () => {
+it('prevents mousedown across the whole listbox so headings/chrome cannot steal trigger focus', async () => {
   const el = (await fixture(html`
     <lr-select label="Meter"><lr-option value="a">A</lr-option></lr-select>
   `)) as LyraSelect;
@@ -2713,7 +2759,7 @@ it('prevents mousedown on an option so the trigger keeps focus, but not on listb
 
   const onChrome = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
   el.shadowRoot!.querySelector('[part="listbox"]')!.dispatchEvent(onChrome);
-  expect(onChrome.defaultPrevented).to.be.false;
+  expect(onChrome.defaultPrevented).to.be.true;
 });
 
 
@@ -2924,6 +2970,43 @@ describe('multiple', () => {
     expect(new FormData(form).getAll('fruit')).to.deep.equal(['a', 'b']);
   });
 
+  it('preserves duplicate-valued option occurrences through pick, tags, removal, FormData, and restoration', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-select name="fruit" multiple>
+          <lr-option value="same">First occurrence</lr-option>
+          <lr-option value="same">Second occurrence</lr-option>
+        </lr-select>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-select') as LyraSelect;
+    const options = [...el.querySelectorAll('lr-option')] as LyraOption[];
+    el.open = true;
+    await el.updateComplete;
+    rows(el)[0].click();
+    rows(el)[1].click();
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(['same', 'same']);
+    expect(el.selectedOptions).to.deep.equal(options);
+    expect(tags(el).map((tag) => tag.textContent!.trim())).to.deep.equal([
+      'First occurrence',
+      'Second occurrence',
+    ]);
+    expect(new FormData(form).getAll('fruit')).to.deep.equal(['same', 'same']);
+
+    const removeButtons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="tag__remove-button"]')];
+    removeButtons[1].click();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['same']);
+    expect(el.selectedOptions).to.deep.equal([options[0]]);
+
+    el.formStateRestoreCallback('["same","same"]', 'restore');
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['same', 'same']);
+    expect(el.selectedOptions).to.deep.equal(options);
+  });
+
   it('contributes no form entry at all while unnamed', async () => {
     const form = (await fixture(html`
       <form>
@@ -3018,8 +3101,10 @@ describe('multiple', () => {
     const el = (await fixture(multi())) as LyraSelect;
     el.value = ['a', 'b'];
     await el.updateComplete;
-    const removeValue = (value: string): void =>
-      (el as unknown as { removeValue(v: string): void }).removeValue(value);
+    const removeValue = (value: string): void => {
+      const selected = el.value as string[];
+      (el as unknown as { removeValueAt(index: number): void }).removeValueAt(selected.indexOf(value));
+    };
 
     el.disabled = true;
     removeValue('a');
@@ -3060,6 +3145,37 @@ describe('multiple', () => {
     trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'B', bubbles: true, cancelable: true }));
     await el.updateComplete;
     expect(el.value).to.deep.equal(['a', 'b']);
+  });
+
+  it('continues closed type-ahead past selected occurrences to the next unselected match', async () => {
+    const el = (await fixture(html`
+      <lr-select multiple>
+        <lr-option value="same">Apple</lr-option>
+        <lr-option value="same">Apricot</lr-option>
+        <lr-option value="same">Avocado</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    const optionRows = rows(el);
+    optionRows[0].click();
+    optionRows[2].click();
+    el.open = false;
+    await el.updateComplete;
+
+    // The last selected occurrence is Avocado, so the bounded circular search first encounters
+    // the already-selected Apple before reaching the unselected same-valued Apricot occurrence.
+    trigger(el).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'A', bubbles: true, cancelable: true }),
+    );
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(['same', 'same', 'same']);
+    expect(el.selectedOptions.map((option) => option.label)).to.deep.equal([
+      'Apple',
+      'Avocado',
+      'Apricot',
+    ]);
   });
 
   it('is accessible with tags rendered and the listbox open', async () => {

@@ -187,9 +187,10 @@
   root-included tag. Never put a hand-authored export inside that generated block or generate the
   `lyra.ts` export surface: the latter is reviewed and semver-covered by hand. Stable generated
   `src/components/lr-*.ts` aliases provide family-independent per-tag registration paths.
-  `package.json#exports` maps `.`, `./components/*`, `./utilities/*` — NOT
-  `./internal/*`, which 8.0.0 removed on purpose: only the curated `src/utilities/` re-exports are
-  semver-covered, and an `internal/` specifier now fails to resolve outright
+  `package.json#exports` maps `.`, explicit inventory-derived component/AI routes, and explicit
+  curated utility/helper routes — never broad `./components/*`, `./ai/*`, or `./utilities/*`
+  wildcards, and never `./internal/*`. Internal paths were removed on purpose: only the curated
+  `src/utilities/` re-exports are semver-covered, and an `internal/` specifier fails to resolve outright
   (`ERR_PACKAGE_PATH_NOT_EXPORTED`) rather than degrading, in a consumer's code and in this repo's
   own check fixtures alike. A helper that needs to be reachable gets a `src/utilities/` re-export,
   not just its `src/internal/` home.
@@ -199,7 +200,8 @@
   CSS/locale/companion registration side effects. The pure `lyra.js` root is not a side effect.
   Do not edit that array or the root-registration allowlist by hand. After adding, moving, or
   removing a component, refresh the inventory and run `pnpm registrations`; this regenerates the
-  `all.ts` import block, aliases, allowlist, and side-effect forms together. `check:registrations`,
+  `all.ts` import block, aliases, allowlist, side-effect forms, and explicit package-export map
+  together. `check:registrations`, `check:package-exports`,
   `check-side-effects`, their
   deterministic self-tests, and CI's regenerate-and-diff step fail on stale, duplicate, or missing
   entries. The `.ts` entries matter because Storybook's production build

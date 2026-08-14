@@ -109,6 +109,9 @@
               "type": { "text": "boolean" }
             },
             {
+              "name": "untyped-alias"
+            },
+            {
               "name": "value",
               "fieldName": "value",
               "type": { "text": "string" }

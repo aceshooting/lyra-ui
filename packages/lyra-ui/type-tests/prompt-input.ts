@@ -2,7 +2,7 @@ import type {
   ChatComposerSelectionDirection,
   ChatComposerWrap,
   LyraPromptInput,
-  PromptInputAttachment,
+  LyraPromptInputAttachment,
 } from '../src/lyra.js';
 
 declare const promptInput: LyraPromptInput;
@@ -14,14 +14,16 @@ void input;
 void direction;
 void wrap;
 
-const attachment: PromptInputAttachment = { id: 'report', name: 'report.pdf', bytes: 2_048 };
+const attachment: LyraPromptInputAttachment = { attachmentId: 'report', name: 'report.pdf', bytes: 2_048 };
 promptInput.attachments = [attachment];
-// @ts-expect-error PromptInputAttachment uses the child chip's `bytes` vocabulary, not `size`.
-promptInput.attachments = [{ id: 'legacy', name: 'legacy.pdf', size: 2_048 }];
+// @ts-expect-error LyraPromptInputAttachment uses the child chip's `bytes` vocabulary, not `size`.
+promptInput.attachments = [{ attachmentId: 'legacy', name: 'legacy.pdf', size: 2_048 }];
+// @ts-expect-error v9 attachment identity is `attachmentId`, not the generic `id` field.
+promptInput.attachments = [{ id: 'legacy', name: 'legacy.pdf' }];
 
 promptInput.spellcheck = false;
 promptInput.autocapitalize = 'sentences';
-promptInput.autoCorrect = 'on';
+promptInput.autocorrect = 'on';
 promptInput.wrap = 'hard';
 promptInput.autocomplete = 'off';
 promptInput.inputMode = 'text';

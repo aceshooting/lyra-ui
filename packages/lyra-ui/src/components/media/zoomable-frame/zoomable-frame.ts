@@ -3,4 +3,7 @@ import { LyraZoomableFrame } from './zoomable-frame.class.js';
 
 defineElement('zoomable-frame', LyraZoomableFrame);
 export { LyraZoomableFrame } from './zoomable-frame.class.js';
-export type { LyraZoomableFrameEventMap, ZoomableFrameLoading } from './zoomable-frame.class.js';
+export type {
+  LyraZoomableFrameEventMap,
+  LyraZoomableFrameLoading,
+} from './zoomable-frame.class.js';

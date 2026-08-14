@@ -152,7 +152,10 @@ applyLyraThemePreset(defineLyraThemePreset({
 
 Built-ins cover `system`, explicit `light`/`dark`, `unset`, and four contrast-checked gemstone accents.
 Applying one reflects its stable id to `data-lr-theme-preset` and emits
-`lr-theme-preset-change`; direct `setLyraTheme()` calls clear the marker.
+`lr-theme-preset-change` with the complete applied snapshot when every requested field survives
+runtime validation. If a field is normalized (an invalid accent fails closed to `null`), only
+`lr-theme-change` fires and no exact preset marker is claimed. Direct `setLyraTheme()` calls clear
+the marker too.
 `defineLyraThemePreset()` validates the lowercase kebab-case id and field shapes, then freezes the
 preset; CSS color syntax is checked by the production runtime when it is applied.
 

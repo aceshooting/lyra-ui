@@ -1,10 +1,12 @@
-import { html, type TemplateResult, nothing } from 'lit';
+import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { styles } from './pan-zoom.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -62,8 +64,7 @@ export interface LyraPanZoomEventMap {
  * @csspart zoom-out - Zoom-out button.
  * @csspart zoom-in - Zoom-in button.
  * @csspart reset - Reset-to-100-percent button.
- * @cssprop --lr-pan-zoom-min-block-size - Minimum viewport block size. The former
- *   `--lr-zoomable-frame-min-block-size` name remains a temporary fallback for migrated consumers.
+ * @cssprop [--lr-pan-zoom-min-block-size=var(--lr-size-10rem)] - Minimum viewport block size.
  * @cssprop [--lr-pan-zoom-zoom=1] - Read-only scale written from `zoom`; set the property instead.
  * @status stable
  * @since 8.0.0
@@ -82,7 +83,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ type: Number, reflect: true }) zoom = 1;
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
@@ -90,6 +91,8 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
   @property() src = '';
   @property() alt = '';
+  /** Overall host name when supplied as `aria-label`. A property-only value names the focusable
+   * viewport; when the host already owns a name, the viewport keeps its localized purpose name. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private get safeMinZoom(): number {
@@ -183,12 +186,16 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     const zoom = this.safeZoom;
     const min = this.safeMinZoom;
     const max = this.safeMaxZoom;
-    const label = this.accessibleLabel ?? this.localize('zoomableFrameLabel');
-    return html`<div part="base" role="region" aria-label=${label}>
+    const explicitHostLabel = hostAriaLabel(this);
+    const viewportLabel = explicitHostLabel !== null
+      ? this.localize('zoomableFrameLabel')
+      : this.accessibleLabel ?? this.localize('zoomableFrameLabel');
+    const safeSrc = safeMediaSrc(this.src);
+    return html`<div part="base">
       <div
         part="viewport"
         role="group"
-        aria-label=${label}
+        aria-label=${viewportLabel}
         tabindex="0"
         @keydown=${this.onViewportKeyDown}
         @focus=${this.onViewportFocus}
@@ -197,16 +204,18 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
         <div
           part="content"
           data-zoom=${String(zoom)}
-          style="--lr-pan-zoom-zoom: ${zoom}; --lr-zoomable-frame-zoom: ${zoom}"
+          style="--lr-pan-zoom-zoom: ${zoom}"
         >
-          ${this.src ? html`<img src=${safeMediaSrc(this.src) ?? nothing} alt=${this.alt} />` : html`<slot></slot>`}
+          ${safeSrc ? html`<img src=${safeSrc} alt=${this.alt} />` : html`<slot></slot>`}
         </div>
       </div>
       <div part="controls" role="toolbar" aria-label=${this.localize('zoomControls')}>
         <button part="zoom-out" type="button" aria-label=${this.localize('zoomOut')} ?disabled=${zoom <= min} @click=${() => this.zoomOut()}>−</button>
-        <button part="reset" type="button" aria-label=${this.localize('resetZoom')} @click=${() => this.resetZoom()}>${this.localize('pdfViewerCurrentZoom', undefined, {
-          percent: getNumberFormat(this.effectiveLocale).format(Math.round(zoom * 100)),
-        })}</button>
+        <button part="reset" type="button" @click=${() => this.resetZoom()}>
+          <span class="sr-only">${this.localize('resetZoom')} </span><span>${this.localize('pdfViewerCurrentZoom', undefined, {
+            percent: getNumberFormat(this.effectiveLocale).format(Math.round(zoom * 100)),
+          })}</span>
+        </button>
         <button part="zoom-in" type="button" aria-label=${this.localize('zoomIn')} ?disabled=${zoom >= max} @click=${() => this.zoomIn()}>+</button>
       </div>
     </div>`;

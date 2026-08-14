@@ -116,14 +116,57 @@ function ansi256ToColor(n: number, role: 'fg' | 'bg' = 'fg'): string {
 
 const CSI_FINAL_BYTE = /[\x40-\x7e]/;
 /** ANSI control sequences are small; this generous ceiling prevents a truncated OSC/CSI from
- * retaining and repeatedly rescanning an unbounded streamed suffix. */
+ * retaining and repeatedly rescanning an unbounded streamed suffix, and prevents a terminated
+ * sequence from allocating or interpreting an unbounded payload. */
 export const MAX_ANSI_SEQUENCE_LENGTH = 4_096;
+/** SGR needs at most five adjacent parameters for one supported extended-color operation. A
+ * generous total ceiling keeps parsing work and retained arrays constant without narrowing real
+ * terminal styling. Sequences above the ceiling are ignored atomically. */
+const MAX_SGR_PARAMETERS = 64;
+
+function parseSgrParameters(input: string, start: number, end: number): number[] | null {
+  if (start === end) return [0];
+
+  const params: number[] = [];
+  let value = 0;
+  let hasTokenContent = false;
+  let valid = true;
+
+  for (let index = start; index <= end; index++) {
+    const code = index === end ? 0x3b : input.charCodeAt(index);
+    if (code >= 0x30 && code <= 0x39) {
+      hasTokenContent = true;
+      const digit = code - 0x30;
+      if (valid && value <= Math.floor((Number.MAX_SAFE_INTEGER - digit) / 10)) value = value * 10 + digit;
+      else valid = false;
+      continue;
+    }
+
+    if (code !== 0x3b) {
+      hasTokenContent = true;
+      valid = false;
+      continue;
+    }
+
+    if (params.length >= MAX_SGR_PARAMETERS) return null;
+    params.push(hasTokenContent ? (valid ? value : Number.NaN) : 0);
+    value = 0;
+    hasTokenContent = false;
+    valid = true;
+  }
+
+  return params;
+}
 
 export function createAnsiParser(): AnsiParser {
   let styles: AnsiStyles = { ...RESET_STYLES };
   /** A partial escape sequence (starting at its ESC byte) left over from a previous `push()` whose
    *  terminator hadn't arrived yet. */
   let carry = '';
+  /** Once an incomplete sequence crosses the carry ceiling, retain only its grammar state and
+   *  discard through its terminator. A fresh ESC resynchronizes parsing so a later independent
+   *  sequence is not swallowed when the hostile sequence never terminates. */
+  let discarding: 'csi' | 'osc' | null = null;
 
   function applySgr(params: number[]): void {
     const list = params.length === 0 ? [0] : params;
@@ -176,6 +219,37 @@ export function createAnsiParser(): AnsiParser {
     const segments: AnsiSegment[] = [];
     let textStart = 0;
     let i = 0;
+
+    if (discarding !== null) {
+      while (i < input.length) {
+        const code = input.charCodeAt(i);
+        if (discarding === 'csi' && code >= 0x40 && code <= 0x7e) {
+          discarding = null;
+          i++;
+          break;
+        }
+        if (discarding === 'osc' && code === 0x07) {
+          discarding = null;
+          i++;
+          break;
+        }
+        if (code === 0x1b) {
+          if (discarding === 'osc' && input[i + 1] === '\\') {
+            discarding = null;
+            i += 2;
+            break;
+          }
+          // A fresh escape starts a new independently parseable boundary. This also lets a bare
+          // trailing ESC become the normal one-byte carry rather than retaining hostile content.
+          discarding = null;
+          break;
+        }
+        i++;
+      }
+      if (discarding !== null) return segments;
+      textStart = i;
+    }
+
     while (i < input.length) {
       if (input.charCodeAt(i) !== 0x1b) {
         i++;
@@ -193,16 +267,21 @@ export function createAnsiParser(): AnsiParser {
       }
       if (next === '[') {
         let j = i + 2;
+        let overlong = false;
         // safe: input[j] is read only while j < input.length (same && condition)
-        while (j < input.length && !CSI_FINAL_BYTE.test(input[j]!)) j++;
+        while (j < input.length && !CSI_FINAL_BYTE.test(input[j]!)) {
+          j++;
+          if (j - i + 1 > MAX_ANSI_SEQUENCE_LENGTH) overlong = true;
+        }
         if (j >= input.length) {
-          carry = input.length - i <= MAX_ANSI_SEQUENCE_LENGTH ? input.slice(i) : '';
+          if (overlong || input.length - i > MAX_ANSI_SEQUENCE_LENGTH) discarding = 'csi';
+          else carry = input.slice(i);
           return segments;
         }
-        if (input[j] === 'm') {
-          const paramText = input.slice(i + 2, j);
-          const params = paramText === '' ? [0] : paramText.split(';').map((s) => (s === '' ? 0 : Number(s)));
-          applySgr(params);
+        overlong ||= j - i + 1 > MAX_ANSI_SEQUENCE_LENGTH;
+        if (!overlong && input[j] === 'm') {
+          const params = parseSgrParameters(input, i + 2, j);
+          if (params !== null) applySgr(params);
         }
         // Any other CSI final byte (cursor move, erase, scroll, ...) is stripped without being
         // interpreted -- the consuming component owns cursor/line-buffer control on its own.
@@ -214,6 +293,7 @@ export function createAnsiParser(): AnsiParser {
       if (next === ']') {
         let j = i + 2;
         let terminated = false;
+        let overlong = false;
         while (j < input.length) {
           if (input.charCodeAt(j) === 0x07) {
             j++;
@@ -226,9 +306,11 @@ export function createAnsiParser(): AnsiParser {
             break;
           }
           j++;
+          if (j - i > MAX_ANSI_SEQUENCE_LENGTH) overlong = true;
         }
         if (!terminated) {
-          carry = input.length - i <= MAX_ANSI_SEQUENCE_LENGTH ? input.slice(i) : '';
+          if (overlong || input.length - i > MAX_ANSI_SEQUENCE_LENGTH) discarding = 'osc';
+          else carry = input.slice(i);
           return segments;
         }
         i = j;
@@ -249,6 +331,7 @@ export function createAnsiParser(): AnsiParser {
   function reset(): void {
     styles = { ...RESET_STYLES };
     carry = '';
+    discarding = null;
   }
 
   return { push, reset };

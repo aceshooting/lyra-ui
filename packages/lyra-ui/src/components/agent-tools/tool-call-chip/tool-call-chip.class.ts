@@ -14,11 +14,12 @@ import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { durationMessageValue } from '../../../internal/duration.js';
 
 import { styles } from './tool-call-chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_open, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -133,29 +134,6 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
   },
 };
 
-/** `820` -> `"820ms"`; `1500` -> `"1.5s"`; `2000` -> `"2s"`. Sub-second
- *  durations are the common case for a single tool call, so they get the
- *  more precise unit; once a call runs a full second or longer, trimming to
- *  (at most) one decimal place of seconds reads better than a 4-5 digit
- *  millisecond count. Identical algorithm to lr-tool-result-dialog's own
- *  duration formatter -- duplicated rather than imported because these are
- *  independent, separately consumable components. The returned numeric
- *  value is interpolated through a localized duration message by the caller. */
-function formatDuration(ms: number): {
-  key: 'durationMilliseconds' | 'durationSeconds';
-  value: number;
-} {
-  if (!Number.isFinite(ms) || ms < 1000) {
-    return { key: 'durationMilliseconds', value: Math.round(Math.max(0, ms)) };
-  }
-  const seconds = ms / 1000;
-  const rounded = Math.round(seconds * 10) / 10;
-  return {
-    key: 'durationSeconds',
-    value: rounded,
-  };
-}
-
 /**
  * `<lr-tool-call-chip>` — a compact inline pill representing one tool/
  * function call an agent made mid-conversation, e.g.
@@ -168,8 +146,8 @@ function formatDuration(ms: number): {
  *
  * The default slot is *not* the chip's visible content — the chip's own
  * label is always built from `name`/`summary`/`status`/`duration-ms`. It's
- * reserved for optional rich detail content (e.g. the tool's raw arguments,
- * a short preview) shown in a floating tooltip on hover/focus, positioned
+ * reserved for optional read-only preview content (e.g. the tool's raw
+ * arguments or a short formatted summary) shown in a floating tooltip on hover/focus, positioned
  * with `internal/positioner.js`'s `place()` the same way `<lr-combobox>`
  * positions its listbox. No tooltip is shown at all when the slot carries no
  * content — hovering an empty chip does nothing. Hover and keyboard focus are
@@ -177,7 +155,10 @@ function formatDuration(ms: number): {
  * `<lr-citation-badge>`'s popover), so releasing one modality while the
  * other is still active doesn't close it, and the trigger button's
  * `aria-describedby` points at the tooltip's id whenever it's open and has
- * content, so the association reaches assistive tech too.
+ * content, so the association reaches assistive tech too. The tooltip is an
+ * explicitly noninteractive preview: its flattened subtree is inert, so a
+ * consumer must put actions in the detail surface opened from
+ * `lr-tool-call-chip-select`, not links or controls in this description slot.
  *
  * The `icon` slot overrides the built-in per-status glyph entirely via the
  * platform's own slot-fallback-content mechanism (`<slot
@@ -188,8 +169,9 @@ function formatDuration(ms: number): {
  * for the current `status` is used.
  *
  * @customElement lr-tool-call-chip
- * @slot - Rich tooltip/detail content, shown on hover/focus. Nothing renders
- * (no hover affordance at all) when this slot is empty.
+ * @slot - Noninteractive tooltip preview text or formatting, shown on hover/focus. Interactive
+ * descendants are inert; put actions in the detail surface opened from
+ * `lr-tool-call-chip-select`. Nothing renders when this slot is empty.
  * @slot icon - Overrides the built-in status glyph entirely.
  * @event lr-tool-call-chip-select - The chip was activated (click or
  * Enter/Space while focused). `detail: { name, callId }`. The `lr-tool-chip-select`
@@ -223,7 +205,11 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     details: LYRA_DEFAULT_details,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     durationSeconds: LYRA_DEFAULT_durationSeconds,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     statusDenied: LYRA_DEFAULT_statusDenied,
     statusError: LYRA_DEFAULT_statusError,
     statusPending: LYRA_DEFAULT_statusPending,
@@ -264,9 +250,9 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   // Same fix lr-stat's hasIcon/lr-combobox's hasHintSlot etc. already
   // establish: a `[part]` always contains a literal `<slot>` child regardless
   // of assigned content, so `:empty` never matches -- real emptiness is
-  // tracked in JS instead. Only element children count (mirrors lr-stat's
-  // identical default-slot check) since the tooltip's rich content is
-  // expected to be markup, not a bare text node.
+  // tracked in JS instead. Text nodes count too: this slot's primary contract
+  // is a noninteractive textual description, and requiring a wrapper element
+  // merely to make a bare preview visible would contradict that contract.
   @state() private hasDetailSlot = false;
   @state() private tooltipOpen = false;
 
@@ -280,10 +266,17 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   private hovering = false;
   private focused = false;
 
+  private hasPreviewNodes(nodes: readonly Node[]): boolean {
+    return nodes.some((node) => {
+      if (node.nodeType === 3) return Boolean(node.textContent?.trim());
+      return node.nodeType === 1 && !(node as Element).hasAttribute('slot');
+    });
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
-      this.hasDetailSlot = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
+      this.hasDetailSlot = this.hasPreviewNodes(Array.from(this.childNodes));
     }
   }
 
@@ -316,7 +309,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   }
 
   private onDetailSlotChange = (e: Event): void => {
-    this.hasDetailSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasDetailSlot = this.hasPreviewNodes((e.target as HTMLSlotElement).assignedNodes({ flatten: true }));
     // The slot can be emptied out from under an already-open tooltip (e.g. a
     // consumer clearing streamed/async preview content) -- nothing left to
     // show, so don't leave an empty tooltip floating open regardless of
@@ -333,7 +326,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   // and the Escape handler below, where the tooltip must close regardless of
   // hover/focus state -- and from onMouseLeave/onBlur once each has already
   // confirmed the *other* modality isn't still holding the tooltip open. The
-  // default slot is documented as read-only preview content (raw args, a
+  // default slot is enforced as an inert, read-only preview (raw args, a
   // short snippet), not an interactive surface meant to retain focus/hover of
   // its own, so there's no "did the pointer move into the tooltip itself"
   // check needed beyond the hovering/focused pair.
@@ -424,7 +417,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   }
 
   private localizedDuration(ms: number): string {
-    const duration = formatDuration(ms);
+    const duration = durationMessageValue(ms);
     return this.localize(duration.key, undefined, {
       value: getNumberFormat(this.effectiveLocale, {
         maximumFractionDigits: duration.key === 'durationSeconds' ? 1 : 0,
@@ -443,7 +436,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
       <button
         part="base"
         type="button"
-        aria-label=${this.getAttribute('aria-label') || this.accessibleLabel}
+        aria-label=${this.accessibleLabel}
         aria-describedby=${this.hasDetailSlot && this.tooltipOpen ? this.tooltipId : nothing}
         @click=${this.onClick}
         @mouseenter=${this.onMouseEnter}
@@ -452,7 +445,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         @blur=${this.onBlur}
         @keydown=${this.onKeyDown}
       >
-        <span part="icon" aria-hidden="true">
+        <span part="icon" aria-hidden="true" inert>
           <slot name="icon">${this.icon ? this.icon : STATUS_ICON[status]()}</slot>
         </span>
         <span part="label">
@@ -467,7 +460,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
           >
         </span>
       </button>
-      <div part="tooltip" id=${this.tooltipId} role="tooltip" ?hidden=${!this.tooltipOpen}>
+      <div part="tooltip" id=${this.tooltipId} role="tooltip" inert ?hidden=${!this.tooltipOpen}>
         <slot @slotchange=${this.onDetailSlotChange}></slot>
       </div>
     `;

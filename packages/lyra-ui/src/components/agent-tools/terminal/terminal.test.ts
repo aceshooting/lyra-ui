@@ -1,6 +1,13 @@
 import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './terminal.js';
 import type { LyraTerminal } from './terminal.js';
+
+async function settleClipboard(el: LyraTerminal): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  await el.updateComplete;
+}
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
@@ -70,6 +77,21 @@ describe('lr-terminal', () => {
     expect(el.getPlainText()).to.equal('reset');
   });
 
+  it('commits same-turn replace/write/clear operations in call order', async () => {
+    const el = await fixture<LyraTerminal>(html`<lr-terminal></lr-terminal>`);
+    el.content = 'base';
+    el.write(' + streamed');
+    expect(el.getPlainText()).to.equal('base + streamed');
+
+    el.content = 'must not resurrect';
+    el.clear();
+    await el.updateComplete;
+    expect(el.getPlainText()).to.equal('');
+
+    el.replace('synchronous replacement');
+    expect(el.getPlainText()).to.equal('synchronous replacement');
+  });
+
   it('\\r moves the write cursor to line start so following text overwrites (progress bar)', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.write('50%\rdone!');
@@ -120,6 +142,24 @@ describe('lr-terminal', () => {
     expect(nan.getPlainText()).to.equal('l1\nl2\nl3\nl4\nl5\nl6');
   });
 
+  it('bounds newline-free cells, retained cells, newline bursts, and huge finite scrollback', async () => {
+    const single = await fixture<LyraTerminal>(html`<lr-terminal></lr-terminal>`);
+    single.write('x'.repeat(25_000));
+    expect(single.getPlainText()).to.have.length(20_000);
+
+    const retained = await fixture<LyraTerminal>(html`<lr-terminal></lr-terminal>`);
+    retained.maxScrollback = Number.MAX_VALUE;
+    retained.write(`${'x'.repeat(20_001)}\n`.repeat(11));
+    const retainedLines = retained.getPlainText().split('\n');
+    expect(retainedLines).to.have.length(11);
+    expect(retainedLines.reduce((count, line) => count + line.length, 0)).to.be.at.most(200_000);
+
+    const burst = await fixture<LyraTerminal>(html`<lr-terminal></lr-terminal>`);
+    burst.maxScrollback = Number.MAX_VALUE;
+    burst.write('\n'.repeat(10_050));
+    expect(burst.getPlainText().split('\n')).to.have.length(10_000);
+  });
+
   it('clear() resets scrollback and parser state', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.write('\x1b[31msome text');
@@ -141,14 +181,24 @@ describe('lr-terminal', () => {
   });
 
   it('copy button emits lr-copy with the SGR-stripped plain text', async () => {
-    const el = (await fixture(html`<lr-terminal copyable></lr-terminal>`)) as LyraTerminal;
-    el.write('\x1b[31mred\x1b[0m plain');
-    await el.updateComplete;
-    const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
-    const listener = oneEvent(el, 'lr-copy');
-    button.click();
-    const event = (await listener) as CustomEvent<{ text: string }>;
-    expect(event.detail.text).to.equal('red plain');
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.resolve() },
+    });
+    try {
+      const el = (await fixture(html`<lr-terminal copyable></lr-terminal>`)) as LyraTerminal;
+      el.write('\x1b[31mred\x1b[0m plain');
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+      const listener = oneEvent(el, 'lr-copy');
+      button.click();
+      const event = (await listener) as CustomEvent<{ ok: true; text: string }>;
+      expect(event.detail).to.deep.equal({ ok: true, text: 'red plain' });
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
   });
 
   it('download button emits lr-download with the configured filename', async () => {
@@ -321,15 +371,19 @@ describe('lr-terminal', () => {
     expect(leaked).to.be.false;
   });
 
-  it('accessible label defaults to the localized terminalLabel and honors aria-label override', async () => {
+  it('keeps the nested log purpose-named instead of cloning non-empty or empty host labels', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     const viewport = el.shadowRoot!.querySelector('[part="viewport"]')!;
     expect(viewport.getAttribute('role')).to.equal('log');
     expect(viewport.getAttribute('aria-label')).to.be.a('string').and.not.equal('');
     const labeled = (await fixture(html`<lr-terminal aria-label="Build output"></lr-terminal>`)) as LyraTerminal;
-    expect(labeled.shadowRoot!.querySelector('[part="viewport"]')!.getAttribute('aria-label')).to.equal(
-      'Build output',
-    );
+    const labeledViewport = labeled.shadowRoot!.querySelector('[part="viewport"]')!;
+    expect(labeled.getAttribute('aria-label')).to.equal('Build output');
+    expect(labeledViewport.getAttribute('aria-label')).to.equal('Terminal output');
+
+    labeled.setAttribute('aria-label', '');
+    await labeled.updateComplete;
+    expect(labeledViewport.getAttribute('aria-label')).to.equal('Terminal output');
   });
 
   it('disables the log role implicit live behavior so announce-output has one dedicated announcer', async () => {
@@ -562,14 +616,16 @@ describe('lr-terminal', () => {
     expect(await el.scrollToAnchor({ kind: 'line-range', start: 99 })).to.be.false;
   });
 
-  it('scrollToAnchor emits follow=false when it disengages following', async () => {
+  it('scrollToAnchor disengages follow without echoing a user-only follow event', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.write('a\nb');
     await el.updateComplete;
-    const listener = oneEvent(el, 'lr-follow-change');
+    let fired = false;
+    el.addEventListener('lr-follow-change', () => (fired = true));
     expect(await el.scrollToAnchor({ kind: 'line-range', start: 1 })).to.be.true;
-    const event = (await listener) as CustomEvent<{ following: boolean }>;
-    expect(event.detail.following).to.be.false;
+    await el.updateComplete;
+    expect(el.follow).to.be.false;
+    expect(fired).to.be.false;
   });
 
   it('announce-output routes appended text into the shared light-DOM sink, not the shadow region', async () => {
@@ -714,6 +770,7 @@ describe('lr-terminal', () => {
       await el.updateComplete;
 
       (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      await settleClipboard(el);
       expect(clipboardWrites).to.deep.equal(['frame output']);
       const copyTimer = [...timers].find(([, timer]) => timer.delay === 1500)?.[0];
       expect(copyTimer).to.be.a('number');
@@ -855,7 +912,15 @@ describe('lr-terminal', () => {
   it('the "jump to latest" button re-engages follow, scrolls to the last line, and emits lr-follow-change', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.write('a\nb\nc');
-    el.follow = false;
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeId: unknown };
+    const released = oneEvent(el, 'lr-follow-change');
+    list.dispatchEvent(new CustomEvent('lr-visible-range-changed', {
+      detail: { start: 0, end: 0 },
+      bubbles: true,
+      composed: true,
+    }));
+    expect((await released as CustomEvent<{ following: boolean }>).detail.following).to.be.false;
     await el.updateComplete;
     const button = el.shadowRoot!.querySelector('[part="jump-to-latest"]') as HTMLButtonElement;
     expect((button) != null).to.equal(true);
@@ -864,14 +929,21 @@ describe('lr-terminal', () => {
     const event = (await listener) as CustomEvent<{ following: boolean }>;
     expect(event.detail.following).to.be.true;
     expect(el.follow).to.be.true;
-    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeId: unknown };
     expect(list.activeId).to.equal(3);
   });
 
   it('pressing End in the viewport re-engages follow via the same jump-to-latest path', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.write('a\nb');
-    el.follow = false;
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const released = oneEvent(el, 'lr-follow-change');
+    list.dispatchEvent(new CustomEvent('lr-visible-range-changed', {
+      detail: { start: 0, end: 0 },
+      bubbles: true,
+      composed: true,
+    }));
+    expect((await released as CustomEvent<{ following: boolean }>).detail.following).to.be.false;
     await el.updateComplete;
     const listener = oneEvent(el, 'lr-follow-change');
     const viewport = el.shadowRoot!.querySelector('[part="viewport"]')!;
@@ -925,7 +997,7 @@ describe('lr-terminal', () => {
     expect(((await spaceListener) as CustomEvent<{ id: string }>).detail.id).to.equal('h1');
   });
 
-  it('best-effort copy: a synchronously-throwing navigator.clipboard.writeText does not block lr-copy', async () => {
+  it('a synchronously-throwing clipboard write emits failure without false success', async () => {
     const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -940,10 +1012,17 @@ describe('lr-terminal', () => {
       el.write('secret');
       await el.updateComplete;
       const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
-      const listener = oneEvent(el, 'lr-copy');
+      let copies = 0;
+      el.addEventListener('lr-copy', () => { copies += 1; });
+      const errorListener = oneEvent(el, 'lr-copy-error');
       button.click();
-      const event = (await listener) as CustomEvent<{ text: string }>;
-      expect(event.detail.text).to.equal('secret');
+      const errorEvent = (await errorListener) as CustomEvent<{ ok: false; text: string; reason: string; error: unknown }>;
+      expect(errorEvent.detail.ok).to.equal(false);
+      expect(errorEvent.detail.text).to.equal('secret');
+      expect(errorEvent.detail.reason).to.equal('failed');
+      expect(copies).to.equal(0);
+      await el.updateComplete;
+      expect(button.textContent!.trim()).to.equal('Copy failed');
     } finally {
       if (original) Object.defineProperty(navigator, 'clipboard', original);
       else delete (navigator as unknown as { clipboard?: unknown }).clipboard;
@@ -951,17 +1030,27 @@ describe('lr-terminal', () => {
   });
 
   it('copy button label swaps to the localized "copied" confirmation, then reverts after ~1.5s', async () => {
-    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
-    el.write('hi');
-    await el.updateComplete;
-    const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
-    expect(button.textContent!.trim()).to.equal('Copy');
-    button.click();
-    await el.updateComplete;
-    expect(button.textContent!.trim()).to.equal('Copied!');
-    await new Promise((resolve) => setTimeout(resolve, 1600));
-    await el.updateComplete;
-    expect(button.textContent!.trim()).to.equal('Copy');
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.resolve() },
+    });
+    try {
+      const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+      el.write('hi');
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+      expect(button.textContent!.trim()).to.equal('Copy');
+      button.click();
+      await settleClipboard(el);
+      expect(button.textContent!.trim()).to.equal('Copied!');
+      await new Promise((resolve) => setTimeout(resolve, 1600));
+      await el.updateComplete;
+      expect(button.textContent!.trim()).to.equal('Copy');
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
   });
 
   it('coalesces multiple write() bursts inside one throttle window into a single announcement', async () => {
@@ -972,6 +1061,17 @@ describe('lr-terminal', () => {
     await new Promise((resolve) => setTimeout(resolve, 20)); // Announcer's own throttle uses real timers
     const region = el.shadowRoot!.querySelector('[part="announcer"]')!;
     expect(region.textContent).to.equal('first chunk\nsecond chunk');
+  });
+
+  it('announces the visible logical output without ANSI or editing control sequences', async () => {
+    const el = await fixture<LyraTerminal>(html`<lr-terminal announce-output></lr-terminal>`);
+    el.write('\x1b[31mabc\rX\tY\bZ\x1b[0m');
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const visible = 'Xbc     Z';
+    expect(el.getPlainText()).to.equal(visible);
+    expect(el.shadowRoot!.querySelector('[part="announcer"]')!.textContent).to.equal(visible);
+    expect(el.shadowRoot!.querySelector('[part="announcer"]')!.textContent).not.to.match(/[\u001b\r\t\b]/);
   });
 
   it('cancels queued output when clear(), content replacement, or announce-output=false invalidates it', async () => {
@@ -1071,6 +1171,16 @@ describe('lr-terminal', () => {
     expect(inverse.style.backgroundColor).to.equal('var(--lr-color-text)');
   });
 
+  it('uses the terminal surface as inverse foreground when no explicit background exists', async () => {
+    const el = await fixture<LyraTerminal>(html`<lr-terminal></lr-terminal>`);
+    el.write('\x1b[7minverse-default\x1b[0m');
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const segment = list.shadowRoot!.querySelector<HTMLElement>('[data-line-number="1"] span')!;
+    expect(segment.style.color).to.equal('var(--lr-terminal-surface-color, var(--lr-color-surface-raised))');
+    expect(segment.style.backgroundColor).to.equal('var(--lr-color-text)');
+  });
+
   it('omits the toolbar entirely when both copyable and downloadable are false', async () => {
     const el = (await fixture(
       html`<lr-terminal .copyable=${false} .downloadable=${false}></lr-terminal>`,
@@ -1091,6 +1201,22 @@ describe('lr-terminal', () => {
     await el.updateComplete;
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     expect(list.getAttribute('row-height')).to.equal('24');
+  });
+
+  it('wrap=false makes the painted line span its full horizontal scroll extent', async () => {
+    const container = document.createElement('div');
+    container.style.inlineSize = '320px';
+    const el = await fixture<LyraTerminal>(html`
+      <lr-terminal .wrap=${false} .highlights=${[
+        { id: 'long', anchor: { kind: 'line-range', start: 1 }, tone: 'danger' },
+      ]}></lr-terminal>
+    `, { parentNode: container });
+    el.write('unbroken'.repeat(200));
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const line = list.shadowRoot!.querySelector<HTMLElement>('[data-line-number="1"]')!;
+    expect(line.getBoundingClientRect().width).to.be.greaterThan(320);
+    expect(Math.abs(line.getBoundingClientRect().width - line.scrollWidth)).to.be.lessThan(2);
   });
 
   it('exports the virtualized line part so a consumer stylesheet reaches it', async () => {
@@ -1225,6 +1351,46 @@ describe('lr-terminal', () => {
       await resetMouse();
     }
   });
+
+  it('preserves a semantic danger highlight through real pointer hover', async () => {
+    const el = await fixture<LyraTerminal>(html`<lr-terminal></lr-terminal>`);
+    el.write('danger line');
+    el.highlights = [{ id: 'danger', anchor: { kind: 'line-range', start: 1 }, tone: 'danger' }];
+    await el.updateComplete;
+    await aTimeout(100);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const line = list.shadowRoot!.querySelector<HTMLElement>('[data-line-number="1"]')!;
+    expect(line.getAttribute('part')).to.contain('line-highlight-danger');
+    line.scrollIntoView({ block: 'center' });
+    const rect = line.getBoundingClientRect();
+    const rest = getComputedStyle(line).backgroundColor;
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      expect(getComputedStyle(line).backgroundColor).to.equal(rest);
+    } finally {
+      await resetMouse();
+    }
+  });
+});
+
+it('normalizes duplicate highlight ids first-wins before line ownership', async () => {
+  const el = await fixture<LyraTerminal>(html`
+    <lr-terminal
+      .content=${'first\nsecond'}
+      .highlights=${[
+        { id: 'same', anchor: { kind: 'line-range', start: 1 }, tone: 'success' },
+        { id: 'same', anchor: { kind: 'line-range', start: 2 }, tone: 'danger' },
+      ] satisfies LyraHighlight[]}
+    ></lr-terminal>
+  `);
+  const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  const first = list.shadowRoot!.querySelector<HTMLElement>('[data-line-number="1"]')!;
+  const second = list.shadowRoot!.querySelector<HTMLElement>('[data-line-number="2"]')!;
+  expect(first.getAttribute('part')).to.contain('line-highlight-success');
+  expect(second.getAttribute('part')).not.to.contain('line-highlight-danger');
 });
 
 it('searchNext/searchPrevious resolve a boolean, matching the shared viewer search contract', async () => {

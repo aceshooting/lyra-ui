@@ -1,11 +1,10 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './agent-run.js';
 import type { LyraAgentRun } from './agent-run.js';
-import type { LyraGenerationStatus } from '../../conversation/generation-status/generation-status.js';
+import type { LyraGenerationMetrics } from '../../conversation/generation-metrics/generation-metrics.js';
 import type { LyraTaskList } from '../task-list/task-list.js';
 import type { AgentRun, AgentStep, AgentStatusKind, CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
-import { styles } from './agent-run.styles.js';
 
 function makeRun(overrides: Partial<AgentRun> = {}): AgentRun {
   return {
@@ -84,14 +83,14 @@ it('omits the status message entirely when unset', async () => {
 });
 
 describe('elapsed time', () => {
-  it('composes a live-ticking lr-generation-status while running, with its own stop button hidden', async () => {
+  it('composes live-ticking lr-generation-metrics while running, with its own stop button hidden', async () => {
     const startedAt = Date.now() - 4000;
     const el = (await fixture(
       html`<lr-agent-run .run=${makeRun({ status: { kind: 'running' }, startedAt })}></lr-agent-run>`,
     )) as LyraAgentRun;
-    const status = el.shadowRoot!.querySelector('lr-generation-status') as LyraGenerationStatus;
+    const status = el.shadowRoot!.querySelector('lr-generation-metrics') as LyraGenerationMetrics;
     expect(status).to.exist;
-    expect(status.active).to.be.true;
+    expect(status.status).to.equal('running');
     expect(status.startedAt).to.equal(startedAt);
     expect(status.showStop).to.be.false;
     expect((el.shadowRoot!.querySelector('[part="elapsed-static"]')) == null).to.be.true;
@@ -102,8 +101,8 @@ describe('elapsed time', () => {
       const el = (await fixture(
         html`<lr-agent-run .run=${makeRun({ status: { kind } })}></lr-agent-run>`,
       )) as LyraAgentRun;
-      const status = el.shadowRoot!.querySelector('lr-generation-status') as LyraGenerationStatus;
-      expect(status.active, kind).to.be.true;
+      const status = el.shadowRoot!.querySelector('lr-generation-metrics') as LyraGenerationMetrics;
+      expect(status.status, kind).to.equal('running');
     }
   });
 
@@ -113,7 +112,7 @@ describe('elapsed time', () => {
         .run=${makeRun({ status: { kind: 'done' }, startedAt: 1000, endedAt: 6000 })}
       ></lr-agent-run>`,
     )) as LyraAgentRun;
-    expect((el.shadowRoot!.querySelector('lr-generation-status')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('lr-generation-metrics')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="elapsed-static"]')!.textContent!.trim()).to.equal('5s');
   });
 
@@ -130,7 +129,7 @@ describe('elapsed time', () => {
     const el = (await fixture(
       html`<lr-agent-run .run=${makeRun({ status: { kind: 'done' }, endedAt: undefined })}></lr-agent-run>`,
     )) as LyraAgentRun;
-    expect((el.shadowRoot!.querySelector('lr-generation-status')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('lr-generation-metrics')) == null).to.be.true;
     expect((el.shadowRoot!.querySelector('[part="elapsed-static"]')) == null).to.be.true;
   });
 
@@ -138,7 +137,7 @@ describe('elapsed time', () => {
     const el = (await fixture(
       html`<lr-agent-run .run=${makeRun({ status: { kind: 'idle' }, startedAt: undefined })}></lr-agent-run>`,
     )) as LyraAgentRun;
-    expect((el.shadowRoot!.querySelector('lr-generation-status')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('lr-generation-metrics')) == null).to.be.true;
     expect((el.shadowRoot!.querySelector('[part="elapsed-static"]')) == null).to.be.true;
   });
 });
@@ -278,18 +277,18 @@ describe('cancel/retry controls', () => {
     expect((event.detail as CancelEventDetail).reason).to.be.undefined;
   });
 
-  it('emits lr-retry with a 1-based attempt counter, incrementing per click', async () => {
+  it('emits lr-run-retry with a 1-based attempt counter, incrementing per click', async () => {
     const el = (await fixture(
       html`<lr-agent-run .run=${makeRun({ status: { kind: 'error' } })}></lr-agent-run>`,
     )) as LyraAgentRun;
     const button = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLButtonElement;
 
-    let listener = oneEvent(el, 'lr-retry');
+    let listener = oneEvent(el, 'lr-run-retry');
     button.click();
     let event = await listener;
     expect((event.detail as RetryEventDetail).attempt).to.equal(1);
 
-    listener = oneEvent(el, 'lr-retry');
+    listener = oneEvent(el, 'lr-run-retry');
     button.click();
     event = await listener;
     expect((event.detail as RetryEventDetail).attempt).to.equal(2);
@@ -300,14 +299,14 @@ describe('cancel/retry controls', () => {
       html`<lr-agent-run .run=${makeRun({ id: 'run-a', status: { kind: 'error' } })}></lr-agent-run>`,
     )) as LyraAgentRun;
     let button = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLButtonElement;
-    let listener = oneEvent(el, 'lr-retry');
+    let listener = oneEvent(el, 'lr-run-retry');
     button.click();
     await listener;
 
     el.run = makeRun({ id: 'run-b', status: { kind: 'error' } });
     await el.updateComplete;
     button = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLButtonElement;
-    listener = oneEvent(el, 'lr-retry');
+    listener = oneEvent(el, 'lr-run-retry');
     button.click();
     const event = await listener;
     expect((event.detail as RetryEventDetail).attempt).to.equal(1);
@@ -359,7 +358,7 @@ describe('tasks slot default content', () => {
         .run=${makeRun({ status: { kind: 'running' }, startedAt: Number.POSITIVE_INFINITY })}
       ></lr-agent-run>
     `)) as LyraAgentRun;
-    expect((el.shadowRoot!.querySelector('lr-generation-status')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('lr-generation-metrics')) == null).to.be.true;
     expect(el.shadowRoot!.textContent).to.not.include('Infinity');
     expect(el.shadowRoot!.textContent).to.not.include('NaN');
   });
@@ -589,12 +588,12 @@ it('renders and distinguishes queued and collecting lifecycle states', async () 
   const queued = root.querySelector('#queued') as LyraAgentRun;
   expect(queued.shadowRoot!.querySelector('[part="status-badge"]')!.textContent!.trim()).to.equal('Waiting in queue');
   expect(queued.shadowRoot!.querySelector('[part="status-badge"]')!.getAttribute('variant')).to.equal('warning');
-  expect((queued.shadowRoot!.querySelector('lr-generation-status')) == null).to.be.true;
+  expect((queued.shadowRoot!.querySelector('lr-generation-metrics')) == null).to.be.true;
   expect((queued.shadowRoot!.querySelector('[part="cancel-button"]')) == null).to.be.true;
 
   const collecting = root.querySelector('#collecting') as LyraAgentRun;
   expect(collecting.shadowRoot!.querySelector('[part="status-badge"]')!.textContent!.trim()).to.equal('Collecting context');
-  expect(collecting.shadowRoot!.querySelector('lr-generation-status')).to.exist;
+  expect(collecting.shadowRoot!.querySelector('lr-generation-metrics')).to.exist;
   expect(collecting.shadowRoot!.querySelector('[part="cancel-button"]')).to.exist;
   expect(collecting.shadowRoot!.querySelectorAll('[part="metric"]')).to.have.length(2);
 });
@@ -685,15 +684,6 @@ it('drops border, background, padding and radius under frame="plain"', async () 
   expect(chrome.paddingLeft).to.equal('0px');
 });
 
-it('orders :host([frame="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
-  const css = styles.cssText;
-  const compactAt = css.indexOf(':host([compact])');
-  const plainAt = css.indexOf(":host([frame='plain'])");
-  expect(compactAt).to.be.greaterThan(-1);
-  expect(plainAt).to.be.greaterThan(-1);
-  expect(plainAt).to.be.greaterThan(compactAt);
-});
-
 it('lets plain win over compact when both are set', async () => {
   const el = (await fixture(
     html`<lr-agent-run compact frame="plain" .run=${makeRun({ steps })}></lr-agent-run>`,
@@ -740,4 +730,33 @@ it('allows semantic metric colors to be rethemed without changing shared status 
   `)) as LyraAgentRun;
   const value = el.shadowRoot!.querySelector('[part="metric-value"]') as HTMLElement;
   expect(getComputedStyle(value).color).to.equal('rgb(1, 2, 3)');
+});
+
+it('maps the public brand metric variant to its themeable brand color', async () => {
+  const el = await fixture<LyraAgentRun>(html`
+    <lr-agent-run
+      style="--lr-agent-run-metric-brand-color: rgb(4, 5, 6)"
+      .run=${makeRun()}
+      .metrics=${[{ id: 'quality', label: 'Quality', value: '98%', variant: 'brand' }]}
+    ></lr-agent-run>
+  `);
+  const value = el.shadowRoot!.querySelector('[part="metric-value"]') as HTMLElement;
+  expect(value.dataset['variant']).to.equal('brand');
+  expect(getComputedStyle(value).color).to.equal('rgb(4, 5, 6)');
+});
+
+it('normalizes duplicate metric ids first-wins', async () => {
+  const el = await fixture<LyraAgentRun>(html`
+    <lr-agent-run
+      .run=${makeRun()}
+      .metrics=${[
+        { id: 'tokens', label: 'First metric', value: 10 },
+        { id: 'tokens', label: 'Later metric', value: 99 },
+      ]}
+    ></lr-agent-run>
+  `);
+  const metrics = el.shadowRoot!.querySelectorAll('[part="metric"]');
+  expect(metrics).to.have.length(1);
+  expect(metrics[0]!.textContent).to.contain('First metric');
+  expect(metrics[0]!.textContent).not.to.contain('Later metric');
 });

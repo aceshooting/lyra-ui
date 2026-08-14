@@ -315,7 +315,16 @@ test('pin configuration must match the canonical packages and upstream versions'
     },
   };
   const upstreamTags = {
-    webawesome: { version: '3.11.0' },
+    webawesome: {
+      version: '3.11.0',
+      runtimeMethodEdgeSemantics: {
+        source: {
+          package: '@awesome.me/webawesome',
+          version: '3.11.0',
+          tarballIntegrity: fixturePins.packages.webawesome.tarballIntegrity,
+        },
+      },
+    },
     shoelace: {
       version: '2.20.1',
       runtimeEventCancelability: {
@@ -352,5 +361,29 @@ test('pin configuration must match the canonical packages and upstream versions'
   assert.throws(
     () => validatePinConfiguration(fixturePins, { inventory, upstreamTags: staleEvidence }),
     /Shoelace: runtime evidence integrity does not match the reviewed artifact/u,
+  );
+
+  const staleMethodEvidence = structuredClone(upstreamTags);
+  staleMethodEvidence.webawesome.runtimeMethodEdgeSemantics.source.version =
+    '3.10.0';
+  assert.throws(
+    () =>
+      validatePinConfiguration(fixturePins, {
+        inventory,
+        upstreamTags: staleMethodEvidence,
+      }),
+    /Web Awesome: runtime method-edge evidence package identity does not match the reviewed artifact/u,
+  );
+
+  const staleMethodIntegrity = structuredClone(upstreamTags);
+  staleMethodIntegrity.webawesome.runtimeMethodEdgeSemantics.source.tarballIntegrity =
+    `sha512-${Buffer.alloc(64, 1).toString('base64')}`;
+  assert.throws(
+    () =>
+      validatePinConfiguration(fixturePins, {
+        inventory,
+        upstreamTags: staleMethodIntegrity,
+      }),
+    /Web Awesome: runtime method-edge evidence integrity does not match the reviewed artifact/u,
   );
 });

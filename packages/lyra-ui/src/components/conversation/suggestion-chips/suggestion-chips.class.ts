@@ -2,17 +2,21 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import '../../layout/scroller/scroller.class.js';
 import { styles } from './suggestion-chips.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import {
+  applyComposedFocusRepair,
+  captureComposedFocusRepair,
+  type ComposedFocusRepairSnapshot,
+} from '../../../internal/focus-navigation.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_suggestionsLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export interface ChatSuggestion {
-  id: string;
+export interface LyraChatSuggestion {
+  suggestionId: string;
   label: string;
   /** Optional literal icon hint (for example, an emoji). Rendered decoratively before the text. */
   icon?: string;
@@ -21,7 +25,14 @@ export interface ChatSuggestion {
 }
 
 export interface LyraSuggestionChipsEventMap {
-  'lr-suggestion-select': CustomEvent<{ id: string; label: string }>;
+  'lr-suggestion-select': CustomEvent<{ suggestionId: string; label: string }>;
+}
+
+interface PendingSuggestionFocus {
+  suggestionId: string;
+  index: number;
+  repair: ComposedFocusRepairSnapshot;
+  generation: number;
 }
 
 /**
@@ -30,11 +41,12 @@ export interface LyraSuggestionChipsEventMap {
  * decides whether to compose it into an input or send it directly. Never writes into a composer or
  * sends anything itself.
  *
- * Streaming-friendly: chips render through a keyed `repeat()` on `id`, so replacing follow-ups
- * mid-conversation preserves focus on any chip whose `id` survives.
+ * Streaming-friendly: chips render through a keyed `repeat()` on `suggestionId`, so replacing
+ * follow-ups mid-conversation preserves focus on any chip whose identifier survives. Identifiers
+ * must be nonempty and unique; invalid and later duplicate entries are omitted deterministically.
  *
  * @customElement lr-suggestion-chips
- * @event lr-suggestion-select - `detail: { id, label }`.
+ * @event lr-suggestion-select - `detail: { suggestionId, label }`.
  * @csspart base - The labeled group.
  * @csspart row - The flex container holding the chips, in both the wrapping and the scrolling
  *   layout. Style this to change how chip lines pack (`justify-content`, `row-gap`).
@@ -60,8 +72,9 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The suggestions to render, in order. Empty renders nothing at all. */
-  @property({ attribute: false }) suggestions: ChatSuggestion[] = [];
+  /** The suggestions to render, in order. `suggestionId` must be unique and nonempty; the first
+   *  valid occurrence wins. Empty renders nothing at all. */
+  @property({ attribute: false }) suggestions: readonly LyraChatSuggestion[] = [];
 
   /** Wraps into multiple rows instead of a single horizontally scrollable line. */
   @property({ type: Boolean, reflect: true }) wrap = false;
@@ -70,40 +83,95 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   @property() label = '';
 
   @state() private activeIndex = 0;
-  private refocusAfterUpdate = false;
+  private pendingFocus?: PendingSuggestionFocus;
+  private focusRepairGeneration = 0;
+
+  private normalizeSuggestions(items: readonly LyraChatSuggestion[] | undefined): LyraChatSuggestion[] {
+    const seen = new Set<string>();
+    const normalized: LyraChatSuggestion[] = [];
+    for (const suggestion of items ?? []) {
+      const suggestionId = suggestion?.suggestionId;
+      if (typeof suggestionId !== 'string' || suggestionId.trim() === '' || seen.has(suggestionId)) continue;
+      seen.add(suggestionId);
+      normalized.push(suggestion);
+    }
+    return normalized;
+  }
+
+  private get effectiveSuggestions(): LyraChatSuggestion[] {
+    return this.normalizeSuggestions(this.suggestions);
+  }
+
+  override disconnectedCallback(): void {
+    this.focusRepairGeneration++;
+    this.pendingFocus = undefined;
+    super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.focusRepairGeneration++;
+    this.pendingFocus = undefined;
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('suggestions') || changed.has('wrap')) {
+      const active = deepActiveElementIn(this.ownerDocument);
+      const activeElement = active?.nodeType === 1 && 'dataset' in active ? active as HTMLElement : null;
+      const suggestionId = activeElement?.dataset['suggestionId'];
+      const repair = activeElement ? captureComposedFocusRepair(this, activeElement) : null;
+      const generation = ++this.focusRepairGeneration;
+      this.pendingFocus = suggestionId && repair
+        ? { suggestionId, index: this.activeIndex, repair, generation }
+        : undefined;
+    }
     if (changed.has('suggestions')) {
-      const previous = changed.get('suggestions') as ChatSuggestion[] | undefined;
-      const activeId = previous?.[this.activeIndex]?.id;
-      const focusedId =
-        (activeElementIn(this.shadowRoot) as HTMLElement | null)?.dataset['suggestionId'];
-      const remapped = activeId ? this.suggestions.findIndex((suggestion) => suggestion.id === activeId) : -1;
+      const previous = this.normalizeSuggestions(
+        changed.get('suggestions') as readonly LyraChatSuggestion[] | undefined,
+      );
+      const current = this.effectiveSuggestions;
+      const activeId = this.pendingFocus?.suggestionId ?? previous[this.activeIndex]?.suggestionId;
+      const remapped = activeId
+        ? current.findIndex((suggestion) => suggestion.suggestionId === activeId)
+        : -1;
       this.activeIndex =
-        remapped >= 0 ? remapped : Math.min(this.activeIndex, Math.max(0, this.suggestions.length - 1));
-      this.refocusAfterUpdate =
-        focusedId !== undefined && this.suggestions.length > 0;
+        remapped >= 0 ? remapped : Math.min(this.activeIndex, Math.max(0, current.length - 1));
     }
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (!this.refocusAfterUpdate) return;
-    this.refocusAfterUpdate = false;
-    this.focusChip(this.activeIndex);
+    const pending = this.pendingFocus;
+    this.pendingFocus = undefined;
+    if (!pending) return;
+    void this.restorePendingFocus(pending);
   }
 
-  private select(suggestion: ChatSuggestion): void {
+  private async restorePendingFocus(pending: PendingSuggestionFocus): Promise<void> {
+    const scroller = this.renderRoot.querySelector<Element & { updateComplete?: Promise<unknown> }>('lr-scroller');
+    await scroller?.updateComplete;
+    await Promise.resolve();
+    if (pending.generation !== this.focusRepairGeneration || !this.isConnected) return;
+    const buttons = this.chipButtons();
+    const surviving = buttons.find((button) => button.dataset['suggestionId'] === pending.suggestionId);
+    const target = surviving ?? buttons[Math.min(pending.index, Math.max(0, buttons.length - 1))] ?? null;
+    applyComposedFocusRepair(pending.repair, target);
+  }
+
+  private select(suggestion: LyraChatSuggestion): void {
     this.emit('lr-suggestion-select', {
-      id: suggestion.id,
+      suggestionId: suggestion.suggestionId,
       label: suggestion.label,
     });
   }
 
+  private chipButtons(): HTMLButtonElement[] {
+    return [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part~="chip"]')];
+  }
+
   private focusChip(index: number): void {
-    const buttons = [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part~="chip"]')];
-    buttons[index]?.focus();
+    this.chipButtons()[index]?.focus();
   }
 
   private onChipFocus(index: number): void {
@@ -111,7 +179,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    const n = this.suggestions.length;
+    const n = this.effectiveSuggestions.length;
     if (n === 0) return;
     const forwardKey = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
@@ -126,12 +194,12 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
     this.focusChip(target);
   };
 
-  private renderChip(suggestion: ChatSuggestion, index: number): TemplateResult {
+  private renderChip(suggestion: LyraChatSuggestion, index: number): TemplateResult {
     return html`
       <button
         type="button"
         part="chip"
-        data-suggestion-id=${suggestion.id}
+        data-suggestion-id=${suggestion.suggestionId}
         tabindex=${index === this.activeIndex ? '0' : '-1'}
         @click=${() => this.select(suggestion)}
         @focus=${() => this.onChipFocus(index)}
@@ -148,12 +216,13 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   }
 
   override render(): TemplateResult {
-    if (this.suggestions.length === 0) return html``;
+    const suggestions = this.effectiveSuggestions;
+    if (suggestions.length === 0) return html``;
     const label = this.label || this.localize('suggestionsLabel');
-    const ariaLabel = this.getAttribute('aria-label') || label;
+    const ariaLabel = this.getAttribute('aria-label') ?? label;
     const chips = repeat(
-      this.suggestions,
-      (s) => s.id,
+      suggestions,
+      (s) => s.suggestionId,
       (s, i) => this.renderChip(s, i),
     );
     return html`

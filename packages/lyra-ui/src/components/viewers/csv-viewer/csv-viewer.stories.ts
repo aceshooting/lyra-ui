@@ -6,7 +6,7 @@ const meta: Meta = {
   title: 'DocumentViewer/CsvViewer',
   component: 'lr-csv-viewer',
   tags: ['autodocs'],
-  parameters: { docs: { description: { component: 'A host `aria-label` names both the CSV region and loaded table by attribute presence, including an explicitly empty value; `name` and the localized label are fallbacks. Highlight actions localize their complete cell value and annotation through separate `{value}` and `{label}` placeholders.' } } },
+  parameters: { docs: { description: { component: 'A host `aria-label` names both the CSV region and loaded table by attribute presence, including an explicitly empty value; `name` and the localized label are fallbacks. Highlight actions localize their complete cell value and annotation through separate `{value}` and `{label}` placeholders. Quote-aware row, column, aggregate-cell, and diagnostic ceilings are enforced before PapaParse materializes the grid.' } } },
 };
 export default meta;
 type Story = StoryObj;

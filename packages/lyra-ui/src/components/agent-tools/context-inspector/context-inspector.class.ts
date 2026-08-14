@@ -8,7 +8,7 @@ import type { ContextMeterSegment, ContextMeterTone } from '../../data/context-m
 import type { LyraCitationBadgeEventMap } from '../../retrieval/citation-badge/citation-badge.class.js';
 import type { LyraCopyButtonEventMap } from '../../utility/copy-button/copy-button.class.js';
 import type {
-  ExportFormatOption,
+  LyraExportFormatOption,
   LyraExportButtonEventMap,
 } from '../../utility/export-button/export-button.class.js';
 import '../../data/context-meter/context-meter.class.js';
@@ -17,9 +17,11 @@ import '../../utility/export-button/export-button.class.js';
 import '../../retrieval/citation-badge/citation-badge.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './context-inspector.styles.js';
+import { firstByIdentity } from '../collection-identity.js';
+import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_contextInspectorCopyLabel, LYRA_DEFAULT_contextInspectorEmpty, LYRA_DEFAULT_contextInspectorLabel, LYRA_DEFAULT_contextInspectorRedacted, LYRA_DEFAULT_contextInspectorSegmentTokens, LYRA_DEFAULT_contextInspectorTruncated, LYRA_DEFAULT_contextInspectorTruncatedCount, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_contextInspectorCopyLabel, LYRA_DEFAULT_contextInspectorEmpty, LYRA_DEFAULT_contextInspectorLabel, LYRA_DEFAULT_contextInspectorRedacted, LYRA_DEFAULT_contextInspectorSegmentTokens, LYRA_DEFAULT_contextInspectorTruncated, LYRA_DEFAULT_contextInspectorTruncatedCount, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -112,10 +114,11 @@ export interface LyraContextInspectorEventMap
  * Pure projection: never fetches, estimates tokens, or performs redaction itself — `segments` is
  * expected to already carry each field's final, already-processed value (e.g. `text` already has
  * any redaction placeholders substituted in; this component never sees or renders the original
- * unredacted content).
+ * unredacted content). Duplicate segment ids normalize before totals, exports, rendering, and
+ * citation events; the first occurrence wins.
  *
  * @customElement lr-context-inspector
- * @event lr-copy - `detail: { text }`, surfaced by the embedded `lr-copy-button` copying the
+ * @event lr-copy - `detail: { ok: true, text }`, surfaced by the embedded `lr-copy-button` copying the
  *   assembled context text (every segment's `label` + `text`, in order). Bubbles + composed
  *   already; not re-emitted, so exactly one event reaches a host listener.
  * @event lr-error - A clipboard write failed in the embedded copy control.
@@ -166,14 +169,19 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
     contextInspectorTruncatedCount: LYRA_DEFAULT_contextInspectorTruncatedCount,
     details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The assembled context, one entry per piece (system prompt, retrieved chunk, history turn, ...). */
+  /** The assembled context, one entry per piece (system prompt, retrieved chunk, history turn,
+   *  ...). Duplicate ids normalize first-wins before metering, rendering, export, and events. */
   @property({ attribute: false }) segments: ContextInspectorSegment[] = [];
 
   /** The full token budget `segments` are measured against — passed straight through to `<lr-context-meter>`'s own `total`. */
@@ -183,13 +191,17 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
   @property() label = '';
 
   /** Export format(s) offered by the embedded `<lr-export-button>` — a single id renders a plain button, more than one a format-choice menu. */
-  @property({ attribute: false }) formats: ExportFormatOption[] = ['json'];
+  @property({ attribute: false }) exportFormats: LyraExportFormatOption[] = ['json'];
 
   /** Download filename (no extension) passed through to `<lr-export-button>`. */
-  @property() filename = 'context';
+  @property({ attribute: 'export-filename' }) exportFilename = 'context';
+
+  private get normalizedSegments(): ContextInspectorSegment[] {
+    return firstByIdentity(Array.isArray(this.segments) ? this.segments : [], (segment) => segment.id);
+  }
 
   private get meterSegments(): ContextMeterSegment[] {
-    return this.segments.map((s) => ({ label: s.label, value: s.tokens, ...(s.tone ? { tone: s.tone } : {}) }));
+    return this.normalizedSegments.map((s) => ({ label: s.label, value: s.tokens, ...(s.tone ? { tone: s.tone } : {}) }));
   }
 
   private get safeTotal(): number {
@@ -198,13 +210,13 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
 
   /** Every segment's `label` + `text`, in order — the `<lr-copy-button>`'s `value`. */
   private get assembledText(): string {
-    return this.segments.map((s) => `${s.label}\n${s.text}`).join('\n\n');
+    return this.normalizedSegments.map((s) => `${s.label}\n${s.text}`).join('\n\n');
   }
 
   /** One flat row per segment for `<lr-export-button>` — `redactions` is summarized as a count
    *  rather than carried in full, keeping every export format (including CSV) well-formed. */
   private get exportRows(): Record<string, unknown>[] {
-    return this.segments.map((s) => ({
+    return this.normalizedSegments.map((s) => ({
       id: s.id,
       label: s.label,
       tokens: s.tokens,
@@ -268,11 +280,16 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
   }
 
   override render(): TemplateResult {
-    const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('contextInspectorLabel');
+    const groupLabel = overallSemanticLabel(
+      this,
+      this.label || this.localize('contextInspectorLabel'),
+    );
+    const groupRole = overallSemanticRole(this, 'group');
 
-    if (this.segments.length === 0) {
+    const segments = this.normalizedSegments;
+    if (segments.length === 0) {
       return html`
-        <div part="base" role="group" aria-label=${groupLabel}>
+        <div part="base" role=${groupRole ?? nothing} aria-label=${groupLabel ?? nothing}>
           <lr-empty part="empty" heading=${this.localize('contextInspectorEmpty')}></lr-empty>
         </div>
       `;
@@ -280,7 +297,7 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
 
     let citationIndex = 0;
     return html`
-      <div part="base" role="group" aria-label=${groupLabel}>
+      <div part="base" role=${groupRole ?? nothing} aria-label=${groupLabel ?? nothing}>
         <lr-context-meter part="meter" .segments=${this.meterSegments} .total=${this.safeTotal} label=${this.label}></lr-context-meter>
         <div part="toolbar">
           <lr-copy-button
@@ -288,10 +305,15 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
             .value=${this.assembledText}
             aria-label=${this.localize('contextInspectorCopyLabel')}
           ></lr-copy-button>
-          <lr-export-button part="export-button" .rows=${this.exportRows} .formats=${this.formats} filename=${this.filename}></lr-export-button>
+          <lr-export-button
+            part="export-button"
+            .rows=${this.exportRows}
+            .formats=${this.exportFormats}
+            filename=${this.exportFilename}
+          ></lr-export-button>
         </div>
         <div part="segments" role="list">
-          ${this.segments.map((segment) => {
+          ${segments.map((segment) => {
             if (segment.citation) citationIndex += 1;
             return this.renderSegment(segment, citationIndex);
           })}

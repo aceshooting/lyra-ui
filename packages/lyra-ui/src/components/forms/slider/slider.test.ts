@@ -208,6 +208,20 @@ describe('mapped numeric and form contract', () => {
     expect(events).to.equal(0);
   });
 
+  it('saturates overflowing imperative steps in their requested direction', async () => {
+    const el = (await fixture(html`<lr-slider></lr-slider>`)) as LyraSlider;
+    el.min = -Number.MAX_VALUE;
+    el.max = Number.MAX_VALUE;
+    el.step = Number.MAX_VALUE;
+    el.valueAsNumber = Number.MAX_VALUE;
+    el.stepUp(2);
+    expect(el.valueAsNumber).to.equal(Number.MAX_VALUE);
+
+    el.valueAsNumber = -Number.MAX_VALUE;
+    el.stepDown(2);
+    expect(el.valueAsNumber).to.equal(-Number.MAX_VALUE);
+  });
+
   it('supports external form ownership and exposes the validity surface', async () => {
     const wrapper = await fixture(html`
       <div><form id="remote-slider-form"></form><lr-slider name="gain" value="12"></lr-slider></div>
@@ -658,7 +672,7 @@ it('clears a pending keyboard commit when own or fieldset disablement interrupts
   expect(changes, 're-enabling must not revive a fieldset-disabled key sequence').to.equal(0);
 });
 
-it('mirrors ArrowRight/ArrowLeft under dir="rtl", matching lr-time-range/lr-split', async () => {
+it('mirrors ArrowRight/ArrowLeft under dir="rtl", matching lr-time-range/lr-multi-split', async () => {
   const el = (await fixture(
     html`<lr-slider dir="rtl" min="0" max="100" value="20"></lr-slider>`,
   )) as LyraSlider;
@@ -1964,6 +1978,15 @@ it('renders one marker per step position when with-markers is set', async () => 
   ).to.equal('true');
 });
 
+it('positions markers at reachable values for a non-divisible domain', async () => {
+  const el = (await fixture(html`
+    <lr-slider with-markers min="0" max="10" step="3"></lr-slider>
+  `)) as LyraSlider;
+  const positions = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="marker"]')]
+    .map((marker) => marker.style.insetInlineStart);
+  expect(positions).to.deep.equal(['0%', '30%', '60%', '90%']);
+});
+
 it('positions markers along the block axis in a vertical slider', async () => {
   const el = (await fixture(html`
     <lr-slider with-markers orientation="vertical" min="0" max="100" step="50"></lr-slider>
@@ -2396,6 +2419,28 @@ it('restores range state supplied by its adopted iframe realm', async () => {
     el.remove();
     frame.remove();
   }
+});
+
+it('rejects spoofed FormData restoration values and ignores shadowed instance readers', async () => {
+  const el = (await fixture(html`
+    <lr-slider name="window" range min="0" max="100" min-value="20" max-value="80"></lr-slider>
+  `)) as LyraSlider;
+  const spoof = {
+    [Symbol.toStringTag]: 'FormData',
+    append() {},
+    *values() { yield '0'; yield '100'; },
+  } as unknown as FormData;
+  el.formStateRestoreCallback(spoof, 'restore');
+  expect([el.minValue, el.maxValue]).to.deep.equal([20, 80]);
+
+  const genuine = new FormData();
+  genuine.append('window', '30');
+  genuine.append('window', '70');
+  Object.defineProperty(genuine, 'values', {
+    value: () => { throw new Error('shadowed reader'); },
+  });
+  el.formStateRestoreCallback(genuine, 'restore');
+  expect([el.minValue, el.maxValue]).to.deep.equal([30, 70]);
 });
 
 it('constructs range submission and restore state with the adopted owner FormData', async () => {

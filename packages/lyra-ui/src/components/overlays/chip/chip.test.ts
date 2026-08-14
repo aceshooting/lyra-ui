@@ -139,11 +139,11 @@ describe('pill', () => {
 it('keeps size="m" pixel-equivalent to the original chip and scales compact tiers', async () => {
   const render = async (size?: string): Promise<LyraChip> =>
     (await fixture(html`
-      <lr-chip size=${size ?? 'm'}><svg slot="icon" viewBox="0 0 10 10"></svg>Tag</lr-chip>
+      <lr-chip size=${size ?? 'm'}><svg slot="start" viewBox="0 0 10 10"></svg>Tag</lr-chip>
     `)) as LyraChip;
   const metrics = (el: LyraChip) => {
     const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
-    const icon = getComputedStyle(el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement);
+    const icon = getComputedStyle(el.shadowRoot!.querySelector('[part="start"]') as HTMLElement);
     return {
       font: Number.parseFloat(base.fontSize),
       paddingBlock: Number.parseFloat(base.paddingBlockStart),
@@ -154,7 +154,7 @@ it('keeps size="m" pixel-equivalent to the original chip and scales compact tier
   };
 
   const defaultChip = (await fixture(html`
-    <lr-chip><svg slot="icon" viewBox="0 0 10 10"></svg>Tag</lr-chip>
+    <lr-chip><svg slot="start" viewBox="0 0 10 10"></svg>Tag</lr-chip>
   `)) as LyraChip;
   const explicitMedium = await render('m');
   expect(metrics(defaultChip)).to.deep.equal(metrics(explicitMedium));
@@ -174,11 +174,11 @@ it('keeps size="m" pixel-equivalent to the original chip and scales compact tier
 it('3xs is smaller than 2xs on every density metric except the shared gap floor', async () => {
   const render = async (size: '2xs' | '3xs'): Promise<LyraChip> =>
     (await fixture(html`
-      <lr-chip size=${size}><svg slot="icon" viewBox="0 0 10 10"></svg>Tag</lr-chip>
+      <lr-chip size=${size}><svg slot="start" viewBox="0 0 10 10"></svg>Tag</lr-chip>
     `)) as LyraChip;
   const metrics = (el: LyraChip) => {
     const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
-    const icon = getComputedStyle(el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement);
+    const icon = getComputedStyle(el.shadowRoot!.querySelector('[part="start"]') as HTMLElement);
     return {
       font: Number.parseFloat(base.fontSize),
       paddingBlock: Number.parseFloat(base.paddingBlockStart),
@@ -196,14 +196,14 @@ it('3xs is smaller than 2xs on every density metric except the shared gap floor'
 
 it('keeps a removable/toggleable 3xs chip at the WCAG 2.5.8 minimum tap target', async () => {
   const removable = (await fixture(html`
-    <lr-chip size="3xs" removable><span slot="icon">●</span>Tag</lr-chip>
+    <lr-chip size="3xs" removable><span slot="start">●</span>Tag</lr-chip>
   `)) as LyraChip;
   const removeButton = removable.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
   expect(Number.parseFloat(getComputedStyle(removeButton).minBlockSize)).to.be.at.least(40);
   await expect(removable).to.be.accessible();
 
   const toggleable = (await fixture(html`
-    <lr-chip size="3xs" toggleable><span slot="icon">●</span>Tag</lr-chip>
+    <lr-chip size="3xs" toggleable><span slot="start">●</span>Tag</lr-chip>
   `)) as LyraChip;
   const toggleButton = toggleable.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
   expect(Number.parseFloat(getComputedStyle(toggleButton).minBlockSize)).to.be.at.least(40);
@@ -214,14 +214,14 @@ it('keeps a removable/toggleable 3xs chip at the WCAG 2.5.8 minimum tap target',
 it('keeps compact removable and toggleable chips keyboard-accessible with adequate targets', async () => {
   for (const size of ['2xs', 'xs', 's', 'm'] as const) {
     const removable = (await fixture(html`
-      <lr-chip size=${size} removable><span slot="icon">●</span>Tag</lr-chip>
+      <lr-chip size=${size} removable><span slot="start">●</span>Tag</lr-chip>
     `)) as LyraChip;
     const removeButton = removable.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
     expect(Number.parseFloat(getComputedStyle(removeButton).minBlockSize), `${size} remove target`).to.be.at.least(40);
     await expect(removable).to.be.accessible();
 
     const toggleable = (await fixture(html`
-      <lr-chip size=${size} toggleable><span slot="icon">●</span>Tag</lr-chip>
+      <lr-chip size=${size} toggleable><span slot="start">●</span>Tag</lr-chip>
     `)) as LyraChip;
     const toggleButton = toggleable.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
     expect(Number.parseFloat(getComputedStyle(toggleButton).minBlockSize), `${size} toggle target`).to.be.at.least(40);
@@ -272,7 +272,7 @@ it('renders the default slot as the label', async () => {
 });
 
 it('can render every public action-label branch before a browser render root exists', () => {
-  for (const mode of ['removable', 'selected', 'toggleable'] as const) {
+  for (const mode of ['removable', 'toggleable'] as const) {
     const el = document.createElement('lr-chip') as LyraChip;
     el.append('Research');
     el[mode] = true;
@@ -300,26 +300,26 @@ it('keeps the server-first remove name during hydration, then adopts the declara
   ).to.equal('Remove Research');
 });
 
-it('keeps the progressive server icon visible during hydration, then adopts its presence', async () => {
+it('keeps the progressive server start adornment visible during hydration, then adopts its presence', async () => {
   const el = await mountServerRenderedChip(
-    `<lr-chip removable>${SERVER_SHADOW}<span slot="icon">●</span>Research</lr-chip>`,
+    `<lr-chip removable>${SERVER_SHADOW}<span slot="start">●</span>Research</lr-chip>`,
   );
   await el.updateComplete;
-  const icon = el.shadowRoot?.querySelector('[part="icon"]');
+  const icon = el.shadowRoot?.querySelector('[part="start"]');
   expect(icon?.hasAttribute('hidden')).to.be.false;
 
   await waitUntil(
-    () => (el as unknown as { hasIconSlot: boolean }).hasIconSlot,
-    'the corrective hydration update must adopt the declarative icon',
+    () => (el as unknown as { hasStartSlot: boolean }).hasStartSlot,
+    'the corrective hydration update must adopt the declarative start adornment',
   );
-  expect(el.shadowRoot?.querySelector('[part="icon"]') === icon).to.be.true;
+  expect(el.shadowRoot?.querySelector('[part="start"]') === icon).to.be.true;
 });
 
 it('derives the removable name before the first paint on a browser-only mount', async () => {
   const el = document.createElement('lr-chip') as LyraChip;
   el.removable = true;
   const icon = document.createElement('span');
-  icon.slot = 'icon';
+  icon.slot = 'start';
   icon.textContent = '●';
   el.append(icon, 'Research');
   document.body.append(el);
@@ -328,32 +328,41 @@ it('derives the removable name before the first paint on a browser-only mount', 
     expect(
       el.shadowRoot?.querySelector('[part="remove-button"]')?.getAttribute('aria-label'),
     ).to.equal('Remove Research');
-    expect(el.shadowRoot?.querySelector('[part="icon"]')?.hasAttribute('hidden')).to.be.false;
+    expect(el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden')).to.be.false;
   } finally {
     el.remove();
   }
 });
 
-describe('icon slot', () => {
-  it('hides [part="icon"] when nothing is slotted', async () => {
+describe('start slot', () => {
+  it('hides [part="start"] when nothing is slotted', async () => {
     const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
-    const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+    const icon = el.shadowRoot!.querySelector('[part="start"]') as HTMLElement;
     expect(icon.hidden).to.be.true;
   });
 
-  it('shows [part="icon"] once an element is slotted with slot="icon"', async () => {
-    const el = (await fixture(html`<lr-chip><span slot="icon">●</span>Tag</lr-chip>`)) as LyraChip;
-    const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+  it('shows [part="start"] once an element is slotted with slot="start"', async () => {
+    const el = (await fixture(html`<lr-chip><span slot="start">●</span>Tag</lr-chip>`)) as LyraChip;
+    const icon = el.shadowRoot!.querySelector('[part="start"]') as HTMLElement;
     expect(icon.hidden).to.be.false;
   });
 
-  it('reacts to the icon slot being populated after first render', async () => {
+  it('does not retain the removed icon slot or part alias', async () => {
+    const el = (await fixture(html`
+      <lr-chip><span id="legacy" slot="icon">legacy</span><span id="canonical" slot="start">start</span>Tag</lr-chip>
+    `)) as LyraChip;
+    const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('[part="start"] slot')!;
+    expect(slot.assignedElements().map((item) => item.id)).to.deep.equal(['canonical']);
+    expect(el.shadowRoot!.querySelectorAll('[part="icon"]').length).to.equal(0);
+  });
+
+  it('reacts to the start slot being populated after first render', async () => {
     const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
-    const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+    const icon = el.shadowRoot!.querySelector('[part="start"]') as HTMLElement;
     expect(icon.hidden).to.be.true;
 
     const dot = document.createElement('span');
-    dot.setAttribute('slot', 'icon');
+    dot.setAttribute('slot', 'start');
     dot.textContent = '●';
     el.appendChild(dot);
     // slotchange fires asynchronously
@@ -362,18 +371,18 @@ describe('icon slot', () => {
     expect(icon.hidden).to.be.false;
   });
 
-  it('keeps arbitrary interactive icon content visible but inert beside a real action', async () => {
+  it('keeps arbitrary interactive start content visible but inert beside a real action', async () => {
     const root = await fixture<HTMLElement>(html`<div>
       <button id="before-chip-icon" type="button">Before</button>
       <lr-chip removable>
-        <a id="nested-chip-icon" slot="icon" href="#nested-chip-icon">I</a>
+        <a id="nested-chip-icon" slot="start" href="#nested-chip-icon">I</a>
         Research
       </lr-chip>
     </div>`);
     const el = root.querySelector('lr-chip') as LyraChip;
     const before = root.querySelector<HTMLButtonElement>('#before-chip-icon')!;
     const nested = root.querySelector<HTMLAnchorElement>('#nested-chip-icon')!;
-    const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!;
+    const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="start"]')!;
     const remove = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
 
     expect(icon.getAttribute('aria-hidden')).to.equal('true');
@@ -488,18 +497,26 @@ describe('remove affordance', () => {
     expect(btn?.getAttribute('aria-label')).to.equal('Retirer research');
   });
 
-  it('lets a host aria-label override the computed remove-button label', async () => {
+  it('keeps a host label on a group while giving the remove action a purpose-specific name', async () => {
     const el = (await fixture(
       html`<lr-chip removable aria-label="Delete research filter">research</lr-chip>`,
     )) as LyraChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
-    expect(btn.getAttribute('aria-label')).to.equal('Delete research filter');
+    expect(el.getAttribute('role')).to.equal('group');
+    expect(btn.getAttribute('aria-label')).to.equal('Remove research');
     expect(el.textContent!.trim()).to.equal('research');
+
+    el.removeAttribute('role');
+    await Promise.resolve();
+    expect(el.getAttribute('role')).to.equal('group');
+    el.setAttribute('role', 'region');
+    await Promise.resolve();
+    expect(el.getAttribute('role')).to.equal('region');
   });
 
-  it('excludes icon-slot text from the computed remove-button label', async () => {
+  it('excludes start-slot text from the computed remove-button label', async () => {
     const el = (await fixture(
-      html`<lr-chip removable><span slot="icon">●</span>research</lr-chip>`,
+      html`<lr-chip removable><span slot="start">●</span>research</lr-chip>`,
     )) as LyraChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
     expect(btn.getAttribute('aria-label')).to.equal('Remove research');
@@ -508,7 +525,7 @@ describe('remove affordance', () => {
   // Slot *reassignment* (as opposed to insertion or removal) is its own path into the derived
   // action name: the chip reaches it through both its `slotchange` listener and the `'slot'`
   // entry its label observer adds to the shared accessible-text attribute filter.
-  it('re-derives the remove-button label when a child moves between the default and icon slots', async () => {
+  it('re-derives the remove-button label when a child moves between the default and start slots', async () => {
     const el = (await fixture(html`<lr-chip removable>research</lr-chip>`)) as LyraChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
     const badge = document.createElement('span');
@@ -518,7 +535,7 @@ describe('remove affordance', () => {
     await el.updateComplete;
     expect(btn.getAttribute('aria-label')).to.equal('Remove research beta');
 
-    badge.setAttribute('slot', 'icon');
+    badge.setAttribute('slot', 'start');
     await new Promise((resolve) => requestAnimationFrame(resolve));
     await el.updateComplete;
     expect(btn.getAttribute('aria-label')).to.equal('Remove research');
@@ -530,14 +547,14 @@ describe('remove affordance', () => {
   });
 
   it('falls back to the bare "Remove" label when the default slot has no text', async () => {
-    const el = (await fixture(html`<lr-chip removable><span slot="icon">●</span></lr-chip>`)) as LyraChip;
+    const el = (await fixture(html`<lr-chip removable><span slot="start">●</span></lr-chip>`)) as LyraChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
     expect(btn.getAttribute('aria-label')).to.equal('Remove');
   });
 
-  it('never leaves an icon-only toggleable chip\'s real control unnamed', async () => {
+  it('never leaves a start-adornment-only toggleable chip\'s real control unnamed', async () => {
     const el = (await fixture(
-      html`<lr-chip toggleable><span slot="icon" aria-hidden="true">●</span></lr-chip>`,
+      html`<lr-chip toggleable><span slot="start" aria-hidden="true">●</span></lr-chip>`,
     )) as LyraChip;
     const btn = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
     expect(btn.textContent!.trim(), 'the control has no text of its own to name it').to.equal('');
@@ -546,9 +563,9 @@ describe('remove affordance', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('localizes the icon-only toggle fallback name through a .strings override', async () => {
+  it('localizes the start-only toggle fallback name through a .strings override', async () => {
     const el = (await fixture(
-      html`<lr-chip toggleable .strings=${{ select: 'Sélectionner' }}><span slot="icon" aria-hidden="true">●</span></lr-chip>`,
+      html`<lr-chip toggleable .strings=${{ select: 'Sélectionner' }}><span slot="start" aria-hidden="true">●</span></lr-chip>`,
     )) as LyraChip;
     const btn = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
     expect(btn.getAttribute('aria-label')).to.equal('Sélectionner');
@@ -556,7 +573,7 @@ describe('remove affordance', () => {
 
   it('still prefers the chip\'s own label text over the generic toggle fallback', async () => {
     const el = (await fixture(
-      html`<lr-chip toggleable><span slot="icon" aria-hidden="true">●</span>Latency</lr-chip>`,
+      html`<lr-chip toggleable><span slot="start" aria-hidden="true">●</span>Latency</lr-chip>`,
     )) as LyraChip;
     const btn = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
     expect(btn.getAttribute('aria-label')).to.equal('Latency');
@@ -630,30 +647,37 @@ describe('remove affordance', () => {
   });
 });
 
-it('is accessible in the default (non-removable, no icon) state', async () => {
+it('is accessible in the default (non-removable, no start adornment) state', async () => {
   const el = (await fixture(html`<lr-chip>Filter: active</lr-chip>`)) as LyraChip;
   await expect(el).to.be.accessible();
 });
 
-it('is accessible in a populated removable state with an icon and a non-neutral variant', async () => {
+it('is accessible in a populated removable state with a start adornment and a non-neutral variant', async () => {
   const el = (await fixture(html`
-    <lr-chip variant="danger" removable value="scope-1"><span slot="icon">●</span>Overdue</lr-chip>
+    <lr-chip variant="danger" removable value="scope-1"><span slot="start">●</span>Overdue</lr-chip>
   `)) as LyraChip;
   await expect(el).to.be.accessible();
 });
 
 describe('selected', () => {
-  it('latches toggle mode at assignment time across a same-task true-to-false update', async () => {
+  it('never opts into toggle mode, including across a same-task true-to-false update', async () => {
     const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const restingBackground = getComputedStyle(base).backgroundColor;
+    const restingBorder = getComputedStyle(base).borderTopColor;
 
     el.selected = true;
+    await el.updateComplete;
+    expect(el.toggleable).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="toggle-button"]').length).to.equal(0);
+    expect(getComputedStyle(base).backgroundColor).to.equal(restingBackground);
+    expect(getComputedStyle(base).borderTopColor).to.equal(restingBorder);
+
     el.selected = false;
     await el.updateComplete;
 
-    expect(el.toggleable).to.be.true;
-    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
-    expect((button) != null).to.equal(true);
-    expect(button.getAttribute('aria-pressed')).to.equal('false');
+    expect(el.toggleable).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="toggle-button"]').length).to.equal(0);
   });
 
   it('is not interactive by default (no role/tabindex on [part=base])', async () => {
@@ -663,14 +687,8 @@ describe('selected', () => {
     expect(base.hasAttribute('tabindex')).to.be.false;
   });
 
-  it('becomes keyboard-activatable and toggles on click when selected is opted into', async () => {
-    // The fixture opts into selected mode by starting already selected/pressed -- the same
-    // boolean both enables `[part='base']`'s interactive semantics and represents its current
-    // pressed value (see the property's own doc comment), so a chip that starts `selected`
-    // starts already reflecting `aria-pressed="true"`; clicking it toggles that value off. Toggle
-    // mode itself is sticky (see `toggleable`'s doc comment), so once opted in via `selected` the
-    // chip keeps announcing `aria-pressed="false"` (not omitting it) once unpressed.
-    const el = (await fixture(html`<lr-chip selected value="v1">Tag</lr-chip>`)) as LyraChip;
+  it('becomes keyboard-activatable and toggles on click when mode and state are set independently', async () => {
+    const el = (await fixture(html`<lr-chip toggleable selected value="v1">Tag</lr-chip>`)) as LyraChip;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
     expect(button.localName).to.equal('button');
     expect(button.getAttribute('aria-pressed')).to.equal('true');
@@ -684,7 +702,7 @@ describe('selected', () => {
   });
 
   it('uses native button activation for keyboard and synthetic click paths', async () => {
-    const el = (await fixture(html`<lr-chip selected>Tag</lr-chip>`)) as LyraChip;
+    const el = (await fixture(html`<lr-chip toggleable selected>Tag</lr-chip>`)) as LyraChip;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
     setTimeout(() => button.click());
     await oneEvent(el, 'lr-chip-select');
@@ -701,7 +719,7 @@ describe('selected', () => {
   });
 
   it('is accessible when selected and interactive', async () => {
-    const el = (await fixture(html`<lr-chip selected>Tag</lr-chip>`)) as LyraChip;
+    const el = (await fixture(html`<lr-chip toggleable selected>Tag</lr-chip>`)) as LyraChip;
     await expect(el).to.be.accessible();
   });
 
@@ -838,7 +856,8 @@ describe('selected', () => {
     el.setAttribute('aria-label', '');
     await Promise.resolve();
     await el.updateComplete;
-    expect(remove.getAttribute('aria-label')).to.equal('');
+    expect(el.getAttribute('role')).to.equal('group');
+    expect(remove.getAttribute('aria-label')).to.equal('Remove Gamma');
 
     el.removeAttribute('aria-label');
     el.removable = false;
@@ -909,6 +928,28 @@ describe('selected', () => {
     }
   });
 
+  it('arms accessible-text observation only while an action needs a derived name', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+    const NativeMutationObserver = window.MutationObserver;
+    let labelObservations = 0;
+    class TrackingMutationObserver extends NativeMutationObserver {
+      override observe(target: Node, options?: MutationObserverInit): void {
+        if ((target as Element).localName === 'lr-chip' && options?.characterData) labelObservations += 1;
+        super.observe(target, options);
+      }
+    }
+    Object.defineProperty(window, 'MutationObserver', { configurable: true, value: TrackingMutationObserver });
+    try {
+      const el = (await fixture(html`<lr-chip>Passive label</lr-chip>`)) as LyraChip;
+      expect(labelObservations).to.equal(0);
+      el.removable = true;
+      await el.updateComplete;
+      expect(labelObservations).to.be.greaterThan(0);
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
+    }
+  });
+
   it('refreshes a cached action name after the label changes while disconnected', async () => {
     const el = (await fixture(html`<lr-chip toggleable>Alpha</lr-chip>`)) as LyraChip;
     el.remove();
@@ -924,17 +965,17 @@ describe('selected', () => {
     }
   });
 
-  it('refreshes icon presence after an icon is added while disconnected', async () => {
+  it('refreshes start-slot presence after a start adornment is added while disconnected', async () => {
     const el = (await fixture(html`<lr-chip toggleable>Alpha</lr-chip>`)) as LyraChip;
     el.remove();
     const icon = document.createElement('span');
-    icon.slot = 'icon';
+    icon.slot = 'start';
     icon.textContent = '●';
     el.append(icon);
     document.body.append(el);
     try {
       await el.updateComplete;
-      expect(el.shadowRoot?.querySelector('[part="icon"]')?.hasAttribute('hidden')).to.be.false;
+      expect(el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden')).to.be.false;
     } finally {
       el.remove();
     }
@@ -944,7 +985,7 @@ describe('selected', () => {
     // Regression test: [part=base]'s interactive semantics used to be gated on the *current*
     // live value of `selected`, so the very first click (which flips selected to false) stripped
     // role/tabindex/handlers on the next render and the chip could never be clicked again.
-    const el = (await fixture(html`<lr-chip selected value="v1">Tag</lr-chip>`)) as LyraChip;
+    const el = (await fixture(html`<lr-chip toggleable selected value="v1">Tag</lr-chip>`)) as LyraChip;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
 
     setTimeout(() => button.click());
@@ -980,7 +1021,7 @@ describe('selected', () => {
   });
 
   it('is accessible once toggled off (still interactive, now unselected)', async () => {
-    const el = (await fixture(html`<lr-chip selected>Tag</lr-chip>`)) as LyraChip;
+    const el = (await fixture(html`<lr-chip toggleable selected>Tag</lr-chip>`)) as LyraChip;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
     setTimeout(() => button.click());
     await oneEvent(el, 'lr-chip-select');
@@ -992,7 +1033,7 @@ describe('selected', () => {
 
 describe('pressed-border override', () => {
   it('pressed border-color falls back to --lr-chip-accent by default', async () => {
-    const el = (await fixture(html`<lr-chip selected>Tag</lr-chip>`)) as LyraChip;
+    const el = (await fixture(html`<lr-chip toggleable selected>Tag</lr-chip>`)) as LyraChip;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const style = getComputedStyle(base);
     expect(style.borderColor).to.equal(style.color);
@@ -1000,7 +1041,7 @@ describe('pressed-border override', () => {
 
   it('uses --lr-chip-pressed-border when set, independent of --lr-chip-accent (label color)', async () => {
     const el = (await fixture(
-      html`<lr-chip selected style="--lr-chip-pressed-border: rgb(1, 2, 3);">Tag</lr-chip>`,
+      html`<lr-chip toggleable selected style="--lr-chip-pressed-border: rgb(1, 2, 3);">Tag</lr-chip>`,
     )) as LyraChip;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const style = getComputedStyle(base);
@@ -1019,7 +1060,7 @@ describe('pressed-border override', () => {
 
 describe('pressed-background override', () => {
   it('pressed background falls back to --lr-chip-bg by default', async () => {
-    const el = (await fixture(html`<lr-chip selected>Tag</lr-chip>`)) as LyraChip;
+    const el = (await fixture(html`<lr-chip toggleable selected>Tag</lr-chip>`)) as LyraChip;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const restingBg = getComputedStyle(base).backgroundColor;
     el.selected = false;
@@ -1029,7 +1070,7 @@ describe('pressed-background override', () => {
 
   it('uses --lr-chip-pressed-bg when set, independent of the resting background', async () => {
     const el = (await fixture(
-      html`<lr-chip selected style="--lr-chip-pressed-bg: rgb(4, 5, 6);">Tag</lr-chip>`,
+      html`<lr-chip toggleable selected style="--lr-chip-pressed-bg: rgb(4, 5, 6);">Tag</lr-chip>`,
     )) as LyraChip;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(base).backgroundColor).to.equal('rgb(4, 5, 6)');
@@ -1049,7 +1090,7 @@ describe('aria-pressed', () => {
   });
 
   it('is "true" once pressed', async () => {
-    const el = (await fixture(html`<lr-chip selected>Tag</lr-chip>`)) as LyraChip;
+    const el = (await fixture(html`<lr-chip toggleable selected>Tag</lr-chip>`)) as LyraChip;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
     expect(button.getAttribute('aria-pressed')).to.equal('true');
   });
@@ -1143,11 +1184,25 @@ describe('per-tier min-height and exact-height hatch', () => {
     expect(removeCs.borderRadius).to.equal('3px');
   });
 
-  it('declares --lr-chip-radius on :host and consumes it once on [part="base"] and [part="remove-button"]', () => {
+  it('keeps the radius default private and consumes the inheritable public hook at both surfaces', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/:host \{[^}]*--lr-chip-radius: var\(--lr-radius\);/);
-    expect(css).to.match(/\[part='base'\] \{[^}]*border-radius: var\(--lr-chip-radius\);/);
-    expect(css).to.match(/\[part='remove-button'\] \{[^}]*border-radius: var\(--lr-chip-radius\);/);
+    expect(css).to.match(/:host \{[^}]*--_lr-chip-radius: var\(--lr-radius\);/);
+    expect(css).to.match(/\[part='base'\] \{[^}]*border-radius: var\(--lr-chip-radius, var\(--_lr-chip-radius\)\);/);
+    expect(css).to.match(/\[part='remove-button'\] \{[^}]*border-radius: var\(--lr-chip-radius, var\(--_lr-chip-radius\)\);/);
+  });
+
+  it('honors inherited and direct public chip hooks without shadowing either', async () => {
+    const wrapper = await fixture(html`
+      <div style="--lr-chip-bg: rgb(1, 2, 3); --lr-chip-radius: 7px">
+        <lr-chip>Inherited</lr-chip>
+        <lr-chip style="--lr-chip-bg: rgb(4, 5, 6); --lr-chip-radius: 9px">Direct</lr-chip>
+      </div>
+    `);
+    const [inherited, direct] = Array.from(wrapper.querySelectorAll('lr-chip')) as LyraChip[];
+    expect(getComputedStyle(base(inherited!)).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(base(inherited!)).borderRadius).to.equal('7px');
+    expect(getComputedStyle(base(direct!)).backgroundColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(base(direct!)).borderRadius).to.equal('9px');
   });
 
   it('lets a consumer raise --lr-chip-min-height so an interactive chip grows past its content', async () => {

@@ -13,7 +13,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'The top-level shell for one AgentRun: lifecycle-status badge, elapsed time, current step, model/cost summary, and built-in Cancel/Retry controls in a header, composing lr-generation-status, lr-usage-badge, and lr-task-list — plus four named slots (tasks/tools/reasoning/output) for the run\'s actual content.',
+          'The top-level shell for one AgentRun: lifecycle-status badge, elapsed time, current step, model/cost summary, and built-in Cancel/Retry controls in a header, composing lr-generation-metrics, lr-usage-badge, and lr-task-list — plus four named slots (tasks/tools/reasoning/output) for the run\'s actual content.',
       },
     },
   },
@@ -63,6 +63,7 @@ export const QueuedAndCollecting: Story = {
       <lr-agent-run
         .run=${{ ...runningRun, status: { kind: 'collecting' } }}
         .metrics=${[
+          { id: 'quality', label: 'Quality', value: '98%', variant: 'brand' },
           { id: 'input', label: 'Input tokens', value: 1240 },
           { id: 'output', label: 'Output tokens', value: 0 },
         ]}
@@ -203,8 +204,8 @@ export const Live: Story = {
       el.addEventListener('lr-cancel', () => {
         log.textContent = 'lr-cancel fired';
       });
-      el.addEventListener('lr-retry', (e) => {
-        log.textContent = `lr-retry fired, attempt ${(e as CustomEvent).detail.attempt}`;
+      el.addEventListener('lr-run-retry', (e) => {
+        log.textContent = `lr-run-retry fired, attempt ${(e as CustomEvent).detail.attempt}`;
       });
     }
     return html`

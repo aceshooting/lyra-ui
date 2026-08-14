@@ -46,7 +46,7 @@ export const styles = css`
   [part='header'][hidden] {
     display: none;
   }
-  [part='title'] {
+  [part='heading'] {
     flex: 1 1 auto;
     min-inline-size: 0;
     color: var(--lr-color-text);

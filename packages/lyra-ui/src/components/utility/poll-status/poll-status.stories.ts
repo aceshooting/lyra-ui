@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { ref } from 'lit/directives/ref.js';
 import './poll-status.js';
 import type { LyraPollStatus } from './poll-status.js';
 
@@ -36,32 +37,47 @@ export const Inactive: Story = {
 export const PauseResume: Story = {
   name: 'Pause / resume',
   render: () => {
-    function wire(root: HTMLElement): void {
-      const status = root.querySelector<LyraPollStatus>('lr-poll-status')!;
-      if (status.hasAttribute('data-wired')) return;
-      status.setAttribute('data-wired', '');
-
-      const log = root.querySelector<HTMLElement>('[data-log]')!;
-      const line = (text: string): void => {
-        const time = new Date().toLocaleTimeString(undefined, { hour12: false });
-        const el = document.createElement('div');
-        el.textContent = `${time} — ${text}`;
-        log.prepend(el);
-      };
-      status.addEventListener('lr-pause-change', (e) => line(`lr-pause-change: ${(e as CustomEvent).detail}`));
-      status.addEventListener('lr-poll-due', () => line('lr-poll-due fired'));
-
-      root.querySelector('[data-restart]')!.addEventListener('click', () => {
-        status.restart();
-        line('restart() (same 8000ms delay)');
+    let cleanup: (() => void) | undefined;
+    let generation = 0;
+    function wire(root?: Element): void {
+      generation += 1;
+      cleanup?.();
+      cleanup = undefined;
+      if (!(root instanceof HTMLElement)) return;
+      const current = generation;
+      queueMicrotask(() => {
+        if (current !== generation || !root.isConnected) return;
+        const status = root.querySelector<LyraPollStatus>('lr-poll-status')!;
+        const log = root.querySelector<HTMLElement>('[data-log]')!;
+        const line = (text: string): void => {
+          const time = new Date().toLocaleTimeString(undefined, {
+            hour12: false,
+          });
+          const el = root.ownerDocument.createElement('div');
+          el.textContent = `${time} — ${text}`;
+          log.prepend(el);
+        };
+        const onPause = (event: Event): void =>
+          line(`lr-pause-change: ${(event as CustomEvent<{ paused: boolean }>).detail.paused}`);
+        const onDue = (): void => line('lr-poll-due fired');
+        const restart = root.querySelector<HTMLElement>('[data-restart]')!;
+        const onRestart = (): void => {
+          status.restart();
+          line('restart() (same 8000ms delay)');
+        };
+        status.addEventListener('lr-pause-change', onPause);
+        status.addEventListener('lr-poll-due', onDue);
+        restart.addEventListener('click', onRestart);
+        cleanup = () => {
+          status.removeEventListener('lr-pause-change', onPause);
+          status.removeEventListener('lr-poll-due', onDue);
+          restart.removeEventListener('click', onRestart);
+        };
       });
     }
 
     return html`
-      <div
-        style="display:flex; flex-direction:column; gap:0.75rem; max-width:28rem;"
-        @click=${(e: Event) => wire(e.currentTarget as HTMLElement)}
-      >
+      <div ${ref(wire)} style="display:flex; flex-direction:column; gap:0.75rem; max-width:28rem;">
         <lr-poll-status next-in-ms="8000"></lr-poll-status>
         <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
           <button

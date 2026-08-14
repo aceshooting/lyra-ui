@@ -81,7 +81,7 @@ export const ContextAndHostCss: StoryObj = {
     docs: {
       description: {
         story:
-          'An unset inner callout inherits the danger/xl context. An explicit attribute or property write — even the same-default `brand`/`m` pair — pins a local mapping; removing it resumes inheritance. Explicit `neutral` maps the neutral palette. The final sibling demonstrates that ordinary host CSS owns the chrome while `base` stays a transparent semantic grid.',
+          'An unset inner callout inherits the danger/xl context for both presentation and update urgency: later text changes use the assertive sink. An explicit attribute or property write — even the same-default `brand`/`m` pair — pins a local mapping; removing it resumes inheritance. Explicit `neutral` maps the neutral palette. The final sibling demonstrates that ordinary host CSS owns the chrome while `base` stays a transparent semantic grid.',
       },
     },
   },

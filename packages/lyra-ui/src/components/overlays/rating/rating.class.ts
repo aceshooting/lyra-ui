@@ -22,6 +22,7 @@ import {
   EXTERNAL_LABEL_HOST_SEMANTICS,
   type ExternalLabelHostSemanticOperation,
 } from '../../../internal/form-control-labels.js';
+import { currentValidityValidator, type LyraFormValidator } from '../../forms/form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rating } from '../../../internal/default-strings.generated.js';
@@ -169,6 +170,11 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  /** Public WA-compatible intrinsic validator catalog. */
+  static get validators(): LyraFormValidator<LyraRating>[] {
+    return [currentValidityValidator('required', 'disabled', 'readonly', 'value', 'max')];
+  }
+
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
 
@@ -252,6 +258,11 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   private authorAriaLabel: string | null = null;
   private syncingHostSemantics = false;
   private externalLabelNameActive = false;
+
+  /** Live presentational symbol row, or `null` before the render root is populated. */
+  get rating(): HTMLElement | null {
+    return this.renderRoot.querySelector<HTMLElement>('[part~="rating"]');
+  }
 
   constructor() {
     super();

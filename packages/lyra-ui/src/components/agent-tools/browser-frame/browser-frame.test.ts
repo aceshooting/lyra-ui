@@ -1,8 +1,8 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './browser-frame.js';
 import type { LyraBrowserFrame } from './browser-frame.js';
-import { styles } from './browser-frame.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function sinkTexts(doc: Document = document): string[] {
   return Array.from(
@@ -12,9 +12,9 @@ function sinkTexts(doc: Document = document): string[] {
 }
 
 describe('lr-browser-frame', () => {
-  it('defaults to status=idle, controller=agent, controls=true', async () => {
+  it('defaults to phase=idle, controller=agent, controls=true', async () => {
     const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
-    expect(el.status).to.equal('idle');
+    expect(el.phase).to.equal('idle');
     expect(el.controller).to.equal('agent');
     expect(el.controls).to.be.true;
   });
@@ -32,7 +32,7 @@ describe('lr-browser-frame', () => {
 
   it('renders visible localized status text, never color-only', async () => {
     const el = (await fixture(
-      html`<lr-browser-frame status="stalled"></lr-browser-frame>`,
+      html`<lr-browser-frame phase="stalled"></lr-browser-frame>`,
     )) as LyraBrowserFrame;
     await el.updateComplete;
     const status = el.shadowRoot!.querySelector('[part="status"]')!;
@@ -42,14 +42,14 @@ describe('lr-browser-frame', () => {
 
   it('announces only post-mount status transitions through the shared light-DOM sink', async () => {
     const el = (await fixture(
-      html`<lr-browser-frame status="stalled"></lr-browser-frame>`,
+      html`<lr-browser-frame phase="stalled"></lr-browser-frame>`,
     )) as LyraBrowserFrame;
     expect(sinkTexts(), 'mounting with a status is not a live change').to.deep.equal([]);
     expect(el.shadowRoot!.querySelector('[part="status"]')!.hasAttribute('role')).to.be.false;
 
-    el.status = 'streaming';
+    el.phase = 'streaming';
     await el.updateComplete;
-    el.status = 'stalled';
+    el.phase = 'stalled';
     await el.updateComplete;
     expect(sinkTexts()).to.deep.equal(['Live', 'Stalled']);
 
@@ -69,7 +69,7 @@ describe('lr-browser-frame', () => {
     try {
       frameDocument.body.append(el);
       await new Promise((resolve) => requestAnimationFrame(resolve));
-      el.status = 'connecting';
+      el.phase = 'connecting';
       await el.updateComplete;
 
       expect(sinkTexts(), 'the old document no longer owns the adopted component sink').to.deep.equal([]);
@@ -122,17 +122,17 @@ describe('lr-browser-frame', () => {
     }
   });
 
-  it('treats a status write queued while detached as a silent reconnect baseline', async () => {
+  it('treats a phase write queued while detached as a silent reconnect baseline', async () => {
     const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
     const parent = el.parentNode!;
 
     el.remove();
-    el.status = 'stalled';
+    el.phase = 'stalled';
     parent.appendChild(el);
     await el.updateComplete;
-    expect(sinkTexts(), 'the detached status is resting content when reconnected').to.deep.equal([]);
+    expect(sinkTexts(), 'the detached phase is resting content when reconnected').to.deep.equal([]);
 
-    el.status = 'streaming';
+    el.phase = 'streaming';
     await el.updateComplete;
     expect(sinkTexts(), 'the next connected transition still announces').to.deep.equal(['Live']);
   });
@@ -400,7 +400,7 @@ describe('lr-browser-frame', () => {
     const el = (await fixture(html`
       <lr-browser-frame
         url="https://example.com"
-        status="stalled"
+        phase="stalled"
         .strings=${{
           browserFrameStatusStalled: 'Connexion interrompue',
           browserFrameTakeOver: 'Prendre le contrôle',
@@ -441,7 +441,7 @@ describe('lr-browser-frame', () => {
     const el = (await fixture(html`
       <lr-browser-frame
         url="https://example.com"
-        status="streaming"
+        phase="streaming"
         .pings=${[{ id: 'p1', x: 10, y: 10, kind: 'click' }]}
       ></lr-browser-frame>
     `)) as LyraBrowserFrame;
@@ -449,23 +449,24 @@ describe('lr-browser-frame', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('gives take-over-button and stop-button a hover state', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='take-over-button'\],\s*\n?\s*\[part='stop-button'\]\s*\{[^}]*font/);
-    expect(css).to.match(/\[part='take-over-button'\]:hover/);
-    expect(css).to.match(/\[part='stop-button'\]:hover/);
-  });
-
-  it('gives take-over-button and stop-button a themed focus-visible ring', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    for (const part of ['take-over-button', 'stop-button']) {
-      expect(css, `${part} must get focus-visible`).to.match(
-        new RegExp(`\\[part='${part}'\\]:focus-visible[^{]*\\{[^}]*outline:`),
-      );
+  it('paints rendered hover feedback on take-over and stop buttons', async () => {
+    const el = await fixture<LyraBrowserFrame>(html`
+      <lr-browser-frame style="--lr-color-brand-quiet: rgb(1, 2, 3)"></lr-browser-frame>
+    `);
+    try {
+      for (const part of ['take-over-button', 'stop-button']) {
+        const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
+        const rect = button.getBoundingClientRect();
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)');
+        expect(getComputedStyle(button).backgroundColor, part).to.equal('rgb(1, 2, 3)');
+      }
+    } finally {
+      await resetMouse();
     }
-    expect(css).to.match(/\[part='take-over-button'\]:focus-visible[^{]*\{[^}]*var\(--lr-focus-ring-width\)/);
-    expect(css).to.match(/\[part='take-over-button'\]:focus-visible[^{]*\{[^}]*var\(--lr-focus-ring-color\)/);
-    expect(css).to.match(/\[part='take-over-button'\]:focus-visible[^{]*\{[^}]*var\(--lr-focus-ring-offset\)/);
   });
 
   it('renders a visible focus-visible outline on the take-over and stop buttons', async () => {
@@ -487,9 +488,9 @@ describe('lr-browser-frame', () => {
 it('clamps ping coordinates and never lets them reach the declaration list verbatim', async () => {
   const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
   el.pings = [
-    { x: '0%;position:fixed;inset:0' as unknown as number, y: 10 },
-    { x: Number.NaN, y: Number.POSITIVE_INFINITY },
-    { x: 250, y: -80 },
+    { id: 'injection', x: '0%;position:fixed;inset:0' as unknown as number, y: 10, kind: 'click' },
+    { id: 'non-finite', x: Number.NaN, y: Number.POSITIVE_INFINITY, kind: 'move' },
+    { id: 'clamped', x: 250, y: -80, kind: 'scroll' },
   ];
   await el.updateComplete;
   const pings = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="ping"]')];
@@ -502,4 +503,16 @@ it('clamps ping coordinates and never lets them reach the declaration list verba
   // 250 and -80 clamp into the documented 0-100 range.
   expect(pings[2]!.style.left).to.equal('100%');
   expect(pings[2]!.style.top).to.equal('0%');
+});
+
+it('normalizes duplicate ping ids first-wins before overlay rendering', async () => {
+  const el = await fixture<LyraBrowserFrame>(html`
+    <lr-browser-frame .pings=${[
+      { id: 'same', x: 10, y: 20, kind: 'click' },
+      { id: 'same', x: 80, y: 90, kind: 'type' },
+    ]}></lr-browser-frame>
+  `);
+  const pings = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="ping"]');
+  expect(pings).to.have.length(1);
+  expect(pings[0]!.dataset['kind']).to.equal('click');
 });

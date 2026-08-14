@@ -27,9 +27,9 @@ export const styles = css`
   }
   /* The collapsed-rail floor only applies once actually collapsed -- scoped
      here rather than to the bare [edge] selectors above, so it can never
-     override a smaller explicit min-size (resolved in JS by
+     override a smaller explicit min-extent (resolved in JS by
      resolveBoundsPx()) while expanded. An unconditional floor here would
-     silently win over a min-size below the rail token's width, since a CSS
+     silently win over a min-extent below the rail token's width, since a CSS
      min-inline-size/min-block-size always wins over an inline size style
      regardless of what value applySize() computed and announced via
      aria-valuenow. */
@@ -101,7 +101,7 @@ export const styles = css`
   }
   /* Transparent hit-slop, widening the draggable/tappable box along the
      resize axis only, without changing the handle's visible 3px thickness --
-     same technique as lr-split's divider. */
+     same technique as lr-multi-split's divider. */
   [part="handle"]::before {
     content: "";
     position: absolute;

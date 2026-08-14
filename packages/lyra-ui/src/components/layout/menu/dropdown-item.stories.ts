@@ -2,7 +2,10 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
 import './dropdown-item.js';
 
-const meta: Meta = { title: 'Components/Dropdown Item', component: 'lr-dropdown-item' };
+const meta: Meta = {
+  title: 'Components/Dropdown Item',
+  component: 'lr-dropdown-item',
+};
 export default meta;
 type Story = StoryObj;
 
@@ -24,15 +27,23 @@ export const CompatibilitySurface: Story = {
     },
   },
   render: () => html`
-    <div role="menu" aria-label="Compatibility states" style="inline-size: 18rem;">
+    <div
+      role="menu"
+      aria-label="Compatibility states"
+      style="inline-size: 18rem;"
+    >
       <lr-dropdown-item value="rename">
         <span slot="prefix">✏️</span>
         Rename
         <span slot="details">⌘R</span>
       </lr-dropdown-item>
-      <lr-dropdown-item type="checkbox" checked value="wrap">Wrap text</lr-dropdown-item>
+      <lr-dropdown-item type="checkbox" checked value="wrap"
+        >Wrap text</lr-dropdown-item
+      >
       <lr-dropdown-item loading value="saving">Saving</lr-dropdown-item>
-      <lr-dropdown-item variant="danger" value="delete">Delete</lr-dropdown-item>
+      <lr-dropdown-item variant="danger" value="delete"
+        >Delete</lr-dropdown-item
+      >
     </div>
   `,
 };
@@ -42,12 +53,15 @@ export const SubmenuControl: Story = {
     docs: {
       description: {
         story:
-          'The mapped `openSubmenu()` / `closeSubmenu()` methods settle after `submenuOpen` and its `submenu-open` reflection agree. Native focus and blur remain on the focusable item host.',
+          'The mapped `openSubmenu()` / `closeSubmenu()` methods settle after `submenuOpen`, `submenu-open`, and the normalized `submenuopen` alias agree. Closing by any route clears both attribute spellings. Native focus and blur remain on the focusable item host.',
       },
     },
   },
   render: () => html`
-    <div data-submenu-story style="display: grid; gap: var(--lr-space-s); inline-size: 18rem;">
+    <div
+      data-submenu-story
+      style="display: grid; gap: var(--lr-space-s); inline-size: 18rem;"
+    >
       <div style="display: flex; gap: var(--lr-space-xs);">
         <button
           type="button"
@@ -57,7 +71,9 @@ export const SubmenuControl: Story = {
               .querySelector('lr-dropdown-item')!;
             void item.openSubmenu('none');
           }}
-        >Open submenu</button>
+        >
+          Open submenu
+        </button>
         <button
           type="button"
           @click=${(event: Event) => {
@@ -66,13 +82,19 @@ export const SubmenuControl: Story = {
               .querySelector('lr-dropdown-item')!;
             void item.closeSubmenu();
           }}
-        >Close submenu</button>
+        >
+          Close submenu
+        </button>
       </div>
       <div role="menu" aria-label="Share actions">
         <lr-dropdown-item>
           Share
-          <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
-          <lr-dropdown-item slot="submenu" value="link">Copy link</lr-dropdown-item>
+          <lr-dropdown-item slot="submenu" value="email"
+            >Email</lr-dropdown-item
+          >
+          <lr-dropdown-item slot="submenu" value="link"
+            >Copy link</lr-dropdown-item
+          >
         </lr-dropdown-item>
       </div>
     </div>
@@ -80,15 +102,56 @@ export const SubmenuControl: Story = {
 };
 
 /** Web Awesome publishes the mixed-case `submenuOpen` attribute. HTML normalizes that spelling to
- * `submenuopen`; Lyra accepts it permanently alongside the canonical `submenu-open` reflection. */
+ * `submenuopen`; Lyra synchronizes it with `submenu-open` and clears both after dismissal. */
 export const UpstreamSubmenuOpenAttribute: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The initial mixed-case spelling becomes `submenuopen` in HTML. It and `submenu-open` are bidirectional controls of one live state: removing either closes the submenu, and Escape, outside dismissal, selection, or `closeSubmenu()` removes both so the submenu stays closed.',
+      },
+    },
+  },
   render: () => html`
-    <div role="menu" aria-label="Share actions" style="inline-size: 18rem;">
-      <lr-dropdown-item submenuOpen>
-        Share
-        <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
-        <lr-dropdown-item slot="submenu" value="link">Copy link</lr-dropdown-item>
-      </lr-dropdown-item>
+    <div
+      data-alias-story
+      style="display: grid; gap: var(--lr-space-s); inline-size: 18rem;"
+    >
+      <div style="display: flex; gap: var(--lr-space-xs);">
+        <button
+          type="button"
+          @click=${(event: Event) => {
+            const item = (event.currentTarget as HTMLElement)
+              .closest('[data-alias-story]')!
+              .querySelector('lr-dropdown-item')!;
+            item.setAttribute('submenuopen', '');
+          }}
+        >
+          Open via alias
+        </button>
+        <button
+          type="button"
+          @click=${(event: Event) => {
+            const item = (event.currentTarget as HTMLElement)
+              .closest('[data-alias-story]')!
+              .querySelector('lr-dropdown-item')!;
+            item.removeAttribute('submenu-open');
+          }}
+        >
+          Close via canonical
+        </button>
+      </div>
+      <div role="menu" aria-label="Share actions">
+        <lr-dropdown-item submenuOpen>
+          Share
+          <lr-dropdown-item slot="submenu" value="email"
+            >Email</lr-dropdown-item
+          >
+          <lr-dropdown-item slot="submenu" value="link"
+            >Copy link</lr-dropdown-item
+          >
+        </lr-dropdown-item>
+      </div>
     </div>
   `,
 };
@@ -103,7 +166,11 @@ export const Sizes: Story = {
     },
   },
   render: () => html`
-    <div role="menu" aria-label="Sizes" style="display: flex; flex-direction: column; inline-size: 18rem;">
+    <div
+      role="menu"
+      aria-label="Sizes"
+      style="display: flex; flex-direction: column; inline-size: 18rem;"
+    >
       <lr-dropdown-item size="xs" value="a">Extra small</lr-dropdown-item>
       <lr-dropdown-item size="s" value="b">Small</lr-dropdown-item>
       <lr-dropdown-item size="m" value="c">Medium (default)</lr-dropdown-item>

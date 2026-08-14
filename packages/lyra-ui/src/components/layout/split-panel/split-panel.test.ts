@@ -1,6 +1,6 @@
 import { elementUpdated, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './split-panel.js';
-import type { LyraSplitPanel, SplitPanelSnapFunction } from './split-panel.js';
+import { SNAP_NONE, type LyraSplitPanel, type SplitPanelSnapFunction } from './split-panel.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function divider(element: LyraSplitPanel): HTMLElement {
@@ -26,6 +26,10 @@ function pointer(element: EventTarget, type: string, pointerId: number, x: numbe
     }),
   );
 }
+
+it('exports a no-op snap function from the granular component route', () => {
+  expect(SNAP_NONE({ pos: 37, size: 200, snapThreshold: 12 })).to.equal(37);
+});
 
 function installResizeObserverStub(): {
   callbacks: ResizeObserverCallback[];
@@ -569,6 +573,80 @@ it('snaps pointer dragging to fixed, repeated, and functional snap points', asyn
   pointer(window, 'pointerup', 13, 294);
 });
 
+it('bounds snap source scanning before a valid million-character tail can affect layout', () => {
+  const element = document.createElement('lr-split-panel') as LyraSplitPanel;
+  const withSnapNormalizer = element as unknown as {
+    applySnap(position: number, size: number): number;
+  };
+  element.snap = `${'x'.repeat(1_000_000)} 50%`;
+  element.snapThreshold = 400;
+
+  expect(withSnapNormalizer.applySnap(210, 400)).to.equal(210);
+});
+
+it('enforces the exact snap-source boundary', () => {
+  const element = document.createElement('lr-split-panel') as LyraSplitPanel;
+  const withSnapNormalizer = element as unknown as {
+    applySnap(position: number, size: number): number;
+  };
+  element.snapThreshold = 400;
+
+  element.snap = `${'x'.repeat(16_381)}50%`;
+  expect(withSnapNormalizer.applySnap(210, 400)).to.equal(200);
+
+  element.snap = `${'x'.repeat(16_382)}50%`;
+  expect(withSnapNormalizer.applySnap(210, 400)).to.equal(210);
+});
+
+it('does not delegate a malformed numeric prefix to a bulk backtracking matcher', () => {
+  const element = document.createElement('lr-split-panel') as LyraSplitPanel;
+  const withSnapNormalizer = element as unknown as {
+    readonly normalizedSnapTokens: readonly unknown[];
+  };
+  const source = '9'.repeat(16_384);
+  const originalMatch = String.prototype.match;
+  const originalExec = RegExp.prototype.exec;
+  let bulkMatchCalls = 0;
+  let bulkExecCalls = 0;
+  try {
+    String.prototype.match = function (this: string, expression: RegExp): RegExpMatchArray | null {
+      if (String(this) === source) bulkMatchCalls += 1;
+      return originalMatch.call(this, expression);
+    };
+    RegExp.prototype.exec = function (this: RegExp, value: string): RegExpExecArray | null {
+      if (value === source) bulkExecCalls += 1;
+      return originalExec.call(this, value);
+    };
+    element.snap = source;
+    expect(withSnapNormalizer.normalizedSnapTokens).to.have.lengthOf(0);
+  } finally {
+    String.prototype.match = originalMatch;
+    RegExp.prototype.exec = originalExec;
+  }
+
+  expect(bulkMatchCalls).to.equal(0);
+  expect(bulkExecCalls).to.equal(0);
+});
+
+it('caps and caches the normalized snap-token projection', () => {
+  const element = document.createElement('lr-split-panel') as LyraSplitPanel;
+  const withSnapNormalizer = element as unknown as {
+    readonly normalizedSnapTokens: readonly unknown[];
+    applySnap(position: number, size: number): number;
+  };
+  element.snap = Array.from({ length: 300 }, (_, index) => `${index + 1}px`).join(' ');
+  element.snapThreshold = 400;
+
+  const first = withSnapNormalizer.normalizedSnapTokens;
+  const second = withSnapNormalizer.normalizedSnapTokens;
+  expect(first).to.have.lengthOf(256);
+  expect(second).to.equal(first);
+  expect(withSnapNormalizer.applySnap(300, 400)).to.equal(256);
+
+  element.snap = '25% 50% 75%';
+  expect(withSnapNormalizer.normalizedSnapTokens).to.not.equal(first);
+});
+
 it('renders upstream CSS-property aliases and an expanded divider hit target', async () => {
   const element = (await fixture(html`
     <lr-split-panel
@@ -970,30 +1048,26 @@ it('recovers the pre-snap position when a custom snap function throws', async ()
   pointer(window, 'pointerup', 41, 260);
 });
 
-it('returns undefined for a snap length that does not match the px/percent grammar', () => {
+it('rejects a snap length that does not match the px/percent grammar', () => {
   const element = document.createElement('lr-split-panel') as LyraSplitPanel;
   const withPrivates = element as unknown as {
-    resolveSnapLength(value: string, size: number): number | undefined;
+    readonly normalizedSnapTokens: readonly unknown[];
   };
-  expect(withPrivates.resolveSnapLength('bogus', 400)).to.equal(undefined);
+  element.snap = 'bogus';
+  expect(withPrivates.normalizedSnapTokens).to.have.lengthOf(0);
 });
 
-it('clamps a snap token whose numeric value overflows to Infinity down to a zero-length point', async () => {
-  const element = (await fixture(html`
-    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
-  `)) as LyraSplitPanel;
-  element.snap = `${'9'.repeat(400)}px 50%`;
+it('rejects a snap token whose numeric value overflows instead of treating it as zero', () => {
+  const element = document.createElement('lr-split-panel') as LyraSplitPanel;
+  const withPrivates = element as unknown as {
+    readonly normalizedSnapTokens: readonly unknown[];
+    applySnap(position: number, size: number): number;
+  };
+  const overflow = `${'9'.repeat(400)}px`;
+  element.snap = overflow;
   element.snapThreshold = 400;
-  await elementUpdated(element);
-
-  // The oversized token's parsed length overflows to Infinity, which `finiteNumber` clamps to 0
-  // rather than treating as invalid -- so it competes as a (far) candidate and the closer, valid
-  // 50% token still wins.
-  pointer(divider(element), 'pointerdown', 42, 200);
-  pointer(window, 'pointermove', 42, 210);
-  await elementUpdated(element);
-  expect(element.positionInPixels).to.be.closeTo(200, 1);
-  pointer(window, 'pointerup', 42, 210);
+  expect(withPrivates.normalizedSnapTokens).to.have.lengthOf(0);
+  expect(withPrivates.applySnap(210, 400)).to.equal(210);
 });
 
 it('discards repeat() snap candidates that land outside the resizable range', async () => {

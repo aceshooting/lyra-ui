@@ -65,6 +65,10 @@ const baseTokens = css`
     --lr-color-on-warning: var(--lr-color-warning-on-loud);
     --lr-color-on-danger: var(--lr-color-danger-on-loud);
     --lr-color-on-neutral: var(--lr-color-neutral-on-loud);
+    /* Foreground for controls and captions painted over the strong media scrim. It is independent
+       from ordinary text and semantic-tone foregrounds because the underlying surface is always
+       the strong overlay, regardless of the page theme. */
+    --lr-color-on-strong-overlay: var(--lr-theme-color-on-strong-overlay, #fff);
     /* The surface a modal panel (dialog, drawer, lightbox, command palette) paints itself with.
        Separate from --lr-color-surface because in dark mode a panel that shares the page surface
        token is invisible against the page; light mode keeps the page surface as its default. */
@@ -443,6 +447,7 @@ const auxTokens = css`
       --lr-color-on-warning: Canvas;
       --lr-color-on-danger: Canvas;
       --lr-color-on-neutral: Canvas;
+      --lr-color-on-strong-overlay: CanvasText;
       --lr-focus-ring-color: Highlight;
     }
   }

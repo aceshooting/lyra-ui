@@ -4,8 +4,15 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseSync } from 'oxc-parser';
 import { splitSections, readTagFacts, FAMILIES } from './build-llms.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
+import {
+  readSourceContractBaseline,
+  sourceContractCensus,
+  sourceContractKey,
+  validateSourceContractBaseline,
+} from './llms-source-contracts.mjs';
 
 export const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -21,6 +28,111 @@ const SHARED_SURFACE = new Set([
 
 const camel = (name) => name.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 const escapePattern = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+function propertyName(node) {
+  if (node?.type === 'Identifier') return node.name;
+  if (node?.type === 'Literal' && typeof node.value === 'string') return node.value;
+  return '';
+}
+
+function bindingNames(node) {
+  if (!node) return [];
+  if (node.type === 'Identifier') return [node.name];
+  if (node.type === 'AssignmentPattern') return bindingNames(node.left);
+  if (node.type === 'RestElement') return bindingNames(node.argument);
+  if (node.type === 'ObjectPattern') {
+    return node.properties.flatMap((property) => {
+      if (property.type !== 'Property') return bindingNames(property.argument);
+      const key = propertyName(property.key);
+      const nested =
+        property.value?.type === 'ObjectPattern' || property.value?.type === 'ArrayPattern'
+          ? bindingNames(property.value)
+          : property.value?.type === 'AssignmentPattern' &&
+              (property.value.left?.type === 'ObjectPattern' ||
+                property.value.left?.type === 'ArrayPattern')
+            ? bindingNames(property.value.left)
+            : [];
+      return [...(key ? [key] : []), ...nested];
+    });
+  }
+  if (node.type === 'ArrayPattern') return node.elements.flatMap(bindingNames);
+  return [];
+}
+
+function nestedContractNames(node, names, visited = new Set()) {
+  if (!node || typeof node !== 'object' || visited.has(node)) return;
+  visited.add(node);
+  if (node.type === 'TSPropertySignature' || node.type === 'TSMethodSignature') {
+    const name = propertyName(node.key);
+    if (name) names.add(name);
+  }
+  if (node.type === 'TSFunctionType' || node.type === 'TSMethodSignature') {
+    for (const parameter of node.params ?? []) {
+      for (const name of bindingNames(parameter)) names.add(name);
+    }
+  }
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'start' || key === 'end' || key === 'loc') continue;
+    if (Array.isArray(value)) {
+      for (const child of value) nestedContractNames(child, names, visited);
+    } else {
+      nestedContractNames(value, names, visited);
+    }
+  }
+}
+
+/**
+ * Extracts the source-authored names consumers must see for one exported interface or free
+ * function. Inline callback parameters and option-object fields are included recursively.
+ */
+export function exportedContractNames(file, source, declarationName) {
+  const parsed = parseSync(file, source, { lang: 'ts', sourceType: 'module' });
+  if (parsed.errors.length > 0) {
+    throw new Error(`Unable to parse authored contract ${declarationName} in ${file}`);
+  }
+  const declaration = parsed.program.body
+    .filter((statement) => statement.type === 'ExportNamedDeclaration')
+    .map((statement) => statement.declaration)
+    .find((candidate) => candidate?.id?.name === declarationName);
+  if (!declaration) {
+    throw new Error(`Missing exported authored contract ${declarationName} in ${file}`);
+  }
+
+  const names = new Set();
+  if (declaration.type === 'TSInterfaceDeclaration') {
+    nestedContractNames(declaration.body, names);
+  } else if (declaration.type === 'FunctionDeclaration') {
+    for (const parameter of declaration.params) {
+      for (const name of bindingNames(parameter)) names.add(name);
+      nestedContractNames(parameter.typeAnnotation ?? parameter.left?.typeAnnotation, names);
+    }
+  } else {
+    throw new Error(
+      `Unsupported authored contract ${declarationName} (${declaration.type}) in ${file}`,
+    );
+  }
+  return [...names];
+}
+
+/** Returns only the inline-code signature that declares `name`, never unrelated prose nearby. */
+export function contractDeclarationBlock(text, name) {
+  const match = new RegExp('`' + escapePattern(name) + '(?=[\\s({<])').exec(text);
+  if (!match) return '';
+  const closingBacktick = text.indexOf('`', match.index + 1);
+  return text.slice(match.index, closingBacktick < 0 ? text.length : closingBacktick + 1);
+}
+
+/** Returns the one authored public-utility bullet owned by `moduleName`. */
+export function utilityContractBlock(text, moduleName) {
+  const marker = new RegExp(
+    `^- \\*\\*\\\`${escapePattern(moduleName)}\\\`(?:[^\\n]*)`,
+    'm',
+  ).exec(text);
+  if (!marker) return '';
+  const remainder = text.slice(marker.index + marker[0].length);
+  const next = remainder.search(/^- \*\*`[a-z0-9-]+`/m);
+  return text.slice(marker.index, next < 0 ? text.length : marker.index + marker[0].length + next);
+}
 
 /**
  * True when `name` appears in `text` as a genuine standalone token, not merely as a substring of an
@@ -124,7 +236,11 @@ export function ownsToken(tag, token, allTags) {
  *   every documentable name the manifest (or the component's stylesheet) knows about that the
  *   component's own section never mentions.
  */
-export function collectGaps(families = FAMILIES.map(([f]) => f), manifestOverride = null) {
+export function collectGaps(
+  families = FAMILIES.map(([f]) => f),
+  manifestOverride = null,
+  sourceContractOverride = null,
+) {
   const manifest = expandManifestInheritance(
     manifestOverride ?? JSON.parse(
       readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'),
@@ -225,6 +341,74 @@ export function collectGaps(families = FAMILIES.map(([f]) => f), manifestOverrid
           'cssprop (stylesheet, undeclared in manifest)',
           stylesheetTokens(mod.path).filter((token) => ownsToken(tag, token, allTags)),
         );
+      }
+    }
+  }
+  // Manifest-only fixtures do not read the live package census unless a source-contract fixture is
+  // supplied explicitly. The production path derives it from authoritative package inventories.
+  if (manifestOverride === null || sourceContractOverride !== null) {
+    let census;
+    let baseline;
+    let documents;
+    try {
+      census = sourceContractOverride?.census ?? sourceContractCensus(packageDir);
+      baseline = sourceContractOverride?.baseline ?? readSourceContractBaseline(packageDir);
+      documents = sourceContractOverride?.documents;
+    } catch (error) {
+      gaps.push({
+        family: 'shared',
+        tag: 'public-source-contract-census',
+        lines: 0,
+        kind: 'exported source-contract census',
+        names: [error instanceof Error ? error.message : String(error)],
+      });
+      return gaps;
+    }
+
+    for (const finding of validateSourceContractBaseline(census, baseline)) {
+      gaps.push({
+        family: 'shared',
+        tag: 'public-source-contract-census',
+        lines: 0,
+        kind: 'exported source-contract census',
+        names: [finding],
+      });
+    }
+
+    const censusByKey = new Map(census.map((contract) => [sourceContractKey(contract), contract]));
+    const seenOwners = new Set();
+    for (const owner of baseline.documented ?? []) {
+      const key = sourceContractKey(owner);
+      if (seenOwners.has(key)) continue;
+      seenOwners.add(key);
+      const contract = censusByKey.get(key);
+      if (!contract) continue;
+      const documentPath = owner.document;
+      const text =
+        documents?.[documentPath] ??
+        readFileSync(path.join(packageDir, documentPath), 'utf8');
+      let block = '';
+      let tag = owner.locator?.name ?? contract.exportName;
+      if (owner.locator?.kind === 'utility') {
+        block = utilityContractBlock(text, owner.locator.name);
+      } else if (owner.locator?.kind === 'component') {
+        const section = splitSections(text).find(({ tags }) =>
+          tags.includes(owner.locator.tag),
+        );
+        block = contractDeclarationBlock(section?.text ?? '', owner.locator.declaration);
+        tag = owner.locator.tag;
+      } else if (owner.locator?.kind === 'declaration') {
+        block = contractDeclarationBlock(text, owner.locator.name);
+      }
+      const missing = contract.names.filter((name) => !mentionsName(block, name));
+      if (missing.length > 0 || block.length === 0) {
+        gaps.push({
+          family: owner.family ?? 'shared',
+          tag,
+          lines: block.split('\n').length,
+          kind: `${contract.kind} field/parameter contract`,
+          names: block.length === 0 ? [`missing contract locator for ${contract.exportName}`] : missing,
+        });
       }
     }
   }

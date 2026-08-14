@@ -146,14 +146,16 @@ export const Narrow320: Story = {
   `,
 };
 
-/** Component-scoped state hooks inherit from the wrapper and independently retheme the open
- *  trigger plus the synthetic stale-value row. */
+/** Component-scoped geometry/state hooks inherit from the wrapper and independently retheme the
+ *  control rhythm, corners, open trigger, and synthetic stale-value row. */
 export const ThemeableStateHooks: Story = {
   render: () => html`
     <div
       style="
         display: grid;
         max-inline-size: var(--lr-size-24rem);
+        --lr-voice-picker-gap: var(--lr-space-s);
+        --lr-voice-picker-radius: var(--lr-radius-pill);
         --lr-voice-picker-open-border-color: var(--lr-color-success);
         --lr-voice-picker-option-synthetic-border-style: dotted;
         --lr-voice-picker-option-synthetic-border-color: var(--lr-color-warning);

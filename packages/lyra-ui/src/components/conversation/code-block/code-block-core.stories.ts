@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "A build-lean variant of `lr-code-block` for a consumer whose `languages` map already covers every language it renders. Unlike `lr-code-block`'s `languagesOnly` flag -- a runtime check a bundler can't prove always-true -- this component's own module never references shiki's full ~200-language default entry point at all, so importing it gives a genuine compile-time exclusion of that table from the build output. A `language` absent from the supplied `languages` map always renders the plain-text fallback; there is no default highlighter to fall back to.",
+          "A build-lean variant of `lr-code-block` for a consumer whose `languages` map already covers every language it renders. This component's module never references shiki's full ~200-language default entry point, so importing it gives a genuine compile-time exclusion of that table from the build output. A `language` absent from the supplied `languages` map always renders the plain-text fallback; there is no default highlighter to fall back to.",
       },
     },
   },
@@ -57,11 +57,15 @@ export const Narrow320: Story = {
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
       <lr-code-block-core
-        filename=${`src/generated/${"very-long-directory-name/".repeat(8)}conversation-handler.ts`}
+        filename=${`src/generated/${"very-long-directory-name/".repeat(
+          8
+        )}conversation-handler.ts`}
         language="typescript"
         line-numbers
         .languages=${typescriptLanguages}
-        .code=${`const endpoint = "https://example.test/${"unbroken-segment-".repeat(16)}";`}
+        .code=${`const endpoint = "https://example.test/${"unbroken-segment-".repeat(
+          16
+        )}";`}
       ></lr-code-block-core>
     </div>
   `,
@@ -147,8 +151,8 @@ export const Collapsible: Story = {
   `,
 };
 
-export const InteractiveLines: Story = {
-  name: "Keyboard-interactive line numbers",
+export const ActivatableLines: Story = {
+  name: "Keyboard-activatable line numbers",
   parameters: {
     docs: {
       description: {
@@ -161,7 +165,7 @@ export const InteractiveLines: Story = {
     <lr-code-block-core
       filename="stream.ts"
       line-numbers
-      interactive-lines
+      activatable-lines
       .code=${"const first = 1;\nconst second = 2;\nconst third = 3;\nconst fourth = 4;"}
     ></lr-code-block-core>
   `,

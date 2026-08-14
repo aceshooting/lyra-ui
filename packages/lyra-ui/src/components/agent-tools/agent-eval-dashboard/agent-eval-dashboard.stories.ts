@@ -10,6 +10,7 @@ const metrics = [
 const runs = [
   { id: 'r1', label: 'Prompt v3', status: 'done' as const, metrics: { pass: 0.92, latency: 840, cost: 0.034 } },
   { id: 'r2', label: 'Prompt v2', status: 'error' as const, metrics: { pass: 0.71, latency: 1100, cost: 0.051 } },
+  { id: 'r3', label: 'Provider batch', status: { kind: 'rate-limited', label: 'Throttled', variant: 'warning' as const, message: 'Retry in 30 seconds' }, metrics: { pass: 0.84, latency: 980, cost: 0.04 } },
 ];
 
 const meta: Meta = { title: 'AgentEvalDashboard', component: 'lr-agent-eval-dashboard', tags: ['autodocs'] };
@@ -33,5 +34,21 @@ export const Narrow320: Story = {
         .runs=${runs.map((run) => ({ ...run, label: `${run.label} — multilingual customer-support benchmark` }))}
       ></lr-agent-eval-dashboard>
     </div>
+  `,
+};
+
+export const BoundedHistory: Story = {
+  name: 'Bounded run history',
+  render: () => html`
+    <lr-agent-eval-dashboard
+      max-rendered-runs="12"
+      .metrics=${metrics}
+      .runs=${Array.from({ length: 100 }, (_, index) => ({
+        id: `run-${index}`,
+        label: `Run ${index + 1}`,
+        status: index % 8 === 0 ? 'error' : 'done',
+        metrics: { pass: 0.7 + (index % 20) / 100 },
+      }))}
+    ></lr-agent-eval-dashboard>
   `,
 };

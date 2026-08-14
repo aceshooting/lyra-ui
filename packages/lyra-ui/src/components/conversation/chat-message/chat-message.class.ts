@@ -1,6 +1,8 @@
 import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
+import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
@@ -9,12 +11,17 @@ import '../../utility/live-region/live-region.class.js';
 import { styles } from './chat-message.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chatCompleteAnnounce, LYRA_DEFAULT_chatFailedAnnounce, LYRA_DEFAULT_chatFailedToSend, LYRA_DEFAULT_chatResponding, LYRA_DEFAULT_chatSending, LYRA_DEFAULT_collapse, LYRA_DEFAULT_collapseMessage, LYRA_DEFAULT_details, LYRA_DEFAULT_expandMessage, LYRA_DEFAULT_open, LYRA_DEFAULT_retry } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chatCompleteAnnounce, LYRA_DEFAULT_chatFailedAnnounce, LYRA_DEFAULT_chatFailedToSend, LYRA_DEFAULT_chatResponding, LYRA_DEFAULT_chatSending, LYRA_DEFAULT_collapse, LYRA_DEFAULT_collapseMessage, LYRA_DEFAULT_details, LYRA_DEFAULT_expandMessage, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 export type ChatMessageRole = 'user' | 'assistant' | 'system';
 export type ChatMessageStatus = 'sending' | 'sent' | 'failed' | 'streaming';
+export type ChatMessageActionsPosition = 'inside' | 'outside';
+
+export interface ChatMessageToggleDetail {
+  collapsed: boolean;
+}
 
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
@@ -65,8 +72,9 @@ const STATUS_TEXT_KEY: Record<Exclude<ChatMessageStatus, 'sent'>, string> = {
 };
 
 export interface LyraChatMessageEventMap {
-  'lr-retry': CustomEvent<{ messageId?: string }>;
-  'lr-collapse-toggle': CustomEvent<boolean>;
+  'lr-message-retry': CustomEvent<{ messageId?: string }>;
+  'lr-toggle-request': CustomEvent<ChatMessageToggleDetail>;
+  'lr-toggle': CustomEvent<ChatMessageToggleDetail>;
 }
 /**
  * `<lr-chat-message>` — a role-based message bubble *shell* for a chat/
@@ -104,16 +112,13 @@ export interface LyraChatMessageEventMap {
  * across a single element's lifetime, which is exactly the coalescing job
  * `<lr-live-region>` exists for.
  *
- * `role` is a message-author role (`user`/`assistant`/`system`, matching
- * the vocabulary of every chat/completion API), *not* a WAI-ARIA role, so
- * it reflects to a `data-role` attribute rather than the bare `role`
- * attribute — `role="user"` would collide with `Element`'s own ARIA `role`
- * accessor and is not a valid ARIA role token to begin with.
+ * `messageRole` identifies the author (`user`/`assistant`/`system`, matching
+ * the vocabulary of chat/completion APIs). The platform `role` property remains available for
+ * host semantics; author identity is applied to the internal article and can be overridden with
+ * a host `aria-label`.
  *
- * `actionsOutsideBubble` allows the `actions` slot to render as a sibling
- * immediately after the message bubble instead of nested inside the footer —
- * useful for consumers whose action row (e.g., a hover-reveal copy button)
- * must sit visually outside the bubble's chrome.
+ * `actionsPosition="outside"` renders the `actions` slot as a sibling immediately after the
+ * message bubble instead of nested inside the footer.
  *
  * @customElement lr-chat-message
  * @slot - The message body.
@@ -125,22 +130,23 @@ export interface LyraChatMessageEventMap {
  *   its built-in `[part="status-text"]`/`[part="retry-button"]` exactly as before. The moment this
  *   slot has assigned content, that built-in status text and retry button are suppressed — the host
  *   is now fully responsible for presenting its own failure UI, and the built-in `chatFailedAnnounce`
- *   live-region announcement is suppressed too (see `@event lr-retry` below for the effect on that
+ *   live-region announcement is suppressed too (see `@event lr-message-retry` below for the effect on that
  *   event, and the "Accessibility of `status`" paragraph above for the built-in announcement this
  *   replaces). Content assigned here should carry `role="alert"` itself when it represents an
  *   actionable send failure — this component does not add that role on the host's behalf, since it
  *   has no way to know what markup the host puts in this slot. This mirrors `lr-flow-node`'s `header`
  *   slot, which replaces that component's own built-in heading row the same way.
- * @event lr-retry - Fired by the built-in retry button, only rendered when `status="failed"` and the
+ * @event lr-message-retry - Fired by the built-in retry button, only rendered when `status="failed"` and the
  *   `failure` slot is empty. `detail: { messageId?: string }` includes this element's stable
  *   `messageId` when supplied, so a conversation surface can identify the message without a
  *   closure around each row. A host using the `failure` slot owns its own retry control and is not
  *   required to use this event at all — but nothing stops that control from dispatching its own
- *   `new CustomEvent('lr-retry', { bubbles: true, composed: true })` to stay consistent with the
+ *   `new CustomEvent('lr-message-retry', { bubbles: true, composed: true })` to stay consistent with the
  *   same event contract a listener further up a conversation surface already relies on for every
  *   other message.
- * @event lr-collapse-toggle - `detail: boolean` (the new `collapsed` state) — fired when the user activates the built-in collapse button.
- * @csspart bubble - The message bubble root. Programmatically focusable (`tabindex="-1"`) so focus has a stable place to land when the built-in retry button is removed (e.g. a `lr-retry` listener flipping `status` away from `"failed"`). Its fill/text derive from `--lr-chat-message-bubble-bg`/`--lr-chat-message-bubble-color` for every role except `user`, which derives from `--lr-chat-message-user-bubble-bg`/`--lr-chat-message-user-bubble-color` instead — override those cssprops rather than the shared `--lr-color-*` tokens they default to. Its geometry comes from `--lr-chat-message-bubble-padding`/`--lr-chat-message-bubble-radius` for the same reason — a `::part(bubble)` override from the consumer's tree outranks the per-`status` rules in this shadow tree and silently erases the `failed`/`streaming` treatments.
+ * @event lr-toggle-request - Cancelable request to change collapse state. `detail: { collapsed }`.
+ * @event lr-toggle - Collapse state committed. `detail: { collapsed }`.
+ * @csspart bubble - The message article and bubble root. Programmatically focusable (`tabindex="-1"`) so focus has a stable place to land when the built-in retry button is removed. Its fill, text, and geometry derive from the documented theme hooks.
  * @csspart header - The row above the message body — avatar, badges, and the collapse toggle. Hidden entirely when none of those have anything to show.
  * @csspart avatar - The wrapper around the `avatar` slot.
  * @csspart badges - The wrapper around the `badges` slot.
@@ -155,12 +161,12 @@ export interface LyraChatMessageEventMap {
  * @csspart status-text - The visible text twin of `status-indicator` — carries the state in text, not just color.
  * @csspart timestamp - The formatted `timestamp`, rendered in a `<time>` element.
  * @csspart retry-button - The built-in retry button (only rendered when `status="failed"`).
- * @csspart actions - The wrapper around the `actions` slot. Rendered inside the footer by default; a sibling immediately after `bubble` when `actionsOutsideBubble` is set.
+ * @csspart actions - The wrapper around the `actions` slot. Rendered inside the footer by default; a sibling immediately after `bubble` when `actionsPosition="outside"`.
  * @cssprop [--lr-chat-message-max-width=80%] - Maximum inline size of the message bubble.
  * @cssprop [--lr-chat-message-bubble-bg=var(--lr-color-surface)] - Bubble fill for every role except `user`.
  * @cssprop [--lr-chat-message-bubble-color=var(--lr-color-text)] - Bubble text color for every role except `user`.
- * @cssprop [--lr-chat-message-user-bubble-bg=var(--lr-color-brand-quiet)] - Bubble fill for `data-role="user"`.
- * @cssprop [--lr-chat-message-user-bubble-color=var(--lr-color-text)] - Bubble text color for `data-role="user"`.
+ * @cssprop [--lr-chat-message-user-bubble-bg=var(--lr-color-brand-quiet)] - Bubble fill for `message-role="user"`.
+ * @cssprop [--lr-chat-message-user-bubble-color=var(--lr-color-text)] - Bubble text color for `message-role="user"`.
  * @cssprop [--lr-chat-message-system-color=var(--lr-color-text-quiet)] - System-message text color.
  * @cssprop [--lr-chat-message-streaming-border-color=var(--lr-color-brand)] - Streaming bubble border.
  * @cssprop [--lr-chat-message-failed-border-color=var(--lr-color-danger)] - Failed bubble border.
@@ -172,7 +178,7 @@ export interface LyraChatMessageEventMap {
  * @cssprop [--lr-chat-message-streaming-indicator-color=var(--lr-color-brand)] - Streaming indicator.
  * @cssprop [--lr-chat-message-failed-indicator-color=var(--lr-color-danger)] - Failed indicator.
  * @cssprop [--lr-chat-message-failed-status-color=var(--lr-color-danger)] - Failed status text.
- * @cssprop [--lr-chat-message-bubble-padding=var(--lr-space-m)] - Bubble padding. Prefer this over a `::part(bubble)` padding override: an outer-tree `::part` declaration outranks every rule in this shadow tree, which silently suppresses the per-`status` and per-role bubble styling below it.
+ * @cssprop [--lr-chat-message-bubble-padding=var(--lr-space-m)] - Bubble padding.
  * @cssprop [--lr-chat-message-bubble-radius=var(--lr-radius)] - Bubble corner radius. Bubble-only by design — `collapse-button` and `retry-button` keep reading the shared `--lr-radius`, so a rounder bubble never desyncs the controls from the rest of the library.
  * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Streaming-indicator animation duration
  *   and timing function.
@@ -193,38 +199,43 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     collapseMessage: LYRA_DEFAULT_collapseMessage,
     details: LYRA_DEFAULT_details,
     expandMessage: LYRA_DEFAULT_expandMessage,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    promptStudioRoleAssistant: LYRA_DEFAULT_promptStudioRoleAssistant,
+    promptStudioRoleSystem: LYRA_DEFAULT_promptStudioRoleSystem,
+    promptStudioRoleUser: LYRA_DEFAULT_promptStudioRoleUser,
     retry: LYRA_DEFAULT_retry,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   // `status` needs a hand-written accessor (see `previousStatus` below) so
   // it's declared via `static properties` + `noAccessor` rather than
-  // `@property()` directly -- the same pattern `lr-playback`'s `playing`
+  // `@property()` directly -- the same pattern `lr-sequence-playback`'s `playing`
   // uses for the identical reason (a property whose setter must run real
   // logic on every assignment, not just on the next completed render).
   static override properties = {
     status: { reflect: true, noAccessor: true },
   };
 
-  /** Who authored the message. Reflects to `data-role` — see the class doc. */
-  @property({ reflect: true, attribute: 'data-role' }) override role: ChatMessageRole = 'assistant';
+  /** Who authored the message. The author is exposed as the internal article's accessible name. */
+  @property({ reflect: true, attribute: 'message-role' }) messageRole: ChatMessageRole = 'assistant';
 
-  /** Optional stable application-defined identifier for this message. Included in `lr-retry`
+  /** Optional stable application-defined identifier for this message. Included in `lr-message-retry`
    *  detail when set. */
   @property({ attribute: 'message-id', reflect: true }) messageId = '';
 
   /** When the message was sent/received. Accepts a `Date` or anything
    *  `new Date()` can parse (e.g. an ISO 8601 string); invalid input is
    *  treated the same as unset (no timestamp rendered). */
-  @property({ attribute: false }) timestamp?: Date | string;
+  @property({ attribute: false }) timestamp?: LyraTimestamp;
 
-  /** Overrides the default `hour:minute` rendering of `timestamp` — this
-   *  library has no i18n system of its own, so an overridable formatter is
-   *  the established way to hand locale-sensitive display back to the
-   *  consumer (mirrors `lr-heatmap`'s `cellText`). */
+  /** Overrides the localized default `hour:minute` rendering of `timestamp` for applications
+   *  that need a domain-specific date/time contract. */
   @property({ attribute: false }) formatTimestamp?: (date: Date) => string;
 
   /** Shows the built-in collapse/expand toggle in the header. */
@@ -243,11 +254,9 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
    *  always matches what's on screen. */
   @property({ attribute: 'attachments-position' }) attachmentsPosition: 'before' | 'after' = 'after';
 
-  /** Renders the `actions` slot's content as a sibling immediately after `[part="bubble"]` instead of
-   *  nested inside `[part="footer"]`'s own padding/background box — for a consumer whose action row
-   *  (e.g. a hover-reveal copy button) must sit visually outside the bubble's chrome. `false` (the
-   *  default) keeps today's exact DOM: actions render inside the footer, inside the bubble. */
-  @property({ type: Boolean, reflect: true, attribute: 'actions-outside-bubble' }) actionsOutsideBubble = false;
+  /** Where the actions row renders relative to the bubble. */
+  @property({ reflect: true, attribute: 'actions-position' })
+  actionsPosition: ChatMessageActionsPosition = 'inside';
 
   @state() private hasAvatarSlot = false;
   @state() private hasBadgesSlot = false;
@@ -284,6 +293,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
    *  by the time `updated()` runs for the first time, so it can't be reused
    *  here). */
   private isMounting = true;
+  private statusAtDisconnect?: ChatMessageStatus;
 
   /** Delivery/generation state. Drives the footer's status dot/text and,
    *  for `"failed"`, the bubble's danger treatment and the built-in retry
@@ -343,6 +353,22 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     }
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.statusAtDisconnect !== undefined) {
+      // Suppress only a status update queued while detached. Reparenting an
+      // unchanged message must not silence its next genuine transition.
+      this.isMounting = this.status !== this.statusAtDisconnect && this.isUpdatePending;
+      this.statusAtDisconnect = undefined;
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.statusAtDisconnect = this.status;
+    this.isMounting = true;
+    super.disconnectedCallback();
+  }
+
   private hasSlotted(name: string): boolean {
     return Array.from(this.children).some((el) => el.getAttribute('slot') === name);
   }
@@ -359,9 +385,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   }
 
   private get normalizedTimestamp(): Date | undefined {
-    if (this.timestamp === undefined) return undefined;
-    const date = this.timestamp instanceof Date ? this.timestamp : new Date(this.timestamp);
-    return Number.isNaN(date.getTime()) ? undefined : date;
+    return normalizeLyraTimestamp(this.timestamp);
   }
 
   private get statusText(): string | undefined {
@@ -406,17 +430,20 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   };
 
   private toggleCollapsed = (): void => {
-    this.collapsed = !this.collapsed;
-    this.emit('lr-collapse-toggle', this.collapsed);
+    const detail = { collapsed: !this.collapsed } as const;
+    const request = this.emit('lr-toggle-request', detail, { cancelable: true });
+    if (request.defaultPrevented) return;
+    this.collapsed = detail.collapsed;
+    this.emit('lr-toggle', detail);
   };
 
   private onRetryClick = (): void => {
-    // A `lr-retry` listener is documented to respond by flipping `status`
+    // A `lr-message-retry` listener is documented to respond by flipping `status`
     // away from `"failed"`, which removes this very button on the next
     // render. Emit first so a no-op or asynchronous listener leaves focus on
     // the still-actionable button; only a synchronous accepted transition
     // moves focus to the always-rendered bubble before the next render.
-    this.emit('lr-retry', { messageId: this.messageId || undefined });
+    this.emit('lr-message-retry', { messageId: this.messageId || undefined });
     if (this.status !== 'failed') this.bubbleEl?.focus();
   };
 
@@ -431,7 +458,15 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     const showHeader = this.hasAvatarSlot || this.hasBadgesSlot || this.collapsible;
     // `statusText` is already truthy whenever `status === 'failed'` and the built-in UI isn't
     // suppressed, so it alone covers that case here too.
-    const showFooter = Boolean(statusText) || Boolean(ts) || (!this.actionsOutsideBubble && this.hasActionsSlot);
+    const actionsOutside = this.actionsPosition === 'outside';
+    const showFooter = Boolean(statusText) || Boolean(ts) || (!actionsOutside && this.hasActionsSlot);
+    const authorLabel = this.localize(
+      this.messageRole === 'user'
+        ? 'promptStudioRoleUser'
+        : this.messageRole === 'system'
+          ? 'promptStudioRoleSystem'
+          : 'promptStudioRoleAssistant',
+    );
     const actionsBlock = html`<span part="actions" ?hidden=${!this.hasActionsSlot}
       ><slot name="actions" @slotchange=${this.onActionsSlotChange}></slot
     ></span>`;
@@ -440,7 +475,13 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     </div>`;
 
     return html`
-      <div part="bubble" tabindex="-1">
+      <div
+        part="bubble"
+        role="article"
+        aria-label=${this.hasAttribute('aria-label') ? (this.getAttribute('aria-label') ?? '') : nothing}
+        tabindex="-1"
+      >
+        ${this.hasAttribute('aria-label') ? nothing : html`<span class="sr-only">${authorLabel}</span>`}
         <div part="header" ?hidden=${!showHeader}>
           <span part="avatar" ?hidden=${!this.hasAvatarSlot}
             ><slot name="avatar" @slotchange=${this.onAvatarSlotChange}></slot
@@ -481,11 +522,11 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
                 ${retryIcon()}<span>${this.localize('retry')}</span>
               </button>`
             : nothing}
-          ${this.actionsOutsideBubble ? nothing : actionsBlock}
+          ${actionsOutside ? nothing : actionsBlock}
         </div>
         <lr-live-region></lr-live-region>
       </div>
-      ${this.actionsOutsideBubble ? actionsBlock : nothing}
+      ${actionsOutside ? actionsBlock : nothing}
     `;
   }
 }

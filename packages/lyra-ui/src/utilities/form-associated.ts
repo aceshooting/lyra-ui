@@ -10,4 +10,19 @@
  * alongside Lyra's, so that the control participates in a form, restores on reset, and reports
  * validity the same way every `lr-` control does.
  */
-export * from '../internal/form-associated.js';
+export {
+  attachInternalsSafely,
+  createFallbackInternals,
+  createStringArrayFormDataState,
+  FormAssociated,
+  isEmptyFormValue,
+  readStringArrayFormDataState,
+  stringFormValueAdapter,
+} from '../internal/form-associated.js';
+export type {
+  FormAssociatedInterface,
+  FormAssociatedSubclassInterface,
+  FormOwnerValue,
+  FormSubmissionValue,
+  FormValueAdapter,
+} from '../internal/form-associated.js';

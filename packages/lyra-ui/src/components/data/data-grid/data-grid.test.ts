@@ -260,6 +260,18 @@ it("relays a column-filter editor focus and blur once through the grid host", as
 });
 
 it("routes the copy announcement into the shared light-DOM sink, leaving the shadow part a mirror", async () => {
+  const clipboardDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    "clipboard"
+  );
+  let resolveWrite!: () => void;
+  const write = new Promise<void>((resolve) => {
+    resolveWrite = resolve;
+  });
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText: () => write },
+  });
   const element = await dataGrid(html`
     <lr-data-grid
       label="People"
@@ -272,9 +284,31 @@ it("routes the copy announcement into the shared light-DOM sink, leaving the sha
     "mounting must not announce a resting state"
   ).to.deep.equal([]);
 
-  element.copySelectedRows({ includeHeaders: false });
-  await element.updateComplete;
-  expect(sinkTexts("polite")).to.deep.equal(["Copied!"]);
+  try {
+    let emitted = false;
+    element.addEventListener("lr-copy", () => {
+      emitted = true;
+    });
+    const success = oneEvent(element, "lr-copy");
+    element.copySelectedRows({ includeHeaders: false });
+    await Promise.resolve();
+    expect(emitted, "copy intent is not clipboard success").to.equal(false);
+    expect(sinkTexts("polite")).to.deep.equal([]);
+
+    resolveWrite();
+    const event = (await success) as CustomEvent<{
+      readonly ok: true;
+      readonly text: string;
+    }>;
+    expect(Object.isFrozen(event.detail)).to.equal(true);
+    expect(event.detail.ok).to.equal(true);
+    await element.updateComplete;
+    expect(sinkTexts("polite")).to.deep.equal(["Copied!"]);
+  } finally {
+    if (clipboardDescriptor)
+      Object.defineProperty(navigator, "clipboard", clipboardDescriptor);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  }
 
   const region = element.shadowRoot!.querySelector('[part="live-region"]')!;
   // The retained part is a styling/inspection mirror only -- a live region inside a shadow root is
@@ -286,6 +320,14 @@ it("routes the copy announcement into the shared light-DOM sink, leaving the sha
 });
 
 it("announces a second identical copy again instead of silently rewriting one text node", async () => {
+  const clipboardDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    "clipboard"
+  );
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText: () => Promise.resolve() },
+  });
   const element = await dataGrid(html`
     <lr-data-grid
       label="People"
@@ -293,14 +335,23 @@ it("announces a second identical copy again instead of silently rewriting one te
       .data=${rows}
     ></lr-data-grid>
   `);
-  element.copySelectedRows({ includeHeaders: false });
-  await element.updateComplete;
-  element.copySelectedRows({ includeHeaders: false });
-  await element.updateComplete;
-  expect(
-    sinkTexts("polite"),
-    "an identical repeat must be a second addition so assistive tech reads it again"
-  ).to.deep.equal(["Copied!", "Copied!"]);
+  try {
+    let success = oneEvent(element, "lr-copy");
+    element.copySelectedRows({ includeHeaders: false });
+    await success;
+    success = oneEvent(element, "lr-copy");
+    element.copySelectedRows({ includeHeaders: false });
+    await success;
+    await element.updateComplete;
+    expect(
+      sinkTexts("polite"),
+      "an identical repeat must be a second addition so assistive tech reads it again"
+    ).to.deep.equal(["Copied!", "Copied!"]);
+  } finally {
+    if (clipboardDescriptor)
+      Object.defineProperty(navigator, "clipboard", clipboardDescriptor);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  }
 });
 
 it("keeps declarative loading silent and makes the visible shadow overlay non-live", async () => {
@@ -1297,7 +1348,7 @@ it("uses the three exact empty/loading/no-results slots", async () => {
   expect(element.shadowRoot!.querySelector('slot[name="no-results"]')).to.exist;
 });
 
-it("emits both server request events with immutable request snapshots and server paging", async () => {
+it("emits only the mirrored request event with an immutable snapshot and server paging", async () => {
   const element = await dataGrid(html`
     <lr-data-grid
       label="Server people"
@@ -1313,11 +1364,11 @@ it("emits both server request events with immutable request snapshots and server
   element.sort = [{ id: "name", desc: true }];
   element.filters = [{ id: "team", value: "Runtime" }];
   element.searchTerm = "Lin";
+  let prefixedRequests = 0;
+  element.addEventListener("lr-data-request", () => { prefixedRequests += 1; });
   const requestEvent = oneEvent(element, "request");
-  const dataRequestEvent = oneEvent(element, "lr-data-request");
   await element.reload();
   const request = await requestEvent;
-  const dataRequest = await dataRequestEvent;
   expect(request.detail.page).to.equal(2);
   expect(request.detail.pageSize).to.equal(5);
   expect(request.detail.sort).to.deep.equal([{ id: "name", desc: true }]);
@@ -1325,14 +1376,18 @@ it("emits both server request events with immutable request snapshots and server
     { id: "team", value: "Runtime" },
   ]);
   expect(request.detail.search).to.equal("Lin");
-  element.sort[0]!.desc = false;
-  element.filters[0]!.value = "Compiler";
+  expect(() => {
+    (element.sort[0] as { desc: boolean }).desc = false;
+  }).to.throw(TypeError);
+  expect(() => {
+    (element.filters[0] as { value: unknown }).value = "Compiler";
+  }).to.throw(TypeError);
   expect(request.detail.sort).to.deep.equal([{ id: "name", desc: true }]);
   expect(request.detail.filters).to.deep.equal([
     { id: "team", value: "Runtime" },
   ]);
   expect(request.detail.signal).to.be.instanceOf(AbortSignal);
-  expect(dataRequest.detail).to.equal(request.detail);
+  expect(prefixedRequests).to.equal(0);
   expect(request.bubbles).to.equal(true);
   expect(request.composed).to.equal(true);
   expect(request.cancelable).to.equal(false);
@@ -1468,7 +1523,7 @@ it("supports silent programmatic pin/visibility changes and user menu events", a
   const pinEvent = oneEvent(element, "lr-column-pin");
   (
     header(element, "name").querySelector(
-      '[role="menuitem"]'
+      '[data-column-action="pin-start"]'
     ) as HTMLButtonElement
   ).click();
   expect((await pinEvent).detail).to.deep.equal({
@@ -2344,7 +2399,9 @@ it("uses the adopted owner realm for clipboard, fallback DOM, Blob, URL, and dow
       }
       return true;
     }) as typeof frameDocument.execCommand;
+    const fallbackSuccess = oneEvent(element, "lr-copy");
     element.copySelectedRows({ includeHeaders: false });
+    await fallbackSuccess;
     expect(fallbackText).to.include("Ada\tCompiler\t7");
     expect(
       frameDocument.body.querySelector(":scope > textarea") === null
@@ -3216,7 +3273,9 @@ it("falls back to a temporary textarea when the async clipboard is unavailable",
     return true;
   }) as typeof document.execCommand;
   try {
+    const success = oneEvent(element, "lr-copy");
     expect(element.copySelectedRows({ includeHeaders: false })).to.equal(3);
+    await success;
   } finally {
     document.execCommand = originalExecCommand;
     if (clipboardDescriptor)
@@ -3227,6 +3286,63 @@ it("falls back to a temporary textarea when the async clipboard is unavailable",
     "Ada\tCompiler\t7\nLin\tRuntime\t10\nGrace\tCompiler\t9"
   );
   expect((document.body.querySelector(":scope > textarea")) == null).to.be.true;
+});
+
+it("announces a localized clipboard failure and emits only the settled typed failure", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      .strings=${{ copyFailed: "Unable to copy these rows" }}
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const clipboardDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    "clipboard"
+  );
+  const originalExecCommand = document.execCommand;
+  const error = new Error("raw platform failure must not be announced");
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText: () => Promise.reject(error) },
+  });
+  document.execCommand = (() => false) as typeof document.execCommand;
+  try {
+    let succeeded = false;
+    element.addEventListener("lr-copy", () => {
+      succeeded = true;
+    });
+    const compatibility = oneEvent(element, "lr-error");
+    const failed = oneEvent(element, "lr-copy-error");
+    element.copySelectedRows({ includeHeaders: false });
+    const [, event] = (await Promise.all([
+      compatibility,
+      failed,
+    ])) as [Event, CustomEvent<{
+      readonly ok: false;
+      readonly text: string;
+      readonly reason: string;
+      readonly error: unknown;
+    }>];
+    await element.updateComplete;
+
+    expect(succeeded).to.equal(false);
+    expect(event.detail.ok).to.equal(false);
+    expect(event.detail.reason).to.equal("failed");
+    expect(event.detail.error).to.equal(error);
+    expect(Object.isFrozen(event.detail)).to.equal(true);
+    expect(sinkTexts("polite")).to.deep.equal(["Unable to copy these rows"]);
+    expect(sinkTexts("polite").join(" ")).not.to.include(error.message);
+    expect(
+      element.shadowRoot!.querySelector('[part="live-region"]')!.textContent
+    ).to.equal("Unable to copy these rows");
+  } finally {
+    document.execCommand = originalExecCommand;
+    if (clipboardDescriptor)
+      Object.defineProperty(navigator, "clipboard", clipboardDescriptor);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  }
 });
 
 it("copies and raises a context menu from the grid keyboard contract", async () => {
@@ -3370,7 +3486,7 @@ it("pins, unpins, and hides a column from the per-column menu", async () => {
   await element.updateComplete;
   const items = [
     ...header(element, "name").querySelectorAll<HTMLButtonElement>(
-      '[role="menuitem"]'
+      '[data-column-action]'
     ),
   ];
   expect(items.length).to.equal(3);
@@ -3390,7 +3506,7 @@ it("pins, unpins, and hides a column from the per-column menu", async () => {
   expect(element.getColumnPin("name")).to.equal(false);
 
   const checkbox = header(element, "name").querySelector<HTMLInputElement>(
-    '[role="menuitemcheckbox"] input'
+    '[data-column-visibility] input'
   )!;
   expect(checkbox.checked).to.equal(true);
   const visibility = oneEvent(element, "lr-column-visibility-change");
@@ -3425,8 +3541,8 @@ it("omits the visibility checkbox for a column that cannot be hidden", async () 
     .querySelector<HTMLButtonElement>('[part="column-menu-button"]')!
     .click();
   await element.updateComplete;
-  expect((header(element, "name").querySelector('[role="menuitemcheckbox"]')) == null).to.be.true;
-  expect(header(element, "name").querySelector('[role="menuitem"]') === null).to.be.true;
+  expect((header(element, "name").querySelector('[data-column-visibility]')) == null).to.be.true;
+  expect(header(element, "name").querySelector('[data-column-action]') === null).to.be.true;
 });
 
 it("selects a range of descendant rows with a shift-click", async () => {
@@ -4091,7 +4207,9 @@ it("falls back to the textarea copy path when reading navigator.clipboard throws
     return true;
   }) as typeof document.execCommand;
   try {
+    const success = oneEvent(element, "lr-copy");
     expect(element.copySelectedRows({ includeHeaders: false })).to.equal(3);
+    await success;
   } finally {
     document.execCommand = originalExecCommand;
     if (clipboardDescriptor)
@@ -4550,7 +4668,7 @@ it("ignores column-move and resize requests for a column id that is no longer kn
     preventDefault() {},
   } as unknown as KeyboardEvent;
   internals.onResizeKey(notAltKey, "name");
-  expect(resizes, "a resize key without Alt does nothing").to.equal(0);
+  expect(resizes, "a focused separator resizes with an unmodified arrow key").to.equal(1);
 
   const startEvent = {
     clientX: 0,
@@ -4561,7 +4679,7 @@ it("ignores column-move and resize requests for a column id that is no longer kn
   expect(
     resizes,
     "starting a resize on an unknown column id does nothing"
-  ).to.equal(0);
+  ).to.equal(1);
 });
 
 it("refuses to reorder the first column further left", async () => {
@@ -5307,6 +5425,10 @@ it("keys the narrow-toolbar layout to the container's max-inline-size, not physi
   ) as HTMLElement;
   expect(getComputedStyle(narrowToolbar).flexDirection).to.equal("column");
   expect(getComputedStyle(narrowSearch).inlineSize).to.not.equal("auto");
+  expect(
+    getComputedStyle(narrowSearch).flexBasis,
+    "the wide-layout inline-size basis must not become a 12rem block-size in column flow"
+  ).to.equal("auto");
 
   const wideWrapper = await fixture<HTMLDivElement>(html`
     <div style="inline-size: 600px">
@@ -5381,6 +5503,404 @@ it("wires the size density ladder into rendered row/header height", async () => 
   `);
   expect(rowHeight(smallAlias)).to.equal(rowHeight(small));
   expect(rowHeight(largeAlias)).to.equal(rowHeight(large));
+});
+
+it("renders an honest native column-control group with distinct localized actions", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      with-column-menu
+      pinnable
+      .strings=${{
+        dataGridColumnMenu: "Actions for {label}",
+        dataGridPinStart: "Start-pin {label}",
+        dataGridPinEnd: "End-pin {label}",
+        dataGridUnpin: "Remove pin from {label}",
+      }}
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const trigger = header(element, "name").querySelector<HTMLButtonElement>(
+    '[part="column-menu-button"]'
+  )!;
+  expect(trigger.getAttribute("aria-label")).to.equal("Actions for Name");
+  trigger.click();
+  await element.updateComplete;
+
+  const group = header(element, "name").querySelector<HTMLElement>(
+    '[part="column-menu"] [role="group"]'
+  )!;
+  expect(trigger.getAttribute("aria-controls")).to.equal(group.id);
+  expect(group.querySelectorAll('[role="menuitem"]').length).to.equal(0);
+  expect(group.querySelectorAll('[role="menuitemcheckbox"]').length).to.equal(0);
+  expect(
+    [...group.querySelectorAll<HTMLButtonElement>("button")].map((button) =>
+      button.textContent?.trim()
+    )
+  ).to.deep.equal([
+    "Start-pin Name",
+    "End-pin Name",
+    "Remove pin from Name",
+  ]);
+  expect(group.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').length).to.equal(1);
+  await expect(element).to.be.accessible();
+
+  const action = group.querySelector<HTMLButtonElement>("button")!;
+  action.focus();
+  action.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    })
+  );
+  await element.updateComplete;
+  expect(header(element, "name").querySelector('[role="group"]') === null).to.be.true;
+  expect(element.shadowRoot!.activeElement === trigger).to.be.true;
+});
+
+it("exposes a complete keyboard-adjustable separator and normalizes inverted width bounds", async () => {
+  const boundedColumns: DataGridColumn<Person>[] = [
+    { field: "name", label: "Name", minWidth: 200, maxWidth: 100 },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      resizable
+      .columns=${boundedColumns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const handle = element.shadowRoot!.querySelector<HTMLElement>(
+    '[part="resize-handle"]'
+  )!;
+  expect(handle.tabIndex).to.equal(0);
+  expect(handle.getAttribute("aria-valuemin")).to.equal("200");
+  expect(handle.getAttribute("aria-valuemax")).to.equal("200");
+  expect(handle.getAttribute("aria-valuenow")).to.equal("200");
+  expect(
+    element.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!.style
+      .getPropertyValue("--data-grid-columns")
+  ).to.contain("minmax(200px, 200px)");
+
+  const resized = oneEvent(element, "lr-column-resize");
+  handle.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "ArrowRight",
+      bubbles: true,
+      cancelable: true,
+    })
+  );
+  const event = await resized;
+  expect(event.detail).to.deep.equal({
+    columnId: "name",
+    width: 200,
+    finished: true,
+  });
+  expect(Object.isFrozen(event.detail)).to.equal(true);
+  await expect(element).to.be.accessible();
+});
+
+it("gives the page-size control a distinct localized purpose and represents an unlisted current size", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      paginate
+      page-size="7"
+      .strings=${{ dataGridRowsPerPage: "Visible rows per page" }}
+      .pageSizeOptions=${[10, 20]}
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const select = element.shadowRoot!.querySelector<HTMLSelectElement>(
+    '[part="page-size"]'
+  )!;
+  expect(select.getAttribute("aria-label")).to.equal("Visible rows per page");
+  expect(select.value).to.equal("7");
+  expect([...select.options].map((option) => option.value)).to.deep.equal([
+    "7",
+    "10",
+    "20",
+  ]);
+});
+
+it("bounds deep and cyclic public tree models without rejecting the update", async () => {
+  interface DeepRow {
+    id: number;
+    children?: DeepRow[];
+  }
+  let root: DeepRow = { id: 5_999 };
+  for (let id = 5_998; id >= 0; id -= 1) root = { id, children: [root] };
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Deep tree"
+      row-key="id"
+      child-rows="children"
+      .expandedKeys=${Array.from({ length: 6_000 }, (_value, id) => id)}
+      .columns=${[{ field: "id", label: "ID" }]}
+      .data=${[root]}
+    ></lr-data-grid>
+  `);
+  expect(element.shadowRoot!.querySelectorAll('[part~="row"]').length).to.be.at.most(65);
+  expect(element.shadowRoot!.querySelector('[part="tree-limit"]')).to.exist;
+  expect(
+    element.shadowRoot!.querySelector('[part="table"]')!.getAttribute(
+      "data-tree-truncated"
+    )
+  ).to.equal("true");
+
+  const cyclic: DeepRow = { id: 1 };
+  cyclic.children = [cyclic];
+  element.data = [cyclic];
+  element.expandedKeys = [1];
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelectorAll('[part~="row"]').length).to.equal(1);
+});
+
+it("keeps ineligible descendants out of parent selection cascades", async () => {
+  const tree: Person[] = [{
+    id: 1,
+    name: "Parent",
+    team: "Compiler",
+    score: 10,
+    children: [{ id: 2, name: "Blocked child", team: "Compiler", score: 0 }],
+  }];
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      row-key="id"
+      child-rows="children"
+      selectable="multiple"
+      .selectableRows=${(row: Person) => row.score > 0}
+      .columns=${columns}
+      .data=${tree}
+    ></lr-data-grid>
+  `);
+  const selected = oneEvent(element, "lr-row-select");
+  element.shadowRoot!.querySelector<HTMLInputElement>(
+    '[part~="row"] input[type="checkbox"]'
+  )!.click();
+  const event = await selected;
+  expect(event.detail.selectedKeys).to.deep.equal([1]);
+  expect(element.selectedKeys).to.deep.equal([1]);
+  expect(Object.isFrozen(event.detail)).to.equal(true);
+  expect(Object.isFrozen(event.detail.selectedKeys)).to.equal(true);
+});
+
+it("requires an owned drag token and revalidates movement policy at drop", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      reorderable
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  let moves = 0;
+  element.addEventListener("lr-column-move", () => { moves += 1; });
+  const external = new DataTransfer();
+  external.setData("text/plain", "name");
+  header(element, "score").dispatchEvent(
+    new DragEvent("drop", {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer: external,
+    })
+  );
+  expect(moves).to.equal(0);
+  expect(element.columnOrder).to.deep.equal([]);
+
+  const owned = new DataTransfer();
+  header(element, "name").dispatchEvent(
+    new DragEvent("dragstart", {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer: owned,
+    })
+  );
+  element.reorderable = false;
+  header(element, "score").dispatchEvent(
+    new DragEvent("drop", {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer: owned,
+    })
+  );
+  await element.updateComplete;
+  expect(moves).to.equal(0);
+  expect(element.columnOrder).to.deep.equal([]);
+  expect(element.shadowRoot!.querySelector('[part="drag-ghost"]') === null).to.be.true;
+});
+
+it("rolls back an active resize when its governing capability is revoked", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      resizable
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const handle = element.shadowRoot!.querySelector<HTMLElement>(
+    '[part="resize-handle"]'
+  )!;
+  const details: Array<{ width: number; finished: boolean }> = [];
+  element.addEventListener("lr-column-resize", (event) => {
+    details.push(event.detail);
+  });
+  handle.dispatchEvent(new PointerEvent("pointerdown", {
+    pointerId: 811,
+    clientX: 10,
+    bubbles: true,
+  }));
+  handle.dispatchEvent(new PointerEvent("pointermove", {
+    pointerId: 811,
+    clientX: 40,
+    bubbles: true,
+  }));
+  element.resizable = false;
+  handle.dispatchEvent(new PointerEvent("pointerup", {
+    pointerId: 811,
+    clientX: 40,
+    bubbles: true,
+  }));
+  await element.updateComplete;
+  expect(details.some((detail) => detail.finished)).to.equal(false);
+  expect(details.at(-1)?.finished).to.equal(false);
+  expect(element.getState().widths).to.deep.equal({});
+});
+
+it("maps scrollToIndex from processed rows through grouped display items", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      group-by="team"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  element.expandAllRows();
+  await element.updateComplete;
+  const requested = element.getVisibleRows()[1]!.name;
+  let scrolled = "";
+  for (const row of element.shadowRoot!.querySelectorAll<HTMLElement>('[part~="row"]')) {
+    row.scrollIntoView = () => { scrolled = row.textContent ?? ""; };
+  }
+  element.scrollToIndex(1);
+  expect(scrolled).to.contain(requested);
+});
+
+it("returns detached JSON-safe frozen filter state", async () => {
+  const source = new Set(["Compiler"]);
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      .columns=${columns}
+      .data=${rows}
+      .filters=${[{ id: "team", value: source }]}
+    ></lr-data-grid>
+  `);
+  source.add("Runtime");
+  const state = element.getState();
+  expect(state.filters).to.deep.equal([
+    { id: "team", value: ["Compiler"] },
+  ]);
+  expect(JSON.parse(JSON.stringify(state)).filters).to.deep.equal([
+    { id: "team", value: ["Compiler"] },
+  ]);
+  expect(Object.isFrozen(state)).to.equal(true);
+  expect(Object.isFrozen(state.filters)).to.equal(true);
+  expect(Object.isFrozen(state.filters![0]!.value)).to.equal(true);
+});
+
+it("keeps virtualization active when optional child/detail/group capabilities are fixed-height", async () => {
+  const manyRows: Person[] = Array.from({ length: 1_000 }, (_value, id) => ({
+    id,
+    name: `Person ${id}`,
+    team: id % 2 ? "Compiler" : "Runtime",
+    score: id,
+  }));
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      style="--max-height: var(--lr-size-20rem)"
+      .childRows=${() => []}
+      .rowDetail=${() => "Details"}
+      .columns=${columns}
+      .data=${manyRows}
+    ></lr-data-grid>
+  `);
+  expect(element.shadowRoot!.querySelectorAll('[part~="row"]').length).to.be.lessThan(100);
+  element.rowDetail = null;
+  element.groupBy = "team";
+  element.expandAllRows();
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelectorAll('[part~="row"]').length).to.be.lessThan(100);
+});
+
+it("emits a frozen group expansion snapshot", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      group-by="team"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const expanded = oneEvent(element, "lr-group-expand");
+  element.shadowRoot!.querySelector<HTMLButtonElement>(
+    '[part="group-row"] [part="expand-button"]'
+  )!.click();
+  const event = await expanded;
+  expect(event.detail.columnId).to.equal("team");
+  expect(event.detail.rows.length).to.be.greaterThan(0);
+  expect(Object.isFrozen(event.detail)).to.equal(true);
+  expect(Object.isFrozen(event.detail.rows)).to.equal(true);
+});
+
+it("uses one effective page across synchronous rows, state, and pager rendering", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      paginate
+      page-size="1"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  element.page = 999;
+  expect(element.getVisibleRows().map((row) => row.id)).to.deep.equal([3]);
+  expect(element.getState().page).to.equal(2);
+  await element.updateComplete;
+  expect(
+    element.shadowRoot!.querySelector('[part~="page-current"]')?.textContent?.trim()
+  ).to.equal("3");
+});
+
+it("accounts for expanded detail rows in aria-rowindex and aria-rowcount", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      row-key="id"
+      .rowDetail=${(row: Person) => `Details for ${row.name}`}
+      .expandedKeys=${[1]}
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const indexes = [
+    ...element.shadowRoot!.querySelectorAll<HTMLElement>(
+      '[role="row"][aria-rowindex]'
+    ),
+  ].map((row) => Number(row.getAttribute("aria-rowindex")));
+  expect(indexes).to.deep.equal([2, 3, 4, 5]);
+  expect(
+    element.shadowRoot!.querySelector('[part="table"]')!.getAttribute(
+      "aria-rowcount"
+    )
+  ).to.equal("5");
 });
 
 describe("data-grid processing helpers", () => {

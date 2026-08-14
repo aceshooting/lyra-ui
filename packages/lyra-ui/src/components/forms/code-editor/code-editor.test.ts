@@ -45,7 +45,7 @@ it('keeps scrolling on the editor frame instead of creating a nested textarea sc
 
 it('renders line numbers and inserts spaces for Tab', async () => {
   const el = (await fixture(html`<lr-code-editor value="one\ntwo" tab-size="2"></lr-code-editor>`)) as LyraCodeEditor;
-  expect(el.shadowRoot!.querySelectorAll('[part="gutter"] div')).to.have.length(2);
+  expect(el.shadowRoot!.querySelectorAll('[part="gutter"] .gutter-line')).to.have.length(2);
   const textarea = el.shadowRoot!.querySelector('textarea')!;
   textarea.focus(); textarea.setSelectionRange(0, 0); textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
   expect(el.value).to.contain('  one');
@@ -454,10 +454,10 @@ it('forwards the complete native focus, selection, and range-editing surface', a
   const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
   const forwarded: string[] = [];
   el.addEventListener('focus', (event) => {
-    if (event instanceof CustomEvent) forwarded.push('focus');
+    if (event instanceof FocusEvent && event.target === el) forwarded.push('focus');
   });
   el.addEventListener('blur', (event) => {
-    if (event instanceof CustomEvent) forwarded.push('blur');
+    if (event instanceof FocusEvent && event.target === el) forwarded.push('blur');
   });
 
   el.focus({ preventScroll: true });
@@ -501,25 +501,152 @@ it('rejects host focus synchronously when direct or fieldset disablement starts'
   expect(el.shadowRoot!.activeElement === null, 'same-task fieldset cascade').to.be.true;
 });
 
-it('synchronizes user edits and re-emits input/change with the current value', async () => {
+it('relays one native input/change and emits typed Lyra value aliases', async () => {
   const el = (await fixture(html`<lr-code-editor></lr-code-editor>`)) as LyraCodeEditor;
   const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  const nativeInputs: Event[] = [];
+  const nativeChanges: Event[] = [];
   const inputDetails: unknown[] = [];
   const changeDetails: unknown[] = [];
-  el.addEventListener('input', (event) => {
-    if (event instanceof CustomEvent) inputDetails.push(event.detail);
-  });
-  el.addEventListener('change', (event) => {
-    if (event instanceof CustomEvent) changeDetails.push(event.detail);
-  });
+  el.addEventListener('input', (event) => nativeInputs.push(event));
+  el.addEventListener('change', (event) => nativeChanges.push(event));
+  el.addEventListener('lr-input', (event) => inputDetails.push(event.detail));
+  el.addEventListener('lr-change', (event) => changeDetails.push(event.detail));
 
   textarea.value = 'const answer = 42;';
-  textarea.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+  textarea.dispatchEvent(new InputEvent('input', {
+    bubbles: true,
+    composed: true,
+    data: '2',
+    inputType: 'insertText',
+  }));
   textarea.dispatchEvent(new Event('change', { bubbles: true }));
 
   expect(el.value).to.equal('const answer = 42;');
+  expect(nativeInputs).to.have.lengthOf(1);
+  expect(nativeInputs[0]).to.be.instanceOf(InputEvent);
+  expect((nativeInputs[0] as InputEvent).inputType).to.equal('insertText');
+  expect(nativeInputs[0].target === el).to.be.true;
+  expect(nativeChanges).to.have.lengthOf(1);
+  expect(nativeChanges[0].constructor).to.equal(Event);
+  expect(nativeChanges[0].target === el).to.be.true;
   expect(inputDetails).to.deep.equal([{ value: 'const answer = 42;' }]);
   expect(changeDetails).to.deep.equal([{ value: 'const answer = 42;' }]);
+});
+
+it('normalizes every public/default/restored line ending to the native LF representation', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-code-editor name="source" value=${'a\rb\r\nc'}></lr-code-editor></form>
+  `);
+  const el = form.querySelector('lr-code-editor') as LyraCodeEditor;
+  const textarea = el.input!;
+  expect(el.value).to.equal('a\nb\nc');
+  expect(el.defaultValue).to.equal('a\nb\nc');
+  expect(textarea.value).to.equal('a\nb\nc');
+  expect(new FormData(form).get('source')).to.equal('a\nb\nc');
+  expect(el.shadowRoot!.querySelectorAll('.gutter-line')).to.have.lengthOf(3);
+
+  el.value = 'live\rvalue';
+  form.reset();
+  expect(el.value).to.equal('a\nb\nc');
+  el.formStateRestoreCallback('restored\r\nvalue', 'restore');
+  expect(el.value).to.equal('restored\nvalue');
+  expect(el.selectionStart).to.equal(textarea.selectionStart);
+});
+
+it('matches native hard-wrap FormData while retaining the live unwrapped value', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <textarea name="native" cols="20" wrap="hard">abcdefghijklmnopqrstuvwxyz</textarea>
+      <lr-code-editor name="editor" cols="20" wrap="hard" value="abcdefghijklmnopqrstuvwxyz"></lr-code-editor>
+    </form>
+  `);
+  const el = form.querySelector('lr-code-editor') as LyraCodeEditor;
+  const data = new FormData(form);
+  expect(data.get('editor')).to.equal(data.get('native'));
+  expect(el.value).to.equal('abcdefghijklmnopqrstuvwxyz');
+  expect(el.input!.value).to.equal('abcdefghijklmnopqrstuvwxyz');
+});
+
+it('forwards the native editing attributes and exposes the owned input and scroll position', async () => {
+  const el = await fixture<LyraCodeEditor>(html`
+    <lr-code-editor
+      rows="7"
+      cols="33"
+      minlength="2"
+      maxlength="8"
+      autocomplete="off"
+      inputmode="text"
+      enterkeyhint="done"
+      autocorrect="on"
+      autofocus
+      title="Source editor"
+    ></lr-code-editor>
+  `);
+  const textarea = el.input!;
+  expect(textarea === el.shadowRoot!.querySelector('textarea')).to.be.true;
+  expect(textarea.rows).to.equal(7);
+  expect(textarea.cols).to.equal(33);
+  expect(textarea.minLength).to.equal(2);
+  expect(textarea.maxLength).to.equal(8);
+  expect(textarea.autocomplete).to.equal('off');
+  expect(textarea.inputMode).to.equal('text');
+  expect(textarea.getAttribute('enterkeyhint')).to.equal('done');
+  expect(textarea.autofocus).to.be.true;
+  expect(textarea.title).to.equal('Source editor');
+  el.scrollPosition({ top: 12, left: 3 });
+  expect(el.scrollPosition()).to.deep.equal({ top: textarea.scrollTop, left: textarea.scrollLeft });
+});
+
+it('reflects the language styling hook and restores its empty default on removal', async () => {
+  const el = await fixture<LyraCodeEditor>(html`<lr-code-editor language="typescript"></lr-code-editor>`);
+  expect(el.language).to.equal('typescript');
+  expect(el.getAttribute('language')).to.equal('typescript');
+  el.language = 'rust';
+  await el.updateComplete;
+  expect(el.getAttribute('language')).to.equal('rust');
+  el.removeAttribute('language');
+  await el.updateComplete;
+  expect(el.language).to.equal('');
+  expect(el.hasAttribute('language')).to.be.false;
+});
+
+it('supplements native minlength/maxlength validity for programmatic values', async () => {
+  const el = await fixture<LyraCodeEditor>(html`<lr-code-editor minlength="3" maxlength="5"></lr-code-editor>`);
+  el.value = 'x';
+  expect(el.validity.tooShort).to.be.true;
+  expect(el.validationMessage).to.not.equal('');
+  el.value = 'abcdef';
+  expect(el.validity.tooLong).to.be.true;
+  el.value = 'valid';
+  expect(el.validity.valid).to.be.true;
+});
+
+it('normalizes non-finite and fractional row and length constraints before layout and validity', async () => {
+  const el = await fixture<LyraCodeEditor>(html`<lr-code-editor value="abcd"></lr-code-editor>`);
+
+  el.rows = Number.POSITIVE_INFINITY;
+  el.minlength = 2.9;
+  el.maxlength = 3.9;
+  await el.updateComplete;
+  expect(el.rows).to.equal(4);
+  expect(el.input!.rows).to.equal(4);
+  expect(el.minlength).to.equal(2);
+  expect(el.maxlength).to.equal(3);
+  expect(el.input!.minLength).to.equal(2);
+  expect(el.input!.maxLength).to.equal(3);
+  expect(el.validity.tooLong).to.be.true;
+
+  el.rows = -10;
+  el.minlength = Number.NaN;
+  el.maxlength = Number.NEGATIVE_INFINITY;
+  await el.updateComplete;
+  expect(el.rows).to.equal(1);
+  expect(el.minlength).to.equal(undefined);
+  expect(el.maxlength).to.equal(undefined);
+  expect(el.input!.hasAttribute('minlength')).to.be.false;
+  expect(el.input!.hasAttribute('maxlength')).to.be.false;
+  expect(el.validity.valid).to.be.true;
 });
 
 it('parses explicit spellcheck strings with native true/false semantics', async () => {
@@ -536,11 +663,30 @@ it('parses explicit spellcheck strings with native true/false semantics', async 
   expect(disabled.shadowRoot!.querySelector('textarea')!.spellcheck).to.be.false;
 });
 
-it('does not create one gutter element per line for very large values', async () => {
-  const value = Array.from({ length: 10_000 }, (_, index) => String(index)).join('\n');
+it('bounds the line-number projection and skips all line splitting while the gutter is disabled', async () => {
+  const value = Array.from({ length: 100_000 }, (_, index) => String(index)).join('\n');
   const el = (await fixture(html`<lr-code-editor .value=${value}></lr-code-editor>`)) as LyraCodeEditor;
-  expect(el.shadowRoot!.querySelectorAll('[part="gutter"] > *').length).to.be.lessThan(100);
-  expect(el.shadowRoot!.querySelector('[part="gutter"]')!.textContent).to.contain('10000');
+  expect(el.shadowRoot!.querySelectorAll('.gutter-line')).to.have.lengthOf(200);
+  expect(el.shadowRoot!.querySelector('[part="gutter"]')!.textContent).to.contain('100000');
+  expect(el.shadowRoot!.querySelector('[part="gutter"]')!.textContent!.length).to.be.lessThan(2_000);
+
+  el.lineNumbers = false;
+  await el.updateComplete;
+  const originalSplit = String.prototype.split;
+  let splits = 0;
+  const nextValue = `${value}\nlast`;
+  String.prototype.split = function (...args: Parameters<String['split']>) {
+    if (String(this) === nextValue && args[0] === '\n') splits++;
+    return originalSplit.apply(this, args);
+  };
+  try {
+    el.value = nextValue;
+    await el.updateComplete;
+  } finally {
+    String.prototype.split = originalSplit;
+  }
+  expect(splits).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="gutter"]') === null).to.be.true;
 });
 
 it('paints the required marker as generated content the accessible name never sees', async () => {

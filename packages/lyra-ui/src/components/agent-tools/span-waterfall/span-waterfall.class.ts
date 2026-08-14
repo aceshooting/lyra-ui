@@ -2,16 +2,15 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { finiteRatio, finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
-import '../../utility/live-region/live-region.class.js';
-import '../../overlays/empty/empty.class.js';
 import { styles } from './span-waterfall.styles.js';
-import { normalizeLyraSpanKind, normalizeLyraSpanStatus, type LyraSpan } from '../trace-tree/span.js';
+import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from '../trace-tree/span.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -56,10 +55,20 @@ function niceStep(span: number, count: number): number {
 
 function axisTicks(start: number, end: number, count = 5): number[] {
   const step = niceStep(end - start, count);
-  if (step <= 0) return [start];
+  if (!Number.isFinite(step) || step <= 0) return [start, end];
   const first = Math.ceil(start / step) * step;
+  if (!Number.isFinite(first)) return [start, end];
   const ticks: number[] = [];
-  for (let v = first; v <= end + step / 2; v += step) ticks.push(Math.round(v / step) * step);
+  // Index-based and explicitly bounded: additive stepping can stop making forward progress near
+  // Number.MAX_VALUE and would otherwise hang the render loop forever.
+  for (let index = 0; index <= count + 2; index++) {
+    const value = first + index * step;
+    if (!Number.isFinite(value) || value > end + step / 2) break;
+    const rounded = Math.round(value / step) * step;
+    if (Number.isFinite(rounded) && (ticks.length === 0 || rounded > ticks[ticks.length - 1]!)) {
+      ticks.push(rounded);
+    }
+  }
   return ticks;
 }
 
@@ -92,6 +101,7 @@ export interface LyraSpanWaterfallEventMap {
  * @csspart status-text - The visible status label.
  * @csspart duration - The formatted duration text.
  * @csspart empty - The empty-state message shown when `spans` is empty.
+ * @csspart limit - Localized notice shown when the shared 500-span projection ceiling is reached.
  * @csspart live-region - The internal focus/status-announcement live region.
  * @cssprop [--lr-span-waterfall-name-width=8rem] - Width of the name gutter column.
  * @cssprop [--lr-span-waterfall-stripe-speed=var(--lr-duration-ambient)] - Animation duration for a
@@ -119,14 +129,19 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     spanKindAgent: LYRA_DEFAULT_spanKindAgent,
     spanKindEmbedding: LYRA_DEFAULT_spanKindEmbedding,
     spanKindLlm: LYRA_DEFAULT_spanKindLlm,
     spanKindOther: LYRA_DEFAULT_spanKindOther,
     spanKindRetriever: LYRA_DEFAULT_spanKindRetriever,
     spanKindTool: LYRA_DEFAULT_spanKindTool,
+    spanProjectionLimit: LYRA_DEFAULT_spanProjectionLimit,
     spanStartedAtOffset: LYRA_DEFAULT_spanStartedAtOffset,
     spanWaterfall: LYRA_DEFAULT_spanWaterfall,
     statusDenied: LYRA_DEFAULT_statusDenied,
@@ -140,7 +155,8 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** Identical contract to `<lr-trace-tree>.spans`; rows sort by `startMs` (ties keep array order).
-   *  Foreign runtime `kind`/`status` values normalize to `'other'`/`'pending'` before rendering. */
+   *  The controlled `activeSpanId` reserves a position inside the shared 500-row ceiling. Foreign
+   *  runtime `kind`/`status` values normalize to `'other'`/`'pending'` before rendering. */
   @property({ attribute: false }) spans: LyraSpan[] = [];
   @property({ attribute: 'active-span-id' }) activeSpanId: string | null = null;
   /** Visible time window in trace-relative ms (same non-negative, trace-relative vocabulary as
@@ -154,26 +170,48 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
 
   private focusedId: string | null = null;
   private sortedSource?: LyraSpan[];
+  private sortedActiveSpanId: string | null = null;
   private sortedCache: LyraSpan[] = [];
+  private sortedCacheTruncated = false;
+  private limitAnnouncementSink?: AnnouncementSink;
+  private limitAnnouncementInitialized = false;
+  private previouslyTruncated = false;
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncLimitAnnouncementSink();
+    this.limitAnnouncementInitialized = this.hasUpdated;
+    this.previouslyTruncated = this.sortedCacheTruncated;
+  }
+
+  override disconnectedCallback(): void {
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = undefined;
+    super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = undefined;
+    this.syncLimitAnnouncementSink();
+  }
+
+  private syncLimitAnnouncementSink(): void {
+    if (!this.isConnected || this.limitAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+  }
+
   private sortedSpans(): LyraSpan[] {
-    if (this.sortedSource === this.spans) return this.sortedCache;
+    if (this.sortedSource === this.spans && this.sortedActiveSpanId === this.activeSpanId) return this.sortedCache;
     this.sortedSource = this.spans;
-    this.sortedCache = this.spans
-      .filter((span) => Number.isFinite(span.startMs) && (span.endMs == null || Number.isFinite(span.endMs)))
-      .map((span) => {
-        const startMs = Math.max(0, span.startMs);
-        const endMs = span.endMs == null ? undefined : Math.max(startMs, span.endMs);
-        return {
-          ...span,
-          kind: normalizeLyraSpanKind(span.kind),
-          status: normalizeLyraSpanStatus(span.status),
-          startMs,
-          endMs,
-        };
-      })
+    this.sortedActiveSpanId = this.activeSpanId;
+    const projection = normalizeLyraSpans(this.spans, this.activeSpanId);
+    this.sortedCacheTruncated = projection.truncated;
+    this.sortedCache = projection.spans
       .map((s, i) => ({ s, i }))
       .sort((a, b) => a.s.startMs - b.s.startMs || a.i - b.i)
       .map((x) => x.s);
@@ -186,8 +224,12 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     // `null` means "fit the whole trace"; a non-null-but-NaN value (a bad attribute) falls back
     // to that same default instead of flowing NaN into axisTicks()/barGeometry(). Both bounds are
     // trace-relative ms, so never negative (min 0), mirroring `LyraSpan.startMs`'s own contract.
-    const start = this.viewStartMs == null ? 0 : finiteRange(this.viewStartMs, 0, 0);
-    const end = this.viewEndMs == null ? fallbackEnd : finiteRange(this.viewEndMs, fallbackEnd, 0);
+    const start = this.viewStartMs == null
+      ? 0
+      : finiteRange(this.viewStartMs, 0, 0, Number.MAX_SAFE_INTEGER - 1);
+    const end = this.viewEndMs == null
+      ? fallbackEnd
+      : finiteRange(this.viewEndMs, fallbackEnd, 0, Number.MAX_SAFE_INTEGER);
     // A caller-supplied window with end <= start (inverted or degenerate) still needs *some*
     // positive width to render/position bars sanely -- widen to a minimal 1ms window rather than
     // swapping start/end (unlike `<lr-time-range>`'s handle-drag case, swapping here would
@@ -195,14 +237,14 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     return { start, end: end > start ? end : start + 1 };
   }
 
-  private barGeometry(span: LyraSpan, view: ViewWindow): { startPct: number; widthPct: number } {
-    const spanWidth = view.end - view.start || 1;
+  private barGeometry(span: LyraSpan, view: ViewWindow): { startPct: number; widthPct: number; visible: boolean } {
     const endMs = span.endMs ?? (span.status === 'running' ? view.end : span.startMs);
+    const visible = span.startMs <= view.end && endMs >= view.start;
     const clampedStart = Math.max(view.start, span.startMs);
     const clampedEnd = Math.min(view.end, Math.max(endMs, span.startMs));
-    const startPct = Math.max(0, Math.min(100, ((clampedStart - view.start) / spanWidth) * 100));
-    const widthPct = Math.max(0, Math.min(100 - startPct, ((clampedEnd - clampedStart) / spanWidth) * 100));
-    return { startPct, widthPct };
+    const startPct = finiteRatio(clampedStart, view.start, view.end) * 100;
+    const endPct = finiteRatio(clampedEnd, view.start, view.end) * 100;
+    return { startPct, widthPct: Math.max(0, endPct - startPct), visible };
   }
 
   private formatDuration(ms: number | undefined): string {
@@ -253,7 +295,8 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    const rows = this.sortedSpans();
+    const view = this.viewWindow();
+    const rows = this.sortedSpans().filter((span) => this.barGeometry(span, view).visible);
     if (rows.length === 0) return;
     const currentIndex = rows.findIndex((s) => s.id === this.focusedId);
     const idx = currentIndex >= 0 ? currentIndex : 0;
@@ -287,19 +330,31 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('spans')) {
+    if (changed.has('spans') || changed.has('activeSpanId')) {
       this.sortedSource = undefined;
-      const ids = new Set(this.sortedSpans().map((span) => span.id));
+    }
+    if (
+      changed.has('spans')
+      || changed.has('viewStartMs')
+      || changed.has('viewEndMs')
+      || changed.has('activeSpanId')
+    ) {
+      const view = this.viewWindow();
+      const ids = new Set(
+        this.sortedSpans().filter((span) => this.barGeometry(span, view).visible).map((span) => span.id),
+      );
       if (this.focusedId == null || !ids.has(this.focusedId)) {
         this.focusedId =
           this.activeSpanId && ids.has(this.activeSpanId)
             ? this.activeSpanId
             : (this.sortedSpans()[0]?.id ?? null);
       }
-    }
-    if (changed.has('activeSpanId') && this.activeSpanId) {
-      const ids = new Set(this.sortedSpans().map((span) => span.id));
-      if (ids.has(this.activeSpanId)) this.focusedId = this.activeSpanId;
+      if (this.focusedId !== null && !ids.has(this.focusedId)) {
+        this.focusedId = this.sortedSpans().find((span) => ids.has(span.id))?.id ?? null;
+      }
+      if (changed.has('activeSpanId') && this.activeSpanId && ids.has(this.activeSpanId)) {
+        this.focusedId = this.activeSpanId;
+      }
     }
   }
 
@@ -319,21 +374,27 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     super.updated(changed);
     if (changed.has('activeSpanId') && this.activeSpanId) {
       const bar = this.renderedBarById(this.activeSpanId);
-      if (bar) {
+      if (bar && !bar.hidden) {
         const ownerWindow = bar.ownerDocument.defaultView;
         const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
         bar.scrollIntoView({ block: 'nearest', behavior: reducedMotion ? 'auto' : 'smooth' });
       }
     }
+    if (this.limitAnnouncementInitialized && this.sortedCacheTruncated && !this.previouslyTruncated) {
+      this.limitAnnouncementSink?.announce(this.localize('spanProjectionLimit', undefined, {
+        count: MAX_RENDERED_LYRA_SPANS,
+      }));
+    }
+    this.limitAnnouncementInitialized = true;
+    this.previouslyTruncated = this.sortedCacheTruncated;
   }
 
   private renderAxis(view: ViewWindow): TemplateResult {
     const ticks = axisTicks(view.start, view.end);
-    const span = view.end - view.start || 1;
     return html`
       <div part="axis" aria-hidden="true">
         ${ticks.map((t) => {
-          const pct = ((t - view.start) / span) * 100;
+          const pct = finiteRatio(t, view.start, view.end) * 100;
           if (pct < 0 || pct > 100) return nothing;
           return html`<span
             part="tick"
@@ -353,9 +414,9 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     setSize: number,
     firstId: string | undefined,
   ): TemplateResult {
-    const { startPct, widthPct } = this.barGeometry(span, view);
+    const { startPct, widthPct, visible } = this.barGeometry(span, view);
     const isActive = this.activeSpanId === span.id;
-    const tabbable = this.focusedId === span.id || (this.focusedId == null && firstId === span.id);
+    const tabbable = visible && (this.focusedId === span.id || (this.focusedId == null && firstId === span.id));
     const durationLabel = span.endMs != null ? this.formatDuration(span.endMs - span.startMs) : '';
     const fragments = [
       span.name,
@@ -373,6 +434,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
             data-id=${span.id}
             data-tone=${STATUS_TONE[span.status]}
             data-status=${span.status}
+            ?hidden=${!visible}
             tabindex=${tabbable ? '0' : '-1'}
             aria-current=${isActive ? 'true' : 'false'}
             aria-label=${fragments.join(this.localize('accessibleLabelSeparator'))}
@@ -394,18 +456,23 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   override render(): TemplateResult {
     const rows = this.sortedSpans();
     const view = this.viewWindow();
-    const firstId = rows[0]?.id;
+    const firstId = rows.find((span) => this.barGeometry(span, view).visible)?.id;
     return html`
       <div
         part="base"
         role="list"
-        aria-label=${this.getAttribute('aria-label') || this.label || this.localize('spanWaterfall')}
+        aria-label=${this.label || this.localize('spanWaterfall')}
         @keydown=${this.onKeyDown}
       >
         ${!this.hideAxis && rows.length > 0 ? this.renderAxis(view) : nothing}
         ${rows.length === 0
           ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
           : rows.map((span, index) => this.renderRow(span, view, index + 1, rows.length, firstId))}
+        ${this.sortedCacheTruncated
+          ? html`<p part="limit" role="note">${this.localize('spanProjectionLimit', undefined, {
+              count: MAX_RENDERED_LYRA_SPANS,
+            })}</p>`
+          : nothing}
       </div>
       <lr-live-region part="live-region" mode="polite"></lr-live-region>
     `;

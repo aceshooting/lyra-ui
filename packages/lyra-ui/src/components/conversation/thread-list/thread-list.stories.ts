@@ -4,8 +4,9 @@ import './thread-list.js';
 import type { ChatThread, LyraThreadList } from './thread-list.class.js';
 import '../../layout/menu/menu.js';
 import '../../layout/menu/menu-item.js';
+import '../../overlays/overlay/dropdown.js';
 import '../../overlays/badge/badge.js';
-import type { MenuSelectDetail } from '../../layout/menu/menu.js';
+import type { MenuItemSelectDetail } from '../../layout/menu/menu.js';
 
 const meta: Meta = {
   title: 'ThreadList',
@@ -81,7 +82,8 @@ export const Default: Story = {
 };
 
 /** `renderActions` replaces the built-in pin/archive/delete icon buttons with a fully custom
- *  per-row menu -- the shape a consumer with its own richer row-action surface (a `<lr-menu>` with
+ *  per-row menu -- the shape a consumer with its own richer row-action surface (an `<lr-dropdown>`
+ *  containing `<lr-menu>`
  *  Rename/Delete, a rename dialog, delete-confirmation state, etc.) needs instead of `rowActions`'
  *  closed `pin | archive | delete` set. `rowActions` is left unset here, so nothing built-in
  *  precedes the menu in the `actions` slot -- setting both would append this menu after the
@@ -94,7 +96,7 @@ export const CustomRowActions: Story = {
         active-id="2"
         .threads=${threads}
         .renderActions=${(thread: ChatThread) => html`
-          <lr-menu label="Conversation actions" placement="bottom-end">
+          <lr-dropdown placement="bottom-end">
             <button
               slot="trigger"
               aria-label="Conversation actions"
@@ -102,18 +104,15 @@ export const CustomRowActions: Story = {
             >
               ⋮
             </button>
-            <lr-menu-item
-              value="rename"
-              @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => console.log('rename', thread.id, e.detail.value)}
-              >Rename</lr-menu-item
+            <lr-menu
+              label="Conversation actions"
+              @lr-select=${(e: CustomEvent<MenuItemSelectDetail>) =>
+                console.log(e.detail.item.value, thread.id)}
             >
-            <lr-menu-item
-              value="delete"
-              destructive
-              @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => console.log('delete', thread.id, e.detail.value)}
-              >Delete</lr-menu-item
-            >
-          </lr-menu>
+              <lr-menu-item value="rename">Rename</lr-menu-item>
+              <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+            </lr-menu>
+          </lr-dropdown>
         `}
       ></lr-thread-list>
     </div>`,
@@ -195,8 +194,8 @@ export const SlottedMode: Story = {
   render: () => html`
     <div style="block-size:200px;inline-size:320px;border:1px solid var(--lr-color-border);">
       <lr-thread-list>
-        <lr-conversation-item title="Manually composed row 1"></lr-conversation-item>
-        <lr-conversation-item title="Manually composed row 2"></lr-conversation-item>
+        <lr-conversation-item label="Manually composed row 1"></lr-conversation-item>
+        <lr-conversation-item label="Manually composed row 2"></lr-conversation-item>
       </lr-thread-list>
     </div>
   `,
@@ -235,7 +234,7 @@ export const RenderHooks: Story = {
         scrollbar-color: var(--lr-color-brand) var(--lr-color-surface);
         scrollbar-gutter: stable;
       }
-      .hook-parts::part(row-leading),
+      .hook-parts::part(row-start),
       .hook-parts::part(row-meta) {
         display: inline-flex;
         gap: var(--lr-space-xs);
@@ -250,14 +249,14 @@ export const RenderHooks: Story = {
       <lr-thread-list
         class="hook-parts"
         .threads=${threads}
-        .renderLeading=${(thread: ChatThread) =>
+        .renderStart=${(thread: ChatThread) =>
           html`<lr-badge variant=${thread.pinned ? 'brand' : 'neutral'}>AI</lr-badge>`}
         .renderMeta=${(thread: ChatThread) => html`<span>${thread.archived ? 'Archived' : 'Knowledge base'}</span>`}
         .renderRowContent=${(thread: ChatThread) => html`
           <strong>${thread.title}</strong>
           <small>${thread.excerpt ?? 'No preview available'}</small>
         `}
-        .formatGroupLabel=${(key: string) => `Group: ${key}`}
+        .getGroupLabel=${({ id }: { id: string }) => `Group: ${id}`}
       ></lr-thread-list>
     </div>
   `,
@@ -310,7 +309,7 @@ export const HighlightedExcerpt: Story = {
 /** Row density from the outside, with no token override. In data mode this component builds each
  *  `<lr-conversation-item>` itself two shadow roots down, and forwards the item's own parts out
  *  under the `row-item-*` namespace (`row-*` is the separate wrapper surface around this
- *  component's render-callback output). Setting `::part(row-item-base)`/`::part(row-item-title)`
+ *  component's render-callback output). Setting `::part(row-item-base)`/`::part(row-item-label)`
  *  reaches exactly the two declarations that set row height -- and, unlike the
  *  `::part(row) { --lr-theme-space-s: … }` retheme it replaces, it does *not* leak into the
  *  `renderActions` menu, whose items stay at full size and above the touch-target floor. Opening
@@ -323,7 +322,7 @@ export const DenseRows: Story = {
         padding-block: var(--lr-space-2xs);
         padding-inline: var(--lr-space-s);
       }
-      .dense-rows::part(row-item-title) {
+      .dense-rows::part(row-item-label) {
         font-size: var(--lr-font-size-sm);
       }
       .dense-rows::part(row-item-timestamp) {
@@ -336,7 +335,7 @@ export const DenseRows: Story = {
         active-id="2"
         .threads=${threads}
         .renderActions=${(thread: ChatThread) => html`
-          <lr-menu label="Conversation actions" placement="bottom-end">
+          <lr-dropdown placement="bottom-end">
             <button
               slot="trigger"
               aria-label="Conversation actions"
@@ -344,18 +343,15 @@ export const DenseRows: Story = {
             >
               ⋮
             </button>
-            <lr-menu-item
-              value="rename"
-              @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => console.log('rename', thread.id, e.detail.value)}
-              >Rename</lr-menu-item
+            <lr-menu
+              label="Conversation actions"
+              @lr-select=${(e: CustomEvent<MenuItemSelectDetail>) =>
+                console.log(e.detail.item.value, thread.id)}
             >
-            <lr-menu-item
-              value="delete"
-              destructive
-              @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => console.log('delete', thread.id, e.detail.value)}
-              >Delete</lr-menu-item
-            >
-          </lr-menu>
+              <lr-menu-item value="rename">Rename</lr-menu-item>
+              <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+            </lr-menu>
+          </lr-dropdown>
         `}
       ></lr-thread-list>
     </div>
@@ -399,7 +395,9 @@ export const ControlledProjectGroups: Story = {
         .threads=${projectThreads}
         .groupBy=${(thread: ChatThread) => (thread as ProjectThread).project}
         .groupOrder=${['Viewer', 'Platform']}
-        .formatGroup=${(id: string, grouped: ChatThread[]) => html`<strong>${id}</strong> (${grouped.length})`}
+        .getGroupLabel=${({ id, threads }: { id: string; threads: readonly ChatThread[] }) =>
+          `${id} (${threads.length})`}
+        .renderGroupAdornment=${({ id }: { id: string }) => html`<a href="#group-${id}">Open</a>`}
         .collapsedGroupIds=${['Platform']}
         @lr-group-toggle=${(event: CustomEvent) => console.log('controlled group intent', event.detail)}
       ></lr-thread-list>

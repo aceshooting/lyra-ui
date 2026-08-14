@@ -7,6 +7,8 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './animated-image.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_animatedImageDefaultAlt, LYRA_DEFAULT_pauseWithContext, LYRA_DEFAULT_playWithContext } from '../../../internal/default-strings.generated.js';
@@ -17,14 +19,14 @@ const MAX_FROZEN_FRAME_DIMENSION = 8192;
 const MAX_FROZEN_FRAME_PIXELS = 16_777_216;
 
 export interface LyraAnimatedImageEventMap {
-  'lr-load': CustomEvent<undefined>;
-  'lr-error': CustomEvent<undefined>;
-  'lr-play': CustomEvent<undefined>;
-  'lr-pause': CustomEvent<undefined>;
+  'lr-load': CustomEvent<null>;
+  'lr-error': CustomEvent<null>;
+  'lr-play': CustomEvent<null>;
+  'lr-pause': CustomEvent<null>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
 }
 
 /**
@@ -60,10 +62,15 @@ export interface LyraAnimatedImageEventMap {
  * native image decode failure -- `lr-error` fires and no request is ever
  * attempted.
  *
- * **Decorative-only is not supported.** An explicit `alt=""` still falls
- * back to the localized `animatedImageDefaultAlt` string rather than staying
- * empty/presentational -- the same deliberate tradeoff `<lr-media-card>`'s
- * `imgAlt` getter already makes for its own `alt`/`filename` fallback chain.
+ * **Alternative text follows native image presence semantics.** An absent or explicitly empty
+ * `alt` keeps the image and frozen canvas decorative, matching the mirrored components. A
+ * nonempty value names whichever of those two mutually-exclusive visual owners is exposed. The
+ * play/pause button remains independently named with localized action text.
+ *
+ * Lyra deliberately adds a reduced-motion safety policy and a bounded `--lr-animated-image-max-height`
+ * default beyond the mirrored components. Set `respect-reduced-motion="false"` when preserving
+ * upstream playback under a reduced-motion preference is required, and override the max-height
+ * hook with `none` when the upstream unconstrained block-size is required.
  *
  * Deliberately no label/hint/error chrome -- this is not a form-associated
  * control (nothing resembling a value the user submits).
@@ -113,9 +120,8 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
    *  safe-scheme allowlist before use -- see the class doc. */
   @property() src = '';
 
-  /** A description of the image used by assistive devices. Falls back to
-   *  the localized `animatedImageDefaultAlt` when empty -- see the class doc. */
-  @property() alt = '';
+  /** A description of the image used by assistive devices. Absent/empty means decorative. */
+  @property() alt?: string;
 
   /** Requests animated playback. Distinct from the read-only `playing`
    *  effect -- see the class doc's "`play` vs. `playing`" section. */
@@ -150,6 +156,13 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
 
   private _playing = false;
   private mediaQuery?: MediaQueryList;
+  /**
+   * Each connection starts from state, not from an observable transition. Keep this armed until
+   * the first connected update commits so a property write made while detached cannot emit merely
+   * because Lit happened to flush it after reattachment. Updates that do flush while detached also
+   * leave the guard armed for the reconnect baseline.
+   */
+  private connectionEventBaselinePending = true;
 
   @query('[part="image"]') private imageEl?: HTMLImageElement;
   @query('[part="canvas"]') private canvasEl?: HTMLCanvasElement;
@@ -166,13 +179,10 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   get playing(): boolean {
     return this._playing;
   }
-  // Kept as a no-op setter (rather than omitted) so `el.playing = x` doesn't
-  // throw in this strict-mode class body -- assigning has no defined
-  // effect, per the class doc; control playback via `.play` instead.
-  set playing(_value: boolean) {}
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.connectionEventBaselinePending = true;
     this.mediaQuery = this.ownerWindow?.matchMedia?.('(prefers-reduced-motion: reduce)');
     this.mediaQuery?.addEventListener('change', this.onMotionPreferenceChange);
     // A preference change while detached cannot deliver an event to this instance. Re-run the
@@ -182,6 +192,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.connectionEventBaselinePending = true;
     this.mediaQuery?.removeEventListener('change', this.onMotionPreferenceChange);
     this.mediaQuery = undefined;
     super.disconnectedCallback();
@@ -195,6 +206,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    const mayEmitConnectionTransition = this.isConnected && !this.connectionEventBaselinePending;
     if (changed.has('src')) {
       this.hasLoaded = false;
       this.hasError = false;
@@ -205,7 +217,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
       // waiting on a native `error` event that will never fire.
       if (trimmed !== '' && safeMediaSrc(this.src) === null) {
         this.hasError = true;
-        this.emit('lr-error');
+        if (mayEmitConnectionTransition) this.emit('lr-error', null);
       }
     }
 
@@ -215,7 +227,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     if (nextPlaying !== this._playing) {
       this._playing = nextPlaying;
       this.toggleAttribute('playing', nextPlaying);
-      this.emit(nextPlaying ? 'lr-play' : 'lr-pause');
+      if (mayEmitConnectionTransition) this.emit(nextPlaying ? 'lr-play' : 'lr-pause', null);
     }
     // Private CSS-only hook (see the stylesheet) -- keeps the live <img>
     // visible while still loading or after a decode failure, independent of
@@ -223,19 +235,27 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     this.toggleAttribute('data-loaded', this.hasLoaded);
   }
 
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (this.isConnected) this.connectionEventBaselinePending = false;
+  }
+
   private get effectiveAlt(): string {
-    return this.alt || this.localize('animatedImageDefaultAlt');
+    return this.alt ?? '';
   }
 
   private get toggleLabel(): string {
+    const authoredLabel = hostAriaLabel(this);
+    if (authoredLabel !== null) return authoredLabel;
     if (this.accessibleLabel) return this.accessibleLabel;
-    const name = this.effectiveAlt;
+    const name = this.effectiveAlt || this.localize('animatedImageDefaultAlt');
     return this.playing
       ? this.localize('pauseWithContext', undefined, { name })
       : this.localize('playWithContext', undefined, { name });
   }
 
-  private onImageLoad = (): void => {
+  private onImageLoad = (event: Event): void => {
+    if (!this.isConnected || event.currentTarget !== this.imageEl) return;
     this.hasError = false;
     this.hasLoaded = true;
     const img = this.imageEl;
@@ -244,38 +264,32 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
       const width = img.naturalWidth;
       const height = img.naturalHeight;
       const dpr = this.ownerWindow?.devicePixelRatio || 1;
-      const requestedWidth = width * dpr;
-      const requestedHeight = height * dpr;
-      const dimensionScale = Math.min(
-        1,
-        MAX_FROZEN_FRAME_DIMENSION / Math.max(1, requestedWidth),
-        MAX_FROZEN_FRAME_DIMENSION / Math.max(1, requestedHeight),
-      );
-      const pixelScale = Math.min(
-        1,
-        Math.sqrt(MAX_FROZEN_FRAME_PIXELS / Math.max(1, requestedWidth * requestedHeight)),
-      );
-      const backingScale = Math.min(dimensionScale, pixelScale);
-      const backingWidth = Math.max(1, Math.floor(requestedWidth * backingScale));
-      const backingHeight = Math.max(1, Math.floor(requestedHeight * backingScale));
+      const allocation = resolveBoundedCanvasAllocation({
+        cssWidth: width,
+        cssHeight: height,
+        desiredScale: dpr,
+        maxDimension: MAX_FROZEN_FRAME_DIMENSION,
+        maxPixels: MAX_FROZEN_FRAME_PIXELS,
+      });
       // Setting width/height resets any prior transform, so a fresh
       // ctx.scale() below is always relative to an untransformed canvas --
       // safe to call again on every subsequent src's own load.
-      canvas.width = backingWidth;
-      canvas.height = backingHeight;
+      canvas.width = allocation.pixelWidth;
+      canvas.height = allocation.pixelHeight;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.scale(backingWidth / Math.max(1, width), backingHeight / Math.max(1, height));
+        ctx.scale(allocation.scaleX, allocation.scaleY);
         ctx.drawImage(img, 0, 0, width, height);
       }
     }
-    this.emit('lr-load');
+    this.emit('lr-load', null);
   };
 
-  private onImageError = (): void => {
+  private onImageError = (event: Event): void => {
+    if (!this.isConnected || event.currentTarget !== this.imageEl) return;
     this.hasLoaded = false;
     this.hasError = true;
-    this.emit('lr-error');
+    this.emit('lr-error', null);
   };
 
   private onToggleClick = (): void => {
@@ -299,12 +313,12 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
 
   private onControlFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
+    this.emit('lr-focus', null);
   };
 
   private onControlBlur = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
+    this.emit('lr-blur', null);
   };
 
   override render(): TemplateResult {
@@ -329,8 +343,8 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
         />
         <canvas
           part="canvas"
-          role="img"
-          aria-label=${alt}
+          role=${alt ? 'img' : 'presentation'}
+          aria-label=${alt || nothing}
           tabindex="-1"
           aria-hidden=${frozen ? nothing : 'true'}
         ></canvas>

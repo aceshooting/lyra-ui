@@ -1,7 +1,14 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './stack-trace.js';
 import type { LyraStackTrace } from './stack-trace.js';
-import { styles } from './stack-trace.styles.js';
+
+async function settleClipboard(el: LyraStackTrace): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  await el.updateComplete;
+}
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const trace = [
   'TypeError: Cannot read properties of undefined',
@@ -147,14 +154,67 @@ describe('lr-stack-trace', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="frame"]').length).to.equal(0);
   });
 
-  it('copy button emits lr-copy with the raw trace text', async () => {
-    const el = (await fixture(html`<lr-stack-trace .trace=${trace} copyable></lr-stack-trace>`)) as LyraStackTrace;
+  it('bounds untrusted raw trace rendering and exposes localized truncation', async () => {
+    const el = (await fixture(html`<lr-stack-trace
+      .trace=${'x'.repeat(300_000)}
+      .strings=${{ stackTraceLimit: 'Trace shortened' }}
+    ></lr-stack-trace>`)) as LyraStackTrace;
     await el.updateComplete;
-    const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
-    const listener = oneEvent(el, 'lr-copy');
-    button.click();
-    const event = (await listener) as CustomEvent<{ text: string }>;
-    expect(event.detail.text).to.equal(trace);
+
+    expect(el.shadowRoot!.querySelector('[part="raw"]')!.textContent!.length).to.be.lessThan(300_000);
+    expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('Trace shortened');
+  });
+
+  it('owns an independent default internal-pattern array per instance', async () => {
+    const first = (await fixture(html`<lr-stack-trace></lr-stack-trace>`)) as LyraStackTrace;
+    const second = (await fixture(html`<lr-stack-trace></lr-stack-trace>`)) as LyraStackTrace;
+    expect(first.internalPatterns).not.to.equal(second.internalPatterns);
+  });
+
+  it('copy button emits lr-copy with the raw trace text', async () => {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.resolve() },
+    });
+    try {
+      const el = (await fixture(html`<lr-stack-trace .trace=${trace} copyable></lr-stack-trace>`)) as LyraStackTrace;
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+      const listener = oneEvent(el, 'lr-copy');
+      button.click();
+      const event = (await listener) as CustomEvent<{ ok: true; text: string }>;
+      expect(event.detail).to.deep.equal({ ok: true, text: trace });
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('renders failure instead of copied and emits the typed clipboard error outcome', async () => {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const failure = new Error('write failed');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.reject(failure) },
+    });
+    try {
+      const el = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+      const genericError = oneEvent(el, 'lr-error');
+      const detailedError = oneEvent(el, 'lr-copy-error');
+      button.click();
+      const [, detailedEvent] = await Promise.all([genericError, detailedError]) as [
+        CustomEvent<undefined>,
+        CustomEvent<{ ok: false; text: string; reason: string; error: unknown }>,
+      ];
+      await el.updateComplete;
+      expect(detailedEvent.detail).to.deep.equal({ ok: false, text: trace, reason: 'failed', error: failure });
+      expect(button.textContent!.trim()).to.equal('Copy failed');
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
   });
 
   it('uses the adopted owner clipboard and does not arm ambient resources when ownerless', async () => {
@@ -216,11 +276,21 @@ describe('lr-stack-trace', () => {
     const frameWindow = frame.contentWindow!;
     const originalSetTimeout = frameWindow.setTimeout;
     const originalClearTimeout = frameWindow.clearTimeout;
+    const ambientClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const frameClipboard = Object.getOwnPropertyDescriptor(frameWindow.navigator, 'clipboard');
     let queued: (() => void) | undefined;
     const cleared: number[] = [];
     let el: LyraStackTrace | undefined;
 
     try {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: () => Promise.resolve() },
+      });
+      Object.defineProperty(frameWindow.navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: () => Promise.resolve() },
+      });
       frameWindow.setTimeout = ((handler: TimerHandler) => {
         if (typeof handler === 'function') queued = handler as () => void;
         return 994;
@@ -233,20 +303,24 @@ describe('lr-stack-trace', () => {
       await el.updateComplete;
       const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
       button.click();
-      await el.updateComplete;
+      await settleClipboard(el);
       expect(queued).to.be.a('function');
 
       document.body.append(document.adoptNode(el));
       await el.updateComplete;
       expect(cleared).to.deep.equal([994]);
       button.click();
-      await el.updateComplete;
+      await settleClipboard(el);
       queued!();
       await el.updateComplete;
       expect(button.textContent?.trim(), 'the retired owner callback must not clear new feedback').to.equal('Copied!');
     } finally {
       frameWindow.setTimeout = originalSetTimeout;
       frameWindow.clearTimeout = originalClearTimeout;
+      if (ambientClipboard) Object.defineProperty(navigator, 'clipboard', ambientClipboard);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+      if (frameClipboard) Object.defineProperty(frameWindow.navigator, 'clipboard', frameClipboard);
+      else Reflect.deleteProperty(frameWindow.navigator, 'clipboard');
       el?.remove();
       frame.remove();
     }
@@ -332,22 +406,47 @@ describe('lr-stack-trace chrome', () => {
 
   it('keeps the copy button and frame buttons visibly interactive under plain (their chrome is their own)', async () => {
     const el = (await fixture(
-      html`<lr-stack-trace frame="plain" .trace=${trace}></lr-stack-trace>`,
+      html`<lr-stack-trace
+        frame="plain"
+        style="--lr-stack-trace-interactive-color: rgb(1, 2, 3)"
+        .trace=${trace}
+      ></lr-stack-trace>`,
     )) as LyraStackTrace;
     const copy = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
     expect((copy) != null).to.equal(true);
     const s = getComputedStyle(copy);
     expect(s.borderTopWidth).to.equal('1px');
     expect(s.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include(
-      "button[part='frame']:hover, button[part='frame']:focus-visible { color: var(--lr-stack-trace-interactive-color, var(--lr-color-brand)); }",
-    );
+    const frame = el.shadowRoot!.querySelector('button[part="frame"]') as HTMLButtonElement;
+    const rect = frame.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => getComputedStyle(frame).color === 'rgb(1, 2, 3)');
+      expect(getComputedStyle(frame).color).to.equal('rgb(1, 2, 3)');
+    } finally {
+      await resetMouse();
+    }
   });
 
-  it('gives internal-toggle a hover state', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='internal-toggle'\]:hover/);
+  it('paints a real internal-toggle hover state', async () => {
+    const el = await fixture<LyraStackTrace>(html`
+      <lr-stack-trace style="--lr-color-brand-quiet: rgb(4, 5, 6)" .trace=${trace}></lr-stack-trace>
+    `);
+    const toggle = el.shadowRoot!.querySelector('[part="internal-toggle"]') as HTMLButtonElement;
+    const rect = toggle.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => getComputedStyle(toggle).backgroundColor === 'rgb(4, 5, 6)');
+      expect(getComputedStyle(toggle).backgroundColor).to.equal('rgb(4, 5, 6)');
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('is accessible with a parsed trace under frame="plain"', async () => {

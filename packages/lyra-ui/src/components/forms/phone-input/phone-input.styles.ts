@@ -269,6 +269,24 @@ export const styles = css`
     color: var(--lr-color-danger);
   }
 
+  @media (forced-colors: active) {
+    /* Background tint is flattened to Canvas in forced-colors mode. Keep the invisible select's
+       hover/press target distinguishable with a geometry cue and system color. */
+    [part='country-select']:not(:disabled):hover + [part='country-trigger'] {
+      outline-color: Highlight;
+      outline-style: dashed;
+      outline-width: var(--lr-border-width-thin);
+      outline-offset: calc(-1 * var(--lr-border-width-thin));
+    }
+
+    [part='country-select']:not(:disabled):active + [part='country-trigger'] {
+      outline-color: Highlight;
+      outline-style: solid;
+      outline-width: var(--lr-border-width-thick);
+      outline-offset: calc(-1 * var(--lr-border-width-thick));
+    }
+  }
+
   [part='form-control'],
   [part='form-control-label'],
   [part='hint'],

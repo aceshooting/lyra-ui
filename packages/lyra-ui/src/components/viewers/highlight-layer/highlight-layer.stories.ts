@@ -10,7 +10,7 @@ const meta: Meta = {
   parameters: {
     docs: {
       description: {
-        component: 'Paints highlight rectangles (percent-of-box coordinates) over positioned content.',
+        component: 'Paints highlight rectangles over positioned content; noninteractive mode is an aria-hidden pure-paint overlay.',
       },
     },
   },

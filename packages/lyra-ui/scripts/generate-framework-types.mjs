@@ -15,6 +15,45 @@ const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const manifestFile = path.join(packageDir, 'custom-elements.json');
 const byName = (a, b) => a.localeCompare(b);
 const identifierPattern = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+const builtInTypeNames = new Set([
+  'Array',
+  'BigInt',
+  'Boolean',
+  'Date',
+  'Element',
+  'Event',
+  'HTMLElement',
+  'HTMLFormElement',
+  'Map',
+  'Node',
+  'Number',
+  'Object',
+  'Promise',
+  'Readonly',
+  'ReadonlyArray',
+  'ReadonlyMap',
+  'ReadonlySet',
+  'Record',
+  'Set',
+  'String',
+  'Symbol',
+  'WeakMap',
+  'WeakSet',
+  'any',
+  'bigint',
+  'boolean',
+  'false',
+  'never',
+  'null',
+  'number',
+  'object',
+  'string',
+  'symbol',
+  'true',
+  'undefined',
+  'unknown',
+  'void',
+]);
 
 function quoted(value) {
   return `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
@@ -37,6 +76,23 @@ function moduleSpecifier(modulePath) {
     );
   }
   return `./${modulePath.slice('src/'.length).replace(/\.ts$/, '.js')}`;
+}
+
+function normalizeTypeText(type) {
+  if (typeof type?.text !== 'string') return undefined;
+  const text = type.text.replaceAll(/\s+/g, ' ').trim().replace(/^\|\s*/, '');
+  return text || undefined;
+}
+
+function referencedTypeSymbols(typeText) {
+  if (!typeText) return [];
+  return [
+    ...new Set(
+      (typeText.match(/[A-Za-z_$][A-Za-z0-9_$]*/g) ?? []).filter(
+        (name) => /^[A-Z_$]/.test(name) && !builtInTypeNames.has(name),
+      ),
+    ),
+  ].sort(byName);
 }
 
 function collectElements(manifest) {
@@ -79,6 +135,20 @@ function collectElements(manifest) {
       );
       const propertyNames = [...new Set(members.map((member) => member.name))].sort(byName);
       const propertySet = new Set(propertyNames);
+      const propertyOverrides = members
+        .filter((member) => member.lyraReadType !== undefined)
+        .map((member) => {
+          const readType = normalizeTypeText(member.lyraReadType);
+          const writeType = normalizeTypeText(member.type);
+          if (!readType || !writeType) {
+            throw new Error(
+              `${tagName}.${member.name}: asymmetric accessor metadata requires read and write types`,
+            );
+          }
+          return { name: member.name, readType, writeType };
+        })
+        .filter(({ readType, writeType }) => readType !== writeType)
+        .sort((a, b) => a.name.localeCompare(b.name));
 
       const memberByName = new Map(
         (declaration.members ?? [])
@@ -103,6 +173,7 @@ function collectElements(manifest) {
           name: attribute.name,
           fieldName:
             typeof fieldName === 'string' && memberByName.has(fieldName) ? fieldName : undefined,
+          typeText: normalizeTypeText(attribute.type),
         });
       }
       aliases.sort((a, b) => a.name.localeCompare(b.name));
@@ -116,6 +187,7 @@ function collectElements(manifest) {
             ? declaration.superclass.name
             : undefined,
         propertyNames,
+        propertyOverrides,
         aliases,
         eventNames: [...new Set((declaration.events ?? []).map((event) => event.name).filter(Boolean))].sort(
           byName,
@@ -169,6 +241,12 @@ function imports(elements, frameworkImport) {
       eventSymbols.add(element.eventMapName);
       symbolsBySpecifier.set(element.eventMapSpecifier, eventSymbols);
     }
+    for (const alias of element.aliases) {
+      for (const symbol of referencedTypeSymbols(alias.typeText)) classSymbols.add(symbol);
+    }
+    for (const override of element.propertyOverrides) {
+      for (const symbol of referencedTypeSymbols(override.writeType)) classSymbols.add(symbol);
+    }
   }
   return [
     frameworkImport,
@@ -187,10 +265,25 @@ function aliasType(element, indent) {
   const memberIndent = `${indent}  `;
   return [
     '{',
-    ...element.aliases.map(({ name, fieldName }) =>
+    ...element.aliases.map(({ name, fieldName, typeText }) =>
       fieldName
         ? `${memberIndent}${quoted(name)}?: ${element.className}[${quoted(fieldName)}];`
-        : `${memberIndent}${quoted(name)}?: LyraUnknownAttributeValue;`,
+        : typeText
+          ? `${memberIndent}${quoted(name)}?: LyraAttributeValue<${typeText}>;`
+          : `${memberIndent}${quoted(name)}?: LyraUnknownAttributeValue;`,
+    ),
+    `${indent}}`,
+  ].join('\n');
+}
+
+function propertyOverrideType(element, indent) {
+  if (element.propertyOverrides.length === 0) return '{}';
+  const memberIndent = `${indent}  `;
+  return [
+    '{',
+    ...element.propertyOverrides.map(
+      ({ name, writeType }) =>
+        `${memberIndent}${identifierPattern.test(name) ? name : quoted(name)}: ${writeType};`,
     ),
     `${indent}}`,
   ].join('\n');
@@ -208,6 +301,7 @@ function elementType(element, frameworkName) {
     `export type ${typeName} = ${helper}<`,
     `  ${element.className},`,
     `${union(element.propertyNames, '  ')},`,
+    `  ${propertyOverrideType(element, '  ')},`,
     `  ${element.eventMapName ?? '{}'},`,
     `${union(element.eventNames, '  ')},`,
     `${union(element.cssNames, '  ')},`,
@@ -228,6 +322,19 @@ function generatedHeader(kind) {
 function sharedEventTypes() {
   return [
     'export type LyraUnknownAttributeValue = string | number | boolean | null | undefined;',
+    '',
+    'type LyraAttributePrimitive<Value> = Value extends boolean',
+    "  ? Value | '' | 'true' | 'false'",
+    '  : Value extends number',
+    '    ? Value | `${Value}`',
+    '    : Value extends string',
+    '      ? Value',
+    '      : LyraUnknownAttributeValue;',
+    '',
+    '/** Markup-compatible values for a typed attribute alias that has no public class field. */',
+    'export type LyraAttributeValue<Value> =',
+    '  | LyraAttributePrimitive<Exclude<Value, null | undefined>>',
+    '  | Extract<Value, null | undefined>;',
     '',
     'type LyraFallbackEvent<Name extends string> = Name extends keyof LyraGlobalEventMap',
     '  ? LyraGlobalEventMap[Name]',
@@ -283,6 +390,7 @@ type LyraReactEventProps<
 type LyraReactElementProps<
   ElementType extends HTMLElement,
   PropertyNames extends keyof ElementType,
+  PropertyOverrides extends object,
   ElementEvents extends object,
   EventNames extends string,
   CSSNames extends string,
@@ -292,7 +400,7 @@ type LyraReactElementProps<
   PropertyNames | keyof AttributeAliases | keyof LyraReactEventProps<ElementType, ElementEvents, EventNames> | 'style'
 > &
   React.RefAttributes<ElementType> &
-  Partial<Pick<ElementType, PropertyNames>> &
+  Partial<Omit<Pick<ElementType, PropertyNames>, keyof PropertyOverrides> & PropertyOverrides> &
   AttributeAliases &
   LyraReactEventProps<ElementType, ElementEvents, EventNames> & {
     style?: React.CSSProperties & LyraCSSCustomProperties<CSSNames>;
@@ -339,6 +447,7 @@ type LyraVueEmit<
 type LyraVueCustomElement<
   ElementType extends HTMLElement,
   PropertyNames extends keyof ElementType,
+  PropertyOverrides extends object,
   ElementEvents extends object,
   EventNames extends string,
   CSSNames extends string,
@@ -346,7 +455,7 @@ type LyraVueCustomElement<
 > = new () => ElementType & {
   /** @deprecated Template prop metadata only; this property does not exist at runtime. */
   $props: Omit<HTMLAttributes, PropertyNames | keyof AttributeAliases | 'style'> &
-    Partial<Pick<ElementType, PropertyNames>> &
+    Partial<Omit<Pick<ElementType, PropertyNames>, keyof PropertyOverrides> & PropertyOverrides> &
     AttributeAliases &
     PublicProps & {
       style?: HTMLAttributes['style'] | LyraCSSCustomProperties<CSSNames>;
@@ -401,6 +510,7 @@ type LyraSvelteStyleProps<CSSNames extends string> = {
 type LyraSvelteElementProps<
   ElementType extends HTMLElement,
   PropertyNames extends keyof ElementType,
+  PropertyOverrides extends object,
   ElementEvents extends object,
   EventNames extends string,
   CSSNames extends string,
@@ -409,7 +519,7 @@ type LyraSvelteElementProps<
   HTMLAttributes<ElementType>,
   PropertyNames | keyof AttributeAliases | keyof LyraSvelteEventProps<ElementType, ElementEvents, EventNames>
 > &
-  Partial<Pick<ElementType, PropertyNames>> &
+  Partial<Omit<Pick<ElementType, PropertyNames>, keyof PropertyOverrides> & PropertyOverrides> &
   AttributeAliases &
   LyraSvelteEventProps<ElementType, ElementEvents, EventNames> &
   LyraSvelteStyleProps<CSSNames>;

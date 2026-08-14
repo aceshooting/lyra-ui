@@ -7,13 +7,13 @@ function entryEls(el: LyraTranscriptFeed): HTMLElement[] {
   return [...el.shadowRoot!.querySelectorAll('[part~="entry"]')] as HTMLElement[];
 }
 
-it('defaults to entries=[], follow=true, show-timestamps=false, max-rendered-entries=0', async () => {
+it('defaults to entries=[], follow=true, show-timestamps=false, max-rendered-entries=500', async () => {
   const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
   expect(el.entries).to.deep.equal([]);
   expect(el.follow).to.be.true;
   expect(el.hasAttribute('follow')).to.be.true;
   expect(el.showTimestamps).to.be.false;
-  expect(el.maxRenderedEntries).to.equal(0);
+  expect(el.maxRenderedEntries).to.equal(500);
 });
 
 it('never scrolls horizontally -- overflow-y:auto alone lets the x axis compute to auto too, which can show a phantom scrollbar', async () => {
@@ -127,12 +127,12 @@ describe('timestamps', () => {
     expect((el.shadowRoot!.querySelector('[part="timestamp"]')) === null).to.be.true;
 
     el.showTimestamps = true;
-    el.formatTimestamp = (ms) => `t=${ms}`;
+    el.formatTimestamp = (date) => `t=${date.getTime()}`;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="timestamp"]')!.textContent).to.equal('t=1700000000000');
   });
 
-  it('omits non-finite timestamps without dropping their transcript entries', async () => {
+  it('omits non-finite and out-of-TimeClip timestamps without dropping transcript entries', async () => {
     const el = (await fixture(
       html`<lr-transcript-feed show-timestamps></lr-transcript-feed>`,
     )) as LyraTranscriptFeed;
@@ -140,10 +140,11 @@ describe('timestamps', () => {
       { id: 'valid', text: 'valid timestamp', timestamp: Date.UTC(2026, 0, 1, 12, 34) },
       { id: 'nan', text: 'not a number', timestamp: Number.NaN },
       { id: 'infinity', text: 'infinite', timestamp: Number.POSITIVE_INFINITY },
+      { id: 'too-large', text: 'outside TimeClip', timestamp: Number.MAX_VALUE },
     ];
     await el.updateComplete;
 
-    expect(entryEls(el)).to.have.length(3);
+    expect(entryEls(el)).to.have.length(4);
     expect(el.shadowRoot!.querySelectorAll('[part="timestamp"]')).to.have.length(1);
   });
 });
@@ -161,7 +162,7 @@ it('max-rendered-entries caps the DOM row count to the newest N without mutating
   expect(el.shadowRoot!.querySelector('[part="log"]')!.textContent).to.contain('three');
 });
 
-it('normalizes a NaN max-rendered-entries to 0 ("render all") instead of leaving it unclamped', async () => {
+it('normalizes a NaN max-rendered-entries to the bounded default', async () => {
   const el = (await fixture(
     html`<lr-transcript-feed max-rendered-entries="not-a-number"></lr-transcript-feed>`,
   )) as LyraTranscriptFeed;
@@ -173,6 +174,25 @@ it('normalizes a NaN max-rendered-entries to 0 ("render all") instead of leaving
   ];
   await el.updateComplete;
   expect(entryEls(el).length).to.equal(3);
+});
+
+it('retains zero as an explicit full-history rendering opt-in', async () => {
+  const el = (await fixture(html`<lr-transcript-feed max-rendered-entries="0"></lr-transcript-feed>`)) as LyraTranscriptFeed;
+  el.entries = Array.from({ length: 501 }, (_, index) => ({ id: String(index), text: String(index) }));
+  await el.updateComplete;
+  expect(entryEls(el)).to.have.lengthOf(501);
+});
+
+it('uses first-wins identity and rejects empty transcript ids from rendering', async () => {
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
+  el.entries = [
+    { id: 'same', text: 'first' },
+    { id: 'same', text: 'second' },
+    { id: '', text: 'missing identity' },
+  ];
+  await el.updateComplete;
+  expect(entryEls(el)).to.have.lengthOf(1);
+  expect(el.shadowRoot!.querySelector('[part="text"]')!.textContent).to.equal('first');
 });
 
 describe('follow / stick-to-bottom contract', () => {
@@ -217,7 +237,7 @@ describe('follow / stick-to-bottom contract', () => {
     expect(base.scrollHeight - base.scrollTop - base.clientHeight).to.be.lessThan(2);
   });
 
-  it('scrollToBottom is a plain instant scroll and does not re-engage follow', async () => {
+  it('scrollToBottom re-engages follow and performs a plain instant scroll', async () => {
     const el = (await fixture(
       html`<lr-transcript-feed follow="false" style="block-size: 80px"></lr-transcript-feed>`,
     )) as LyraTranscriptFeed;
@@ -229,10 +249,11 @@ describe('follow / stick-to-bottom contract', () => {
     el.addEventListener('lr-follow-change', () => { followChanges += 1; });
 
     el.scrollToBottom();
+    await el.updateComplete;
 
     expect(base.scrollHeight - base.scrollTop - base.clientHeight).to.be.lessThan(2);
-    expect(el.follow).to.be.false;
-    expect(followChanges).to.equal(0);
+    expect(el.follow).to.be.true;
+    expect(followChanges).to.equal(1);
   });
 
   it('emits lr-follow-change for a direct programmatic assignment too, but never for the value already in effect on first render', async () => {
@@ -401,6 +422,18 @@ it('announces a caption finalizing through the shared light-DOM live region, exa
   await el.updateComplete;
   expect(sinkMessages()).to.deep.equal(['final text']);
 
+  el.entries = [{ id: 'turn-1', speaker: 'You', text: 'revised', interim: true }];
+  await el.updateComplete;
+  el.entries = [{ id: 'turn-1', speaker: 'You', text: 're-finalized' }];
+  await el.updateComplete;
+  expect(sinkMessages(), 'final/interim/final keeps monotonic per-session history').to.deep.equal(['final text']);
+
+  el.entries = [];
+  await el.updateComplete;
+  el.entries = [{ id: 'turn-1', text: 're-added' }];
+  await el.updateComplete;
+  expect(sinkMessages(), 'removing and re-adding the same id does not replay it').to.deep.equal(['final text']);
+
   // A later, unrelated update must not re-announce an entry already spoken.
   el.entries = [
     { id: 'turn-1', speaker: 'You', text: 'final text' },
@@ -408,6 +441,32 @@ it('announces a caption finalizing through the shared light-DOM live region, exa
   ];
   await el.updateComplete;
   expect(sinkMessages()).to.deep.equal(['final text']);
+});
+
+it('resets announcement history only when sessionId changes and baselines the new session', async () => {
+  const el = (await fixture(html`<lr-transcript-feed session-id="session-a"></lr-transcript-feed>`)) as LyraTranscriptFeed;
+  el.entries = [{ id: 'turn-1', text: 'session A' }];
+  await el.updateComplete;
+  expect(sinkMessages()).to.deep.equal(['session A']);
+
+  el.sessionId = 'session-b';
+  el.entries = [{ id: 'turn-1', text: 'existing session B' }];
+  await el.updateComplete;
+  expect(sinkMessages(), 'existing new-session transcript is a silent baseline').to.deep.equal(['session A']);
+
+  el.entries = [
+    { id: 'turn-1', text: 'existing session B' },
+    { id: 'turn-2', text: 'new in session B' },
+  ];
+  await el.updateComplete;
+  expect(sinkMessages()).to.deep.equal(['session A', 'new in session B']);
+});
+
+it('preserves an explicitly empty log label override by presence', async () => {
+  const el = (await fixture(html`
+    <lr-transcript-feed aria-label="" .entries=${[{ id: '1', text: 'hi' }]}></lr-transcript-feed>
+  `)) as LyraTranscriptFeed;
+  expect(el.shadowRoot!.querySelector('[part="log"]')!.getAttribute('aria-label')).to.equal('');
 });
 
 it('never announces the entries it was mounted with -- only captions that finalize afterwards', async () => {

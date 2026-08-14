@@ -244,7 +244,22 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   @property() autocomplete = 'off';
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
-  @property({ type: Boolean, reflect: true }) open = false;
+  /** Whether the model list is open. Effectively disabled controls reject direct reopen attempts,
+   * including a synchronous fieldset cascade. */
+  @property({ type: Boolean, reflect: true })
+  get open(): boolean { return this._open; }
+  set open(next: boolean) {
+    const old = this._open;
+    const liveDisabled = this.effectiveDisabled ||
+      (typeof this.matches === 'function' && this.matches(':disabled'));
+    this._open = Boolean(next) && !liveDisabled;
+    if (this._open === old) {
+      if (next && !this._open && this.hasAttribute('open')) this.removeAttribute('open');
+      return;
+    }
+    if (!this._open) this.activeIndex = -1;
+    this.requestUpdate('open', old);
+  }
   /** Visual size, on the library-wide six-step ladder (`2xs`–`xl`). `small`/`medium`/`large` are
    *  accepted spellings of `s`/`m`/`l` and render identically, so markup migrated from Web Awesome
    *  or Shoelace needs no attribute rewrite. */
@@ -272,6 +287,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   private pointerListenerDocument?: Document;
   private pointerListener?: (event: PointerEvent) => void;
   private _value = '';
+  private _open = false;
   private _fieldsetDisabled = false;
   private _name = '';
   private _disabled = false;
@@ -484,7 +500,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.open = false;
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.modeFocusRepair = undefined;
     this.focusedModeRepair = undefined;
     this.focusReturnTarget = undefined;
@@ -1028,7 +1045,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         aria-selected=${selected ? 'true' : 'false'}
         ?data-active=${id === activeId}
       >
-        ${entry.icon ? html`<span part="option-icon" aria-hidden="true">${entry.icon}</span>` : nothing}
+        ${entry.icon ? html`<span part="option-icon" aria-hidden="true" inert>${entry.icon}</span>` : nothing}
         <span part="option-label">${entry.label}</span>
         ${entry.synthetic ? html`<span part="option-badge">${this.localize('notInCatalog')}</span>` : ''}
       </div>`;
@@ -1110,7 +1127,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         <span class="trigger-label" ?data-placeholder=${!hasValue}
           >${hasValue ? this.labelFor(this._value) : this.placeholder}</span
         >
-        <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>
+        <span part="expand-icon" aria-hidden="true" inert>${chevronIcon()}</span>
       </button>
       ${this.renderListbox(rows, activeId, this.localize('modelSelectNoModels'))}
       ${this.renderHintError(hasError, hasHint)}
@@ -1156,7 +1173,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
           @focus=${this.onInputFocus}
           @blur=${this.onInputBlur}
         />
-        <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>
+        <span part="expand-icon" aria-hidden="true" inert>${chevronIcon()}</span>
       </div>
       ${this.renderListbox(rows, activeId, this.localize('noMatches'))}
       ${this.renderHintError(hasError, hasHint)}

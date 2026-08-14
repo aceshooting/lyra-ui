@@ -158,6 +158,110 @@ describe("<lr-reorder-list>", () => {
     expect(middle.pending).to.be.true;
   });
 
+  it('projects held state as busy, disables every move action, and announces both outcomes', async () => {
+    const el = await fixture<LyraReorderList>(threeItems);
+    el.strings = {
+      reorderMovePending: 'Move held',
+      reorderMoveCancelled: 'Move discarded',
+    };
+    await el.updateComplete;
+    el.addEventListener('lr-reorder', (event) => event.preventDefault());
+
+    (itemsOf(el)[1].shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
+    await Promise.all([el.updateComplete, ...itemsOf(el).map((item) => item.updateComplete)]);
+
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('aria-busy')).to.equal('true');
+    expect(itemsOf(el)[1].pending).to.equal(true);
+    expect(
+      itemsOf(el).every((item) =>
+        [...item.shadowRoot!.querySelectorAll('button')].every((button) => button.disabled),
+      ),
+    ).to.equal(true);
+    const region = el.shadowRoot!.querySelector('lr-live-region') as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    await region.updateComplete;
+    expect(region.shadowRoot!.textContent).to.contain('Move held');
+
+    el.revertPendingMove();
+    await Promise.all([el.updateComplete, region.updateComplete]);
+    expect(base.getAttribute('aria-busy')).to.equal('false');
+    expect(region.shadowRoot!.textContent).to.contain('Move discarded');
+  });
+
+  it('honors synchronous finalize/revert calls made while the cancelable request dispatches', async () => {
+    const finalized = await fixture<LyraReorderList>(threeItems);
+    finalized.addEventListener('lr-reorder', (event) => {
+      event.preventDefault();
+      finalized.finalizePendingMove();
+    }, { once: true });
+    (itemsOf(finalized)[1].shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
+    expect(itemsOf(finalized).map((item) => item.value)).to.deep.equal(['b', 'a', 'c']);
+    expect(itemsOf(finalized)[0].pending).to.equal(false);
+
+    const reverted = await fixture<LyraReorderList>(threeItems);
+    reverted.addEventListener('lr-reorder', (event) => {
+      event.preventDefault();
+      reverted.revertPendingMove();
+    }, { once: true });
+    (itemsOf(reverted)[1].shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
+    expect(itemsOf(reverted).map((item) => item.value)).to.deep.equal(['a', 'b', 'c']);
+    expect(itemsOf(reverted)[1].pending).to.equal(false);
+  });
+
+  it('aborts an accepted proposal after synchronous listener removal, reorder, or disabling', async () => {
+    for (const mutation of ['remove', 'reorder', 'disable-mover', 'disable-target'] as const) {
+      const el = await fixture<LyraReorderList>(threeItems);
+      const before = itemsOf(el);
+      const mover = before[1];
+      const target = before[0];
+      el.addEventListener('lr-reorder', () => {
+        if (mutation === 'remove') mover.remove();
+        if (mutation === 'reorder') el.append(target);
+        if (mutation === 'disable-mover') mover.disabled = true;
+        if (mutation === 'disable-target') target.disabled = true;
+      }, { once: true });
+
+      (mover.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
+
+      if (mutation === 'remove') {
+        expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['a', 'c']);
+      } else if (mutation === 'reorder') {
+        expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['b', 'c', 'a']);
+      } else {
+        expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['a', 'b', 'c']);
+      }
+      expect(el.contains(mover)).to.equal(mutation !== 'remove');
+    }
+  });
+
+  it('requires unique nonempty stable values and emits immutable identity snapshots', async () => {
+    const el = await fixture<LyraReorderList>(html`
+      <lr-reorder-list>
+        <lr-reorder-item value="a">A</lr-reorder-item>
+        <lr-reorder-item>Missing</lr-reorder-item>
+        <lr-reorder-item value="a">Duplicate</lr-reorder-item>
+        <lr-reorder-item value="b">B</lr-reorder-item>
+      </lr-reorder-list>
+    `);
+    const all = itemsOf(el);
+    await Promise.all(all.map((item) => item.updateComplete));
+    expect(
+      [all[1], all[2]].every((item) =>
+        [...item.shadowRoot!.querySelectorAll('button')].every((button) => button.disabled),
+      ),
+    ).to.equal(true);
+    let detail: { readonly order: readonly string[] } | undefined;
+    el.addEventListener('lr-reorder', (event) => {
+      detail = event.detail;
+    }, { once: true });
+    (all[3].shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
+    expect(detail?.order).to.deep.equal(['b', 'a']);
+    expect(Object.isFrozen(detail)).to.equal(true);
+    expect(Object.isFrozen(detail?.order)).to.equal(true);
+  });
+
   it("finalizePendingMove() applies a held move", async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     const middle = itemsOf(el)[1];
@@ -331,6 +435,39 @@ describe("<lr-reorder-list>", () => {
       fromIndex: 1,
       toIndex: 2,
     });
+  });
+
+  it('does not consume no-op or nested-control modifier arrows', async () => {
+    const el = await fixture<LyraReorderList>(html`
+      <lr-reorder-list>
+        <lr-reorder-item value="a"><input aria-label="Edit A" /></lr-reorder-item>
+        <lr-reorder-item value="b">B</lr-reorder-item>
+      </lr-reorder-list>
+    `);
+    const input = el.querySelector('input')!;
+    const nested = new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      ctrlKey: true,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    input.dispatchEvent(nested);
+    expect(nested.defaultPrevented).to.equal(false);
+    expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['a', 'b']);
+
+    const boundary = itemsOf(el)[0].shadowRoot!.querySelector(
+      '[part="move-up-button"]',
+    ) as HTMLButtonElement;
+    const noOp = new KeyboardEvent('keydown', {
+      key: 'ArrowUp',
+      ctrlKey: true,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    boundary.dispatchEvent(noOp);
+    expect(noOp.defaultPrevented).to.equal(false);
   });
 
   it("restores focus to a still-enabled button after the move", async () => {

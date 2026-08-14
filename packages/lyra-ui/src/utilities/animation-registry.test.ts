@@ -3,10 +3,10 @@ import {
   getAnimation,
   setAnimation,
   setDefaultAnimation,
-  type ElementAnimation,
+  type LyraElementAnimation,
 } from './animation-registry.js';
 
-function animation(opacity: number, options: KeyframeAnimationOptions = {}): ElementAnimation {
+function animation(opacity: number, options: KeyframeAnimationOptions = {}): LyraElementAnimation {
   return { keyframes: [{ opacity: 0 }, { opacity }], options };
 }
 
@@ -19,16 +19,23 @@ function stubReducedMotion(matches: boolean): () => void {
   };
 }
 
-it('resolves a global default defensively and cleanup removes exactly that registration', () => {
+it('snapshots a global default and resolves defensive copies before exact cleanup', () => {
   const el = document.createElement('div');
-  const cleanup = setDefaultAnimation('test.global', animation(0.75, { duration: 125 }));
+  const configured = animation(0.75, { duration: 125 });
+  const cleanup = setDefaultAnimation('test.global', configured);
   try {
     const first = getAnimation(el, 'test.global', { dir: 'ltr' });
     expect(first.keyframes[1]?.opacity).to.equal(0.75);
     expect(first.options.duration).to.equal(125);
 
-    first.keyframes[1]!.opacity = 0.1;
-    first.options.duration = 999;
+    (configured.keyframes as Keyframe[])[1]!.opacity = 0.2;
+    (configured.options as KeyframeAnimationOptions).duration = 300;
+    expect(Object.isFrozen(first)).to.be.true;
+    expect(Object.isFrozen(first.keyframes)).to.be.true;
+    expect(Object.isFrozen(first.keyframes[1]!)).to.be.true;
+    expect(Object.isFrozen(first.options)).to.be.true;
+    expect(Reflect.set(first.keyframes[1]!, 'opacity', 0.1)).to.be.false;
+    expect(Reflect.set(first.options, 'duration', 999)).to.be.false;
     const second = getAnimation(el, 'test.global', { dir: 'ltr' });
     expect(second.keyframes[1]?.opacity).to.equal(0.75);
     expect(second.options.duration).to.equal(125);
@@ -87,7 +94,7 @@ it('selects rtlKeyframes live and merges an override with the component fallback
     keyframes: [{ transform: 'translateX(-1px)' }, { transform: 'translateX(0)' }],
     rtlKeyframes: [{ transform: 'translateX(1px)' }, { transform: 'translateX(0)' }],
   });
-  const fallback: ElementAnimation = {
+  const fallback: LyraElementAnimation = {
     keyframes: [{ opacity: 0 }, { opacity: 1 }],
     options: { duration: 180, easing: 'ease-out', fill: 'both' },
   };
@@ -133,9 +140,12 @@ it('uses an explicit fallback without registering it globally', () => {
 
 it('fails a structurally malformed JavaScript override closed to the caller fallback', () => {
   const el = document.createElement('div');
-  const malformed = { keyframes: undefined } as unknown as ElementAnimation;
-  const cleanup = setAnimation(el, 'test.malformed', malformed);
+  const malformed: { keyframes: Keyframe[] | undefined } = { keyframes: undefined };
+  const cleanup = setAnimation(el, 'test.malformed', malformed as unknown as LyraElementAnimation);
   try {
+    // Registration snapshots validity too: mutating a formerly malformed caller object cannot
+    // turn the inert entry into a live cross-instance override later.
+    malformed.keyframes = [{ opacity: 0 }, { opacity: 1 }];
     const resolved = getAnimation(el, 'test.malformed', {
       dir: 'ltr',
       fallback: animation(0.4, { duration: 70 }),

@@ -186,7 +186,10 @@ export const styles = css`
 
   [part='name'] {
     min-inline-size: var(--lr-size-4rem);
-    padding-inline-start: calc(var(--_lr-trace-tree-depth, 0) * var(--lr-space-l));
+    padding-inline-start: min(
+      calc(var(--_lr-trace-tree-depth, 0) * var(--lr-space-l)),
+      var(--lr-trace-tree-max-indent, var(--lr-size-12rem))
+    );
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -287,6 +290,12 @@ export const styles = css`
 
   [part='empty'] {
     padding: var(--lr-space-l);
+  }
+
+  [part='limit'] {
+    margin: var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
   }
 
   @container (max-inline-size: 479.98px) {

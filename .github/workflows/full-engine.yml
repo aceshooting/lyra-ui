@@ -9,6 +9,7 @@ permissions:
   contents: read
 
 jobs:
+  # release-qualification: matrix
   full-engine:
     name: ${{ matrix.browser }} / shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest

@@ -864,12 +864,34 @@ describe('lr-button', () => {
       expect(anchor.hasAttribute('rel')).to.be.false;
     });
 
-    it('forwards download to the anchor', async () => {
+  it('forwards download to the anchor', async () => {
       const el = (await fixture(
         html`<lr-button href="https://example.com/file.zip" download="file.zip">Go</lr-button>`,
       )) as LyraButton;
       const anchor = el.shadowRoot!.querySelector('a') as HTMLAnchorElement;
       expect(anchor.getAttribute('download')).to.equal('file.zip');
+    });
+
+    it('preserves an empty download attribute and applies the downloadable URL policy', async () => {
+      const downloadable = (await fixture(html`
+        <lr-button href="https://example.com/file.zip" download>Download</lr-button>
+      `)) as LyraButton;
+      const anchor = downloadable.shadowRoot!.querySelector('a') as HTMLAnchorElement;
+      expect(anchor.hasAttribute('download')).to.be.true;
+      expect(anchor.getAttribute('download')).to.equal('');
+
+      const mail = (await fixture(html`
+        <lr-button href="mailto:hello@example.com" download>Email</lr-button>
+      `)) as LyraButton;
+      expect(mail.shadowRoot!.querySelector('a') === null).to.be.true;
+      expect(mail.shadowRoot!.querySelector('button')).to.exist;
+
+      mail.download = undefined;
+      await mail.updateComplete;
+      expect(mail.shadowRoot!.querySelector('a')!.getAttribute('href')).to.equal(
+        'mailto:hello@example.com',
+      );
+      expect(mail.shadowRoot!.querySelector('a')!.hasAttribute('download')).to.be.false;
     });
 
     it('allows a mailto: href (anchor-safe link scheme)', async () => {
@@ -1428,6 +1450,57 @@ describe('lr-button: named submitter and form-submission overrides', () => {
     expect(seen.target).to.equal('_blank');
   });
 
+  it('preserves present-empty native submitter overrides instead of inheriting the form values', async () => {
+    const form = (await fixture(html`
+      <form action="/inherited" method="post" enctype="multipart/form-data" target="inherited">
+        <lr-button
+          type="submit"
+          formaction=""
+          formenctype=""
+          formmethod=""
+          formtarget=""
+        >Submit</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    const seen: Record<string, string | null> = {};
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const submitter = event.submitter as HTMLButtonElement;
+      for (const name of ['formaction', 'formenctype', 'formmethod', 'formtarget']) {
+        seen[name] = submitter.getAttribute(name);
+      }
+    });
+
+    el.click();
+
+    expect(seen).to.deep.equal({
+      formaction: '',
+      formenctype: '',
+      formmethod: '',
+      formtarget: '',
+    });
+  });
+
+  it('distinguishes absent submitter overrides from explicit empty property values', async () => {
+    const form = (await fixture(html`
+      <form><lr-button type="submit">Submit</lr-button></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    const submitters: Array<EventTarget | null> = [];
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitters.push(event.submitter);
+    });
+
+    el.click();
+    el.formTarget = '';
+    el.click();
+
+    expect(submitters[0]).to.equal(null);
+    expect((submitters[1] as HTMLButtonElement).getAttribute('formtarget')).to.equal('');
+  });
+
   it('closes an ancestor dialog with its value through formmethod="dialog"', async () => {
     const dialog = (await fixture(html`
       <dialog>
@@ -1766,30 +1839,21 @@ describe('lr-button — mapped Shoelace and Web Awesome surface', () => {
     expect((el.shadowRoot!.querySelector('[part~="end"]') as HTMLElement).hidden).to.be.false;
   });
 
-  it('maps compatibility form aliases onto the canonical native override properties', async () => {
-    const wrapper = await fixture<HTMLDivElement>(html`
-      <div>
-        <form id="mapped-button-owner"></form>
-        <lr-button
-          form="mapped-button-owner"
-          form-action="/mapped"
-          form-enctype="multipart/form-data"
-          form-method="post"
-          form-no-validate
-          form-target="mapped-result"
-          type="submit"
-        >Submit</lr-button>
-      </div>
-    `);
-    const form = wrapper.querySelector('form')!;
-    const el = wrapper.querySelector('lr-button') as LyraButton;
-
-    expect(el.form === form).to.be.true;
-    expect(el.formAction).to.equal('/mapped');
-    expect(el.formEnctype).to.equal('multipart/form-data');
-    expect(el.formMethod).to.equal('post');
-    expect(el.formNoValidate).to.be.true;
-    expect(el.formTarget).to.equal('mapped-result');
+  it('keeps only canonical native submitter attributes', async () => {
+    const el = (await fixture(html`
+      <lr-button
+        form-action="/legacy"
+        form-enctype="multipart/form-data"
+        form-method="post"
+        form-no-validate
+        form-target="legacy-result"
+      >Submit</lr-button>
+    `)) as LyraButton;
+    expect(el.formAction).to.be.undefined;
+    expect(el.formEnctype).to.be.undefined;
+    expect(el.formMethod).to.be.undefined;
+    expect(el.formNoValidate).to.be.false;
+    expect(el.formTarget).to.be.undefined;
   });
 
   it('exposes synchronous required/custom validity and state restoration without changing submitter semantics', async () => {
@@ -1898,13 +1962,53 @@ it('exposes the native validation surface of its form association', async () => 
   expect([...el.labels].map((node) => (node as Element).id)).to.deep.equal(['send-label']);
 });
 
+it('bars required validity while disabled, loading, or rendered as a link and restores it', async () => {
+  const el = (await fixture(html`
+    <lr-button required value="">Submit</lr-button>
+  `)) as LyraButton;
+  expect(el.validity.valueMissing).to.be.true;
+
+  el.disabled = true;
+  expect(el.validity.valid).to.be.true;
+  el.disabled = false;
+  expect(el.validity.valueMissing).to.be.true;
+
+  el.loading = true;
+  await el.updateComplete;
+  expect(el.validity.valid).to.be.true;
+  el.loading = false;
+  await el.updateComplete;
+  expect(el.validity.valueMissing).to.be.true;
+
+  el.href = 'https://example.com';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('a')).to.exist;
+  expect(el.validity.valid).to.be.true;
+  el.href = undefined;
+  await el.updateComplete;
+  expect(el.validity.valueMissing).to.be.true;
+});
+
+it('retains consumer custom validity while validation is barred and restores it afterward', async () => {
+  const el = (await fixture(html`<lr-button>Submit</lr-button>`)) as LyraButton;
+  el.setCustomValidity('Approval required');
+  expect(el.validity.customError).to.be.true;
+  el.loading = true;
+  await el.updateComplete;
+  expect(el.validity.valid).to.be.true;
+  el.loading = false;
+  await el.updateComplete;
+  expect(el.validity.customError).to.be.true;
+  expect(el.validationMessage).to.equal('Approval required');
+});
+
 it('contains unbroken labels and end adornments in a 320px LTR or RTL allocation', async () => {
   const unbroken = 'LocalizedButtonLabel'.repeat(48);
   const adornment = 'EndAdornment'.repeat(48);
   for (const direction of ['ltr', 'rtl'] as const) {
     const wrapper = await fixture<HTMLElement>(html`
       <div dir=${direction} style="inline-size: 320px; max-inline-size: 320px; overflow: auto">
-        <lr-button style="max-inline-size: 100%">
+        <lr-button>
           ${unbroken}<span slot="end">${adornment}</span>
         </lr-button>
       </div>
@@ -1912,6 +2016,22 @@ it('contains unbroken labels and end adornments in a 320px LTR or RTL allocation
     const el = wrapper.querySelector('lr-button') as LyraButton;
     const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
     expect(wrapper.scrollWidth, `${direction} wrapper scroll width`).to.be.at.most(wrapper.clientWidth);
+    expect(el.getBoundingClientRect().width, `${direction} host width`).to.be.at.most(
+      wrapper.getBoundingClientRect().width,
+    );
     expect(base.scrollWidth, `${direction} base scroll width`).to.be.at.most(base.clientWidth);
   }
+});
+
+it('treats missing light-DOM collections as empty during nested SSR state seeding', () => {
+  const el = document.createElement('lr-button') as LyraButton;
+  Object.defineProperty(el, 'children', { configurable: true, value: undefined });
+  Object.defineProperty(el, 'childNodes', { configurable: true, value: undefined });
+  const internals = el as unknown as {
+    syncAdornmentSlots(): void;
+    hasIconOnlyDefaultContent(): boolean;
+  };
+
+  expect(() => internals.syncAdornmentSlots()).to.not.throw();
+  expect(internals.hasIconOnlyDefaultContent()).to.be.false;
 });

@@ -1,6 +1,7 @@
 import {
   loadChartJs,
   loadChartModule,
+  loadAndRegisterChartModule,
   type ChartJsModule,
 } from './chart-core-loader.js';
 import type {
@@ -14,7 +15,7 @@ import type {
  * Backward-compatible Chart.js loader entry. Core-only consumers import
  * `chart-core-loader.ts` so optional chart features stay outside their graph.
  */
-export { loadChartJs, loadChartModule, type ChartJsModule };
+export { loadChartJs, loadChartModule, loadAndRegisterChartModule, type ChartJsModule };
 export type {
   ChartFeatureLoadResult,
   ChartPluginCapability,

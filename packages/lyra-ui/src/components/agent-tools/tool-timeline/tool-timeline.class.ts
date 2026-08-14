@@ -5,12 +5,17 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { eyeOffIcon } from '../../../internal/icons.js';
+import { srOnly } from '../../../internal/a11y.js';
 import type { ToolInvocation, ToolApprovalEventDetail } from '../../../ai/types.js';
+import type { ToolCallStatus } from '../tool-call-chip/tool-call-chip.class.js';
 import { styles } from './tool-timeline.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { overallSemanticLabel } from '../semantic-owner.js';
+import type { ApprovalAction } from '../approval-state.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_retry, LYRA_DEFAULT_toolTimelineDetailsFor } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_toolTimelineDetailsFor, LYRA_DEFAULT_toolTimelineLimit } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -24,6 +29,11 @@ import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_
  * with no adapter, exactly as `ToolInvocation` itself already does.
  */
 export interface ToolTimelineEntry extends ToolInvocation {
+  /** Stable identity for the owning run/source generation. Supply this when invocation ids can be
+   *  reused; when an identity repeats, its first occurrence wins deterministically. */
+  sourceKey?: string;
+  /** Literal icon hint forwarded to the composed `<lr-tool-call-chip>`. */
+  icon?: string;
   /** Epoch milliseconds the call started. Entries are ordered by this field (ascending); an entry
    *  with no `startedAt` sorts after every timed entry, keeping its relative position among any
    *  other untimed entries, and renders with no visible timestamp. */
@@ -58,13 +68,47 @@ export interface ToolTimelineEntry extends ToolInvocation {
  */
 export interface ToolTimelineApprovalDetail extends ToolApprovalEventDetail {
   args?: unknown;
+  sourceKey?: string;
+}
+
+export interface ToolTimelineActivateDetail {
+  invocationId: string;
+  sourceKey?: string;
+}
+
+export interface ToolTimelineRenderErrorDetail extends ToolTimelineActivateDetail {
+  toolName: string;
+  error: unknown;
 }
 
 /** Which approval action is waiting for a host that vetoed `lr-tool-approval-decide` to settle it. */
-export type ToolTimelineApprovalPending = 'approve' | 'deny' | null;
+export type ToolTimelineApprovalPending = ApprovalAction | null;
 
 export interface LyraToolTimelineEventMap {
   'lr-tool-approval-decide': CustomEvent<ToolTimelineApprovalDetail>;
+  'lr-tool-activate': CustomEvent<ToolTimelineActivateDetail>;
+  'lr-tool-render-error': CustomEvent<ToolTimelineRenderErrorDetail>;
+}
+
+function entryIdentity(entry: ToolTimelineEntry): string {
+  return JSON.stringify([entry.sourceKey ?? null, entry.id]);
+}
+
+function entryCorrelation(entry: ToolTimelineEntry): ToolTimelineActivateDetail {
+  return entry.sourceKey === undefined
+    ? { invocationId: entry.id }
+    : { invocationId: entry.id, sourceKey: entry.sourceKey };
+}
+
+const MAX_RENDERED_ENTRIES = 500;
+const MAX_REDACTION_PATHS = 100;
+const MAX_REDACTION_DEPTH = 64;
+const MAX_REDACTION_NODES = 10_000;
+const TOOL_STATUSES = new Set<ToolCallStatus>(['pending', 'running', 'success', 'error', 'denied']);
+
+function normalizeEntry(entry: ToolTimelineEntry): ToolTimelineEntry {
+  const status = TOOL_STATUSES.has(entry.status) ? entry.status : 'pending';
+  return status === entry.status ? entry : { ...entry, status };
 }
 
 /** `hour:minute` in the component's effective locale -- identical algorithm to
@@ -80,16 +124,47 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * instead of throwing. Arrays are walked with numeric-index path segments (`args.rows.0.ssn`);
  * every other non-plain-object value below an unmasked branch is treated as an opaque leaf.
  */
-function redactBranch(value: unknown, currentPath: string, paths: readonly string[], placeholder: string): unknown {
+function redactBranch(
+  value: unknown,
+  currentPath: string,
+  paths: readonly string[],
+  placeholder: string,
+  budget: { nodes: number },
+  depth: number,
+): unknown {
   if (paths.includes(currentPath)) return placeholder;
+  if (depth >= MAX_REDACTION_DEPTH || budget.nodes >= MAX_REDACTION_NODES) return placeholder;
+  budget.nodes++;
   if (!paths.some((p) => p.startsWith(`${currentPath}.`))) return value;
   if (Array.isArray(value)) {
-    return value.map((item, index) => redactBranch(item, `${currentPath}.${index}`, paths, placeholder));
+    try {
+      const result: unknown[] = [];
+      for (let index = 0; index < value.length; index++) {
+        if (budget.nodes >= MAX_REDACTION_NODES) return placeholder;
+        result.push(redactBranch(value[index], `${currentPath}.${index}`, paths, placeholder, budget, depth + 1));
+      }
+      return result;
+    } catch {
+      return placeholder;
+    }
   }
   if (value !== null && typeof value === 'object') {
     const result = Object.create(null) as Record<string, unknown>;
-    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
-      result[key] = redactBranch(item, `${currentPath}.${key}`, paths, placeholder);
+    try {
+      for (const key in value as Record<string, unknown>) {
+        if (!Object.prototype.propertyIsEnumerable.call(value, key)) continue;
+        if (budget.nodes >= MAX_REDACTION_NODES) return placeholder;
+        result[key] = redactBranch(
+          (value as Record<string, unknown>)[key],
+          `${currentPath}.${key}`,
+          paths,
+          placeholder,
+          budget,
+          depth + 1,
+        );
+      }
+    } catch {
+      return placeholder;
     }
     return result;
   }
@@ -99,7 +174,31 @@ function redactBranch(value: unknown, currentPath: string, paths: readonly strin
 /** Entry point for `redactBranch()` -- a no-op (returns `value` unchanged) whenever `paths` is
  *  empty, so the common unredacted case never allocates a clone. */
 function redactField(value: unknown, root: string, paths: readonly string[], placeholder: string): unknown {
-  return paths.length === 0 ? value : redactBranch(value, root, paths, placeholder);
+  if (paths.length === 0) return value;
+  if (paths.length > MAX_REDACTION_PATHS) return placeholder;
+  const relevant: string[] = [];
+  for (const path of paths) {
+    if (typeof path !== 'string' || path.length > 4_096) return placeholder;
+    if (path !== root && !path.startsWith(`${root}.`)) continue;
+    if (path.split('.').length - 1 > MAX_REDACTION_DEPTH) return placeholder;
+    relevant.push(path);
+  }
+  if (relevant.length === 0) return value;
+  return redactBranch(value, root, relevant, placeholder, { nodes: 0 }, 0);
+}
+
+interface RedactedEntry {
+  args: unknown;
+  result: unknown;
+  error: unknown;
+}
+
+interface RedactionCacheEntry extends RedactedEntry {
+  sourceArgs: unknown;
+  sourceResult: unknown;
+  sourceError: unknown;
+  sourcePaths: readonly string[];
+  placeholder: string;
 }
 
 /**
@@ -117,8 +216,16 @@ function redactField(value: unknown, root: string, paths: readonly string[], pla
  * every timed entry, keeping its position relative to any other untimed entries stable (input
  * order is preserved among ties) — a still-pending call with no timestamp yet naturally lands at
  * the end without needing to be pre-sorted by the host.
+ * Rendering is bounded to 500 unique source entries before sorting. Duplicate `(sourceKey,id)`
+ * identities use a deterministic first-wins policy. Entries already open or under approval
+ * review are reserved inside that budget when new history would otherwise push them past the
+ * ceiling, and a localized notice exposes truncation instead of silently hiding it. Foreign
+ * runtime statuses normalize once to `pending` before both row and child presentation.
  *
- * Redaction only ever affects the read-only detail view: the copy of `args` handed to the
+ * Redaction work is deferred until a detail row opens and memoized while its payload/path inputs
+ * remain unchanged. It is bounded to 100 paths, 64 levels, and 10,000 visited nodes; exceeding a
+ * ceiling masks the affected branch rather than exposing data or exhausting the page. Redaction
+ * only ever affects the read-only detail view: the copy of `args` handed to the
  * approval dialog is always the entry's real, unmasked value. Approving a masked-args call must
  * let the reviewer see (and, if `approvalEditable`, edit) what will actually be sent — handing the
  * dialog a placeholder string in place of a real field would silently corrupt the decision.
@@ -133,9 +240,8 @@ function redactField(value: unknown, root: string, paths: readonly string[], pla
  * persist it asynchronously, `pendingApproval` identifies the held action. After success, update
  * the controlled entries and call `finalizePendingApproval()`; after failure, call
  * `revertPendingApproval()` to restore the same open dialog and its draft for retry. A chip
- * belonging to an entry that isn't pending approval is left alone — its own
- * `lr-tool-call-chip-select` still bubbles out normally, exactly once per activation, for a host
- * that wants to react to raw chip selection for its own purposes.
+ * belonging to an entry that isn't pending approval emits the timeline-owned, correlated
+ * `lr-tool-activate`; raw child selection and disclosure lifecycle events are contained.
  *
  * @customElement lr-tool-timeline
  * @event lr-tool-approval-decide - A pending entry's approval dialog was resolved.
@@ -143,6 +249,10 @@ function redactField(value: unknown, root: string, paths: readonly string[], pla
  *   host-edited arguments) is present only when `approved` is `true`. Cancelable; preventing it
  *   preserves the pending dialog and its current argument edits, sets `pendingApproval`, and
  *   requires `finalizePendingApproval()` or `revertPendingApproval()` to settle the held action.
+ * @event lr-tool-activate - A non-approval entry was activated. `detail: { invocationId,
+ *   sourceKey? }`.
+ * @event lr-tool-render-error - A nested result renderer failed. `detail: { invocationId,
+ *   sourceKey?, toolName, error }`.
  * @csspart base - The root `<ol>`.
  * @csspart entry - One entry's `<li>`; carries `data-status` (the entry's `status`) and
  *   `data-pending-approval` (`"true"`/`"false"`).
@@ -156,11 +266,14 @@ function redactField(value: unknown, root: string, paths: readonly string[], pla
  * @csspart entry-approval-status - The "Approved"/"Denied" badge, only rendered once `approved`
  *   is set; carries `data-decision` (`"approved"`/`"denied"`).
  * @csspart entry-redacted-indicator - A decorative marker shown when `redactedFields` is
- *   non-empty for that entry.
+ *   non-empty for that entry; the glyph is decorative and localized hidden-state text remains in
+ *   the accessibility tree.
  * @csspart entry-details - The `<lr-details>` disclosure wrapping the entry's result view.
  * @csspart entry-result - The entry's `<lr-tool-result-view>`.
  * @csspart entry-error - The entry's `error` text, only rendered when set.
  * @csspart approval-dialog - The single shared `<lr-tool-approval-dialog>` instance.
+ * @csspart empty - Localized empty state shown when no entries are available.
+ * @csspart limit - Localized resource-ceiling notice.
  * @cssprop [--lr-tool-timeline-gap=var(--lr-space-l)] - Vertical gap between entries.
  * @cssprop [--lr-tool-timeline-marker-size=var(--lr-size-0-625rem)] - Diameter of an entry's rail
  *   dot; also the width of the marker gutter column.
@@ -190,12 +303,14 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     confirmApproved: LYRA_DEFAULT_confirmApproved,
     confirmDenied: LYRA_DEFAULT_confirmDenied,
     envListValueHidden: LYRA_DEFAULT_envListValueHidden,
+    noData: LYRA_DEFAULT_noData,
     retry: LYRA_DEFAULT_retry,
     toolTimelineDetailsFor: LYRA_DEFAULT_toolTimelineDetailsFor,
+    toolTimelineLimit: LYRA_DEFAULT_toolTimelineLimit,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The calls to render, in any order — see the class doc's ordering note. */
   @property({ attribute: false }) entries: ToolTimelineEntry[] = [];
@@ -208,11 +323,43 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   /** Overrides the default `hour:minute` rendering of every entry's `startedAt`. */
   @property({ attribute: false }) formatTimestamp?: (date: Date) => string;
 
-  /** The `id` of the entry currently under review in the shared approval dialog, or `undefined`
-   *  while it's closed. */
-  @state() private reviewingEntryId?: string;
+  /** The `(sourceKey,id)` identity of the entry currently under review, or `undefined` while the
+   *  shared dialog is closed. */
+  @state() private reviewingEntryKey?: string;
   @state() private approvalPending: ToolTimelineApprovalPending = null;
   @state() private openedEntryIds = new Set<string>();
+  private projectedEntriesCache: ToolTimelineEntry[] = [];
+  private projectionTruncated = false;
+  private redactionCache = new WeakMap<ToolTimelineEntry, RedactionCacheEntry>();
+  private limitAnnouncementSink?: AnnouncementSink;
+  private limitAnnouncementInitialized = false;
+  private previouslyTruncated = false;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncLimitAnnouncementSink();
+    this.limitAnnouncementInitialized = this.hasUpdated;
+    this.previouslyTruncated = this.projectionTruncated;
+  }
+
+  override disconnectedCallback(): void {
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = undefined;
+    super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = undefined;
+    this.syncLimitAnnouncementSink();
+  }
+
+  private syncLimitAnnouncementSink(): void {
+    if (!this.isConnected || this.limitAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+  }
 
   /** The approval/denial action held after a listener vetoes `lr-tool-approval-decide`, or `null`
    *  otherwise. Read-only: call `finalizePendingApproval()` after persisting the controlled entry,
@@ -223,17 +370,67 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('entries') && this.reviewingEntryId !== undefined) {
-      const still = this.entries.find((entry) => entry.id === this.reviewingEntryId);
+    if (!changed.has('entries')) return;
+    this.rebuildProjection();
+    const projected = this.projectedEntriesCache;
+    const identities = new Set(projected.map(entryIdentity));
+    if (this.reviewingEntryKey !== undefined) {
+      const still = projected.find((entry) => entryIdentity(entry) === this.reviewingEntryKey);
       if (!still || !(still.needsApproval && still.approved === undefined)) {
-        this.reviewingEntryId = undefined;
+        this.reviewingEntryKey = undefined;
         this.approvalPending = null;
       }
     }
+    const opened = new Set([...this.openedEntryIds].filter((key) => identities.has(key)));
+    if (opened.size !== this.openedEntryIds.size) this.openedEntryIds = opened;
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (this.limitAnnouncementInitialized && this.projectionTruncated && !this.previouslyTruncated) {
+      this.limitAnnouncementSink?.announce(this.localize('toolTimelineLimit', undefined, {
+        count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_ENTRIES),
+      }));
+    }
+    this.limitAnnouncementInitialized = true;
+    this.previouslyTruncated = this.projectionTruncated;
+  }
+
+  private rebuildProjection(): void {
+    const entries = Array.isArray(this.entries) ? this.entries : [];
+    const projected: ToolTimelineEntry[] = [];
+    const projectedIndex = new Map<string, number>();
+    const reservedKeys = new Set(this.openedEntryIds);
+    if (this.reviewingEntryKey !== undefined) reservedKeys.add(this.reviewingEntryKey);
+    const displacedReserved = new Map<string, ToolTimelineEntry>();
+    const seen = new Set<string>();
+    for (const sourceEntry of entries) {
+      const entry = normalizeEntry(sourceEntry);
+      const key = entryIdentity(entry);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (projected.length < MAX_RENDERED_ENTRIES) {
+        projectedIndex.set(key, projected.length);
+        projected.push(entry);
+      } else if (reservedKeys.has(key)) {
+        displacedReserved.set(key, entry);
+      }
+    }
+    for (const [key, entry] of displacedReserved) {
+      if (projectedIndex.has(key)) continue;
+      let replacement = projected.length - 1;
+      while (replacement >= 0 && reservedKeys.has(entryIdentity(projected[replacement]!))) replacement--;
+      if (replacement < 0) break;
+      projectedIndex.delete(entryIdentity(projected[replacement]!));
+      projected[replacement] = entry;
+      projectedIndex.set(key, replacement);
+    }
+    this.projectedEntriesCache = projected;
+    this.projectionTruncated = seen.size > projected.length;
   }
 
   private get sortedEntries(): ToolTimelineEntry[] {
-    return this.entries
+    return this.projectedEntriesCache
       .map((entry, index) => ({ entry, index }))
       .sort((a, b) => {
         const ak = Number.isFinite(a.entry.startedAt) ? a.entry.startedAt! : Number.POSITIVE_INFINITY;
@@ -244,9 +441,9 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   }
 
   private get reviewingEntry(): ToolTimelineEntry | undefined {
-    return this.reviewingEntryId === undefined
+    return this.reviewingEntryKey === undefined
       ? undefined
-      : this.entries.find((entry) => entry.id === this.reviewingEntryId);
+      : this.projectedEntriesCache.find((entry) => entryIdentity(entry) === this.reviewingEntryKey);
   }
 
   private durationFor(entry: ToolTimelineEntry): number | undefined {
@@ -262,20 +459,22 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   }
 
   private onChipSelect(entry: ToolTimelineEntry, event: Event): void {
+    event.stopPropagation();
     if (entry.needsApproval && entry.approved === undefined) {
-      event.stopPropagation();
-      this.reviewingEntryId = entry.id;
+      this.reviewingEntryKey = entryIdentity(entry);
+      return;
     }
+    this.emit('lr-tool-activate', entryCorrelation(entry));
   }
 
   private onDialogApprove = (event: CustomEvent<{ args: unknown }>): void => {
     event.stopPropagation();
-    const invocationId = this.reviewingEntryId;
-    if (invocationId === undefined) return;
+    const entry = this.reviewingEntry;
+    if (entry === undefined) return;
     const wrapperEvent = this.emit(
       'lr-tool-approval-decide',
       {
-        invocationId,
+        ...entryCorrelation(entry),
         approved: true,
         args: event.detail.args,
       },
@@ -286,16 +485,16 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
       event.preventDefault();
       return;
     }
-    this.reviewingEntryId = undefined;
+    this.reviewingEntryKey = undefined;
   };
 
   private onDialogDeny = (event: CustomEvent): void => {
     event.stopPropagation();
-    const invocationId = this.reviewingEntryId;
-    if (invocationId === undefined) return;
+    const entry = this.reviewingEntry;
+    if (entry === undefined) return;
     const wrapperEvent = this.emit(
       'lr-tool-approval-decide',
-      { invocationId, approved: false },
+      { ...entryCorrelation(entry), approved: false },
       { cancelable: true },
     );
     if (wrapperEvent.defaultPrevented) {
@@ -303,13 +502,13 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
       event.preventDefault();
       return;
     }
-    this.reviewingEntryId = undefined;
+    this.reviewingEntryKey = undefined;
   };
 
   private onDialogClose = (event: CustomEvent): void => {
     event.stopPropagation();
     this.approvalPending = null;
-    this.reviewingEntryId = undefined;
+    this.reviewingEntryKey = undefined;
   };
 
   /** Completes a vetoed approval/denial after the host has persisted the controlled entry. Closes
@@ -317,7 +516,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   finalizePendingApproval(): void {
     if (this.approvalPending === null) return;
     this.approvalPending = null;
-    this.reviewingEntryId = undefined;
+    this.reviewingEntryKey = undefined;
   }
 
   /** Releases a vetoed approval/denial after host persistence fails. Keeps the same dialog open
@@ -327,12 +526,71 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     this.approvalPending = null;
   }
 
-  private onDetailsToggle(entryId: string, event: CustomEvent<{ open: boolean }>): void {
+  private onDetailsToggle(entry: ToolTimelineEntry, event: CustomEvent<{ open: boolean }>): void {
     event.stopPropagation();
+    const key = entryIdentity(entry);
     const next = new Set(this.openedEntryIds);
-    if (event.detail.open) next.add(entryId);
-    else next.delete(entryId);
+    if (event.detail.open) next.add(key);
+    else next.delete(key);
     this.openedEntryIds = next;
+  }
+
+  private stopOwnedEvent(event: Event): void {
+    event.stopPropagation();
+  }
+
+  private onRenderError(
+    entry: ToolTimelineEntry,
+    event: CustomEvent<{ toolName: string; error: unknown }>,
+  ): void {
+    event.stopPropagation();
+    this.emit('lr-tool-render-error', { ...entryCorrelation(entry), ...event.detail });
+  }
+
+  private redactedEntry(entry: ToolTimelineEntry, placeholder: string): RedactedEntry {
+    const paths = Array.isArray(entry.redactedFields) ? entry.redactedFields : [];
+    const cached = this.redactionCache.get(entry);
+    if (
+      cached
+      && cached.sourceArgs === entry.args
+      && cached.sourceResult === entry.result
+      && cached.sourceError === entry.error
+      && cached.sourcePaths === paths
+      && cached.placeholder === placeholder
+    ) {
+      return cached;
+    }
+    const redacted: RedactionCacheEntry = {
+      sourceArgs: entry.args,
+      sourceResult: entry.result,
+      sourceError: entry.error,
+      sourcePaths: paths,
+      placeholder,
+      args: redactField(entry.args, 'args', paths, placeholder),
+      result: entry.result === undefined
+        ? undefined
+        : redactField(entry.result, 'result', paths, placeholder),
+      error: entry.error === undefined
+        ? undefined
+        : redactField(entry.error, 'error', paths, placeholder),
+    };
+    this.redactionCache.set(entry, redacted);
+    return redacted;
+  }
+
+  private openedDetailsTemplate(entry: ToolTimelineEntry, placeholder: string): TemplateResult {
+    const redacted = this.redactedEntry(entry, placeholder);
+    return html`
+      <lr-tool-result-view
+        part="entry-result"
+        tool-name=${entry.name}
+        .args=${redacted.args}
+        .result=${redacted.result}
+        @lr-render-error=${(event: CustomEvent<{ toolName: string; error: unknown }>) =>
+          this.onRenderError(entry, event)}
+      ></lr-tool-result-view>
+      ${redacted.error !== undefined ? html`<p part="entry-error">${redacted.error}</p>` : nothing}
+    `;
   }
 
   private entryTemplate(entry: ToolTimelineEntry, placeholder: string): TemplateResult {
@@ -340,14 +598,9 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     const durationMs = this.durationFor(entry);
     const retryCount = finiteCount(entry.retryCount ?? 0);
     const redactedFields = entry.redactedFields ?? [];
-    const redactedArgs = redactField(entry.args, 'args', redactedFields, placeholder);
-    const redactedResult =
-      entry.result !== undefined ? redactField(entry.result, 'result', redactedFields, placeholder) : entry.result;
-    const redactedError =
-      entry.error !== undefined && redactedFields.includes('error') ? placeholder : entry.error;
     const pendingApproval = entry.needsApproval === true && entry.approved === undefined;
     const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
-    const detailsOpened = this.openedEntryIds.has(entry.id);
+    const detailsOpened = this.openedEntryIds.has(entryIdentity(entry));
 
     return html`
       <li
@@ -366,6 +619,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
               .name=${entry.name}
               .status=${entry.status}
               .durationMs=${durationMs}
+              .icon=${entry.icon ?? ''}
               call-id=${entry.id}
               @lr-tool-call-chip-select=${(event: Event) => this.onChipSelect(entry, event)}
             ></lr-tool-call-chip>
@@ -385,26 +639,23 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
                   >`
                 : nothing}
             ${redactedFields.length > 0
-              ? html`<span part="entry-redacted-indicator" aria-hidden="true">${eyeOffIcon()}</span>`
+              ? html`<span part="entry-redacted-indicator">
+                  <span aria-hidden="true">${eyeOffIcon()}</span>
+                  <span class="sr-only">${this.localize('envListValueHidden')}</span>
+                </span>`
               : nothing}
           </div>
           <lr-details
             part="entry-details"
             .summary=${this.localize('toolTimelineDetailsFor', undefined, { name: entry.name })}
             .open=${detailsOpened}
-            @lr-toggle=${(event: CustomEvent<{ open: boolean }>) => this.onDetailsToggle(entry.id, event)}
+            @lr-show=${this.stopOwnedEvent}
+            @lr-after-show=${this.stopOwnedEvent}
+            @lr-hide=${this.stopOwnedEvent}
+            @lr-after-hide=${this.stopOwnedEvent}
+            @lr-toggle=${(event: CustomEvent<{ open: boolean }>) => this.onDetailsToggle(entry, event)}
           >
-            ${detailsOpened
-              ? html`
-                  <lr-tool-result-view
-                    part="entry-result"
-                    tool-name=${entry.name}
-                    .args=${redactedArgs}
-                    .result=${redactedResult}
-                  ></lr-tool-result-view>
-                  ${redactedError !== undefined ? html`<p part="entry-error">${redactedError}</p>` : nothing}
-                `
-              : nothing}
+            ${detailsOpened ? this.openedDetailsTemplate(entry, placeholder) : nothing}
           </lr-details>
         </div>
       </li>
@@ -417,16 +668,26 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     const placeholder = this.localize('envListValueHidden');
 
     return html`
-      <ol part="base" role="list" aria-label=${this.getAttribute('aria-label') || nothing}>
-        ${repeat(entries, (entry) => entry.id, (entry) => this.entryTemplate(entry, placeholder))}
-      </ol>
+      ${entries.length === 0
+        ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
+        : html`<ol part="base" role="list" aria-label=${overallSemanticLabel(this) ?? nothing}>
+            ${repeat(entries, entryIdentity, (entry) => this.entryTemplate(entry, placeholder))}
+          </ol>`}
+      ${this.projectionTruncated
+        ? html`<p part="limit" role="note">${this.localize('toolTimelineLimit', undefined, {
+            count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_ENTRIES),
+          })}</p>`
+        : nothing}
       <lr-tool-approval-dialog
         part="approval-dialog"
         tool-name=${reviewing?.name ?? ''}
+        .proposalKey=${reviewing === undefined ? '' : entryIdentity(reviewing)}
         .args=${reviewing?.args ?? {}}
         .editable=${this.approvalEditable}
         .pending=${this.approvalPending}
-        ?open=${reviewing !== undefined}
+        .open=${reviewing !== undefined}
+        @focus=${this.stopOwnedEvent}
+        @blur=${this.stopOwnedEvent}
         @lr-approve=${this.onDialogApprove}
         @lr-deny=${this.onDialogDeny}
         @lr-close=${this.onDialogClose}

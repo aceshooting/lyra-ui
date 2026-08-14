@@ -1,7 +1,7 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './artifact-panel.js';
 import type { LyraArtifactPanel } from './artifact-panel.js';
-import { styles } from './artifact-panel.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 describe('lr-artifact-panel', () => {
   it('defaults to view=preview and activeVersionId=null (latest)', async () => {
@@ -22,7 +22,7 @@ describe('lr-artifact-panel', () => {
     expect(withCode.shadowRoot!.querySelector('[part="view-toggle"]')).to.exist;
   });
 
-  it('uses a host aria-label to name the rendered view-selector group', async () => {
+  it('keeps the view selector purpose-named instead of cloning the host aria-label', async () => {
     const el = (await fixture(html`
       <lr-artifact-panel aria-label="Report artifact">
         <pre slot="code">code</pre>
@@ -31,7 +31,12 @@ describe('lr-artifact-panel', () => {
     await el.updateComplete;
     const group = el.shadowRoot!.querySelector('[part="view-toggle"]') as HTMLElement;
     expect(group.getAttribute('role')).to.equal('group');
-    expect(group.getAttribute('aria-label')).to.equal('Report artifact');
+    expect(el.getAttribute('aria-label')).to.equal('Report artifact');
+    expect(group.getAttribute('aria-label')).to.equal('Artifact');
+
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(group.getAttribute('aria-label')).to.equal('Artifact');
     await expect(el).to.be.accessible();
   });
 
@@ -52,6 +57,17 @@ describe('lr-artifact-panel', () => {
     await el.updateComplete;
     expect(el.view).to.equal('preview');
     expect((el.shadowRoot!.querySelector('[part="view-toggle"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('slot:not([name])') as HTMLElement).style.display).to.equal('');
+  });
+
+  it('rejects a programmatic code view when no code content exists after mount', async () => {
+    const el = await fixture<LyraArtifactPanel>(html`
+      <lr-artifact-panel><div id="preview">preview</div></lr-artifact-panel>
+    `);
+    el.view = 'code';
+    await el.updateComplete;
+
+    expect(el.view).to.equal('preview');
     expect((el.shadowRoot!.querySelector('slot:not([name])') as HTMLElement).style.display).to.equal('');
   });
 
@@ -76,6 +92,39 @@ describe('lr-artifact-panel', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="version-position"]')!.textContent).to.include('3');
     expect((el.shadowRoot!.querySelector('[part="version-next"]') as HTMLButtonElement).disabled).to.be.true; // at latest
+  });
+
+  it('renders the active version label beside its localized position', async () => {
+    const el = await fixture<LyraArtifactPanel>(html`
+      <lr-artifact-panel
+        active-version-id="v1"
+        .versions=${[{ id: 'v1', label: 'Initial draft' }, { id: 'v2', label: 'Published' }]}
+      ></lr-artifact-panel>
+    `);
+    expect(el.shadowRoot!.querySelector('[part="version-label"]')?.textContent).to.equal(
+      'Initial draft',
+    );
+  });
+
+  it('clears a removed active version id without emitting a user navigation event', async () => {
+    const el = await fixture<LyraArtifactPanel>(html`
+      <lr-artifact-panel
+        active-version-id="v1"
+        .versions=${[{ id: 'v1', label: 'Initial' }, { id: 'v2', label: 'Latest' }]}
+      ></lr-artifact-panel>
+    `);
+    let changes = 0;
+    el.addEventListener('lr-version-change', () => changes++);
+
+    el.versions = [{ id: 'v2', label: 'Latest' }];
+    await el.updateComplete;
+    expect(el.activeVersionId).to.equal(null);
+    expect(el.hasAttribute('active-version-id')).to.equal(false);
+    expect(changes).to.equal(0);
+
+    el.versions = [{ id: 'v1', label: 'Reintroduced' }, { id: 'v2', label: 'Latest' }];
+    await el.updateComplete;
+    expect(el.activeVersionId, 'reintroducing the id must not silently repin selection').to.equal(null);
   });
 
   it('previous/next emit lr-version-change with the neighboring version id', async () => {
@@ -176,19 +225,72 @@ describe('lr-artifact-panel', () => {
     expect(el.shadowRoot!.querySelector('[part="streaming-indicator"]')).to.exist;
   });
 
-  it('copy button hidden while copyText is empty, emits lr-copy with it when set', async () => {
+  it('hides an empty copy action and emits success only after the owner write fulfills', async () => {
     const empty = (await fixture(html`<lr-artifact-panel></lr-artifact-panel>`)) as LyraArtifactPanel;
     await empty.updateComplete;
     expect((empty.shadowRoot!.querySelector('[part="copy-button"]')) == null).to.be.true;
 
-    const el = (await fixture(
-      html`<lr-artifact-panel copy-text="hello"></lr-artifact-panel>`,
-    )) as LyraArtifactPanel;
-    await el.updateComplete;
-    const listener = oneEvent(el, 'lr-copy');
-    (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
-    const event = (await listener) as CustomEvent<{ text: string }>;
-    expect(event.detail.text).to.equal('hello');
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    let resolveWrite!: () => void;
+    const pending = new Promise<void>((resolve) => { resolveWrite = resolve; });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => pending },
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-artifact-panel copy-text="hello"></lr-artifact-panel>`,
+      )) as LyraArtifactPanel;
+      await el.updateComplete;
+      let copies = 0;
+      el.addEventListener('lr-copy', () => { copies += 1; });
+      const listener = oneEvent(el, 'lr-copy');
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      await Promise.resolve();
+      expect(copies).to.equal(0);
+      resolveWrite();
+      const event = (await listener) as CustomEvent<{ ok: true; text: string }>;
+      expect(event.detail).to.deep.equal({ ok: true, text: 'hello' });
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('emits the shared typed failure outcome when the clipboard rejects', async () => {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const failure = new DOMException('Denied', 'NotAllowedError');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.reject(failure) },
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-artifact-panel copy-text="hello"></lr-artifact-panel>`,
+      )) as LyraArtifactPanel;
+      const genericError = oneEvent(el, 'lr-error');
+      const detailedError = oneEvent(el, 'lr-copy-error');
+      let copies = 0;
+      el.addEventListener('lr-copy', () => { copies += 1; });
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      await genericError;
+      const event = (await detailedError) as CustomEvent<{
+        ok: false;
+        text: string;
+        reason: string;
+        error: unknown;
+      }>;
+      expect(event.detail).to.deep.equal({
+        ok: false,
+        text: 'hello',
+        reason: 'denied',
+        error: failure,
+      });
+      expect(copies).to.equal(0);
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
   });
 
   it('uses the adopted owner clipboard and fails closed in an ownerless document', async () => {
@@ -244,7 +346,7 @@ describe('lr-artifact-panel', () => {
     await el.updateComplete;
     const listener = oneEvent(el, 'lr-download');
     (el.shadowRoot!.querySelector('[part="download-button"]') as HTMLButtonElement).click();
-    const event = (await listener) as CustomEvent<{ filename: string; src?: string }>;
+    const event = (await listener) as CustomEvent<{ filename: string; src: string }>;
     expect(event.detail).to.deep.equal({ filename: 'f.md', src: 'https://example.com/f.md' });
   });
 
@@ -325,15 +427,35 @@ describe('lr-artifact-panel', () => {
     expect(el.shadowRoot!.querySelector('[part="streaming-indicator"]')!.textContent).to.equal('Génération…');
   });
 
-  it('themes the restore/copy/download header buttons and gives view-button its own hover/focus', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    for (const part of ['restore-button', 'copy-button', 'download-button']) {
-      expect(css, `${part} must get chrome-reset styling`).to.match(new RegExp(`\\[part='${part}'\\][^{]*\\{[^}]*cursor:\\s*pointer`));
-      expect(css, `${part} must get hover`).to.match(new RegExp(`\\[part='${part}'\\]:hover`));
-      expect(css, `${part} must get focus-visible`).to.match(new RegExp(`\\[part='${part}'\\]:focus-visible[^{]*\\{[^}]*outline:`));
+  it('paints rendered hover and focus feedback on artifact header controls', async () => {
+    const el = await fixture<LyraArtifactPanel>(html`
+      <lr-artifact-panel
+        active-version-id="v1"
+        copy-text="copy me"
+        download-src="https://example.com/artifact.txt"
+        style="--lr-color-brand-quiet: rgb(1, 2, 3)"
+        .versions=${[{ id: 'v1', createdAt: new Date(0) }, { id: 'v2', createdAt: new Date(1) }]}
+      >
+        preview
+        <pre slot="code">code</pre>
+      </lr-artifact-panel>
+    `);
+    try {
+      for (const part of ['restore-button', 'copy-button', 'download-button', 'view-button']) {
+        const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
+        const rect = button.getBoundingClientRect();
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)');
+        expect(getComputedStyle(button).backgroundColor, `${part} hover`).to.equal('rgb(1, 2, 3)');
+        button.focus();
+        expect(getComputedStyle(button).outlineStyle, `${part} focus`).to.equal('solid');
+      }
+    } finally {
+      await resetMouse();
     }
-    expect(css).to.match(/\[part='view-button'\]:hover/);
-    expect(css).to.match(/\[part='view-button'\]:focus-visible[^{]*\{[^}]*outline:/);
   });
 
   it('contains long public label and kind values at 320px', async () => {
@@ -354,4 +476,15 @@ describe('lr-artifact-panel', () => {
     expect(label.scrollWidth).to.be.at.most(Math.ceil(label.getBoundingClientRect().width) + 1);
     expect(kind.scrollWidth).to.be.at.most(Math.ceil(kind.getBoundingClientRect().width) + 1);
   });
+});
+
+it('normalizes duplicate version ids first-wins before navigation and labels', async () => {
+  const el = await fixture<LyraArtifactPanel>(html`
+    <lr-artifact-panel .versions=${[
+      { id: 'same', label: 'First version' },
+      { id: 'same', label: 'Later version' },
+    ]}></lr-artifact-panel>
+  `);
+  expect(el.shadowRoot!.querySelector('[part="version-position"]')!.textContent).to.contain('1');
+  expect(el.shadowRoot!.querySelector('[part="version-label"]')!.textContent).to.equal('First version');
 });

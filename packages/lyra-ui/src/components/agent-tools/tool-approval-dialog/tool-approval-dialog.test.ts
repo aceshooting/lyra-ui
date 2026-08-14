@@ -4,7 +4,6 @@ import type { LyraToolApprovalDialog } from './tool-approval-dialog.js';
 import type { LyraJsonViewer } from '../../utility/json-viewer/json-viewer.js';
 import type { LyraButton } from '../../forms/button/button.class.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { styles } from './tool-approval-dialog.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const ARGS = { query: 'solar inverters', max_results: 5 };
@@ -58,14 +57,20 @@ it('reflects open as an attribute and sets dialog semantics once open', async ()
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('h2')!.id);
 });
 
-it('forwards a host aria-label to the panel and lets it win over the generated heading, mirroring tool-select-dialog/tool-result-dialog', async () => {
+it('keeps a host aria-label on the host while the dialog panel remains heading-labelled', async () => {
   const el = (await fixture(
     html`<lr-tool-approval-dialog open tool-name="web_search" aria-label="Custom approval name"></lr-tool-approval-dialog>`,
   )) as LyraToolApprovalDialog;
   const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
 
-  expect(panel.getAttribute('aria-label')).to.equal('Custom approval name');
-  expect(panel.hasAttribute('aria-labelledby')).to.equal(false);
+  expect(el.getAttribute('aria-label')).to.equal('Custom approval name');
+  expect(panel.hasAttribute('aria-label')).to.equal(false);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('h2')!.id);
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(panel.hasAttribute('aria-label')).to.equal(false);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('h2')!.id);
 });
 
 it('falls back to aria-labelledby when no host aria-label is set', async () => {
@@ -184,11 +189,6 @@ describe('editing', () => {
     expect(getComputedStyle(textarea(el)).borderColor).to.equal('rgb(40, 50, 60)');
   });
 
-  it('gives the args-editor textarea hover feedback matching the keyboard focus-visible cue', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='args-editor'\]:hover\s*\{[^}]*border-color:/);
-  });
-
   it('themes the args-editor hover border through a component hook when no decision is pending', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog
@@ -208,6 +208,66 @@ describe('editing', () => {
         position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
       });
       expect(getComputedStyle(ta).borderTopColor).to.equal('rgb(1, 2, 3)');
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('keeps the invalid editor border semantic tone while the real pointer hovers it', async () => {
+    const el = (await fixture(html`
+      <lr-tool-approval-dialog
+        open
+        tool-name="web_search"
+        .args=${ARGS}
+        style="
+          --lr-tool-approval-dialog-hover-border-color: rgb(1, 2, 3);
+          --lr-tool-approval-dialog-invalid-border-color: rgb(10, 20, 30);
+        "
+      ></lr-tool-approval-dialog>
+    `)) as LyraToolApprovalDialog;
+    editButton(el).click();
+    await el.updateComplete;
+    setTextareaValue(el, '{ not valid json');
+    await el.updateComplete;
+
+    const ta = textarea(el);
+    const rect = ta.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      expect(getComputedStyle(ta).borderTopColor).to.equal('rgb(10, 20, 30)');
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('keeps the disabled Edit button visually disabled during pending hover and active pointer states', async () => {
+    const el = (await fixture(html`
+      <lr-tool-approval-dialog
+        open
+        tool-name="web_search"
+        .args=${ARGS}
+        style="--lr-color-surface: rgb(40, 50, 60); --lr-color-brand-quiet: rgb(1, 2, 3)"
+      ></lr-tool-approval-dialog>
+    `)) as LyraToolApprovalDialog;
+    el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
+    approveButton(el).click();
+    await el.updateComplete;
+    const edit = editButton(el);
+    expect(edit.disabled).to.be.true;
+    const rect = edit.getBoundingClientRect();
+
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      expect(getComputedStyle(edit).backgroundColor).to.equal('rgb(40, 50, 60)');
+      await sendMouse({ type: 'down' });
+      expect(getComputedStyle(edit).backgroundColor).to.equal('rgb(40, 50, 60)');
+      await sendMouse({ type: 'up' });
     } finally {
       await resetMouse();
     }
@@ -384,6 +444,54 @@ describe('editing', () => {
     expect(el.shadowRoot!.querySelector('[part="args-view"]')).to.exist;
     expect(approveButton(el).disabled).to.be.false;
   });
+
+  it('resets a stale draft and pending action when an open proposal is replaced', async () => {
+    const el = await fixture<LyraToolApprovalDialog>(html`
+      <lr-tool-approval-dialog
+        open
+        proposal-key="run-a:call-1"
+        tool-name="web_search"
+        .args=${ARGS}
+      ></lr-tool-approval-dialog>
+    `);
+    editButton(el).click();
+    await el.updateComplete;
+    setTextareaValue(el, '{"query":"stale edit"}');
+    el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
+    approveButton(el).click();
+    await el.updateComplete;
+    expect(el.pending).to.equal('approve');
+
+    el.toolName = 'read_file';
+    el.args = { path: 'replacement.md' };
+    await el.updateComplete;
+
+    expect(el.pending).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="args-editor"]') === null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="args-view"]') as LyraJsonViewer).data).to.deep.equal({
+      path: 'replacement.md',
+    });
+  });
+
+  it('uses proposal-key to reset open state even when the visible proposal fields are reused', async () => {
+    const el = await fixture<LyraToolApprovalDialog>(html`
+      <lr-tool-approval-dialog
+        open
+        proposal-key="run-a:call-1"
+        tool-name="web_search"
+        .args=${ARGS}
+      ></lr-tool-approval-dialog>
+    `);
+    editButton(el).click();
+    await el.updateComplete;
+    setTextareaValue(el, '{"query":"stale edit"}');
+
+    el.proposalKey = 'run-b:call-1';
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="args-editor"]') === null).to.be.true;
+    expect(el.pending).to.equal(null);
+  });
 });
 
 describe('approve/deny', () => {
@@ -440,6 +548,20 @@ describe('approve/deny', () => {
 });
 
 describe('dismissal', () => {
+  it('offers consistent show() and hide() lifecycle methods', async () => {
+    const el = await fixture<LyraToolApprovalDialog>(html`
+      <lr-tool-approval-dialog></lr-tool-approval-dialog>
+    `);
+    el.show();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    const closed = oneEvent(el, 'lr-close');
+    el.hide();
+    expect((await closed).detail).to.equal('api');
+    expect(el.open).to.be.false;
+  });
+
   it('closes on backdrop click and emits lr-close with reason "backdrop"', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog open></lr-tool-approval-dialog>`,

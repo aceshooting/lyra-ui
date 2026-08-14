@@ -2,14 +2,13 @@ import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property, query, state } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { finiteRange } from "../../../internal/numbers.js";
+import type { LyraOrientation } from "../../../internal/shared-unions.js";
 import { styles } from "./scroller.styles.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
-export type ScrollerOrientation = "horizontal" | "vertical";
 
 export interface LyraScrollerEventMap {
   "lr-scroll": CustomEvent<{
@@ -61,11 +60,9 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  @property({ reflect: true }) orientation: ScrollerOrientation = "horizontal";
+  @property({ reflect: true }) orientation: LyraOrientation = "horizontal";
   @property({ type: Boolean, reflect: true }) controls = false;
-  @property({ type: Boolean, attribute: "hide-scrollbar", reflect: true })
-  hideScrollbar = false;
-  /** Web Awesome spelling of `hideScrollbar`; either flag suppresses the native scrollbar. */
+  /** Hides the native scrollbar while preserving scrolling. */
   @property({ type: Boolean, attribute: "without-scrollbar", reflect: true })
   withoutScrollbar = false;
   /** Removes both visual edge cues while leaving native scrolling untouched. */
@@ -76,7 +73,9 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
 
   @state() private canScrollStart = false;
   @state() private canScrollEnd = false;
+  @state() private measured = false;
   @query('[part="viewport"]') private viewport?: HTMLElement;
+  @query('[part="content"]') private content?: HTMLElement;
   private resizeObserver?: ResizeObserver;
   private resizeObserverDocument?: Document;
   private ownerRealmGeneration = 0;
@@ -102,7 +101,8 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.resetOwnerRealmWork();
   }
 
@@ -111,6 +111,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     if (!this.isConnected) return;
     if (this.resizeObserver && this.resizeObserverDocument === ownerDocument) {
       if (this.viewport) this.resizeObserver.observe(this.viewport);
+      if (this.content) this.resizeObserver.observe(this.content);
       return;
     }
     this.resizeObserver?.disconnect();
@@ -135,6 +136,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     this.resizeObserverDocument = ownerDocument;
     observer.observe(this);
     if (this.viewport) observer.observe(this.viewport);
+    if (this.content) observer.observe(this.content);
   }
 
   private resetOwnerRealmWork(): void {
@@ -143,6 +145,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
     this.resizeObserverDocument = undefined;
+    this.measured = false;
   }
 
   private scheduleEdgeUpdate(): void {
@@ -201,8 +204,10 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   private syncEdges(emitForPositionChange: boolean): void {
     const detail = this.edgeDetail();
     const changed =
+      !this.measured ||
       detail.scrollStart !== this.canScrollStart ||
       detail.scrollEnd !== this.canScrollEnd;
+    this.measured = true;
     this.canScrollStart = detail.scrollStart;
     this.canScrollEnd = detail.scrollEnd;
     if (changed || emitForPositionChange) this.emit("lr-scroll", detail);
@@ -246,6 +251,11 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     });
     this.scrollFrame = handle;
     this.scrollFrameWindow = ownerWindow;
+  };
+
+  private onSlotChange = (): void => {
+    if (this.content) this.resizeObserver?.observe(this.content);
+    this.scheduleEdgeUpdate();
   };
 
   /** `scrollStep` normalized to a finite, non-negative override amount before
@@ -301,7 +311,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
             part="control previous"
             type="button"
             aria-label=${this.localize("scrollPrevious")}
-            ?disabled=${this.canScrollStart}
+            ?disabled=${!this.measured || this.canScrollStart}
             @click=${() => this.scrollByDirection(-1)}
             @dblclick=${() => this.scrollToEdge("start")}
           >
@@ -314,7 +324,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
         <span
           part="start-shadow"
           aria-hidden="true"
-          ?hidden=${this.withoutShadow || this.canScrollStart}
+          ?hidden=${!this.measured || this.withoutShadow || this.canScrollStart}
         ></span>
         <div
           part="viewport"
@@ -323,12 +333,12 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
           tabindex="0"
           @scroll=${this.onScroll}
         >
-          <div part="content"><slot @slotchange=${this.updateEdges}></slot></div>
+          <div part="content"><slot @slotchange=${this.onSlotChange}></slot></div>
         </div>
         <span
           part="end-shadow"
           aria-hidden="true"
-          ?hidden=${this.withoutShadow || this.canScrollEnd}
+          ?hidden=${!this.measured || this.withoutShadow || this.canScrollEnd}
         ></span>
       </div>
       ${this.controls
@@ -336,7 +346,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
             part="control next"
             type="button"
             aria-label=${this.localize("scrollNext")}
-            ?disabled=${this.canScrollEnd}
+            ?disabled=${!this.measured || this.canScrollEnd}
             @click=${() => this.scrollByDirection(1)}
             @dblclick=${() => this.scrollToEdge("end")}
           >

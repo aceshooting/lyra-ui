@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tree.js';
-import type { LyraTree, TreeItem } from './tree.js';
+import type { LyraTree, LyraTreeNodeData } from './tree.js';
 import type { LyraTreeItem } from './tree-item.js';
 
 describe('tree upstream-compatible selection and lazy lifecycle', () => {
@@ -29,6 +29,25 @@ describe('tree upstream-compatible selection and lazy lifecycle', () => {
     expect(standalone!.selected).to.be.true;
     expect(event.detail.selection.map((item: LyraTreeItem) => item.nodeLabel)).to.eql(['Standalone']);
     expect(el.selectedItems.map((item) => item.nodeLabel)).to.eql(['Standalone']);
+    expect(Object.isFrozen(event.detail)).to.be.true;
+    expect(Object.isFrozen(event.detail.selection)).to.be.true;
+    expect(Object.isFrozen(el.selectedItems)).to.be.true;
+  });
+
+  it('renders explicit multiselectable true and false on the tree role owner', async () => {
+    const el = (await fixture(selectableTree())) as LyraTree;
+    const roleOwner = () => el.shadowRoot!.querySelector('[role="tree"]')!;
+
+    expect(roleOwner().getAttribute('aria-multiselectable')).to.equal('false');
+    el.selection = 'multiple';
+    await el.updateComplete;
+    expect(roleOwner().getAttribute('aria-multiselectable')).to.equal('true');
+    el.selection = 'leaf';
+    await el.updateComplete;
+    expect(roleOwner().getAttribute('aria-multiselectable')).to.equal('false');
+    el.selection = 'leaf-multiple';
+    await el.updateComplete;
+    expect(roleOwner().getAttribute('aria-multiselectable')).to.equal('true');
   });
 
   it('cascades multiple selection, computes indeterminate parents, and keeps disabled targets inert', async () => {
@@ -45,7 +64,9 @@ describe('tree upstream-compatible selection and lazy lifecycle', () => {
     expect(parent.selected).to.be.false;
     const checkbox = parent.shadowRoot!.querySelector('[part="checkbox"]') as HTMLElement | null;
     expect(checkbox === null, 'multiple mode renders a checkbox').to.be.false;
-    expect(checkbox!.getAttribute('aria-checked')).to.equal('mixed');
+    expect(checkbox!.getAttribute('aria-hidden')).to.equal('true');
+    expect(parent.getAttribute('aria-checked')).to.equal('mixed');
+    expect(parent.hasAttribute('aria-selected')).to.be.false;
 
     parent.select();
     await el.updateComplete;
@@ -196,6 +217,99 @@ describe('tree upstream-compatible selection and lazy lifecycle', () => {
     expect(events).to.eql(['lr-expand', 'lr-collapse', 'lr-after-collapse']);
   });
 
+  it('keeps the collapsing subtree painted until its real hide animation completes', async () => {
+    const el = (await fixture(html`
+      <lr-tree label="Topics" style="--show-duration:0ms">
+        <lr-tree-item label="Parent" style="--hide-duration:40ms">
+          <lr-tree-item label="Child"></lr-tree-item>
+        </lr-tree-item>
+      </lr-tree>
+    `)) as LyraTree;
+    const item = el.querySelector('lr-tree-item') as LyraTreeItem;
+    item.expand();
+    await el.updateComplete;
+
+    let completed = false;
+    const afterCollapse = oneEvent(item, 'lr-after-collapse').then((event) => {
+      completed = true;
+      return event;
+    });
+    item.collapse();
+    await item.updateComplete;
+    const children = item.shadowRoot!.querySelector<HTMLElement>('[part="children"]');
+    expect(children === null, 'children remain mounted during the hide phase').to.be.false;
+    expect(children!.hasAttribute('data-collapsing')).to.be.true;
+    expect(getComputedStyle(children!).animationName).to.include('lr-tree-hide');
+    expect(children!.getAnimations().length).to.be.greaterThan(0);
+    expect(completed, 'completion is not emitted before the painted animation').to.be.false;
+
+    await afterCollapse;
+    await item.updateComplete;
+    expect(item.shadowRoot!.querySelector('[part="group"]') === null).to.be.true;
+  });
+
+  it('cancels an in-flight hide when expansion reverses it', async () => {
+    const el = (await fixture(html`
+      <lr-tree label="Topics" style="--show-duration:0ms">
+        <lr-tree-item label="Parent" style="--hide-duration:35ms">
+          <lr-tree-item label="Child"></lr-tree-item>
+        </lr-tree-item>
+      </lr-tree>
+    `)) as LyraTree;
+    const item = el.querySelector('lr-tree-item') as LyraTreeItem;
+    item.expand();
+    await el.updateComplete;
+    let afterCollapse = 0;
+    item.addEventListener('lr-after-collapse', () => afterCollapse++);
+
+    item.collapse();
+    await item.updateComplete;
+    item.expand();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    await item.updateComplete;
+
+    expect(item.expanded).to.be.true;
+    expect(item.shadowRoot!.querySelector('[part="group"]') === null).to.be.false;
+    expect(afterCollapse).to.equal(0);
+  });
+
+  it('normalizes an overflowing seconds duration before it reaches the timer host', async () => {
+    const item = (await fixture(html`
+      <lr-tree-item label="Parent">
+        <lr-tree-item label="Child"></lr-tree-item>
+      </lr-tree-item>
+    `)) as LyraTreeItem;
+    await item.updateComplete;
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const frameWindow = frame.contentWindow!;
+    const frameDocument = frame.contentDocument!;
+    const originalSetTimeout = frameWindow.setTimeout;
+    const delays: number[] = [];
+    frameWindow.setTimeout = ((handler: TimerHandler, delay = 0) => {
+      delays.push(Number(delay));
+      return originalSetTimeout.call(frameWindow, handler, 0);
+    }) as typeof frameWindow.setTimeout;
+    item.style.setProperty('--show-duration', '0ms');
+    item.style.setProperty('--hide-duration', `1${'0'.repeat(306)}s`);
+    try {
+      item.remove();
+      frameDocument.body.append(frameDocument.adoptNode(item));
+      await item.updateComplete;
+      item.expand();
+      await item.updateComplete;
+      const completed = oneEvent(item, 'lr-after-collapse');
+      item.collapse();
+      await completed;
+      expect(delays.every((delay) => Number.isFinite(delay) && delay <= 2_147_483_647)).to.be.true;
+      expect(delays, 'overflow normalizes to immediate completion without scheduling').to.deep.equal([]);
+    } finally {
+      frameWindow.setTimeout = originalSetTimeout;
+      item.remove();
+      frame.remove();
+    }
+  });
+
   it('settles the expansion lifecycle immediately when reduced motion is requested', async () => {
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = ((query: string) => ({
@@ -229,7 +343,7 @@ describe('tree upstream-compatible selection and lazy lifecycle', () => {
   });
 
   it('uses the same multiple-selection engine for data-created descendants without mutating data', async () => {
-    const treeData: TreeItem[] = [
+    const treeData: LyraTreeNodeData[] = [
       {
         id: 'branch',
         label: 'Branch',
@@ -246,6 +360,9 @@ describe('tree upstream-compatible selection and lazy lifecycle', () => {
     await el.updateComplete;
 
     const branch = el.querySelector('lr-tree-item') as LyraTreeItem;
+    expect(branch.getChildrenItems()).to.have.length(0);
+    branch.expand();
+    await el.updateComplete;
     const [selected, available, disabled] = branch.getChildrenItems();
     expect(branch.indeterminate).to.be.true;
     expect(selected!.selected).to.be.true;

@@ -1,54 +1,35 @@
-import { type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteInteger } from '../../../internal/numbers.js';
-import { srOnly } from '../../../internal/a11y.js';
-import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
-import { scopeFromElement, buildQuoteAnchor } from '../../../internal/text-quote.js';
-import { acquireHighlightHandle, type HighlightHandle } from '../../../internal/text-highlights.js';
-import type { LyraAnchor, LyraAnchorKind } from '../../viewers/document-viewer/anchors.js';
-import type { LyraMarkedParser, MarkdownDeps } from './markdown-loader.js';
+import { property } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { srOnly } from "../../../internal/a11y.js";
+import type { LyraAnchorTargetEventMap } from "../../../internal/anchor-target.js";
+import {
+  getMarkdownDepsIfLoaded,
+  type LyraMarkedParser,
+} from "./markdown-loader.js";
 import {
   loadShikiHighlighterCore,
   normalizeShikiLanguage,
   type ShikiLanguageInput,
-} from '../code-block/shiki-types.js';
-import type { KatexApi } from './katex-loader.js';
-import type { MarkedModule } from './markdown-loader.js';
+} from "../code-block/shiki-types.js";
 import {
-  applyMarkdownAriaBusy,
-  applyMarkdownFragmentAnchor,
-  applyMarkdownTextQuoteAnchor,
-  beginMarkdownDepsLoad,
   createMarkdownKatexState,
-  getCachedHighlight as getCachedHighlightShared,
-  hitTestHighlightRanges,
-  internalLinkHrefFrom,
-  markdownHighlightConfigChanged,
-  markdownLanguageSetChanged,
-  markdownMathPeerError,
-  markdownNeedsReparse,
-  MarkdownOwnedAnimationFrameController,
-  normalizeMarkdownLeadingTabs,
-  parseMarkdownDocument,
-  renderMarkdownContent,
-  watchMarkdownDarkTheme,
-  renderMarkdownDocument,
-  repaintMarkdownHighlights,
-  setCachedHighlight as setCachedHighlightShared,
-  sharedMarkdownParser,
   tokenizeMarkdownHighlight,
-  HIGHLIGHT_CACHE_MAX,
   type PendingHighlight,
-  type ResolvedHighlightRange,
   type MarkdownHeadingItem as SharedMarkdownHeadingItem,
-} from './markdown-shared.js';
-import { styles } from './markdown.styles.js';
-// The parse-only variant, matching `<lr-markdown>`. Inert either way today (none of `sanitize`/
-// `gfm`/`highlightCode` reflect, so no `toAttribute` is ever called), but the pair had drifted onto
+  type MarkdownHtmlMode,
+} from "./markdown-shared.js";
+import {
+  createMarkdownVariantContext,
+  MarkdownRuntimeBase,
+  type MarkdownHighlightAttempt,
+  type MarkdownVariantContext,
+} from "./markdown-base.class.js";
+import { styles } from "./markdown.styles.js";
+// The parse-only variant, matching `<lr-markdown>`. Inert either way today (neither `gfm` nor
+// `highlightCode` reflects, so no `toAttribute` is ever called), but the pair had drifted onto
 // two different converters, and the reflecting one would start behaving differently the moment any
-// of the three gained `reflect: true`.
-import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+// either property gained `reflect: true`.
+import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from "../../../internal/converters.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound } from '../../../internal/default-strings.generated.js';
@@ -57,32 +38,23 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 /** Re-exported so `markdown-core.ts`'s `export *` keeps exposing this from the same public path as
  *  before this type moved into the pair's shared module -- see `markdown-shared.ts`'s class doc. */
 export type MarkdownHeadingItem = SharedMarkdownHeadingItem;
+/** Peer-neutral public alias matching the full variant's `getMarked()` signature. */
+export type Marked = LyraMarkedParser;
 
 /** This variant's own `katex` resolution state, deliberately separate from `<lr-markdown>`'s --
  *  see `createMarkdownKatexState()` for why sharing one instance across the pair would change
  *  re-render-on-resolve behavior on a page using both. */
 const katexState = createMarkdownKatexState();
 
-/** @internal Test-only seam: forces `math` rendering to behave as if `katex` resolved to `katex`
- *  (or, with `null`, as if the optional peer failed to load). Pass `undefined` to restore the real
- *  `getKatex()`-driven behavior. Declared here rather than re-exported from `markdown-shared.ts` so
- *  `stripInternal` keeps it out of the shipped `.d.ts` exactly as before. */
-export function __setKatexForTesting(katex: KatexApi | null | undefined): void {
-  katexState.setForTesting(katex);
-}
-
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
  *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
  *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. Shared by `sanitize`, `gfm`, and
- *  `highlightCode`, which have the identical `true`-default parsing need. */
+ *  `fromAttribute` checks the literal string instead. Shared by `gfm` and `highlightCode`. */
 
 export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
-  'lr-render-error': CustomEvent<{ error: unknown }>;
-  'lr-link-click': CustomEvent<{ href: string; internal: boolean }>;
+  "lr-render-error": CustomEvent<{ error: unknown }>;
+  "lr-link-click": CustomEvent<{ href: string }>;
 }
-
-class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
 
 /**
  * `<lr-markdown-core>` — a build-lean variant of `<lr-markdown>` for a consumer whose
@@ -90,9 +62,7 @@ class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
  * tables, fenced code blocks, links, blockquotes, heading anchors, text-quote highlights, math) is
  * identical to `<lr-markdown>` -- only fenced-code-block highlighting differs: this component's
  * own module never textually contains a call to (or import of) `loadShikiHighlighter` (the
- * ~200-language default dynamic-import table `<lr-markdown>` calls unconditionally unless its
- * *runtime* `languagesOnly` flag is `true` -- a flag on that same module a bundler can't prove
- * always-true, so the unconditional call stays in the build output regardless). A consumer
+ * ~200-language default dynamic-import table `<lr-markdown>` can call). A consumer
  * importing this entry point instead of `markdown.js` gets a genuinely shiki-full-table-free
  * build. A fenced block whose language isn't a key in `languages` always renders the plain-text
  * fallback -- there is no default/full-table highlighter here to fall back to, mirroring
@@ -105,12 +75,12 @@ class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
  * - If `marked` fails to load, or throws while parsing malformed input, the
  *   component falls back to plain text (`white-space: pre-wrap`, no HTML
  *   parsing at all) and fires `lr-render-error`.
- * - If `sanitize` is `true` (the default) and `dompurify` fails to load, the
+ * - If `htmlMode` is `sanitize` (the default) and `dompurify` fails to load, the
  *   component *also* falls back to plain text + `lr-render-error` — it
  *   never renders marked's raw HTML output when sanitization was requested
  *   (or defaulted to) but is unavailable, even though `marked` itself loaded
  *   fine.
- * - If `sanitize` is explicitly `false`, marked's raw output renders as-is
+ * - If `htmlMode` is explicitly `trusted`, marked's raw output renders as-is
  *   regardless of whether `dompurify` is installed — the consumer opted out
  *   of sanitization, so `dompurify`'s absence is irrelevant to that path.
  *
@@ -121,9 +91,9 @@ class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
  * asynchronous, so the very first paint of any `<lr-markdown>` on a page
  * shows plain text for at least one microtask — even when both peers are
  * already installed and load without error — until that import resolves and
- * a second render replaces it with the real Markdown output. Set
- * `eager-load` to skip that window once the shared dependency cache is
- * already warm; see that property's doc for exactly what "warm" requires.
+ * a second render replaces it with the real Markdown output. Call `preloadMarkdown()` before
+ * mounting the first instance to avoid that window; later instances always adopt its settled
+ * shared dependency cache synchronously.
  * Disconnecting and reconnecting while the shared load is pending invalidates the earlier
  * connection's settlement callback, so the current connection parses only once.
  *
@@ -168,8 +138,8 @@ class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
  *
  * @customElement lr-markdown-core
  * @event lr-link-click - Fired (and the click prevented) when a rendered
- *   link's `href` starts with `internal-link-prefix`. `detail: { href:
- *   string, internal: true }`. Ordinary external links navigate normally
+ *   link's `href` starts with `internal-link-prefix`. `detail: { href: string }`.
+ *   Ordinary external links navigate normally
  *   (in `link-target`) and never fire this event.
  * @event lr-render-error - Fired whenever rendering falls back to plain
  *   text, or `math` is set but the `katex` peer isn't installed. `detail: { error: unknown }`.
@@ -192,6 +162,8 @@ class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
  * @csspart blockquote - Every rendered `<blockquote>`.
  * @csspart img - Every rendered `<img>`.
  * @csspart math - A rendered inline or block math span (`data-display="inline"|"block"`).
+ * @cssprop [--lr-markdown-font-mono=var(--lr-font-mono)] - Monospace family for rendered `<code>`
+ *   inside `content`.
  * @cssprop [--lr-markdown-highlight-accent-bg=var(--lr-color-brand-quiet)] - Accent highlight fill.
  * @cssprop [--lr-markdown-highlight-success-bg=var(--lr-color-success-quiet)] - Success highlight fill.
  * @cssprop [--lr-markdown-highlight-warning-bg=var(--lr-color-warning-quiet)] - Warning highlight fill.
@@ -209,7 +181,7 @@ class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
  * @status stable
  * @since 4.0.0
  */
-export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase) {
+export class LyraMarkdownCore extends MarkdownRuntimeBase {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -222,43 +194,61 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
+  private static readonly variant = createMarkdownVariantContext(
+    "lr-markdown-core",
+    katexState
+  );
+
+  /** Returns the shared compatibility parser used as defaults by every core instance. Call
+   * `preloadMarkdown()` before first use when the optional parser peer is not warm yet. */
+  static getMarked(): Marked {
+    const parser = this.variant.sharedParser.get(
+      getMarkdownDepsIfLoaded()?.marked
+    );
+    if (!parser) {
+      throw new Error(
+        "LyraMarkdownCore.getMarked() requires the optional `marked` peer; await preloadMarkdown() first."
+      );
+    }
+    return parser;
+  }
+
+  /** Re-renders every connected `<lr-markdown-core>` instance after shared parser changes. */
+  static updateAll(): void {
+    for (const instance of this.variant.connectedInstances)
+      instance.renderMarkdown();
+  }
+
   /** The Markdown source to render. */
-  @property() content = '';
+  @property() override content = "";
 
-  /** Tab-stop width used to expand tabs in leading indentation before parsing. Values are guarded
-   * to finite integers from 1 through 32, with `4` as the fallback. This is separate from
+  /** Tab-stop width used to expand tabs in leading indentation before parsing. Finite values are
+   * truncated and clamped to `[1, 32]`; non-finite values fall back to `4`. This is separate from
    * `--lr-code-block-tab-size`, which controls the visual width of tabs in rendered code. */
-  @property({ type: Number, attribute: 'tab-size' }) tabSize = 4;
+  @property({ type: Number, attribute: "tab-size" }) override tabSize = 4;
 
-  /** Sanitize marked's HTML output with DOMPurify before rendering. See the
-   *  class doc for what happens when this is `true` (the default) but the
-   *  `dompurify` peer isn't installed. */
-  @property({ converter: trueDefaultBooleanConverter }) sanitize = true;
-
-  /** When `true`, overrides marked's `html` renderer hook to emit the HTML-escaped source text
-   *  instead of passing raw/sanitized markup through -- for a consumer rendering arbitrary
-   *  already-written content (e.g. a historical chat/agent transcript full of code/XML/HTML
-   *  snippets) where a stray angle bracket should render as visible text, not a real DOM element.
-   *  Still lets GFM tables/lists/etc. render normally -- only raw embedded HTML is affected.
-   *  `false` (the default) reproduces today's exact `marked`-default (sanitized-when-`sanitize`)
-   *  passthrough behavior. */
-  @property({ type: Boolean, attribute: 'escape-html' }) escapeHtml = false;
+  /** How authored raw HTML is handled: sanitized through DOMPurify (default), escaped as visible
+   * text, or deliberately trusted. */
+  @property({ attribute: "html-mode" }) override htmlMode: MarkdownHtmlMode =
+    "sanitize";
 
   /** Enable GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists). */
-  @property({ converter: trueDefaultBooleanConverter }) gfm = true;
+  @property({ converter: trueDefaultBooleanConverter }) override gfm = true;
 
   /** `target` applied to every rendered `<a>`, with `rel="noopener
    *  noreferrer"` always added alongside it whenever a `target` is emitted.
    *  `'_blank'` (the default) preserves today's exact output. Set to `null`
    *  (or the empty string, e.g. via the `link-target=""` attribute) to omit
    *  `target`/`rel` entirely, so rendered links open in the same tab. */
-  @property({ attribute: 'link-target' }) linkTarget: string | null = '_blank';
+  @property({ attribute: "link-target" }) override linkTarget: string | null =
+    "_blank";
 
   /** When set, a rendered link whose `href` starts with this prefix is
    *  treated as internal — its click is intercepted and reported via
    *  `lr-link-click` instead of navigating. Empty (the default) means
    *  every link is treated as external. */
-  @property({ attribute: 'internal-link-prefix' }) internalLinkPrefix = '';
+  @property({ attribute: "internal-link-prefix" }) override internalLinkPrefix =
+    "";
 
   /** Added to every rendered heading's source `token.depth` before emitting
    *  `<h${depth}>` — e.g. `heading-offset="2"` renders a source `#` as
@@ -267,30 +257,15 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
    *  overflowing past the HTML heading levels; the floor at `1` is
    *  defensive, since this property is meant to be additive-only). `0`
    *  (the default) preserves today's exact `<h${token.depth}>` output. */
-  @property({ type: Number, attribute: 'heading-offset' }) headingOffset = 0;
+  @property({ type: Number, attribute: "heading-offset" })
+  override headingOffset = 0;
 
-  /** When `true`, `connectedCallback()` skips awaiting `loadMarkdownDeps()`'s
-   *  dynamic `import()` if the shared `marked`/`dompurify` module cache (see
-   *  `markdown-loader.ts`'s `getMarkdownDepsIfLoaded()`) has *already*
-   *  resolved — e.g. because an earlier `<lr-markdown>` instance on the
-   *  page already finished loading, or the consumer primed the cache
-   *  directly by calling `loadMarkdownDeps()` themselves at startup — and
-   *  renders synchronously instead. When the cache isn't warm yet (most
-   *  notably: the very first `<lr-markdown>` ever connected on a page,
-   *  since nothing has called `loadMarkdownDeps()` before it), this still
-   *  falls back to the normal async path — a dynamic `import()` can't be
-   *  made synchronous, so this is a fast path for the common "already warm"
-   *  case, not a hard guarantee. `false` (the default) is byte-identical to
-   *  today: always the async `import()`, fallback-text window included. */
-  @property({ type: Boolean, attribute: 'eager-load' }) eagerLoad = false;
-
-  /** Signals that `content` is still arriving incrementally. Content changes
-   *  are coalesced to at most one parse per animation frame while this is
-   *  `true`; the host remains `aria-busy="true"` so assistive technology knows
-   *  the rendered document is not final. Set it back to `false` with the final
-   *  content update to flush the latest content immediately.
+  /** Signals that `content` is still arriving incrementally. While true, content renders as
+   *  bounded-cost plain text and Markdown parsing resumes only for the final false transition;
+   *  the host remains `aria-busy="true"` so assistive technology knows the rendered document is
+   *  not final.
    *  Reflects so a consumer can also target `lr-markdown[streaming]`. */
-  @property({ type: Boolean, reflect: true }) streaming = false;
+  @property({ type: Boolean, reflect: true }) override streaming = false;
 
   /** Syntax-highlights fenced code blocks via the same optional `shiki` peer `<lr-code-block>`
    *  uses. `true` (the default) upgrades every fenced block from plain `<pre><code>` once the peer
@@ -299,467 +274,64 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
    *  byte-identical output to today). Set `false` to keep plain output even when `shiki` is
    *  installed. No effect while `streaming` is `true` -- see that property's own doc. */
   @property({
-    attribute: 'highlight-code',
+    attribute: "highlight-code",
     converter: trueDefaultBooleanConverter,
   })
-  highlightCode = true;
+  override highlightCode = true;
 
   /** Grammar definitions this instance can highlight, e.g. `{ json: jsonGrammar }` (import from
    *  `shiki/langs/<name>.mjs`), forwarded verbatim to `loadShikiHighlighterCore()` -- same shape as
    *  `<lr-code-block-core>`'s own `languages`. This component has no default/full-table
    *  highlighter to fall back to -- a fenced block whose language isn't a key here always renders
    *  the plain-text fallback. Empty (the default) never highlights anything. */
-  @property({ attribute: false }) languages: Record<string, ShikiLanguageInput> = {};
+  @property({ attribute: false }) override languages: Record<
+    string,
+    ShikiLanguageInput
+  > = {};
 
   /** Stamps a computed slug as `id` on every rendered heading. `getHeadingTree()` computes the
    *  same slugs regardless of this property -- it only controls whether the `id` attribute is
    *  emitted into the rendered DOM. `false` (the default) preserves today's exact output.
    *
-   *  When `sanitize` is also on (the default), a slug whose *value* collides with a real
+   *  When `htmlMode` is `sanitize` (the default), a slug whose *value* collides with a real
    *  `document` property name (e.g. a heading literally titled "Title", "Location", or "Forms"
    *  slugs to `title`/`location`/`forms`) has its `id` silently stripped by DOMPurify's DOM-
    *  clobbering protection (`SANITIZE_DOM`) -- `getHeadingTree()` still reports that heading's slug
    *  either way, but `scrollToAnchor({ kind: 'fragment', id })` still resolves it correctly even
    *  without a DOM `id` present, via its own position-based fallback lookup. */
-  @property({ type: Boolean, attribute: 'heading-anchors' }) headingAnchors = false;
+  @property({ type: Boolean, attribute: "heading-anchors" })
+  override headingAnchors = false;
 
   /** Renders `$...$`/`$$...$$` TeX via the optional `katex` peer, as MathML. `false` (the
    *  default) renders `$...$` literally, unparsed -- today's exact output. */
-  @property({ type: Boolean }) math = false;
+  @property({ type: Boolean }) override math = false;
 
-  /** Anchor kinds this component resolves via `scrollToAnchor()`. Readonly. */
-  override readonly anchorKinds: readonly LyraAnchorKind[] = ['fragment', 'text-quote'];
-
-  // `null` covers both "the optional peers are still loading" and "a render
-  // attempt just fell back after a failure" — the two states intentionally
-  // look identical (plain text, see render()) since a consumer distinguishes
-  // them via `lr-render-error`, not a visual difference.
-  @state() private renderedHtml: string | null = null;
-
-  /** Whether the host's resolved token palette is a dark scheme -- drives the `data-dark-theme`
-   *  hook that swaps Shiki's dual-theme output to its dark half. */
-  @state() private isDarkTheme = false;
-
-  private stopWatchingTheme?: () => void;
-
-  private deps?: MarkdownDeps;
-
-  /** The configurable parser shared by both Markdown variants on this page. It is `undefined`
-   * while the optional peer is unresolved or unavailable. Configuration installed with
-   * `marked.use()` is copied into each fresh internal parse; call `renderMarkdown()` to refresh
-   * content that is already rendered. */
-  get marked(): LyraMarkedParser | undefined {
-    return sharedMarkdownParser(this.deps?.marked);
+  /** @internal */
+  protected override get markdownVariant(): MarkdownVariantContext {
+    return LyraMarkdownCore.variant;
   }
 
-  /** Document-ordered heading outline computed on every parse (see `getHeadingTree()`), regardless
-   *  of `headingAnchors`. */
-  private headingTree: MarkdownHeadingItem[] = [];
-
-  /** Lazily acquired the first time a highlight needs painting; released on disconnect. */
-  private highlightHandle?: HighlightHandle;
-
-  /** The most recently resolved `text-quote` highlight ranges, kept for `onContentClick()`'s
-   *  coordinate hit-test -- the CSS Custom Highlight API paints ranges without creating any DOM
-   *  element to attach a click listener to, so activation is resolved by comparing the click point
-   *  against each range's own `getClientRects()` instead, uniformly across both paint paths. */
-  private resolvedHighlightRanges: ResolvedHighlightRange[] = [];
-
-  /** Guards `lr-render-error` so a permanently-missing `katex` peer reports once per instance,
-   *  not on every subsequent re-render while `math` stays on. Reset whenever `math` toggles. */
-  private mathFailureReported = false;
-
-  /** `(lang, code)` -> already-highlighted HTML, content-addressed (see `PendingHighlight`'s doc).
-   *  Persists across renders of this instance; populated asynchronously by `highlightPending()`.
-   *  Never consulted while `streaming` is `true` or `highlightCode` is `false` -- both gates live
-   *  in the `code()` renderer inside `parseMarkdownDocument()`. Bounded to `HIGHLIGHT_CACHE_MAX`
-   *  entries (see `markdown-shared.ts`), least-recently-used first out, via
-   *  `getCachedHighlight()`/`setCachedHighlight()` -- always go through those instead of the map
-   *  directly so hits refresh recency. */
-  private highlightCache = new Map<string, string>();
-
-  /** LRU read: a hit is re-inserted so Map iteration order (insertion order) keeps the first key
-   *  the least recently used one -- the entry `setCachedHighlight()` evicts when full. Thin
-   *  instance-bound wrapper around the shared, `<lr-markdown>`-sharing implementation in
-   *  `markdown-shared.ts`. */
-  private getCachedHighlight(key: string): string | undefined {
-    return getCachedHighlightShared(this.highlightCache, key);
-  }
-
-  private setCachedHighlight(key: string, html: string): void {
-    setCachedHighlightShared(this.highlightCache, key, html, HIGHLIGHT_CACHE_MAX);
-  }
-
-  /** Bumped on every `highlightPending()` call, including ones that end up not actually loading
-   *  anything -- guards against a newer `content`/`streaming` change superseding an older in-flight
-   *  highlight, exactly mirroring `<lr-code-block>`'s own `highlightToken` field for the identical
-   *  race (an async grammar load resolving after a newer call already produced correct output). */
-  private highlightToken = 0;
-
-  /** Coalesces rapid streaming content assignments so a token burst cannot start one full
-   *  Markdown parse per assignment. The final `streaming = false` update cancels this frame and
-   *  renders synchronously, so consumers never lose the last chunk. */
-  private streamingRenderRaf?: number;
-  /** The browsing context and settlement hook for `streamingRenderRaf`; RAF handles are
-   *  realm-local, and disconnect/adoption must settle a pending `updateComplete` wait. */
-  private readonly streamingRenderFrames = new MarkdownOwnedAnimationFrameController();
-  /** Stable identity lets the shared KaTeX state de-duplicate this instance across any repeated
-   *  renders while the peer load is still in flight. */
-  private readonly handleKatexResolved = (): void => {
-    if (!this.isConnected) return;
-    this.renderMarkdown();
-  };
-
-  /** Keys from `PendingHighlight` that failed to highlight -- peer missing, language unrecognized,
-   *  or tokenization threw. Once a key lands here, `code()` stops re-discovering it as pending on
-   *  every future render. Without this, a permanently-unhighlightable block (e.g. an unrecognized
-   *  language) would never get cached, so every `renderMarkdown()` pass -- including the one
-   *  `highlightPending()` itself triggers on completion -- would rediscover it as pending and retry
-   *  it again, forever. Mirrors `code-loader.ts`'s own `unsupportedLanguages` Set, which exists for
-   *  the identical reason one level down (a single unrecognized `language` value on
-   *  `<lr-code-block>`). */
-  private failedHighlightKeys = new Set<string>();
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.stopThemeWatcher();
-    this.stopWatchingTheme = watchMarkdownDarkTheme(this, (isDarkTheme) => {
-      this.isDarkTheme = isDarkTheme;
-    });
-    beginMarkdownDepsLoad(this, (resolved) => {
-      this.deps = resolved;
-      this.renderMarkdown();
-    });
-  }
-
-  override disconnectedCallback(): void {
-    super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
-    this.cancelStreamingRender();
-    this.stopThemeWatcher();
-    this.highlightHandle?.release();
-    this.highlightHandle = undefined;
-  }
-
-  adoptedCallback(): void {
-    this.cancelStreamingRender();
-    this.stopThemeWatcher();
-  }
-
-  /** Retires the resolved-theme watch. Clears the handle before invoking it so a re-entrant
-   *  callback can never run the same teardown twice. */
-  private stopThemeWatcher(): void {
-    const stop = this.stopWatchingTheme;
-    this.stopWatchingTheme = undefined;
-    stop?.();
-  }
-
-  /** Binds selection -> `lr-text-select` once, on the stable `[part="content"]` wrapper --
-   *  re-renders only replace that wrapper's children via `unsafeHTML`, never the wrapper itself.
-   *  `bindTextSelection` is `protected` on the mixin's own narrowed return type (deliberately not
-   *  part of `LyraAnchorTarget`'s public surface -- see `anchor-target.ts`'s class doc), so it's
-   *  reached the same way that module's own tests do: through a cast, without declaring a no-op
-   *  passthrough override just to satisfy the type checker. */
-  protected override firstUpdated(changed: PropertyValues): void {
-    super.firstUpdated(changed);
-    const contentRoot = this.renderRoot.querySelector('[part="content"]');
-    if (!contentRoot) return;
-    (this as unknown as { bindTextSelection(root: Element): void }).bindTextSelection(contentRoot);
-  }
-
-  // Runs before render (not updated()) so mutating the `renderedHtml` state
-  // property below is absorbed into the *same* update cycle instead of
-  // scheduling a second one -- Lit's documented pattern for deriving one
-  // reactive property from a change to others.
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
-    if (changed.has('math')) this.mathFailureReported = false;
-    if (!this.deps) {
-      // Still loading the optional peers — the connectedCallback promise
-      // above calls renderMarkdown() itself once they resolve, using
-      // whatever property values are current at that time.
-      return;
+  /** @internal */
+  protected override async tokenizePendingHighlight(
+    pending: PendingHighlight,
+    languages: Record<string, ShikiLanguageInput> | undefined,
+    isCurrent: () => boolean
+  ): Promise<MarkdownHighlightAttempt> {
+    const normalizedLang = normalizeShikiLanguage(pending.lang);
+    if (
+      !languages ||
+      (!languages[normalizedLang] && !languages[pending.lang])
+    ) {
+      return null;
     }
-    if (!markdownNeedsReparse(changed)) return;
-    if (markdownHighlightConfigChanged(changed)) {
-      this.highlightToken++;
-      this.failedHighlightKeys.clear();
-      if (markdownLanguageSetChanged(changed)) this.highlightCache.clear();
-    }
-    if (this.streaming && changed.has('content')) this.scheduleStreamingRender();
-    else {
-      this.cancelStreamingRender();
-      this.renderMarkdown();
-    }
-  }
-
-  private cancelStreamingRender(): void {
-    const handle = this.streamingRenderRaf;
-    this.streamingRenderRaf = undefined;
-    if (!this.streamingRenderFrames.cancel() && handle !== undefined) {
-      this.ownerDocument.defaultView?.cancelAnimationFrame(handle);
-    }
-  }
-
-  private scheduleStreamingRender(): void {
-    if (this.streamingRenderRaf !== undefined) return;
-    const view = this.ownerDocument.defaultView;
-    if (!view) {
-      if (this.isConnected) this.renderMarkdown();
-      return;
-    }
-    const handle = this.streamingRenderFrames.request(view, () => {
-      this.streamingRenderRaf = undefined;
-      if (this.isConnected && this.ownerDocument.defaultView === view) this.renderMarkdown();
-    });
-    if (handle === undefined) {
-      if (this.isConnected) this.renderMarkdown();
-    } else if (this.streamingRenderFrames.handle === handle) {
-      this.streamingRenderRaf = handle;
-    }
-  }
-
-  protected override async getUpdateComplete(): Promise<boolean> {
-    const complete = await super.getUpdateComplete();
-    const settled = this.streamingRenderFrames.settled;
-    if (!settled) return complete;
-    await settled;
-    return super.getUpdateComplete();
-  }
-
-  protected override updated(changed: PropertyValues): void {
-    super.updated(changed);
-    applyMarkdownAriaBusy(this, !this.deps || this.streaming);
-    if (changed.has('renderedHtml') || changed.has('highlights') || changed.has('activeHighlightId')) {
-      this.repaintHighlights();
-    }
-  }
-
-  /** Immediately reruns the current content through the shared parse, sanitize, highlight, and
-   * fallback pipeline. This is the public refresh point after configuring `marked`; it safely
-   * no-ops while the optional parser is unresolved. */
-  renderMarkdown(): void {
-    const deps = this.deps;
-    if (!deps) return;
-    const outcome = renderMarkdownDocument({
-      tag: 'lr-markdown-core',
-      deps,
-      sanitize: this.sanitize,
-      math: this.math,
-      parse: (marked, pendingKeys, headingTreeOut) => this.parseMarkdown(marked, pendingKeys, headingTreeOut),
-      onParsed: () => this.maybeLoadKatex(),
-      isKatexConfirmedMissing: () => katexState.isConfirmedMissing(),
-    });
-    // Non-null whenever the parse itself succeeded -- including the dompurify-missing fallback,
-    // which still computed a real outline before refusing to render.
-    if (outcome.headingTree) this.headingTree = outcome.headingTree;
-    if (outcome.status === 'fallback') {
-      this.applyFallback(outcome.error);
-      return;
-    }
-    this.renderedHtml = outcome.html;
-    if (outcome.mathFailed) this.reportMathFailure();
-    this.maybeHighlightPending(outcome.pendingKeys);
-  }
-
-  private applyFallback(error: unknown): void {
-    this.renderedHtml = null;
-    this.emit('lr-render-error', { error });
-  }
-
-  /** Kicks off this variant's `katex` load the first time `math` needs it and no attempt is
-   *  already in flight (module-scoped, so every `<lr-markdown-core>` instance on the page shares
-   *  one load -- mirrors `markdown-loader.ts`'s own warm-cache shape). Skipped entirely under
-   *  `__setKatexForTesting()` -- that seam controls math-rendering behavior directly and must never
-   *  race a real, unmocked `import('katex')` settling underneath it. */
-  private maybeLoadKatex(): void {
-    if (!this.math) return;
-    katexState.startLoad(this.handleKatexResolved);
-  }
-
-  /** Fires `lr-render-error` once per instance for a permanently-missing `katex` peer. Called
-   *  only once `renderMarkdown()` has confirmed the peer is actually missing (the test override or
-   *  the resolved module is `null`) -- a math token rendering its literal fallback while the load
-   *  is merely still in flight (the same one-microtask transient window every other optional peer
-   *  in this component has) never reports an error on its own. */
-  private reportMathFailure(): void {
-    if (this.mathFailureReported) return;
-    this.mathFailureReported = true;
-    this.emit('lr-render-error', {
-      error: markdownMathPeerError('lr-markdown-core'),
-    });
-  }
-
-  /** Kicks off async highlighting for `pendingKeys` (see `highlightPending()`) unless there's
-   *  nothing to do, `highlightCode` is off, or `streaming` is on -- called from both of
-   *  `renderMarkdown()`'s exit points (the `sanitize=false` early return and the normal sanitized
-   *  path), since highlighting is independent of that decision. */
-  private maybeHighlightPending(pendingKeys: PendingHighlight[]): void {
-    if (pendingKeys.length === 0 || !this.highlightCode || this.streaming) return;
-    void this.highlightPending(pendingKeys);
-  }
-
-  /** Loads whatever shiki grammars `pendingKeys` need, tokenizes each pending block concurrently,
-   *  populates `highlightCache` with the results, then triggers one more `renderMarkdown()` pass so
-   *  the newly-cached entries actually reach the screen. A pending key whose language isn't a key in
-   *  `languages`, or otherwise fails to tokenize, is recorded in `failedHighlightKeys` -- it stays
-   *  uncached, so `code()` keeps emitting its plain fallback for it on every future render, and
-   *  `code()` also stops re-discovering it as pending (see `failedHighlightKeys`'s own doc for why
-   *  that matters: without it, the `renderMarkdown()` call at the end of this method would
-   *  rediscover the same permanently-uncacheable key as pending on every pass, forever). Does not
-   *  block or delay any other pending key -- each is tried independently via `Promise.all`. */
-  private async highlightPending(pendingKeys: PendingHighlight[]): Promise<void> {
-    const token = ++this.highlightToken;
-    const languages = this.languages;
-
-    const tokenizeOne = async (pending: PendingHighlight): Promise<void> => {
-      const normalizedLang = normalizeShikiLanguage(pending.lang);
-      if (!languages[normalizedLang] && !languages[pending.lang]) {
-        // Not in the supplied languages map -- there is no default/full-table highlighter to fall
-        // back to in this variant (mirrors <lr-code-block-core>). Permanent for this key:
-        // failedHighlightKeys is never cleared, and languages isn't in willUpdate()'s trigger list,
-        // so changing it doesn't retry this key on its own.
-        this.failedHighlightKeys.add(pending.key);
-        return;
-      }
-      const hl = await loadShikiHighlighterCore(languages);
-      if (token !== this.highlightToken || !this.isConnected) return;
-      if (!hl) {
-        this.failedHighlightKeys.add(pending.key);
-        return;
-      }
-      const html = tokenizeMarkdownHighlight(hl, pending);
-      if (html === null) this.failedHighlightKeys.add(pending.key);
-      else this.setCachedHighlight(pending.key, html);
-    };
-
-    await Promise.all(pendingKeys.map(tokenizeOne));
-
-    if (token !== this.highlightToken || !this.isConnected) return;
-    this.renderMarkdown();
-  }
-
-  /** Thin instance-bound wrapper around the shared, `<lr-markdown>`-sharing implementation in
-   *  `markdown-shared.ts` -- resolves every input `parseMarkdownDocument()` needs from this
-   *  instance's own properties/state, byte-identical to this method's pre-extraction behavior. */
-  private parseMarkdown(
-    marked: MarkedModule,
-    pendingKeys: PendingHighlight[],
-    headingTreeOut: MarkdownHeadingItem[]
-  ): { html: string; hadMathFallback: boolean } {
-    return parseMarkdownDocument({
-      marked,
-      content: normalizeMarkdownLeadingTabs(this.content, finiteInteger(this.tabSize, 4, 1, 32)),
-      markedConfiguration: sharedMarkdownParser(marked)?.defaults,
-      gfm: this.gfm,
-      // Falsy (`null` or `''`) means the consumer explicitly opted out of
-      // target="..."/rel="..." on rendered links -- see the linkTarget doc.
-      // The default '_blank' is already truthy, so this preserves today's
-      // exact output when the property is left unset.
-      linkTarget: this.linkTarget,
-      headingOffset: finiteInteger(this.headingOffset, 0, 0, 6),
-      escapeHtmlOption: this.escapeHtml,
-      highlightCodeOption: this.highlightCode && !this.streaming,
-      // Bound method reference (not the raw map): reads must go through the LRU accessor so a hit
-      // refreshes its recency.
-      getCachedHighlight: (key: string) => this.getCachedHighlight(key),
-      failedHighlightKeys: this.failedHighlightKeys,
-      headingAnchorsOption: this.headingAnchors,
-      mathOption: this.math,
-      cachedKatex: this.math ? katexState.getIfLoaded() : null,
-      pendingKeys,
-      headingTreeOut,
-    });
-  }
-
-  /** A document-ordered, flattened heading outline -- computed on every parse regardless of
-   *  `headingAnchors` (see that property's own doc). A caller building a table of contents can rely
-   *  on this even while `heading-anchors` is off. */
-  getHeadingTree(): MarkdownHeadingItem[] {
-    return [...this.headingTree];
-  }
-
-  private contentRoot(): Element | null {
-    return this.renderRoot.querySelector('[part="content"]');
-  }
-
-  // -- anchor-target: applyAnchor per kind -----------------------------------------------------
-
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
-    const root = this.contentRoot();
-    if (!root) return false;
-    switch (anchor.kind) {
-      case 'fragment':
-        return applyMarkdownFragmentAnchor(root, anchor, this.headingTree);
-      case 'text-quote':
-        return applyMarkdownTextQuoteAnchor(root, anchor, this.effectiveLocale);
-      default:
-        return false;
-    }
-  }
-
-  /** Overrides `DocumentAnchorTarget`'s default (whole render-root) selection scope, matching
-   *  `heading`'s slug computation and `applyTextQuoteAnchor()` above: only `[part="content"]` is a
-   *  meaningful text-quote scope, so a selection that somehow reaches outside it (there is no other
-   *  text in this component's shadow tree today, but the live region could grow one) never leaks
-   *  into a captured anchor. */
-  protected computeSelectionAnchor(range: Range): LyraAnchor | null {
-    const root = this.contentRoot();
-    if (!root) return null;
-    return buildQuoteAnchor(range, scopeFromElement(root));
-  }
-
-  // -- highlight painting ------------------------------------------------------------------------
-
-  private ensureHighlightHandle(): HighlightHandle {
-    if (!this.highlightHandle) this.highlightHandle = acquireHighlightHandle(this, this.ownerDocument);
-    return this.highlightHandle;
-  }
-
-  /** Re-resolves and repaints every `text-quote` highlight -- see
-   *  `repaintMarkdownHighlights()` for the resolution contract. */
-  private repaintHighlights(): void {
-    this.resolvedHighlightRanges = [];
-    const root = this.contentRoot();
-    if (!root) return;
-    this.resolvedHighlightRanges = repaintMarkdownHighlights({
-      locale: this.effectiveLocale,
-      root,
-      handle: this.ensureHighlightHandle(),
-      highlights: this.highlights,
-      activeHighlightId: this.activeHighlightId,
-    });
-  }
-
-  // A single delegated listener on the content wrapper (not one per <a>) —
-  // the rendered markup is fully replaced on every content change, so a
-  // per-anchor listener would need re-attaching on every render anyway.
-  private onContentClick = (e: MouseEvent): void => {
-    const highlightId = hitTestHighlightRanges(this.resolvedHighlightRanges, e.clientX, e.clientY);
-    if (highlightId) {
-      this.emit('lr-highlight-activate', { id: highlightId });
-      return;
-    }
-    const href = internalLinkHrefFrom(e, this.internalLinkPrefix);
-    if (href === null) return;
-    e.preventDefault();
-    this.emit('lr-link-click', { href, internal: true });
-  };
-
-  override render(): TemplateResult {
-    return renderMarkdownContent({
-      content: this.content,
-      sanitize: this.sanitize,
-      renderedHtml: this.renderedHtml,
-      hostAriaLabel: this.getAttribute('aria-label'),
-      isDarkTheme: this.isDarkTheme,
-      onClick: this.onContentClick,
-      liveRegion: this.renderAnchorLiveRegion(),
-    });
+    const highlighter = await loadShikiHighlighterCore(languages);
+    if (!isCurrent()) return undefined;
+    return highlighter ? tokenizeMarkdownHighlight(highlighter, pending) : null;
   }
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-markdown-core': LyraMarkdownCore;
+    "lr-markdown-core": LyraMarkdownCore;
   }
 }

@@ -19,13 +19,13 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lr-handoff-divider style="max-width: 32rem;" agent="Research Agent"></lr-handoff-divider>`,
+  render: () => html`<lr-handoff-divider style="max-width: 32rem;" to-agent="Research Agent"></lr-handoff-divider>`,
 };
 
 export const FromTo: Story = {
   name: 'From one agent to another',
   render: () => html`
-    <lr-handoff-divider style="max-width: 32rem;" from-agent="Planner" agent="Research Agent">
+    <lr-handoff-divider style="max-width: 32rem;" from-agent="Planner" to-agent="Research Agent">
       <lr-avatar slot="avatar" initials="RA"></lr-avatar>
     </lr-handoff-divider>
   `,
@@ -46,7 +46,7 @@ export const Narrow320: Story = {
   name: 'Narrow (320px)',
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
-      <lr-handoff-divider from-agent="Long Planner Agent Name" agent="Very Long Research Agent Name">
+      <lr-handoff-divider from-agent="Long Planner Agent Name" to-agent="Very Long Research Agent Name">
         <lr-avatar slot="avatar" initials="RA"></lr-avatar>
       </lr-handoff-divider>
     </div>

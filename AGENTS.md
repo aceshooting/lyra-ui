@@ -95,7 +95,7 @@ pnpm test        # -r: builds lyra-ui first (its entrypoint tests import dist/),
 pnpm lint        # -r: for lyra-ui NOT just a type check — the full contract-policy chain
                  #     + tsc --noEmit + test:types
 pnpm manifest    # --filter @aceshooting/lyra-ui: cem analyze -> custom-elements.json
-pnpm registrations # regenerate all.ts imports, tag aliases, registration allowlist, and sideEffects
+pnpm registrations # regenerate all.ts imports, tag aliases, allowlist, sideEffects, and explicit exports
 pnpm plugin:sync # sync the lyra-ui version into both agent manifests + Claude marketplace entry
 pnpm docs        # Storybook (.storybook/), demos every component live at localhost:6006
 pnpm create:component --family utility --name status-panel # validated new-component scaffold
@@ -180,8 +180,9 @@ Full rules, incidents, and patterns:
   `::part(x)`; encode state in the part name; and forward every documented part with
   `exportparts` when a component recursively renders its own tag behind another shadow root.
 - Tree-shakeable exports: side-effect-free class module + side-effectful registration entry;
-  inventory metadata generates root imports and BOTH dist/src `package.json#sideEffects` forms,
-  while named exports stay curated by hand (`pnpm registrations`).
+  inventory metadata generates root imports, BOTH dist/src `package.json#sideEffects` forms, and
+  explicit component/AI/utility subpath exports; named root exports stay curated by hand
+  (`pnpm registrations`).
 - Form-associated: `FormAssociated` mixin for string values; otherwise direct
   `ElementInternals` plus your own `setValidity()`.
 - The JSDoc block sits DIRECTLY above `export class Lyra*`, or `cem` silently empties the

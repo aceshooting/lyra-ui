@@ -71,6 +71,37 @@ export const Collapsed: Story = {
   `,
 };
 
+export const CancelableToggle: Story = {
+  name: 'Cancelable toggle proposal',
+  render: () => {
+    function wire(root: HTMLElement): void {
+      const panel = root.querySelector<LyraThinkingPanel>('lr-thinking-panel')!;
+      const veto = root.querySelector<HTMLInputElement>('[data-veto]')!;
+      const status = root.querySelector<HTMLElement>('[data-status]')!;
+      if (panel.hasAttribute('data-wired')) return;
+      panel.setAttribute('data-wired', '');
+      panel.addEventListener('lr-toggle-request', (event) => {
+        status.textContent = `Requested expanded=${event.detail.expanded}`;
+        if (veto.checked) {
+          event.preventDefault();
+          status.textContent += ' (vetoed)';
+        }
+      });
+      panel.addEventListener('lr-toggle', (event) => {
+        status.textContent += `; committed expanded=${event.detail.expanded}`;
+      });
+    }
+    return html`
+      <div style="display:grid;gap:0.75rem;max-width:32rem" @click=${(event: Event) =>
+        wire(event.currentTarget as HTMLElement)}>
+        <label><input data-veto type="checkbox" /> Veto the next toggle request</label>
+        <lr-thinking-panel>Only accepted proposals change this disclosure.</lr-thinking-panel>
+        <p data-status style="margin:0;color:var(--lr-color-text-quiet)">Activate the panel header.</p>
+      </div>
+    `;
+  },
+};
+
 export const DensityAndChrome: Story = {
   name: 'compact + frame="plain"',
   render: () => html`
@@ -148,7 +179,7 @@ export const LiveStreamingDemo: Story = {
         content.textContent = '';
         // On a second (or later) run, `expanded` is already `true` (a no-op)
         // but `mode` genuinely transitions from 'post-hoc' back to 'live' --
-        // that transition alone resets stick-to-bottom and jumps to the
+        // that transition alone resets follow and jumps to the
         // latest content, so a reader who scrolled up during the previous
         // run doesn't silently stop auto-following this time.
         panel.mode = 'live';

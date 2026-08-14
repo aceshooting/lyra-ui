@@ -35,7 +35,7 @@ interface TrackedChipFocus {
 /**
  * `<lr-chip-group>` — a flex-wrap container for a set of `<lr-chip>`
  * children (plain light-DOM composition — direct children are the chips,
- * the same shape `<lr-split>`'s panels / `<lr-source-list>`'s cards
+ * the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards
  * take — no `.items` array prop).
  *
  * `max-visible` is entirely optional. When unset, every child is always
@@ -43,7 +43,7 @@ interface TrackedChipFocus {
  * and the group has more chip children than that, the excess children are
  * hidden (via their own `hidden` property — CSS alone can't parameterize
  * `:nth-child` on a runtime prop, so this reaches into the light DOM the
- * same way `<lr-split>` sets each panel's inline `flex`/`order`) and a
+ * same way `<lr-multi-split>` sets each panel's inline `flex`/`order`) and a
  * "+N" overflow-indicator pill takes their place. Clicking it is a toggle:
  * it reveals the rest (and relabels itself "Show less"); clicking again
  * re-collapses back to `max-visible`. `lr-overflow-toggle` fires only from
@@ -103,16 +103,16 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   }
 
   // Tracks the default slot's assigned-element count, the same
-  // connectedCallback/willUpdate + slotchange convention `<lr-split>`'s
+  // connectedCallback/willUpdate + slotchange convention `<lr-multi-split>`'s
   // `panelCount`/`<lr-source-list>`'s `slottedCount` already establish.
   @state() private childCount = 0;
 
   /** Whether the excess (beyond `max-visible`) children are currently
    *  revealed. Meaningless (and never rendered) while there's no overflow. */
   @state() private expanded = false;
-  private readonly authorHidden = new Map<HTMLElement, boolean>();
-  private readonly observedChildren = new Set<HTMLElement>();
-  private readonly pendingHiddenWrites = new Map<HTMLElement, boolean[]>();
+  private readonly authorHidden = new Map<Element, boolean>();
+  private readonly observedChildren = new Set<Element>();
+  private readonly pendingHiddenWrites = new Map<Element, boolean[]>();
   private visibilityObserver?: MutationObserver;
   private visibilityObserverDocument?: Document;
   private visibilityObserverGeneration = 0;
@@ -144,7 +144,10 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
       ) {
         return;
       }
-      if (this.processHiddenMutations(records)) this.reconcileChildVisibilityAndFocus();
+      if (this.processHiddenMutations(records)) {
+        this.reconcileChildVisibilityAndFocus();
+        this.requestUpdate();
+      }
     });
     this.visibilityObserver = observer;
     this.visibilityObserverDocument = ownerDocument;
@@ -167,19 +170,15 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
 
   override firstUpdated(changed: PropertyValues<this>): void {
     super.firstUpdated(changed);
-    // Fallback reconciliation for slot-forwarding / engines that don't fire
-    // `slotchange` for content present at parse time — same idiom as
-    // `<lr-source-list>`'s identical `firstUpdated`. This can't move to
-    // `willUpdate` (the `<slot>` doesn't exist in the shadow DOM until after
-    // the first render), so when it actually corrects `childCount` (the
-    // slot-forwarding case, where `this.children.length` under-counts) it
-    // unavoidably schedules a second update pass — `updated()` (below) always
-    // runs right after this and already recomputes visibility from this same
-    // corrected count, so there's nothing left for an explicit call here to
-    // do.
+    // Resolve forwarded slots after the first update has completed. Mutating reactive state
+    // inside firstUpdated() produces Lit's "scheduled an update" warning and makes hydration
+    // timing observable to consumers.
     const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
-    this.updateBrowserDerivedState(() => {
-      this.childCount = slot.assignedElements({ flatten: true }).length;
+    queueMicrotask(() => {
+      if (!this.isConnected) return;
+      this.updateBrowserDerivedState(() => {
+        this.childCount = slot.assignedElements({ flatten: true }).length;
+      });
     });
   }
 
@@ -197,7 +196,8 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.resetVisibilityObserver();
     this.observedChildren.clear();
     this.pendingHiddenWrites.clear();
@@ -215,28 +215,40 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     // `maxVisible`'s own accessor already sanitizes to a finite, non-negative integer (or
     // `undefined`) on assignment, so no further finiteness check is needed here.
     const max = this.maxVisible;
-    return max != null && this.childCount > max;
+    return max != null && this.childCount > 0 && this.eligibleChildren().length > max;
   }
 
-  private assignedChildren(): HTMLElement[] {
+  private assignedChildren(): Element[] {
     const slot = this.shadowRoot?.querySelector('slot');
-    return (slot?.assignedElements({ flatten: true }) ?? Array.from(this.children)) as HTMLElement[];
+    return slot?.assignedElements({ flatten: true }) ?? Array.from(this.children);
   }
 
-  private childWillBeVisible(child: HTMLElement, index: number): boolean {
-    const authored = this.authorHidden.get(child) ?? child.hasAttribute('hidden');
-    const managedHidden =
-      this.hasOverflow && !this.expanded && index >= (this.maxVisible as number);
-    return !authored && !managedHidden;
+  private isAuthorHidden(child: Element): boolean {
+    return this.authorHidden.get(child) ?? child.hasAttribute('hidden');
+  }
+
+  private isCapacityEligible(child: Element): boolean {
+    return !this.isAuthorHidden(child) && !child.hasAttribute('inert');
+  }
+
+  private eligibleChildren(children = this.assignedChildren()): Element[] {
+    return children.filter((child) => this.isCapacityEligible(child));
+  }
+
+  private childWillBeVisible(child: Element, assignedChildren: Element[]): boolean {
+    if (!this.isCapacityEligible(child)) return !this.isAuthorHidden(child);
+    const eligibleIndex = this.eligibleChildren(assignedChildren).indexOf(child);
+    const managedHidden = this.hasOverflow && !this.expanded && eligibleIndex >= (this.maxVisible as number);
+    return !managedHidden;
   }
 
   private focusRepairBeforeVisibility(
-    assignedChildren: HTMLElement[],
+    assignedChildren: Element[],
   ): { index: number; repair: ComposedFocusRepairSnapshot } | null {
     const tracked = this.trackedChipFocus;
     if (!tracked) return null;
     const currentIndex = assignedChildren.indexOf(tracked.child);
-    if (currentIndex >= 0 && this.childWillBeVisible(tracked.child, currentIndex)) {
+    if (currentIndex >= 0 && this.childWillBeVisible(tracked.child, assignedChildren)) {
       tracked.index = currentIndex;
       return null;
     }
@@ -247,7 +259,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
       currentIndex < 0 &&
       (active === null || active === this.ownerDocument.body || active === this.ownerDocument.documentElement);
     const focusWasLostWithAlreadyHiddenBranch =
-      tracked.child.hidden &&
+      tracked.child.hasAttribute('hidden') &&
       (active === null || active === this.ownerDocument.body || active === this.ownerDocument.documentElement);
     if (!stillOwnsFocus && !focusWasLostWithRemovedBranch && !focusWasLostWithAlreadyHiddenBranch) {
       return null;
@@ -259,7 +271,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   }
 
   private focusTargetAfterVisibility(
-    assignedChildren: HTMLElement[],
+    assignedChildren: Element[],
     originIndex: number,
   ): HTMLElement | null {
     const chipTargets = assignedChildren
@@ -310,19 +322,22 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     const current = new Set(assignedChildren);
     for (const [child, hidden] of this.authorHidden) {
       if (!current.has(child)) {
-        child.hidden = hidden;
+        child.toggleAttribute('hidden', hidden);
         this.authorHidden.delete(child);
       }
     }
-    assignedChildren.forEach((child, i) => {
-      const element = child as HTMLElement;
+    let eligibleIndex = 0;
+    assignedChildren.forEach((element) => {
       if (!this.authorHidden.has(element)) this.authorHidden.set(element, element.hasAttribute('hidden'));
       const authored = this.authorHidden.get(element) ?? false;
-      this.setManagedHidden(element, authored || (overflowing && !this.expanded && i >= (max as number)));
+      const eligible = !authored && !element.hasAttribute('inert');
+      const managed = eligible && overflowing && !this.expanded && eligibleIndex >= (max as number);
+      this.setManagedHidden(element, authored || managed);
+      if (eligible) eligibleIndex += 1;
     });
   }
 
-  private observeChildren(children: HTMLElement[]): void {
+  private observeChildren(children: Element[]): void {
     const next = new Set(children);
     if (
       next.size === this.observedChildren.size &&
@@ -337,7 +352,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     for (const child of children) {
       this.visibilityObserver?.observe(child, {
         attributes: true,
-        attributeFilter: ['hidden'],
+        attributeFilter: ['hidden', 'inert'],
         attributeOldValue: true,
       });
       this.observedChildren.add(child);
@@ -348,9 +363,14 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     let authorChanged = false;
     for (let index = 0; index < records.length; index++) {
       const record = records[index];
-      if (!record || record.type !== 'attributes' || record.attributeName !== 'hidden') continue;
-      const child = record.target as HTMLElement;
+      if (!record || record.type !== 'attributes') continue;
+      const child = record.target as Element;
       if (!this.authorHidden.has(child)) continue;
+      if (record.attributeName === 'inert') {
+        authorChanged = true;
+        continue;
+      }
+      if (record.attributeName !== 'hidden') continue;
       let nextRecord: MutationRecord | undefined;
       for (let nextIndex = index + 1; nextIndex < records.length; nextIndex++) {
         const candidate = records[nextIndex];
@@ -372,19 +392,19 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     return authorChanged;
   }
 
-  private setManagedHidden(child: HTMLElement, hidden: boolean): void {
-    if (child.hidden === hidden) return;
+  private setManagedHidden(child: Element, hidden: boolean): void {
+    if (child.hasAttribute('hidden') === hidden) return;
     let pending = this.pendingHiddenWrites.get(child);
     if (!pending) {
       pending = [];
       this.pendingHiddenWrites.set(child, pending);
     }
     pending.push(hidden);
-    child.hidden = hidden;
+    child.toggleAttribute('hidden', hidden);
   }
 
   private restoreChildVisibility(): void {
-    for (const [child, hidden] of this.authorHidden) child.hidden = hidden;
+    for (const [child, hidden] of this.authorHidden) child.toggleAttribute('hidden', hidden);
     this.authorHidden.clear();
   }
 
@@ -406,8 +426,12 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
       return;
     }
     const child = children[index]!;
+    if (!('focus' in child)) {
+      this.trackedChipFocus = undefined;
+      return;
+    }
     const repair = captureComposedFocusRepair(child, base);
-    this.trackedChipFocus = repair ? { child, index, repair } : undefined;
+    this.trackedChipFocus = repair ? { child: child as HTMLElement, index, repair } : undefined;
   };
 
   private onFocusOut = (): void => {
@@ -431,7 +455,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
 
   override render(): TemplateResult {
     const overflowing = this.hasOverflow;
-    const hiddenCount = overflowing ? this.childCount - (this.maxVisible as number) : 0;
+    const hiddenCount = overflowing ? this.eligibleChildren().length - (this.maxVisible as number) : 0;
     const formattedHiddenCount = getNumberFormat(this.effectiveLocale).format(hiddenCount);
 
     return html`

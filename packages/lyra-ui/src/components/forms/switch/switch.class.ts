@@ -14,6 +14,7 @@ import {
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { hasRealContent } from '../../../internal/a11y.js';
+import { isActionableElement } from '../../../internal/focus-navigation.js';
 import {
   attachInternalsSafely,
   getFormOwner,
@@ -22,6 +23,7 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
+import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_switchRequired } from '../../../internal/default-strings.generated.js';
@@ -100,10 +102,10 @@ export interface LyraSwitchEventMap {
  * @cssstate checked - Matches while the live switch state is on.
  * @cssstate disabled - Matches while disabled directly or by an ancestor fieldset.
  * @csspart form-control - The outer wrapper around the switch, error and hint.
- * @csspart wrapper - Compatibility name on the interactive switch wrapper.
- * @csspart base - Compatibility name for the interactive control; use `switch`.
- * @csspart switch - The whole interactive control (`role="switch"`); wraps the track and label.
- *   It is the same node as `base`.
+ * @csspart wrapper - Compatibility name on the semantic switch owner.
+ * @csspart base - Compatibility name for the semantic switch owner; use `switch`.
+ * @csspart switch - The interactive `role="switch"` owner around the track, with the rich default
+ *   label as a sibling so nested actions remain valid focus stops.
  * @csspart track - The pill-shaped background.
  * @csspart control - WA/Shoelace name for the same pill-shaped background.
  * @csspart thumb - The circular knob that slides across the track.
@@ -144,6 +146,10 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  /** Public WA-compatible intrinsic validator catalog. */
+  static get validators(): LyraFormValidator<LyraSwitch>[] {
+    return [currentValidityValidator('required', 'disabled', 'checked', 'value')];
+  }
   static override styles = [LyraElement.styles, sizes, styles];
   static formAssociated = true;
 
@@ -182,9 +188,6 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   @property({ attribute: 'help-text' }) helpText = '';
   /** WA SSR slot-presence hint used before light-DOM assignment can be inspected. */
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
-  /** Shoelace's separate reset-default attribute. The public IDL remains `defaultChecked`. */
-  @property({ type: Boolean, attribute: 'default-checked' })
-  private shoelaceDefaultChecked = false;
   /** Error text below the switch (overridden by slotted `error` content). Unset: no error chrome
    *  renders. */
   @property({ attribute: 'error-text' }) errorText = '';
@@ -225,7 +228,6 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   private _checkedDirty = false;
   private settingDefaultChecked = false;
   private reflectingDefaultChecked = false;
-  private hadShoelaceDefaultChecked = false;
   private _fieldsetDisabled = false;
   private _name = '';
   private _checked = false;
@@ -347,7 +349,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
 
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null {
-    return this.renderRoot?.querySelector('[part~="base"]') ?? null;
+    return this.renderRoot?.querySelector('.switch-owner') ?? null;
   }
 
   /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
@@ -407,13 +409,6 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     // FormAssociated is layered under lr-textarea) would otherwise silently never run its own
     // willUpdate() -- mirrors csv-viewer.ts's/docx-viewer.ts's identical super call.
     super.willUpdate(changed);
-    if (
-      changed.has('shoelaceDefaultChecked') &&
-      (this.hasAttribute('default-checked') || this.hadShoelaceDefaultChecked)
-    ) {
-      this.defaultChecked = this.shoelaceDefaultChecked;
-      this.hadShoelaceDefaultChecked = this.hasAttribute('default-checked');
-    }
   }
 
   /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
@@ -536,7 +531,18 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     this.emit('lr-change', { checked: this.checked });
   }
 
-  private onClick = (): void => {
+  private onClick = (event: MouseEvent): void => {
+    const owner = this[VALIDITY_ANCHOR]();
+    for (const target of event.composedPath()) {
+      if (target === event.currentTarget) break;
+      if (
+        target &&
+        typeof target === 'object' &&
+        (target as Node).nodeType === 1 &&
+        target !== owner &&
+        isActionableElement(target as Element)
+      ) return;
+    }
     this.setFromUser(!this.checked);
   };
 
@@ -574,6 +580,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.liveDisabled) return;
+    if (e.repeat) return;
     if (e.key === ' ' || e.key === 'Spacebar') {
       e.preventDefault();
       this.setFromUser(!this.checked);
@@ -697,25 +704,30 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
       .join(' ');
     return html`
       <div part="form-control">
-        <span
-          part="base switch wrapper"
-          role="switch"
-          tabindex=${this.effectiveDisabled ? '-1' : '0'}
-          aria-checked=${this.checked ? 'true' : 'false'}
-          aria-required=${this.required ? 'true' : 'false'}
-          aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
-          aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
-          aria-label=${this.getAttribute('aria-label') ?? nothing}
-          aria-describedby=${describedBy || nothing}
-          @click=${this.onClick}
-          @keydown=${this.onKeyDown}
-          @focus=${this.onFocus}
-          @blur=${this.onBlur}
-        >
-          <span part=${this.checked ? 'track control checked' : 'track control'}>
-            <span part="thumb"></span>
+        <span class="switch-layout" @click=${this.onClick}>
+          <span
+            class="switch-owner"
+            part="base switch wrapper"
+            role="switch"
+            tabindex=${this.effectiveDisabled ? '-1' : '0'}
+            aria-checked=${this.checked ? 'true' : 'false'}
+            aria-required=${this.required ? 'true' : 'false'}
+            aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
+            aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
+            aria-label=${this.getAttribute('aria-label') ?? nothing}
+            aria-labelledby=${this.hasAttribute('aria-label') || !this.hasLabelSlot
+              ? nothing
+              : 'switch-label'}
+            aria-describedby=${describedBy || nothing}
+            @keydown=${this.onKeyDown}
+            @focus=${this.onFocus}
+            @blur=${this.onBlur}
+          >
+            <span part=${this.checked ? 'track control checked' : 'track control'}>
+              <span part="thumb"></span>
+            </span>
           </span>
-          <span part="label" ?hidden=${!this.hasLabelSlot}>
+          <span id="switch-label" part="label" ?hidden=${!this.hasLabelSlot}>
             <slot @slotchange=${this.onSlotChange}></slot>
           </span>
         </span>

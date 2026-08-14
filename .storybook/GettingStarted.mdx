@@ -1,4 +1,4 @@
-import { Meta } from '@storybook/addon-docs/blocks';
+import { Meta } from "@storybook/addon-docs/blocks";
 
 <Meta title="Guides/Getting started" />
 
@@ -29,7 +29,7 @@ only install the peers for surfaces you actually use. See the
 Every component is its own side-effect entry point that registers its own tag:
 
 ```js
-import '@aceshooting/lyra-ui/components/lr-button.js';
+import "@aceshooting/lyra-ui/components/lr-button.js";
 ```
 
 ```html
@@ -52,9 +52,9 @@ Some directories hold more than one tag, and each tag is registered by its own e
 the common example:
 
 ```js
-import '@aceshooting/lyra-ui/components/lr-tab-group.js';
-import '@aceshooting/lyra-ui/components/lr-tab.js';
-import '@aceshooting/lyra-ui/components/lr-tab-panel.js';
+import "@aceshooting/lyra-ui/components/lr-tab-group.js";
+import "@aceshooting/lyra-ui/components/lr-tab.js";
+import "@aceshooting/lyra-ui/components/lr-tab-panel.js";
 ```
 
 ```html
@@ -70,14 +70,14 @@ The v8 Page and media surfaces use the same granular convention, as do the compa
 preserve displaced Lyra behavior:
 
 ```js
-import '@aceshooting/lyra-ui/components/lr-page.js';
-import '@aceshooting/lyra-ui/components/lr-video.js';
-import '@aceshooting/lyra-ui/components/lr-video-playlist.js';
+import "@aceshooting/lyra-ui/components/lr-page.js";
+import "@aceshooting/lyra-ui/components/lr-video.js";
+import "@aceshooting/lyra-ui/components/lr-video-playlist.js";
 
-import '@aceshooting/lyra-ui/components/lr-native-time-input.js';
-import '@aceshooting/lyra-ui/components/lr-pan-zoom.js';
-import '@aceshooting/lyra-ui/components/lr-split-panel.js';
-import '@aceshooting/lyra-ui/components/lr-alert.js';
+import "@aceshooting/lyra-ui/components/lr-native-time-input.js";
+import "@aceshooting/lyra-ui/components/lr-pan-zoom.js";
+import "@aceshooting/lyra-ui/components/lr-split-panel.js";
+import "@aceshooting/lyra-ui/components/lr-alert.js";
 ```
 
 ## The two import styles
@@ -85,9 +85,9 @@ import '@aceshooting/lyra-ui/components/lr-alert.js';
 ### Granular subpaths — the default
 
 ```js
-import '@aceshooting/lyra-ui/components/lr-input.js';
-import '@aceshooting/lyra-ui/components/lr-select.js';
-import '@aceshooting/lyra-ui/components/lr-option.js';
+import "@aceshooting/lyra-ui/components/lr-input.js";
+import "@aceshooting/lyra-ui/components/lr-select.js";
+import "@aceshooting/lyra-ui/components/lr-option.js";
 ```
 
 One import per tag you use. Your bundler sees exactly those modules and their shared internals, and
@@ -97,7 +97,7 @@ guides and in the component reference uses.
 ### The explicit all-components entry — for exploring
 
 ```js
-import '@aceshooting/lyra-ui/all.js'; // registers every root-included component
+import "@aceshooting/lyra-ui/all.js"; // registers every root-included component
 ```
 
 Convenient in a scratch file, a REPL, or while you are still deciding which components you need.
@@ -108,10 +108,10 @@ Two things to know before you ship it:
 - **It defeats tree-shaking.** The barrel's entire purpose is the side effect of registering every
   tag, so a bundler cannot drop any of it. Importing the barrel to use three components pulls in all
   of them.
-- **It is not actually complete.** `all.js` deliberately skips 15 inventory-designated
+- **It is not actually complete.** `all.js` deliberately skips 16 inventory-designated
   optional-peer-family tags — the whole chart family (`<lr-chart>` and its typed subclasses, `<lr-box-plot>`,
   `<lr-histogram>`), plus `<lr-map>`, `<lr-graph>`, `<lr-knowledge-graph-explorer>` and
-  `<lr-geojson-view>`. Their peers still load lazily, but those tags are intentionally outside the
+  `<lr-geojson-view>` and `<lr-geojson-viewer>`. Their peers still load lazily, but those tags are intentionally outside the
   broad root registration surface and always need their own subpath import.
 
 The package root re-exports a broad compatibility surface of commonly used classes, helpers and
@@ -123,13 +123,13 @@ Every one of the eleven families ships an "everything in this family" entry —
 `@aceshooting/lyra-ui/components/<family>`, with no trailing path:
 
 ```js
-import '@aceshooting/lyra-ui/components/conversation'; // every conversation element
-import '@aceshooting/lyra-ui/components/forms';        // every form control
+import "@aceshooting/lyra-ui/components/conversation"; // every conversation element
+import "@aceshooting/lyra-ui/components/forms"; // every form control
 ```
 
 The eleven keys are `agent-tools`, `charts`, `conversation`, `data`, `forms`, `layout`, `media`,
 `overlays`, `retrieval`, `utility` and `viewers` — the same segments the granular paths use. Each
-entry registers *and* re-exports the complete family. (Only three of these were documented before
+entry registers _and_ re-exports the complete family. (Only three of these were documented before
 8.0.0, which made the other eight effectively unreachable even though they were in the `exports`
 map.)
 
@@ -142,7 +142,8 @@ elements you actually render**. Granular entries remain the recommendation for p
 
 One difference from the root barrel: a family entry **does** register the peer-gated tags its family
 owns — the whole chart family under `charts`, `<lr-map>` under `media`, `<lr-graph>` and
-`<lr-knowledge-graph-explorer>` under `retrieval`, `<lr-geojson-view>` under `viewers`. That still
+`<lr-knowledge-graph-explorer>` under `retrieval`, and both `<lr-geojson-view>` and
+`<lr-geojson-viewer>` under `viewers`. That still
 costs nothing up front, because every peer is loaded by a dynamic import at render time; registering
 a tag never pulls Chart.js, MapLibre or d3 into your first-paint bundle. It does mean the tag exists
 and will fail closed with a localized error if you render it without installing its peer.
@@ -153,11 +154,11 @@ The optional manual autoloader is side-effect-free: it imports only inventory-kn
 actually rendered, without pulling the root barrel into the application entry chunk.
 
 ```ts
-import { discover, start, stop } from '@aceshooting/lyra-ui/autoloader.js';
-import { allDefined } from '@aceshooting/lyra-ui/utilities/defined.js';
+import { discover, start, stop } from "@aceshooting/lyra-ui/autoloader.js";
+import { allDefined } from "@aceshooting/lyra-ui/utilities/defined.js";
 
 await discover(document); // scan once
-await start(document);    // scan, then observe dynamic/Turbo-style replacements
+await start(document); // scan, then observe dynamic/Turbo-style replacements
 await allDefined(document);
 stop();
 ```
@@ -172,7 +173,7 @@ Optional-peer tags are excluded unless every required package is explicitly allo
 
 ```ts
 await start(document, {
-  optionalPeers: ['dompurify', 'postal-mime'],
+  optionalPeers: ["dompurify", "postal-mime"],
   events: true,
 });
 ```
@@ -190,13 +191,13 @@ Every registration entry has a `.class.js` sibling that exports the class — an
 `HTMLElementTagNameMap` augmentation — without touching `customElements`:
 
 ```ts
-import { LyraTable } from '@aceshooting/lyra-ui/components/data/table/table.class.js';
+import { LyraTable } from "@aceshooting/lyra-ui/components/data/table/table.class.js";
 
-const table = document.querySelector('lr-table') as LyraTable<Invoice>;
+const table = document.querySelector("lr-table") as LyraTable<Invoice>;
 ```
 
 Use it for subclassing, `instanceof` checks, and type-only imports. Note that
-`document.querySelector('lr-table')` is only *typed* as `LyraTable` when that class module is in
+`document.querySelector('lr-table')` is only _typed_ as `LyraTable` when that class module is in
 your type graph — importing the registration entry (`table.js`) is enough, since it re-exports the
 class module.
 
@@ -204,31 +205,31 @@ class module.
 
 Beyond `components/*`, the package publishes a small set of focused entries:
 
-| Subpath | What it is |
-| --- | --- |
-| `@aceshooting/lyra-ui/theme.css` | Ready-made light + dark theme values. See [Theming](?path=/docs/guides-theming--docs). |
-| `@aceshooting/lyra-ui/design-tokens.json` | Canonical DTCG token interchange for design and build tooling. |
-| `@aceshooting/lyra-ui/design-tokens.css` | Generated light/dark token fixture selectors for previews and design-tool validation; not a replacement for `theme.css`. |
-| `@aceshooting/lyra-ui/native.css` | Optional tokenized styles for native descendants of an explicit `.lr-native` scope. |
-| `@aceshooting/lyra-ui/utilities.css` | Optional low-specificity `lr-*` layout, sizing, prose, text, visibility, and Page helper classes. |
-| `@aceshooting/lyra-ui/theme.js` | Zero-dependency runtime for persisting and applying a theme mode/accent. |
-| `@aceshooting/lyra-ui/theme/presets.js` | Built-in and application-defined theme presets. |
-| `@aceshooting/lyra-ui/localization.js` | Side-effect-free locale runtime. See [Localization and RTL](?path=/docs/guides-localization-and-rtl--docs). |
-| `@aceshooting/lyra-ui/translations/pseudo/en-XA.js` / `ar-XB.js` | Side-effect-only pseudo-locales for expansion and bidi testing. |
-| `@aceshooting/lyra-ui/autoloader.js` | Side-effect-free on-demand `discover()` / `start()` / `stop()` for rendered inventory tags. |
-| `@aceshooting/lyra-ui/autoloader-cdn.js` | Side-effect entry that auto-starts the guarded autoloader for ESM-CDN use. |
-| `@aceshooting/lyra-ui/hydration.js` | Hydration-only browser hook without the server renderer. |
-| `@aceshooting/lyra-ui/ssr-loader.js` | Lit hydration hook, server renderer fallback, support matrix, and diagnostics. |
-| `@aceshooting/lyra-ui/ssr.js` | Registration-free server helpers and SSR capability metadata. |
-| `@aceshooting/lyra-ui/ssr/all.js` | Server entry that explicitly registers the complete SSR catalog. |
-| `@aceshooting/lyra-ui/custom-elements-jsx` | Type-only React 19 / JSX template declarations. |
-| `@aceshooting/lyra-ui/vue` | Type-only Vue custom-element declarations. |
-| `@aceshooting/lyra-ui/svelte` | Type-only Svelte custom-element declarations. |
-| `@aceshooting/lyra-ui/events` | Types only — the global typed-event surface. See [Events](?path=/docs/guides-events--docs). |
-| `@aceshooting/lyra-ui/ai` | Provider-neutral types and stream adapters for the agentic components. |
-| `@aceshooting/lyra-ui/utilities` | The curated, semver-covered helper surface (also importable one module at a time, e.g. `utilities/positioner`). |
-| `@aceshooting/lyra-ui/testing` | happy-dom shims so form-associated controls are constructible in a non-browser test DOM. |
-| `@aceshooting/lyra-ui/translations/<locale>.js` | One of the ten shipped locale catalogs, as a side-effect-only import. |
+| Subpath                                                          | What it is                                                                                                               |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `@aceshooting/lyra-ui/theme.css`                                 | Ready-made light + dark theme values. See [Theming](?path=/docs/guides-theming--docs).                                   |
+| `@aceshooting/lyra-ui/design-tokens.json`                        | Canonical DTCG token interchange for design and build tooling.                                                           |
+| `@aceshooting/lyra-ui/design-tokens.css`                         | Generated light/dark token fixture selectors for previews and design-tool validation; not a replacement for `theme.css`. |
+| `@aceshooting/lyra-ui/native.css`                                | Optional tokenized styles for native descendants of an explicit `.lr-native` scope.                                      |
+| `@aceshooting/lyra-ui/utilities.css`                             | Optional low-specificity `lr-*` layout, sizing, prose, text, visibility, and Page helper classes.                        |
+| `@aceshooting/lyra-ui/theme.js`                                  | Zero-dependency runtime for persisting and applying a theme mode/accent.                                                 |
+| `@aceshooting/lyra-ui/theme/presets.js`                          | Built-in and application-defined theme presets.                                                                          |
+| `@aceshooting/lyra-ui/localization.js`                           | Side-effect-free locale runtime. See [Localization and RTL](?path=/docs/guides-localization-and-rtl--docs).              |
+| `@aceshooting/lyra-ui/translations/pseudo/en-XA.js` / `ar-XB.js` | Side-effect-only pseudo-locales for expansion and bidi testing.                                                          |
+| `@aceshooting/lyra-ui/autoloader.js`                             | Side-effect-free on-demand `discover()` / `start()` / `stop()` for rendered inventory tags.                              |
+| `@aceshooting/lyra-ui/autoloader-cdn.js`                         | Side-effect entry that auto-starts the guarded autoloader for ESM-CDN use.                                               |
+| `@aceshooting/lyra-ui/hydration.js`                              | Hydration-only browser hook without the server renderer.                                                                 |
+| `@aceshooting/lyra-ui/ssr-loader.js`                             | Lit hydration hook, server renderer fallback, support matrix, and diagnostics.                                           |
+| `@aceshooting/lyra-ui/ssr.js`                                    | Registration-free server helpers and SSR capability metadata.                                                            |
+| `@aceshooting/lyra-ui/ssr/all.js`                                | Server entry that explicitly registers the complete SSR catalog.                                                         |
+| `@aceshooting/lyra-ui/custom-elements-jsx`                       | Type-only React 19 / JSX template declarations.                                                                          |
+| `@aceshooting/lyra-ui/vue`                                       | Type-only Vue custom-element declarations.                                                                               |
+| `@aceshooting/lyra-ui/svelte`                                    | Type-only Svelte custom-element declarations.                                                                            |
+| `@aceshooting/lyra-ui/events`                                    | Types only — the global typed-event surface. See [Events](?path=/docs/guides-events--docs).                              |
+| `@aceshooting/lyra-ui/ai`                                        | Provider-neutral types and stream adapters for the agentic components.                                                   |
+| `@aceshooting/lyra-ui/utilities`                                 | The curated, semver-covered helper surface (also importable one module at a time, e.g. `utilities/positioner`).          |
+| `@aceshooting/lyra-ui/testing`                                   | happy-dom shims so form-associated controls are constructible in a non-browser test DOM.                                 |
+| `@aceshooting/lyra-ui/translations/<locale>.js`                  | One of the ten shipped locale catalogs, as a side-effect-only import.                                                    |
 
 `theme.js`, `localization.js` and `events` are deliberately free of component imports, so an
 application can set up theming, locales and event typing without pulling the component graph into
@@ -241,13 +242,15 @@ internal token falls back to a built-in value. Import it once at the application
 the ready-made light and dark palettes:
 
 ```css
-@import '@aceshooting/lyra-ui/theme.css';
-:root { --lr-theme-color-brand-fill-loud: #7c3aed; }
+@import "@aceshooting/lyra-ui/theme.css";
+:root {
+  --lr-theme-color-brand-fill-loud: #7c3aed;
+}
 ```
 
 **The order you load it in does not matter.** `theme.css` declares its own cascade layers up front
 (`@layer lr-base, lr-theme, lr-utilities, lr-overrides;`) and puts its tokens in `lr-theme`. Any
-declaration you write *outside* a layer beats every layered one, whatever its specificity and
+declaration you write _outside_ a layer beats every layered one, whatever its specificity and
 whatever the source order — so the `:root` override above wins even if your stylesheet is bundled
 before `theme.css`, and it needs no `!important`. `lr-utilities` and `lr-overrides` are named so you
 can opt your own layers into a defined position relative to Lyra's rather than inventing one.
@@ -262,8 +265,8 @@ The light-DOM styles are separate from every component entry and from `theme.css
 one independently; importing neither preserves the browser and application styles you already have.
 
 ```css
-@import '@aceshooting/lyra-ui/native.css';
-@import '@aceshooting/lyra-ui/utilities.css';
+@import "@aceshooting/lyra-ui/native.css";
+@import "@aceshooting/lyra-ui/utilities.css";
 ```
 
 `native.css` never installs a page-wide reset. It styles native elements only when they are
@@ -289,7 +292,15 @@ Both files declare the same order as `theme.css`: `lr-base`, `lr-theme`, `lr-uti
 `lr-overrides`. Native styles live in `lr-base` and utility classes in `lr-utilities`, so ordinary
 unlayered application CSS remains authoritative regardless of import order. All design values come
 from Lyra tokens; the complete class inventory and bundle-specific override hooks are in
-<a href="./llms/shared.md#optional-native-styles-and-css-utilities" target="_blank" rel="noreferrer">llms/shared.md</a>.
+
+<a
+  href="./llms/shared.md#optional-native-styles-and-css-utilities"
+  target="_blank"
+  rel="noreferrer"
+>
+  llms/shared.md
+</a>
+.
 
 ### External modal interop
 
@@ -297,9 +308,9 @@ If a third-party modal opens above a Lyra modal, yield Lyra's document-level Esc
 ownership for the connected external root:
 
 ```ts
-import { suspendLyraModalsFor } from '@aceshooting/lyra-ui/utilities/overlay-manager.js';
+import { suspendLyraModalsFor } from "@aceshooting/lyra-ui/utilities/overlay-manager.js";
 
-const externalModal = document.querySelector<HTMLElement>('#vendor-modal')!;
+const externalModal = document.querySelector<HTMLElement>("#vendor-modal")!;
 const release = suspendLyraModalsFor(externalModal);
 // When the external modal closes:
 release();
@@ -327,7 +338,11 @@ npm install dompurify         # <lr-include>, and the viewers that render remote
 ```
 
 The full component-to-peer table is in
-<a href="./llms/peers.md" target="_blank" rel="noreferrer">`llms/peers.md`</a>.
+
+<a href="./llms/peers.md" target="_blank" rel="noreferrer">
+  `llms/peers.md`
+</a>
+.
 
 ## Using them from a framework
 
@@ -336,9 +351,9 @@ generated declarations once in their type graph; these entries emit empty JavaSc
 wrapper dependency, and do not register tags:
 
 ```ts
-import type {} from '@aceshooting/lyra-ui/custom-elements-jsx';
-import type {} from '@aceshooting/lyra-ui/vue';
-import type {} from '@aceshooting/lyra-ui/svelte';
+import type {} from "@aceshooting/lyra-ui/custom-elements-jsx";
+import type {} from "@aceshooting/lyra-ui/vue";
+import type {} from "@aceshooting/lyra-ui/svelte";
 ```
 
 Continue importing the granular registration modules for the elements the application renders.
@@ -368,7 +383,7 @@ tableRef.current.addEventListener('lr-sort', onSort); // React
 ```
 
 Angular additionally needs `CUSTOM_ELEMENTS_SCHEMA` in the module or component that uses the tags.
-And remember that in-DOM HTML lower-cases attribute names — a camelCase *property* name only
+And remember that in-DOM HTML lower-cases attribute names — a camelCase _property_ name only
 survives in framework templates and in JavaScript, never in hand-written HTML.
 
 ## SSR and declarative shadow DOM
@@ -386,9 +401,9 @@ two initial-render tiers:
 import {
   lyraSsrElementRenderers,
   LYRA_SSR_SUPPORT_MATRIX,
-} from '@aceshooting/lyra-ui/ssr-loader.js';
-import { render, LitElementRenderer } from '@lit-labs/ssr';
-import { html } from 'lit';
+} from "@aceshooting/lyra-ui/ssr-loader.js";
+import { render, LitElementRenderer } from "@lit-labs/ssr";
+import { html } from "lit";
 
 const result = render(html`<lr-page><main>Dashboard</main></lr-page>`, {
   elementRenderers: lyraSsrElementRenderers(LitElementRenderer),

@@ -5,24 +5,29 @@ immediately) or multi-format (click opens a small menu).
 
 **Properties:**
 
-- `rows: Record<string, unknown>[] = []` (attribute: false)
-- `columns: CsvColumn[] = []` (attribute: false) — `{ key, label }`; acts as a field allow-list **and**
+- `rows: readonly Readonly<Record<string, unknown>>[] = []` (attribute: false) — assignment takes
+  shallow frozen snapshots of the collection and row records; nested cell values remain opaque
+- `columns: readonly Readonly<LyraCsvColumn>[] = []` (attribute: false) — assignment takes a
+  shallow frozen snapshot. `{ key, label }` acts as a field allow-list **and**
   CSV header-label source for **both** export formats when non-empty. Left empty, **both** CSV and
   JSON fall back to the union of the rows' own keys (`key`/`label` both set to the key name) instead
   of CSV degrading to a header-less/blank file while only JSON had a fallback — so an unconfigured
   export still produces a proper header + data file in either format
 - `filename: string = 'export'`
-- `formats: ExportFormatOption[] = ['csv']` (attribute: false), where `ExportFormatOption` is the
-  built-in `ExportFormat = 'csv' | 'json'` or an `ExportFormatDescriptor = { id: string; label:
-string; description?: string; extension?: string }`. Descriptor labels/descriptions are
-  consumer-supplied, already-localized copy. Custom ids are event-only; no custom encoder is bundled
+- `formats: readonly LyraExportFormatOption[] = ['csv']` (attribute: false; shallow frozen
+  snapshot), where
+  `LyraExportFormatOption` is the built-in `LyraExportFormat = 'csv' | 'json'` or a
+  `LyraExportFormatDescriptor = { formatId: string; label: string; description?: string;
+  extension?: string }`. Descriptor labels/descriptions are consumer-supplied, already-localized
+  copy. Custom format ids are event-only; no custom encoder is bundled
 - `disabled: boolean = false` (reflected) — also disables every `[part="menu-item"]` button, not just
   the trigger
 - `loading: boolean = false` (reflected) — controlled busy state for an async or server-generated
   export; sets host/trigger `aria-busy` and disables the trigger and menu items. The component does
   not toggle it automatically
-- `label: string = 'Export'` — trigger button text; also feeds the format-choice menu's `aria-label`
-  as `` `${label} format` `` so assistive tech gets an accessible name for the menu
+- `label?: string` — trigger button text; `undefined` uses the localized `exportButtonLabel`
+  default. Every supplied string, including `''` and `'Export'`, is caller-owned. The effective
+  label also feeds the format-choice menu's localized accessible name
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the trigger's accessible
   name and feeds the localized format-menu name without changing the visible label
 - `open: boolean = false` (reflected)
@@ -64,7 +69,7 @@ shared-clamp note.
   exp.formats = [
     'csv',
     {
-      id: 'xlsx',
+      formatId: 'xlsx',
       label: 'Excel workbook',
       description: 'Preserves spreadsheet data types',
       extension: 'xlsx',
@@ -89,18 +94,21 @@ escapeCsvField, buildCsv, downloadBlob } from
 
 ```ts
 escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading ASCII/fullwidth =,+,-,@ and tab/CR/LF formula prefixes with an apostrophe
-buildCsv(rows: Record<string, unknown>[], columns: CsvColumn[]): string  // CRLF-joined, header row included
+buildCsv(rows: readonly Readonly<Record<string, unknown>>[], columns: readonly LyraCsvColumn[]): string  // CRLF-joined, header row included
 downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Document): void // triggers a browser download in the supplied document realm
 ```
 
 **Known gotchas:**
 
 - CSV and JSON are the only built-in encoders. To offer XLSX/PDF/etc., pass an
-  `ExportFormatDescriptor` and handle its id from `lr-export`; custom formats never trigger a
+  `LyraExportFormatDescriptor` and handle its `formatId` from `lr-export`; custom formats never trigger a
   download or `lr-export-complete` on their own. A descriptor's optional `extension` is metadata
   for that handler, not automatic filename handling.
 - CSV formula-injection guarding and the deferred (5s) `URL.revokeObjectURL` (works around Safari
   cancelling in-flight downloads on immediate revoke) are genuine, safe-to-rely-on strengths.
+  Finite JavaScript numbers remain numeric CSV cells (including negative and decimal values);
+  caller-supplied strings such as `"-12"` still take the formula-safe text path. `NaN` and
+  infinities are non-numeric values and are escaped as text.
 - `open` is valid only when `formats` contains more than one choice. An invalid open request is
   normalized closed without a false `lr-show`/`lr-hide` pair; shrinking an open menu to one format,
   or becoming `disabled`/`loading`, closes it and repairs focus. JSON projection safely preserves
@@ -128,6 +136,9 @@ positioning opinion of its own.
 - `value: string = ''` — the plain text to copy.
 - `from: string = ''` — source expression that takes precedence over `value`. `id` copies the
   element's `textContent`, `id[attribute]` copies an attribute, and `id.property` copies a property.
+  Resolution prefers an element in the button's own root, then falls back to the owner document;
+  a duplicate same-root id therefore wins without preventing a shadow-contained button from
+  targeting an otherwise valid document-owned source.
 - `copyLabel: string = ''` (attribute `copy-label`) — built-in button accessible name and resting
   tooltip text; empty uses localized `copy`.
 - `successLabel: string = ''` (attribute `success-label`) — confirmation name/tooltip text; empty
@@ -148,19 +159,24 @@ positioning opinion of its own.
   `1000` rather than leaving the state stuck; a negative one clamps to `0`.
 
 **Methods:** `focus(options?)`, `blur()` and `click()` forward to the active built-in or custom
-trigger.
+trigger. `getToolbarActions(): readonly LyraToolbarAction[]` implements the public logical-toolbar
+provider protocol with one stable action whose id is `copy`; its focus, roving tab index, disabled
+state, and composed-event matching follow the active trigger without exposing that node.
 
 **Events:**
 
-- `lr-copy` (`detail: { text: string }`) — fires on every activation with the resolved source text,
-  before the clipboard write and regardless of its outcome. On a source-resolution failure,
-  `text` is empty. This preserves the existing Lyra activation convention.
+- `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — fires only after
+  the owning browsing context's clipboard write fulfills. The detail is a frozen shared outcome.
 - `lr-error` (no detail) — bubbling, composed, non-cancelable notification that source resolution
   or clipboard writing failed.
-- `lr-copy-error` (`detail: { text: string; reason: LyraCopyErrorReason; error: unknown }`) — the
-  retained detailed Lyra alias. `reason` is `'unsupported'` (no Clipboard API), `'denied'`
+- `lr-copy-error` (`detail: LyraClipboardWriteFailure`,
+  `{ ok: false; text: string; reason: LyraCopyErrorReason; error: unknown }`) — the frozen detailed
+  failure outcome. `reason` is `'unsupported'` (no Clipboard API), `'denied'`
   (`NotAllowedError`/`SecurityError`) or `'failed'` (including a missing/empty source and other
   platform failures); the error field contains the original platform or component-created error.
+- `lr-toolbar-actions-change` (no detail) — bubbling/composed coordination event emitted when the
+  logical action's disabled state or backing trigger changes, so an enclosing
+  `<lr-message-actions>` can repair its roving tab stop.
 
 **Slots:** default custom trigger, plus `copy-icon`, `success-icon`, and `error-icon` overrides for
 the built-in button. Exactly one named icon is rendered at a time.
@@ -212,7 +228,7 @@ for an application-level fallback:
   import '@aceshooting/lyra-ui/components/utility/copy-button/copy-button.js';
 
   const button = document.getElementById('copy');
-  button.addEventListener('lr-copy', () => trackCopyAttempt()); // your own instrumentation
+  button.addEventListener('lr-copy', (event) => trackCopySuccess(event.detail.text));
   button.addEventListener('lr-error', () => showCopyFallback());
   button.addEventListener('lr-copy-error', (event) => {
     // event.detail.reason is 'unsupported' | 'denied' | 'failed'
@@ -225,6 +241,9 @@ The closed-set and error-reason types are exported alongside the class:
 
 ```ts
 import type {
+  LyraClipboardWriteFailure,
+  LyraClipboardWriteOutcome,
+  LyraClipboardWriteSuccess,
   LyraCopyButtonTooltip,
   LyraCopyButtonTooltipPlacement,
   LyraCopyErrorReason,
@@ -237,9 +256,8 @@ import type {
   not the clipboard write succeeded. It now waits for `navigator.clipboard.writeText()` to settle: a
   rejection renders the failure glyph instead, announces the localized failure text through the
   shared polite region mirrored by `[part="feedback"]`, and emits `lr-error` plus `lr-copy-error`.
-  `lr-copy` still fires for every
-  activation, so code that treated it as proof the text reached the clipboard must pair it with an
-  error event.
+  `lr-copy` is now the success-only fulfilled outcome; code that tracked activation attempts from
+  that event should instead track the initiating click separately.
 - An empty `value`, missing `from` target/member, or empty resolved source is an error; no clipboard
   write is attempted. `from` always wins over `value`, including when it is invalid.
 - `navigator.clipboard` is absent in insecure contexts/older browsers, and some engines throw
@@ -345,14 +363,19 @@ mark it as the active `aria-current` result, announce its position, and scroll i
 they resolve `false` when there are no matches. `clearSearch()` resets `search` to `''`, clearing all
 matches and the cursor.
 
-**Events:** `lr-copy` (`detail: { text: string }`) — fired by the top-level copy button or a
-per-node one. Fires even when `navigator.clipboard` is unavailable or the write silently failed
-(a rejected `writeText()` is swallowed), so a consumer can still observe copy _intent_ — the event
-is not a confirmation that the OS clipboard was actually reached. Copying a circular `data` value
-serializes safely, substituting the same `Circular reference` marker the tree view renders, instead
-of throwing. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — fired whenever the
-search query, match count, or active-match cursor changes, from `runSearch()`/`searchNext()`/
-`searchPrevious()`/`clearSearch()`, or a direct `search`/`data` property write.
+**Events:** `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — fired by
+the top-level copy button or a per-node one only after the owning browsing context's clipboard write
+fulfills. `lr-error` (no detail) and `lr-copy-error` (`detail: LyraClipboardWriteFailure`) fire when
+serialization or clipboard writing fails; the detailed frozen outcome carries `ok: false`, the
+attempted text, a reason of `'unsupported' | 'denied' | 'failed'`, and the original error. Failures
+announce localized `copyFailed`; the raw platform error is never rendered. Copying a circular
+`data` value serializes safely, substituting the same `Circular reference` marker the tree view
+renders, instead of throwing. `lr-search-change`
+(`detail: { query, matchCount, matchCountExact, activeIndex }`) —
+fired whenever the search query, match count, or active-match cursor changes, from
+`runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()`, or a direct `search`/`data`
+property write. `matchCountExact` is `false` when the bounded traversal only proves a lower bound;
+the rendered count uses an “at least” prefix in the same case.
 
 **Slots:** none — the tree is rendered entirely from `data`.
 
@@ -370,6 +393,11 @@ present for row alignment on leaf/empty nodes),
 clipboard") or a per-node one (aria-label `Copy ${key/type}`, e.g. "Copy age"); only rendered when
 `copyable`), `limit` (the localized notice rendered below the tree when the depth/node traversal
 budget truncates rendering or search — absent entirely for any document within budget)
+
+Collapsed arrays retain their exact safe `.length`. A broad object whose key count itself exceeds
+the traversal budget uses an “at least” preview rather than presenting the retained prefix as a
+false total. Per-row copy actions remain visible by default on coarse-pointer/no-hover devices;
+fine-pointer users retain the hover/focus reveal.
 
 Active-match position changes are appended to Lyra's shared light-DOM polite announcement sink.
 The shadow tree keeps only an `aria-hidden` text mirror, so the same result is not announced twice;
@@ -419,7 +447,7 @@ html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${q
 
 - `data` is property-only (`attribute: false`) — it must be set via `.data = ...` or a lit-html `.data=${...}`
   binding, never as a plain HTML attribute.
-- Search highlighting auto-expands only the _ancestors_ of a match, not the whole tree — a
+- Search highlighting auto-expands only the *ancestors* of a match, not the whole tree — a
   non-matching sibling subtree elsewhere stays collapsed (or expanded) exactly as it already was.
 - An explicit per-node expand/collapse (from clicking a node's `toggle` button) overrides
   `collapsedDepth` and declarative search-driven auto-expansion for that path. Imperative
@@ -462,7 +490,7 @@ writes into — `acquireAnnouncementSink()`, documented after `Announcer` below.
 Streaming UIs (token-by-token chat responses, progress ticks, etc.) naturally produce far more
 candidate announcements than a screen-reader user can usefully absorb — reading every incremental
 chunk aloud is spam, not information. `Announcer` collapses a burst of `announce()` calls arriving
-within `throttleMs` of the _first_ call in that burst down to a single trailing-edge flush of the
+within `throttleMs` of the *first* call in that burst down to a single trailing-edge flush of the
 latest text: superseded intermediate text is dropped outright, never queued or concatenated.
 
 - `new Announcer(options: AnnouncerOptions)` where
@@ -471,7 +499,7 @@ latest text: superseded intermediate text is dropped outright, never queued or c
   `setTimeout`/`clearTimeout` surface implemented by a browser `Window`; omit it to use ambient
   timers.
 - `announce(text: string, options?: AnnounceOptions)` where `AnnounceOptions = { force?: boolean }` —
-  queues `text`, overwriting whatever an earlier call in the same burst queued. Only the _first_
+  queues `text`, overwriting whatever an earlier call in the same burst queued. Only the *first*
   call of a burst schedules the flush timer, so the deadline stays anchored to that first call
   rather than being pushed back by every subsequent call. `{ force: true }` bypasses any
   in-progress window and flushes immediately, so a terminal message (e.g. "response complete") is
@@ -613,8 +641,8 @@ accessible phase-transition announcements.
   freezes and `lr-poll-due` never fires.
 
 **Events:** `lr-poll-due` (no detail — fired once when the countdown reaches zero, not fired while
-`paused`), `lr-pause-change` (`detail: boolean` — fired when `paused` changes via the built-in
-button).
+`paused`), `lr-pause-change` (`detail: { paused: boolean }` — fired when `paused` changes via the
+built-in button).
 
 **Methods:** `restart(): void` — restarts the currently configured `nextInMs` delay from now,
 including after its previous deadline fired. With `nextInMs` unset it simply clears the due state.
@@ -639,18 +667,21 @@ repainting every other component that reuses the same shared success token. Plus
 <script type="module">
   const status = document.querySelector('lr-poll-status');
   status.addEventListener('lr-poll-due', () => refreshData());
-  status.addEventListener('lr-pause-change', (e) => console.log('paused:', e.detail));
+  status.addEventListener('lr-pause-change', (e) => console.log('paused:', e.detail.paused));
 </script>
 ```
 
-Internally, a 1-second ticker re-derives the remaining time from a captured target timestamp (rather
-than a naive per-tick decrement), so the countdown stays accurate even if the tab was backgrounded
-and timers were throttled. Assigning a _changed_ `nextInMs` value starts a fresh deadline; assigning
-the same value is a normal Lit no-op, so use `restart()` for a new cycle with the same delay.
-Pausing/resuming, toggling `active`, disconnecting/reconnecting, or toggling either after the due
-event stops/starts only an unconsumed ticker: a consumed deadline never replays until `nextInMs`
-changes or `restart()` is called. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are
-announced via an internal `<lr-live-region>` in polite mode.
+Internally, owner-window timeouts schedule both the exact deadline and the next displayed-second
+boundary from a captured target timestamp, so a zero/short delay does not wait for a one-second
+poll and the countdown stays accurate after background throttling. Assigning a *changed*
+`nextInMs` value starts a fresh deadline; assigning the same value is a normal Lit no-op, so use
+`restart()` for a new cycle with the same delay. Entering `paused` captures the bounded remaining
+duration; every resume establishes a new deadline from that frozen value. Changing `nextInMs` or
+calling `restart()` while paused replaces the frozen duration without starting time. Toggling
+`active`, disconnecting/reconnecting, or toggling either after the due event stops/starts only an
+unconsumed ticker: a consumed deadline never replays until `nextInMs` changes or `restart()` is
+called. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are announced via an internal
+`<lr-live-region>` in polite mode.
 
 **Known gotchas:**
 
@@ -669,29 +700,34 @@ announced via an internal `<lr-live-region>` in polite mode.
 
 A caret-anchored, keyboard-navigable popover for `@`-mention and `/`-slash-command autocomplete
 inside a plain-text `<textarea>`/`<input>` the host owns. First-party invention (no Web Awesome
-equivalent). On platforms accepting cross-root ARIA element reflection, the host's own input keeps
-focus and `syncActiveDescendant()` points it at the active option. Where that reference is rejected,
-`focusActiveOption()` moves real focus into this component's shadow listbox so the focus owner and
-option share one tree scope. A string `aria-activedescendant` cannot resolve from a host input in
-the document into an option in this component's shadow root.
+equivalent). While open with a text-control `anchor`, the component atomically projects
+`role="combobox"` (unless the author supplied a role), `aria-expanded`, `aria-haspopup`, a
+resolvable controls element, and the active descendant. On platforms accepting cross-root ARIA
+element reflection, the host's own input keeps focus. Where the active-option reference is
+rejected, `focusActiveOption()` moves real focus into this component's shadow listbox so the focus
+owner and option share one tree scope. Every author ARIA value is restored on close, anchor
+replacement, disconnect, or adoption; a cross-root string IDREF is never left behind.
 
 **Properties:**
 
 - `anchor?: HTMLElement` (attribute: false) — the element to position the popup relative to. A
   plain `<textarea>` or single-line text `<input type="text"|"search">` gets caret-precise
   positioning; any other element anchors the whole popup under that element's own box.
-- `items: MentionItem[] = []` (attribute: false) — the full candidate set, pre-`query`-filtering.
+- `items: readonly Readonly<LyraMentionItem>[] = []` (attribute: false) — the full candidate set,
+  pre-`query`-filtering. Assignment takes a shallow frozen snapshot.
 - `query: string = ''` — the text typed since the trigger character; drives the built-in filtering
   (see `filter`).
 - `open: boolean = false` (reflected)
-- `filter: MentionFilter | null = null` (attribute: false) — overrides the built-in
+- `filter: LyraMentionFilter | null = null` (attribute: false) — overrides the built-in
   case-insensitive `label`/`description` substring match entirely.
-- `emptyText: string = 'No matches'` (attribute `empty-text`)
-- `label: string = 'Suggestions'` — accessible name for the `role="listbox"` popup. A host-level
-  plain `aria-label` attribute on `<lr-mention-popover>` itself takes priority over this property
-  when present (checked via a plain `getAttribute()` read, not a reactive property) — matches the
-  same fallback on `<lr-combobox>`/`<lr-table>`.
-- `filteredItems: MentionItem[]` — read-only getter; `items` filtered by `query` via `filter` (or
+- `emptyText?: string` (attribute `empty-text`) — `undefined` uses localized `noMatches`; every
+  supplied string, including `''` and `'No matches'`, is caller-owned
+- `label?: string` — accessible name for the `role="listbox"` popup. `undefined` uses localized
+  `mentionSuggestions`; every supplied string, including `''` and `'Suggestions'`, is
+  caller-owned. A host-level plain `aria-label` attribute on `<lr-mention-popover>` itself takes
+  priority over this property when present (checked via a plain `getAttribute()` read, not a
+  reactive property) — matches the same fallback on `<lr-combobox>`/`<lr-table>`.
+- `filteredItems: readonly Readonly<LyraMentionItem>[]` — read-only getter; `items` filtered by `query` via `filter` (or
   the built-in default). Empty `query` returns `items` unfiltered.
 - `activeDescendantId: string | null` — read-only getter; the `id` of the currently-highlighted
   internal row, or `null` while closed or when `filteredItems` is empty. Useful for diagnostics and
@@ -712,16 +748,22 @@ the document into an option in this component's shadow root.
 - `syncActiveDescendant(control: HTMLElement): boolean` — clears any string
   `aria-activedescendant`, then applies `ariaActiveDescendantElement` when the platform accepts the
   cross-root reference. Returns whether that reference was accepted.
-- `focusActiveOption(): Promise<boolean>` — same-tree fallback after a consumed navigation key
-  when `syncActiveDescendant()` returns `false`. Focuses the active option, lets the popover handle
-  subsequent navigation, and restores focus to `anchor` when the popover closes.
+- `focusActiveOption(options?: LyraMentionFocusOptions): Promise<boolean>` — same-tree fallback
+  after a consumed navigation key when `syncActiveDescendant()` returns `false`. Focuses the active
+  option, lets the popover handle subsequent navigation, and restores focus to `anchor` when the
+  popover closes. Pass `ownsFocus: () => boolean` when the caller has its own suggestion-session
+  generation/disabled/focus-exit state; the predicate is rechecked immediately before transfer and
+  during later fallback navigation. Close, candidate/query/filter/anchor replacement,
+  disconnect/adoption, a newer transfer, or failed ownership resolves `false` without moving focus.
 
-**Exported types:** `MentionItem { id: string; label: string; description?: string; icon?: string
-}`; `MentionFilter = (item: MentionItem, query: string) => boolean`; `MentionSelectDetail { id:
-string; label: string }`.
+**Exported types:** `LyraMentionItem { suggestionId: string; label: string; description?: string;
+icon?: string }`; `LyraMentionFilter = (item: LyraMentionItem, query: string) => boolean`;
+`LyraMentionFocusOptions { ownsFocus?: () => boolean }`;
+`LyraMentionSelectDetail { suggestionId: string; index: number; label: string }`.
 
-**Events:** `lr-mention-select` (`detail: MentionSelectDetail`, `{ id, label }` of the row that
-was committed via Enter/Tab/click), `lr-mention-close` (no detail payload —
+**Events:** `lr-mention-select` (`detail: LyraMentionSelectDetail`; `index` is the occurrence in
+the assigned `items` collection before filtering and disambiguates repeated `suggestionId` values),
+`lr-mention-close` (no detail payload —
 `this.emit('lr-mention-close')` is called with no second argument, so `event.detail` is `null`,
 not `undefined`; fires on Escape or any other `open: true -> false` transition, but never for the
 close that immediately follows a `lr-mention-select` commit, and never for markup that simply
@@ -754,29 +796,42 @@ available space. See `lr-tour` for the shared-clamp note.
 <script type="module">
   const textarea = document.getElementById('composer');
   const popover = document.getElementById('mentions');
+  let suggestionGeneration = 0;
 
   textarea.addEventListener('keydown', (e) => {
     if (popover.open && popover.handleKeyDown(e)) {
       if (!popover.syncActiveDescendant(textarea) && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-        void popover.focusActiveOption();
+        const generation = suggestionGeneration;
+        void popover.focusActiveOption({
+          ownsFocus: () =>
+            generation === suggestionGeneration &&
+            (document.activeElement === textarea || document.activeElement === popover),
+        });
       }
       return;
     }
   });
   textarea.addEventListener('input', () => {
+    suggestionGeneration += 1;
     popover.anchor = textarea;
     popover.items = [
       {
-        id: 'ada',
+        suggestionId: 'ada',
         label: 'Ada Lovelace',
         description: 'Engineering',
         icon: '👩‍💻',
       },
-      { id: 'grace', label: 'Grace Hopper', description: 'Engineering' },
+      { suggestionId: 'grace', label: 'Grace Hopper', description: 'Engineering' },
     ];
     popover.query = 'a'; // detected since the trigger character
     popover.open = true;
     popover.updateComplete.then(() => popover.syncActiveDescendant(textarea));
+  });
+  textarea.addEventListener('blur', (event) => {
+    if (event.relatedTarget !== popover) {
+      suggestionGeneration += 1;
+      popover.open = false;
+    }
   });
 
   popover.addEventListener('lr-mention-select', (e) => {
@@ -786,10 +841,11 @@ available space. See `lr-tour` for the shared-clamp note.
 ```
 
 Integration is entirely the host's responsibility: detect a mention/command trigger in the host's
-own `input` handling, set `anchor`/`items`/`query` and flip `open = true`, forward every `keydown`
-through `handleKeyDown()` while open, and call `syncActiveDescendant()` after opening and after each
-consumed navigation key. If it returns `false`, call `focusActiveOption()` after the first consumed
-ArrowUp/ArrowDown so the fallback owns navigation from then on. Setting `open = false` whenever the
+own `input` handling, set `anchor`/`items`/`query` and flip `open = true`, and forward every
+`keydown` through `handleKeyDown()` while open. Anchor relationship and active-descendant syncing
+are automatic; if an explicit `syncActiveDescendant()` check returns `false`, call
+`focusActiveOption()` after the first consumed ArrowUp/ArrowDown so the fallback owns navigation
+from then on. Setting `open = false` whenever the
 query stops looking like an active mention context (a space typed, the trigger deleted, the input
 blurred, …) is also the host's job — `lr-mention-close` fires automatically from that.
 
@@ -824,7 +880,7 @@ fresh `query` is the proxy for "the caret may have moved").
   active option.
 - There's no persisted "selection" the way `<lr-combobox>`'s own listbox has one — a mention is
   either committed (closing the popover) or dismissed with nothing chosen. `aria-selected="true"`
-  here marks whichever row is currently _active_ (what Enter/Tab would commit right now, per the
+  here marks whichever row is currently *active* (what Enter/Tab would commit right now, per the
   WAI-ARIA combobox-with-list-autocomplete pattern), not a separate persisted value.
 
 ---
@@ -859,21 +915,22 @@ First-party invention (no Web Awesome equivalent).
   default `undefined` shows every line; negative and non-finite values also disable folding.
 - `maxLines: number = 5000` (attribute `max-lines`) — maximum logical lines accepted on either
   side. Larger input renders the localized `diffViewTooLarge` fallback without computing or
-  highlighting the diff. Set the property to `Infinity` explicitly to opt into unbounded diffing.
+  highlighting the diff. `Infinity` relaxes this line-count ceiling, but the fixed aggregate
+  character and comparison-work ceilings remain in force.
 
 **Events:**
 
-- `lr-copy` (`detail: { text: string }`) — the full unified-diff text, fired on every copy-button
-  activation, including an attempt whose clipboard write later fails.
+- `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — the frozen full
+  unified-diff outcome, fired only after the owning browsing context's clipboard write fulfills.
 - `lr-error` (no detail) — the Clipboard API was unavailable or the write failed.
-- `lr-copy-error` (detail contains the text, a `LyraCopyErrorReason`, and the original error) — the
-  detailed failure alias. The reason is `'unsupported' | 'denied' | 'failed'`; its error field
-  preserves the original platform error for diagnostics.
+- `lr-copy-error` (`detail: LyraClipboardWriteFailure`) — the frozen failure outcome contains
+  `ok: false`, the text, a `LyraCopyErrorReason`, and the original error. The reason is
+  `'unsupported' | 'denied' | 'failed'`.
 
 The copy button stays in its resting state until `writeText()` resolves. Success renders and
 announces localized `copied`; failure renders and announces localized `copyFailed`. A newer
-activation, source-text change, disconnect, or document adoption retires an older pending outcome,
-so stale writes cannot confirm or fail the current diff.
+activation, source-text change, `copyable`/`maxLines` transition, disconnect, or document adoption
+retires an older pending outcome, so stale writes cannot confirm or fail a hidden or replaced diff.
 
 **Slots:** none.
 
@@ -908,7 +965,7 @@ the plain unhighlighted diff text untouched.
 ```
 
 The package root also exports the pure `computeLineDiff(oldLines: string[], newLines: string[]):
-DiffOp[]` helper (plus the `DiffOp` type, `{ type: 'equal' | 'add' | 'remove'; text: string }`) — the
+LyraDiffOp[]` helper (plus the `LyraDiffOp` type, `{ type: 'equal' | 'add' | 'remove'; text: string }`) — the
 same line-diff function this component's own `render()`/copy handler call, exposed standalone so a
 consumer can compute or unit-test the same alignment without instantiating the element at all.
 
@@ -916,9 +973,11 @@ consumer can compute or unit-test the same alignment without instantiating the e
 
 - line splitting normalizes LF, CRLF, and lone CR endings before alignment and syntax-token indexing,
   so files that differ only by line-ending convention do not appear wholly changed.
+- An empty document contains zero logical lines. A genuine trailing newline is still represented,
+  so empty/one-sided diffs and copied unified text do not gain a phantom blank operation.
 - alignment uses Hirschberg longest-common-subsequence matching: O(n·m) time with linear working
-  memory. The 5,000-line per-side default ceiling bounds pathological inputs; `Infinity` is an
-  explicit performance-risk opt-out.
+  memory. The 5,000-line per-side default, aggregate character ceiling, and comparison-work ceiling
+  bound pathological inputs; `Infinity` opts out of only the first of those limits.
 - the computed `diffOps` state is cached and recomputed only when `oldText`, `newText`, or
   `maxLines` changes. Copy-confirmation and other unrelated renders reuse the cached alignment.
 - Changing either `oldText` or `newText` clears any in-progress "Copied" feedback immediately.
@@ -951,9 +1010,10 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
   remain the canonical non-nullable `''`.
 - `path: string = ''` — raw SVG path data for a glyph the built-in set doesn't cover. Takes
   precedence over `name`.
-- `label: string = ''` — accessible name. Left empty (the default) the SVG is `aria-hidden="true"`,
-  which is what you want whenever adjacent text already names the control. A host `aria-label` wins
-  over it, and either one is applied to a fetched icon too.
+- `label: string = ''` — accessible name. Left empty (the default) the stable semantic owner is
+  `aria-hidden="true"`, which is what you want whenever adjacent text already names the control. A
+  host `aria-label` wins over it. For a labeled remote icon the same semantic owner and name remain
+  present through idle, loading, loaded, empty, and error states without double-naming the SVG.
 - `library: string = 'default'` (reflected) — name of a library registered with `registerIconLibrary()`.
   `default` means the built-in glyph set. An **unregistered** name also falls back to the
   built-in set instead of erroring, which is what lets registration happen after first render.
@@ -982,7 +1042,7 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
   `flip`, `flip-360`, `shake`, `spin`, `spin-pulse`, `spin-reverse`, `spin-snap`, `spin-snap-4`,
   `spin-snap-8`, `buzz`, `wag`, `float`, `swing`, or `jello`. Every treatment stops under
   `prefers-reduced-motion: reduce`.
-- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon _box_ to
+- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon *box* to
   `--lr-icon-fixed-width` while the glyph keeps `--lr-icon-size` and centres inside it, so a column
   of differently-shaped icons lines its labels up.
 
@@ -1028,7 +1088,8 @@ source tree.
   `normal`), `--animation-duration` (default `--lr-duration-icon`, 1s),
   `--animation-iteration-count` (default `infinite`), and `--animation-timing` (default
   `--lr-easing-emphasized`).
-- Animation-specific controls: `--beat-scale`; `--fade-opacity`; `--beat-fade-opacity` and
+- Animation-specific controls: `--beat-scale` (default `1.25`, used exactly once as the beat peak);
+  `--fade-opacity`; `--beat-fade-opacity` and
   `--beat-fade-scale`; `--bounce-height`, `--bounce-jump-scale-x`, `--bounce-jump-scale-y`,
   `--bounce-land-scale-x`, `--bounce-land-scale-y`, `--bounce-rebound`,
   `--bounce-start-scale-x`, `--bounce-start-scale-y`, and `--bounce-anticipation`; `--flip-angle`,
@@ -1102,8 +1163,11 @@ Promise<string>`, `LyraIconLibraryMutator = (svg: SVGElement) => void`, and
 - Remote loading is fail-closed by construction: the URL must pass the shared fetch allowlist
   (`http:`, `https:`, `blob:`, `data:`, and relative URLs — a `javascript:` URL is never fetched),
   the response is capped at 1 MiB before any parser sees it, and DOMPurify's SVG profile runs
-  unconditionally, sanitizing straight to DOM nodes rather than to a re-parsed string. A response
-  that isn't an SVG document is rejected, and its text never reaches the DOM.
+  unconditionally, sanitizing straight to DOM nodes rather than to a re-parsed string. A strict
+  post-sanitization SVG pass then removes style/foreign-document content and every external
+  `href`, image, CSS `url()`, paint, filter, mask, marker, and related resource sink; only safe
+  same-document fragments survive. A response that isn't an SVG document is rejected, and its
+  text never reaches the DOM.
 - Matching requests share a bounded cache of canonical sanitized SVG nodes. Concurrent icons issue
   one fetch, a disconnected subscriber does not abort work another icon still needs, and retryable
   failures are evicted. The canonical node is never rendered or mutated: each icon deep-clones it,
@@ -1206,7 +1270,9 @@ resolution and `Intl`-instance caching are as described under `lr-format-number`
 **Properties:**
 
 - `date: string | number | Date = new Date()` — unset means the construction-time current instant.
-  **Changed in 8.0.0:** the former empty-string default rendered fallback content
+  Numeric HTML attributes are epoch milliseconds, matching numeric property assignment (including
+  zero and negative epochs); nonnumeric strings retain ordinary date/ISO parsing. **Changed in
+  8.0.0:** the former empty-string default rendered fallback content
 - optional granular fields: `weekday`, `era`, `year`, `month`, `day`, `hour`, `minute`, `second`,
   and `timeZoneName` (attribute `time-zone-name`), each restricted to its corresponding published
   `Intl.DateTimeFormat` literal set
@@ -1256,8 +1322,10 @@ are as described under `lr-format-number` above.
 
 **Properties:**
 
-- `date: string | number | Date = new Date()` — the target instant; unset means now. **Changed in
-  8.0.0:** the former empty-string default rendered no content
+- `date: string | number | Date = new Date()` — the target instant; unset means now. Numeric HTML
+  attributes are epoch milliseconds, matching numeric property assignment (including zero and
+  negative epochs); nonnumeric strings retain ordinary date/ISO parsing. **Changed in 8.0.0:** the
+  former empty-string default rendered no content
 - `unit: 'second'|'minute'|'hour'|'day'|'week'|'month'|'quarter'|'year'|'auto' = 'auto'` — `'auto'`
   picks the largest unit whose own length fits inside the elapsed time, then rounds; naming a unit
   forces it (so a 90-minute delta with `unit="day"` rounds to "today"/0 days)
@@ -1284,7 +1352,7 @@ calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is a
   and clears all three fields. Programmatic assignment never emits `input`/`change`
 - `valueAsDate: Date | null` — the same value as a local-midnight `Date`; settable (assigning
   `null` clears)
-- `parts: DateParts` — the live raw `{ day, month, year }` strings. Assigning a complete valid set
+- `parts: LyraKnownDateParts` — the live raw `{ day, month, year }` strings. Assigning a complete valid set
   synchronizes the canonical `value`; assigning an incomplete or impossible set clears `value`
 - `valueInput: HTMLInputElement` — hidden native `type="date"` mirror kept synchronized with
   `value`, `min`, `max`, `required`, `disabled`, and `readonly` for integrations that inspect native
@@ -1308,13 +1376,26 @@ calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is a
   while any other non-empty field-specific token is forwarded only to the year field
 - `withLabel: boolean = false` (`with-label`) and `withHint: boolean = false` (`with-hint`) — SSR
   slot-presence hints. Normal client rendering detects slotted label/hint content automatically
-- `dayLabel: string = 'Day'` (`day-label`), `monthLabel: string = 'Month'` (`month-label`),
-  `yearLabel: string = 'Year'` (`year-label`) — visible **and** accessible per-field labels; each
-  routes through `localize()` only while left at its literal default
+- `dayLabel?: string` (`day-label`), `monthLabel?: string` (`month-label`), `yearLabel?: string`
+  (`year-label`) — visible **and** accessible per-field labels. `undefined` uses the corresponding
+  localized default; every supplied string, including `''` and the old English copy, is
+  caller-owned
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — applied to `[part="fieldset"]`,
   which owns the group role, overriding the `<legend>`-derived name
 - The shared form surface adds `defaultValue`, `customError` (`custom-error`), `getForm()`,
   `checkValidity()`, `reportValidity()`, and `setCustomValidity(message)`.
+
+**Static constructor API:** `LyraKnownDate.validators` is the mirrored callable validator catalog.
+Each access returns a fresh `LyraFormValidator<LyraKnownDate>[]`; its entry observes
+`required`/`disabled`/`readonly`/`value`/`min`/`max`, and `checkValidity(element)` projects the
+element's current `ValidityState` into `{ isValid, message, invalidKeys }` without changing it.
+
+```ts
+import { LyraKnownDate } from '@aceshooting/lyra-ui/components/utility/known-date/known-date.js';
+
+const knownDate = document.querySelector('lr-known-date')!;
+const result = LyraKnownDate.validators[0].checkValidity(knownDate);
+```
 
 For mapped JavaScript/TypeScript compatibility, assigning `null` to `name` clears it to the
 canonical `''` read value and removes the `name` attribute. The getter remains non-nullable.
@@ -1368,10 +1449,10 @@ labelled control in the library does: `--lr-form-control-required-content` (the 
 CSS `content` string; `''` suppresses it), `--lr-form-control-required-color` (default
 `var(--lr-color-danger)`) and `--lr-form-control-required-offset` (default `0`). One declaration on
 an ancestor — `:root` included — retunes this marker along with every other one in the page. The
-one detail specific to this component: the glyph hangs off `[part="legend"]` rather than
-`[part="form-control-label"]`, because the label part here is a `<span>` *inside* the legend and
-the marker belongs after the whole label. With no label the legend is hidden and nothing is
-painted. Full description in `llms/shared.md` → "The required-field marker".
+one detail specific to this component: `[part="form-control-label"]` is the marker owner inside the
+`<legend>`, so known-date consumes the same shared primitive and public marker hooks as every other
+form control. With no label the legend is hidden and nothing is painted. Full description in
+`llms/shared.md` → "The required-field marker".
 
 **CSS states:** `:state(blank)` while the composite value is empty/incomplete;
 `:state(disabled)` for direct or fieldset-cascaded disablement.
@@ -1412,7 +1493,7 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 
 **Known gotchas:**
 
-- Field _order_ is derived from the locale by formatting a probe date (Jan 2 2026) with
+- Field *order* is derived from the locale by formatting a probe date (Jan 2 2026) with
   `Intl.DateTimeFormat` and reading back the part order — not from `Date.parse()`'s mm/dd/yyyy bias.
   It falls back to `month, day, year` only when that sampling fails.
 - Auto-advance (typing a field's last digit moves to the next) and backspace-into-the-previous-field
@@ -1421,12 +1502,12 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 - Each `<input>` keeps exactly the digits that were typed — never zero-padded, range-clamped, or
   reverted to a previous value; only the composite `value` is normalized to zero-padded ISO.
 - Non-digit characters are stripped in the `input` handler before they reach field state (the
-  native `<input>`'s own value is rewritten in the same tick). Locale-specific numerals _are_
+  native `<input>`'s own value is rewritten in the same tick). Locale-specific numerals *are*
   accepted and transliterated to ASCII, not rejected: Arabic-Indic (`٠`–`٩`) and Extended
   Arabic-Indic/Persian (`۰`–`۹`) digits are mapped unconditionally, and the digits of
   `effectiveLocale`'s own numbering system are added on top via `Intl.NumberFormat`, so typing
   `٢٠٢٦` into the year field commits `2026`.
-- ArrowLeft/ArrowRight cross fields at a field's text boundary, and the _physical_ key meaning
+- ArrowLeft/ArrowRight cross fields at a field's text boundary, and the *physical* key meaning
   "next field" flips under an inherited `dir="rtl"`; the locale-derived field order itself does not.
 - A blank composite is `valueMissing` only when **all three** fields are blank; a partially typed
   required date reports `badInput` instead.
@@ -1458,20 +1539,22 @@ children; nothing is moved or cloned.
   toggles this state; a programmatic assignment remains silent.
 - `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — clamped to a 1000 ms floor
 
-**Methods:** `randomize(): Element[]` — re-selects using the current `mode`, applies
+**Methods:** `randomize(): readonly Element[]` — re-selects using the current `mode`, applies
 `hidden`/`aria-hidden`, emits `lr-content-change`, appends the exposed selection text to the shared
 polite announcement sink (even when `autoplay` is enabled), and returns the elements now shown.
 Does **not** reset or restart the autoplay timer.
 
-**Events:** `lr-content-change` (`detail: { items: HTMLElement[] }` — the exact elements now shown,
-in display order). Fires on first render, on `randomize()`, on a real slot-content change, and on
-each autoplay tick; never when the eligible pool is empty. `lr-pause-change` (`detail: boolean` —
-the new `paused` value) fires only when the built-in pause/resume button toggles `paused`, so a
+**Events:** `lr-content-change` (`detail: { readonly items: readonly Element[] }` — a frozen
+snapshot of the exact elements now shown, in display order). Fires on first render, on
+`randomize()`, on a real slot-content change, and on
+each autoplay tick; never when the eligible pool is empty. `lr-pause-change`
+(`detail: { paused: boolean }`) fires only when the built-in pause/resume button toggles `paused`, so a
 host mirroring or persisting that state stays in sync; a programmatic `paused` write stays silent,
 so a controlled binding can't echo itself. Same event name and payload shape as `<lr-poll-status>`'s
 identical affordance, so one handler serves both.
 
-**Slots:** default — the candidate pool. Direct **element** children are eligible. When a wrapper
+**Slots:** default — the candidate pool. Direct **element** children, including SVG elements, are
+eligible. When a wrapper
 places a forwarding `<slot>` directly in the pool, its flattened projected elements become the
 candidates; an arbitrary nested custom-element subtree remains one opaque direct candidate.
 
@@ -1495,12 +1578,18 @@ only while `autoplay` is enabled and exposed as a toggle with `aria-pressed`.
 `--lr-size-0-5em` — travel distance for the four directional `fade-*` effects) feed the mapped
 `--lr-animation-duration`, `--lr-animation-easing`, and `--lr-animation-translate` names. Existing
 `--lr-random-content-animation-duration`, `--lr-random-content-animation-easing`, and
-`--lr-random-content-animation-translate` names remain fallbacks.
+`--lr-random-content-animation-translate` names remain fallbacks. The base owns a wrapping flex
+layout for simultaneous selections; `--lr-random-content-item-gap` (default `--lr-space-s`) sets
+the row/column gap and `--lr-random-content-item-alignment` (default `flex-start`) sets cross-axis
+alignment. Slotted candidates establish transformable inline-block boxes, so directional entrance
+animations retain their travel for ordinary inline elements.
 
-**Web Awesome migration note:** this mapping requires manual review rather than a mechanical tag
-rename. Candidate eligibility and selection semantics differ, and Lyra additionally suppresses
-autoplay under `prefers-reduced-motion: reduce` and renders a visible localized pause/resume
-control. Review all four behaviors before replacing `<wa-random-content>`.
+**Web Awesome migration note:** `migrate-wa` performs the tag rename and reports only the behavior
+groups exercised by each use: host layout (`display: contents` versus Lyra's block host),
+multi-item layout ownership, the bounded retry used by `mode="unique"`, direct forwarding-slot
+candidates, and autoplay semantics (reduced-motion suppression, silent timer ticks, focus-only
+pause, and Lyra's visible localized pause/resume control). An empty element is rewritten without a
+behavior warning; direct SVG candidates and the documented animation vocabulary are parity cases.
 
 **Known gotchas:**
 
@@ -1530,7 +1619,8 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
 
 - `open: boolean = false` (reflected) — no separate `show()`/`hide()`; set this or call
   `start()`/`end()`
-- `steps: TourStep[] = []` (attribute: false) — empty renders nothing
+- `steps: readonly Readonly<LyraTourStep>[] = []` (attribute: false) — assignment takes a shallow
+  frozen snapshot; empty renders nothing
 - `activeIndex: number = 0` (attribute `active-index`, reflected) — clamped to
   `[0, steps.length - 1]` as a finite integer, including for a direct property/attribute write that
   bypasses `goToStep()`; fractions floor and non-finite values fall back to `0`
@@ -1547,25 +1637,27 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
 - `aria-label` (a plain host attribute, not a public JS property) — names **every** step's popover,
   overriding each step's own `heading` as the `aria-labelledby` source
 
-**Exported types:** `TourStep { id: string; target: TourTarget; heading: string; content?: string;
+**Exported types:** `LyraTourStep { stepId: string; target: LyraTourTarget; heading: string; content?: string;
 placement?: Placement; spotlightPadding?: number; interactiveTarget?: boolean; hidePrevious?: boolean }`;
-`TourTarget = string | HTMLElement | (() => HTMLElement | null)` — a string resolves via
+`LyraTourTarget = string | HTMLElement | (() => HTMLElement | null)` — a string resolves via
 `ownerDocument.querySelector` (top-level light DOM only). Every form resolves exactly once when the
 step becomes active and is kept as one connected snapshot for that activation, then resolves again
 on a later activation/reconnect. Invalid selectors, throwing resolvers, non-`HTMLElement` results,
-and detached elements use the normal missing-target path instead of throwing. `heading` is required
-and becomes the panel's accessible name; `content` renders as plain text (no HTML/markdown parsing).
-`TourEndReason = 'completed' | 'skip' | 'escape' | 'api' | 'unmount' | (string & {})`.
+and detached elements use the normal missing-target path instead of throwing. `heading` normally
+becomes the panel's accessible name; a defensive blank/whitespace heading uses the localized
+"Step X of Y" string instead, including when progress is visually hidden or the target is missing.
+`content` renders as plain text (no HTML/markdown parsing).
+`LyraTourEndReason = 'completed' | 'skip' | 'escape' | 'api' | 'unmount' | (string & {})`.
 
 **Methods:** `start(index = 0)` (clamps, opens, emits `lr-tour-start`), `next()` (on the last step
 ends with `'completed'` instead), `back()` (no-op on the first step), `goToStep(index)` (clamped),
-`skip()` (sugar for `end('skip')`), `end(reason: TourEndReason = 'api')`.
+`skip()` (sugar for `end('skip')`), `end(reason: LyraTourEndReason = 'api')`.
 
 **Events:** `lr-tour-start` (`detail: { index }`, not cancelable); `lr-tour-step-change`
 (`detail: { index, previousIndex, step, via: 'next'|'back'|'goto' }`, **cancelable** — fires before
 `activeIndex` changes, so `preventDefault()` gates advancement on a real action; a deliberate
 departure from `lr-carousel`'s non-cancelable `lr-slide-change`); `lr-tour-end`
-(`detail: TourEndReason`, cancelable except in practice for `'unmount'`, which is emitted when the
+(`detail: LyraTourEndReason`, cancelable except in practice for `'unmount'`, which is emitted when the
 element is removed while still open by something other than its own `end()`);
 `lr-tour-target-missing` (`detail: { index, step }`, informational — the tour does **not** auto-end,
 it renders that step viewport-centered with no spotlight).
@@ -1606,10 +1698,15 @@ rather than per component.
   `inert`, not `aria-hidden`) but every pointer event over the viewport is captured by the backdrop.
   A default step uses a modal overlay and traps focus in the panel. Set `step.interactiveTarget` to
   clip the backdrop around the target, switch the panel to nonmodal semantics, and install an
-  explicit two-way Tab route between the panel and the live target, so both pointer and keyboard
-  interaction remain reachable.
-- Each step transition mounts a genuinely new popover node (keyed on `step.id`) so focus reliably
-  re-enters the panel — don't cache a reference to `[part="popover"]` across steps.
+  explicit bounded Tab scope over the panel and the live composed target descendants, so nested,
+  forwarded, dynamically disabled, and inert controls cannot leak focus to unrelated page content.
+- A live transition between modal and interactive-target steps preserves the trigger captured when
+  the tour opened. Intermediate overlay ownership changes never restore focus; a genuine end returns
+  to that original trigger when it is still connected.
+- Each step transition mounts a genuinely new popover node keyed on occurrence index plus
+  `step.stepId`, so repeated business ids cannot collapse distinct occurrences. Every step-related
+  event exposes the occurrence index, which is the authoritative collection identity; focus
+  reliably re-enters the panel — don't cache a reference to `[part="popover"]` across steps.
 - No `Home`/`End` shortcut and no click-to-jump progress dots (unlike `lr-stepper`): later steps may
   depend on an earlier step's side effect having run. `goToStep()` is available for a caller that
   knows better. ArrowRight/ArrowLeft do move between steps (swapped under RTL), except while focus

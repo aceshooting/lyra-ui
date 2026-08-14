@@ -2,6 +2,8 @@ import { safeFetchUrl } from './safe-url.js';
 
 /** Default cap for remote resources before a viewer hands them to a parser. */
 export const DEFAULT_MAX_RESOURCE_BYTES = 25 * 1024 * 1024;
+/** Independent CPU/object-cardinality ceiling for hostile tiny-chunk streams. */
+export const MAX_RESOURCE_STREAM_CHUNKS = 65_536;
 export const DEFAULT_MAX_TABLE_ROWS = 10_000;
 export const DEFAULT_MAX_TABLE_COLUMNS = 1_000;
 
@@ -105,29 +107,46 @@ export async function readResponseArrayBuffer(response: Response, maxBytes = DEF
   }
 
   const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
+  let output = new Uint8Array(0);
   let total = 0;
+  let chunkCount = 0;
+  const rejectStream = async (message?: string): Promise<never> => {
+    try {
+      await reader.cancel();
+    } catch {
+      // The resource-limit failure remains authoritative even if an adversarial stream rejects
+      // cancellation too.
+    }
+    throw new LyraResourceLimitError(message);
+  };
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      total += value.byteLength;
-      if (total > limit) {
-        await reader.cancel();
-        throw new LyraResourceLimitError();
+      chunkCount += 1;
+      if (chunkCount > MAX_RESOURCE_STREAM_CHUNKS) {
+        await rejectStream('The resource stream contains too many chunks.');
       }
-      chunks.push(value);
+      const nextTotal = total + value.byteLength;
+      if (nextTotal > limit) await rejectStream();
+
+      if (nextTotal > output.byteLength) {
+        let capacity = output.byteLength || Math.min(limit, Math.max(1_024, value.byteLength));
+        while (capacity < nextTotal) capacity = Math.min(limit, Math.max(nextTotal, capacity * 2));
+        const grown = new Uint8Array(capacity);
+        grown.set(output.subarray(0, total));
+        output = grown;
+      }
+      // Copy before asking the producer for another chunk. Streams and test doubles are allowed to
+      // reuse/mutate their view after read() settles; retaining every view until EOF both pins one
+      // object per chunk and makes the final bytes depend on later producer mutations.
+      output.set(value, total);
+      total = nextTotal;
     }
   } finally {
     reader.releaseLock();
   }
-  const output = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    output.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return output.buffer;
+  return output.slice(0, total).buffer;
 }
 
 export async function readResponseText(response: Response, maxBytes = DEFAULT_MAX_RESOURCE_BYTES): Promise<string> {

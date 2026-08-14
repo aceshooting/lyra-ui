@@ -8,9 +8,15 @@ import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import {
+  writeClipboardText,
+  type LyraClipboardWriteFailure,
+  type LyraClipboardWriteSuccess,
+} from '../../../internal/clipboard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_stackTraceHideFrames, LYRA_DEFAULT_stackTraceLabel, LYRA_DEFAULT_stackTraceShowFrames } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_stackTraceHideFrames, LYRA_DEFAULT_stackTraceLabel, LYRA_DEFAULT_stackTraceLimit, LYRA_DEFAULT_stackTraceShowFrames } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -35,7 +41,9 @@ export type StackTraceAppearance = LyraFrame;
 
 export interface LyraStackTraceEventMap {
   'lr-frame-select': CustomEvent<{ file: string; line: number; column?: number; raw: string }>;
-  'lr-copy': CustomEvent<{ text: string }>;
+  'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
+  'lr-error': CustomEvent<undefined>;
+  'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
 }
 
 /**
@@ -44,15 +52,17 @@ export interface LyraStackTraceEventMap {
  * groups. Frames matching `internalPatterns` (`node_modules/`, `node:internal`,
  * `site-packages/`, ... by default) fold behind a count-labeled toggle. Falls back to verbatim
  * raw text when nothing parses. A malformed or unsafe numeric location remains visible as raw,
- * non-activatable trace text rather than becoming an invalid navigation target. First-party
- * invention (no Web Awesome equivalent).
+ * non-activatable trace text rather than becoming an invalid navigation target. Parsing and raw
+ * rendering are bounded by the exported `STACK_TRACE_LIMITS`; `[part="limit"]` makes any omitted
+ * input explicit. First-party invention (no Web Awesome equivalent).
  *
  * @customElement lr-stack-trace
  * @event lr-frame-select - `detail: { file, line, column?, raw }` — a frame with a safe parsed
  *   location was activated (`column` is always undefined for Python frames, which carry no column
  *   information). Malformed or unsafe locations render as raw text and never emit this event.
- * @event lr-copy - `detail: { text }` — the raw, unparsed trace text, fired regardless of
- *   whether the OS clipboard write actually succeeded.
+ * @event lr-copy - `detail: { ok: true, text }` — the raw-trace clipboard write completed.
+ * @event lr-error - The clipboard write failed; generic no-detail notification.
+ * @event lr-copy-error - `detail: { ok: false, text, reason, error }` — typed clipboard failure.
  * @csspart base - The root wrapper; respects `max-height`. Tightens its padding under `compact`
  *   and drops its card chrome under `frame="plain"`.
  * @csspart message - The leading error message text for a group.
@@ -63,6 +73,7 @@ export interface LyraStackTraceEventMap {
  * @csspart frame-location - The frame's `file:line:col` text.
  * @csspart internal-toggle - The collapse/expand toggle for a run of internal frames.
  * @csspart raw - The verbatim `<pre>` fallback when zero structured frames parsed.
+ * @csspart limit - Localized notice rendered when a parser resource ceiling omitted input.
  * @csspart copy-button - The copy-to-clipboard button, only rendered while `copyable`.
  * @cssprop [--lr-stack-trace-max-height=none] - Cap on how tall `[part="base"]` grows before it
  *   scrolls internally. `none` lets the component grow with its content; the `max-height`
@@ -85,8 +96,10 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
     ...super.defaultStrings,
     copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
+    copyFailed: LYRA_DEFAULT_copyFailed,
     stackTraceHideFrames: LYRA_DEFAULT_stackTraceHideFrames,
     stackTraceLabel: LYRA_DEFAULT_stackTraceLabel,
+    stackTraceLimit: LYRA_DEFAULT_stackTraceLimit,
     stackTraceShowFrames: LYRA_DEFAULT_stackTraceShowFrames,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -102,7 +115,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
 
   /** File-path substrings/`RegExp`s that mark a frame as internal. Defaults to
    *  `DEFAULT_INTERNAL_PATTERNS` (common Node/browser/Python framework locations). */
-  @property({ attribute: false }) internalPatterns: (string | RegExp)[] = DEFAULT_INTERNAL_PATTERNS;
+  @property({ attribute: false }) internalPatterns: readonly (string | RegExp)[] = [...DEFAULT_INTERNAL_PATTERNS];
 
   /** Shows a copy-to-clipboard button for the raw trace text. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
@@ -126,21 +139,44 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   @state() private groups: StackGroup[] = [];
+  @state() private boundedSource = '';
+  @state() private parseTruncated = false;
   @state() private expandedInternalRuns = new Set<string>();
-  @state() private justCopied = false;
+  @state() private copyStatus: 'rest' | 'success' | 'error' = 'rest';
 
-  private copyTimer?: { owner: Window; handle: number };
+  private copyTimer?: { owner: Window; handle: number; generation: number };
+  private copyGeneration = 0;
+  private limitAnnouncementSink?: AnnouncementSink;
+  private limitAnnouncementInitialized = false;
+  private previouslyTruncated = false;
 
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.cancelCopyTimer();
-    this.justCopied = false;
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncLimitAnnouncementSink();
+    this.limitAnnouncementInitialized = this.hasUpdated;
+    this.previouslyTruncated = this.parseTruncated;
   }
 
-  adoptedCallback(): void {
+  override disconnectedCallback(): void {
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = undefined;
+    this.resetCopyFeedback();
+    super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     // A disconnected node can be adopted without another disconnect notification.
-    this.cancelCopyTimer();
-    this.justCopied = false;
+    this.resetCopyFeedback();
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = undefined;
+    this.syncLimitAnnouncementSink();
+  }
+
+  private syncLimitAnnouncementSink(): void {
+    if (!this.isConnected || this.limitAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
   }
 
   private cancelCopyTimer(): void {
@@ -149,42 +185,78 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
     if (timer) timer.owner.clearTimeout(timer.handle);
   }
 
+  private resetCopyFeedback(): void {
+    this.copyGeneration += 1;
+    this.cancelCopyTimer();
+    this.copyStatus = 'rest';
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('trace') || changed.has('internalPatterns')) {
-      this.groups = parseStackTrace(this.trace, this.internalPatterns);
+      const result = parseStackTrace(this.trace, { internalPatterns: this.internalPatterns });
+      this.groups = result.groups;
+      this.boundedSource = result.source;
+      this.parseTruncated = result.truncated;
       this.expandedInternalRuns = new Set();
     }
   }
 
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (this.limitAnnouncementInitialized && this.parseTruncated && !this.previouslyTruncated) {
+      this.limitAnnouncementSink?.announce(this.localize('stackTraceLimit'));
+    }
+    this.limitAnnouncementInitialized = true;
+    this.previouslyTruncated = this.parseTruncated;
+  }
+
   private onCopy = (): void => {
+    void this.copyTrace();
+  };
+
+  private async copyTrace(): Promise<void> {
     const text = this.trace;
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
-    try {
-      void owner?.navigator.clipboard?.writeText(text)?.catch(() => {});
-    } catch {
-      // best-effort -- lr-copy still fires with the intended text regardless
-    }
-    this.emit('lr-copy', { text });
+    const generation = ++this.copyGeneration;
     this.cancelCopyTimer();
-    if (!owner) {
-      this.justCopied = false;
+    this.copyStatus = 'rest';
+    const outcome = await writeClipboardText(owner, text);
+    if (!owner || !this.isCurrentCopy(generation, owner)) return;
+    if (!outcome.ok) {
+      this.showCopyStatus('error', generation, owner);
+      this.emit('lr-error');
+      this.emit('lr-copy-error', outcome);
       return;
     }
-    this.justCopied = true;
+    this.showCopyStatus('success', generation, owner);
+    this.emit('lr-copy', outcome);
+  }
+
+  private isCurrentCopy(generation: number, owner: Window): boolean {
+    return this.isConnected
+      && generation === this.copyGeneration
+      && this.ownerDocument.defaultView === owner;
+  }
+
+  private showCopyStatus(status: 'success' | 'error', generation: number, owner: Window): void {
+    this.copyStatus = status;
+    this.cancelCopyTimer();
     let handle = 0;
     handle = owner.setTimeout(() => {
       if (
         this.copyTimer?.owner !== owner
         || this.copyTimer.handle !== handle
+        || this.copyTimer.generation !== generation
+        || generation !== this.copyGeneration
         || !this.isConnected
         || this.ownerDocument.defaultView !== owner
       ) return;
       this.copyTimer = undefined;
-      this.justCopied = false;
+      this.copyStatus = 'rest';
     }, COPY_CONFIRM_MS);
-    this.copyTimer = { owner, handle };
-  };
+    this.copyTimer = { owner, handle, generation };
+  }
 
   private onFrameClick(frame: StackFrame): void {
     if (!isSelectableFrame(frame)) return;
@@ -257,7 +329,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
       <div
         part="base"
         role="group"
-        aria-label=${this.getAttribute('aria-label') || this.localize('stackTraceLabel')}
+        aria-label=${this.localize('stackTraceLabel')}
         style=${(() => {
           // A free-form consumer string must never reach a declaration list verbatim --
           // `max-height="3rem;position:fixed"` would otherwise escape the custom property.
@@ -266,18 +338,25 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
         })()}
       >
         ${this.copyable
-          ? html`<button part="copy-button" type="button" @click=${this.onCopy}>
-              ${this.justCopied ? this.localize('copied') : this.localize('copy')}
+          ? html`<button part="copy-button" type="button" data-copy-status=${this.copyStatus} @click=${this.onCopy}>
+              ${this.copyStatus === 'success'
+                ? this.localize('copied')
+                : this.copyStatus === 'error'
+                  ? this.localize('copyFailed')
+                  : this.localize('copy')}
             </button>`
           : nothing}
         ${this.groups.length === 0
-          ? html`<pre part="raw" dir="ltr">${this.trace}</pre>`
+          ? html`<pre part="raw" dir="ltr">${this.boundedSource}</pre>`
           : this.groups.map(
               (group, index) => html`
                 ${group.message ? html`<div part="message">${group.message}</div>` : nothing}
                 ${this.renderGroup(group, index)}
               `,
             )}
+        ${this.parseTruncated
+          ? html`<p part="limit" role="note">${this.localize('stackTraceLimit')}</p>`
+          : nothing}
       </div>
     `;
   }

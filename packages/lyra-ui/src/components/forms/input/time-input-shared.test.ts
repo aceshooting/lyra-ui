@@ -6,6 +6,7 @@ import {
   localeTimePattern,
   normalizeTimeValue,
   parseTimeValue,
+  timeStepBaseMilliseconds,
   to24Hour,
   wrapTimeMilliseconds,
 } from './time-input-shared.js';
@@ -98,6 +99,15 @@ describe('time-input shared value helpers', () => {
     expect(hasTimeStepMismatch('09:04', 300, '09:00')).to.equal(true);
     expect(hasTimeStepMismatch('09:04', 'any', '09:00')).to.equal(false);
     expect(hasTimeStepMismatch('02:30', 1800, '')).to.equal(false);
+  });
+
+  it('uses valid min, then the default value, then midnight as the native step base', () => {
+    expect(timeStepBaseMilliseconds('00:00:15', '00:00:30')).to.equal(15_000);
+    expect(timeStepBaseMilliseconds('', '00:00:30')).to.equal(30_000);
+    expect(timeStepBaseMilliseconds('invalid', 'also-invalid')).to.equal(0);
+    expect(hasTimeStepMismatch('00:01:30', 60, '', '00:00:30')).to.equal(false);
+    expect(hasTimeStepMismatch('00:01:30', 60, '00:00:15', '00:00:30')).to.equal(true);
+    expect(hasTimeStepMismatch('00:01:00', 60, 'invalid', 'also-invalid')).to.equal(false);
   });
 
   it('treats a malformed value string as matching any step', () => {

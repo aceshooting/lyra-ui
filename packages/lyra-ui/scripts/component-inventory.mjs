@@ -11,6 +11,9 @@ export const SURFACE_SECTIONS = [
   'cssProperties',
   'cssStates',
   'methods',
+  'staticProperties',
+  'staticMethods',
+  'moduleExports',
   'form',
   'native',
 ];
@@ -164,6 +167,7 @@ export const REWRITE_RULE_SECTIONS = ['attributes', 'properties', 'events', 'slo
 // rules never authorize a source transformation in migrate-wa.
 export const NORMALIZATION_SECTIONS = [
   'typeEquivalences',
+  'structuralTypeAliases',
   'methodParameterTypeEquivalences',
   'defaultEquivalences',
   'derivedDefaultEquivalences',
@@ -324,6 +328,15 @@ export function compareAccessibilityProfiles(profiles, upstreamProfile, targetPr
   return { status, missing, additions };
 }
 
+/** A parity review is complete only when the normalized source was actually compared with a
+ * concrete target. A complete upstream snapshot by itself is evidence input, not a comparison. */
+export function deriveStaticApiReviewStatus({ upstreamReviewStatus, targetPresent, comparisonPerformed }) {
+  if (upstreamReviewStatus === 'tag-only') return 'tag-only';
+  return upstreamReviewStatus === 'complete' && targetPresent === true && comparisonPerformed === true
+    ? 'reviewed'
+    : 'unreviewed';
+}
+
 function validateAccessibilityProfiles(profiles, findings) {
   if (!isPlainObject(profiles) || Object.keys(profiles).length === 0) {
     findings.push('accessibilityProfiles must be a non-empty object');
@@ -411,7 +424,15 @@ function validateAccessibilityParity(mapping, profiles, findings) {
   if (!isPlainObject(accessibility.comparison) || !sameJson(accessibility.comparison, expected)) {
     findings.push(`${mapping.upstreamTag}: stored accessibility comparison is stale`);
   }
-  if ((mapping.classification === 'exact' || mapping.classification === 'rewritten') && expected.status === 'warning-required') {
+  const hasScopedConditionalReview =
+    mapping.parity?.lightDom === 'warning-required' &&
+    Array.isArray(mapping.parity?.behaviorReviewFlags) &&
+    mapping.parity.behaviorReviewFlags.length > 0;
+  if (
+    (mapping.classification === 'exact' || mapping.classification === 'rewritten') &&
+    expected.status === 'warning-required' &&
+    !hasScopedConditionalReview
+  ) {
     findings.push(`${mapping.upstreamTag}: automatic mapping has missing accessibility behavior`);
   }
 }
@@ -623,6 +644,54 @@ function isPublicField(member, attributeNames, ecosystem) {
   return member.privacy === 'public' || Boolean(member.description) || Boolean(member.readonly);
 }
 
+// CEM includes several framework configuration hooks on the constructor even though neither
+// upstream documents them as consumer API. Keep that reviewed implementation vocabulary narrow;
+// every other directly-authored Lyra static is public by TypeScript visibility, while published
+// upstream statics require either public documentation or an explicit `public` marker. This keeps
+// callable statics such as preload(), getMarked(), updateAll(), and validators without turning
+// Lit's style/finalization machinery into migration obligations.
+const FRAMEWORK_STATIC_FIELDS = new Set([
+  'css',
+  'dependencies',
+  'elementProperties',
+  'formAssociated',
+  'observeSlots',
+  'shadowRootOptions',
+  'styles',
+]);
+
+function isPublicStaticField(member, ecosystem) {
+  if (
+    member.kind !== 'field' ||
+    member.static !== true ||
+    member.privacy === 'private' ||
+    member.privacy === 'protected' ||
+    FRAMEWORK_STATIC_FIELDS.has(member.name)
+  ) {
+    return false;
+  }
+  if (ecosystem === 'lyra' && !member.inheritedFrom) return true;
+  return member.privacy === 'public' || Boolean(member.description) || Boolean(member.readonly);
+}
+
+function isPublicStaticMethod(member, ecosystem) {
+  if (
+    member.kind !== 'method' ||
+    member.static !== true ||
+    member.privacy === 'private' ||
+    member.privacy === 'protected'
+  ) {
+    return false;
+  }
+  if (ecosystem === 'lyra' && !member.inheritedFrom) {
+    if (INTERNAL_METHOD_NAMES.has(member.name)) return false;
+    if (/^(?:handle|on|_)[A-Z_]/u.test(member.name) && !PUBLIC_METHOD_NAMES.has(member.name)) return false;
+    if (/Callback$/u.test(member.name) && !PUBLIC_METHOD_NAMES.has(member.name)) return false;
+    return true;
+  }
+  return member.privacy === 'public' || Boolean(member.description);
+}
+
 function normalizeParameter(parameter, ecosystem) {
   const normalized = {
     name: parameter.name,
@@ -722,10 +791,9 @@ function normalizeProperties(publicFields) {
   );
 }
 
-function normalizeMethods(members, ecosystem) {
+function normalizeMethodEntries(members, ecosystem) {
   const grouped = new Map();
   for (const member of members) {
-    if (isInternalMethod(member, ecosystem)) continue;
     const overload = {
       parameters: (member.parameters ?? []).map((parameter) => normalizeParameter(parameter, ecosystem)),
       returnType:
@@ -750,6 +818,174 @@ function normalizeMethods(members, ecosystem) {
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 }
+
+function normalizeMethods(members, ecosystem) {
+  return normalizeMethodEntries(
+    members.filter((member) => !isInternalMethod(member, ecosystem)),
+    ecosystem,
+  );
+}
+
+function normalizeStaticProperties(members, ecosystem) {
+  return sortByName(
+    members
+      .filter((member) => isPublicStaticField(member, ecosystem))
+      .map((member) => {
+        return {
+          name: member.name,
+          type: textOf(member.parsedType || member.type),
+          readonly: member.readonly === true,
+          deprecated: member.deprecation || member.deprecated || null,
+        };
+      }),
+  );
+}
+
+function normalizeStaticMethods(members, ecosystem) {
+  return normalizeMethodEntries(
+    members.filter((member) => isPublicStaticMethod(member, ecosystem)),
+    ecosystem,
+  );
+}
+
+function normalizedModulePath(modulePath) {
+  if (typeof modulePath !== 'string' || !modulePath) return null;
+  return path.posix.normalize(modulePath.replaceAll('\\', '/').replace(/^\/+/, ''));
+}
+
+function moduleLookupPath(modulePath) {
+  return normalizedModulePath(modulePath)?.replace(/\.(?:[cm]?js|ts)$/u, '') ?? null;
+}
+
+function resolvedExportDeclarationPath(exportingModule, declarationModule) {
+  const exportingPath = normalizedModulePath(exportingModule);
+  const declaredPath = normalizedModulePath(declarationModule);
+  if (!exportingPath || !declaredPath) return null;
+  return declarationModule.startsWith('.')
+    ? path.posix.normalize(path.posix.join(path.posix.dirname(exportingPath), declarationModule))
+    : declaredPath;
+}
+
+function moduleDeclarationIndex(manifest) {
+  const index = new Map();
+  for (const module of manifest.modules ?? []) {
+    const modulePath = moduleLookupPath(module.path);
+    if (!modulePath) continue;
+    for (const declaration of module.declarations ?? []) {
+      if (!declaration?.name) continue;
+      const key = `${modulePath}\0${declaration.name}`;
+      const declarations = index.get(key) ?? [];
+      declarations.push(declaration);
+      index.set(key, declarations);
+    }
+  }
+  return index;
+}
+
+function moduleExportDeclaration(index, module, entry) {
+  const exportingPath = moduleLookupPath(module.path);
+  const declarationName = entry.declaration?.name ?? entry.name;
+  const declaredPath = entry.declaration?.module
+    ? moduleLookupPath(resolvedExportDeclarationPath(module.path, entry.declaration.module))
+    : exportingPath;
+  return (
+    index.get(`${declaredPath}\0${declarationName}`) ??
+    index.get(`${exportingPath}\0${declarationName}`) ??
+    []
+  );
+}
+
+/**
+ * Normalizes named runtime exports from the declaring component module and explicitly reviewed
+ * sibling modules. Component packages use sibling modules for public catalogs and enumerators, so
+ * looking only at the class declaration silently loses callable API. The exporting module path
+ * remains on every entry as identity/evidence while mapped comparison requires the public name,
+ * kind, and signature.
+ */
+export function normalizeComponentModuleExports(
+  manifest,
+  componentModulePath,
+  { ecosystem, additionalModules = [] },
+) {
+  const componentPath = normalizedModulePath(componentModulePath);
+  if (!componentPath) return [];
+  const scopedModules = new Set([
+    componentPath,
+    ...additionalModules.map((modulePath) => normalizedModulePath(modulePath)).filter(Boolean),
+  ]);
+  const declarationIndex = moduleDeclarationIndex(manifest);
+  const normalized = [];
+
+  for (const module of manifest.modules ?? []) {
+    const modulePath = normalizedModulePath(module.path);
+    if (!modulePath || !scopedModules.has(modulePath)) continue;
+    const explicitlyScoped = modulePath !== componentPath;
+    for (const entry of module.exports ?? []) {
+      if (entry.kind !== 'js' || !entry.name || entry.name === 'default' || entry.name === '*') continue;
+      const declarations = moduleExportDeclaration(declarationIndex, module, entry);
+      const functions = declarations.filter(
+        (declaration) =>
+          declaration.kind === 'function' &&
+          declaration.privacy !== 'private' &&
+          declaration.privacy !== 'protected' &&
+          (ecosystem === 'lyra' || declaration.privacy === 'public' || Boolean(declaration.description)),
+      );
+      const variable = declarations.find(
+        (declaration) =>
+          declaration.kind === 'variable' &&
+          declaration.privacy !== 'private' &&
+          declaration.privacy !== 'protected' &&
+          (ecosystem === 'lyra' || declaration.privacy === 'public' || Boolean(declaration.description)),
+      );
+      if (functions.length > 0) {
+        const callable = normalizeMethodEntries(
+          functions.map((declaration) => ({ ...declaration, kind: 'method' })),
+          ecosystem,
+        )[0];
+        normalized.push({
+          module: modulePath,
+          name: entry.name,
+          kind: 'function',
+          overloads: callable?.overloads ?? [],
+          ...(callable?.deprecated ? { deprecated: callable.deprecated } : {}),
+        });
+      } else if (variable) {
+        normalized.push({
+          module: modulePath,
+          name: entry.name,
+          kind: 'variable',
+          type:
+            ecosystem !== 'lyra' && !variable.type
+              ? UNSPECIFIED_PUBLIC_DOCUMENTATION
+              : textOf(variable.type),
+          readonly: variable.readonly === true,
+          deprecated: variable.deprecation || variable.deprecated || null,
+        });
+      } else if (declarations.length === 0 && explicitlyScoped) {
+        // Published CEMs occasionally retain a real JS export while omitting its variable
+        // declaration. Preserve the identity and fail only on absence; no type is invented.
+        normalized.push({
+          module: modulePath,
+          name: entry.name,
+          kind: 'unknown',
+          type: UNSPECIFIED_PUBLIC_DOCUMENTATION,
+          deprecated: null,
+        });
+      }
+    }
+  }
+
+  return normalized.sort((left, right) =>
+    `${left.module}:${left.name}:${left.kind}`.localeCompare(`${right.module}:${right.name}:${right.kind}`),
+  );
+}
+
+const REVIEWED_COMPONENT_MODULE_EXPORT_SCOPES = new Map([
+  // WA publishes its animation catalogs/enumerators from a sibling component module rather than
+  // the custom-element module. This association is explicit so an arbitrary exported helper in a
+  // component directory is never silently promoted into the tag's migration surface.
+  ['webawesome:wa-animation', ['components/animation/animations.js']],
+]);
 
 function normalizeNamed(entries) {
   return sortByName(
@@ -955,6 +1191,8 @@ export function normalizeDeclaration(declaration, { ecosystem, formAssociated })
   const publicFields = (declaration.members ?? []).filter((member) => isPublicField(member, attributeFieldNames, ecosystem));
   const properties = normalizeProperties(publicFields);
   const methods = normalizeMethods(declaration.members ?? [], ecosystem);
+  const staticProperties = normalizeStaticProperties(declaration.members ?? [], ecosystem);
+  const staticMethods = normalizeStaticMethods(declaration.members ?? [], ecosystem);
   const events = normalizeEvents(declaration.events, ecosystem);
   const formProperties = properties.filter((entry) => FORM_PROPERTIES.has(entry.name)).map((entry) => entry.name);
   const formMethods = methods.filter((entry) => FORM_METHODS.has(entry.name)).map((entry) => entry.name);
@@ -971,6 +1209,9 @@ export function normalizeDeclaration(declaration, { ecosystem, formAssociated })
     cssProperties: normalizeCssProperties(declaration.cssProperties, declaration.tagName),
     cssStates: normalizeNamed(declaration.cssStates),
     methods,
+    staticProperties,
+    staticMethods,
+    moduleExports: [],
     form: {
       associated,
       properties: unique(formProperties),
@@ -997,6 +1238,11 @@ export function normalizeManifest(manifest, { ecosystem, tierByTag = new Map() }
       const normalized = normalizeDeclaration(declaration, {
         ecosystem,
         formAssociated: formAssociations.get(declaration),
+      });
+      normalized.moduleExports = normalizeComponentModuleExports(manifest, module.path, {
+        ecosystem,
+        additionalModules:
+          REVIEWED_COMPONENT_MODULE_EXPORT_SCOPES.get(`${ecosystem}:${declaration.tagName}`) ?? [],
       });
       components.push({
         tag: declaration.tagName,
@@ -1109,6 +1355,352 @@ export function applyRuntimeEventCancelabilityEvidence(
     event.cancelabilityEvidence = 'pinned-runtime';
   }
   return augmented;
+}
+
+const METHOD_EDGE_MEASUREMENT_BASES = new Set([
+  'ambient-page-viewport',
+]);
+
+const METHOD_EDGE_PARITY_EVIDENCE = Object.freeze({
+  upstream: 'pinned-package-black-box',
+  target: 'lyra-authored-contract-and-automated-tests',
+});
+
+const METHOD_EDGE_DIVERGENCE_FLAG =
+  'method-edge-return-sentinel-divergence';
+
+function validMethodEdgeOutcome(outcome) {
+  if (!outcome || typeof outcome !== 'object' || Array.isArray(outcome)) {
+    return false;
+  }
+  if (outcome.kind === 'sentinel') {
+    return (
+      exactObjectKeys(outcome, ['kind', 'value']) &&
+      (outcome.value === null ||
+        typeof outcome.value === 'string' ||
+        typeof outcome.value === 'boolean' ||
+        (typeof outcome.value === 'number' && Number.isFinite(outcome.value)))
+    );
+  }
+  return (
+    outcome.kind === 'measurement' &&
+    exactObjectKeys(outcome, ['kind', 'basis']) &&
+    METHOD_EDGE_MEASUREMENT_BASES.has(outcome.basis)
+  );
+}
+
+/**
+ * Attaches exact-package black-box method-edge observations where the published manifest exposes
+ * the callable shape but omits its return contract. Cases stay symbolic and declarative: they
+ * record only public inputs and outcomes, never upstream implementation details. A documented
+ * return, changed package pin, duplicate case, or renamed method invalidates the evidence.
+ */
+export function applyRuntimeMethodEdgeSemanticsEvidence(
+  components,
+  evidence,
+  { ecosystem, version } = {},
+) {
+  runtimeEvidenceInvariant(
+    Array.isArray(components),
+    'runtime method-edge evidence needs normalized components',
+  );
+  const augmented = structuredClone(components);
+  if (evidence === undefined || evidence === null) return augmented;
+
+  runtimeEvidenceInvariant(
+    exactObjectKeys(evidence, ['source', 'methods']),
+    `${String(ecosystem)}: malformed runtime method-edge evidence envelope`,
+  );
+  runtimeEvidenceInvariant(
+    exactObjectKeys(evidence.source, ['package', 'version', 'tarballIntegrity']),
+    `${String(ecosystem)}: malformed runtime method-edge evidence source`,
+  );
+  const expectedPackage = UPSTREAM_RUNTIME_PACKAGES[ecosystem];
+  runtimeEvidenceInvariant(
+    typeof expectedPackage === 'string' &&
+      evidence.source.package === expectedPackage,
+    `${String(ecosystem)}: runtime method-edge evidence package ${String(
+      evidence.source.package,
+    )} does not match ${String(expectedPackage)}`,
+  );
+  runtimeEvidenceInvariant(
+    evidence.source.version === version,
+    `${String(ecosystem)}: runtime method-edge evidence version ${String(
+      evidence.source.version,
+    )} does not match pin ${String(version)}`,
+  );
+  runtimeEvidenceInvariant(
+    typeof evidence.source.tarballIntegrity === 'string' &&
+      evidence.source.tarballIntegrity.startsWith('sha512-'),
+    `${String(ecosystem)}: runtime method-edge evidence needs a SHA-512 package integrity`,
+  );
+  runtimeEvidenceInvariant(
+    Array.isArray(evidence.methods) && evidence.methods.length > 0,
+    `${String(ecosystem)}: runtime method-edge evidence needs methods`,
+  );
+
+  const byTag = new Map(
+    augmented.map((component) => [component.tag, component]),
+  );
+  const seenMethods = new Set();
+  for (const observation of evidence.methods) {
+    runtimeEvidenceInvariant(
+      exactObjectKeys(observation, ['tag', 'method', 'cases']),
+      `${String(observation?.tag)}#${String(
+        observation?.method,
+      )}: malformed runtime method-edge evidence`,
+    );
+    const key = `${observation.tag}#${observation.method}`;
+    runtimeEvidenceInvariant(
+      !seenMethods.has(key),
+      `duplicate runtime method-edge evidence ${key}`,
+    );
+    seenMethods.add(key);
+
+    const component = byTag.get(observation.tag);
+    const method = component?.surface?.methods?.find(
+      (entry) => entry.name === observation.method,
+    );
+    runtimeEvidenceInvariant(
+      method,
+      `${key}: runtime method-edge evidence targets an unknown method`,
+    );
+    runtimeEvidenceInvariant(
+      (method.overloads ?? []).length > 0 &&
+        (method.overloads ?? []).every(
+          (overload) =>
+            overload.returnType === UNSPECIFIED_PUBLIC_DOCUMENTATION,
+        ) &&
+        !method.edgeSemantics,
+      `${key}: pinned method-edge evidence is stale because the manifest now documents its return`,
+    );
+
+    const caseNames = new Set();
+    runtimeEvidenceInvariant(
+      Array.isArray(observation.cases) &&
+        observation.cases.length > 0 &&
+        observation.cases.every((entry) => {
+          if (
+            !exactObjectKeys(entry, ['case', 'arguments', 'outcome']) ||
+            typeof entry.case !== 'string' ||
+            !entry.case.trim() ||
+            caseNames.has(entry.case) ||
+            !Array.isArray(entry.arguments) ||
+            !entry.arguments.every(
+              (argument) =>
+                typeof argument === 'string' && Boolean(argument.trim()),
+            ) ||
+            !(method.overloads ?? []).some(
+              (overload) =>
+                (overload.parameters ?? []).length === entry.arguments.length,
+            ) ||
+            !validMethodEdgeOutcome(entry.outcome)
+          ) {
+            return false;
+          }
+          caseNames.add(entry.case);
+          return true;
+        }),
+      `${key}: runtime method-edge evidence must cover unique named cases`,
+    );
+    method.edgeSemantics = {
+      evidence: 'pinned-runtime',
+      cases: structuredClone(observation.cases),
+    };
+  }
+  return augmented;
+}
+
+/** Validates the migration-facing adjudication of artifact-bound method-edge observations. The
+ * compact runtime contract no longer carries analyzer surfaces, so callers can omit `upstream`
+ * and `target` to retain the schema/classification checks while the authored inventory performs
+ * the additional evidence-to-surface comparison. */
+export function validateMethodEdgeParity(
+  mapping,
+  { upstream, target } = {},
+) {
+  const findings = [];
+  const label = mapping?.upstreamTag ?? '<unknown>';
+  const methods = mapping?.parity?.methodEdges;
+  const observed = (upstream?.methods ?? []).filter(
+    (method) => method.edgeSemantics,
+  );
+  const observedByName = new Map(
+    observed.map((method) => [method.name, method]),
+  );
+  const behaviorFlags = mapping?.parity?.behaviorReviewFlags;
+  const hasDivergenceFlag =
+    Array.isArray(behaviorFlags) &&
+    behaviorFlags.includes(METHOD_EDGE_DIVERGENCE_FLAG);
+
+  if (methods === undefined) {
+    if (observed.length > 0) {
+      findings.push(`${label}: missing method-edge parity review`);
+    }
+    if (hasDivergenceFlag) {
+      findings.push(`${label}: stale method-edge divergence behavior flag`);
+    }
+    return findings;
+  }
+  if (!Array.isArray(methods) || methods.length === 0) {
+    findings.push(`${label}: parity.methodEdges must be a non-empty array`);
+    if (hasDivergenceFlag) {
+      findings.push(`${label}: stale method-edge divergence behavior flag`);
+    }
+    return findings;
+  }
+
+  const seenMethods = new Set();
+  let hasDifferentCase = false;
+  for (const method of methods) {
+    const validMethod =
+      exactObjectKeys(method, [
+        'method',
+        'evidence',
+        'cases',
+        'rationale',
+      ]) &&
+      typeof method.method === 'string' &&
+      Boolean(method.method.trim()) &&
+      exactObjectKeys(method.evidence, ['upstream', 'target']) &&
+      method.evidence.upstream === METHOD_EDGE_PARITY_EVIDENCE.upstream &&
+      method.evidence.target === METHOD_EDGE_PARITY_EVIDENCE.target &&
+      Array.isArray(method.cases) &&
+      method.cases.length > 0 &&
+      typeof method.rationale === 'string' &&
+      Boolean(method.rationale.trim());
+    if (!validMethod) {
+      findings.push(`${label}: malformed method-edge parity review`);
+      continue;
+    }
+    if (seenMethods.has(method.method)) {
+      findings.push(
+        `${label}: duplicate method-edge parity review ${method.method}`,
+      );
+    }
+    seenMethods.add(method.method);
+
+    const observedMethod = observedByName.get(method.method);
+    if (upstream !== undefined && !observedMethod) {
+      findings.push(
+        `${label}#${method.method}: stale method-edge parity review`,
+      );
+    }
+    if (
+      target !== undefined &&
+      !(target.methods ?? []).some((entry) => entry.name === method.method)
+    ) {
+      findings.push(
+        `${label}#${method.method}: dangling method-edge parity target`,
+      );
+    }
+
+    const observedCases = new Map(
+      (observedMethod?.edgeSemantics?.cases ?? []).map((entry) => [
+        entry.case,
+        entry,
+      ]),
+    );
+    const seenCases = new Set();
+    for (const edgeCase of method.cases) {
+      const validCase =
+        exactObjectKeys(edgeCase, [
+          'case',
+          'arguments',
+          'upstream',
+          'target',
+          'status',
+        ]) &&
+        typeof edgeCase.case === 'string' &&
+        Boolean(edgeCase.case.trim()) &&
+        Array.isArray(edgeCase.arguments) &&
+        edgeCase.arguments.every(
+          (argument) =>
+            typeof argument === 'string' && Boolean(argument.trim()),
+        ) &&
+        validMethodEdgeOutcome(edgeCase.upstream) &&
+        validMethodEdgeOutcome(edgeCase.target) &&
+        (edgeCase.status === 'equivalent' ||
+          edgeCase.status === 'different');
+      if (!validCase) {
+        findings.push(
+          `${label}#${method.method}: malformed method-edge parity case`,
+        );
+        continue;
+      }
+      if (seenCases.has(edgeCase.case)) {
+        findings.push(
+          `${label}#${method.method}: duplicate method-edge parity case ${edgeCase.case}`,
+        );
+      }
+      seenCases.add(edgeCase.case);
+      const expectedStatus = sameJson(edgeCase.upstream, edgeCase.target)
+        ? 'equivalent'
+        : 'different';
+      if (edgeCase.status !== expectedStatus) {
+        findings.push(
+          `${label}#${method.method}:${edgeCase.case}: stale method-edge parity status`,
+        );
+      }
+      if (expectedStatus === 'different') hasDifferentCase = true;
+
+      if (observedMethod) {
+        const observedCase = observedCases.get(edgeCase.case);
+        if (
+          !observedCase ||
+          !sameJson(observedCase.arguments, edgeCase.arguments) ||
+          !sameJson(observedCase.outcome, edgeCase.upstream)
+        ) {
+          findings.push(
+            `${label}#${method.method}:${edgeCase.case}: stored upstream method-edge observation is stale`,
+          );
+        }
+      }
+    }
+    if (observedMethod) {
+      for (const observedCase of observedMethod.edgeSemantics.cases ?? []) {
+        if (!seenCases.has(observedCase.case)) {
+          findings.push(
+            `${label}#${method.method}:${observedCase.case}: missing method-edge parity case`,
+          );
+        }
+      }
+    }
+  }
+  if (upstream !== undefined) {
+    for (const method of observed) {
+      if (!seenMethods.has(method.name)) {
+        findings.push(
+          `${label}#${method.name}: missing method-edge parity review`,
+        );
+      }
+    }
+  }
+
+  if (hasDifferentCase) {
+    if (mapping.classification !== 'warning-required') {
+      findings.push(
+        `${label}: method-edge divergence requires warning-required classification`,
+      );
+    }
+    if (!hasDivergenceFlag) {
+      findings.push(
+        `${label}: missing ${METHOD_EDGE_DIVERGENCE_FLAG} behavior flag`,
+      );
+    }
+    const missingRationale = methods.some(
+      (method) =>
+        typeof mapping.rationale !== 'string' ||
+        typeof method?.rationale !== 'string' ||
+        !mapping.rationale.includes(method.rationale),
+    );
+    if (missingRationale) {
+      findings.push(`${label}: mapping rationale omits method-edge divergence`);
+    }
+  } else if (hasDivergenceFlag) {
+    findings.push(`${label}: stale method-edge divergence behavior flag`);
+  }
+  return findings;
 }
 
 function mappedEventName(name, upstreamPrefix) {
@@ -1279,6 +1871,74 @@ function containsUnknownTypeKeyword(type) {
 
 function containsTemplateInterpolation(type) {
   return typeof type === 'string' && type.includes('$' + '{');
+}
+
+function structuralTypeAliasMap(normalizations) {
+  return new Map(
+    (normalizations?.structuralTypeAliases ?? [])
+      .filter(
+        (entry) =>
+          typeof entry?.name === 'string' &&
+          typeof entry.target === 'string',
+      )
+      .map((entry) => [entry.name, entry.target]),
+  );
+}
+
+function typeContainsIdentifier(type, identifier) {
+  if (typeof type !== 'string') return false;
+  return new RegExp(
+    `(^|[^A-Za-z0-9_$])${identifier.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}([^A-Za-z0-9_$]|$)`,
+    'u',
+  ).test(type);
+}
+
+function expandStructuralTypeAliases(type, normalizations, resolving = new Set()) {
+  if (typeof type !== 'string') return type;
+  const aliases = structuralTypeAliasMap(normalizations);
+  if (aliases.size === 0) return type;
+  let expanded = '';
+  let quote = null;
+  for (let index = 0; index < type.length;) {
+    const character = type[index];
+    if (quote) {
+      expanded += character;
+      if (character === '\\' && index + 1 < type.length) {
+        expanded += type[index + 1];
+        index += 2;
+        continue;
+      }
+      if (character === quote) quote = null;
+      index += 1;
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      expanded += character;
+      index += 1;
+      continue;
+    }
+    if (/[A-Za-z_$]/u.test(character)) {
+      let end = index + 1;
+      while (end < type.length && /[A-Za-z0-9_$]/u.test(type[end])) end += 1;
+      const identifier = type.slice(index, end);
+      const target = aliases.get(identifier);
+      if (typeof target === 'string' && !resolving.has(identifier)) {
+        expanded += expandStructuralTypeAliases(
+          target,
+          normalizations,
+          new Set([...resolving, identifier]),
+        );
+      } else {
+        expanded += identifier;
+      }
+      index = end;
+      continue;
+    }
+    expanded += character;
+    index += 1;
+  }
+  return expanded;
 }
 
 function reviewedTypeEquivalent(normalizations, memberKind, member, upstreamType, targetType) {
@@ -1568,7 +2228,8 @@ function isBareCustomEventType(type) {
   return typeof type === 'string' && /^CustomEvent\s*$/u.test(type.trim());
 }
 
-function eventTypeCompatible(expected, actual) {
+function eventTypeCompatible(expected, actual, normalizations = {}) {
+  actual = expandStructuralTypeAliases(actual, normalizations);
   if (
     !hasPublishedType(expected) ||
     !hasPublishedType(actual) ||
@@ -1680,6 +2341,9 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
     ['properties', propertyRewrites],
     ['events', eventRewrites],
     ['methods', methodRewrites],
+    ['staticProperties', new Map()],
+    ['staticMethods', new Map()],
+    ['moduleExports', new Map()],
     ...['slots', 'parts', 'cssProperties', 'cssStates'].map((section) => [
       section,
       new Map((rewrites[section] ?? []).map((entry) => [entry.from, entry.to])),
@@ -1914,6 +2578,44 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
     }
   }
 
+  for (const property of upstream.staticProperties ?? []) {
+    const candidate = (target.staticProperties ?? []).find((entry) => entry.name === property.name);
+    if (!candidate) {
+      pushMissing(drift, 'missing-static-property', 'staticProperties', property.name);
+      continue;
+    }
+    const expectedType = mappedPublicType(property.type, upstreamPrefix);
+    if (
+      hasPublishedType(property.type) &&
+      !publicTypeCompatible(expectedType, candidate.type) &&
+      !reviewedTypeEquivalent(
+        normalizations,
+        'staticProperty',
+        property.name,
+        property.type,
+        candidate.type,
+      )
+    ) {
+      drift.push({
+        code: 'static-property-type-mismatch',
+        section: 'staticProperties',
+        member: property.name,
+        expected: expectedType,
+        actual: candidate.type,
+      });
+    }
+    if (property.readonly === false && candidate.readonly !== false) {
+      drift.push({
+        code: 'static-property-readonly-mismatch',
+        section: 'staticProperties',
+        member: property.name,
+        expected: false,
+        actual: hasOwn(candidate, 'readonly') ? candidate.readonly : null,
+      });
+    }
+    compareDeprecation('staticProperties', property, candidate);
+  }
+
   for (const [section, code] of [
     ['slots', 'missing-slot'],
     ['parts', 'missing-part'],
@@ -1978,6 +2680,98 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
     if (candidate) compareDeprecation('methods', method, candidate);
   }
 
+  for (const method of upstream.staticMethods ?? []) {
+    const candidate = (target.staticMethods ?? []).find((entry) => entry.name === method.name);
+    if (!candidate) {
+      pushMissing(drift, 'missing-static-method', 'staticMethods', method.name);
+    } else if (
+      !methodOverloadsMatch(
+        method.name,
+        method.overloads,
+        candidate.overloads,
+        upstreamPrefix,
+        normalizations,
+      )
+    ) {
+      drift.push({
+        code: 'static-method-signature-mismatch',
+        section: 'staticMethods',
+        member: method.name,
+        expected: method.overloads,
+        actual: candidate.overloads,
+      });
+    }
+    if (candidate) compareDeprecation('staticMethods', method, candidate);
+  }
+
+  for (const exported of upstream.moduleExports ?? []) {
+    const candidates = (target.moduleExports ?? []).filter((entry) => entry.name === exported.name);
+    if (candidates.length === 0) {
+      drift.push({
+        code: 'missing-module-export',
+        section: 'moduleExports',
+        member: exported.name,
+        module: exported.module,
+      });
+      continue;
+    }
+    if (exported.kind === 'unknown') continue;
+    const sameKind = candidates.filter((entry) => entry.kind === exported.kind);
+    if (sameKind.length === 0) {
+      drift.push({
+        code: 'module-export-kind-mismatch',
+        section: 'moduleExports',
+        member: exported.name,
+        module: exported.module,
+        expected: exported.kind,
+        actual: unique(candidates.map((entry) => entry.kind)),
+      });
+      continue;
+    }
+    if (exported.kind === 'function') {
+      const compatible = sameKind.some((candidate) =>
+        methodOverloadsMatch(
+          exported.name,
+          exported.overloads,
+          candidate.overloads,
+          upstreamPrefix,
+          normalizations,
+        ),
+      );
+      if (!compatible) {
+        drift.push({
+          code: 'module-export-signature-mismatch',
+          section: 'moduleExports',
+          member: exported.name,
+          module: exported.module,
+          expected: exported.overloads,
+          actual: sameKind.map((candidate) => candidate.overloads),
+        });
+      }
+    } else if (
+      hasPublishedType(exported.type) &&
+      !sameKind.some((candidate) =>
+        publicTypeCompatible(mappedPublicType(exported.type, upstreamPrefix), candidate.type) ||
+        reviewedTypeEquivalent(
+          normalizations,
+          'moduleExport',
+          exported.name,
+          exported.type,
+          candidate.type,
+        ),
+      )
+    ) {
+      drift.push({
+        code: 'module-export-type-mismatch',
+        section: 'moduleExports',
+        member: exported.name,
+        module: exported.module,
+        expected: mappedPublicType(exported.type, upstreamPrefix),
+        actual: unique(sameKind.map((candidate) => candidate.type)),
+      });
+    }
+  }
+
   for (const event of upstream.events ?? []) {
     const expectedName = eventRewrites.get(event.name) || mappedEventName(event.name, upstreamPrefix);
     const candidate = (target.events ?? []).find((entry) => entry.name === expectedName);
@@ -1987,7 +2781,7 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
       const expectedType = mappedPublicType(event.type, upstreamPrefix);
       if (
         hasPublishedType(event.type) &&
-        !eventTypeCompatible(expectedType, candidate.type) &&
+        !eventTypeCompatible(expectedType, candidate.type, normalizations) &&
         !reviewedTypeEquivalent(
           normalizations,
           'event',
@@ -2078,6 +2872,39 @@ function validateSurface(surface, label, findings) {
       const valid = event.cancelable !== UNSPECIFIED_PUBLIC_DOCUMENTATION &&
         event.cancelabilityEvidence === 'pinned-runtime';
       if (!valid) findings.push(`${label}: event ${event.name} has malformed cancelability evidence`);
+    }
+  }
+  for (const method of surface.methods ?? []) {
+    if (!hasOwn(method, 'edgeSemantics')) continue;
+    const edgeSemantics = method.edgeSemantics;
+    const caseNames = new Set();
+    const valid =
+      exactObjectKeys(edgeSemantics, ['evidence', 'cases']) &&
+      edgeSemantics.evidence === 'pinned-runtime' &&
+      Array.isArray(edgeSemantics.cases) &&
+      edgeSemantics.cases.length > 0 &&
+      edgeSemantics.cases.every((entry) => {
+        if (
+          !exactObjectKeys(entry, ['case', 'arguments', 'outcome']) ||
+          typeof entry.case !== 'string' ||
+          !entry.case.trim() ||
+          caseNames.has(entry.case) ||
+          !Array.isArray(entry.arguments) ||
+          !entry.arguments.every(
+            (argument) =>
+              typeof argument === 'string' && Boolean(argument.trim()),
+          ) ||
+          !validMethodEdgeOutcome(entry.outcome)
+        ) {
+          return false;
+        }
+        caseNames.add(entry.case);
+        return true;
+      });
+    if (!valid) {
+      findings.push(
+        `${label}: method ${method.name} has malformed edge-semantics evidence`,
+      );
     }
   }
 }
@@ -2291,7 +3118,19 @@ export function validateMappingNormalizations(mapping, { upstream, target } = {}
 
   const seenDeprecations = new Set();
   for (const rule of normalizations.deprecationEquivalences ?? []) {
-    const valid = ['attributes', 'properties', 'slots', 'events', 'parts', 'cssProperties', 'cssStates', 'methods'].includes(rule?.section) &&
+    const valid = [
+      'attributes',
+      'properties',
+      'slots',
+      'events',
+      'parts',
+      'cssProperties',
+      'cssStates',
+      'methods',
+      'staticProperties',
+      'staticMethods',
+      'moduleExports',
+    ].includes(rule?.section) &&
       typeof rule.member === 'string' && Boolean(rule.member) &&
       typeof rule.upstreamDeprecated === 'boolean' &&
       (rule.upstreamReplacement === null || typeof rule.upstreamReplacement === 'string') &&
@@ -2336,13 +3175,73 @@ export function validateMappingNormalizations(mapping, { upstream, target } = {}
     ) findings.push(`${mapping.upstreamTag}: stale equivalent deprecation normalization ${key}`);
   }
 
+  const seenStructuralAliases = new Set();
+  const structuralAliasRules = new Map();
+  for (const rule of normalizations.structuralTypeAliases ?? []) {
+    const keys = rule && typeof rule === 'object' ? Object.keys(rule) : [];
+    const valid =
+      typeof rule?.name === 'string' &&
+      /^[A-Za-z_$][A-Za-z0-9_$]*$/u.test(rule.name) &&
+      typeof rule.target === 'string' &&
+      Boolean(rule.target.trim()) &&
+      !containsAnyTypeKeyword(rule.target) &&
+      !containsUnknownTypeKeyword(rule.target) &&
+      !containsTemplateInterpolation(rule.target) &&
+      keys.length === 2 &&
+      keys.every((key) => key === 'name' || key === 'target');
+    if (!valid) {
+      findings.push(
+        `${mapping.upstreamTag}: invalid normalizations.structuralTypeAliases rule`,
+      );
+      continue;
+    }
+    if (seenStructuralAliases.has(rule.name)) {
+      findings.push(
+        `${mapping.upstreamTag}: duplicate structural type alias ${rule.name}`,
+      );
+    }
+    seenStructuralAliases.add(rule.name);
+    structuralAliasRules.set(rule.name, rule.target);
+  }
+  const reachableStructuralAliases = new Set();
+  const visitStructuralAlias = (name, trail = new Set()) => {
+    if (trail.has(name)) {
+      findings.push(`${mapping.upstreamTag}: cyclic structural type alias ${name}`);
+      return;
+    }
+    if (reachableStructuralAliases.has(name)) return;
+    const targetType = structuralAliasRules.get(name);
+    if (targetType === undefined) return;
+    reachableStructuralAliases.add(name);
+    const nextTrail = new Set([...trail, name]);
+    for (const candidate of structuralAliasRules.keys()) {
+      if (typeContainsIdentifier(targetType, candidate)) {
+        visitStructuralAlias(candidate, nextTrail);
+      }
+    }
+  };
+  for (const event of target?.events ?? []) {
+    for (const name of structuralAliasRules.keys()) {
+      if (typeContainsIdentifier(event.type, name)) visitStructuralAlias(name);
+    }
+  }
+  for (const name of structuralAliasRules.keys()) {
+    if (!reachableStructuralAliases.has(name)) {
+      findings.push(
+        `${mapping.upstreamTag}: stale structural type alias ${name}`,
+      );
+    }
+  }
+
   const seenTypes = new Set();
   for (const rule of normalizations.typeEquivalences ?? []) {
     const keys = rule && typeof rule === 'object' ? Object.keys(rule) : [];
     const valid =
       (rule?.memberKind === 'attribute' ||
         rule?.memberKind === 'property' ||
-        rule?.memberKind === 'event') &&
+        rule?.memberKind === 'event' ||
+        rule?.memberKind === 'staticProperty' ||
+        rule?.memberKind === 'moduleExport') &&
       typeof rule.member === 'string' &&
       Boolean(rule.member) &&
       typeof rule.upstream === 'string' &&
@@ -2380,7 +3279,11 @@ export function validateMappingNormalizations(mapping, { upstream, target } = {}
         ? 'attributes'
         : rule.memberKind === 'property'
           ? 'properties'
-          : 'events';
+          : rule.memberKind === 'event'
+            ? 'events'
+            : rule.memberKind === 'staticProperty'
+              ? 'staticProperties'
+              : 'moduleExports';
     const rewrites = new Map((mapping.rewrites?.[section] ?? []).map((entry) => [entry.from, entry.to]));
     const upstreamPrefix = mapping.upstreamTag?.startsWith('wa-') ? 'wa-' : 'sl-';
     const targetName =
@@ -2412,6 +3315,7 @@ export function validateMappingNormalizations(mapping, { upstream, target } = {}
         ? eventTypeCompatible(
             mappedPublicType(upstreamMember.type, upstreamPrefix),
             targetMember.type,
+            normalizations,
           )
         : publicTypeCompatible(
             mappedPublicType(upstreamMember.type, upstreamPrefix),
@@ -2821,7 +3725,9 @@ export function validateInventory(inventory, { upstreamTags, lyraManifest, stric
   findings.push(...validateLocalMigrations(inventory));
   if (lyraByTag.size !== inventory.components.length) findings.push('components contain duplicate Lyra tags');
   const expectedLyra = manifestDeclarations(lyraManifest);
-  const lyraFormAssociations = manifestFormAssociations(lyraManifest);
+  const normalizedLyraByTag = new Map(
+    normalizeManifest(lyraManifest, { ecosystem: 'lyra' }).map((component) => [component.tag, component]),
+  );
   const expectedLyraTags = expectedLyra.map(({ declaration }) => declaration.tagName);
   const actualLyraTags = [...lyraByTag.keys()].sort();
   if (!sameJson(actualLyraTags, expectedLyraTags)) findings.push('Lyra tag inventory drifted from custom-elements.json');
@@ -2830,11 +3736,7 @@ export function validateInventory(inventory, { upstreamTags, lyraManifest, stric
     const component = lyraByTag.get(declaration.tagName);
     if (!component) continue;
     validateSurface(component.surface, component.tag, findings);
-    const normalized = normalizeDeclaration(declaration, {
-      ecosystem: 'lyra',
-      formAssociated: lyraFormAssociations.get(declaration),
-    });
-    const expectedSurface = Object.fromEntries(SURFACE_SECTIONS.map((section) => [section, normalized[section]]));
+    const expectedSurface = normalizedLyraByTag.get(declaration.tagName)?.surface;
     if (!sameJson(component.surface, expectedSurface)) findings.push(`${component.tag}: normalized public surface drifted`);
     if (!component.family || !component.classModule || !component.registrationModule) {
       findings.push(`${component.tag}: incomplete registration metadata`);
@@ -2893,6 +3795,44 @@ export function validateInventory(inventory, { upstreamTags, lyraManifest, stric
         }
       }
     }
+    const expectedMethodEdgeEvidence = new Set();
+    for (const observation of
+      expectedPin.runtimeMethodEdgeSemantics?.methods ?? []) {
+      const key = `${observation.tag}#${observation.method}`;
+      if (expectedMethodEdgeEvidence.has(key)) {
+        findings.push(`${ecosystem}: duplicate runtime method-edge evidence ${key}`);
+        continue;
+      }
+      expectedMethodEdgeEvidence.add(key);
+      const component = (upstream.components ?? []).find(
+        (entry) => entry.tag === observation.tag,
+      );
+      const method = component?.surface?.methods?.find(
+        (entry) => entry.name === observation.method,
+      );
+      if (
+        !sameJson(method?.edgeSemantics, {
+          evidence: 'pinned-runtime',
+          cases: observation.cases,
+        })
+      ) {
+        findings.push(
+          `${key}: stored runtime method-edge evidence drifted from upstream-tags.json`,
+        );
+      }
+    }
+    for (const component of upstream.components ?? []) {
+      for (const method of component.surface?.methods ?? []) {
+        if (
+          method.edgeSemantics &&
+          !expectedMethodEdgeEvidence.has(`${component.tag}#${method.name}`)
+        ) {
+          findings.push(
+            `${component.tag}#${method.name}: stored runtime method-edge evidence is stale`,
+          );
+        }
+      }
+    }
   }
 
   const mappingByTag = new Map();
@@ -2931,6 +3871,12 @@ export function validateInventory(inventory, { upstreamTags, lyraManifest, stric
     const upstreamEntry = upstreamByTag.get(mapping.upstreamTag)?.component;
     const target = lyraByTag.get(mapping.targetTag);
     findings.push(
+      ...validateMethodEdgeParity(mapping, {
+        upstream: upstreamEntry?.surface,
+        target: target?.surface,
+      }),
+    );
+    findings.push(
       ...validateDefaultRewriteSemantics(mapping, {
         upstream: upstreamEntry?.surface,
         target: target?.surface,
@@ -2953,6 +3899,16 @@ export function validateInventory(inventory, { upstreamTags, lyraManifest, stric
         findings.push(`${mapping.upstreamTag}: exact mapping has ${expectedDrift.length} surface difference(s)`);
       }
     }
+    const expectedStaticApiReview = deriveStaticApiReviewStatus({
+      upstreamReviewStatus: upstreamEntry?.review.status,
+      targetPresent: Boolean(target),
+      comparisonPerformed: upstreamEntry?.review.status === 'complete' && Boolean(target),
+    });
+    if (mapping.parity?.staticApi !== expectedStaticApiReview) {
+      findings.push(
+        `${mapping.upstreamTag}: static API review status is stale; expected ${expectedStaticApiReview}`,
+      );
+    }
     if (strict && mapping.classification === 'unsupported') findings.push(`${mapping.upstreamTag}: unsupported release blocker remains`);
   }
   if (mappingByTag.size !== upstreamByTag.size) findings.push('not every upstream tag has exactly one mapping decision');
@@ -2969,12 +3925,23 @@ export function validatePinnedManifests(inventory, { webawesomeManifest, shoelac
   };
   for (const [ecosystem, { manifest, prefix }] of Object.entries(manifests)) {
     const checked = new Map(
-      applyRuntimeEventCancelabilityEvidence(
-        normalizeManifest(manifest, { ecosystem }),
-        upstreamTags?.[ecosystem]?.runtimeEventCancelability,
+      applyRuntimeMethodEdgeSemanticsEvidence(
+        applyRuntimeEventCancelabilityEvidence(
+          normalizeManifest(manifest, { ecosystem }),
+          upstreamTags?.[ecosystem]?.runtimeEventCancelability,
+          {
+            ecosystem,
+            version:
+              upstreamTags?.[ecosystem]?.version ??
+              inventory.upstreams[ecosystem].version,
+          },
+        ),
+        upstreamTags?.[ecosystem]?.runtimeMethodEdgeSemantics,
         {
           ecosystem,
-          version: upstreamTags?.[ecosystem]?.version ?? inventory.upstreams[ecosystem].version,
+          version:
+            upstreamTags?.[ecosystem]?.version ??
+            inventory.upstreams[ecosystem].version,
         },
       )
         .filter((entry) => entry.tag.startsWith(prefix))
@@ -3010,6 +3977,9 @@ export function emptySurface() {
     cssProperties: [],
     cssStates: [],
     methods: [],
+    staticProperties: [],
+    staticMethods: [],
+    moduleExports: [],
     form: { associated: false, properties: [], methods: [] },
     native: { forwardedEvents: [], delegatedMethods: [] },
   };

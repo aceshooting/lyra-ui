@@ -109,8 +109,8 @@ export const FormattedValues: Story = {
       type="bar"
       legend
       show-data-table
-      .valueFormatter=${(value: number, context: string) =>
-        context === 'legend' ? `$${value.toFixed(0)} total` : `$${value.toFixed(2)}`}
+      .formatter=${({ value, surface }: { value: number; surface: string }) =>
+        surface === 'legend' ? `$${value.toFixed(0)} total` : `$${value.toFixed(2)}`}
       .labels=${['Q1', 'Q2', 'Q3']}
       .datasets=${[{ label: 'Revenue', data: [1200, 1900, 1400] }]}
     ></lr-chart>

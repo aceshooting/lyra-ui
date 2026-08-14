@@ -9,7 +9,7 @@ type Story = StoryObj;
 export const NestedRuns: Story = {
   render: () => html`<lr-subagent-panel
     .runs=${[
-      { id: 'research', label: 'Researcher', status: 'running', task: 'Find primary sources', progress: 0.6 },
+      { id: 'research', label: 'Researcher', status: 'running', task: 'Find primary sources', progressRatio: 0.6 },
       { id: 'writer', parentId: 'research', label: 'Writer', status: 'waiting-input', task: 'Draft the response' },
       { id: 'review', label: 'Reviewer', status: 'queued', task: 'Check every claim' },
     ]}
@@ -28,7 +28,7 @@ export const Narrow320: Story = {
             label: 'Primary-source research specialist',
             status: 'running',
             task: 'Find authoritative evidence for every customer-facing claim in the proposed response',
-            progress: 0.6,
+            progressRatio: 0.6,
           },
           {
             id: 'writer',

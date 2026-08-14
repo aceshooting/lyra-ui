@@ -25,8 +25,9 @@ import {
   type LyraColorPickerOutputFormat,
 } from './color-core.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './color-picker.styles.js';
+import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_colorPicker, LYRA_DEFAULT_colorPickerCurrentValue, LYRA_DEFAULT_colorPickerEyeDropper, LYRA_DEFAULT_colorPickerHue, LYRA_DEFAULT_colorPickerHueValue, LYRA_DEFAULT_colorPickerOpacity, LYRA_DEFAULT_colorPickerOpacityValue, LYRA_DEFAULT_colorPickerSaturationBrightness, LYRA_DEFAULT_colorPickerSaturationBrightnessValue, LYRA_DEFAULT_colorPickerSwatch, LYRA_DEFAULT_colorPickerSwatches, LYRA_DEFAULT_colorPickerToggleFormat, LYRA_DEFAULT_colorPickerValueField, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
@@ -38,10 +39,6 @@ export type {
   LyraColorPickerFormat,
   LyraColorPickerOutputFormat,
 } from './color-core.js';
-
-/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
- *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
-export type LyraColorPickerSize = LyraSizeStep;
 
 /** A predefined palette entry. `label` becomes the swatch's accessible name; without one the
  *  raw colour string is announced instead. */
@@ -276,6 +273,10 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  /** Public WA-compatible intrinsic validator catalog. */
+  static get validators(): LyraFormValidator<LyraColorPicker>[] {
+    return [currentValidityValidator('required', 'disabled', 'value')];
+  }
   static override styles = [LyraElement.styles, srOnly, sizes, styles];
 
   @property() label = '';
@@ -310,18 +311,6 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
    *  keeps the popup in the component's local scrolling context. */
   @property({ type: Boolean, reflect: true }) hoist = false;
 
-  /** Internal reactive adapter for Shoelace's public `default-value` attribute alias. The
-   * supported JS property remains `defaultValue`; the native/Web Awesome `value` attribute
-   * remains its canonical reflected spelling.
-   * @internal
-   * @default '' */
-  @property({ attribute: 'default-value' })
-  get defaultValueAlias(): string {
-    return this.defaultValue;
-  }
-  set defaultValueAlias(next: string | null) {
-    this.defaultValue = next ?? '';
-  }
   /** Preferred panel placement; the resolved side still flips to stay in the viewport. */
   @property({ reflect: true }) placement: Placement = 'bottom-start';
 
@@ -412,7 +401,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     // revealing it on the following render. Mirrors lr-checkbox-group's identical fix.
     const seedEnvironmentState = (): void => {
       const hasSlot = (name: string): boolean =>
-        Array.from(this.children).some((el) => el.getAttribute('slot') === name);
+        Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === name);
       this.hasLabel = hasSlot('label');
       this.hasHint = hasSlot('hint');
       this.hasError = hasSlot('error');
@@ -439,7 +428,8 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     // Adoption can occur while already disconnected, in which case no new disconnected callback
     // runs. Defensively retire resources retained from the previous realm either way.
     this.cancelDrag();

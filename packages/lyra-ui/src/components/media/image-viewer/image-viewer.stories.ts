@@ -1,6 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './image-viewer.js';
+import { IMAGE_VIEWER_HIGHLIGHT_LIMIT } from './image-viewer.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
@@ -46,6 +47,60 @@ export const WithHighlights: Story = {
     ]}
     active-highlight-id="h1"
   ></lr-image-viewer>`,
+};
+
+/** Large highlight sets retain one roving keyboard stop and project at most the documented
+ * ceiling. The active tail item remains reachable by replacing the final item in the leading
+ * window. */
+export const BoundedHighlightProjection: Story = {
+  render: () => {
+    const count = IMAGE_VIEWER_HIGHLIGHT_LIMIT + 25;
+    return html`<lr-image-viewer
+      src=${SRC}
+      name="Mountain river"
+      .highlights=${Array.from({ length: count }, (_, index) => ({
+        id: `region-${index}`,
+        anchor: {
+          kind: 'region' as const,
+          rect: { x: index % 90, y: (index * 3) % 90, width: 5, height: 5 },
+        },
+        label: `Region ${index + 1}`,
+      }))}
+      active-highlight-id=${`region-${count - 1}`}
+    ></lr-image-viewer>`;
+  },
+};
+
+/** The rotated wrapper owns an axis-swapped layout footprint, so actual-size media remains
+ * reachable instead of painting beyond the pan/zoom scroll extent. */
+export const RotatedActualSize: Story = {
+  render: () => html`
+    <lr-image-viewer
+      src=${SRC}
+      name="Mountain river"
+      fit="actual"
+      rotation="90"
+      style="inline-size: 20rem; max-inline-size: 100%"
+    ></lr-image-viewer>
+  `,
+};
+
+/** Outer consumers can style the embedded pan/zoom surface through the collision-resistant
+ * `frame-viewport`, `frame-content`, and `frame-controls` part aliases. */
+export const ForwardedFrameParts: Story = {
+  render: () => html`
+    <style>
+      lr-image-viewer.forwarded-frame-parts::part(frame-viewport) {
+        outline: var(--lr-border-width-thick) dashed var(--lr-color-brand);
+        outline-offset: calc(var(--lr-border-width-thick) * -1);
+      }
+    </style>
+    <lr-image-viewer
+      class="forwarded-frame-parts"
+      src=${SRC}
+      name="Mountain river"
+    ></lr-image-viewer>
+  `,
 };
 
 export const AnnotatableMode: Story = {

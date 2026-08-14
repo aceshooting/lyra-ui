@@ -34,6 +34,27 @@ export const Default: Story = {
   `,
 };
 
+export const PlayOnVisibleThresholds: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`threshold` is a property-only bounded readonly snapshot. This animation starts when its content crosses either retained intersection threshold.',
+      },
+      source: {
+        code: `<lr-animation name="fade-in" play-on-visible iterations="1">
+  <p>Content animated after entering the viewport.</p>
+</lr-animation>`,
+      },
+    },
+  },
+  render: () => html`
+    <lr-animation name="fade-in" play-on-visible iterations="1" .threshold=${[0.25, 0.75]}>
+      <p>Content animated after entering the viewport.</p>
+    </lr-animation>
+  `,
+};
+
 export const Presets: Story = {
   parameters: {
     docs: {

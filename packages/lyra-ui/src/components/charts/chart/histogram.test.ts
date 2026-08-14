@@ -103,7 +103,7 @@ it('visually hides the fallback data table via the sr-only sheet when show-data-
 it('can shrink to a 320px allocation with a long series label', async () => {
   const wrapper = await fixture(html`
     <div style="display: flex; inline-size: 320px;">
-      <lr-histogram label="A deliberately long translated frequency distribution label"></lr-histogram>
+      <lr-histogram series-label="A deliberately long translated frequency distribution label"></lr-histogram>
     </div>
   `);
   const el = wrapper.querySelector('lr-histogram') as LyraHistogram;
@@ -142,13 +142,27 @@ it('allows a strings override to reach the histogram dataset label', async () =>
   ).to.include('Häufigkeit');
 });
 
-it('appends streamed samples through the inherited appendData contract and caps values', () => {
+it('appends streamed samples through the purpose-specific appendSamples contract and caps values', () => {
   const el = document.createElement('lr-histogram') as LyraHistogram;
   el.values = [1, 2];
 
-  el.appendData('samples', [3, null, 4], 4);
+  el.appendSamples([3, null, 4], 4);
 
   expect(el.values).to.deep.equal([1, 2, 3, 4]);
+});
+
+it('keeps raw config options but strips type/data keys that contradict derived histogram data', () => {
+  const el = document.createElement('lr-histogram') as LyraHistogram;
+  el.values = [1, 2, 3];
+  el.config = {
+    type: 'line',
+    data: { labels: ['not-a-bin'], datasets: [{ label: 'raw', data: [99] }] },
+    options: { responsive: false },
+  };
+  const config = (el as unknown as { buildConfig(): any }).buildConfig();
+  expect(config.type).to.equal('bar');
+  expect(config.data.labels).to.not.deep.equal(['not-a-bin']);
+  expect(config.options.responsive).to.equal(false);
 });
 
 it('does not recreate Chart.js after a values update is disconnected in the same tick', async () => {

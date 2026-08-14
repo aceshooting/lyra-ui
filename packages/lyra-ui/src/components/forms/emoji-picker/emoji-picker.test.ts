@@ -153,6 +153,28 @@ it('renders one button per emoji, grouped under a heading per group', async () =
   expect(headings).to.deep.equal(['Smileys', 'Animals']);
 });
 
+it('owns a bounded frozen snapshot of consumer emoji groups', async () => {
+  const source = [{
+    key: 'custom',
+    label: 'Custom',
+    emojis: [{ emoji: '🧪', name: 'test tube', shortcodes: ['test'] }],
+  }];
+  const el = await connectEmojiPicker();
+  el.groups = source;
+  await el.updateComplete;
+  source[0]!.label = 'Forged';
+  source[0]!.emojis[0]!.name = 'forged item';
+  source[0]!.emojis.push({ emoji: '💥', name: 'collision', shortcodes: [] });
+  expect(el.groups).to.deep.equal([{
+    key: 'custom',
+    label: 'Custom',
+    emojis: [{ emoji: '🧪', name: 'test tube', shortcodes: ['test'] }],
+  }]);
+  expect(Object.isFrozen(el.groups)).to.be.true;
+  expect(Object.isFrozen(el.groups[0]!.emojis)).to.be.true;
+  expect(el.shadowRoot!.querySelectorAll('[part="emoji"]')).to.have.lengthOf(1);
+});
+
 it('virtualizes large emoji sets while keeping the full option count in ARIA metadata', async () => {
   const largeGroup: EmojiPickerGroup = {
     key: 'large',
@@ -303,6 +325,53 @@ it('sets value and fires lr-change when an emoji is picked', async () => {
   expect(event.detail).to.deep.equal({ value: '😀' });
 });
 
+it('keeps programmatic value assignments silent across native and prefixed value events', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups;
+  await el.updateComplete;
+  const seen: string[] = [];
+  for (const name of ['input', 'change', 'lr-input', 'lr-change'] as const) {
+    el.addEventListener(name, () => seen.push(name));
+  }
+
+  el.value = '🐶';
+  await el.updateComplete;
+
+  expect(el.value).to.equal('🐶');
+  expect(seen).to.deep.equal([]);
+});
+
+it('keeps committed aria-selected state separate from roving active navigation', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups;
+  await el.updateComplete;
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
+  buttons[0].click();
+  await el.updateComplete;
+  expect(buttons.map((button) => button.getAttribute('aria-selected'))).to.deep.equal([
+    'true',
+    'false',
+    'false',
+  ]);
+
+  const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+  grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(buttons[1].hasAttribute('data-active')).to.be.true;
+  expect(buttons.map((button) => button.getAttribute('aria-selected'))).to.deep.equal([
+    'true',
+    'false',
+    'false',
+  ]);
+
+  el.value = '🐶';
+  await el.updateComplete;
+  expect(buttons.map((button) => button.getAttribute('aria-selected'))).to.deep.equal([
+    'false',
+    'false',
+    'true',
+  ]);
+});
+
 it('gives each emoji button the shared minimum hit area without enlarging the glyph', async () => {
   const el = await connectEmojiPicker();
   el.groups = groups;
@@ -395,12 +464,12 @@ describe('keyboard navigation', () => {
     const buttons = [...el.shadowRoot!.querySelectorAll('[part="emoji"]')];
 
     grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
-    expect(buttons[1].getAttribute('aria-selected')).to.equal('true'); // ArrowLeft is "forward" under RTL
-    expect(buttons[0].getAttribute('aria-selected')).to.equal('false');
+    expect(buttons[1].hasAttribute('data-active')).to.be.true; // ArrowLeft is "forward" under RTL
+    expect(buttons[0].hasAttribute('data-active')).to.be.false;
 
     grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-    expect(buttons[0].getAttribute('aria-selected')).to.equal('true'); // ArrowRight is "backward" under RTL
-    expect(buttons[1].getAttribute('aria-selected')).to.equal('false');
+    expect(buttons[0].hasAttribute('data-active')).to.be.true; // ArrowRight is "backward" under RTL
+    expect(buttons[1].hasAttribute('data-active')).to.be.false;
   });
 
   it('activates the focused emoji on Enter, not a stale active index', async () => {
@@ -438,6 +507,64 @@ describe('keyboard navigation', () => {
     expect(changeEvent.composed).to.be.true;
     expect(lyraInputEvent.detail).to.deep.equal({ value: '😀' });
     expect(lyraEvent.detail).to.deep.equal({ value: '😀' });
+  });
+
+  it('constructs the native input/change/focus/blur quartet in the adopted owner realm', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      const ownerWindow = frame.contentWindow;
+      const ownerDocument = frame.contentDocument;
+      if (!ownerWindow || !ownerDocument) throw new Error('The iframe realm was unavailable.');
+      // Render once in the constructor realm before adoption. Lit constructable stylesheets cannot
+      // be installed for the first time in a different document, while an already-rendered shadow
+      // tree can be adopted and must then publish events from its new owner realm.
+      const el = await connectEmojiPicker();
+      el.groups = groups;
+      await el.updateComplete;
+      ownerDocument.body.append(ownerDocument.adoptNode(el));
+      await el.updateComplete;
+
+      const order: string[] = [];
+      const nativeEvents: Event[] = [];
+      for (const name of ['input', 'change', 'focus', 'blur'] as const) {
+        el.addEventListener(name, (event) => {
+          order.push(name);
+          nativeEvents.push(event);
+        });
+      }
+      for (const name of ['lr-input', 'lr-change', 'lr-focus', 'lr-blur'] as const) {
+        el.addEventListener(name, () => order.push(name));
+      }
+
+      el.shadowRoot!.querySelector<HTMLButtonElement>('[part="emoji"]')!.click();
+      const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search"]')!;
+      const related = ownerDocument.createElement('button');
+      ownerDocument.body.append(related);
+      search.dispatchEvent(new ownerWindow.FocusEvent('focus', { relatedTarget: related }));
+      search.dispatchEvent(new ownerWindow.FocusEvent('blur', { relatedTarget: related }));
+
+      expect(order).to.deep.equal([
+        'input',
+        'lr-input',
+        'change',
+        'lr-change',
+        'focus',
+        'lr-focus',
+        'blur',
+        'lr-blur',
+      ]);
+      expect(nativeEvents[0] instanceof ownerWindow.InputEvent).to.equal(true);
+      expect(nativeEvents[0] instanceof InputEvent).to.equal(false);
+      expect(nativeEvents[1].constructor === ownerWindow.Event).to.equal(true);
+      expect(nativeEvents[1] instanceof ownerWindow.CustomEvent).to.equal(false);
+      expect(nativeEvents[2] instanceof ownerWindow.FocusEvent).to.equal(true);
+      expect(nativeEvents[3] instanceof ownerWindow.FocusEvent).to.equal(true);
+      expect((nativeEvents[2] as FocusEvent).relatedTarget === related).to.equal(true);
+      expect((nativeEvents[3] as FocusEvent).relatedTarget === related).to.equal(true);
+    } finally {
+      frame.remove();
+    }
   });
 
   it('contains composed search input while emitting one value-event pair for a pick', async () => {
@@ -534,15 +661,16 @@ it('localizes the search label, grid label, and empty-state message via .strings
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('Aucun emoji trouvé');
 });
 
-it('localizes an auto-loaded group heading through its labelKey, so registerLyraLocale()/.strings reach it', async () => {
+it('localizes auto-loaded headings through private provenance without exposing label keys', async () => {
   const el = await connectEmojiPicker(() =>
     Promise.resolve([
-      { key: '0', label: 'Smileys & Emotion', labelKey: 'emojiPickerGroupSmileysEmotion', emojis: [{ emoji: '😀', name: 'grinning face' }] },
-      { key: '9', label: 'Flags', labelKey: 'emojiPickerGroupFlags', emojis: [{ emoji: '🏳️', name: 'white flag' }] },
+      { key: '0', label: 'Smileys & Emotion', emojis: [{ emoji: '😀', name: 'grinning face' }] },
+      { key: '9', label: 'Flags', emojis: [{ emoji: '🏳️', name: 'white flag' }] },
     ]),
   );
   await waitUntil(() => el.groups.length === 2, 'auto-loaded groups never arrived');
   await el.updateComplete;
+  expect(el.groups.every((group) => !('labelKey' in group))).to.be.true;
   expect([...el.shadowRoot!.querySelectorAll('[part="group-label"]')].map((h) => h.textContent!.trim())).to.deep.equal([
     'Smileys & Emotion',
     'Flags',
@@ -555,14 +683,13 @@ it('localizes an auto-loaded group heading through its labelKey, so registerLyra
   ]);
 });
 
-it('keeps rendering a consumer-supplied group label verbatim when no labelKey is present', async () => {
+it('keeps a consumer-supplied label verbatim even for a built-in numeric key', async () => {
   const el = await connectEmojiPicker();
-  el.groups = groups;
+  el.groups = [{ key: '0', label: 'My own zero group', emojis: groups[0].emojis }];
   el.strings = { emojiPickerGroupSmileysEmotion: 'Émotions' };
   await el.updateComplete;
   expect([...el.shadowRoot!.querySelectorAll('[part="group-label"]')].map((h) => h.textContent!.trim())).to.deep.equal([
-    'Smileys',
-    'Animals',
+    'My own zero group',
   ]);
 });
 
@@ -800,7 +927,7 @@ it('is accessible with groups populated', async () => {
   await expect(el).to.be.accessible();
 });
 
-describe('active/hover cssprop', () => {
+describe('emoji interaction-state cssprops', () => {
   /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
    *  `--lr-*` design tokens actually live. Used to assert the unset default byte-for-byte against
    *  the token it falls back to. */
@@ -864,30 +991,32 @@ describe('active/hover cssprop', () => {
     return el.shadowRoot!.querySelector('[part="emoji"][data-active]') as HTMLElement;
   }
 
-  it('recolors the active emoji from an ancestor, not a :host-declared prop', async () => {
-    const el = await themedPicker('--lr-emoji-picker-active-bg: rgb(0, 51, 102);');
+  it('recolors keyboard-active independently from an ancestor', async () => {
+    const el = await themedPicker('--lr-emoji-picker-keyboard-active-bg: rgb(0, 51, 102);');
     const active = await activateAnEmoji(el);
     expect((active) != null).to.equal(true);
     expect(getComputedStyle(active).backgroundColor).to.equal('rgb(0, 51, 102)');
   });
 
-  it('drives both :hover and [data-active] from the one shared hook (a single rule, one declaration)', () => {
-    // hover and active share a single rule, so one prop backs both -- read off the component's own
-    // constructed stylesheet to prove the coupling (the rendered result is asserted above/below).
-    const sheet = new CSSStyleSheet();
-    sheet.replaceSync(styles.cssText);
-    const rule = [...sheet.cssRules].find(
-      (candidate) =>
-        candidate instanceof CSSStyleRule &&
-        candidate.style.getPropertyValue('background').includes('--lr-emoji-picker-active-bg'),
-    ) as CSSStyleRule | undefined;
-    expect(rule, 'no rule reads --lr-emoji-picker-active-bg').to.exist;
-    const selector = rule!.selectorText.replace(/"/g, "'");
-    expect(selector).to.include(':hover');
-    expect(selector).to.include('[data-active]');
-    expect(rule!.style.getPropertyValue('background')).to.equal(
-      'var(--lr-emoji-picker-active-bg, var(--lr-color-brand-quiet))',
-    );
+  it('recolors committed selection independently from keyboard-active', async () => {
+    const el = await themedPicker(`
+      --lr-emoji-picker-selected-bg: rgb(102, 0, 51);
+      --lr-emoji-picker-keyboard-active-bg: rgb(0, 51, 102);
+    `);
+    const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
+    buttons[0].click();
+    await el.updateComplete;
+    const active = await activateAnEmoji(el);
+    expect(getComputedStyle(buttons[0]).backgroundColor).to.equal('rgb(102, 0, 51)');
+    expect(getComputedStyle(active).backgroundColor).to.equal('rgb(0, 51, 102)');
+    expect(buttons[0].getAttribute('aria-selected')).to.equal('true');
+    expect(active.getAttribute('aria-selected')).to.equal('false');
+  });
+
+  it('retains the legacy active background as the hover/keyboard fallback', async () => {
+    const el = await themedPicker('--lr-emoji-picker-active-bg: rgb(0, 51, 102);');
+    const active = await activateAnEmoji(el);
+    expect(getComputedStyle(active).backgroundColor).to.equal('rgb(0, 51, 102)');
   });
 
   it('renders byte-identically to the pre-cssprop output when the prop is unset', async () => {
@@ -905,6 +1034,15 @@ describe('active/hover cssprop', () => {
     const el = await themedPicker('--lr-emoji-picker-active-bg: rgb(0, 51, 102);');
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+
+  it('gives forced-color hover, active, selected, and pressed states distinct non-color outlines', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.include('@media (forced-colors: active)');
+    expect(css).to.match(/:hover:not\(:disabled\)[^{]*\{[^}]*dashed Highlight/);
+    expect(css).to.match(/\[data-active\][^{]*\{[^}]*dotted Highlight/);
+    expect(css).to.match(/\[aria-selected='true'\][^{]*\{[^}]*solid Highlight/);
+    expect(css).to.match(/:active:not\(:disabled\)[^{]*\{[^}]*double Highlight/);
   });
 });
 
@@ -1058,6 +1196,28 @@ describe('unrelated keydown', () => {
 });
 
 describe('virtualized scroll handling', () => {
+  it('reuses the filtered/flat/row projection across scroll-only renders', async () => {
+    const el = await connectEmojiPicker();
+    el.style.inlineSize = '320px';
+    el.groups = manyEmojis(5_000);
+    await el.updateComplete;
+    const internals = el as unknown as {
+      projection(): unknown;
+      virtualRows(): unknown;
+    };
+    const projection = internals.projection();
+    const rows = internals.virtualRows();
+    const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+
+    grid.scrollTop = 3000;
+    grid.dispatchEvent(new Event('scroll'));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    await el.updateComplete;
+
+    expect(internals.projection(), 'scroll must not refilter or re-flatten all items').to.equal(projection);
+    expect(internals.virtualRows(), 'scroll must slice a cached row projection').to.equal(rows);
+  });
+
   it('reflows the visible window when the grid scrolls (throttled via one rAF)', async () => {
     const el = await connectEmojiPicker();
     el.style.inlineSize = '320px';

@@ -44,9 +44,11 @@ export const styles = css`
   }
   [part='reveal-button'],
   [part='copy-button'] {
+    appearance: none;
     font: inherit;
     font-size: var(--lr-font-size-xs);
-    background: none;
+    color: var(--lr-color-text);
+    background: transparent;
     border: var(--lr-size-1px) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
     padding: var(--lr-space-2xs) var(--lr-space-xs);

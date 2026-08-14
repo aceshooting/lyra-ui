@@ -18,6 +18,39 @@ describe('loadQrCode()', () => {
     expect(await loadQrCode(() => Promise.resolve({ default: fake }))).to.equal(fake);
   });
 
+  it('prefers a valid namespace capability over a malformed default export', async () => {
+    const fake = { ...fakeQrCodeModule(), default: { create: 'not callable' } };
+    expect(await loadQrCode(() => Promise.resolve(fake))).to.equal(fake);
+  });
+
+  for (const [name, malformed] of [
+    ['null', null],
+    ['an empty namespace', {}],
+    ['a non-callable namespace create', { create: true }],
+    ['a malformed default export', { default: { create: true } }],
+  ] as const) {
+    it(`fails closed when the imported peer is ${name}`, async () => {
+      expect(await loadQrCode(() => Promise.resolve(malformed))).to.equal(null);
+    });
+  }
+
+  it('fails closed and warns when an interop wrapper exposes a hostile capability getter', async () => {
+    const hostile = Object.defineProperty({}, 'create', {
+      get(): never {
+        throw new Error('hostile create');
+      },
+    });
+    const originalWarn = console.warn;
+    const calls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => calls.push(args);
+    try {
+      expect(await loadQrCode(() => Promise.resolve(hostile))).to.equal(null);
+      expect(calls.flat().join(' ')).to.contain('lr-qr-code');
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
   it('returns null and logs the import error when `qrcode` is unavailable', async () => {
     const importError = new Error('qrcode boom');
     const originalWarn = console.warn;
@@ -38,18 +71,24 @@ describe('loadQrCode()', () => {
     // `() => import('qrcode')`. What's under test is that the *promise itself* is shared -- i.e.
     // the underlying importer only ever runs once regardless of how many callers ask -- not what
     // it resolves to (see the skipped test below for why this environment can't assert that part).
-    const first = loadQrCodeCached();
-    const second = loadQrCodeCached();
-    expect(second).to.equal(first);
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      const first = loadQrCodeCached();
+      const second = loadQrCodeCached();
+      expect(second).to.equal(first);
+      await first;
+    } finally {
+      console.warn = originalWarn;
+    }
   });
 
   // A "caches the real optional module result" test (importing the actual `qrcode` package with
   // no injected fake, and asserting a real, non-null resolution -- mirroring pdf-loader.test.ts's
   // 4th test) is intentionally skipped rather than asserted either way: the `qrcode` peer is not
-  // installed in this workspace (it's an optional peer this component only assumes, per its own
-  // contract), and `qrcode`'s browser entry is genuine multi-file CommonJS with no single-file
-  // browser bundle, so it is not yet known whether @web/test-runner's esbuild-based pipeline can
-  // resolve/interop it once it *is* installed without additional CJS-interop wiring (a
+  // directly available to this browser runner: `qrcode`'s browser entry is genuine multi-file
+  // CommonJS with no single-file browser bundle, so @web/test-runner's esbuild-based pipeline
+  // cannot currently resolve it without additional CJS-interop wiring (a
   // `@rollup/plugin-commonjs` + `@web/dev-server-rollup` addition to web-test-runner.config.js is
   // the likely fix, scoped to `qrcode`'s own directory, but that is a centralized-config change
   // outside this component's own files). Every other loader behavior above is covered against an

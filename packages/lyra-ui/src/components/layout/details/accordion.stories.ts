@@ -24,7 +24,7 @@ export const Modes: StoryObj = {
     docs: {
       description: {
         story:
-          '`multiple` allows any number of panels; `single` keeps exactly the activated panel open; `single-collapsible` also allows zero open panels.',
+          '`mode="multiple"` allows any number of panels; `single` keeps exactly the activated panel open; `single-collapsible` also allows zero open panels. In v9, `mode` is the sole expansion-policy property.',
       },
     },
   },

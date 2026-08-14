@@ -17,8 +17,8 @@ export const Gallery: Story = {
     <div style="display:flex; gap:1rem; align-items:center;">
       <lr-flag country="fr" label="France" style="height: 1.5rem"></lr-flag>
       <lr-flag language="en" label="English" style="height: 1.5rem"></lr-flag>
-      <lr-flag language="de" label="German" round style="height: 1.5rem"></lr-flag>
-      <lr-flag country="jp" label="Japan" round style="height: 1.5rem"></lr-flag>
+      <lr-flag language="de" label="German" shape="circle" style="height: 1.5rem"></lr-flag>
+      <lr-flag country="jp" label="Japan" shape="circle" style="height: 1.5rem"></lr-flag>
     </div>
   `,
 };
@@ -31,7 +31,7 @@ export const ThemeableFraming: Story = {
         aria-label="French flag in a wide frame"
         style="height: 3rem; --lr-flag-aspect-ratio: 2 / 1; --lr-flag-object-fit: contain;"
       ></lr-flag>
-      <lr-flag country="jp" aria-label="Japanese flag in a circular frame" round style="height: 3rem;"></lr-flag>
+      <lr-flag country="jp" aria-label="Japanese flag in a circular frame" shape="circle" style="height: 3rem;"></lr-flag>
     </div>
   `,
 };
@@ -41,16 +41,16 @@ export const FidelityTiers: Story = {
   render: () => html`
     <div style="display:flex; gap:2rem; align-items:flex-end;">
       <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
-        <lr-flag country="es" variant="compact" label="Spain (compact)" style="height: 6rem"></lr-flag>
-        <span><code>variant="compact"</code><br />~2 KB WebP · for icons</span>
+        <lr-flag country="es" fidelity="compact" label="Spain (compact)" style="height: 6rem"></lr-flag>
+        <span><code>fidelity="compact"</code><br />~2 KB WebP · for icons</span>
       </div>
       <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
         <lr-flag country="es" label="Spain (standard)" style="height: 6rem"></lr-flag>
         <span>default (standard)<br />~48 KB vector · for cards</span>
       </div>
       <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
-        <lr-flag country="es" variant="detailed" label="Spain (detailed)" style="height: 6rem"></lr-flag>
-        <span><code>variant="detailed"</code><br />full vector · for hero display</span>
+        <lr-flag country="es" fidelity="detailed" label="Spain (detailed)" style="height: 6rem"></lr-flag>
+        <span><code>fidelity="detailed"</code><br />full vector · for hero display</span>
       </div>
     </div>
   `,
@@ -83,7 +83,7 @@ export const LocalePicker: Story = {
                   style="display:flex; align-items:center; gap:0.6rem; width:100%; padding:0.4rem 0.6rem; border:0; background:transparent; font:inherit; text-align:start; cursor:pointer;"
                   @click=${() => console.log('locale selected', tag)}
                 >
-                  <lr-flag language=${tag} variant="compact" label="" style="height: 1rem"></lr-flag>
+                  <lr-flag language=${tag} fidelity="compact" label="" style="height: 1rem"></lr-flag>
                   <span>${localeNativeName(tag)}</span>
                   <span style="margin-inline-start:auto; opacity:0.6;">${languageToCountry(tag)}</span>
                 </button>
@@ -109,7 +109,7 @@ export const LanguageSelector: Story = {
       ].map(
         ([code, label]) => html`
           <li style="display:flex; align-items:center; gap:0.6rem; padding:0.4rem 0.9rem; cursor:pointer;">
-            <lr-flag country=${code} variant="compact" label=${label} style="height: 1.1rem"></lr-flag>
+            <lr-flag country=${code} fidelity="compact" label=${label} style="height: 1.1rem"></lr-flag>
             <span>${label}</span>
           </li>
         `,

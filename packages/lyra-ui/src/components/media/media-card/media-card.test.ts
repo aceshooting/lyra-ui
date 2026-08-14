@@ -3,10 +3,15 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './media-card.js';
 import '../../conversation/chat-message/chat-message.js';
 import type { LyraMediaCard } from './media-card.js';
-import { safeMediaSrc, safeLinkHref } from './media-card.js';
+import * as mediaCardExports from './media-card.js';
 
 const DATA_URI =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
+it('keeps sink validators internal to the component entry', () => {
+  expect(Object.hasOwn(mediaCardExports, 'safeMediaSrc')).to.be.false;
+  expect(Object.hasOwn(mediaCardExports, 'safeLinkHref')).to.be.false;
+});
 
 it('validates maxHeight before assigning the base custom property', async () => {
   const el = await fixture<LyraMediaCard>(html`<lr-media-card kind="file"></lr-media-card>`);
@@ -20,57 +25,99 @@ it('validates maxHeight before assigning the base custom property', async () => 
   expect(base.style.getPropertyValue('--lr-media-card-max-height')).to.equal('calc(12rem + 2px)');
 });
 
-describe('safeMediaSrc / safeLinkHref', () => {
-  it('allows http:/https:/blob: for both', () => {
+describe('internal media-card URL validation', () => {
+  it('allows http:/https:/blob: for the download sink', async () => {
     for (const url of ['http://example.test/a.png', 'https://example.test/a.png', 'blob:https://example.test/uuid']) {
-      expect(safeMediaSrc(url)).to.equal(url);
-      expect(safeLinkHref(url)).to.equal(url);
+      const file = await fixture<LyraMediaCard>(html`
+        <lr-media-card kind="file" .src=${url}></lr-media-card>
+      `);
+      expect(file.shadowRoot!.querySelector('[part="base"]')?.tagName).to.equal('A');
+      expect(file.shadowRoot!.querySelector('a')?.getAttribute('href')).to.equal(url);
     }
   });
 
-  it('allows data: as a media src but rejects it as a link href', () => {
-    expect(safeMediaSrc(DATA_URI)).to.equal(DATA_URI);
-    expect(safeLinkHref(DATA_URI)).to.be.null;
+  it('allows data: as a media src but renders no link for the same file URL', async () => {
+    const image = await fixture<LyraMediaCard>(html`
+      <lr-media-card kind="image" .src=${DATA_URI}></lr-media-card>
+    `);
+    expect(image.shadowRoot!.querySelector('img')?.getAttribute('src')).to.equal(DATA_URI);
+
+    const file = await fixture<LyraMediaCard>(html`
+      <lr-media-card kind="file" .src=${DATA_URI}></lr-media-card>
+    `);
+    expect(file.shadowRoot!.querySelector('[part="base"]')?.tagName).to.equal('SPAN');
+    expect(file.shadowRoot!.querySelectorAll('a')).to.have.length(0);
   });
 
-  it('rejects javascript:/vbscript:/mailto:/tel: for both', () => {
+  it('rejects javascript:/vbscript:/mailto:/tel: from both rendered sink kinds', async () => {
     for (const url of ['javascript:alert(1)', 'vbscript:msgbox(1)', 'mailto:a@b.test', 'tel:+15551234567']) {
-      expect(safeMediaSrc(url), url).to.be.null;
-      expect(safeLinkHref(url), url).to.be.null;
+      const image = await fixture<LyraMediaCard>(html`
+        <lr-media-card kind="image" .src=${url}></lr-media-card>
+      `);
+      expect(image.shadowRoot!.querySelector('[part="base"]')?.tagName, url).to.equal('SPAN');
+      expect(image.shadowRoot!.querySelectorAll('img, video, a'), url).to.have.length(0);
+
+      const file = await fixture<LyraMediaCard>(html`
+        <lr-media-card kind="file" .src=${url}></lr-media-card>
+      `);
+      expect(file.shadowRoot!.querySelector('[part="base"]')?.tagName, url).to.equal('SPAN');
+      expect(file.shadowRoot!.querySelectorAll('a'), url).to.have.length(0);
     }
   });
 
-  it('is case-insensitive on the scheme', () => {
-    expect(safeMediaSrc('JavaScript:alert(1)')).to.be.null;
-    expect(safeMediaSrc('HTTPS://example.test/a.png')).to.equal('HTTPS://example.test/a.png');
+  it('is case-insensitive on the scheme', async () => {
+    const unsafe = await fixture<LyraMediaCard>(html`
+      <lr-media-card kind="image" src="JavaScript:alert(1)"></lr-media-card>
+    `);
+    expect(unsafe.shadowRoot!.querySelectorAll('img, video, a')).to.have.length(0);
+
+    const safe = await fixture<LyraMediaCard>(html`
+      <lr-media-card kind="file" src="HTTPS://example.test/a.png"></lr-media-card>
+    `);
+    expect(safe.shadowRoot!.querySelector('a')?.getAttribute('href')).to.equal(
+      'HTTPS://example.test/a.png',
+    );
   });
 
-  it('allows relative and scheme-relative URLs (no scheme at all)', () => {
+  it('allows relative and scheme-relative URLs', async () => {
     for (const url of ['/foo/bar.png', 'foo/bar.png', '//example.test/foo.png', '?x=1', '#frag']) {
-      expect(safeMediaSrc(url), url).to.equal(url);
-      expect(safeLinkHref(url), url).to.equal(url);
+      const file = await fixture<LyraMediaCard>(html`
+        <lr-media-card kind="file" .src=${url}></lr-media-card>
+      `);
+      expect(file.shadowRoot!.querySelector('a')?.getAttribute('href'), url).to.equal(url);
     }
   });
 
-  it('treats an empty or whitespace-only string as absent (null), not "safe relative"', () => {
-    expect(safeMediaSrc('')).to.be.null;
-    expect(safeMediaSrc('   ')).to.be.null;
-    expect(safeLinkHref('')).to.be.null;
+  it('treats an empty or whitespace-only string as an absent sink', async () => {
+    for (const url of ['', '   ']) {
+      const image = await fixture<LyraMediaCard>(html`
+        <lr-media-card kind="image" .src=${url}></lr-media-card>
+      `);
+      expect(image.shadowRoot!.querySelector('[part="base"]')?.tagName).to.equal('SPAN');
+      expect(image.shadowRoot!.querySelectorAll('img, video, a')).to.have.length(0);
+    }
   });
 
-  it('trims surrounding whitespace from an otherwise-safe URL', () => {
-    expect(safeMediaSrc('  https://example.test/a.png  ')).to.equal('https://example.test/a.png');
+  it('trims surrounding whitespace from an otherwise-safe URL', async () => {
+    const file = await fixture<LyraMediaCard>(html`
+      <lr-media-card kind="file" src="  https://example.test/a.png  "></lr-media-card>
+    `);
+    expect(file.shadowRoot!.querySelector('a')?.getAttribute('href')).to.equal(
+      'https://example.test/a.png',
+    );
   });
 
-  it('is not fooled by an embedded tab used to defeat a naive scheme regex', () => {
+  it('is not fooled by an embedded tab used to defeat a naive scheme regex', async () => {
     // "java\tscript:alert(1)" fails a naive /^[a-z]+:/ match (so a
     // hand-rolled regex would wrongly call this "relative, therefore safe")
     // while a browser attribute sink still normalizes it down to a working
     // javascript: URL -- this is exactly the class of bypass `new URL()`
     // based checking closes, since the platform parser applies the same
     // tab-stripping normalization the browser itself uses.
-    expect(safeMediaSrc('java\tscript:alert(1)')).to.be.null;
-    expect(safeLinkHref('java\tscript:alert(1)')).to.be.null;
+    const image = await fixture<LyraMediaCard>(html`
+      <lr-media-card kind="image" src=${'java\tscript:alert(1)'}></lr-media-card>
+    `);
+    expect(image.shadowRoot!.querySelectorAll('img, video, a')).to.have.length(0);
   });
 });
 
@@ -88,7 +135,10 @@ describe('defaults', () => {
   it('renders the inert file-chip fallback with "Untitled file" when nothing is set', async () => {
     const el = (await fixture(html`<lr-media-card></lr-media-card>`)) as LyraMediaCard;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const icon = el.shadowRoot!.querySelector('[part="file-icon"]') as HTMLElement;
     expect(base.tagName).to.equal('SPAN');
+    expect(icon.getAttribute('aria-hidden')).to.equal('true');
+    expect(icon.inert).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="filename"]')!.textContent).to.equal('Untitled file');
   });
 
@@ -112,7 +162,7 @@ it('forwards host focus(), blur(), and click() to the resolved primary action', 
   `)) as LyraMediaCard;
   const button = el.shadowRoot!.querySelector('[part="open-button"]') as HTMLButtonElement;
   let opens = 0;
-  el.addEventListener('lr-open', () => opens++);
+  el.addEventListener('lr-media-open', () => opens++);
   el.focus();
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('open-button');
   el.blur();
@@ -215,26 +265,26 @@ describe('kind="image"', () => {
     );
   });
 
-  it('emits lr-open with { src, filename } when the card is clicked', async () => {
+  it('emits a noncancelable lr-media-open notification when the image card is clicked', async () => {
     const el = (await fixture(
       html`<lr-media-card src="https://example.test/a.png" kind="image" filename="a.png"></lr-media-card>`,
     )) as LyraMediaCard;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     setTimeout(() => base.click());
-    const ev = await oneEvent(el, 'lr-open');
+    const ev = await oneEvent(el, 'lr-media-open');
     expect(ev.detail).to.deep.equal({ src: 'https://example.test/a.png', filename: 'a.png' });
     expect(ev.bubbles).to.be.true;
     expect(ev.composed).to.be.true;
-    expect(ev.cancelable).to.be.true;
+    expect(ev.cancelable).to.be.false;
   });
 
-  it('trims a whitespace-padded src in the emitted lr-open detail to match what is actually rendered', async () => {
+  it('trims a whitespace-padded src in the emitted lr-media-open detail to match rendering', async () => {
     const el = (await fixture(
       html`<lr-media-card src="  https://example.test/a.png  " kind="image" filename="a.png"></lr-media-card>`,
     )) as LyraMediaCard;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     setTimeout(() => base.click());
-    const ev = await oneEvent(el, 'lr-open');
+    const ev = await oneEvent(el, 'lr-media-open');
     expect(ev.detail).to.deep.equal({ src: 'https://example.test/a.png', filename: 'a.png' });
   });
 
@@ -326,14 +376,15 @@ describe('kind="video"', () => {
     );
   });
 
-  it('emits lr-open with { src, filename } when open-button is clicked', async () => {
+  it('emits noncancelable lr-media-open when the video open-button is clicked', async () => {
     const el = (await fixture(
       html`<lr-media-card src="https://example.test/a.mp4" kind="video" filename="clip.mp4"></lr-media-card>`,
     )) as LyraMediaCard;
     const openButton = el.shadowRoot!.querySelector('[part="open-button"]') as HTMLButtonElement;
     setTimeout(() => openButton.click());
-    const ev = await oneEvent(el, 'lr-open');
+    const ev = await oneEvent(el, 'lr-media-open');
     expect(ev.detail).to.deep.equal({ src: 'https://example.test/a.mp4', filename: 'clip.mp4' });
+    expect(ev.cancelable).to.be.false;
   });
 
   it('falls back to the file chip when src fails the safe-URL check', async () => {
@@ -405,7 +456,7 @@ describe('kind="file" (generic chip)', () => {
     expect(filenamePart.getAttribute('title')).to.equal('a-very-long-quarterly-report.pdf');
   });
 
-  it('emits lr-open with { src, filename } when the link is activated', async () => {
+  it('emits cancelable lr-before-media-download when the safe file link is activated', async () => {
     const el = (await fixture(
       html`<lr-media-card
         src="https://example.test/report.pdf"
@@ -419,13 +470,14 @@ describe('kind="file" (generic chip)', () => {
     // as <lr-document-preview>'s identical download-link test).
     link.addEventListener('click', (e) => e.preventDefault());
     setTimeout(() => link.click());
-    const ev = await oneEvent(el, 'lr-open');
+    const ev = await oneEvent(el, 'lr-before-media-download');
     expect(ev.detail).to.deep.equal({ src: 'https://example.test/report.pdf', filename: 'report.pdf' });
     expect(ev.bubbles).to.be.true;
     expect(ev.composed).to.be.true;
+    expect(ev.cancelable).to.be.true;
   });
 
-  it('propagates preventDefault() on lr-open to the native click, suppressing the link default', async () => {
+  it('propagates lr-before-media-download prevention to the native file-link click', async () => {
     const el = (await fixture(
       html`<lr-media-card
         src="https://example.test/report.pdf"
@@ -433,20 +485,20 @@ describe('kind="file" (generic chip)', () => {
         filename="report.pdf"
       ></lr-media-card>`,
     )) as LyraMediaCard;
-    el.addEventListener('lr-open', (e) => e.preventDefault());
+    el.addEventListener('lr-before-media-download', (e) => e.preventDefault());
     const link = el.shadowRoot!.querySelector('[part="base"]') as HTMLAnchorElement;
     // A synthetic dispatchEvent() (unlike a real `.click()`) never invokes
     // the anchor's own built-in navigation behavior, so this safely
     // exercises the real @click-bound handler with zero risk of the test
     // page actually navigating away, while still observing whether that
-    // handler forwards the lr-open cancellation onto the native event --
+    // handler forwards the before-download cancellation onto the native event --
     // the exact thing under test here.
     const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
     link.dispatchEvent(clickEvent);
     expect(clickEvent.defaultPrevented).to.be.true;
   });
 
-  it('does not call preventDefault on the native click when lr-open is left uncancelled', async () => {
+  it('does not prevent the native click when lr-before-media-download is left uncancelled', async () => {
     const el = (await fixture(
       html`<lr-media-card src="https://example.test/report.pdf" kind="file" filename="report.pdf"></lr-media-card>`,
     )) as LyraMediaCard;
@@ -583,7 +635,7 @@ describe('string localization', () => {
 });
 
 describe('accessibility', () => {
-  it('forwards a reactive aria-label/action override to each actionable rendering', async () => {
+  it('keeps a host label on the host and gives each nested action a purpose-specific name', async () => {
     const image = (await fixture(html`
       <lr-media-card
         aria-label="Open image in lightbox"
@@ -593,7 +645,7 @@ describe('accessibility', () => {
       ></lr-media-card>
     `)) as LyraMediaCard;
     expect(image.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
-      'Open image in lightbox',
+      'Open a.png',
     );
 
     const video = (await fixture(html`
@@ -605,7 +657,7 @@ describe('accessibility', () => {
       ></lr-media-card>
     `)) as LyraMediaCard;
     const openButton = video.shadowRoot!.querySelector('[part="open-button"]') as HTMLButtonElement;
-    expect(openButton.getAttribute('aria-label')).to.equal('Open video in dialog');
+    expect(openButton.getAttribute('aria-label')).to.equal('Open a.mp4');
 
     const file = (await fixture(html`
       <lr-media-card
@@ -616,7 +668,7 @@ describe('accessibility', () => {
       ></lr-media-card>
     `)) as LyraMediaCard;
     const link = file.shadowRoot!.querySelector('[part="base"]') as HTMLAnchorElement;
-    expect(link.getAttribute('aria-label')).to.equal('Download quarterly report');
+    expect(link.getAttribute('aria-label')).to.equal('Open report.pdf');
 
     file.accessibleLabel = 'Save quarterly report';
     await file.updateComplete;
@@ -627,7 +679,7 @@ describe('accessibility', () => {
     expect(link.getAttribute('aria-label')).to.equal('Open report.pdf');
   });
 
-  it('preserves an explicit empty host aria-label on every action owner, updates it live, and restores the per-kind fallback after removal', async () => {
+  it('preserves an explicit empty host label without leaving nested actions unnamed or duplicating later host names', async () => {
     const cases = [
       {
         kind: 'image',
@@ -660,11 +712,11 @@ describe('accessibility', () => {
       `)) as LyraMediaCard;
       const action = () => el.shadowRoot?.querySelector<HTMLElement>(selector);
 
-      expect(action()?.getAttribute('aria-label')).to.equal('');
+      expect(action()?.getAttribute('aria-label')).to.equal(`Open ${filename}`);
 
       el.setAttribute('aria-label', `Live ${kind} action`);
       await el.updateComplete;
-      expect(action()?.getAttribute('aria-label')).to.equal(`Live ${kind} action`);
+      expect(action()?.getAttribute('aria-label')).to.equal(`Open ${filename}`);
 
       el.removeAttribute('aria-label');
       await el.updateComplete;

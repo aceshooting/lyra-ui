@@ -19,6 +19,14 @@ export const Length: StoryObj = {
 };
 
 export const Format: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Format parsing reads at most 4,096 UTF-16 code units, coalesces literal runs, and retains at most 32 `#` segments. Value normalization uses the same source ceiling and stops earlier once every effective segment is full.',
+      },
+    },
+  },
   render: () => html`
     <lr-otp-input label="Invite code" type="alphanumeric" case="upper" format="### ###"></lr-otp-input>
     <lr-otp-input label="License key" type="alphanumeric" case="upper" format="####-####-####"></lr-otp-input>

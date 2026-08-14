@@ -24,7 +24,7 @@ export interface CanvasLink {
   y2: number;
   color: string;
   width: number;
-  dash?: number[];
+  dash?: readonly number[];
   directed?: boolean;
   selected?: boolean;
   dimmed?: boolean;
@@ -38,7 +38,7 @@ export interface CanvasNode {
   x: number;
   y: number;
   r: number;
-  shape: 'circle' | 'square' | 'diamond';
+  shape: "circle" | "square" | "diamond";
   fill: string;
   selected?: boolean;
   dimmed?: boolean;
@@ -52,6 +52,16 @@ export interface CanvasRing {
   x: number;
   y: number;
   r: number;
+}
+export interface CanvasFocusLink {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  width: number;
+}
+export interface CanvasFocusHull {
+  d: string;
 }
 
 /** A "+" expand badge to draw at a node's diagonally-upper-right edge -- `x`/`y`/`r` are the
@@ -76,6 +86,8 @@ export interface CanvasScene {
   expandIndicators?: CanvasExpandIndicator[];
   focusHalo?: CanvasRing;
   keyboardFocusRing?: CanvasRing;
+  keyboardFocusLink?: CanvasFocusLink;
+  keyboardFocusHull?: CanvasFocusHull;
   showNodeLabels: boolean;
   haloColor: string;
   selectedColor: string;
@@ -116,9 +128,14 @@ const EXPAND_BADGE_R = 5;
  *  diagonally upper-right. */
 const EXPAND_BADGE_OFFSET = Math.SQRT1_2;
 
-function pathForShape(x: number, y: number, r: number, shape: CanvasNode['shape']): Path2D {
+function pathForShape(
+  x: number,
+  y: number,
+  r: number,
+  shape: CanvasNode["shape"]
+): Path2D {
   const path = new Path2D();
-  if (shape === 'circle') {
+  if (shape === "circle") {
     path.arc(x, y, r, 0, Math.PI * 2);
     return path;
   }
@@ -126,7 +143,7 @@ function pathForShape(x: number, y: number, r: number, shape: CanvasNode['shape'
   // shapeHalfSide()/squarePath()/diamondPath() math, reimplemented locally so this module stays
   // independent of graph.class.ts.
   const s = (r * Math.sqrt(Math.PI)) / 2;
-  if (shape === 'square') {
+  if (shape === "square") {
     path.rect(x - s, y - s, s * 2, s * 2);
     return path;
   }
@@ -159,12 +176,39 @@ function drawArrowhead(ctx: CanvasRenderingContext2D, link: CanvasLink): void {
   ctx.fill();
 }
 
-function drawRing(ctx: CanvasRenderingContext2D, ring: CanvasRing, color: string): void {
+function drawRing(
+  ctx: CanvasRenderingContext2D,
+  ring: CanvasRing,
+  color: string
+): void {
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2);
   ctx.stroke();
+}
+
+function drawKeyboardFocusCue(
+  ctx: CanvasRenderingContext2D,
+  scene: CanvasScene
+): void {
+  ctx.strokeStyle = scene.haloColor;
+  ctx.setLineDash([4, 3]);
+  if (scene.keyboardFocusLink) {
+    const link = scene.keyboardFocusLink;
+    ctx.lineWidth = Math.max(4, link.width + 4);
+    ctx.beginPath();
+    ctx.moveTo(link.x1, link.y1);
+    ctx.lineTo(link.x2, link.y2);
+    ctx.stroke();
+  }
+  if (scene.keyboardFocusHull) {
+    ctx.lineWidth = 4;
+    ctx.stroke(new Path2D(scene.keyboardFocusHull.d));
+  }
+  ctx.setLineDash([]);
+  if (scene.keyboardFocusRing)
+    drawRing(ctx, scene.keyboardFocusRing, scene.haloColor);
 }
 
 /**
@@ -174,7 +218,11 @@ function drawRing(ctx: CanvasRenderingContext2D, ring: CanvasRing, color: string
  * top via `ctx.transform()`, scoped to a `save()`/`restore()` pair so it never leaks into the
  * caller's own transform state.
  */
-export function drawGraphScene(ctx: CanvasRenderingContext2D, camera: CanvasCamera, scene: CanvasScene): void {
+export function drawGraphScene(
+  ctx: CanvasRenderingContext2D,
+  camera: CanvasCamera,
+  scene: CanvasScene
+): void {
   ctx.save();
   ctx.transform(camera.k, 0, 0, camera.k, camera.x, camera.y);
 
@@ -185,8 +233,8 @@ export function drawGraphScene(ctx: CanvasRenderingContext2D, camera: CanvasCame
     ctx.fillStyle = hull.fill;
     ctx.strokeStyle = hull.fill;
     ctx.lineWidth = HULL_STROKE_WIDTH;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
     ctx.fill(path);
     ctx.stroke(path);
     ctx.globalAlpha = 1;
@@ -196,7 +244,7 @@ export function drawGraphScene(ctx: CanvasRenderingContext2D, camera: CanvasCame
   for (const link of scene.links) {
     ctx.strokeStyle = link.selected ? scene.selectedColor : link.color;
     ctx.lineWidth = link.width;
-    ctx.setLineDash(link.dash ?? []);
+    ctx.setLineDash(link.dash ? [...link.dash] : []);
     ctx.globalAlpha = link.dimmed ? dimmedOpacity : 1;
     ctx.beginPath();
     ctx.moveTo(link.x1, link.y1);
@@ -209,8 +257,8 @@ export function drawGraphScene(ctx: CanvasRenderingContext2D, camera: CanvasCame
 
   if (scene.edgeLabels.length) {
     ctx.font = scene.font;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.lineWidth = LABEL_HALO_WIDTH;
     for (const label of scene.edgeLabels) {
       ctx.strokeStyle = scene.labelHaloColor;
@@ -238,10 +286,11 @@ export function drawGraphScene(ctx: CanvasRenderingContext2D, camera: CanvasCame
     // Label coordinates are physical canvas positions immediately after each node. `start`
     // mirrors under an inherited RTL direction and paints back across the node; `left` keeps the
     // anchor physical while the canvas bidi algorithm still shapes the label text itself.
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
     ctx.fillStyle = scene.labelColor;
-    for (const label of scene.nodeLabels) ctx.fillText(label.text, label.x, label.y);
+    for (const label of scene.nodeLabels)
+      ctx.fillText(label.text, label.x, label.y);
   }
 
   const expandIndicators = scene.expandIndicators ?? [];
@@ -252,9 +301,9 @@ export function drawGraphScene(ctx: CanvasRenderingContext2D, camera: CanvasCame
       const by = indicator.y - indicator.r * EXPAND_BADGE_OFFSET;
       const path = new Path2D();
       path.arc(bx, by, EXPAND_BADGE_R, 0, Math.PI * 2);
-      ctx.fillStyle = scene.expandBadgeFill ?? '';
+      ctx.fillStyle = scene.expandBadgeFill ?? "";
       ctx.fill(path);
-      ctx.strokeStyle = scene.expandBadgeStroke ?? '';
+      ctx.strokeStyle = scene.expandBadgeStroke ?? "";
       ctx.stroke(path);
       ctx.strokeStyle = scene.labelColor;
       ctx.beginPath();
@@ -267,7 +316,7 @@ export function drawGraphScene(ctx: CanvasRenderingContext2D, camera: CanvasCame
   }
 
   if (scene.focusHalo) drawRing(ctx, scene.focusHalo, scene.haloColor);
-  if (scene.keyboardFocusRing) drawRing(ctx, scene.keyboardFocusRing, scene.haloColor);
+  drawKeyboardFocusCue(ctx, scene);
 
   ctx.restore();
 }
@@ -297,7 +346,7 @@ export interface PickableNode {
   x: number;
   y: number;
   r: number;
-  shape: CanvasNode['shape'];
+  shape: CanvasNode["shape"];
 }
 
 /**
@@ -313,14 +362,18 @@ export interface PickableNode {
 export function drawPickingScene(
   ctx: CanvasRenderingContext2D,
   camera: CanvasCamera,
-  scene: { hulls: PickableHull[]; links: PickableLink[]; nodes: PickableNode[] },
+  scene: { hulls: PickableHull[]; links: PickableLink[]; nodes: PickableNode[] }
 ): void {
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.save();
   ctx.transform(camera.k, 0, 0, camera.k, camera.x, camera.y);
-  const cameraScale = Number.isFinite(camera.k) && Math.abs(camera.k) > 0 ? Math.abs(camera.k) : 1;
-  const minimumWorldStroke = (MIN_PICK_TARGET_PX + PICK_RASTER_GUARD_PX) / cameraScale;
+  const cameraScale =
+    Number.isFinite(camera.k) && Math.abs(camera.k) > 0
+      ? Math.abs(camera.k)
+      : 1;
+  const minimumWorldStroke =
+    (MIN_PICK_TARGET_PX + PICK_RASTER_GUARD_PX) / cameraScale;
   let idx = 0;
   for (const hull of scene.hulls) {
     const color = indexToPickColor(idx++);
@@ -328,15 +381,15 @@ export function drawPickingScene(
     ctx.fillStyle = color;
     ctx.strokeStyle = color;
     ctx.lineWidth = Math.max(HULL_STROKE_WIDTH, minimumWorldStroke);
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
     ctx.fill(path);
     ctx.stroke(path);
   }
   for (const link of scene.links) {
     ctx.strokeStyle = indexToPickColor(idx++);
     ctx.lineWidth = Math.max(link.width + 6, 8, minimumWorldStroke);
-    ctx.lineCap = 'round';
+    ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(link.x1, link.y1);
     ctx.lineTo(link.x2, link.y2);
@@ -344,7 +397,14 @@ export function drawPickingScene(
   }
   for (const node of scene.nodes) {
     ctx.fillStyle = indexToPickColor(idx++);
-    ctx.fill(pathForShape(node.x, node.y, Math.max(node.r, minimumWorldStroke / 2), node.shape));
+    ctx.fill(
+      pathForShape(
+        node.x,
+        node.y,
+        Math.max(node.r, minimumWorldStroke / 2),
+        node.shape
+      )
+    );
   }
   ctx.restore();
 }

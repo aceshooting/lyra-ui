@@ -10,40 +10,27 @@ import { css } from 'lit';
 // component's loop without touching `--lr-transition-ambient` itself, which
 // every other ambient-looping component in the library also keys off.
 // Both tokens are *compound* values (`1.8s ease-in-out`, duration +
-// timing-function together, exactly like every `transition:` shorthand
-// elsewhere in this library), so `--lr-typing-duration` can only ever be
-// spliced into the `animation:` *shorthand* below, never assigned to
-// `animation-duration` alone -- that longhand requires a bare `<time>` and
-// would silently invalidate (collapsing the duration to 0) if given the
-// compound value. For the same reason no extra timing-function keyword can
-// follow it in the shorthand: the token already supplies one. The alias is
-// declared as `--lr-typing-duration: var(--lr-transition-ambient);` (not
-// inlined as a `var(--lr-typing-duration, var(--lr-transition-ambient))`
-// fallback in the shorthand) so it keeps resolving through whatever
-// `--lr-transition-ambient` currently computes to on this host -- including
-// the centralized `prefers-reduced-motion` override in `tokens.styles.ts`,
-// which collapses `--lr-transition-ambient` itself to a near-zero duration,
-// and the `--lr-theme-transition-slow` retheming hook underneath it. Only a
-// consumer who sets `--lr-typing-duration` directly opts out of tracking
-// the shared token.
+// timing-function together), so `--lr-typing-duration` is consumed only in
+// the `animation:` shorthand. Its use-site fallback keeps tracking the shared
+// reduced-motion-aware ambient token without shadowing an ancestor override.
 export const styles = css`
   :host {
     display: inline-flex;
     align-items: center;
     vertical-align: middle;
     line-height: var(--lr-line-height-none);
-    --lr-typing-dot-size: var(--lr-space-s);
-    --lr-typing-gap: var(--lr-space-xs);
-    --lr-typing-cursor-width: var(--lr-size-0-125rem);
-    --lr-typing-cursor-height: var(--lr-size-1em);
-    --lr-typing-duration: var(--lr-transition-ambient);
+    --_lr-typing-dot-size-default: var(--lr-space-s);
+    --_lr-typing-gap-default: var(--lr-space-xs);
+    --_lr-inline-cursor-width-default: var(--lr-size-0-125rem);
+    --_lr-inline-cursor-height-default: var(--lr-size-1em);
+    --_lr-typing-duration-default: var(--lr-transition-ambient);
     /* Themeable, not auto-derived from --lr-typing-duration: like the compound
        --lr-transition-ambient it aliases (duration + timing-function, e.g. "1.8s ease-in-out")
        baked into the animation: shorthand above, it can't be decomposed via calc() into a
        fraction of just its duration. A consumer retiming --lr-typing-duration keeps the
        stagger proportional by also setting these two explicitly. */
-    --lr-typing-dot-stagger-1: 600ms;
-    --lr-typing-dot-stagger-2: 1200ms;
+    --_lr-typing-dot-stagger-1-default: 600ms;
+    --_lr-typing-dot-stagger-2-default: 1200ms;
   }
   /* The shared six-step size ladder renders here as three tiers: a presence cue is a few pixels of
      decoration, and six distinguishable dot diameters inside a 1em line box do not exist. Every
@@ -54,38 +41,38 @@ export const styles = css`
   :host([size='xs']),
   :host([size='s']),
   :host([size='small']) {
-    --lr-typing-dot-size: var(--lr-size-0-375rem);
-    --lr-typing-gap: var(--lr-size-0-1875rem);
-    --lr-typing-cursor-width: var(--lr-size-0-09375rem);
+    --_lr-typing-dot-size-default: var(--lr-size-0-375rem);
+    --_lr-typing-gap-default: var(--lr-size-0-1875rem);
+    --_lr-inline-cursor-width-default: var(--lr-size-0-09375rem);
   }
   :host([size='l']),
   :host([size='large']),
   :host([size='xl']) {
-    --lr-typing-dot-size: var(--lr-space-m);
-    --lr-typing-gap: var(--lr-space-s);
-    --lr-typing-cursor-width: var(--lr-size-0-1875rem);
+    --_lr-typing-dot-size-default: var(--lr-space-m);
+    --_lr-typing-gap-default: var(--lr-space-s);
+    --_lr-inline-cursor-width-default: var(--lr-size-0-1875rem);
   }
 
   [part='base'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lr-typing-gap);
+    gap: var(--lr-typing-gap, var(--_lr-typing-gap-default));
   }
 
   /* -- dots -------------------------------------------------------------- */
   [part='dot'] {
-    inline-size: var(--lr-typing-dot-size);
-    block-size: var(--lr-typing-dot-size);
+    inline-size: var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default));
+    block-size: var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default));
     border-radius: 50%;
     background: currentColor;
     opacity: 0.5;
-    animation: lr-typing-dot-bounce var(--lr-typing-duration) infinite;
+    animation: lr-typing-dot-bounce var(--lr-typing-duration, var(--_lr-typing-duration-default)) infinite;
   }
   [part='dot']:nth-child(2) {
-    animation-delay: var(--lr-typing-dot-stagger-1);
+    animation-delay: var(--lr-typing-dot-stagger-1, var(--_lr-typing-dot-stagger-1-default));
   }
   [part='dot']:nth-child(3) {
-    animation-delay: var(--lr-typing-dot-stagger-2);
+    animation-delay: var(--lr-typing-dot-stagger-2, var(--_lr-typing-dot-stagger-2-default));
   }
   @keyframes lr-typing-dot-bounce {
     0%,
@@ -103,13 +90,13 @@ export const styles = css`
   /* -- pulse --------------------------------------------------------------
      A single breathing dot, meant for tighter spaces than three dots allow. */
   [part='pulse'] {
-    inline-size: var(--lr-typing-dot-size);
-    block-size: var(--lr-typing-dot-size);
+    inline-size: var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default));
+    block-size: var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default));
     border-radius: 50%;
     background: currentColor;
     opacity: 1;
     transform: scale(1);
-    animation: lr-typing-pulse var(--lr-typing-duration) infinite;
+    animation: lr-typing-pulse var(--lr-typing-duration, var(--_lr-typing-duration-default)) infinite;
   }
   @keyframes lr-typing-pulse {
     0%,
@@ -130,12 +117,12 @@ export const styles = css`
      on/off even though the token's ease-out timing-function is in effect
      across the whole animation. */
   [part='cursor'] {
-    inline-size: var(--lr-typing-cursor-width);
-    block-size: var(--lr-typing-cursor-height);
+    inline-size: var(--lr-inline-cursor-width, var(--_lr-inline-cursor-width-default));
+    block-size: var(--lr-inline-cursor-height, var(--_lr-inline-cursor-height-default));
     background: currentColor;
-    border-radius: var(--lr-typing-cursor-width);
+    border-radius: var(--lr-inline-cursor-width, var(--_lr-inline-cursor-width-default));
     opacity: 1;
-    animation: lr-typing-cursor-blink var(--lr-typing-duration) infinite;
+    animation: lr-typing-cursor-blink var(--lr-typing-duration, var(--_lr-typing-duration-default)) infinite;
   }
   @keyframes lr-typing-cursor-blink {
     0%,

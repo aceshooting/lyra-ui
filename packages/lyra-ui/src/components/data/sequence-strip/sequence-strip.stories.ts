@@ -13,17 +13,17 @@ export default meta;
 type Story = StoryObj;
 
 const categories = (): SequenceStripCategory[] => [
-  { key: 'text', color: storyColor('chart1'), label: 'Text' },
-  { key: 'tool', color: storyColor('chart2'), label: 'Tool' },
-  { key: 'mixed', color: storyColor('chart3'), label: 'Mixed' },
+  { id: 'text', color: storyColor('chart1'), label: 'Text' },
+  { id: 'tool', color: storyColor('chart2'), label: 'Tool' },
+  { id: 'mixed', color: storyColor('chart3'), label: 'Mixed' },
 ];
 
 const items: SequenceStripItem[] = [
-  { id: '1', category: 'text', label: 'Turn 1: plain response' },
-  { id: '2', category: 'tool', marker: true, label: 'Turn 2: tool call (subagent)' },
-  { id: '3', category: 'tool', label: 'Turn 3: tool call' },
-  { id: '4', category: 'mixed', label: 'Turn 4: mixed' },
-  { id: '5', category: 'text', label: 'Turn 5: plain response' },
+  { id: '1', categoryId: 'text', label: 'Turn 1: plain response' },
+  { id: '2', categoryId: 'tool', marker: true, label: 'Turn 2: tool call (subagent)' },
+  { id: '3', categoryId: 'tool', label: 'Turn 3: tool call' },
+  { id: '4', categoryId: 'mixed', label: 'Turn 4: mixed' },
+  { id: '5', categoryId: 'text', label: 'Turn 5: plain response' },
 ];
 
 export const Default: Story = {
@@ -65,25 +65,25 @@ export const LegendNarrowAllocation: Story = {
         .items=${items}
         .categories=${[
           ...categories(),
-          { key: 'sub', color: storyColor('chart4'), label: 'Dispatched to a subagent' },
-          { key: 'err', color: storyColor('danger'), label: 'Errored tool invocation' },
+          { id: 'sub', color: storyColor('chart4'), label: 'Dispatched to a subagent' },
+          { id: 'err', color: storyColor('danger'), label: 'Errored tool invocation' },
         ] as SequenceStripCategory[]}
       ></lr-sequence-strip>
     </div>
   `,
 };
 
-/** High-cardinality strips retain every semantic cell and keyboard stop at 320px. Two hundred
- *  cells flex below their ordinary 2px minimum; above 320 items, decorative gaps collapse too. */
+/** High-cardinality strips mount a bounded 200-cell window at 320px. End shifts the projection to
+ *  the final global item while `aria-posinset`/`aria-setsize` retain the complete model. */
 export const HighCardinalityNarrow: Story = {
-  name: 'High cardinality (200 / 500 at 320px, LTR / RTL)',
+  name: 'Windowed high cardinality (200 / 500 at 320px, LTR / RTL)',
   render: () => html`
     <div style="display: grid; gap: var(--lr-space-l); justify-items: start">
       ${([200, 500] as const).flatMap((count) =>
         (['ltr', 'rtl'] as const).map((direction) => {
           const denseItems: SequenceStripItem[] = Array.from({ length: count }, (_, index) => ({
             id: `${count}-${index}`,
-            category: index % 3 === 0 ? 'tool' : index % 3 === 1 ? 'mixed' : 'text',
+            categoryId: index % 3 === 0 ? 'tool' : index % 3 === 1 ? 'mixed' : 'text',
             marker: index % 17 === 0,
             label: `Item ${index + 1} of ${count}`,
           }));
@@ -137,8 +137,8 @@ export const ControlledReplacementDuringArrow: Story = {
         if (event.key !== 'ArrowRight') return;
         const strip = event.currentTarget as HTMLElement & { items: SequenceStripItem[] };
         strip.items = [
-          { id: 'replacement-a', category: 'text', label: 'Replacement A' },
-          { id: 'replacement-b', category: 'tool', label: 'Replacement B' },
+          { id: 'replacement-a', categoryId: 'text', label: 'Replacement A' },
+          { id: 'replacement-b', categoryId: 'tool', label: 'Replacement B' },
         ];
       }}
     ></lr-sequence-strip>

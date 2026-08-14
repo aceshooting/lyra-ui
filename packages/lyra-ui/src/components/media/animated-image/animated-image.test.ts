@@ -198,6 +198,68 @@ it('reconciles playing against a reduced-motion preference that changed while de
   }
 });
 
+it('rebaselines detached play and unsafe-src writes without emitting on detach or reconnect', async () => {
+  const motion = stubReducedMotion(false);
+  const el = (await fixture(html`
+    <lr-animated-image alt="Pixel"></lr-animated-image>
+  `)) as LyraAnimatedImage;
+  const parent = el.parentElement!;
+  const events: string[] = [];
+  el.addEventListener('lr-play', () => events.push('play'));
+  el.addEventListener('lr-pause', () => events.push('pause'));
+  el.addEventListener('lr-error', () => events.push('error'));
+
+  try {
+    el.remove();
+    el.play = true;
+    el.src = 'javascript:alert(1)';
+    await el.updateComplete;
+    expect(el.playing).to.be.true;
+    expect(events, 'a detached update is state, not an observable transition').to.deep.equal([]);
+
+    parent.append(el);
+    await el.updateComplete;
+    expect(el.playing).to.be.true;
+    expect(el.hasAttribute('playing')).to.be.true;
+    expect(events, 'reconnection rebaselines the detached state').to.deep.equal([]);
+
+    el.play = false;
+    await el.updateComplete;
+    expect(events).to.deep.equal(['pause']);
+
+    el.src = 'javascript:alert(2)';
+    await el.updateComplete;
+    expect(events).to.deep.equal(['pause', 'error']);
+  } finally {
+    el.remove();
+    motion.restore();
+  }
+});
+
+it('suppresses a detached write whose pending update first flushes after reconnection', async () => {
+  const motion = stubReducedMotion(false);
+  try {
+    const el = (await fixture(html`
+      <lr-animated-image alt="Pixel"></lr-animated-image>
+    `)) as LyraAnimatedImage;
+    const parent = el.parentElement!;
+    const events: string[] = [];
+    el.addEventListener('lr-play', () => events.push('play'));
+    el.addEventListener('lr-error', () => events.push('error'));
+
+    el.remove();
+    el.play = true;
+    el.src = 'javascript:alert(1)';
+    parent.append(el);
+    await el.updateComplete;
+
+    expect(el.playing).to.be.true;
+    expect(events).to.deep.equal([]);
+  } finally {
+    motion.restore();
+  }
+});
+
 describe('lr-load / DPR-aware frame capture', () => {
   it('fires lr-load and captures a DPR-aware frozen frame matching the loaded image', async () => {
     const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
@@ -357,11 +419,11 @@ describe('play / playing / reduced-motion arbitration', () => {
     }
   });
 
-  it('el.playing = x has no defined effect -- read-only, control playback via .play', async () => {
+  it('exposes playing as a genuine getter-only state; control playback via .play', async () => {
     const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
     expect(() => {
       (el as unknown as { playing: boolean }).playing = true;
-    }).to.not.throw();
+    }).to.throw(TypeError);
     expect(el.playing).to.be.false;
   });
 });
@@ -403,6 +465,20 @@ describe('accessible name on the play button', () => {
     }
   });
 
+  it('preserves an explicitly empty host aria-label instead of replacing it with computed copy', async () => {
+    const el = (await fixture(html`
+      <lr-animated-image alt="Site tour" aria-label=""></lr-animated-image>
+    `)) as LyraAnimatedImage;
+    await loaded(el);
+    const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
+    expect(button.getAttribute('aria-label')).to.equal('');
+
+    el.removeAttribute('aria-label');
+    el.accessibleLabel = 'Property-authored control name';
+    await el.updateComplete;
+    expect(button.getAttribute('aria-label')).to.equal('Property-authored control name');
+  });
+
   it('keeps a non-empty accessible name on the play button while disabled by reduced motion', async () => {
     const stub = stubReducedMotion(true);
     try {
@@ -419,8 +495,8 @@ describe('accessible name on the play button', () => {
   });
 });
 
-describe('alt forwarding + fallback', () => {
-  it('forwards alt to the image alt and canvas aria-label, falling back to the localized default when empty', async () => {
+describe('alt forwarding + decorative presence semantics', () => {
+  it('forwards nonempty alt while preserving absent and explicit-empty values as decorative', async () => {
     const el = (await fixture(
       html`<lr-animated-image alt="Custom alt text"></lr-animated-image>`,
     )) as LyraAnimatedImage;
@@ -434,8 +510,14 @@ describe('alt forwarding + fallback', () => {
     await el.updateComplete;
     img = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
     canvas = el.shadowRoot!.querySelector('[part="canvas"]') as HTMLCanvasElement;
-    expect(img.alt).to.equal('Animated image');
-    expect(canvas.getAttribute('aria-label')).to.equal('Animated image');
+    expect(img.alt).to.equal('');
+    expect(canvas.hasAttribute('aria-label')).to.be.false;
+    expect(canvas.getAttribute('role')).to.equal('presentation');
+
+    el.alt = undefined;
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement).alt).to.equal('');
+    expect(el.shadowRoot!.querySelector('[part="canvas"]')!.getAttribute('role')).to.equal('presentation');
   });
 });
 
@@ -445,7 +527,7 @@ describe('string localization', () => {
     await loaded(el);
     const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
     const img = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
-    expect(img.alt).to.equal('Animated image');
+    expect(img.alt).to.equal('');
     expect(button.getAttribute('aria-label')).to.equal('Play Animated image');
   });
 
@@ -461,9 +543,25 @@ describe('string localization', () => {
     await loaded(el);
     const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
     const img = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
-    expect(img.alt).to.equal('Image animée');
+    expect(img.alt).to.equal('');
     expect(button.getAttribute('aria-label')).to.equal('Lire Image animée');
   });
+});
+
+it('ignores native load/error callbacks after disconnection', async () => {
+  const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
+  const image = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
+  let loads = 0;
+  let errors = 0;
+  el.addEventListener('lr-load', () => loads++);
+  el.addEventListener('lr-error', () => errors++);
+  el.remove();
+
+  image.dispatchEvent(new Event('load'));
+  image.dispatchEvent(new Event('error'));
+  await aTimeout(0);
+  expect(loads).to.equal(0);
+  expect(errors).to.equal(0);
 });
 
 describe('RTL', () => {

@@ -10,6 +10,7 @@ import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './subagent-panel.styles.js';
+import type { AgentRunActivateDetail } from '../run-events.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_subagentPanelCancelRun, LYRA_DEFAULT_subagentPanelEmpty, LYRA_DEFAULT_subagentPanelLabel, LYRA_DEFAULT_subagentPanelLimit, LYRA_DEFAULT_subagentPanelRetry, LYRA_DEFAULT_subagentPanelRetryRun } from '../../../internal/default-strings.generated.js';
@@ -23,15 +24,16 @@ export interface SubagentRun {
   status: AgentStatusKind;
   task?: string;
   model?: string;
-  progress?: number;
+  /** Completion ratio in the inclusive 0..1 range. */
+  progressRatio?: number;
   startedAt?: number;
   endedAt?: number;
   metadata?: Record<string, unknown>;
 }
 export interface LyraSubagentPanelEventMap {
-  'lr-run-select': CustomEvent<{ run: SubagentRun }>;
+  'lr-run-activate': CustomEvent<AgentRunActivateDetail<SubagentRun>>;
   'lr-cancel': CustomEvent<{ runId: string }>;
-  'lr-retry': CustomEvent<{ runId: string }>;
+  'lr-run-retry': CustomEvent<{ runId: string }>;
 }
 
 const STATUS_VARIANT: Partial<Record<AgentStatusKind, BadgeVariant>> = {
@@ -60,9 +62,9 @@ interface OrderedRuns {
  * task/model context, progress, selection, cancellation, and retry intents.
  *
  * @customElement lr-subagent-panel
- * @event lr-run-select - A complete subagent run was selected.
+ * @event lr-run-activate - A complete subagent run was activated. `detail: { runId, run }`.
  * @event lr-cancel - Cancellation was requested for an active run.
- * @event lr-retry - Retry was requested for an errored/cancelled run.
+ * @event lr-run-retry - Retry was requested for an errored/cancelled run.
  * @csspart base - The named subagent region.
  * @csspart list - Hierarchical run list.
  * @csspart run - One run.
@@ -111,7 +113,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) runs: SubagentRun[] = [];
-  @property({ attribute: 'selected-run-id' }) selectedRunId = '';
+  @property({ attribute: 'selected-run-id' }) selectedRunId: string | null = null;
   @property() label = '';
 
   /** Roving-tabindex focus target. `null` defaults the first rendered row to `tabindex="0"`. */
@@ -311,7 +313,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
         const row = rows.find((candidate) => candidate.run.id === target.dataset['runId']);
         if (!row) return;
         e.preventDefault();
-        this.emit('lr-run-select', { run: row.run });
+        this.emit('lr-run-activate', { runId: row.run.id, run: row.run });
         break;
       }
       default:
@@ -331,7 +333,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
 
   private renderRun = ({ run, depth, posInSet, setSize }: SubagentRow, firstId: string | undefined): TemplateResult => {
     const selected = run.id === this.selectedRunId;
-    const progress = typeof run.progress === 'number' ? finiteRange(run.progress, 0, 0, 1) : null;
+    const progress = typeof run.progressRatio === 'number' ? finiteRange(run.progressRatio, 0, 0, 1) : null;
     const runPart = selected ? 'run run-selected' : 'run';
     const tabbable = this.focusedId === run.id || (this.focusedId == null && run.id === firstId);
     return html`
@@ -350,9 +352,8 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
           <button
             part="run-trigger"
             type="button"
-            tabindex="-1"
             aria-pressed=${selected ? 'true' : 'false'}
-            @click=${() => this.emit('lr-run-select', { run })}
+            @click=${() => this.emit('lr-run-activate', { runId: run.id, run })}
           >
             <span part="label">${run.label}</span>
             <lr-badge part="status" variant=${STATUS_VARIANT[run.status] ?? 'neutral'}>${this.statusLabel(run.status)}</lr-badge>
@@ -374,7 +375,6 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
               ? html`<button
                   part="cancel"
                   type="button"
-                  tabindex="-1"
                   aria-label=${this.localize('subagentPanelCancelRun', undefined, { name: run.label })}
                   @click=${() => this.emit('lr-cancel', { runId: run.id })}
                 >×</button>`
@@ -383,9 +383,8 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
               ? html`<button
                   part="retry"
                   type="button"
-                  tabindex="-1"
                   aria-label=${this.localize('subagentPanelRetryRun', undefined, { name: run.label })}
-                  @click=${() => this.emit('lr-retry', { runId: run.id })}
+                  @click=${() => this.emit('lr-run-retry', { runId: run.id })}
                 >${this.localize('subagentPanelRetry')}</button>`
               : nothing}
           </span>
@@ -395,11 +394,11 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   };
 
   override render(): TemplateResult {
-    const label = this.getAttribute('aria-label') || this.label || this.localize('subagentPanelLabel');
+    const label = this.label || this.localize('subagentPanelLabel');
     const ordered = this.orderedRunsCache;
     const firstId = ordered.rows[0]?.run.id;
     return html`
-      <section part="base" aria-label=${label}>
+      <div part="base">
         ${this.runs.length
           ? html`<ul
               part="list"
@@ -414,7 +413,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
                     })}</p>`
                 : nothing}`
           : html`<lr-empty part="empty" heading=${this.localize('subagentPanelEmpty')}></lr-empty>`}
-      </section>
+      </div>
     `;
   }
 }

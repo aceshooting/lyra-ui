@@ -36,11 +36,11 @@ function syntheticManifest() {
           attribute: name,
           type: { text: metadata.readType },
         })),
-        attributes: Object.entries(contract).map(([name, metadata]) => ({
-          name,
-          fieldName: name,
-          type: { text: metadata.readType },
-        })),
+        attributes: Object.entries(contract).flatMap(([name, metadata]) =>
+          metadata.attribute === false
+            ? []
+            : [{ name, fieldName: name, type: { text: metadata.readType } }],
+        ),
       })),
     }],
   };
@@ -50,6 +50,7 @@ const EXPECTED_VALUES = {
   'lr-breadcrumb-item': { href: undefined },
   'lr-icon': { name: undefined, src: undefined },
   'lr-icon-button': { name: undefined },
+  'lr-filter-bar': {},
   'lr-input': {},
   'lr-split-panel': { snap: undefined },
   'lr-textarea': {},
@@ -116,11 +117,44 @@ test('CEM projects exact asymmetric write unions and both editor formats expand 
       const attribute = declaration.attributes.find((candidate) => candidate.name === name);
       const writeType = ACCESSOR_WRITE_TYPE_CONTRACTS.get(declaration.tagName)[name].writeType;
       assert.equal(member.type.text, writeType);
-      assert.equal(attribute.type.text, writeType);
-      assert.deepEqual(htmlDataValues(attribute.type.text, aliases)?.map(({ name: value }) => value), expected);
-      assert.deepEqual(webTypesValue(attribute.type.text, aliases)?.type.map(unquote), expected);
+      assert.equal(member.lyraReadType.text, ACCESSOR_WRITE_TYPE_CONTRACTS.get(declaration.tagName)[name].readType);
+      if (attribute) {
+        assert.equal(attribute.type.text, writeType);
+        assert.deepEqual(htmlDataValues(attribute.type.text, aliases)?.map(({ name: value }) => value), expected);
+        assert.deepEqual(webTypesValue(attribute.type.text, aliases)?.type.map(unquote), expected);
+      }
     }
   }
+});
+
+test('CEM projects property-only FilterBar write unions without inventing attributes', () => {
+  const manifest = syntheticManifest();
+  plugin.packageLinkPhase({ customElementsManifest: manifest });
+  const declaration = manifest.modules[0].declarations.find(
+    ({ tagName }) => tagName === 'lr-filter-bar',
+  );
+
+  assert.deepEqual(ACCESSOR_WRITE_TYPE_CONTRACTS.get('lr-filter-bar'), {
+    filters: {
+      readType: 'readonly LyraFilterBarFilterDefinition[]',
+      writeType: 'readonly LyraFilterBarFilterDefinition[] | null | undefined',
+      attribute: false,
+    },
+    value: {
+      readType: 'LyraFilterBarValue',
+      writeType: 'LyraFilterBarValue | null | undefined',
+      attribute: false,
+    },
+  });
+  assert.equal(declaration.attributes.length, 0);
+  assert.equal(
+    declaration.members.find(({ name }) => name === 'filters').lyraReadType.text,
+    'readonly LyraFilterBarFilterDefinition[]',
+  );
+  assert.equal(
+    declaration.members.find(({ name }) => name === 'value').lyraReadType.text,
+    'LyraFilterBarValue',
+  );
 });
 
 test('CEM projects the exact optional write surfaces for accessor-backed string and callback APIs', () => {
@@ -256,9 +290,8 @@ test('source scanning marks conflicting or opaque duplicate alias declarations a
 
 test('fresh no-write CEM retains reviewed runtime and public-document subclass contracts', async () => {
   const { manifest } = await generateManifest({ write: false });
-  const declaration = (tagName) => manifest.modules
-    .flatMap((module) => module.declarations ?? [])
-    .find((candidate) => candidate.tagName === tagName);
+  const declarations = manifest.modules.flatMap((module) => module.declarations ?? []);
+  const declaration = (tagName) => declarations.find((candidate) => candidate.tagName === tagName);
   const member = (tagName, name, kind = 'field') => declaration(tagName)?.members?.find(
     (candidate) => candidate.kind === kind && candidate.name === name,
   );
@@ -268,6 +301,18 @@ test('fresh no-write CEM retains reviewed runtime and public-document subclass c
 
   for (const tagName of ['lr-checkbox', 'lr-radio-group', 'lr-select', 'lr-slider', 'lr-switch']) {
     assert.equal(member(tagName, 'form')?.reflects, true, `${tagName}.form reflects`);
+  }
+  const formOwners = declarations.filter((candidate) =>
+    candidate.members?.some((entry) => entry.kind === 'field' && entry.name === 'form'),
+  );
+  assert.ok(formOwners.length > 0, 'the package has form-owner declarations to govern');
+  for (const owner of formOwners) {
+    const form = owner.members.find((entry) => entry.kind === 'field' && entry.name === 'form');
+    const formAttribute = owner.attributes?.find((entry) => entry.name === 'form');
+    assert.equal(form.type?.text, 'HTMLFormElement | string | null', `${owner.tagName}.form write type`);
+    assert.equal(form.lyraReadType?.text, 'HTMLFormElement | null', `${owner.tagName}.form read type`);
+    assert.equal(formAttribute?.type?.text, 'HTMLFormElement | string | null', `${owner.tagName}[form] type`);
+    assert.equal(formAttribute?.fieldName, 'form', `${owner.tagName}[form] field link`);
   }
   for (const tagName of ['lr-checkbox', 'lr-switch']) {
     assert.equal(member(tagName, 'defaultChecked')?.default, 'false', `${tagName}.defaultChecked default`);

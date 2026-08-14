@@ -2,7 +2,8 @@ import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './flag.js';
 import './flag-peer.js';
-import { loadFlagUrl, __setFlagUrlResolverForTesting } from './flag.js';
+import { loadFlagUrl, setFlagUrlResolver } from './flag.js';
+import { registerLyraFlagPeer } from './flag-peer.js';
 import type { LyraFlag } from './flag.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -25,8 +26,12 @@ async function img(el: LyraFlag): Promise<HTMLImageElement> {
   // library default (1000ms) to avoid flaking under load. Even 15000ms can be exhausted by the
   // coverage-instrumented 300+ file run before the two cold dynamic imports receive CPU time —
   // same class of issue as lr-graph's setup and code-block.test.ts's Shiki wait.
-  await waitUntil(() => el.shadowRoot!.querySelector('img'), 'flag image should render', { timeout: 45_000 });
-  return el.shadowRoot!.querySelector('img')!;
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('img:not([hidden])'),
+    'loaded flag image should render',
+    { timeout: 45_000 },
+  );
+  return el.shadowRoot!.querySelector('img:not([hidden])')!;
 }
 
 it('shows a loading skeleton and aria-busy while the flag package loads, and ignores a stale resolution once the code is cleared first', async () => {
@@ -115,40 +120,40 @@ it('country takes precedence over language when both are set', async () => {
   );
 });
 
-it('falls back to the standard variant when detailed is requested but the code has none', async () => {
-  const el = (await fixture(html`<lr-flag country="fr" variant="detailed"></lr-flag>`)) as LyraFlag;
+it('falls back to the standard fidelity when detailed is requested but the code has none', async () => {
+  const el = (await fixture(html`<lr-flag country="fr" fidelity="detailed"></lr-flag>`)) as LyraFlag;
   const image = await img(el);
   expect(image.getAttribute('src')).to.contain('fr.svg');
   expect(image.getAttribute('src')).to.not.contain('/detailed/');
 });
 
-it('re-resolves when variant is set to detailed on an already-mounted element', async () => {
+it('re-resolves when fidelity is set to detailed on an already-mounted element', async () => {
   const el = (await fixture(html`<lr-flag country="es"></lr-flag>`)) as LyraFlag;
   const first = await img(el);
   expect(first.getAttribute('src')).to.not.contain('/detailed/');
 
-  el.variant = 'detailed';
+  el.fidelity = 'detailed';
   await waitUntil(
     () => el.shadowRoot!.querySelector('img')?.getAttribute('src')?.includes('/detailed/es.svg'),
-    'flag image should update to the detailed variant',
+    'flag image should update to the detailed fidelity',
   );
 });
 
-it('requests the compact (WebP raster) variant for a code that has one', async () => {
-  const el = (await fixture(html`<lr-flag country="es" variant="compact"></lr-flag>`)) as LyraFlag;
+it('requests the compact (WebP raster) fidelity for a code that has one', async () => {
+  const el = (await fixture(html`<lr-flag country="es" fidelity="compact"></lr-flag>`)) as LyraFlag;
   const image = await img(el);
   expect(image.getAttribute('src')).to.contain('/compact/es.webp');
 });
 
-it('falls back to the standard variant when compact is set but the code has none', async () => {
-  const el = (await fixture(html`<lr-flag country="fr" variant="compact"></lr-flag>`)) as LyraFlag;
+it('falls back to the standard fidelity when compact is set but the code has none', async () => {
+  const el = (await fixture(html`<lr-flag country="fr" fidelity="compact"></lr-flag>`)) as LyraFlag;
   const image = await img(el);
   expect(image.getAttribute('src')).to.contain('fr.svg');
   expect(image.getAttribute('src')).to.not.contain('/compact/');
 });
 
-it('variant="detailed" resolves the detailed vector', async () => {
-  const el = (await fixture(html`<lr-flag country="es" variant="detailed"></lr-flag>`)) as LyraFlag;
+it('fidelity="detailed" resolves the detailed vector', async () => {
+  const el = (await fixture(html`<lr-flag country="es" fidelity="detailed"></lr-flag>`)) as LyraFlag;
   const image = await img(el);
   expect(image.getAttribute('src')).to.contain('/detailed/es.svg');
 });
@@ -161,37 +166,47 @@ it('ignores a stray `detailed` attribute, which 8.0.0 removed', async () => {
   expect(image.getAttribute('src')).to.not.contain('/detailed/');
 });
 
-it('re-resolves to the compact variant when variant is set on an already-mounted element', async () => {
+it('re-resolves to the compact fidelity when fidelity is set on an already-mounted element', async () => {
   const el = (await fixture(html`<lr-flag country="es"></lr-flag>`)) as LyraFlag;
   const first = await img(el);
   expect(first.getAttribute('src')).to.not.contain('/compact/');
 
-  el.variant = 'compact';
+  el.fidelity = 'compact';
   await waitUntil(
     () => el.shadowRoot!.querySelector('img')?.getAttribute('src')?.includes('/compact/es.webp'),
-    'flag image should update to the compact variant',
+    'flag image should update to the compact fidelity',
   );
 });
 
-it('reflects the round attribute', async () => {
-  const el = (await fixture(html`<lr-flag country="fr" round></lr-flag>`)) as LyraFlag;
-  expect(el.round).to.be.true;
-  expect(el.hasAttribute('round')).to.be.true;
+it('reflects and normalizes the shape attribute', async () => {
+  const el = (await fixture(html`<lr-flag country="fr" shape="circle"></lr-flag>`)) as LyraFlag;
+  expect(el.shape).to.equal('circle');
+  expect(el.getAttribute('shape')).to.equal('circle');
 
-  el.round = false;
+  el.shape = 'invalid' as 'circle';
   await el.updateComplete;
-  expect(el.hasAttribute('round')).to.be.false;
+  expect(el.shape).to.equal('rect');
+  expect(el.getAttribute('shape')).to.equal('rect');
 });
 
-it('reads the variant attribute into its property', async () => {
-  const el = (await fixture(html`<lr-flag country="es" variant="detailed"></lr-flag>`)) as LyraFlag;
-  expect(el.variant).to.equal('detailed');
+it('reads the fidelity attribute into its property', async () => {
+  const el = (await fixture(html`<lr-flag country="es" fidelity="detailed"></lr-flag>`)) as LyraFlag;
+  expect(el.fidelity).to.equal('detailed');
 
-  // `variant` is deliberately NOT reflected: nothing in the stylesheet selects on it, and the tier
-  // is resolved into the `src` the <img> ends up with, which is what a consumer can observe.
-  el.variant = 'compact';
+  el.fidelity = 'compact';
   await el.updateComplete;
-  expect(el.variant).to.equal('compact');
+  expect(el.fidelity).to.equal('compact');
+  expect(el.getAttribute('fidelity')).to.equal('compact');
+});
+
+it('normalizes a foreign fidelity value to the standard tier', async () => {
+  const el = await fixture<LyraFlag>(html`
+    <lr-flag country="es" fidelity="foreign"></lr-flag>
+  `);
+  expect(el.fidelity).to.equal('standard');
+  expect(el.getAttribute('fidelity')).to.equal('standard');
+  expect((await img(el)).getAttribute('src')).to.not.contain('/compact/');
+  expect(el.shadowRoot!.querySelector('img')!.getAttribute('src')).to.not.contain('/detailed/');
 });
 
 it('resolves a language to a representative country flag', async () => {
@@ -255,23 +270,24 @@ it('renders nothing for unknown input', async () => {
 });
 
 describe('src (pre-resolved URL, bypasses the peer-package lookup)', () => {
-  it('renders immediately with no loading state, ignoring country/language', async () => {
+  it('loads the direct source without a peer lookup, ignoring country/language', async () => {
     const el = (await fixture(
       html`<lr-flag src=${TEST_FLAG_SRC} country="fr" label="Custom"></lr-flag>`,
     )) as LyraFlag;
-    // No `await img(el)`/`waitUntil` needed: src bypasses the async peer-package
-    // round trip entirely, so the <img> is present on the very first render.
+    expect(el.getAttribute('aria-busy')).to.equal('true');
+    const image = await img(el);
     expect(el.getAttribute('aria-busy')).to.equal('false');
-    const image = el.shadowRoot!.querySelector('img');
-    expect((image) != null).to.equal(true);
-    expect(image!.getAttribute('src')).to.equal(TEST_FLAG_SRC);
-    expect(image!.getAttribute('alt')).to.equal('Custom');
+    expect(image.getAttribute('src')).to.equal(TEST_FLAG_SRC);
+    expect(image.getAttribute('alt')).to.equal('Custom');
   });
 
-  it('does not render an image for an unsafe pre-resolved src URL', async () => {
+  it('fails visibly for an unsafe pre-resolved src URL', async () => {
     const el = (await fixture(html`<lr-flag src="javascript:alert(1)"></lr-flag>`)) as LyraFlag;
     expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
-    expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.false;
+    expect(el.hasAttribute('data-error')).to.be.true;
+    expect(el.getAttribute('aria-busy')).to.equal('false');
+    expect(assertiveAnnouncements(), 'initial state is not a live transition').to.deep.equal([]);
   });
 
   it('falls back to country/language resolution once src is cleared', async () => {
@@ -286,12 +302,19 @@ describe('src (pre-resolved URL, bypasses the peer-package lookup)', () => {
     expect(image.getAttribute('src')).to.contain('fr.svg');
   });
 
-  it('switching src to a new value updates the image with no loading flash', async () => {
+  it('treats an explicitly empty src as absent so it cannot mask country resolution', async () => {
+    const el = await fixture<LyraFlag>(html`<lr-flag src="" country="fr"></lr-flag>`);
+    expect((await img(el)).getAttribute('src')).to.contain('fr.svg');
+  });
+
+  it('switching src to a new value enters a fresh native loading transaction', async () => {
     const el = (await fixture(html`<lr-flag src=${TEST_FLAG_SRC} label="A"></lr-flag>`)) as LyraFlag;
+    await img(el);
     el.src = TEST_FLAG_SRC_REPLACEMENT;
     await el.updateComplete;
+    expect(el.getAttribute('aria-busy')).to.equal('true');
+    expect((await img(el)).getAttribute('src')).to.equal(TEST_FLAG_SRC_REPLACEMENT);
     expect(el.getAttribute('aria-busy')).to.equal('false');
-    expect(el.shadowRoot!.querySelector('img')!.getAttribute('src')).to.equal(TEST_FLAG_SRC_REPLACEMENT);
   });
 });
 
@@ -374,25 +397,265 @@ describe('loadFlagUrl (uncached, dependency-injectable)', () => {
     expect(calls.length).to.equal(1);
     expect(calls[0][0]).to.contain('@aceshooting/lyra-flags');
   });
+
+  it('accepts a validated default-shaped peer and rejects malformed capabilities', async () => {
+    const fallback = async () => TEST_FLAG_SRC;
+    expect(await loadFlagUrl(() => Promise.resolve({ default: { flagUrl: fallback } }))).to.equal(
+      fallback,
+    );
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      expect(await loadFlagUrl(() => Promise.resolve({ flagUrl: 'not callable' }))).to.equal(null);
+      expect(await loadFlagUrl(() => Promise.resolve({}))).to.equal(null);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  it('fails closed when a peer namespace capability getter throws', async () => {
+    const hostile = {};
+    Object.defineProperty(hostile, 'flagUrl', {
+      get(): never {
+        throw new Error('hostile getter');
+      },
+    });
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      expect(await loadFlagUrl(() => Promise.resolve(hostile))).to.equal(null);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+});
+
+describe('live resolver registration', () => {
+  afterEach(() => setFlagUrlResolver(registerLyraFlagPeer()));
+
+  it('recovers a mounted peer-missing flag as soon as a resolver is registered', async () => {
+    setFlagUrlResolver(null);
+    const el = await fixture<LyraFlag>(html`<lr-flag country="fr"></lr-flag>`);
+    await waitUntil(() => !!el.shadowRoot!.querySelector('[part="error"]'));
+
+    setFlagUrlResolver(async () => TEST_FLAG_SRC);
+    const image = await img(el);
+    expect(image.getAttribute('src')).to.equal(TEST_FLAG_SRC);
+    expect(el.hasAttribute('data-error')).to.be.false;
+  });
+
+  it('ignores an old resolver result after a new resolver generation wins', async () => {
+    let settleOld: ((value: string) => void) | undefined;
+    setFlagUrlResolver(
+      () => new Promise<string>((resolve) => {
+        settleOld = resolve;
+      }),
+    );
+    const el = await fixture<LyraFlag>(html`<lr-flag country="fr"></lr-flag>`);
+    await waitUntil(() => settleOld !== undefined);
+
+    setFlagUrlResolver(async () => TEST_FLAG_SRC_REPLACEMENT);
+    expect((await img(el)).getAttribute('src')).to.equal(TEST_FLAG_SRC_REPLACEMENT);
+    settleOld!(TEST_FLAG_SRC);
+    await aTimeout(20);
+    expect(el.shadowRoot!.querySelector('img')!.getAttribute('src')).to.equal(
+      TEST_FLAG_SRC_REPLACEMENT,
+    );
+  });
+
+  it('observes the latest resolver generation after reconnect', async () => {
+    setFlagUrlResolver(null);
+    const el = await fixture<LyraFlag>(html`<lr-flag country="fr"></lr-flag>`);
+    await waitUntil(() => !!el.shadowRoot!.querySelector('[part="error"]'));
+    const parent = el.parentElement!;
+    el.remove();
+    setFlagUrlResolver(async () => TEST_FLAG_SRC);
+    parent.append(el);
+    expect((await img(el)).getAttribute('src')).to.equal(TEST_FLAG_SRC);
+  });
+});
+
+describe('connection-scoped source transactions', () => {
+  afterEach(() => setFlagUrlResolver(registerLyraFlagPeer()));
+
+  it('does not resolve a country written while detached and restarts it after reconnect', async () => {
+    let calls = 0;
+    setFlagUrlResolver(async () => {
+      calls++;
+      return TEST_FLAG_SRC;
+    });
+    const el = await fixture<LyraFlag>(html`<lr-flag></lr-flag>`);
+    const parent = el.parentElement!;
+    el.remove();
+    el.country = 'fr';
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(calls).to.equal(0);
+    expect(el.shadowRoot!.querySelector('img') === null).to.be.true;
+
+    parent.append(el);
+    await waitUntil(() => calls === 1);
+    expect((await img(el)).getAttribute('src')).to.equal(TEST_FLAG_SRC);
+  });
+
+  it('does not render a direct source written while detached and starts it after reconnect', async () => {
+    const el = await fixture<LyraFlag>(html`<lr-flag></lr-flag>`);
+    const parent = el.parentElement!;
+    el.remove();
+    el.src = '/detached-flag.svg';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('img') === null).to.be.true;
+
+    parent.append(el);
+    await el.updateComplete;
+    const current = el.shadowRoot!.querySelector('img')!;
+    expect(current.getAttribute('src')).to.equal('/detached-flag.svg');
+    current.dispatchEvent(new Event('load'));
+    await el.updateComplete;
+    expect(el.getAttribute('aria-busy')).to.equal('false');
+  });
+
+  it('ignores a peer result that settles detached and starts a fresh request on reconnect', async () => {
+    const resolvers: Array<(value: string) => void> = [];
+    setFlagUrlResolver(
+      () => new Promise<string>((resolve) => resolvers.push(resolve)),
+    );
+    const el = await fixture<LyraFlag>(html`<lr-flag country="fr"></lr-flag>`);
+    await waitUntil(() => resolvers.length === 1);
+    const parent = el.parentElement!;
+    el.remove();
+    resolvers[0]!(TEST_FLAG_SRC);
+    await aTimeout(20);
+    expect(el.shadowRoot!.querySelector('img') === null).to.be.true;
+
+    parent.append(el);
+    await waitUntil(() => resolvers.length === 2);
+    resolvers[1]!(TEST_FLAG_SRC_REPLACEMENT);
+    expect((await img(el)).getAttribute('src')).to.equal(TEST_FLAG_SRC_REPLACEMENT);
+  });
+
+  it('ignores native terminal events delivered detached and remounts the image on reconnect', async () => {
+    const el = await fixture<LyraFlag>(html`<lr-flag src="/pending-flag.svg"></lr-flag>`);
+    const firstImage = el.shadowRoot!.querySelector('img')!;
+    const parent = el.parentElement!;
+    el.remove();
+    firstImage.dispatchEvent(new Event('error'));
+    expect(el.hasAttribute('data-error')).to.be.false;
+
+    parent.append(el);
+    await el.updateComplete;
+    const current = el.shadowRoot!.querySelector('img')!;
+    expect(current === firstImage).to.be.false;
+    current.dispatchEvent(new Event('load'));
+    await el.updateComplete;
+    expect(el.getAttribute('aria-busy')).to.equal('false');
+    expect(current.hasAttribute('hidden')).to.be.false;
+  });
+});
+
+it('keeps stale native image terminal events from mutating a replacement request', async () => {
+  const el = await fixture<LyraFlag>(html`<lr-flag src="/old-flag.svg"></lr-flag>`);
+  const oldImage = el.shadowRoot!.querySelector('img')!;
+  el.src = TEST_FLAG_SRC;
+  await el.updateComplete;
+  const replacement = el.shadowRoot!.querySelector('img')!;
+  expect(replacement === oldImage).to.be.false;
+
+  oldImage.dispatchEvent(new Event('error'));
+  expect(el.hasAttribute('data-error')).to.be.false;
+  replacement.dispatchEvent(new Event('load'));
+  await el.updateComplete;
+  expect(el.getAttribute('aria-busy')).to.equal('false');
+  expect(el.shadowRoot!.querySelector('img')!.hasAttribute('hidden')).to.be.false;
+});
+
+it('rejects an A-to-B-to-A stale native event even when the source identity repeats', async () => {
+  const el = await fixture<LyraFlag>(html`<lr-flag src="/same-flag.svg"></lr-flag>`);
+  const firstA = el.shadowRoot!.querySelector('img')!;
+
+  el.src = '/middle-flag.svg';
+  await el.updateComplete;
+  el.src = '/same-flag.svg';
+  await el.updateComplete;
+  const currentA = el.shadowRoot!.querySelector('img')!;
+  expect(currentA === firstA).to.be.false;
+
+  firstA.dispatchEvent(new Event('error'));
+  firstA.dispatchEvent(new Event('load'));
+  await el.updateComplete;
+  expect(el.hasAttribute('data-error')).to.be.false;
+  expect(el.getAttribute('aria-busy')).to.equal('true');
+  expect(currentA.hasAttribute('hidden')).to.be.true;
+
+  currentA.dispatchEvent(new Event('load'));
+  await el.updateComplete;
+  expect(el.getAttribute('aria-busy')).to.equal('false');
+  expect(currentA.hasAttribute('hidden')).to.be.false;
+});
+
+it('turns a current native image failure into the localized contained error state', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <span style="display:inline">before <lr-flag src="/broken.svg"></lr-flag> after</span>
+  `);
+  const flag = wrapper.querySelector('lr-flag') as LyraFlag;
+  flag.shadowRoot!.querySelector('img')!.dispatchEvent(new Event('error'));
+  await flag.updateComplete;
+  expect(flag.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Flag unavailable');
+  expect(flag.getAttribute('aria-busy')).to.equal('false');
+  expect(flag.hasAttribute('data-error')).to.be.true;
+  expect(getComputedStyle(flag).aspectRatio).to.equal('auto');
+  expect(getComputedStyle(flag).lineHeight).to.not.equal('0px');
+});
+
+it('contains long localized error copy at narrow LTR/RTL widths for both shapes', async () => {
+  const message = 'Unavailable '.repeat(80);
+  for (const direction of ['ltr', 'rtl'] as const) {
+    for (const shape of ['rect', 'circle'] as const) {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction} style="inline-size:319px;max-inline-size:100%;">
+          before
+          <lr-flag
+            src="javascript:blocked"
+            shape=${shape}
+            .strings=${{ flagLoadError: message }}
+          ></lr-flag>
+          after
+        </div>
+      `);
+      const flag = wrapper.querySelector('lr-flag') as LyraFlag;
+      const error = flag.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const errorRect = error.getBoundingClientRect();
+      expect(wrapper.scrollWidth, `${direction}/${shape} wrapper overflow`).to.be.at.most(
+        wrapper.clientWidth,
+      );
+      expect(errorRect.left, `${direction}/${shape} inline start`).to.be.at.least(
+        wrapperRect.left - 0.5,
+      );
+      expect(errorRect.right, `${direction}/${shape} inline end`).to.be.at.most(
+        wrapperRect.right + 0.5,
+      );
+      expect(error.textContent).to.equal(message);
+    }
+  }
 });
 
 describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
   // The real `@aceshooting/lyra-flags` peer's `flagUrl(code)` never actually rejects (an unknown
   // code just resolves `undefined`), so `loadFlagUrl()`'s own try/catch -- which only guards the
   // *import* step -- cannot exercise a resolver function that itself rejects.
-  // `__setFlagUrlResolverForTesting` swaps in a rejecting resolver at the exact seam
-  // `willUpdate()` reads through (`loadFlagUrlResolver()`'s cache), making that behavior directly
-  // testable without uninstalling the real peer package.
+  // The public peer-registration seam supplies a rejecting resolver at the exact boundary the
+  // component uses, without shipping a test-only runtime export.
   afterEach(() => {
     // Restore the real cached resolver for every later test in this file/suite.
-    __setFlagUrlResolverForTesting(undefined);
+    setFlagUrlResolver(registerLyraFlagPeer());
   });
 
   it('does not leave an unhandled promise rejection when the resolver function itself rejects, matching the baseline (peer-missing) behavior of resolving to loading=false', async () => {
-    __setFlagUrlResolverForTesting(
-      Promise.resolve(async () => {
+    setFlagUrlResolver(
+      async () => {
         throw new Error('network failure');
-      }),
+      },
     );
     let caught: unknown;
     const onUnhandled = (e: PromiseRejectionEvent) => (caught = e.reason);
@@ -417,10 +680,10 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
   });
 
   it('fails closed visibly and appends each localized resolver failure to the light-DOM sink', async () => {
-    __setFlagUrlResolverForTesting(
-      Promise.resolve(async () => {
+    setFlagUrlResolver(
+      async () => {
         throw new Error('network failure');
-      }),
+      },
     );
     const originalWarn = console.warn;
     console.warn = () => {};
@@ -451,7 +714,7 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
   it('renders a real English sentence, not the raw key name, when no locale is registered', async () => {
     // Every other test here supplies `.strings`, which masked a missing DEFAULT_STRINGS entry:
     // resolveLyraString() falls back to the key itself, so [part="error"] read "flagLoadError".
-    __setFlagUrlResolverForTesting(Promise.resolve(null));
+    setFlagUrlResolver(null);
     const el = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
     await waitUntil(() => !!el.shadowRoot!.querySelector('[part="error"]'));
     const text = el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim();
@@ -460,7 +723,7 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
   });
 
   it('distinguishes a missing resolver from a valid resolver returning no flag', async () => {
-    __setFlagUrlResolverForTesting(Promise.resolve(null));
+    setFlagUrlResolver(null);
     const missing = (await fixture(html`
       <lr-flag country="fr" .strings=${{ flagLoadError: 'Flags unavailable.' }}></lr-flag>
     `)) as LyraFlag;
@@ -469,7 +732,7 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
       'Flags unavailable.',
     );
 
-    __setFlagUrlResolverForTesting(Promise.resolve(async () => undefined));
+    setFlagUrlResolver(async () => undefined);
     const unknown = (await fixture(html`
       <lr-flag country="zz" .strings=${{ flagLoadError: 'Flags unavailable.' }}></lr-flag>
     `)) as LyraFlag;
@@ -480,13 +743,11 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
 
   it('ignores a rejection superseded by a newer country/language/src change (the same resolveToken guard the .then() branch uses), while the still-current call still recovers from its own rejection', async () => {
     const rejecters: Array<(err: unknown) => void> = [];
-    __setFlagUrlResolverForTesting(
-      Promise.resolve(
-        () =>
-          new Promise<string | undefined>((_resolve, reject) => {
-            rejecters.push(reject);
-          }),
-      ),
+    setFlagUrlResolver(
+      () =>
+        new Promise<string | undefined>((_resolve, reject) => {
+          rejecters.push(reject);
+        }),
     );
     let caught: unknown;
     const onUnhandled = (e: PromiseRejectionEvent) => (caught = e.reason);
@@ -570,5 +831,22 @@ it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired
     expect(calledOnSelf).to.be.true;
   } finally {
     proto.updated = original;
+  }
+});
+
+it('calls super.adoptedCallback so owner-realm locale and direction caches are invalidated', async () => {
+  const proto = LyraElement.prototype;
+  const original = proto.adoptedCallback;
+  let calledOnSelf = false;
+  proto.adoptedCallback = function (this: LyraElement): void {
+    if (this.tagName === 'LR-FLAG') calledOnSelf = true;
+    original.call(this);
+  };
+  try {
+    const el = (await fixture(html`<lr-flag></lr-flag>`)) as LyraFlag;
+    el.adoptedCallback();
+    expect(calledOnSelf).to.be.true;
+  } finally {
+    proto.adoptedCallback = original;
   }
 });

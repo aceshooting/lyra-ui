@@ -2,8 +2,8 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { assertTableDimensions, isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
-import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { loadPapaParseCached } from '../../../internal/papaparse-loader.js';
 import { parseCellRange, type ParsedCellRange } from '../../../internal/cell-range.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
@@ -15,6 +15,8 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_datasetViewerCaption, LYRA_DEFAULT_datasetViewerCaptionNamed, LYRA_DEFAULT_datasetViewerEmpty, LYRA_DEFAULT_datasetViewerMissingParser, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDataset, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
@@ -63,9 +65,14 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * locale-aware case-insensitive substring match over the header followed by every body cell's raw
  * string value, ordered row then column.
  *
+ * A quote-aware structural scan enforces the 10,000-data-row, 1,000-field, 1,000,000-cell, and
+ * 100-diagnostic ceilings before PapaParse can materialize an amplified result. The peer then runs
+ * with streaming record callbacks and the same limits as a second boundary.
+ *
  * @customElement lr-dataset-viewer
  * @event lr-render-error - Fired when fetching or parsing fails, the resource guard rejects the
- *   table, or PapaParse returns nonfatal diagnostics alongside a recoverable partial table.
+ *   table, or PapaParse returns up to the bounded diagnostic ceiling alongside a recoverable
+ *   partial table.
  * @event lr-highlight-activate - A `highlights` cell was clicked, or activated via Enter/Space
  *   while focused. `detail: { id }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -73,13 +80,13 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
- * @csspart base - The root wrapper. Carries a persistent `role="region"` named by a host
- *   `aria-label` (winning by attribute presence) or otherwise `name`, in every fetch state --
- *   idle, loading, empty, error and loaded alike. With neither set it stays a plain wrapper rather
- *   than an unnamed region.
+ * @csspart base - The stable root wrapper with explicit `aria-busy` across every fetch state. `name` supplies its shadow
+ *   region name; a non-empty host `aria-label` instead leaves ownership on the host, while an
+ *   explicitly empty label remains explicit on this shadow owner. With neither source it stays a
+ *   plain wrapper rather than an unnamed region.
  * @csspart body - The scrollable body wrapper.
- * @csspart table - The `role="table"` container. Its accessible name is a host `aria-label` when
- *   set, otherwise `name`, otherwise a localized row-count caption.
+ * @csspart table - The `role="table"` container, named by the display name plus localized row
+ *   count or by the localized row count alone; it never copies the host's overall name.
  * @csspart header-row - The sticky header row (`role="row"`).
  * @csspart header-cell - A header cell (`role="columnheader"`).
  * @csspart data-row - One virtualized data row.
@@ -90,7 +97,7 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  *   emits `lr-highlight-activate` on click or Enter/Space. Its accessible name localizes the
  *   complete cell-value and annotation message through separate `{value}` and `{label}`
  *   placeholders.
- * @csspart spinner - The loading status region.
+ * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
  * @csspart error - The error message region.
  * @cssprop [--lr-dataset-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
@@ -123,12 +130,12 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
   /** URL to fetch and parse as delimited text. */
   @property() src = '';
-  /** Display name used for the table's accessible name when the host has no `aria-label`, and for
-   *  the `[part="base"]` region landmark in every fetch state. Host `aria-label` wins by attribute
-   *  presence, including an empty value. */
+  /** Display name used for the table's row-count caption and for `[part="base"]` when host
+   *  `aria-label` is absent. A non-empty host label remains on the host; an explicitly empty one
+   *  stays explicit on the shadow owner. */
   @property() name = '';
   /** CSS length that caps the scrollable body. */
   /** A CSS `max-height`; invalid values are ignored. */
@@ -165,7 +172,8 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.cancelPendingAnimationFrames();
     this.announcements.adopted();
   }
@@ -271,7 +279,6 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     if (!result.fields.length || !result.rows.length) {
       return { table: null, errors: result.errors };
     }
-    assertTableDimensions(result.rows.length, result.fields.length);
     return {
       table: { fields: result.fields, rows: result.rows },
       errors: result.errors,
@@ -456,9 +463,9 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
       case 'loaded': {
         const { fields, rows } = this.fetchState.table;
         const localizedCount = getNumberFormat(this.effectiveLocale).format(rows.length);
-        const label = hostAriaLabel(this) ?? (this.name
+        const label = this.name
           ? this.localize('datasetViewerCaptionNamed', undefined, { name: this.name, count: localizedCount })
-          : this.localize('datasetViewerCaption', undefined, { count: localizedCount }));
+          : this.localize('datasetViewerCaption', undefined, { count: localizedCount });
         const headerHighlights = this.cellHighlightsForRow(1);
         return html`
           <div part="table" role="table" aria-label=${label} aria-rowcount=${rows.length + 1} aria-colcount=${fields.length}>
@@ -475,12 +482,12 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
               row-index-offset="1"
               @lr-load-more=${this.stopInternalEvent}
               @lr-visible-range-changed=${this.stopInternalEvent}
-              @lr-scroll=${this.stopInternalEvent}
+              @lr-virtual-scroll=${this.stopInternalEvent}
             ></lr-virtual-list>
           </div>
         `;
       }
-      case 'loading': return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+      case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'empty': return html`<p class="empty-note">${this.localize('datasetViewerEmpty')}</p>`;
       case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle':
@@ -490,20 +497,16 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
 
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    // `name` (or a host-level aria-label) names the dataset region in EVERY fetch state, not just
+    // `name` names the dataset region in EVERY fetch state, not just
     // once a table exists -- otherwise a landmark-navigating screen-reader user finds nothing at
     // all while the viewer is idle, loading, empty, or in error, which is every state except a
-    // successful non-empty load. The richer row-count caption stays on the inner [part='table']:
-    // the two are complementary, matching <lr-csv-viewer>/<lr-archive-viewer>'s base-vs-content
-    // split. With neither name nor aria-label there is nothing meaningful to announce, so the
-    // region role is only added once a name exists (mirroring <lr-archive-viewer>).
-    const authoredLabel = hostAriaLabel(this);
-    const label = authoredLabel ?? this.name;
-    const named = authoredLabel !== null || Boolean(this.name);
+    // successful non-empty load. The richer row-count caption stays on the inner [part='table'].
+    // A non-empty host name owns the overall semantics and is never copied to either shadow owner;
+    // with neither name source there is no unnamed region (mirroring <lr-archive-viewer>).
+    const label = viewerSemanticLabel(this, this.name || null);
+    const role = label === null ? null : viewerSemanticRole(this, 'region');
     const style = maxHeight ? styleMap({ '--lr-dataset-viewer-max-height': maxHeight }) : nothing;
-    return named
-      ? html`<div part="base" role="region" aria-label=${label} style=${style}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`
-      : html`<div part="base" style=${style}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div part="base" role=${role ?? nothing} aria-label=${label ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'} style=${style}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

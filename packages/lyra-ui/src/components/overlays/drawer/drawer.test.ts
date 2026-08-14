@@ -25,6 +25,18 @@ it('reflects the inherited pinned Web Awesome label property', async () => {
   expect(el.getAttribute('label')).to.equal('Filters');
 });
 
+it('inherits guarded reentrant preflight so an opposite close supersedes show', async () => {
+  const el = (await fixture(html`<lr-drawer label="Filters"></lr-drawer>`)) as LyraDrawer;
+  let shows = 0;
+  el.addEventListener('lr-show', () => {
+    shows++;
+    void el.hide();
+  }, { once: true });
+  await el.show();
+  expect(shows).to.equal(1);
+  expect(el.open).to.equal(false);
+});
+
 it('closes through the inherited cancelable close contract', async () => {
   const el = (await fixture(html`
     <lr-drawer open heading="Details" closable></lr-drawer>
@@ -152,6 +164,25 @@ it('contains RTL unbroken body and footer content in a 320px viewport-bound draw
   expect(body.scrollHeight, 'long body content must remain independently scrollable').to.be.greaterThan(body.clientHeight);
   body.scrollTop = 1;
   expect(body.scrollTop, 'the body scrolling surface must accept a keyboard/mouse scroll position').to.be.greaterThan(0);
+});
+
+it('keeps a long header-actions projection and the close target inside a 319px drawer', async () => {
+  const el = (await fixture(html`
+    <lr-drawer open closable heading="Settings" style="inline-size:319px;block-size:16rem;inset-inline-end:auto;inset-block-end:auto">
+      <button slot="header-actions">${'LocalizedAction'.repeat(120)}</button>
+      Body
+    </lr-drawer>
+  `)) as LyraDrawer;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector('[part="header-actions"]') as HTMLElement;
+  const close = el.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement;
+  const panelRect = panel.getBoundingClientRect();
+  for (const target of [actions, close]) {
+    const rect = target.getBoundingClientRect();
+    expect(rect.left).to.be.at.least(panelRect.left - 1);
+    expect(rect.right).to.be.at.most(panelRect.right + 1);
+  }
 });
 
 describe('inherited show/hide lifecycle', () => {

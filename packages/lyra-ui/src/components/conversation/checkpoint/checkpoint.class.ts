@@ -1,10 +1,12 @@
-import { html, svg, nothing, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { html, svg, nothing, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { styles } from './checkpoint.styles.js';
+import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { nextId } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_checkpointConfirmPrompt, LYRA_DEFAULT_checkpointLabel, LYRA_DEFAULT_checkpointRestore, LYRA_DEFAULT_checkpointRestoreWithContext, LYRA_DEFAULT_checkpointRestoring, LYRA_DEFAULT_confirm } from '../../../internal/default-strings.generated.js';
@@ -104,7 +106,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
 
   /** Optional creation time, rendered as `<time datetime>`, default `hour:minute` in
    *  `effectiveLocale`. Invalid strings are treated as unset. */
-  @property({ attribute: false }) timestamp?: Date | string;
+  @property({ attribute: false }) timestamp?: LyraTimestamp;
 
   /** Overrides the default `hour:minute` rendering of `timestamp`. */
   @property({ attribute: false }) formatTimestamp?: (date: Date) => string;
@@ -122,14 +124,15 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
 
   @state() private confirming = false;
 
+  private readonly confirmPromptId = nextId('checkpoint-confirm-prompt');
+  private focusGeneration = 0;
+
   private get computedLabel(): string {
     return this.label || this.localize('checkpointLabel');
   }
 
   private get normalizedTimestamp(): Date | undefined {
-    if (this.timestamp === undefined) return undefined;
-    const date = this.timestamp instanceof Date ? this.timestamp : new Date(this.timestamp);
-    return Number.isNaN(date.getTime()) ? undefined : date;
+    return normalizeLyraTimestamp(this.timestamp);
   }
 
   private fireRestore(): void {
@@ -140,13 +143,15 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   }
 
   private onRestoreClick = (): void => {
-    if (this.restoring) return;
+    if (!this.restorable || this.restoring || this.confirming) return;
     if (!this.confirmRestore) {
       this.fireRestore();
       return;
     }
     this.confirming = true;
+    const generation = ++this.focusGeneration;
     void this.updateComplete.then(() => {
+      if (generation !== this.focusGeneration || !this.isConnected || !this.confirming) return;
       (this.renderRoot.querySelector('[part="confirm-button"]') as HTMLButtonElement | null)?.focus();
     });
   };
@@ -154,14 +159,26 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   private revertToRestore(refocus: boolean): void {
     if (!this.confirming) return;
     this.confirming = false;
+    const generation = ++this.focusGeneration;
     if (refocus) {
       void this.updateComplete.then(() => {
+        if (
+          generation !== this.focusGeneration ||
+          !this.isConnected ||
+          this.confirming ||
+          !this.restorable ||
+          this.restoring
+        ) return;
         (this.renderRoot.querySelector('[part="restore-button"]') as HTMLButtonElement | null)?.focus();
       });
     }
   }
 
   private onConfirmClick = (): void => {
+    if (!this.confirming || !this.restorable || !this.confirmRestore || this.restoring) {
+      this.revertToRestore(false);
+      return;
+    }
     this.revertToRestore(true);
     this.fireRestore();
   };
@@ -181,9 +198,32 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
     if (group && (!next || !group.contains(next))) this.revertToRestore(false);
   };
 
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (
+      this.confirming &&
+      (changed.has('restorable') || changed.has('confirmRestore') || changed.has('restoring')) &&
+      (!this.restorable || !this.confirmRestore || this.restoring)
+    ) {
+      this.confirming = false;
+      this.focusGeneration++;
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.confirming = false;
+    this.focusGeneration++;
+    super.disconnectedCallback();
+  }
+
+  override click(): void {
+    if (!this.restorable || this.restoring || this.confirming) return;
+    (this.renderRoot.querySelector('[part="restore-button"]') as HTMLButtonElement | null)?.click();
+  }
+
   override render(): TemplateResult {
     const label = this.computedLabel;
-    const ariaLabel = this.getAttribute('aria-label') || label;
+    const ariaLabel = this.getAttribute('aria-label') ?? label;
     const ts = this.normalizedTimestamp;
     const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
 
@@ -201,11 +241,21 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
                   @keydown=${this.onConfirmGroupKeyDown}
                   @focusout=${this.onConfirmGroupFocusOut}
                 >
-                  <span part="confirm-prompt">${this.localize('checkpointConfirmPrompt')}</span>
-                  <button part="confirm-button" type="button" @click=${this.onConfirmClick}>
+                  <span id=${this.confirmPromptId} part="confirm-prompt">${this.localize('checkpointConfirmPrompt')}</span>
+                  <button
+                    part="confirm-button"
+                    type="button"
+                    aria-describedby=${this.confirmPromptId}
+                    @click=${this.onConfirmClick}
+                  >
                     ${this.localize('confirm')}
                   </button>
-                  <button part="cancel-button" type="button" @click=${this.onCancelClick}>
+                  <button
+                    part="cancel-button"
+                    type="button"
+                    aria-describedby=${this.confirmPromptId}
+                    @click=${this.onCancelClick}
+                  >
                     ${this.localize('cancel')}
                   </button>
                 </span>

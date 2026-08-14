@@ -1,6 +1,10 @@
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import {
+  resolveBoundedCanvasAllocation,
+  type BoundedCanvasAllocation,
+} from '../../../internal/canvas.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
@@ -17,13 +21,18 @@ import { LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_qrCodeGeneratio
 const DEFAULT_SIZE = 128;
 const MIN_SIZE = 1;
 /**
- * An untrusted `size` drives the canvas backing-store allocation directly
- * (`size * devicePixelRatio` per side, i.e. RGBA pixel data on the order of
- * `4 * (size * dpr) ** 2` bytes). Keeping it within this bound avoids an
- * attacker- or typo-supplied value turning a single QR code into an
- * unbounded allocation.
+ * An untrusted `size` drives both layout and the canvas backing store. The
+ * public size remains bounded independently from the stricter backing-store
+ * pixel budget below.
  */
 const MAX_SIZE = 2048;
+/** The pinned WA/SL QR renderers both use a fixed two backing pixels per CSS pixel. */
+const QR_BACKING_SCALE = 2;
+/** Safety-only ceilings. Ordinary sizes retain the exact fixed 2x upstream geometry. */
+const MAX_CANVAS_DIMENSION = 4096;
+const MAX_CANVAS_PIXELS = 8_388_608;
+/** QR version 40 is 177 modules wide; larger peer output is not a valid QR matrix. */
+const MAX_QR_MODULE_COUNT = 177;
 const DEFAULT_RADIUS = 0;
 const MIN_RADIUS = 0;
 const MAX_RADIUS = 0.5;
@@ -31,25 +40,16 @@ const DEFAULT_IMAGE_COVERAGE = 0.5;
 const DEFAULT_IMAGE_PADDING = 0;
 const DEFAULT_ERROR_CORRECTION: LyraQrCodeErrorCorrection = 'H';
 const ERROR_CORRECTION_LEVELS: ReadonlySet<string> = new Set(['L', 'M', 'Q', 'H']);
-/**
- * The optional `qrcode` peer's own default renderer bakes a 4-module light
- * margin around the symbol (its `renderer/utils.js`, `margin` defaults to
- * `4`). Reproduced here so this component is scannable out of the box with
- * zero consumer configuration -- not a public property (an ambient host CSS
- * `padding` adds further breathing room on top of this, but is not a
- * substitute for it).
- */
-const QUIET_ZONE_MODULES = 4;
 const FALLBACK_FILL = '#000000';
-const FALLBACK_BACKGROUND = '#ffffff';
+const FALLBACK_BACKGROUND = 'transparent';
 
 export type LyraQrCodeErrorCorrection = 'L' | 'M' | 'Q' | 'H';
 
 /** A generated QR symbol's module (bit) matrix -- the subset of `qrcode`'s own `create()` return
  *  shape this component actually consumes. */
 interface QrModules {
-  size: number;
-  get(row: number, col: number): number;
+  readonly size: number;
+  get(row: number, col: number): 0 | 1;
 }
 
 type QrCodeState =
@@ -57,6 +57,49 @@ type QrCodeState =
   | { kind: 'loading' }
   | { kind: 'ready'; modules: QrModules; image?: HTMLImageElement }
   | { kind: 'error'; message: string };
+
+function isObjectLike(value: unknown): value is object {
+  return (typeof value === 'object' || typeof value === 'function') && value !== null;
+}
+
+/**
+ * Clones the bounded bit matrix consumed by paint. No peer-owned object or getter survives this
+ * boundary, so later mutation cannot alter redraws and malformed/hostile shapes fail inside the
+ * generation error path rather than during Lit's subsequent update.
+ */
+function normalizeQrModules(result: unknown): QrModules {
+  if (!isObjectLike(result)) throw new TypeError('QR result must be an object.');
+  const modules = (result as { modules?: unknown }).modules;
+  if (!isObjectLike(modules)) throw new TypeError('QR result has no module matrix.');
+
+  const size = (modules as { size?: unknown }).size;
+  const get = (modules as { get?: unknown }).get;
+  if (!Number.isSafeInteger(size) || (size as number) < 1 || (size as number) > MAX_QR_MODULE_COUNT) {
+    throw new TypeError('QR module count is invalid.');
+  }
+  if (typeof get !== 'function') throw new TypeError('QR module reader is invalid.');
+
+  const moduleCount = size as number;
+  const bits = new Uint8Array(moduleCount * moduleCount);
+  for (let row = 0; row < moduleCount; row++) {
+    for (let col = 0; col < moduleCount; col++) {
+      const value = Reflect.apply(get, modules, [row, col]) as unknown;
+      if (value !== 0 && value !== 1 && value !== false && value !== true) {
+        throw new TypeError('QR module value is invalid.');
+      }
+      bits[row * moduleCount + col] = value === 1 || value === true ? 1 : 0;
+    }
+  }
+
+  return Object.freeze({
+    size: moduleCount,
+    get(row: number, col: number): 0 | 1 {
+      if (!Number.isInteger(row) || !Number.isInteger(col)) return 0;
+      if (row < 0 || col < 0 || row >= moduleCount || col >= moduleCount) return 0;
+      return bits[row * moduleCount + col] === 1 ? 1 : 0;
+    },
+  });
+}
 
 function normalizeErrorCorrection(value: string): LyraQrCodeErrorCorrection {
   const upper = value.toUpperCase();
@@ -107,35 +150,28 @@ function resolveQrColor(
  * `<lr-qr-code>` -- encodes `value` as a QR symbol with the optional
  * `qrcode` peer dependency (Reed-Solomon error correction and every other
  * algorithmic step of the QR spec is delegated to that library, never
- * hand-rolled) and draws the resulting module matrix onto a canvas itself,
- * one square (optionally rounded) cell per module, with a light quiet-zone
- * margin baked in around the symbol so it stays scannable out of the box
- * with zero consumer configuration. Extra host CSS `padding` around the
- * element adds further breathing room on top of that baked-in margin, but is
- * not required for baseline scannability.
+ * hand-rolled) and draws the resulting module matrix across the full canvas,
+ * one square (optionally rounded) cell per module. Like the mirrored WA/SL
+ * components, it does not inject a quiet zone; add host CSS `padding` when a
+ * scanner or physical output needs one.
  *
- * The canvas -- not the host -- owns `role="img"` and the accessible name,
- * since it is the one meaningful descendant here (mirrors
- * `lr-file-icon`'s single-image pattern rather than the composite-group
- * pattern used by `lr-heatmap`/`lr-word-cloud`). The accessible name
- * resolves, in order: a host `aria-label` attribute (forwarded onto the canvas),
- * then `label`, then `value` itself. An empty `value` renders
- * `[part="empty"]` instead of an `img`-role element -- there is nothing to
- * encode or name.
+ * The stable host is the single semantic owner while a value is loading or
+ * rendered. Its accessible name resolves, in order, from a host `aria-label`
+ * attribute, `label`, then `value`; the canvas is presentational. The same
+ * host publishes `aria-busy="true"` and `"false"`. An empty `value` renders
+ * `[part="empty"]` without image semantics.
  *
- * Standard host `color`/`background-color` control the dark/light modules. They default through
- * `--lr-qr-code-fill`/`--lr-qr-code-background` to
- * `--lr-color-text`/`--lr-color-surface`, which -- like every
- * semantic token in this library -- flip under a dark theme. That means the
- * *default* rendering under a dark theme is a polarity-inverted QR code
- * (light modules on a dark background) rather than the conventional
- * dark-on-light. Contrast itself stays strong in both themes (these are the
- * app's own high-contrast text/surface pair), so human legibility is
- * unaffected -- only third-party barcode *scanner* robustness across
- * less-tolerant scanning apps is the residual, consumer-overridable risk. A
- * consumer needing guaranteed cross-scanner compatibility regardless of page
- * theme should pin `--lr-qr-code-fill: #000` / `--lr-qr-code-background:
- * #fff` explicitly at the point of use.
+ * Standard host `color` and `background-color` control foreground and
+ * background paint. `--lr-qr-code-fill` and `--lr-qr-code-background` are
+ * optional aliases for those host styles; otherwise inherited color and the
+ * host's transparent background are preserved. Deprecated `fill` and
+ * `background` values still take precedence during their compatibility
+ * window. Shoelace migration inserts its historical black/white defaults.
+ *
+ * The mirrored renderers use a fixed two backing pixels per CSS pixel rather
+ * than the live device pixel ratio. Lyra preserves that geometry for ordinary
+ * sizes and uniformly reduces only extreme allocations to a bounded pixel
+ * budget; CSS size and aspect ratio do not change.
  *
  * Deliberately out of scope for this component, not oversights: a finder-pattern-corner accent
  * color; auto-shrinking to fit a
@@ -145,9 +181,8 @@ function resolveQrColor(
  * it, though it still renders correctly at its default size inside a narrow
  * allocation); form association (`value` is caller-supplied display data the
  * user doesn't edit through this component -- no `FormAssociated` mixin, no
- * label/hint/error chrome, no `ElementInternals`); and any
- * motion/`prefers-reduced-motion` branch (nothing here animates). Keyboard
- * focus is likewise intentionally absent -- the canvas is a static image
+ * label/hint/error chrome, no form internals); and playback behavior. Keyboard
+ * focus is intentionally absent -- the canvas is a static image
  * standing in for `value`, structurally like `<img>`, not an interactive
  * grid.
  *
@@ -155,13 +190,14 @@ function resolveQrColor(
  * @csspart base - Deprecated in 8.2.3; compatibility name for the outer wrapper; use `qr-code`.
  * @csspart qr-code - The outer wrapper, sized to `size`×`size` CSS px in every state. It is the
  *   same node as `base`.
- * @csspart canvas - The rendered QR code canvas.
+ * @csspart canvas - The stable QR canvas. It remains hidden but reachable through `.canvas`
+ *   while the component is empty, loading, or in an error state.
  * @csspart empty - Shown when `value` is empty.
  * @csspart loading - Shown while the optional `qrcode` peer is loading, the first time it's needed.
  * @csspart error - Visible error shown when the peer is missing, or `value` failed to encode; the
  *   transition is announced through the shared light-DOM assertive region.
- * @cssprop [--lr-qr-code-fill=var(--lr-color-text)] - Dark/foreground module color.
- * @cssprop [--lr-qr-code-background=var(--lr-color-surface)] - Light/background module color, including the quiet zone.
+ * @cssprop --lr-qr-code-fill - Optional alias for host `color`, used by foreground modules.
+ * @cssprop --lr-qr-code-background - Optional alias for host `background-color`, used by the canvas background.
  * @status stable
  * @since 4.0.0
  */
@@ -261,10 +297,15 @@ export class LyraQrCode extends LyraElement {
     this.requestUpdate('errorCorrection', oldValue);
   }
 
-  @query('canvas') private canvasEl?: HTMLCanvasElement;
+  /** The stable canvas used for QR paint. The same node remains reachable across empty, loading,
+   * ready, error, reconnect, and redraw transitions. */
+  @query('canvas') canvas!: HTMLCanvasElement;
 
   @state() private loadState: QrCodeState = { kind: 'empty' };
   private errorAnnouncementSink?: AnnouncementSink;
+  private statusAnnouncementSink?: AnnouncementSink;
+  private pendingLoadingAnnouncement = false;
+  private readonly accessibilityInternals?: ElementInternals;
 
   // Gates draw() while scrolled off-screen, same shape as <lr-chart>'s own visibility gate --
   // a page rendering many <lr-qr-code>s (e.g. a scrollable list of badge/ticket codes) never
@@ -279,10 +320,18 @@ export class LyraQrCode extends LyraElement {
    *  `loadLibrary` field). */
   private loadLibrary: () => Promise<QrCodeApi | null> = loadQrCodeCached;
   private generation = 0;
-  private dprQuery?: MediaQueryList;
 
   constructor() {
     super();
+    // ElementInternals supplies default host semantics without copying an author's `aria-label`
+    // onto a second node. DOM shims that do not implement it retain the canvas fallback in
+    // render(); constructing the component must never throw there.
+    try {
+      this.accessibilityInternals = this.attachInternals();
+    } catch {
+      this.accessibilityInternals = undefined;
+    }
+    this.syncSemanticOwner();
     // Redraws when prefers-color-scheme flips or an ancestor's theme attribute mutates. The
     // controller registers itself with the host via addController().
     new ThemeWatcher(this, () => this.refreshTheme());
@@ -292,10 +341,10 @@ export class LyraQrCode extends LyraElement {
     // `value` is synchronously observable on both server and client. Initialize the matching
     // honest pending state before Lit's first lifecycle pass so hydration never has to replace an
     // empty branch from inside `willUpdate()`.
-    if (this.value && this.loadState.kind === 'empty') this.loadState = { kind: 'loading' };
+    if (this.value && this.loadState.kind === 'empty') this.transitionTo({ kind: 'loading' });
+    else this.setAttribute('aria-busy', this.loadState.kind === 'loading' ? 'true' : 'false');
     super.connectedCallback();
-    this.syncErrorAnnouncementSink();
-    this.watchDpr();
+    this.syncAnnouncementSinks();
     const IntersectionObserverCtor = this.ownerDocument.defaultView?.IntersectionObserver;
     if (IntersectionObserverCtor) {
       this.intersectionObserver = new IntersectionObserverCtor((entries) => {
@@ -319,66 +368,78 @@ export class LyraQrCode extends LyraElement {
       this.value &&
       (this.loadState.kind === 'loading' ||
         (this.image && this.loadState.kind === 'ready' && !this.loadState.image))
-    ) void this.generate();
+    ) this.generate();
   }
 
   override disconnectedCallback(): void {
     this.generation++;
-    this.releaseErrorAnnouncementSink();
-    this.stopWatchingDpr();
+    this.pendingLoadingAnnouncement = false;
+    this.releaseAnnouncementSinks();
     super.disconnectedCallback();
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
   }
 
-  adoptedCallback(): void {
-    this.releaseErrorAnnouncementSink();
-    this.syncErrorAnnouncementSink();
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseAnnouncementSinks();
+    this.syncAnnouncementSinks();
   }
 
-  private syncErrorAnnouncementSink(): void {
+  private syncAnnouncementSinks(): void {
     if (!this.isConnected) return;
-    if (this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.releaseErrorAnnouncementSink();
+    if (
+      this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument &&
+      this.statusAnnouncementSink?.element.ownerDocument === this.ownerDocument
+    ) return;
+    this.releaseAnnouncementSinks();
     this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+    this.statusAnnouncementSink = acquireAnnouncementSink('polite', {
       document: this.ownerDocument,
       source: this,
     });
   }
 
-  private releaseErrorAnnouncementSink(): void {
+  private releaseAnnouncementSinks(): void {
     this.errorAnnouncementSink?.release();
     this.errorAnnouncementSink = undefined;
+    this.statusAnnouncementSink?.release();
+    this.statusAnnouncementSink = undefined;
   }
 
-  private watchDpr(): void {
-    // A MediaQueryList's `matches` is fixed at creation time, so crossing the DPR threshold it
-    // was built for means building a fresh one for the new ratio -- remove the previous
-    // instance's listener first, or it leaks.
-    this.stopWatchingDpr();
-    const ownerWindow = this.ownerDocument.defaultView;
-    if (!ownerWindow) return;
-    this.dprQuery = ownerWindow.matchMedia(
-      `(resolution: ${ownerWindow.devicePixelRatio}dppx)`,
-    );
-    this.dprQuery.addEventListener('change', this.onDprChange);
+  private transitionTo(next: QrCodeState): void {
+    const announcesLoading =
+      next.kind === 'loading' &&
+      this.loadState.kind !== 'loading' &&
+      this.hasUpdated &&
+      this.isConnected;
+    this.loadState = next;
+    this.setAttribute('aria-busy', next.kind === 'loading' ? 'true' : 'false');
+    this.syncSemanticOwner();
+    if (announcesLoading) this.pendingLoadingAnnouncement = true;
   }
 
-  private stopWatchingDpr(): void {
-    this.dprQuery?.removeEventListener('change', this.onDprChange);
-    this.dprQuery = undefined;
+  private syncSemanticOwner(): void {
+    const semantic = this.loadState.kind === 'loading' || this.loadState.kind === 'ready';
+    if (!this.accessibilityInternals) return;
+    this.accessibilityInternals.role = semantic ? 'img' : null;
+    // This is a default ARIA value: an explicit host `aria-label` remains authoritative.
+    this.accessibilityInternals.ariaLabel = semantic ? this.label || this.value : null;
   }
-
-  private onDprChange = (): void => {
-    this.watchDpr();
-    this.draw();
-  };
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncSemanticOwner();
+    if (this.pendingLoadingAnnouncement) {
+      this.pendingLoadingAnnouncement = false;
+      this.statusAnnouncementSink?.announce(this.localize('loading'));
+    }
     if (changed.has('value') || changed.has('errorCorrection') || changed.has('image') || !this.hasUpdated) {
       this.scheduleAfterUpdate(() => {
-        void this.generate();
+        this.generate();
       });
       return;
     }
@@ -402,45 +463,50 @@ export class LyraQrCode extends LyraElement {
     // Encoding and canvas paint are intentionally client-only, but a non-empty declarative value
     // is already enough information to distinguish pending work from genuine empty data. Seed the
     // honest state before the server render and before the browser's first render alike.
-    if (changed.has('value') && this.value && this.loadState.kind === 'empty') {
-      this.loadState = { kind: 'loading' };
+    if (changed.has('value') || changed.has('errorCorrection') || changed.has('image')) {
+      this.transitionTo(this.value ? { kind: 'loading' } : { kind: 'empty' });
     }
   }
 
   /** Re-encodes `value` via the optional `qrcode` peer's `create()` and caches the resulting
-   *  module matrix. Redraw-only geometry changes (`size`/`radius`) and theme/DPR refreshes never
+   *  module matrix. Redraw-only geometry changes (`size`/`radius`) and theme refreshes never
    *  call this -- see the class doc comment and `updated()`'s dispatch. */
-  async generate(): Promise<void> {
+  generate(): void {
+    void this.generateCurrentValue();
+  }
+
+  private async generateCurrentValue(): Promise<void> {
     const generation = ++this.generation;
     if (!this.value) {
-      this.loadState = { kind: 'empty' };
+      this.transitionTo({ kind: 'empty' });
       return;
     }
-    this.loadState = { kind: 'loading' };
-    const api = await this.loadLibrary();
-    if (generation !== this.generation || !this.isConnected) return;
-    if (!api) {
-      const message = this.localize('qrCodeMissingLibrary');
-      this.loadState = { kind: 'error', message };
-      this.errorAnnouncementSink?.announce(message);
-      return;
-    }
+    this.transitionTo({ kind: 'loading' });
     try {
+      const api = await this.loadLibrary();
+      if (generation !== this.generation || !this.isConnected) return;
+      if (!api) {
+        const message = this.localize('qrCodeMissingLibrary');
+        this.transitionTo({ kind: 'error', message });
+        this.errorAnnouncementSink?.announce(message);
+        return;
+      }
       const imageSource = safeMediaSrc(this.image);
       const result = api.create(this.value, {
         errorCorrectionLevel: imageSource ? 'H' : this.errorCorrection,
-      }) as { modules: QrModules };
+      });
+      const modules = normalizeQrModules(result);
       if (generation !== this.generation) return;
-      this.loadState = { kind: 'ready', modules: result.modules };
+      this.transitionTo({ kind: 'ready', modules });
       if (imageSource) {
         const image = await this.loadEmbeddedImage(imageSource);
         if (generation !== this.generation || !this.isConnected || !image) return;
-        this.loadState = { kind: 'ready', modules: result.modules, image };
+        this.transitionTo({ kind: 'ready', modules, image });
       }
     } catch {
-      if (generation !== this.generation) return;
+      if (generation !== this.generation || !this.isConnected) return;
       const message = this.localize('qrCodeGenerationFailed');
-      this.loadState = { kind: 'error', message };
+      this.transitionTo({ kind: 'error', message });
       this.errorAnnouncementSink?.announce(message);
     }
   }
@@ -458,7 +524,7 @@ export class LyraQrCode extends LyraElement {
     return loaded && image.naturalWidth > 0 && image.naturalHeight > 0 ? image : undefined;
   }
 
-  /** Redraws canvas content after an upstream token, theme, or DPR change, reusing the already-
+  /** Redraws canvas content after an upstream token or theme change, reusing the already-
    *  cached module matrix rather than re-encoding `value`. The component automatically observes
    *  ancestor theme-attribute changes and color-scheme changes; this method remains available for
    *  consumer-owned token changes that are not represented by those signals. */
@@ -487,23 +553,23 @@ export class LyraQrCode extends LyraElement {
   private draw(): void {
     if (this.loadState.kind !== 'ready') return;
     // Off-screen: skip the per-module fillRect/roundRect loop entirely. Every caller (updated(),
-    // onDprChange, refreshTheme()) funnels through here, so gating centrally covers all of them --
+    // refreshTheme()) funnels through here, so gating centrally covers all of them --
     // becoming visible again re-triggers a draw() from the IntersectionObserver callback in
     // connectedCallback(), which catches up on whatever was skipped while off-screen.
     if (!this.visible) return;
-    const canvas = this.canvasEl;
+    const canvas = this.canvas;
     if (!canvas) return;
     const { modules } = this.loadState;
-    const dpr = this.ownerDocument.defaultView?.devicePixelRatio || 1;
     const size = this.size;
-    canvas.width = Math.round(size * dpr);
-    canvas.height = Math.round(size * dpr);
+    const allocation = LyraQrCode.canvasAllocation(size);
+    canvas.width = allocation.pixelWidth;
+    canvas.height = allocation.pixelHeight;
     canvas.style.width = `${size}px`;
     canvas.style.height = `${size}px`;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.scale(dpr, dpr);
+    ctx.scale(allocation.scaleX, allocation.scaleY);
 
     const background = this.backgroundColor(ctx);
     const fill = this.fillColor(ctx);
@@ -511,9 +577,7 @@ export class LyraQrCode extends LyraElement {
     ctx.fillRect(0, 0, size, size);
 
     const moduleCount = modules.size;
-    if (moduleCount <= 0) return;
-    const moduleSize = size / (moduleCount + QUIET_ZONE_MODULES * 2);
-    const offset = QUIET_ZONE_MODULES * moduleSize;
+    const moduleSize = size / moduleCount;
     const radiusPx = this.radius * moduleSize;
     // `roundRect` is broadly supported in evergreen engines but guarded defensively for older ones
     // (see the class doc comment's rendering rationale).
@@ -523,8 +587,8 @@ export class LyraQrCode extends LyraElement {
     for (let row = 0; row < moduleCount; row++) {
       for (let col = 0; col < moduleCount; col++) {
         if (!modules.get(row, col)) continue;
-        const x = offset + col * moduleSize;
-        const y = offset + row * moduleSize;
+        const x = col * moduleSize;
+        const y = row * moduleSize;
         if (this.radius > 0 && canRoundRect) {
           ctx.beginPath();
           ctx.roundRect(x, y, moduleSize, moduleSize, radiusPx);
@@ -535,6 +599,18 @@ export class LyraQrCode extends LyraElement {
       }
     }
     if (this.loadState.image) this.drawEmbeddedImage(ctx, this.loadState.image, size);
+  }
+
+  /** Pure allocation seam kept private so tests can cover extreme inputs without creating a
+   * multi-megapixel canvas. */
+  private static canvasAllocation(cssSize: number): Readonly<BoundedCanvasAllocation> {
+    return resolveBoundedCanvasAllocation({
+      cssWidth: cssSize,
+      cssHeight: cssSize,
+      desiredScale: QR_BACKING_SCALE,
+      maxDimension: MAX_CANVAS_DIMENSION,
+      maxPixels: MAX_CANVAS_PIXELS,
+    });
   }
 
   private drawEmbeddedImage(
@@ -577,7 +653,7 @@ export class LyraQrCode extends LyraElement {
     return this.getAttribute('aria-label') ?? (this.label || this.value);
   }
 
-  private renderBody(): TemplateResult {
+  private renderBody(): TemplateResult | typeof nothing {
     switch (this.loadState.kind) {
       case 'empty':
         return html`<div part="empty">${this.localize('noData')}</div>`;
@@ -586,12 +662,21 @@ export class LyraQrCode extends LyraElement {
       case 'error':
         return html`<div part="error">${this.loadState.message}</div>`;
       case 'ready':
-        return html`<canvas part="canvas" role="img" aria-label=${this.accessibleName()}></canvas>`;
+        return nothing;
     }
   }
 
   override render(): TemplateResult {
+    const ready = this.loadState.kind === 'ready';
+    const fallbackSemantics = !this.accessibilityInternals && ready;
     return html`<div part="base qr-code" style=${styleMap({ inlineSize: `${this.size}px`, blockSize: `${this.size}px` })}>
+      <canvas
+        part="canvas"
+        ?hidden=${!ready}
+        aria-hidden=${this.accessibilityInternals ? 'true' : ready ? nothing : 'true'}
+        role=${fallbackSemantics ? 'img' : nothing}
+        aria-label=${fallbackSemantics ? this.accessibleName() : nothing}
+      ></canvas>
       ${this.renderBody()}
     </div>`;
   }

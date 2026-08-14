@@ -6,10 +6,7 @@ import {
   type AnnouncementPoliteness,
 } from './announcer.js';
 
-function sinkElement(
-  politeness: AnnouncementPoliteness,
-  doc: Document = document,
-): HTMLElement | null {
+function sinkElement(politeness: AnnouncementPoliteness, doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
 }
 
@@ -29,24 +26,34 @@ it('defaults throttleMs to 500 when not provided', () => {
 
 it('flushes a single announce() call after the throttle window elapses', async () => {
   const flushes: string[] = [];
-  const a = new Announcer({ throttleMs: THROTTLE_MS, onFlush: (text) => flushes.push(text) });
+  const a = new Announcer({
+    throttleMs: THROTTLE_MS,
+    onFlush: (text) => flushes.push(text),
+  });
 
   a.announce('hello');
   expect(flushes, 'must not flush synchronously').to.deep.equal([]);
 
-  await waitUntil(() => flushes.length === 1, 'expected one flush', { timeout: 2000 });
+  await waitUntil(() => flushes.length === 1, 'expected one flush', {
+    timeout: 2000,
+  });
   expect(flushes).to.deep.equal(['hello']);
 });
 
 it('collapses repeated calls within a window to only the latest text', async () => {
   const flushes: string[] = [];
-  const a = new Announcer({ throttleMs: THROTTLE_MS, onFlush: (text) => flushes.push(text) });
+  const a = new Announcer({
+    throttleMs: THROTTLE_MS,
+    onFlush: (text) => flushes.push(text),
+  });
 
   a.announce('a');
   a.announce('b');
   a.announce('c');
 
-  await waitUntil(() => flushes.length === 1, 'expected exactly one flush', { timeout: 2000 });
+  await waitUntil(() => flushes.length === 1, 'expected exactly one flush', {
+    timeout: 2000,
+  });
   expect(flushes, 'superseded text must be dropped, not queued or concatenated').to.deep.equal(['c']);
 });
 
@@ -66,7 +73,9 @@ it('anchors the flush deadline to the first call in a burst, not later calls', a
   await new Promise((resolve) => setTimeout(resolve, THROTTLE_MS / 2));
   a.announce('b'); // still inside the first call's window
 
-  await waitUntil(() => flushes.length === 1, 'expected exactly one flush', { timeout: 2000 });
+  await waitUntil(() => flushes.length === 1, 'expected exactly one flush', {
+    timeout: 2000,
+  });
 
   // Timestamp is captured inside onFlush itself, not after waitUntil
   // resolves -- waitUntil's own poll `interval` (50ms by default) can add
@@ -81,7 +90,10 @@ it('anchors the flush deadline to the first call in a burst, not later calls', a
 
 it('force: true flushes immediately, synchronously, regardless of any pending window', () => {
   const flushes: string[] = [];
-  const a = new Announcer({ throttleMs: 5000, onFlush: (text) => flushes.push(text) });
+  const a = new Announcer({
+    throttleMs: 5000,
+    onFlush: (text) => flushes.push(text),
+  });
 
   a.announce('queued');
   a.announce('final', { force: true });
@@ -91,7 +103,10 @@ it('force: true flushes immediately, synchronously, regardless of any pending wi
 
 it('force: true with nothing already pending still flushes its own text', () => {
   const flushes: string[] = [];
-  const a = new Announcer({ throttleMs: 5000, onFlush: (text) => flushes.push(text) });
+  const a = new Announcer({
+    throttleMs: 5000,
+    onFlush: (text) => flushes.push(text),
+  });
 
   a.announce('only', { force: true });
 
@@ -100,7 +115,10 @@ it('force: true with nothing already pending still flushes its own text', () => 
 
 it('a forced flush cancels the scheduled trailing-edge flush so it never double-fires', async () => {
   const flushes: string[] = [];
-  const a = new Announcer({ throttleMs: THROTTLE_MS, onFlush: (text) => flushes.push(text) });
+  const a = new Announcer({
+    throttleMs: THROTTLE_MS,
+    onFlush: (text) => flushes.push(text),
+  });
 
   a.announce('a');
   a.announce('b', { force: true });
@@ -113,7 +131,10 @@ it('a forced flush cancels the scheduled trailing-edge flush so it never double-
 
 it('cancel() drops a pending announcement without flushing it', async () => {
   const flushes: string[] = [];
-  const a = new Announcer({ throttleMs: THROTTLE_MS, onFlush: (text) => flushes.push(text) });
+  const a = new Announcer({
+    throttleMs: THROTTLE_MS,
+    onFlush: (text) => flushes.push(text),
+  });
 
   a.announce('a');
   a.cancel();
@@ -137,26 +158,38 @@ it('exposes isPending/pendingText while a burst is in progress, and clears them 
   expect(a.isPending).to.be.true;
   expect(a.pendingText).to.equal('a');
 
-  await waitUntil(() => !a.isPending, 'expected the burst to flush', { timeout: 2000 });
+  await waitUntil(() => !a.isPending, 'expected the burst to flush', {
+    timeout: 2000,
+  });
   expect(a.pendingText).to.be.undefined;
 });
 
 it('separate, non-overlapping bursts each flush independently', async () => {
   const flushes: string[] = [];
-  const a = new Announcer({ throttleMs: THROTTLE_MS, onFlush: (text) => flushes.push(text) });
+  const a = new Announcer({
+    throttleMs: THROTTLE_MS,
+    onFlush: (text) => flushes.push(text),
+  });
 
   a.announce('a');
-  await waitUntil(() => flushes.length === 1, 'expected the first burst to flush', { timeout: 2000 });
+  await waitUntil(() => flushes.length === 1, 'expected the first burst to flush', {
+    timeout: 2000,
+  });
 
   a.announce('b');
-  await waitUntil(() => flushes.length === 2, 'expected the second burst to flush', { timeout: 2000 });
+  await waitUntil(() => flushes.length === 2, 'expected the second burst to flush', {
+    timeout: 2000,
+  });
 
   expect(flushes).to.deep.equal(['a', 'b']);
 });
 
 it('changing throttleMs between bursts affects the next burst, not one already scheduled', async () => {
   const flushes: string[] = [];
-  const a = new Announcer({ throttleMs: THROTTLE_MS, onFlush: (text) => flushes.push(text) });
+  const a = new Announcer({
+    throttleMs: THROTTLE_MS,
+    onFlush: (text) => flushes.push(text),
+  });
 
   a.announce('a');
   a.throttleMs = 5; // must not retroactively reschedule the in-flight timer
@@ -173,11 +206,7 @@ it('uses an injected timer host and rebinds a pending burst without retaining th
   const firstCallbacks = new Map<number, () => void>();
   const secondCallbacks = new Map<number, () => void>();
   const firstClears: number[] = [];
-  const makeTimerHost = (
-    callbacks: Map<number, () => void>,
-    clears: number[],
-    handle: number,
-  ) => ({
+  const makeTimerHost = (callbacks: Map<number, () => void>, clears: number[], handle: number) => ({
     setTimeout(callback: () => void): number {
       callbacks.set(handle, callback);
       return handle;
@@ -216,10 +245,8 @@ it('creates the announcement sink in the document light DOM, not in any shadow r
     // Node identity is compared as a boolean on purpose: a failing chai assertion carrying a DOM
     // node as actual/expected hangs the whole test file.
     expect(element === sink.element, 'the sink must be a light-DOM element').to.be.true;
-    expect(element!.parentElement === document.body, 'the sink must hang off document.body').to.be
-      .true;
-    expect(element!.getRootNode() === document, 'the sink must not live inside a shadow root').to.be
-      .true;
+    expect(element!.parentElement === document.body, 'the sink must hang off document.body').to.be.true;
+    expect(element!.getRootNode() === document, 'the sink must not live inside a shadow root').to.be.true;
     expect(element!.getAttribute('role')).to.equal('status');
     expect(element!.getAttribute('aria-live')).to.equal('polite');
     expect(element!.getAttribute('aria-relevant')).to.equal('additions');
@@ -271,10 +298,10 @@ it('announces an identical repeat again instead of silently rewriting the same s
   try {
     sink.announce('same');
     sink.announce('same');
-    expect(
-      sinkTexts('polite'),
-      'a repeat must be a second addition, so assistive tech reads it twice',
-    ).to.deep.equal(['same', 'same']);
+    expect(sinkTexts('polite'), 'a repeat must be a second addition, so assistive tech reads it twice').to.deep.equal([
+      'same',
+      'same',
+    ]);
   } finally {
     sink.release();
   }
@@ -367,6 +394,63 @@ it('removes an announced node once its ttl elapses so stale text is never re-rea
   }
 });
 
+it('bounds a hostile single-handle burst to the latest pending announcements', () => {
+  const sink = acquireAnnouncementSink('polite', { messageTtlMs: 5000 });
+  try {
+    for (let index = 0; index < 50_000; index += 1) {
+      sink.announce(`message ${index}`);
+    }
+
+    const texts = sinkTexts('polite');
+    expect(texts.length).to.equal(32);
+    expect(texts[0]).to.equal('message 49968');
+    expect(texts.at(-1)).to.equal('message 49999');
+  } finally {
+    sink.release();
+  }
+});
+
+it('bounds the shared sink and batches every handle onto one pending sweep timer', async () => {
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const ownerDocument = iframe.contentDocument!;
+  const ownerWindow = iframe.contentWindow!;
+  const originalSetTimeout = ownerWindow.setTimeout;
+  const originalClearTimeout = ownerWindow.clearTimeout;
+  const callbacks = new Map<number, () => void>();
+  let nextHandle = 400;
+  ownerWindow.setTimeout = ((handler: TimerHandler) => {
+    const handle = ++nextHandle;
+    if (typeof handler === 'function') callbacks.set(handle, handler);
+    return handle;
+  }) as typeof ownerWindow.setTimeout;
+  ownerWindow.clearTimeout = ((handle?: number) => {
+    if (handle !== undefined) callbacks.delete(handle);
+  }) as typeof ownerWindow.clearTimeout;
+
+  const sinks = Array.from({ length: 5 }, () =>
+    acquireAnnouncementSink('polite', {
+      document: ownerDocument,
+      messageTtlMs: 5000,
+    }),
+  );
+  try {
+    for (const [owner, sink] of sinks.entries()) {
+      for (let index = 0; index < 32; index += 1) {
+        sink.announce(`owner ${owner} message ${index}`);
+      }
+    }
+
+    expect(sinkTexts('polite', ownerDocument).length).to.equal(128);
+    expect(callbacks.size, 'one shared timer sweeps every pending node').to.equal(1);
+    expect(sinkTexts('polite', ownerDocument).at(-1)).to.equal('owner 4 message 31');
+  } finally {
+    for (const sink of sinks) sink.release();
+    ownerWindow.setTimeout = originalSetTimeout;
+    ownerWindow.clearTimeout = originalClearTimeout;
+    iframe.remove();
+  }
+});
+
 it('shares one sink per politeness and ref-counts it away when the last consumer releases', () => {
   const first = acquireAnnouncementSink('polite');
   const second = acquireAnnouncementSink('polite');
@@ -421,13 +505,9 @@ it('release() drops the releasing consumer own pending nodes and their sweep tim
     expect(sinkTexts('polite')).to.deep.equal(['from first', 'from second']);
 
     first.release();
-    expect(sinkTexts('polite'), 'only the releasing consumer nodes go').to.deep.equal([
-      'from second',
-    ]);
+    expect(sinkTexts('polite'), 'only the releasing consumer nodes go').to.deep.equal(['from second']);
     first.announce('after release');
-    expect(sinkTexts('polite'), 'a released sink must not announce again').to.deep.equal([
-      'from second',
-    ]);
+    expect(sinkTexts('polite'), 'a released sink must not announce again').to.deep.equal(['from second']);
   } finally {
     second.release();
   }
@@ -486,7 +566,10 @@ it('schedules and cancels message sweeps with the sink document timer realm', as
 
   let sink: ReturnType<typeof acquireAnnouncementSink> | undefined;
   try {
-    sink = acquireAnnouncementSink('polite', { document: ownerDocument, messageTtlMs: 500 });
+    sink = acquireAnnouncementSink('polite', {
+      document: ownerDocument,
+      messageTtlMs: 500,
+    });
     sink.announce('sweep in frame');
     expect(callbacks.has(91), 'the frame window scheduled the sweep').to.be.true;
     const sweep = callbacks.get(91)!;

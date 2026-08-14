@@ -1,7 +1,9 @@
 // Regenerates the editor-autocomplete data files from custom-elements.json:
-//   - vscode-html-data.json  (VS Code's `html.customData` format -- tag names, attributes, slots)
+//   - vscode-html-data.json  (VS Code's `html.customData` format -- tag names and attributes;
+//                              slot/CSS-part tables remain tag-description prose)
 //   - vscode-css-data.json   (VS Code's `css.customData` format -- every `--lr-*` custom property)
-//   - web-types.json         (JetBrains' web-types format -- same coverage, for WebStorm/IntelliJ)
+//   - web-types.json         (JetBrains' web-types format -- tags, attributes and CSS properties;
+//                              slot/CSS-part tables remain tag-description prose)
 // TypeScript consumers already get tag/attribute completion via the generated
 // `HTMLElementTagNameMap` (produced by `tsc` alongside `dist/*.d.ts`). Plain HTML, Vue templates,
 // and Angular templates never go through that type graph, so editors need these small JSON data

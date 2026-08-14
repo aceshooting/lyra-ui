@@ -4,23 +4,27 @@ import { LyraElement } from "../../../internal/lyra-element.js";
 import { tag } from "../../../internal/prefix.js";
 import { hostAriaLabel } from "../../../internal/a11y.js";
 import type { LyraReorderItem } from "./reorder-item.class.js";
+import {
+  releaseReorderOwnerState,
+  updateReorderOwnerState,
+} from './reorder-owner.js';
 import type { LyraLiveRegion } from "../../utility/live-region/live-region.class.js";
 import { getNumberFormat } from "../../../internal/intl-cache.js";
 import { styles } from "./reorder-list.styles.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_reorderItemMoved } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_reorderItemMoved, LYRA_DEFAULT_reorderMoveCancelled, LYRA_DEFAULT_reorderMovePending } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export interface ReorderDetail {
-  order: string[];
-  fromIndex: number;
-  toIndex: number;
+export interface LyraReorderDetail {
+  readonly order: readonly string[];
+  readonly fromIndex: number;
+  readonly toIndex: number;
 }
 
 export interface LyraReorderListEventMap {
-  "lr-reorder": CustomEvent<ReorderDetail>;
+  "lr-reorder": CustomEvent<LyraReorderDetail>;
 }
 
 type ReorderFocusTarget = {
@@ -42,7 +46,9 @@ type ReorderFocusTarget = {
  * controlled. This list has no such data-array prop; its children are plain author-authored
  * slotted content with nothing to reconcile against, so DOM order genuinely is the source of
  * truth (the same principle `<lr-tree>` relies on for its own children). The `lr-reorder` event
- * still tells the host the resulting order, so it can persist it without hand-rolling its own
+ * Every item must provide a unique, nonempty `value`; invalid or duplicate identities stay
+ * visible but cannot move. The `lr-reorder` event tells the host the resulting stable-id order,
+ * so it can persist it without hand-rolling its own
  * splice/resort logic.
  *
  * An `lr-reorder` listener can call `preventDefault()` to hold a move open while its own async
@@ -53,10 +59,11 @@ type ReorderFocusTarget = {
  * @customElement lr-reorder-list
  * @slot - `<lr-reorder-item>` elements.
  * @event lr-reorder - `detail: { order, fromIndex, toIndex }` — fired before a move is applied
- * (button click or Ctrl/Cmd+Arrow). `order` is every item's `value` (or its DOM-position-index
- * fallback) in the order the move WOULD produce; `fromIndex`/`toIndex` are the moved item's
+ * (button click or Ctrl/Cmd+Arrow). `order` is every valid item's stable `value` in the order the
+ * move WOULD produce; `fromIndex`/`toIndex` are the moved item's
  * 0-based position before/after. Cancelable: a listener calling `preventDefault()` holds the move
- * instead of applying it -- the affected `<lr-reorder-item>` reflects `pending`, and no other move
+ * instead of applying it -- the affected `<lr-reorder-item>` exposes `:state(pending)`, every move
+ * action becomes disabled, and no other move
  * can start anywhere in this list -- until the host calls `finalizePendingMove()` to apply it or
  * `revertPendingMove()` to discard it and restore the prior order. Uncanceled (the default), the
  * move applies synchronously in the same tick, unchanged from every release before this option
@@ -72,6 +79,8 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     reorderItemMoved: LYRA_DEFAULT_reorderItemMoved,
+    reorderMoveCancelled: LYRA_DEFAULT_reorderMoveCancelled,
+    reorderMovePending: LYRA_DEFAULT_reorderMovePending,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -92,47 +101,106 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   private pendingFocusTarget: ReorderFocusTarget | null = null;
 
   private focusRestoreGeneration = 0;
+  private itemObserver?: MutationObserver;
+  private stateItems = new Set<LyraReorderItem>();
+  private moveToken = 0;
 
   /** Set while an `lr-reorder` listener has called `preventDefault()`, holding a move until the
    *  host calls `finalizePendingMove()` or `revertPendingMove()`. `moveItem()` refuses to start
    *  any further move while this is set -- at most one move is ever held at a time. */
   private pendingMove: {
+    token: number;
+    phase: 'dispatching' | 'held';
+    resolution: 'finalize' | 'revert' | null;
     item: LyraReorderItem;
+    target: LyraReorderItem;
     direction: "up" | "down";
     fromIndex: number;
     toIndex: number;
     members: LyraReorderItem[];
+    values: string[];
   } | null = null;
 
-  private get itemElements(): LyraReorderItem[] {
+  private get directItemElements(): LyraReorderItem[] {
     const itemTag = tag("reorder-item");
     return [...this.children].filter(
       (element): element is LyraReorderItem => element.localName === itemTag
     );
   }
 
-  private syncBoundaryState(): void {
-    const items = this.itemElements;
-    items.forEach((item, i) => {
-      item.atStart = i === 0;
-      item.atEnd = i === items.length - 1;
-      item.listDisabled = this.disabled;
+  private get itemElements(): LyraReorderItem[] {
+    const seen = new Set<string>();
+    return this.directItemElements.filter((item) => {
+      const value = item.value;
+      if (typeof value !== 'string' || value.trim() === '' || seen.has(value)) return false;
+      seen.add(value);
+      return true;
     });
   }
 
+  private syncBoundaryState(): void {
+    const directItems = this.directItemElements;
+    const items = this.itemElements;
+    const validItems = new Set(items);
+    const busy = this.pendingMove?.phase === 'held';
+    const nextStateItems = new Set(directItems);
+    for (const item of this.stateItems) {
+      if (!nextStateItems.has(item)) releaseReorderOwnerState(item, this);
+    }
+    directItems.forEach((item) => {
+      const i = items.indexOf(item);
+      updateReorderOwnerState(item, this, {
+        atStart: i === 0,
+        atEnd: i >= 0 && i === items.length - 1,
+        listDisabled: this.disabled,
+        pending: busy && this.pendingMove?.item === item,
+        busy,
+        validIdentity: validItems.has(item),
+      });
+    });
+    this.stateItems = nextStateItems;
+    this.requestUpdate();
+  }
+
   private onSlotChange = (): void => {
-    if (this.pendingMove && !this.pendingMembershipIsCurrent())
+    if (this.pendingMove && this.pendingMove.phase === 'held' && !this.pendingMembershipIsCurrent())
       this.revertPendingMove();
     this.syncBoundaryState();
   };
+
+  private refreshItemObserver(): void {
+    this.itemObserver?.disconnect();
+    const Observer = this.ownerDocument.defaultView?.MutationObserver;
+    if (!Observer || !this.isConnected) return;
+    this.itemObserver = new Observer(() => this.onSlotChange());
+    this.itemObserver.observe(this, {
+      attributes: true,
+      childList: true,
+      attributeFilter: ['disabled', 'value'],
+    });
+  }
 
   private pendingMembershipIsCurrent(): boolean {
     if (!this.pendingMove) return false;
     const current = this.itemElements;
     return (
+      !this.disabled &&
+      !this.pendingMove.item.disabled &&
+      !this.pendingMove.target.disabled &&
       current.length === this.pendingMove.members.length &&
-      current.every((item, index) => item === this.pendingMove!.members[index])
+      current.every(
+        (item, index) =>
+          item === this.pendingMove!.members[index] &&
+          item.value === this.pendingMove!.values[index],
+      ) &&
+      current[this.pendingMove.toIndex] === this.pendingMove.target
     );
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.refreshItemObserver();
+    this.syncBoundaryState();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -141,17 +209,19 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   }
 
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
+    this.itemObserver?.disconnect();
+    this.itemObserver = undefined;
     this.pendingFocusTarget = null;
     this.focusRestoreGeneration += 1;
-    if (this.pendingMove) {
-      this.pendingMove.item.pending = false;
-      this.pendingMove = null;
-    }
+    this.pendingMove = null;
+    this.moveToken += 1;
+    for (const item of this.stateItems) releaseReorderOwnerState(item, this);
+    this.stateItems.clear();
+    super.disconnectedCallback();
   }
 
-  private orderValues(items: LyraReorderItem[]): string[] {
-    return items.map((item, i) => item.value ?? String(i));
+  private orderValues(items: LyraReorderItem[]): readonly string[] {
+    return Object.freeze(items.map((item) => item.value));
   }
 
   private scheduleFocusRestore(): void {
@@ -242,23 +312,52 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     reordered.splice(fromIndex, 1);
     reordered.splice(toIndex, 0, item);
 
+    const transaction = {
+      token: ++this.moveToken,
+      phase: 'dispatching' as const,
+      resolution: null,
+      item,
+      target: items[toIndex]!,
+      direction,
+      fromIndex,
+      toIndex,
+      members: [...items],
+      values: items.map((member) => member.value),
+    };
+    this.pendingMove = transaction;
+
     const event = this.emit(
       "lr-reorder",
-      { order: this.orderValues(reordered), fromIndex, toIndex },
+      Object.freeze({ order: this.orderValues(reordered), fromIndex, toIndex }),
       { cancelable: true }
     );
-    if (event.defaultPrevented) {
-      this.pendingMove = {
-        item,
-        direction,
-        fromIndex,
-        toIndex,
-        members: [...items],
-      };
-      item.pending = true;
+    if (this.pendingMove !== transaction || transaction.token !== this.moveToken) return;
+    if (!this.pendingMembershipIsCurrent()) {
+      this.pendingMove = null;
+      this.syncBoundaryState();
       return;
     }
 
+    if (event.defaultPrevented) {
+      if (transaction.resolution === 'revert') {
+        this.pendingMove = null;
+        this.syncBoundaryState();
+        return;
+      }
+      if (transaction.resolution === 'finalize') {
+        this.pendingMove = null;
+        this.syncBoundaryState();
+        this.applyMove(item, direction, fromIndex, toIndex);
+        return;
+      }
+      this.pendingMove = { ...transaction, phase: 'held' };
+      this.syncBoundaryState();
+      this.liveRegion?.announce(this.localize('reorderMovePending'), { force: true });
+      return;
+    }
+
+    this.pendingMove = null;
+    this.syncBoundaryState();
     this.applyMove(item, direction, fromIndex, toIndex);
   }
 
@@ -266,13 +365,17 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
    *  async work (e.g. persisting the new order) has succeeded. No-op if nothing is pending. */
   finalizePendingMove(): void {
     if (!this.pendingMove) return;
+    if (this.pendingMove.phase === 'dispatching') {
+      this.pendingMove.resolution = 'finalize';
+      return;
+    }
     if (!this.pendingMembershipIsCurrent()) {
       this.revertPendingMove();
       return;
     }
     const { item, direction, fromIndex, toIndex } = this.pendingMove;
     this.pendingMove = null;
-    item.pending = false;
+    this.syncBoundaryState();
     this.applyMove(item, direction, fromIndex, toIndex);
   }
 
@@ -281,9 +384,16 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
    *  No-op if nothing is pending. */
   revertPendingMove(): void {
     if (!this.pendingMove) return;
-    const { item } = this.pendingMove;
+    if (this.pendingMove.phase === 'dispatching') {
+      this.pendingMove.resolution = 'revert';
+      return;
+    }
+    const wasHeld = this.pendingMove.phase === 'held';
     this.pendingMove = null;
-    item.pending = false;
+    this.syncBoundaryState();
+    if (wasHeld) {
+      this.liveRegion?.announce(this.localize('reorderMoveCancelled'), { force: true });
+    }
   }
 
   private onMoveRequest = (e: Event): void => {
@@ -298,16 +408,48 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.disabled) return;
     if (
       !(e.ctrlKey || e.metaKey) ||
+      e.altKey ||
+      e.shiftKey ||
       (e.key !== "ArrowUp" && e.key !== "ArrowDown")
     )
       return;
-    const item = (e.target as Element | null)?.closest?.(
-      tag("reorder-item")
-    ) as LyraReorderItem | null;
+    const path = e.composedPath();
+    const item = path.find(
+      (target): target is LyraReorderItem =>
+        target instanceof Element &&
+        target.localName === tag('reorder-item') &&
+        target.parentElement === this,
+    );
     if (!item) return;
+    const itemIndex = path.indexOf(item);
+    const originatedInNestedControl = path.slice(0, itemIndex).some((target) => {
+      if (!(target instanceof Element)) return false;
+      if (target instanceof HTMLButtonElement && target.getRootNode() === item.shadowRoot) return false;
+      const name = target.localName;
+      return (
+        name === 'a' ||
+        name === 'button' ||
+        name === 'input' ||
+        name === 'select' ||
+        name === 'textarea' ||
+        target.hasAttribute('contenteditable') ||
+        (name.includes('-') && target !== item)
+      );
+    });
+    if (originatedInNestedControl) return;
+    const items = this.itemElements;
+    const fromIndex = items.indexOf(item);
+    const toIndex = e.key === 'ArrowDown' ? fromIndex + 1 : fromIndex - 1;
+    if (
+      this.disabled ||
+      this.pendingMove ||
+      item.disabled ||
+      fromIndex < 0 ||
+      toIndex < 0 ||
+      toIndex >= items.length
+    ) return;
     e.preventDefault();
     this.moveItem(item, e.key === "ArrowDown" ? "down" : "up");
   };
@@ -318,6 +460,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
         part="base"
         role="list"
         aria-label=${hostAriaLabel(this) ?? (this.label || nothing)}
+        aria-busy=${this.pendingMove?.phase === 'held' ? 'true' : 'false'}
         @lr-move-request=${this.onMoveRequest}
         @keydown=${this.onKeyDown}
       >

@@ -11,29 +11,29 @@ export const styles = css`
        vocabulary reads the same everywhere in the library. Defaults to the
        'pending' tone so an unset/unknown status still reads as neutral
        instead of unstyled. */
-    --lr-attachment-chip-accent: var(--lr-color-text-quiet);
-    --lr-attachment-chip-bg: var(--lr-color-surface);
-    --lr-attachment-chip-border: var(--lr-color-border);
+    --_lr-attachment-chip-accent: var(--lr-color-text-quiet);
+    --_lr-attachment-chip-bg: var(--lr-color-surface);
+    --_lr-attachment-chip-border: var(--lr-color-border);
     /* Compact-mode thumbnail size -- a dedicated token rather than reusing
        --lr-icon-button-size (the one token in this library with no
        --lr-theme-* fallback chain), so a consumer can retheme just the compact thumbnail
        independent of every other icon-button-sized control. */
-    --lr-attachment-chip-compact-thumbnail-size: var(--lr-size-1-75rem);
-    --lr-attachment-chip-compact-font-size: var(--lr-font-size-xs);
-    --lr-attachment-chip-compact-gap: var(--lr-size-0-25rem);
-    --lr-attachment-chip-spinner-duration: var(--lr-transition-ambient);
+    --_lr-attachment-chip-compact-thumbnail-size: var(--lr-size-1-75rem);
+    --_lr-attachment-chip-compact-font-size: var(--lr-font-size-xs);
+    --_lr-attachment-chip-compact-gap: var(--lr-size-0-25rem);
+    --_lr-attachment-chip-spinner-duration: var(--lr-transition-ambient);
   }
 
   :host([compact]) [part='base'] {
     border: none;
     border-radius: var(--lr-radius-pill);
     padding: var(--lr-size-0-125rem) var(--lr-space-xs);
-    font-size: var(--lr-attachment-chip-compact-font-size);
-    gap: var(--lr-attachment-chip-compact-gap);
+    font-size: var(--lr-attachment-chip-compact-font-size, var(--_lr-attachment-chip-compact-font-size));
+    gap: var(--lr-attachment-chip-compact-gap, var(--_lr-attachment-chip-compact-gap));
   }
   :host([compact]) [part='thumbnail'] {
-    inline-size: var(--lr-attachment-chip-compact-thumbnail-size);
-    block-size: var(--lr-attachment-chip-compact-thumbnail-size);
+    inline-size: var(--lr-attachment-chip-compact-thumbnail-size, var(--_lr-attachment-chip-compact-thumbnail-size));
+    block-size: var(--lr-attachment-chip-compact-thumbnail-size, var(--_lr-attachment-chip-compact-thumbnail-size));
   }
   /* The action buttons remain at the shared hit-area floor in compact mode, even though the
      thumbnail itself is smaller. */
@@ -48,21 +48,21 @@ export const styles = css`
   }
 
   :host([status='uploading']) {
-    --lr-attachment-chip-accent: var(--lr-color-brand);
-    --lr-attachment-chip-bg: var(--lr-color-brand-quiet);
-    --lr-attachment-chip-border: transparent;
+    --_lr-attachment-chip-accent: var(--lr-color-brand);
+    --_lr-attachment-chip-bg: var(--lr-color-brand-quiet);
+    --_lr-attachment-chip-border: transparent;
   }
   :host([status='error']) {
-    --lr-attachment-chip-accent: var(--lr-color-danger);
-    --lr-attachment-chip-bg: var(--lr-color-danger-quiet);
-    --lr-attachment-chip-border: transparent;
+    --_lr-attachment-chip-accent: var(--lr-color-danger);
+    --_lr-attachment-chip-bg: var(--lr-color-danger-quiet);
+    --_lr-attachment-chip-border: transparent;
   }
   /* Optional neutral-positive tint for a finished upload -- subtler than
      'uploading'/'error' since there's nothing left for the user to act on. */
-  :host([status='done']) {
-    --lr-attachment-chip-accent: var(--lr-color-success);
-    --lr-attachment-chip-bg: var(--lr-color-success-quiet);
-    --lr-attachment-chip-border: transparent;
+  :host([status='success']) {
+    --_lr-attachment-chip-accent: var(--lr-color-success);
+    --_lr-attachment-chip-bg: var(--lr-color-success-quiet);
+    --_lr-attachment-chip-border: transparent;
   }
 
   [part='base'] {
@@ -72,9 +72,9 @@ export const styles = css`
     max-inline-size: 100%;
     box-sizing: border-box;
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-attachment-chip-border);
+    border: var(--lr-border-width-thin) solid var(--lr-attachment-chip-border, var(--_lr-attachment-chip-border));
     border-radius: var(--lr-radius);
-    background: var(--lr-attachment-chip-bg);
+    background: var(--lr-attachment-chip-bg, var(--_lr-attachment-chip-bg));
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-snug);
@@ -95,7 +95,7 @@ export const styles = css`
     overflow: hidden;
     border-radius: calc(var(--lr-radius) * 0.6);
     background: var(--lr-color-surface);
-    color: var(--lr-attachment-chip-accent);
+    color: var(--lr-attachment-chip-accent, var(--_lr-attachment-chip-accent));
   }
   [part='thumbnail'] img {
     inline-size: 100%;
@@ -132,7 +132,7 @@ export const styles = css`
     font-variant-numeric: tabular-nums;
   }
   [part='status-text'] {
-    color: var(--lr-attachment-chip-accent);
+    color: var(--lr-attachment-chip-accent, var(--_lr-attachment-chip-accent));
     font-weight: var(--lr-font-weight-semibold);
   }
 
@@ -147,7 +147,7 @@ export const styles = css`
   [part='progress-fill'] {
     block-size: 100%;
     border-radius: inherit;
-    background: var(--lr-attachment-chip-accent);
+    background: var(--lr-attachment-chip-accent, var(--_lr-attachment-chip-accent));
     transition: inline-size var(--lr-transition-base);
   }
 
@@ -158,8 +158,8 @@ export const styles = css`
     block-size: var(--lr-size-1rem);
     border-radius: 50%;
     border: var(--lr-border-width-medium) solid var(--lr-color-border);
-    border-block-start-color: var(--lr-attachment-chip-accent);
-    animation: lr-attachment-chip-spin var(--lr-attachment-chip-spinner-duration) infinite;
+    border-block-start-color: var(--lr-attachment-chip-accent, var(--_lr-attachment-chip-accent));
+    animation: lr-attachment-chip-spin var(--lr-attachment-chip-spinner-duration, var(--_lr-attachment-chip-spinner-duration)) infinite;
   }
 
   [part='retry-button'],
@@ -232,6 +232,26 @@ export const styles = css`
     }
     [part='spinner'] {
       animation: none !important;
+    }
+  }
+
+  @media (forced-colors: active) {
+    [part='base'] {
+      forced-color-adjust: auto;
+      border-color: CanvasText;
+    }
+    :host([status='uploading']) [part='base'] {
+      border-style: dashed;
+      border-color: Highlight;
+    }
+    :host([status='error']) [part='base'] {
+      border-style: double;
+      border-color: Mark;
+    }
+    :host([status='success']) [part='base'] {
+      border-style: solid;
+      outline: var(--lr-border-width-medium) double CanvasText;
+      outline-offset: calc(-1 * var(--lr-border-width-medium));
     }
   }
 `;

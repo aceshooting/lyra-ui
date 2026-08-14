@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "workflows": {
+    "ci": {
+      "name": "CI",
+      "path": ".github/workflows/ci.yml",
+      "event": "push",
+      "headBranch": "main",
+      "requiredJobs": [
+        "build-and-coverage",
+        "chrome / Node 22 / shard 1/1",
+        "chromium / Node 22 / shard 1/2",
+        "chromium / Node 22 / shard 2/2",
+        "docs-and-storybook",
+        "edge / Node 22 / shard 1/1",
+        "firefox / Node 20 / shard 1/1",
+        "firefox / Node 22 / shard 1/4",
+        "firefox / Node 22 / shard 2/4",
+        "firefox / Node 22 / shard 3/4",
+        "firefox / Node 22 / shard 4/4",
+        "lint",
+        "packed-consumer",
+        "safari / Node 20 / shard 1/1",
+        "safari / Node 22 / shard 1/1",
+        "static-checks",
+        "visual-regression"
+      ]
+    },
+    "fullEngine": {
+      "name": "Full browser-engine suite",
+      "path": ".github/workflows/full-engine.yml",
+      "event": "workflow_dispatch",
+      "headBranch": "main",
+      "requiredJobs": [
+        "firefox / shard 1/4",
+        "firefox / shard 2/4",
+        "firefox / shard 3/4",
+        "firefox / shard 4/4",
+        "webkit / shard 1/4",
+        "webkit / shard 2/4",
+        "webkit / shard 3/4",
+        "webkit / shard 4/4"
+      ]
+    }
+  }
+}

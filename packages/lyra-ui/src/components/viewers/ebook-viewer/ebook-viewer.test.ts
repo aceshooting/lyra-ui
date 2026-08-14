@@ -449,8 +449,76 @@ describe('lr-ebook-viewer', () => {
         window: { getSelection: () => ({ toString: () => 'world', rangeCount: 1, getRangeAt: () => ({ getClientRects: () => [rect] }) }) },
       });
       const event = (await listener) as CustomEvent<{ text: string; anchor: unknown; rects: DOMRect[] }>;
-      expect(event.detail).to.deep.equal({ text: 'world', anchor: { kind: 'cfi', cfi: 'epubcfi(/6/2!/4)' }, rects: [rect] });
+      expect(event.detail.text).to.equal('world');
+      expect(event.detail.anchor).to.deep.equal({ kind: 'cfi', cfi: 'epubcfi(/6/2!/4)' });
+      expect(event.detail.rects).to.have.lengthOf(1);
+      expect(event.detail.rects[0].toJSON()).to.deep.include({ x: 0, y: 0, width: 10, height: 10 });
     } finally {
+      restore();
+    }
+  });
+
+  it('translates selected rectangles through nested, scrolled and CSS-scaled iframe viewports', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello world' });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    const outer = document.createElement('iframe');
+    outer.style.cssText = 'position:fixed;inset-inline-start:80px;inset-block-start:100px;width:240px;height:160px;border:4px solid transparent;transform:scale(.75);transform-origin:0 0';
+    document.body.append(outer);
+    const outerDocument = outer.contentDocument!;
+    outerDocument.documentElement.style.overflow = 'auto';
+    outerDocument.body.style.cssText = 'margin:0;min-height:500px;position:relative';
+    const inner = outerDocument.createElement('iframe');
+    inner.style.cssText = 'position:absolute;inset-inline-start:30px;inset-block-start:90px;width:120px;height:80px;border:2px solid transparent;transform:scale(.5);transform-origin:0 0';
+    outerDocument.body.append(inner);
+    outer.contentWindow!.scrollTo(0, 20);
+    const sourceWindow = inner.contentWindow!;
+    const ownSelection = Object.getOwnPropertyDescriptor(sourceWindow, 'getSelection');
+    const sourceRect = new sourceWindow.DOMRect(8, 10, 20, 12);
+    Object.defineProperty(sourceWindow, 'getSelection', {
+      configurable: true,
+      value: () => ({
+        toString: () => 'nested selection',
+        rangeCount: 1,
+        getRangeAt: () => ({ getClientRects: () => [sourceRect] }),
+      }),
+    });
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+
+      const mapThroughFrame = (
+        rect: { x: number; y: number; width: number; height: number },
+        frame: HTMLIFrameElement,
+        childWindow: Window,
+      ) => {
+        const bounds = frame.getBoundingClientRect();
+        const borderScaleX = bounds.width / frame.offsetWidth;
+        const borderScaleY = bounds.height / frame.offsetHeight;
+        const scaleX = frame.clientWidth * borderScaleX / childWindow.innerWidth;
+        const scaleY = frame.clientHeight * borderScaleY / childWindow.innerHeight;
+        return {
+          x: bounds.left + frame.clientLeft * borderScaleX + rect.x * scaleX,
+          y: bounds.top + frame.clientTop * borderScaleY + rect.y * scaleY,
+          width: rect.width * scaleX,
+          height: rect.height * scaleY,
+        };
+      };
+      const inOuter = mapThroughFrame(sourceRect, inner, sourceWindow);
+      const expected = mapThroughFrame(inOuter, outer, outer.contentWindow!);
+      const selected = oneEvent(el, 'lr-text-select');
+      fake.select('epubcfi(/6/2!/4)', { window: sourceWindow });
+      const event = (await selected) as CustomEvent<{ rects: DOMRect[] }>;
+      const actual = event.detail.rects[0]!;
+      expect(actual.x).to.be.closeTo(expected.x, 0.75);
+      expect(actual.y).to.be.closeTo(expected.y, 0.75);
+      expect(actual.width).to.be.closeTo(expected.width, 0.75);
+      expect(actual.height).to.be.closeTo(expected.height, 0.75);
+      expect(actual.x).to.be.greaterThan(sourceRect.x + 30);
+    } finally {
+      if (ownSelection) Object.defineProperty(sourceWindow, 'getSelection', ownSelection);
+      else delete (sourceWindow as unknown as { getSelection?: unknown }).getSelection;
+      outer.remove();
       restore();
     }
   });
@@ -1337,6 +1405,93 @@ describe('scrollToAnchor (ebook)', () => {
       expect(successCall?.styles?.fill).to.be.a('string').and.not.equal('');
       expect(dangerCall?.styles?.fill).to.be.a('string').and.not.equal('');
       expect(successCall?.styles?.fill).to.not.equal(dangerCall?.styles?.fill);
+    } finally {
+      restore();
+    }
+  });
+
+  it('paints the active highlight with a non-color outline and clears it for an unknown id', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello world' });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      el.highlights = [
+        { id: 'h1', anchor: { kind: 'cfi', cfi: 'epubcfi(/6/6!)' }, tone: 'success' },
+        { id: 'h2', anchor: { kind: 'cfi', cfi: 'epubcfi(/6/8!)' }, tone: 'danger' },
+      ];
+      el.activeHighlightId = 'h2';
+      await el.updateComplete;
+      const active = fake.highlightCalls.filter((call) => call.cfi === 'epubcfi(/6/8!)').at(-1)!;
+      const inactive = fake.highlightCalls.filter((call) => call.cfi === 'epubcfi(/6/6!)').at(-1)!;
+      expect(active.className).to.contain('lr-ebook-highlight-active');
+      expect(active.styles['stroke-width']).to.equal('3');
+      expect(active.styles['stroke-dasharray']).to.equal('2 1');
+      expect(active.styles['stroke']).to.be.a('string').and.not.equal('');
+      expect(inactive.className).not.to.contain('lr-ebook-highlight-active');
+      expect(inactive.styles).not.to.have.property('stroke-width');
+
+      el.activeHighlightId = 'unknown';
+      await el.updateComplete;
+      const repainted = fake.highlightCalls.filter((call) => call.cfi === 'epubcfi(/6/8!)').at(-1)!;
+      expect(repainted.className).not.to.contain('lr-ebook-highlight-active');
+      expect(repainted.styles).not.to.have.property('stroke-width');
+    } finally {
+      restore();
+    }
+  });
+
+  it('uses a forced-colors system stroke for the active highlight', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello world' });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(forced-colors: active)',
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      el.highlights = [{ id: 'h1', anchor: { kind: 'cfi', cfi: 'epubcfi(/6/6!)' } }];
+      el.activeHighlightId = 'h1';
+      await el.updateComplete;
+      const active = fake.highlightCalls.filter((call) => call.cfi === 'epubcfi(/6/6!)').at(-1)!;
+      expect(active.styles['stroke']).to.equal('CanvasText');
+      expect(active.styles['stroke-width']).to.equal('3');
+    } finally {
+      window.matchMedia = originalMatchMedia;
+      restore();
+    }
+  });
+
+  it('re-resolves highlight and search colors after a scoped theme-token change', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello world' });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      el.highlights = [{ id: 'h1', anchor: { kind: 'cfi', cfi: 'epubcfi(/6/6!)' }, tone: 'success' }];
+      await el.search('world');
+      await el.updateComplete;
+
+      const removeCount = fake.removeCalls.length;
+      el.style.setProperty('--lr-color-success-quiet', 'rgb(1, 2, 3)');
+      el.style.setProperty('--lr-color-warning', 'rgb(4, 5, 6)');
+      await aTimeout(20);
+      const highlight = fake.highlightCalls.filter((call) => call.cfi === 'epubcfi(/6/6!)').at(-1)!;
+      const search = fake.highlightCalls.filter((call) => call.className === 'lr-ebook-search').at(-1)!;
+      expect(highlight.styles.fill).to.equal('rgb(1, 2, 3)');
+      expect(search.styles.fill).to.equal('rgb(4, 5, 6)');
+      expect(fake.removeCalls.length).to.be.greaterThan(removeCount);
     } finally {
       restore();
     }

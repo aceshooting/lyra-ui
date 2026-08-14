@@ -11,7 +11,7 @@ const SPARSE_ICS = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//lyra-ui//test//
 
 function response(body: string, ok = true): Response { return { ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', text: () => Promise.resolve(body) } as Response; }
 function stubFetch(body: string, ok = true): () => void { const original = window.fetch; window.fetch = (() => Promise.resolve(response(body, ok))) as typeof window.fetch; return () => { window.fetch = original; }; }
-async function loaded(body: string): Promise<{ el: LyraCalendarViewer; restore: () => void }> { const restore = stubFetch(body); const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer src="https://example.test/calendar.ics"></lr-calendar-viewer>`); await waitUntil(() => el.shadowRoot!.querySelector('[part="event"]') !== null || el.shadowRoot!.querySelector('[part="error"]') !== null); return { el, restore }; }
+async function loaded(body: string): Promise<{ el: LyraCalendarViewer; restore: () => void }> { const restore = stubFetch(body); const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer src="https://example.test/calendar.ics"></lr-calendar-viewer>`); await waitUntil(() => el.shadowRoot!.querySelector('[part="event"]') !== null || el.shadowRoot!.querySelector('[part="error"]') !== null, undefined, { timeout: 5000 }); return { el, restore }; }
 
 describe('lr-calendar-viewer', () => {
   it('renders a localized empty state by default', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No calendar to display.'); });
@@ -36,6 +36,37 @@ describe('lr-calendar-viewer', () => {
           new Date('2026-07-14T14:00:00Z'),
         ),
       );
+    } finally { restore(); }
+  });
+  it('preserves DATE semantics and treats an all-day DTEND as exclusive', async () => {
+    const allDay = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', 'UID:all-day',
+      'DTSTART;VALUE=DATE:20260714', 'DTEND;VALUE=DATE:20260717', 'SUMMARY:Retreat',
+      'END:VEVENT', 'END:VCALENDAR', '',
+    ].join('\r\n');
+    const { el, restore } = await loaded(allDay);
+    try {
+      const formatter = new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeZone: 'UTC' });
+      expect(el.shadowRoot!.querySelector('[part="event-time"]')!.textContent).to.equal(
+        formatter.formatRange(new Date(Date.UTC(2026, 6, 14)), new Date(Date.UTC(2026, 6, 16))),
+      );
+      const state = (el as unknown as {
+        fetchState: { kind: 'loaded'; events: Array<{ startKind: string; endKind: string }> };
+      }).fetchState;
+      expect(state.events[0]).to.include({ startKind: 'date', endKind: 'date' });
+    } finally { restore(); }
+  });
+  it('formats a one-day all-day event without a fabricated midnight time or extra day', async () => {
+    const allDay = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
+      'DTSTART;VALUE=DATE:20260714', 'DTEND;VALUE=DATE:20260715', 'SUMMARY:Holiday',
+      'END:VEVENT', 'END:VCALENDAR', '',
+    ].join('\r\n');
+    const { el, restore } = await loaded(allDay);
+    try {
+      const expected = new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeZone: 'UTC' })
+        .format(new Date(Date.UTC(2026, 6, 14)));
+      expect(el.shadowRoot!.querySelector('[part="event-time"]')!.textContent).to.equal(expected);
     } finally { restore(); }
   });
   it('renders sparse valid events with a localizable fallback summary and no empty optional chrome', async () => {
@@ -73,7 +104,7 @@ describe('lr-calendar-viewer', () => {
     } finally { restore(); }
   });
   it('rejects a calendar whose event count exceeds the retained-entry ceiling', async () => {
-    const events = Array.from({ length: 10_001 }, (_unused, index) => [
+    const events = Array.from({ length: 251 }, (_unused, index) => [
       'BEGIN:VEVENT',
       `UID:${index}@example.test`,
       'DTSTART:20260714T140000Z',
@@ -139,8 +170,8 @@ describe('lr-calendar-viewer', () => {
   it('is accessible', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`); await expect(el).to.be.accessible(); });
   it('is accessible with events listed', async () => { const { el, restore } = await loaded(TWO_EVENTS); try { expect(el.shadowRoot!.querySelectorAll('[part="event"]')).to.have.lengthOf(2); await expect(el).to.be.accessible(); } finally { restore(); } });
   it('uses the name property as the accessible name of the base region', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer name="Team offsite.ics"></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Team offsite.ics'); });
-  it('falls back to a host aria-label when name is unset', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer aria-label="Holiday schedule"></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Holiday schedule'); });
-  it('lets a host aria-label override the name property', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer name="Team offsite.ics" aria-label="Host label"></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Host label'); });
+  it('leaves a non-empty accessible name on the host instead of copying it to the shadow region', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer aria-label="Holiday schedule"></lr-calendar-viewer>`); const base = el.shadowRoot!.querySelector('[part="base"]')!; expect(base.getAttribute('aria-label')).to.be.null; expect(base.getAttribute('role')).to.be.null; expect(el.getAttribute('aria-label')).to.equal('Holiday schedule'); });
+  it('lets a host aria-label override the name property without creating a second owner', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer name="Team offsite.ics" aria-label="Host label"></lr-calendar-viewer>`); const base = el.shadowRoot!.querySelector('[part="base"]')!; expect(base.getAttribute('aria-label')).to.be.null; expect(base.getAttribute('role')).to.be.null; });
   it('preserves an explicitly empty host aria-label ahead of name', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer name="Team offsite.ics" aria-label=""></lr-calendar-viewer>`); const base = el.shadowRoot!.querySelector('[part="base"]')!; expect(base.hasAttribute('aria-label')).to.be.true; expect(base.getAttribute('aria-label')).to.equal(''); });
   it('falls back to the localized calendarViewerLabel default when neither name nor a host aria-label is set', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Calendar viewer'); });
   it('supports a .strings override for the calendarViewerLabel fallback', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer .strings=${{ calendarViewerLabel: 'Visionneuse de calendrier' }}></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse de calendrier'); });

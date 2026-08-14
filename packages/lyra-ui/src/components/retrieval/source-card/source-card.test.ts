@@ -28,7 +28,7 @@ it('renders title and page combined', async () => {
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('annual_report.pdf — p. 12');
 });
 
-it('lets a host aria-label name the title button without replacing its visible title', async () => {
+it('keeps explicit-empty and dynamic host naming distinct from the visible title button', async () => {
   const el = (await fixture(
     html`<lr-source-card
       title="annual_report.pdf"
@@ -37,8 +37,17 @@ it('lets a host aria-label name the title button without replacing its visible t
     ></lr-source-card>`,
   )) as LyraSourceCard;
   const title = el.shadowRoot!.querySelector('[part="title"]')!;
-  expect(title.getAttribute('aria-label')).to.equal('Open the cited annual report');
+  expect(el.getAttribute('aria-label')).to.equal('Open the cited annual report');
+  expect(title.getAttribute('aria-label')).to.equal(null);
   expect(title.textContent!.trim()).to.equal('annual_report.pdf — p. 12');
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('');
+  expect(title.getAttribute('aria-label')).to.equal(null);
+  el.setAttribute('aria-label', 'Revised report action');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Revised report action');
+  expect(title.getAttribute('aria-label')).to.equal(null);
 });
 
 it('renders a non-numeric page label as-is', async () => {

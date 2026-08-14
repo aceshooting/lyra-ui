@@ -135,8 +135,10 @@ export const styles = css`
   }
   .handle-fallback {
     display: inline-flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
+    direction: ltr;
   }
   .handle-fallback svg {
     inline-size: var(--lr-size-0-75rem);

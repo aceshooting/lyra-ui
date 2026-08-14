@@ -35,7 +35,8 @@ it("validates fullscreen and backdrop inset values before assigning them", async
   el.backdropInset = "";
   await el.updateComplete;
   expect(base.style.getPropertyValue("--lr-widget-fullscreen-inset")).to.equal("var(--lr-space-l) 0");
-  expect(backdrop.style.getPropertyValue("--lr-widget-backdrop-inset")).to.equal("var(--lr-space-l) 0");
+  expect(backdrop.style.getPropertyValue("--lr-widget-backdrop-inset")).to.equal("");
+  expect(getComputedStyle(backdrop).inset).to.equal("0px");
 });
 
 it("renders label and sublabel in the header", async () => {
@@ -666,6 +667,87 @@ describe("views", () => {
       toggles.filter((toggle) => toggle.getAttribute("aria-pressed") === "true")
     ).to.have.length(1);
   });
+
+  it("keys view controls and panels by validated id and repairs focus only when that id disappears", async () => {
+    const el = await fixture<LyraWidget>(html`
+      <lr-widget
+        label="Usage"
+        .views=${[
+          { id: "a", label: "A" },
+          { id: "b", label: "B" },
+          { id: "c", label: "C" },
+        ]}
+      ></lr-widget>
+    `);
+    el.activeView = "b";
+    await el.updateComplete;
+    const beforeToggle = el.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part="view-toggle"][data-view-id="b"]'
+    )!;
+    const beforePanel = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="body"] > [data-view-id="b"]'
+    )!;
+    beforeToggle.focus();
+
+    el.views = [
+      { id: "b", label: "B" },
+      { id: "c", label: "C" },
+    ];
+    await el.updateComplete;
+    expect(
+      el.shadowRoot!.querySelector('[part="view-toggle"][data-view-id="b"]') === beforeToggle
+    ).to.equal(true);
+    expect(
+      el.shadowRoot!.querySelector('[part="body"] > [data-view-id="b"]') === beforePanel
+    ).to.equal(true);
+    expect(el.shadowRoot!.activeElement === beforeToggle).to.equal(true);
+
+    el.views = [{ id: "c", label: "C" }];
+    await el.updateComplete;
+    expect(el.activeView).to.equal("c");
+    expect(
+      el.shadowRoot!.activeElement ===
+        el.shadowRoot!.querySelector('[part="view-toggle"][data-view-id="c"]')
+    ).to.equal(true);
+  });
+
+  it("rejects malformed, empty, whitespace and hostile view records without rejecting updates", async () => {
+    const hostile = Object.defineProperty({}, "id", {
+      get(): never {
+        throw new Error("hostile id");
+      },
+    });
+    const el = await fixture<LyraWidget>(html`<lr-widget label="Usage"></lr-widget>`);
+    el.views = [
+      null,
+      { id: "" },
+      { id: " spaced " },
+      hostile,
+      { id: "valid", label: "Valid" },
+    ] as unknown as readonly import("./widget.js").LyraWidgetView[];
+    await el.updateComplete;
+    const toggles = el.shadowRoot!.querySelectorAll('[part="view-toggle"]');
+    expect(toggles.length).to.equal(1);
+    expect(toggles[0]?.getAttribute("data-view-id")).to.equal("valid");
+  });
+});
+
+it("keeps a constrained header fixed while the body owns deep-content scrolling", async () => {
+  const el = await fixture<LyraWidget>(html`
+    <lr-widget label="Scrollable" style="display:block; inline-size:320px; block-size:160px;">
+      <button style="display:block; margin-block-start:900px;">Deep action</button>
+    </lr-widget>
+  `);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  expect(body.scrollHeight).to.be.greaterThan(body.clientHeight);
+  expect(getComputedStyle(body).overflowY).to.equal("auto");
+  const headerTop = header.getBoundingClientRect().top;
+  body.scrollTop = body.scrollHeight;
+  body.dispatchEvent(new Event("scroll"));
+  expect(header.getBoundingClientRect().top).to.equal(headerTop);
+  expect(base.scrollTop).to.equal(0);
 });
 
 it("contains long view labels in a narrow header and floors toggles at the shared hit size", async () => {
@@ -1932,7 +2014,7 @@ it("applies tighter header/body padding when compact", async () => {
 });
 
 describe("backdrop-inset", () => {
-  it("backdrop inset falls back to fullscreen-inset when unset", async () => {
+  it("keeps the default backdrop viewport-filling when the panel is inset", async () => {
     const el = (await fixture(
       html`<lr-widget
         expandable
@@ -1945,9 +2027,8 @@ describe("backdrop-inset", () => {
       '[part="backdrop"]'
     ) as HTMLElement;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(getComputedStyle(backdrop).inset).to.equal(
-      getComputedStyle(base).inset
-    );
+    expect(getComputedStyle(backdrop).inset).to.equal("0px");
+    expect(getComputedStyle(base).inset).to.equal("0px 0px 0px 240px");
   });
 
   it("decouples backdrop inset from fullscreen-inset when backdrop-inset is set", async () => {

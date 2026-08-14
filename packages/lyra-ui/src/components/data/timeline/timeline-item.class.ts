@@ -5,17 +5,17 @@ import { styles } from './timeline-item.styles.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 
-/** The shared semantic tone. Kept as a local name so existing imports keep resolving. */
-export type TimelineItemVariant = LyraVariant;
-
 const timelineItemVariantConverter = {
-  fromAttribute(value: string | null): TimelineItemVariant {
-    return (value ?? 'neutral') as TimelineItemVariant;
+  fromAttribute(value: string | null): LyraVariant {
+    return normalizeTimelineItemVariant(value);
   },
-  toAttribute(value: TimelineItemVariant): string | null {
+  toAttribute(value: LyraVariant): string | null {
     return value === 'neutral' ? null : value;
   },
 };
+
+const normalizeTimelineItemVariant = (value: unknown): LyraVariant =>
+  value === 'brand' || value === 'success' || value === 'warning' || value === 'danger' ? value : 'neutral';
 
 /**
  * `<lr-timeline-item>` — one marker + title + optional timestamp + optional description row inside
@@ -51,10 +51,8 @@ const timelineItemVariantConverter = {
  * @customElement lr-timeline-item
  * @slot - The item's primary heading/title content. Rich content allowed (inline code, a badge, a
  *   link) — nothing renders when this slot is empty, a valid if unusual usage.
- * @slot marker-icon - Canonical leading marker/glyph override (e.g. a `<lr-icon>`, an emoji, a
- *   small avatar-like element). Takes precedence over the legacy `icon` slot.
- * @slot icon - Legacy marker-glyph alias, retained as the fallback for `marker-icon`. When both
- *   icon slots are empty, the marker falls back to a plain color-coded dot driven by `variant`.
+ * @slot marker-icon - Marker/glyph override (e.g. a `<lr-icon>`, an emoji, a small avatar-like
+ *   element). When empty, the marker falls back to a plain color-coded dot driven by `variant`.
  * @slot timestamp - Full override of the timestamp presentation (e.g.
  *   `<lr-format-date slot="timestamp">`, a custom string, a differently-configured
  *   `<lr-relative-time>`). Wins over the `timestamp` property whenever it has assigned content,
@@ -64,9 +62,8 @@ const timelineItemVariantConverter = {
  * @slot description - Secondary/body content below the title (explanatory text, a diff snippet, a
  *   "view details" affordance). `[part="description"]` is hidden entirely when this slot is empty.
  * @csspart base - The root wrapper. Flex container; `flex-direction` is driven by the
- *   `--lr-timeline-item-direction` custom property inherited from `<lr-timeline>`'s `:host` --
- *   `row` in vertical-timeline mode (marker beside content), `column` in horizontal-timeline mode
- *   (marker above content).
+ *   parent timeline's private cross-shadow orientation state -- `row` in vertical-timeline mode
+ *   (marker beside content), `column` in horizontal-timeline mode (marker above content).
  * @csspart track - Wrapper around the marker and rail (the "spine"). Always the opposite axis from
  *   `[part="base"]` -- see the class doc's rail-mechanism note.
  * @csspart marker - The dot/icon circle. Always `aria-hidden="true"` -- purely decorative, the
@@ -95,23 +92,9 @@ const timelineItemVariantConverter = {
  *   Swapped per `variant` (see the class doc's variant table); a consumer can override it on an
  *   ancestor for a themed group or directly on one item, with the direct value winning via the
  *   normal cascade.
- * @cssprop [--lr-timeline-item-direction=row] - Internal orientation plumbing, not a retheming
- *   knob: `[part="base"]`'s `flex-direction`, set by an ancestor `<lr-timeline>`'s `:host` and
- *   inherited across the slot boundary (`row` vertical, `column` horizontal). The `row` fallback
- *   applies when the item is used standalone.
- * @cssprop [--lr-timeline-item-track-direction=column] - Internal orientation plumbing, not a
- *   retheming knob: `[part="track"]`'s `flex-direction`, always the opposite axis from
- *   `--lr-timeline-item-direction` and set alongside it by `<lr-timeline>`.
- * @cssprop [--lr-timeline-item-gap-block-end=0] - Internal orientation plumbing, not a retheming
- *   knob: `[part="content"]`'s `padding-block-end`, set by a vertical `<lr-timeline>` so the rail
- *   reaches the next item's marker. `0` when standalone or horizontal; retheme
- *   `--lr-timeline-gap` on `<lr-timeline>` instead.
- * @cssprop [--lr-timeline-item-gap-inline-end=0] - Internal orientation plumbing, not a retheming
- *   knob: the inline-axis counterpart of `--lr-timeline-item-gap-block-end`, non-zero only under a
- *   horizontal `<lr-timeline>`.
- * @cssprop [--lr-timeline-item-rail-visibility=visible] - Internal plumbing, not a retheming knob:
- *   `[part="rail"]`'s `visibility`, set to `hidden` by `<lr-timeline>`'s
- *   `::slotted(:last-child)` rule so the final item has no trailing rail.
+ * @cssprop [--lr-timeline-active-ring-color=var(--lr-timeline-marker-color)] - Static outline color
+ *   for the current/in-progress marker. The outline remains visible when reduced motion disables
+ *   the optional pulse animation.
  * @status stable
  * @since 4.0.0
  */
@@ -136,7 +119,21 @@ export class LyraTimelineItem extends LyraElement {
   /** Tone of the marker. `'neutral'` (default) is a plain past event; `'brand'` is highlighted/
    *  informational; `'success'` is completed positively (e.g. a successful deploy); `'warning'` needs
    *  attention; `'danger'` is a failed/error event. The library-wide `LyraVariant` set. */
-  @property({ reflect: true, converter: timelineItemVariantConverter }) variant: TimelineItemVariant = 'neutral';
+  private _variant: LyraVariant = 'neutral';
+  @property({ reflect: true, converter: timelineItemVariantConverter })
+  get variant(): LyraVariant {
+    return this._variant;
+  }
+  set variant(value: LyraVariant) {
+    const normalized = normalizeTimelineItemVariant(value);
+    const previous = this._variant;
+    if (previous === normalized) {
+      if (value !== normalized) this.requestUpdate('variant', previous);
+      return;
+    }
+    this._variant = normalized;
+    this.requestUpdate('variant', previous);
+  }
 
   /** Marks this as the current/in-progress item (e.g. "the agent is executing this step right now"),
    *  as opposed to a resolved past entry. Drives a pulsing marker (disabled under
@@ -168,6 +165,15 @@ export class LyraTimelineItem extends LyraElement {
     this.setAttribute('aria-current', String(this.active));
   }
 
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (changed.has('variant')) {
+      const reflected = timelineItemVariantConverter.toAttribute(this.variant);
+      if (reflected === null) this.removeAttribute('variant');
+      else if (this.getAttribute('variant') !== reflected) this.setAttribute('variant', reflected);
+    }
+  }
+
   private get normalizedTimestamp(): Date | undefined {
     if (this.timestamp === undefined) return undefined;
     const date = this.timestamp instanceof Date ? this.timestamp : new Date(this.timestamp);
@@ -176,11 +182,7 @@ export class LyraTimelineItem extends LyraElement {
 
   private onIconSlotChange = (): void => {
     const markerIconSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="marker-icon"]');
-    const iconSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="icon"]');
-    this.hasIconSlot = Boolean(
-      markerIconSlot?.assignedElements({ flatten: true }).length ||
-        iconSlot?.assignedElements({ flatten: true }).length,
-    );
+    this.hasIconSlot = Boolean(markerIconSlot?.assignedElements({ flatten: true }).length);
   };
 
   private onTimestampSlotChange = (e: Event): void => {
@@ -205,9 +207,7 @@ export class LyraTimelineItem extends LyraElement {
       <div part="base">
         <div part="track">
           <span part="marker" aria-hidden="true" ?data-has-icon=${this.hasIconSlot}>
-            <slot name="marker-icon" @slotchange=${this.onIconSlotChange}
-              ><slot name="icon" @slotchange=${this.onIconSlotChange}></slot></slot
-            >
+            <slot name="marker-icon" @slotchange=${this.onIconSlotChange}></slot>
           </span>
           <span part="rail"></span>
         </div>

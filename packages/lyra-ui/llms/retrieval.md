@@ -3,36 +3,39 @@
 A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 
 **Properties:**
-- `nodes: GraphNode[] = []` (attribute: false) — `GraphNode { id: string; label?: string;
-  accessibleLabel?: string; description?: string; radius?: number; color?: string; type?: string;
-  expandable?: boolean; communityId?: string }`;
+
+- `nodes: LyraGraphNode[] = []` (attribute: false) — readonly `LyraGraphNode { id: string; label?: string;
+accessibleLabel?: string; description?: string; radius?: number; color?: string; type?: string;
+expandable?: boolean; communityId?: string }`;
   `accessibleLabel` supplies richer spoken text than the visible label, while `description` renders
-  as native SVG `<title>` tooltip text. `radius` is clamped to `[6, 24]` (an unset/non-finite value
+  as the preferred bounded tooltip/summary text in both renderers. `radius` is clamped to `[6, 24]` (an unset/non-finite value
   falls back to the midpoint, `15`) so a node can never render invisibly small or absurdly large.
-  `type` is a key into `nodeTypes` (matched by `GraphNodeType.id`); unknown/absent renders as an
+  `type` is a key into `nodeTypes` (matched by `LyraNodeTypeStyle.id`); unknown/absent renders as an
   untyped default circle with the token fill, but an unmatched `type` still participates in
   `hiddenTypes` filtering by its raw string value
-- `nodeTypes: GraphNodeType[] = []` (attribute: false) — `GraphNodeType { id: string; label: string;
-  color?: string; shape?: 'circle' | 'square' | 'diamond' }`, one entry per `GraphNode.type` value:
+- `nodeTypes: LyraNodeTypeStyle[] = []` (attribute: false) — readonly `LyraNodeTypeStyle { id: string; label: string;
+color?: string; shape?: 'circle' | 'square' | 'diamond' }`, one entry per `LyraGraphNode.type` value:
   `label` feeds the spoken "typed node" summary, and `shape`/`color` drive rendering per node.
-  Per-node fill resolution precedence is `GraphNode.color` (most specific) > the matched
-  `GraphNodeType.color` > an ordered categorical fallback palette assigned by the type's index in
+  Per-node fill resolution precedence is `LyraGraphNode.color` (most specific) > the matched
+  `LyraNodeTypeStyle.color` > an ordered categorical fallback palette assigned by the type's index in
   `nodeTypes` (`--lr-graph-cat-1` through `-8`, wrapping every 8 entries) > the untyped
   `--lr-node-fill` default; both data-driven color sources are sanitized the same way as
-  `GraphNode.color` itself. A typed node with no matching `nodeTypes` entry renders as a plain
+  `LyraGraphNode.color` itself. A typed node with no matching `nodeTypes` entry renders as a plain
   circle with the untyped default fill
 - `hiddenTypes: string[] = []` (attribute: false) — hides nodes whose raw `type` is listed and every
   incident link from rendering, layout, keyboard navigation, the data-list alternative, and the
   accessible counts. Hidden positions are retained by id, so showing a type restores its prior
   layout even when no matching `nodeTypes` entry exists
-- `links: GraphLink[] = []` (attribute: false) — `GraphLink { id?: string; source: string; target:
-  string; width?: number; label?: string; accessibleLabel?: string; description?: string; directed?:
-  boolean; color?: string; dash?: number[] }` (source/target are node ids). `directed` adds an
+- `links: LyraGraphLink[] = []` (attribute: false) — readonly `LyraGraphLink { id?: string; source: string; target:
+string; width?: number; label?: string; accessibleLabel?: string; description?: string; directed?:
+boolean; color?: string; dash?: number[] }` (source/target are node ids). `directed` adds an
   arrowhead; `color` and `dash` style the individual stroke; `label` provides a spoken-name and SVG
   tooltip fallback but is not rendered as visible edge text; `accessibleLabel` and `description`
   can override the spoken name and tooltip independently. `width` is normalized before reaching
   SVG, canvas paint, or canvas picking: negative values clamp to `0`, while a non-finite or unset
-  value uses `1.5`. A link whose `source` id doesn't resolve to a real node is still dropped entirely
+  value uses `1.5`. A zero-width or fully transparent link remains in the nonvisual topology
+  summary but is excluded from pointer picking and keyboard navigation, so invisible geometry never
+  becomes an operable control. A link whose `source` id doesn't resolve to a real node is still dropped entirely
   (there's no position to draw a stub from). A link whose `target` id doesn't resolve instead renders
   as a short, dashed, non-interactive stub off `source`'s own position
   (`[part='link'][data-dangling]`, `aria-hidden="true"`) rather than being silently dropped — e.g. for
@@ -44,15 +47,18 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 - `linkDistance: number = 100` (attribute `link-distance` — live-reactive, see gotchas)
 - `minZoom: number = 0.1` (attribute `min-zoom`)
 - `maxZoom: number = 8` (attribute `max-zoom`)
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — host accessible name forwarded
-  to the internal semantic SVG; when unset, the SVG uses the localized node/link-count summary
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — setting the JS property while
+  the host attribute is absent names the SVG/canvas owner. Authored host `aria-label` presence,
+  including an explicitly empty value, instead makes the host the sole named graph owner; the
+  inner renderer drops its parallel role/name. Removing the attribute restores the inner owner and
+  its localized node/link-count fallback
 - `seed?: number` — when set, seeds each node's initial x/y deterministically
   (keyed by node **id**, not array index/order) instead of `forceSimulation()`'s own random start,
   and settles the simulation synchronously instead of animating the settle (same effect
   `prefers-reduced-motion` has, see gotchas)
 - `showEdgeLabels: boolean = false` (attribute `show-edge-labels`) — draws each resolved
   (non-dangling) link's `label` as visible SVG text (`[part="link-label"]`) at the segment midpoint.
-  Off by default: `GraphLink.label` stays spoken/tooltip-only, matching pre-existing behavior, unless
+  Off by default: `LyraGraphLink.label` stays spoken/tooltip-only, matching pre-existing behavior, unless
   this is set
 - `edgeLabelMinZoom: number = 0.6` (attribute `edge-label-min-zoom`) — below this zoom scale, every
   drawn edge label is hidden (toggled via a `data-edge-labels-hidden` attribute on the zoomed `<g>`,
@@ -75,7 +81,8 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
   `::part(node)`/`::part(link)` styling (pixels, not elements — theme via cssprops instead), no
   native SVG `<title>` tooltip (replaced by `part="tooltip"`), and a drawn focus ring instead of a
   CSS one. Keyboard roving/announcements are preserved through an offscreen `part="cursor-item"`
-  button per node/link/hull. In both renderers, node, link, and community-hull picking keeps at
+  button per visible node/link/hull; the canvas repaints a non-color dashed/ring focus cue for the
+  currently focused node, link, or hull and uses a system color under forced colors. In both renderers, node, link, and community-hull picking keeps at
   least 24 CSS px of screen-space geometry as the viewport zoom changes; this enlarges interaction
   only, not the visible marks.
 
@@ -85,11 +92,11 @@ camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local draw
 
 **Events:** `lr-node-click` (`detail: { id, x, y }`, where `x` and `y` are the clicked node's current
 local drawing coordinates), `lr-link-click` (`detail: { source, target,
-id? }`; the optional `id` is the stable `GraphLink.id` supplied by the caller), `lr-node-enter`/
+id? }`; the optional `id` is the stable `LyraGraphLink.id` supplied by the caller), `lr-node-enter`/
 `lr-node-leave` (`detail: { id }`, hover start/end, suppressed while dragging/panning),
 `lr-link-enter`/`lr-link-leave` (`detail: { source, target, id? }`, same hover contract),
 `lr-node-expand` (`detail: { id }`, a node was double-activated — native `dblclick`, or two
-Enter/Space activations within 500ms — regardless of `GraphNode.expandable`), `lr-community-click`
+Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-click`
 (`detail: { id }`, a hull was activated), `lr-selection-change`
 (`detail: { nodeIds, linkIds }`, a controlled selection intent), and `lr-viewport-change`
 (`detail: { k, x, y }`, a frame-coalesced camera/layout signal)
@@ -108,11 +115,11 @@ the peers loaded fine but `nodes` is empty),
 (`renderer="canvas"` only — the drawing surface, its hover tooltip replacing the SVG `<title>`, and
 the offscreen keyboard-roving items)
 
-**Themeable custom properties:** `--lr-node-fill` (set inline per-node from `GraphNode.color`,
+**Themeable custom properties:** `--lr-node-fill` (set inline per-node from `LyraGraphNode.color`,
 falls back to `--lr-color-brand`) and `--lr-link-color` (set inline per-link from
-`GraphLink.color`, falling back to `--lr-color-border`); also uses `--lr-color-text` +
+`LyraGraphLink.color`, falling back to `--lr-color-border`); also uses `--lr-color-text` +
 `--lr-font` (label text), `--lr-focus-ring-*` (node/link `:focus-visible` outline).
-The ordered categorical fallback palette for a typed node with no `GraphNodeType.color` is
+The ordered categorical fallback palette for a typed node with no `LyraNodeTypeStyle.color` is
 `--lr-graph-cat-1` (default `var(--lr-theme-graph-cat-1,#8250df)`),
 `--lr-graph-cat-2` (default `var(--lr-theme-graph-cat-2,#bf3989)`),
 `--lr-graph-cat-3` (default `var(--lr-theme-graph-cat-3,#0a7d91)`),
@@ -125,7 +132,7 @@ index in `nodeTypes` and wraps every eight entries; the `--lr-theme-graph-cat-*`
 preferred theme-level overrides.
 `--lr-graph-edge-label-halo` (default `var(--lr-color-surface)`) — the legibility halo painted
 behind a drawn `[part="link-label"]` (via `paint-order: stroke`).
-`--lr-graph-focus-halo-color` (default `var(--lr-color-brand)`) — `[part="focus-halo"]` stroke.
+`--lr-graph-focus-halo-color` (default `var(--lr-color-brand)`) — `[part="focus-halo"]` and canvas keyboard-focus cue stroke.
 `--lr-graph-selected-color` (default `var(--lr-color-success)`) — selected node/link stroke.
 `--lr-graph-dimmed-opacity` (default `0.35`) — opacity of a node/link listed in
 `dimmedNodeIds`/`dimmedLinkIds`.
@@ -147,24 +154,40 @@ localized `part="error"` alert. Install with
 ```html
 <lr-graph style="display:block;height:500px"></lr-graph>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/retrieval/graph/graph.js';
+  import "@aceshooting/lyra-ui/components/retrieval/graph/graph.js";
 
-  const g = document.querySelector('lr-graph');
+  const g = document.querySelector("lr-graph");
   g.nodes = [
-    { id: 'a', label: 'A', accessibleLabel: 'Source document A', description: 'The source document' },
-    { id: 'b', label: 'B', description: 'The cited document' },
+    {
+      id: "a",
+      label: "A",
+      accessibleLabel: "Source document A",
+      description: "The source document",
+    },
+    { id: "b", label: "B", description: "The cited document" },
   ];
-  g.links = [{
-    id: 'citation-a-b', source: 'a', target: 'b', label: 'cites',
-    accessibleLabel: 'Document A cites document B', description: 'Citation relationship',
-    directed: true, color: 'var(--lr-color-brand)', dash: [6, 3],
-  }];
-  g.addEventListener('lr-node-click', (e) => console.log(e.detail.id));
-  g.addEventListener('lr-link-click', (e) => console.log(e.detail.id, e.detail.source, e.detail.target));
+  g.links = [
+    {
+      id: "citation-a-b",
+      source: "a",
+      target: "b",
+      label: "cites",
+      accessibleLabel: "Document A cites document B",
+      description: "Citation relationship",
+      directed: true,
+      color: "var(--lr-color-brand)",
+      dash: [6, 3],
+    },
+  ];
+  g.addEventListener("lr-node-click", (e) => console.log(e.detail.id));
+  g.addEventListener("lr-link-click", (e) =>
+    console.log(e.detail.id, e.detail.source, e.detail.target)
+  );
 </script>
 ```
 
 **Known gotchas:**
+
 - per-tick full re-render is expensive: every d3-force tick (up to ~300 by default,
   continuously while dragging via `alphaTarget(0.3)`) writes node/link positions straight onto the
   already-rendered DOM via `setAttribute()` rather than reassigning `simNodes`/`simLinks` (that
@@ -188,9 +211,9 @@ localized `part="error"` alert. Install with
   load (for example, because they are not installed), the graph fails closed with a localized
   neutral `part="error"` message and announces the transition through a shared assertive light-DOM
   region instead of leaving an empty SVG.
-- `GraphNode.color`, node-type colors, `GraphLink.color`, and community colors are accepted only
+- `LyraGraphNode.color`, node-type colors, `LyraGraphLink.color`, and community colors are accepted only
   when the browser parses them as CSS `color`; declaration breaks and `url()` paint servers are
-  ignored in favor of the normal token/palette fallback. `GraphLink.dash` is used only when every
+  ignored in favor of the normal token/palette fallback. `LyraGraphLink.dash` is used only when every
   entry is finite and non-negative; an empty or invalid array falls back to a solid line rather
   than partially applying malformed SVG stroke data.
 - a structural `nodes`/`links` change now carries over each already-settled node's position (and any
@@ -203,15 +226,16 @@ localized `part="error"` alert. Install with
   ~300 rendered frames; user-initiated motion (dragging a node) is unaffected either way.
 - in canvas mode, `pointercancel`, lost pointer capture, and disconnect all release a live node's
   force pin and reset the simulation target; a canceled drag never leaves the node pinned.
-- the `<svg part="svg">` now carries `role="group"` and an `aria-label` summarizing the node/link
-  counts (e.g. "Node-link diagram with 5 nodes and 4 links"), and node `<text part="label">`s are
-  `aria-hidden="true"` (their content is already covered by each node's own `aria-label`).
+- With no authored host `aria-label`, the SVG/canvas carries `role="group"` and the localized
+  node/link-count name (e.g. "Node-link diagram with 5 nodes and 4 links"). An authored host label
+  moves that one graph role/name to the host instead of duplicating it. Node `<text part="label">`s
+  stay `aria-hidden="true"` because each node control already owns its label.
 - `nodeTypes` and `showEdgeLabels` are live-reactive post-mount: either changing re-scans/rebinds the
   cached per-node and per-link DOM element arrays, alongside the existing `simNodes`/`simLinks`
   structural-change trigger — no need to also touch `nodes`/`links` to see a type/shape/color or
   edge-label change take effect.
 - when `showEdgeLabels` is `false` (the default), a resolved link renders as a bare `<line
-  part="link">` with no extra wrapping element, so existing consumers who never set it see
+part="link">` with no extra wrapping element, so existing consumers who never set it see
   byte-for-byte identical link DOM; setting it wraps each link's `<line>` and its
   `[part="link-label"]` `<text>` together. `edgeLabelMinZoom`'s hide/show gate is applied once at
   mount (against d3-zoom's known identity transform) as well as on every subsequent pan/zoom, so
@@ -253,26 +277,28 @@ at `lr-node-add`/`lr-palette-place`; the host mutates `nodes`. Fully decoupled f
 with a `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
 
 **Properties:**
+
 - `items: PaletteItem[] = []` (attribute: false) — `PaletteItem { type: string; label: string;
-  description?: string; category?: string; keywords?: string[]; icon?: unknown; disabled?: boolean }`;
+description?: string; category?: string; keywords?: string[]; icon?: unknown; disabled?: boolean }`;
   `type` is the `FlowNode.type` a placement/drop creates, `category` groups items under
   first-appearance-ordered headings, `disabled` renders an item visible but not draggable/placeable
 - `label: string = ''` — accessible name for the search field/listbox
 - `reorderable: boolean = false` (reflected) — opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard
   reordering of the catalog. Unset, no `lr-reorder` is ever emitted and Ctrl/Cmd+Arrow keeps
   behaving exactly like a plain Arrow press
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the listbox's
-  computed accessible name; wins over `label` and the localized default, and attribute-reflects
-  from a host-level `aria-label`
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
+  the host attribute is absent, overrides the listbox name. Authored host `aria-label` instead
+  names the component as a whole (including explicit-empty/dynamic values) and is not cloned onto
+  the listbox, which retains the distinct `label`/localized name
 
 **Events:** `lr-palette-place` (`detail: { type }`, a pointer click or Enter/Space — the
 click/keyboard alternative to dragging), `lr-select` (`detail: { item }`, emitted alongside
 `lr-palette-place` on both gestures, carrying the full item), `lr-reorder`
-(`detail: { type, category, fromIndex, toIndex }`, only while `reorderable`), `focus`/`blur` (no
-detail — re-dispatched from the internal search field's own `focus`/`blur`, bubbling and composed
-unlike the native events, since neither bubbles nor crosses the shadow boundary on its own).
+(`detail: { type, category, fromIndex, toIndex }`, only while `reorderable`), `focus`/`blur`
+(realm-correct native `FocusEvent`s relayed exactly once from the internal search field, preserving
+`relatedTarget` while bubbling and crossing the shadow boundary).
 
-`lr-reorder` is a *request*, the same host-applies-the-mutation contract `lr-tree`'s identical
+`lr-reorder` is a _request_, the same host-applies-the-mutation contract `lr-tree`'s identical
 `reorderable`/`lr-reorder` pair already uses: Ctrl/Cmd+ArrowUp/ArrowDown on the focused item asks to
 move it past its neighbour **inside its own category group**, so a reorder can never turn into a
 recategorization, and nothing is emitted at a group boundary. `category` is `null` for the
@@ -296,17 +322,18 @@ announcement).
 <lr-node-palette id="palette"></lr-node-palette>
 <lr-flow-canvas id="canvas" droppable style="height:480px"></lr-flow-canvas>
 <script>
-  document.getElementById('palette').items = [
-    { type: 'http-request', label: 'HTTP Request', category: 'Actions' },
-    { type: 'transform', label: 'Transform', category: 'Actions' },
+  document.getElementById("palette").items = [
+    { type: "http-request", label: "HTTP Request", category: "Actions" },
+    { type: "transform", label: "Transform", category: "Actions" },
   ];
-  document.getElementById('canvas').addEventListener('lr-node-add', (e) => {
-    console.log('drop payload type:', e.detail.type, e.detail.position);
+  document.getElementById("canvas").addEventListener("lr-node-add", (e) => {
+    console.log("drop payload type:", e.detail.type, e.detail.position);
   });
 </script>
 ```
 
 **Known gotchas:**
+
 - A drag from this palette carries `FLOW_PALETTE_MIME_TYPE` as its `DataTransfer` type — only a
   `droppable` `lr-flow-canvas` (or a host reimplementing the same MIME type) accepts it.
 - Clicking or activating an item by keyboard fires `lr-palette-place`/`lr-select` immediately, no
@@ -323,9 +350,9 @@ as visibility filters. Never reads or writes a graph directly — the host forwa
 same event-decoupled contract every sibling in this family follows.
 
 **Properties:**
-- `types: LyraGraphLegendType[] = []` (attribute: false) — `{ id: string; label: string; color?:
-  string; shape?: 'circle' | 'square' | 'diamond' }`, the exact `lr-graph.nodeTypes` entry shape
-  (declared locally, not imported, so this stays a zero-dependency component). A color is used only
+
+- `types: LyraNodeTypeStyle[] = []` (attribute: false) — `{ id: string; label: string; color?:
+string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTypes` entry shape. A color is used only
   when valid for CSS `color`; declaration breaks and `url()` fall back to the categorical palette
 - `counts?: Record<string, number>` (attribute: false) — optional per-type count shown alongside the
   label
@@ -333,7 +360,9 @@ same event-decoupled contract every sibling in this family follows.
   `lr-visibility-change`
 - `interactive: boolean = true` (reflected) — renders each row as a toggle `<button>`; `false` renders
   plain, non-interactive rows
-- `label: string = ''` — accessible name for the `role="group"` wrapper
+- `label: string = ''` — fallback accessible name for the `role="group"` wrapper. A non-empty host
+  `aria-label` makes the host the sole overall owner (the wrapper omits its duplicate role/name);
+  an explicitly empty host label stays empty on the wrapper
 
 **Events:** `lr-visibility-change` (`detail: { hiddenTypes }`, the complete updated array, fired
 after each toggle).
@@ -356,10 +385,13 @@ only that row's decorative swatch opacity. Also reads `--lr-graph-cat-1` through
 <lr-graph-legend id="legend"></lr-graph-legend>
 <lr-graph id="graph" style="height:480px"></lr-graph>
 <script>
-  const graph = document.getElementById('graph');
-  const legend = document.getElementById('legend');
-  legend.types = [{ id: 'person', label: 'Person', color: '#0969da' }, { id: 'org', label: 'Organization' }];
-  legend.addEventListener('lr-visibility-change', (e) => {
+  const graph = document.getElementById("graph");
+  const legend = document.getElementById("legend");
+  legend.types = [
+    { id: "person", label: "Person", color: "#0969da" },
+    { id: "org", label: "Organization" },
+  ];
+  legend.addEventListener("lr-visibility-change", (e) => {
     legend.hiddenTypes = e.detail.hiddenTypes;
     graph.hiddenTypes = e.detail.hiddenTypes;
   });
@@ -367,6 +399,7 @@ only that row's decorative swatch opacity. Also reads `--lr-graph-cat-1` through
 ```
 
 **Known gotchas:**
+
 - Ships no coupling to `lr-graph`'s optional `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers —
   `types`/`counts`/`hiddenTypes` are plain data the host derives from a graph, never a live reference
   to one.
@@ -381,12 +414,13 @@ itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s own
 `focusNode(id, options?)`.
 
 **Properties:**
+
 - `entity: LyraEntity | null = null` (attribute: false) — `LyraEntity { id: string; label: string;
-  type?: string; description?: string; properties?: Record<string, string | number>; degree?:
-  number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `GraphNode`
+type?: string; description?: string; properties?: Record<string, string | number>; degree?:
+number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `LyraGraphNode`
   additions, so a graph node adapts into a `LyraEntity` with no mapping table; `null` renders the
   empty state
-- `types: NodeTypeStyle[] = []` (attribute: false) — the same `lr-graph.nodeTypes`/
+- `types: LyraNodeTypeStyle[] = []` (attribute: false) — the same `lr-graph.nodeTypes`/
   `lr-graph-legend.types` entry shape, resolving `entity.type` to a label/color for the badge
 - `communityLabel: string = ''` (attribute `community-label`) — override text for the community chip
 - `showFocusButton: boolean = true` (attribute `show-focus-button`)
@@ -424,15 +458,24 @@ from tokens.
 ```html
 <lr-entity-card id="card"></lr-entity-card>
 <script>
-  document.getElementById('card').entity = {
-    id: 'e1', label: 'Ada Lovelace', type: 'person',
-    description: 'Mathematician', properties: { born: 1815 }, degree: 4,
+  document.getElementById("card").entity = {
+    id: "e1",
+    label: "Ada Lovelace",
+    type: "person",
+    description: "Mathematician",
+    properties: { born: 1815 },
+    degree: 4,
   };
-  document.getElementById('card').addEventListener('lr-entity-activate', (e) => graph.focusNode(e.detail.id));
+  document
+    .getElementById("card")
+    .addEventListener("lr-entity-activate", (e) =>
+      graph.focusNode(e.detail.id)
+    );
 </script>
 ```
 
 **Known gotchas:**
+
 - The type badge's data-driven background uses an 8% (not this codebase's usual 16%) quiet-tint mix
   against `--lr-color-surface` — the lower percentage is required to hold WCAG AA 4.5:1 text
   contrast for arbitrary, unvetted type colors (even 10% isn't safe margin for every hue in the
@@ -447,6 +490,7 @@ preview popover. The knowledge-graph sibling of `lr-citation-badge`, reusing its
 contract wholesale. Carries ids through events only — no entity data resolution, no navigation.
 
 **Properties:**
+
 - `entityId: string = ''` (attribute `entity-id`)
 - `label: string = ''` — the chip's visible text
 - `type: string = ''` (reflected) — lets a host theme per type from CSS, e.g.
@@ -468,12 +512,16 @@ text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`
 **Optional peer deps:** none.
 
 ```html
-<p>…first described by <lr-entity-chip entity-id="e1" label="Ada Lovelace" type="person">
-  <lr-entity-card slot=""></lr-entity-card>
-</lr-entity-chip>.</p>
+<p>
+  …first described by
+  <lr-entity-chip entity-id="e1" label="Ada Lovelace" type="person">
+    <lr-entity-card slot=""></lr-entity-card> </lr-entity-chip
+  >.
+</p>
 ```
 
 **Known gotchas:**
+
 - Reuses `lr-citation-badge`'s exact "real preview content" detection (an assigned element with no
   other `slot`, or non-whitespace text) to decide whether a popover exists at all.
 
@@ -486,13 +534,15 @@ expand-in-graph affordances. Never computes neighbors itself (the host derives r
 graph data) and never mutates a graph.
 
 **Properties:**
+
 - `rows: LyraNeighborRow[] = []` (attribute: false) — `LyraNeighborRow { relation: string; direction:
-  'in' | 'out' | 'both'; node: LyraEntity }`
+'in' | 'out' | 'both'; node: LyraEntity }`
 - `groupByRelation: boolean = false` (attribute `group-by-relation`) — inserts a `group-header` row per
   distinct `relation`
 - `expandable: boolean = false` — renders a per-row expand-in-graph icon button
 - `virtualizeAt: number = 100` (attribute `virtualize-at`) — row count above which the list virtualizes
-- `label: string = ''`
+- `label: string = ''` — fallback name for the stable group. A non-empty host `aria-label` makes
+  the host the sole overall owner; an explicitly empty host label stays empty on the group
 
 **Events:** `lr-entity-activate` (`detail: { id }`, a row's node button was activated),
 `lr-node-expand` (`detail: { id }`, a row's expand button was activated — deliberately the same
@@ -515,13 +565,18 @@ wrapper, re-exported under the same name), `direction` (`aria-hidden` glyph), `r
 ```html
 <lr-neighbor-list expandable group-by-relation></lr-neighbor-list>
 <script>
-  document.querySelector('lr-neighbor-list').rows = [
-    { relation: 'works_for', direction: 'out', node: { id: 'e2', label: 'Analytical Engine Co.' } },
+  document.querySelector("lr-neighbor-list").rows = [
+    {
+      relation: "works_for",
+      direction: "out",
+      node: { id: "e2", label: "Analytical Engine Co." },
+    },
   ];
 </script>
 ```
 
 **Known gotchas:**
+
 - `lr-node-expand`'s detail shape is intentionally identical to `lr-graph`'s own event of the
   same name, so a single listener wired to both handles "expand this node's neighborhood" uniformly.
 - A row is exactly one `[part="row"]` element in both rendering paths. Above `virtualizeAt` that
@@ -537,10 +592,12 @@ reasoning paths) as a compact, horizontally scrollable strip. One-dimensional an
 path finding, no branching, no per-element popovers.
 
 **Properties:**
+
 - `path: LyraPathElement[] = []` (attribute: false) — a flat alternating sequence:
   `{ kind: 'node'; node: LyraEntity } | { kind: 'edge'; relation: string; directed?: boolean;
-  reverse?: boolean }`
-- `label: string = ''`
+reverse?: boolean }`
+- `label: string = ''` — fallback name for the stable group. A non-empty host `aria-label` makes
+  the host the sole overall owner; an explicitly empty host label stays empty on the group
 
 **Events:** `lr-entity-activate` (`detail: { id }`, a node element activated),
 `lr-relation-activate` (`detail: { relation, sourceId?, targetId? }`, an edge element activated —
@@ -560,15 +617,19 @@ that position).
 ```html
 <lr-path-strip></lr-path-strip>
 <script>
-  document.querySelector('lr-path-strip').path = [
-    { kind: 'node', node: { id: 'a', label: 'Ada Lovelace' } },
-    { kind: 'edge', relation: 'wrote', directed: true },
-    { kind: 'node', node: { id: 'b', label: 'Notes on the Analytical Engine' } },
+  document.querySelector("lr-path-strip").path = [
+    { kind: "node", node: { id: "a", label: "Ada Lovelace" } },
+    { kind: "edge", relation: "wrote", directed: true },
+    {
+      kind: "node",
+      node: { id: "b", label: "Notes on the Analytical Engine" },
+    },
   ];
 </script>
 ```
 
 **Known gotchas:**
+
 - Purely presentational rendering of a caller-supplied path — it never computes shortest paths or
   fetches relationship data itself, and never branches (one linear chain per instance).
 
@@ -581,9 +642,11 @@ count, member chips with overflow, and a drill-in action. Doesn't own community 
 graph or membership fetching — `lr-drill` asks the host to load members/subgraph.
 
 **Properties:**
+
 - `community: LyraCommunity | null = null` (attribute: false) — `LyraCommunity { id: string; label:
-  string; summary?: string; memberCount?: number }`; `memberCount` is authoritative when it exceeds
-  `members.length`; `null` renders the empty state
+string; summary?: string; memberCount?: number }`; `memberCount` is a non-negative safe-integer
+  total for paged data and is authoritative only when it is at least `members.length`; a smaller or
+  invalid total cannot contradict the known rendered records; `null` renders the empty state
 - `members: LyraEntity[] = []` (attribute: false) — rendered as chips, up to `maxMembers`
 - `maxMembers: number = 8` (attribute `max-members`) — remaining members collapse into a "+N"
   overflow chip
@@ -613,11 +676,17 @@ activated).
 ```html
 <lr-community-card></lr-community-card>
 <script>
-  document.querySelector('lr-community-card').community = { id: 'c1', label: 'Early computing pioneers', summary: 'A cluster of 19th-century mathematicians and engineers.', memberCount: 12 };
+  document.querySelector("lr-community-card").community = {
+    id: "c1",
+    label: "Early computing pioneers",
+    summary: "A cluster of 19th-century mathematicians and engineers.",
+    memberCount: 12,
+  };
 </script>
 ```
 
 **Known gotchas:**
+
 - `memberCount` (not `members.length`) is the authoritative displayed count whenever it's larger —
   useful when the host sends only a preview slice of members alongside the real total.
 
@@ -630,8 +699,9 @@ deep-link event that lands a chunk in `lr-document-viewer`. Never fetches, ranks
 opens documents itself.
 
 **Properties:**
+
 - `chunks: LyraChunk[] = []` (attribute: false) — `LyraChunk { id: string; text: string; score:
-  number; sourceId: string; title?: string; page?: string | number; anchor?: LyraChunkAnchor }`;
+number; sourceId: string; title?: string; page?: string | number; anchor?: LyraChunkAnchor }`;
   `score` is 0–1, `title` falls back to a localized "untitled source", `anchor` (the same
   discriminated union `lr-document-viewer.anchor` accepts — page/text-quote/fragment/line-range/
   cell-range/cfi/time-range/region/node-path) is carried through `lr-chunk-open` verbatim; finite
@@ -646,7 +716,8 @@ opens documents itself.
 - `activeId: string = ''` (attribute `active-id`)
 - `virtualizeAt: number = 50` (attribute `virtualize-at`)
 - `compact: boolean = false` (reflected) — hides the text preview/toggle, title/score row only
-- `label: string = ''`
+- `label: string = ''` — fallback name for the populated result group. A non-empty host
+  `aria-label` makes the host the sole overall owner; an explicitly empty host label stays empty
 
 **Events:** `lr-chunk-open` (`detail: { id, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
@@ -668,7 +739,7 @@ collapsed; dropped once expanded), `toggle` ("Show more"/"Show less", omitted wh
 
 Every row-level part is reachable through `::part()` in both rendering paths: above
 `virtualize-at` the row lives in the internal `lr-virtual-list`'s shadow root and its parts are
-re-exported from there under the same names. Row *state* is exposed as an additional part name
+re-exported from there under the same names. Row _state_ is exposed as an additional part name
 rather than as an attribute on the part, because Shadow Parts forbids an attribute selector after
 `::part()` — `::part(chunk)[aria-current='true']` is invalid CSS. The equivalent attributes
 (`aria-current`, `data-tone`, `data-clamped`) are still present on the elements. A state part is a
@@ -679,7 +750,7 @@ one that matches inside a tree.
 `var(--lr-color-brand-quiet)`) — the background of the chunk matching `activeId`.
 `--lr-chunk-inspector-current-color` (default `var(--lr-color-text)`) — the text color of that
 chunk's `score` line (`::part(score-current)`). Both are inline `var()` fallbacks at the point of
-use rather than `:host` declarations, so either can be set on the element *or on any ancestor*:
+use rather than `:host` declarations, so either can be set on the element _or on any ancestor_:
 `::part(chunk)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()` — which is why the current-chunk state is also published as its own part name
 (`chunk-current`, `score-current`); either the custom properties or `::part(chunk-current)` will
@@ -696,15 +767,25 @@ Plus shared tokens otherwise.
 ```html
 <lr-chunk-inspector></lr-chunk-inspector>
 <script>
-  const inspector = document.querySelector('lr-chunk-inspector');
+  const inspector = document.querySelector("lr-chunk-inspector");
   inspector.chunks = [
-    { id: 'c1', text: 'Revenue grew 12% year over year…', score: 0.91, sourceId: 'doc-1', title: 'Q3 report', page: 4 },
+    {
+      id: "c1",
+      text: "Revenue grew 12% year over year…",
+      score: 0.91,
+      sourceId: "doc-1",
+      title: "Q3 report",
+      page: 4,
+    },
   ];
-  inspector.addEventListener('lr-chunk-open', (e) => documentViewer.openAt(e.detail.sourceId, e.detail.anchor));
+  inspector.addEventListener("lr-chunk-open", (e) =>
+    documentViewer.openAt(e.detail.sourceId, e.detail.anchor)
+  );
 </script>
 ```
 
 **Known gotchas:**
+
 - `title` and `open-button` are split into two separate parts (rather than one dual-part-name
   element) because an exact-match `[part="..."]` CSS attribute selector — as this component's own
   tests use — cannot match a multi-token `part` attribute value.
@@ -719,18 +800,23 @@ control — the selection is immediate app state consumed by the next retrieval 
 stance `lr-tool-select-dialog` already takes.
 
 **Properties:**
+
 - `sources: LyraSourceEntry[] = []` (attribute: false) — `LyraSourceEntry { id: string; label:
-  string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat (no `children`) or
-  a tree — presence of `children` makes a row a group/folder with tri-state select
+string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat (no `children`) or
+  a tree — presence of `children` makes a row a group/folder with tri-state select. Input is
+  normalized once into a deterministic first-id-wins model with identity/cycle detection, a depth
+  ceiling of 64 and a 2,000-node ceiling; rejected/truncated input fails closed with localized
+  visible status rather than recursing or exposing duplicate controls
 - `selectedIds: string[] = []` (attribute: false) — controlled; duplicates and ids that are not
   leaves in the current `sources` tree are pruned, and the host assigns updates back from
   `lr-sources-change`
 - `showSelectAll: boolean = true` (attribute `show-select-all`)
 - `searchable: boolean = true`
-- `label: string = ''`
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the tree's computed
-  accessible name; wins over `label` and the localized default, and attribute-reflects from a
-  host-level `aria-label` so plain markup gets ARIA-name forwarding
+- `label: string = ''` — fallback name for the source tree
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
+  the host attribute is absent, overrides the tree name. Authored host `aria-label` instead names
+  the picker as a whole (including explicit-empty/dynamic values) and is not cloned onto the tree,
+  which retains the distinct `label`/localized name
 
 **Events:** `lr-sources-change` (`detail: { selectedIds }`, the complete updated leaf-id array,
 fired after every toggle including select-all).
@@ -738,24 +824,27 @@ fired after every toggle including select-all).
 **Slots:** none.
 
 **CSS parts:** `base`, `search` (the built-in filter `lr-input`, only when `searchable`),
-`select-all` (only when `showSelectAll`), `summary` ("{selected} of {total} selected"), `tree`
+`select-all` (only when `showSelectAll`), `select-all-control` (the shared `lr-checkbox` semantic
+owner), `summary` ("{selected} of {total} selected"), `tree`
 (`role="tree"`), `item` (`role="treeitem"`; selection appears only through tri-state
 `aria-checked` — `"true"`, `"false"`, or `"mixed"` — and intentionally has no duplicate
 `aria-selected` state), `disclosure` (a folder row's pointer-only expand/collapse indicator; the
 surrounding treeitem owns keyboard expansion),
 `checkbox` (tri-state glyph), `icon` (the `lr-file-icon` type badge), `label`, `empty` (`noData`
-when `sources` is empty, `noMatches` when a filter empties the tree).
+when `sources` is empty, `noMatches` when a filter empties the tree), `limit` (bounded-normalizer
+failure/truncation). Post-mount no-match and recovery transitions announce through the shared
+light-DOM polite sink; the shadow messages are visible mirrors, never live regions.
 
 **Themeable custom properties:** `--lr-source-picker-checked-bg` — the background of a fully-checked
 selection control: the `select-all` pill (whose resting default is `var(--lr-color-brand-quiet)`) and
 a fully-selected entry's `[part='checkbox']` (whose resting default is `var(--lr-color-brand)`). The
 two keep their distinct defaults while it is unset; setting it unifies both.
 `--lr-source-picker-checked-border` (default `var(--lr-color-brand)`) — the border color of every
-checked *or* mixed selection control. `--lr-source-picker-mixed-bg` (default
+checked _or_ mixed selection control. `--lr-source-picker-mixed-bg` (default
 `color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))`) — the background of a
 partially-selected entry's `[part='checkbox']`, so a tri-state folder reads as distinct from a fully
 selected one. All three are inline `var()` fallbacks at the point of use rather than `:host`
-declarations, so each can be set on the element *or on any ancestor*:
+declarations, so each can be set on the element _or on any ancestor_:
 `::part(checkbox)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
 after `::part()` — which previously left re-pointing the library-wide `--lr-color-brand` token as
 the only lever, repainting every other brand surface with it. `--lr-source-picker-indent-size`
@@ -770,17 +859,27 @@ set the step, not the depth. Plus shared tokens otherwise.
 ```html
 <lr-source-picker></lr-source-picker>
 <script>
-  const picker = document.querySelector('lr-source-picker');
+  const picker = document.querySelector("lr-source-picker");
   picker.sources = [
-    { id: 'folder-1', label: 'Reports', children: [{ id: 'doc-1', label: 'Q3.pdf', mimeType: 'application/pdf' }] },
+    {
+      id: "folder-1",
+      label: "Reports",
+      children: [{ id: "doc-1", label: "Q3.pdf", mimeType: "application/pdf" }],
+    },
   ];
-  picker.addEventListener('lr-sources-change', (e) => (retrievalScope = e.detail.selectedIds));
+  picker.addEventListener(
+    "lr-sources-change",
+    (e) => (retrievalScope = e.detail.selectedIds)
+  );
 </script>
 ```
 
 **Known gotchas:**
+
 - Deliberately not form-associated — `lr-sources-change` is the only wiring; there's no
   `name`/`value`/`FormData` participation the way a genuine form control would have.
+- Selection, filtering and projection all consume the same bounded normalized tree. Repeated ids
+  use the first depth-first occurrence; cyclic/repeated object identities are skipped.
 
 ---
 
@@ -791,15 +890,17 @@ Communities / Text chunks) composing this family's own pieces. The chat ↔ grap
 component. Pure projection + event conduit: no fetching, no graph/viewer imports, no persistence.
 
 **Properties:**
+
 - `provenance: LyraProvenance | null = null` (attribute: false) — `LyraProvenance { entities?:
-  LyraEntity[]; relationships?: { path: LyraPathElement[] }[]; communities?: LyraCommunity[]; chunks?:
-  LyraChunk[] }`; each present array renders through the matching sibling component (`lr-entity-
-  chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-inspector`);
+LyraEntity[]; relationships?: { path: LyraPathElement[] }[]; communities?: LyraCommunity[]; chunks?:
+LyraChunk[] }`; each present array renders through the matching sibling component (`lr-entity-
+chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-inspector`);
   `null` or every section empty renders the overall empty state
-- `types: NodeTypeStyle[] = []` (attribute: false) — forwarded to the Entities section's chips
+- `types: LyraNodeTypeStyle[] = []` (attribute: false) — forwarded to the Entities section's chips
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   forwarded to the Text chunks section's `lr-chunk-inspector`
-- `label: string = ''`
+- `label: string = ''` — fallback name for the stable overall group. A non-empty host `aria-label`
+  makes the host the sole overall owner; an explicitly empty host label stays empty
 
 **Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —
 `section` is `'entities' | 'relationships' | 'communities' | 'chunks'`). Because the panel is a
@@ -826,14 +927,17 @@ Plus shared tokens.
 ```html
 <lr-provenance-panel></lr-provenance-panel>
 <script>
-  document.querySelector('lr-provenance-panel').provenance = {
-    entities: [{ id: 'e1', label: 'Ada Lovelace', type: 'person' }],
-    chunks: [{ id: 'c1', text: 'Revenue grew 12%…', score: 0.91, sourceId: 'doc-1' }],
+  document.querySelector("lr-provenance-panel").provenance = {
+    entities: [{ id: "e1", label: "Ada Lovelace", type: "person" }],
+    chunks: [
+      { id: "c1", text: "Revenue grew 12%…", score: 0.91, sourceId: "doc-1" },
+    ],
   };
 </script>
 ```
 
 **Known gotchas:**
+
 - Composes `lr-entity-chip`, `lr-path-strip`, `lr-community-card`, and `lr-chunk-inspector`
   directly rather than reimplementing their rendering — events from those inner components (e.g.
   `lr-entity-activate`, `lr-chunk-open`) still bubble/compose up through this panel's light DOM
@@ -850,14 +954,15 @@ radial layout is closed-form arithmetic, in its own `mind-map-layout.ts` module,
 `lr-word-cloud`'s dependency-free precedent.
 
 **Properties:**
+
 - `topics: LyraTopic[] = []` (attribute: false) — `LyraTopic { id: string; label: string; children?:
-  LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub
+LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub
 - `label: string = ''` — accessible name for the SVG group and the implicit hub's text
 - `expandDepth: number = 1` (attribute `expand-depth`) — initial expansion depth (root + first
   ring); expansion state afterward is component-managed per topic id and survives `topics`
   reassignment
 
-**Events:** `lr-topic-select` (`detail: { id }`, a *leaf* topic was activated),
+**Events:** `lr-topic-select` (`detail: { id }`, a _leaf_ topic was activated),
 `lr-topic-toggle` (`detail: { id, expanded }`, a parent topic was activated, or auto-expanded by
 keyboard descent).
 
@@ -877,16 +982,25 @@ clickable" feedback keyboard users already get from the drawn `focus-ring` part.
 ```html
 <lr-mind-map style="height:480px" expand-depth="2"></lr-mind-map>
 <script>
-  document.querySelector('lr-mind-map').topics = [
-    { id: 'root', label: 'Computing history', children: [
-      { id: 'people', label: 'People', children: [{ id: 'ada', label: 'Ada Lovelace' }] },
-      { id: 'machines', label: 'Machines' },
-    ] },
+  document.querySelector("lr-mind-map").topics = [
+    {
+      id: "root",
+      label: "Computing history",
+      children: [
+        {
+          id: "people",
+          label: "People",
+          children: [{ id: "ada", label: "Ada Lovelace" }],
+        },
+        { id: "machines", label: "Machines" },
+      ],
+    },
   ];
 </script>
 ```
 
 **Known gotchas:**
+
 - A user's explicit expand/collapse only ever overrides the `depth < expandDepth` default in the
   direction chosen — reassigning `topics` (even with the same ids) never silently discards that
   override.
@@ -905,19 +1019,21 @@ elsewhere on the page (a sibling component in this family) — this component ne
 anything about `<lr-source-card>`, it only carries the id through its event details.
 
 **Properties:**
+
 - `index: number = 1` — the citation number shown, e.g. `3` renders as `[3]`.
 - `status: CitationBadgeStatus = 'default'` (reflected) — one of `'default' | 'high' | 'medium' |
-  'low' | 'verified' | 'unverified'`; drives the badge's color and (unless `label` is set) part of
+'low' | 'verified' | 'unverified'`; drives the badge's color and (unless `label` is set) part of
   its accessible name.
 - `sourceId: string = ''` (attribute `source-id`) — id of a corresponding `<lr-source-card>`,
   echoed back verbatim in both events; never read or validated by this component.
 - `href: string = ''` — optional direct link target for the citation's source, carried into
   `lr-citation-open`'s detail as-is; this component never navigates.
-- `label: string = ''` — adds caller-supplied context to the localized citation name while retaining
-  the visible citation number (for example, `"Citation 3, Annual report"`). A host `aria-label`
-  remains the exact highest-precedence override.
+- `label: string = ''` — adds caller-supplied context to the localized citation-button name while
+  retaining the visible citation number (for example, `"Citation 3, Annual report"`). Authored host
+  `aria-label` independently names the component and is not cloned onto that nested button
 
 **Events:**
+
 - `lr-citation-activate` (`detail: { sourceId: string; index: number }`) — fires on click, or on
   Enter while focused (native `<button>` behavior, no listener needed for the Enter case). The
   lightweight "jump to this source" signal.
@@ -927,7 +1043,7 @@ anything about `<lr-source-card>`, it only carries the id through its event deta
   constituent click, standard browser `dblclick` behavior) in addition to the one `lr-citation-open`.
 
 **Slots:** default — rich preview/tooltip content (e.g. a filename + excerpt), shown in a floating
-popover on hover/focus. This is *not* the badge's visible content (the badge always renders
+popover on hover/focus. This is _not_ the badge's visible content (the badge always renders
 `[index]`); nothing renders at all (no hover affordance) when this slot is empty.
 When populated, the button carries `aria-describedby` referencing the same-shadow-tree popover,
 which owns `role="tooltip"` whether currently shown or hidden.
@@ -946,7 +1062,7 @@ directly — set instead by the `:host([status=...])` rules), plus shared tokens
 > Retheming a badge from outside `<lr-citation-badge>` (e.g. per-source or per-confidence colors)?
 > Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
 > "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
-> wrapper's *direct* children, not a nested `<lr-*>` host's shadow DOM.
+> wrapper's _direct_ children, not a nested `<lr-*>` host's shadow DOM.
 
 **Optional peer deps:** none.
 
@@ -954,13 +1070,15 @@ directly — set instead by the `:host([status=...])` rules), plus shared tokens
 <p>
   Revenue grew 12% year over year
   <lr-citation-badge index="1" status="verified" source-id="doc-1">
-    <strong>annual_report.pdf</strong> — "Revenue grew 12% year over year, driven primarily by..."
-  </lr-citation-badge>.
+    <strong>annual_report.pdf</strong> — "Revenue grew 12% year over year,
+    driven primarily by..." </lr-citation-badge
+  >.
 </p>
 <script type="module">
-  document.addEventListener('lr-citation-activate', (e) => {
-    document.querySelector(`lr-source-card[source-id="${e.detail.sourceId}"]`)
-      ?.scrollIntoView({ block: 'center' });
+  document.addEventListener("lr-citation-activate", (e) => {
+    document
+      .querySelector(`lr-source-card[source-id="${e.detail.sourceId}"]`)
+      ?.scrollIntoView({ block: "center" });
   });
 </script>
 ```
@@ -977,11 +1095,12 @@ and blur (Tab away) close it immediately instead, with no delay.
 
 Status coloring follows a semantic scheme: `verified`/`high` use the success tones (a claim that's
 been checked, or the model is confident in); `medium`/`low` use warning tones; `unverified` uses the
-*danger* tone — deliberately distinct from `low`, since "hasn't been checked at all" is a different
+_danger_ tone — deliberately distinct from `low`, since "hasn't been checked at all" is a different
 (arguably riskier) claim than "checked but uncertain". `default` renders as plain neutral text with
 no background tint, for citations that carry no confidence/verification signal at all.
 
 **Known gotchas:**
+
 - Enter and Space are given distinct meanings (Enter = activate via native `<button>` click, Space =
   open) — Space's native click-on-keyup is pre-empted with `preventDefault()` on keydown so it fires
   `lr-citation-open` instead of triggering a second `lr-citation-activate`.
@@ -998,11 +1117,12 @@ no background tint, for citations that carry no confidence/verification signal a
 A collapsible "Sources" panel for one chat message (`lr-source-list`) that groups a set of
 `lr-source-card` entries. First-party invention (no Web Awesome equivalent). Cards are meant to be
 direct light-DOM children of the list (plain composition — no `.items` array prop, the same shape
-`<lr-split>`'s panels take), though `lr-source-card` renders and functions fine standalone.
+`<lr-multi-split>`'s panels take), though `lr-source-card` renders and functions fine standalone.
 
 ### `lr-source-list`
 
 **Properties:**
+
 - `expanded: boolean = false` (reflected) — whether the card list is currently shown. Starts
   collapsed by default so a message's sources don't eat vertical space until asked for.
 - `label: string = ''` — header text used when `label-plural` isn't set, e.g. `"Sources"`.
@@ -1038,10 +1158,11 @@ while collapsed).
 ### `lr-source-card`
 
 **Properties:**
+
 - `sourceId: string = ''` (attribute `source-id`) — stable identifier matching a
   `<lr-citation-badge>` elsewhere on the page.
 - `title: string = ''` — the source's display title, e.g. a filename. Falls back to `"Untitled
-  source"` when empty.
+source"` when empty.
 - `page?: string | number` — optional page reference, e.g. `12` or `"iv"`, rendered as-is (never
   parsed/validated as a number), appended to the title as `" — p. {page}"`.
 - `href?: string` — optional URL, echoed back (unopened) in `lr-open`'s detail.
@@ -1054,12 +1175,13 @@ while collapsed).
   `<lr-source-list>` (or any container already drawing its own border/dividers) doesn't double it.
   `plain` wins over `compact` when both are set — nothing left to tighten. The title and toggle keep
   their brand color and hover underline under `plain`, since neither ever depended on the card
-  chrome. The exported alias `SourceCardAppearance` is retained as a name for the same union.
+  chrome. Use the shared `LyraFrame` type when authoring this property.
 
 **Events:**
+
 - `lr-expand` (`detail: { sourceId: string; expanded: boolean }`) — the per-card "Show
   more"/"Show less" toggle was activated. Unrelated to the parent `lr-source-list`'s own
-  expand/collapse, which only ever hides/shows the *set* of cards, never a single card's own content.
+  expand/collapse, which only ever hides/shows the _set_ of cards, never a single card's own content.
 - `lr-open` (`detail: { sourceId: string; href?: string }`) — the title was activated. This
   component never navigates on its own (a controlled component, the same convention
   `<lr-tool-call-chip>`'s `lr-tool-call-chip-select` follows); a listener decides what "open"
@@ -1089,7 +1211,9 @@ elsewhere. Plus shared tokens — `--lr-color-border`, `--lr-color-surface`,
 <lr-source-list label-plural="2 sources">
   <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12">
     <span slot="excerpt">Revenue grew 12% year over year...</span>
-    <span slot="full">Revenue grew 12% year over year, driven primarily by...</span>
+    <span slot="full"
+      >Revenue grew 12% year over year, driven primarily by...</span
+    >
   </lr-source-card>
   <lr-source-card source-id="doc-2" title="q3_notes.md">
     <span slot="excerpt">No matching full-text chunk for this source.</span>
@@ -1099,9 +1223,11 @@ elsewhere. Plus shared tokens — `--lr-color-border`, `--lr-color-surface`,
   // Elsewhere, a <lr-citation-badge>'s activation handler can scroll to and
   // highlight the matching card -- neither component needs extra API surface
   // for that, only source-id to be targeted by:
-  document.addEventListener('lr-citation-activate', (e) => {
-    const card = document.querySelector(`lr-source-card[source-id="${e.detail.sourceId}"]`);
-    card?.scrollIntoView({ block: 'center' });
+  document.addEventListener("lr-citation-activate", (e) => {
+    const card = document.querySelector(
+      `lr-source-card[source-id="${e.detail.sourceId}"]`
+    );
+    card?.scrollIntoView({ block: "center" });
   });
 </script>
 ```
@@ -1116,6 +1242,7 @@ forwarding scenarios or engines that don't fire `slotchange` for content already
 time.
 
 **Known gotchas:**
+
 - `lr-source-list` does not automatically build an “N sources” plural summary: provide
   `labelPlural` when that is wanted. Its no-label fallback is localized through
   `sourceListDefaultLabel`, and a per-instance `.strings` override reaches the rendered header.
@@ -1138,23 +1265,26 @@ above an `lr-tab-group` strip for Relationships (`lr-neighbor-list`), Supporting
 or mutates graph/document state.
 
 **Properties:**
+
 - `entity: LyraEntity | null = null` (attribute: false) — `lr-entity-card`'s own `LyraEntity`;
   `null` renders the shared `lr-empty` `noData` state in place of the whole dossier
 - `confidence: LyraEntityDossierConfidence | null = null` (attribute: false) —
-  `LyraEntityDossierConfidence { label: string; value: string; unit?: string; variant?: StatVariant;
-  exactValue?: string; caption?: string; rows?: StatRow[] }` (exported by this module; `StatVariant`
-  and `StatRow` are `lr-stat`'s own types). All caller-supplied domain data, never routed through
+  readonly `LyraEntityDossierConfidence { label: string; value: string; unit?: string; variant?:
+LyraVariant; exactValue?: string; caption?: string; rows?: readonly StatRow[] }` (exported by this
+  module; `LyraVariant`
+  is the shared semantic variant vocabulary and `StatRow` is `lr-stat`'s row type). All
+  caller-supplied domain data, never routed through
   `localize()`. `null` omits the stat entirely — no placeholder
 - `neighbors: LyraNeighborRow[] = []` (attribute: false) — forwarded verbatim to
   `lr-neighbor-list.rows` (`{ relation: string; direction: 'in' | 'out' | 'both'; node: LyraEntity }`)
 - `chunks: LyraChunk[] = []` (attribute: false) — forwarded to `lr-chunk-inspector.chunks`; the
-  evidence for *this entity's own* summary/properties
+  evidence for _this entity's own_ summary/properties
 - `provenance: LyraProvenance | null = null` (attribute: false) — forwarded to
   `lr-provenance-panel.provenance`; deliberately a separate input from `chunks` (the broader
   grounding chain, which may span other entities/relationships/communities). Pass the same array to
   both when the two genuinely coincide
-- `types: NodeTypeStyle[] = []` (attribute: false) — `{ id: string; label: string; color?: string;
-  shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape; forwarded to both
+- `types: LyraNodeTypeStyle[] = []` (attribute: false) — readonly `{ id: string; label: string; color?: string;
+shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape; forwarded to both
   `lr-entity-card` and `lr-provenance-panel`
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   forwarded to both `lr-chunk-inspector` and `lr-provenance-panel`
@@ -1162,8 +1292,9 @@ or mutates graph/document state.
 - `expandable: boolean = false` — forwarded to `lr-neighbor-list`
 - `showFocusButton: boolean = true` (attribute `show-focus-button`) — forwarded to `lr-entity-card`
 - `communityLabel: string = ''` (attribute `community-label`) — forwarded to `lr-entity-card`
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name for the internal
-  `lr-tab-group` strip; unset renders the strip with no `aria-label`
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
+  the host attribute is absent, names the internal `lr-tab-group` strip. Authored host
+  `aria-label` names the dossier as a whole and is not cloned onto the strip
 
 **Events:** declares none of its own. Every composed child's event bubbles through unmodified
 (`composed: true`): `lr-entity-activate` (`detail: { id }`), `lr-node-expand` (`detail: { id }`),
@@ -1187,6 +1318,7 @@ relationship path-strip edge).
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - The active tab is internal `@state`, not a controlled property — `lr-tab-group` already owns it, and a
   stale public property re-bound on an unrelated re-render would fight the user's own click.
 - Tab labels reuse each composed child's own `localize()` key (`neighborListLabel`,
@@ -1203,38 +1335,45 @@ event conduit — never fetches or computes an assessment. Composes `lr-stat` fo
 and `lr-citation-badge` for each evidence entry.
 
 **Properties:**
+
 - `assessment: GroundingAssessment | null = null` (attribute: false) — **`GroundingAssessment`,
   imported from `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ supportedClaims: number;
-  unsupportedClaims: number; coverage: number; confidence?: number; warnings?: string[];
-  claims?: GroundedClaim[] }`, where `coverage` and `confidence` are 0–1 fractions. `null` renders
+unsupportedClaims: number; coverage: number; confidence?: number; warnings?: string[];
+claims?: GroundedClaim[] }`, where `coverage` and `confidence` are 0–1 fractions. `null` renders
   the empty state
 - `citations: Citation[] = []` (attribute: false) — **`Citation` from `@aceshooting/lyra-ui/ai`**:
   `{ id: string; chunkId?: string; sourceId?: string; span?: { start: number; end: number };
-  label?: string }`. Independent of `assessment`; empty omits the whole evidence section. Each entry
+label?: string }`. Independent of `assessment`; empty omits the whole evidence section. Each entry
   renders as an `lr-citation-badge` whose `index` is its 1-based position and whose `source-id` is
   `citation.sourceId ?? ''`
-- `thresholds: GroundingSummaryThresholds = { high: 0.8, medium: 0.5 }` (attribute: false) —
-  `GroundingSummaryThresholds { high: number; medium: number }` (exported here), both 0–1 fractions,
+- `thresholds: LyraScoreThresholds = { high: 0.8, medium: 0.5 }` (attribute: false) —
+  readonly `LyraScoreThresholds { high: number; medium: number }`, with both
+  0–1 fractions,
   applied to both `coverage` and `confidence`: `>= high` → `success` tone, `>= medium` → `warning`,
   below → `danger`
-- `label: string = ''` — accessible group label. A host `aria-label` takes precedence, followed by
-  `label`, then the localized `groundingSummaryLabel`
+- `label: string = ''` — fallback name for the stable group, using localized
+  `groundingSummaryLabel` when empty. A non-empty host `aria-label` makes the host the sole overall
+  owner (the group omits its duplicate role/name); an explicitly empty host label stays empty
 - `showClaims: boolean = true` (attribute `show-claims`) — renders `assessment.claims` through
   `lr-claim-evidence`; set false to keep the aggregate scorecard only
+- `headingLevel: 1 | 2 | 3 | 4 | 5 | 6 = 3` (attribute `heading-level`) — real heading level used
+  by both warnings and evidence sections, clamped to the HTML outline range
 
 **Events:** `lr-citation-select` (`detail: CitationSelectEventDetail` from
 `@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
-The inner `lr-citation-badge`'s own `lr-citation-activate` (`detail: { sourceId, index }`) still
-bubbles through unmodified; this richer event exists because a bare `sourceId`/`index` pair can't
-tell a host which exact evidence *span* to jump to. The composed `lr-claim-evidence` also surfaces
+The inner `lr-citation-badge`'s generic activation is stopped at this composition boundary; this
+richer event exists because a bare `sourceId`/`index` pair can't tell a host which exact evidence
+_span_ to jump to. The composed `lr-claim-evidence` also surfaces
 `lr-claim-select` (`detail: { claim }`) unchanged when a claim is activated.
 
 **Slots:** none.
 
-**CSS parts:** `base` (`role="group"` root), `stats` (the claim-count/coverage/confidence `lr-stat`
+**CSS parts:** `base` (the `role="group"` root unless a non-empty host label owns the component),
+`stats` (the claim-count/coverage/confidence `lr-stat`
 row), `warnings` (omitted when there are none), `warnings-heading`, `warnings-count`,
 `warnings-list` (a `<ul>`), `warning` (one `<li>`), `evidence` (omitted when `citations` is empty),
-`evidence-heading`, `evidence-count`, `evidence-item` (badge + always-visible label/span text),
+`evidence-heading` (a real `h1`–`h6`), `evidence-count`, `evidence-list` (a `<ul>`),
+`evidence-item` (one `<li>` containing a badge + always-visible label/span text),
 `evidence-label` (omitted when `Citation.label` is unset), `evidence-span` (the formatted
 `Citation.span` range, omitted when unset), `claims` (the composed claim-evidence audit), `empty`
 (shown when `assessment` is `null`).
@@ -1251,26 +1390,29 @@ Controlled list of documents moving through an ingestion pipeline: stage badge, 
 embedding counts, retry attempts, errors, and retry/cancel requests. Never ingests anything itself.
 
 **Properties:**
+
 - `items: IngestionQueueItem[] = []` (attribute: false) — `IngestionQueueItem { id: string;
-  document: DocumentRef; stage: IngestionStage; progress?: number; chunkCount?: number;
-  embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here). `document` is
+document: DocumentRef; stage: IngestionStage; progress?: number; chunkCount?: number;
+embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here). `document` is
   **`DocumentRef` from `@aceshooting/lyra-ui/ai`** (`{ id, name, mimeType?, uri?, version? }`), not a
   divergent name/mimeType pair, so a caller can reuse the same list a `DocumentRef`-typed
   knowledge-base view already holds. `IngestionStage = 'queued' | 'uploading' | 'extracting' |
-  'chunking' | 'embedding' | 'indexing' | 'done' | 'failed' | 'cancelled'` — the first six are
-  in-flight (in pipeline order), the last three terminal. `progress` is 0–100 *within the current
-  stage* (omitted/non-finite renders an indeterminate indicator, and it is only meaningful during an
+'chunking' | 'embedding' | 'indexing' | 'done' | 'failed' | 'cancelled'` — the first six are
+  in-flight (in pipeline order), the last three terminal. `progress` is 0–100 _within the current
+  stage_ (omitted/non-finite renders an indeterminate indicator, and it is only meaningful during an
   active non-`'queued'` stage). `embeddedChunkCount` renders only alongside a defined `chunkCount`.
   `error` renders only while `stage === 'failed'`. Controlled — pass a new array to update
-- `label: string = ''` — accessible name for the region; defaults to the localized
-  `ingestionQueueLabel`
+- `label: string = ''` — fallback name for the stable region; defaults to localized
+  `ingestionQueueLabel`. A non-empty host `aria-label` makes the host the sole overall owner (the
+  region omits its duplicate role/name); an explicitly empty host label stays empty
 - `virtualizeAt: number = 100` (attribute `virtualize-at`) — item count above which the list renders
   through an internal `lr-virtual-list`. Exclusive, like every other `virtualize-at` in this family:
   exactly this many items still render as a plain list. Before 9.0.0 this was spelled
-  `virtualizeThreshold`/`virtualize-threshold` *and* compared inclusively (`>=`), so a migration
+  `virtualizeThreshold`/`virtualize-threshold` _and_ compared inclusively (`>=`), so a migration
   that only renames the attribute shifts the switchover point by one item
 
 **Events:**
+
 - `lr-retry` (`detail: IngestionRetryEventDetail` = `RetryEventDetail & { itemId: string }` =
   `{ attempt: number; messageId?: string; itemId: string }`) — `attempt` is the attempt about to be
   made: the displayed nonnegative finite-integer `item.attempts` value plus one (invalid, negative,
@@ -1295,7 +1437,7 @@ per-item stage label), `item-progress`,
 announcement itself goes to the library's shared **light-DOM** assertive region, appended to the
 consumer's `<body>` and marked `data-lr-live-region="assertive"`, because a live region inside a
 shadow root is not reliably announced (JAWS with Firefox ignores one outright). What is announced
-is unchanged: only failures added or transitioned *after* mount, so historical failed rows stay
+is unchanged: only failures added or transitioned _after_ mount, so historical failed rows stay
 visible without being re-announced. Assert against that document-level region rather than
 `::part(failure-live)`.
 
@@ -1319,21 +1461,22 @@ retheme the internal list via `lr-virtual-list { --lr-virtual-list-height: … }
 
 Controlled source list for a retrieval knowledge base: sync status, indexing health, permissions, and
 per-row create/sync/pause/delete requests. Composes `lr-table`, `lr-badge`, `lr-stat`, and a per-row
-`lr-menu`. Never syncs or indexes anything itself.
+`lr-dropdown` containing `lr-menu`. Never syncs or indexes anything itself.
 
 **Properties:**
+
 - `sources: KnowledgeSource[] = []` (attribute: false) — `KnowledgeSource { id: string; name: string;
-  type?: string; syncStatus: KnowledgeSourceSyncStatus; indexingHealth?: KnowledgeSourceIndexingHealth;
-  permission?: KnowledgeSourcePermission; documentCount?: number; lastSyncedAt?: Date | string;
-  errorMessage?: string }` (all four types exported here), where
+type?: string; syncStatus: KnowledgeSourceSyncStatus; indexingHealth?: KnowledgeSourceIndexingHealth;
+permission?: KnowledgeSourcePermission; documentCount?: number; lastSyncedAt?: Date | string;
+errorMessage?: string }` (all four types exported here), where
   `KnowledgeSourceSyncStatus = 'idle' | 'syncing' | 'paused' | 'synced' | 'error'`,
   `KnowledgeSourceIndexingHealth = 'healthy' | 'degraded' | 'failed' | 'unknown'` (absent is treated
   as `'unknown'`), and `KnowledgeSourcePermission = 'owner' | 'editor' | 'viewer' | 'restricted'`.
   `type` is a free-form connector kind (`'drive'`, `'notion'`, `'upload'`, `'url'`, …) rendered
   as-is. `lastSyncedAt` follows this library's `Date | string` timestamp convention (epoch ms Date or
   ISO-8601); absent/unparseable renders "never synced". `errorMessage` shows only while
-  `syncStatus === 'error'`. `id`/`name` follow `DocumentRef`'s spirit, but a source is a *connector
-  feeding* documents, not a document, so the rest of the fields are its own
+  `syncStatus === 'error'`. `id`/`name` follow `DocumentRef`'s spirit, but a source is a _connector
+  feeding_ documents, not a document, so the rest of the fields are its own
 - `label: string = ''` — heading text and the table's accessible name; falls back to a localized default
 - `hideSummary: boolean = false` (attribute `hide-summary`, reflected) — hides the aggregate
   total/synced/syncing/needs-attention row
@@ -1362,6 +1505,7 @@ unset), `sync-cell`, `sync-badge`, `sync-timestamp`, `sync-error`, `health-cell`
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - `permission` is rendered informationally only — the per-row action menu is never gated by it.
   Authorization enforcement is the host's concern.
 - "Sync now" is disabled only while `syncStatus === 'syncing'` (including on `'error'` rows, so
@@ -1379,21 +1523,23 @@ overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-
 `lr-path-strip`, and `lr-popover.showAt()`.
 
 **Properties:** (host-supplied data, rendered as given)
-- `nodes: GraphNode[] = []`, `links: GraphLink[] = []`, `nodeTypes: GraphNodeType[] = []`,
+
+- `nodes: LyraGraphNode[] = []`, `links: LyraGraphLink[] = []`, `nodeTypes: LyraNodeTypeStyle[] = []`,
   `communities: GraphCommunity[] = []` (all attribute: false) — exactly `lr-graph`'s own types,
   forwarded verbatim; see the `lr-graph` section above for each shape
 - `entityDetails: Record<string, LyraKnowledgeGraphEntityDetails> = {}` (attribute: false) —
   `LyraKnowledgeGraphEntityDetails = Pick<LyraEntity, 'description' | 'properties' | 'degree'>`, i.e.
   `{ description?: string; properties?: Record<string, string | number>; degree?: number }`, keyed by
-  node id. Merged onto the matching `GraphNode` to build the entity shown in the details popover and
+  node id. Merged onto the matching `LyraGraphNode` to build the entity shown in the details popover and
   neighbor rows. A node with no entry still renders: `degree` falls back to a live count derived from
   `links`, `description`/`properties` are omitted
-- `path: LyraPathElement[] = []` (attribute: false) — host-supplied path-finding *result*, rendered
+- `path: LyraPathElement[] = []` (attribute: false) — host-supplied path-finding _result_, rendered
   via `lr-path-strip` (`{ kind: 'node'; node: LyraEntity } | { kind: 'edge'; relation: string;
-  directed?: boolean; reverse?: boolean }`). Empty renders no strip
+directed?: boolean; reverse?: boolean }`). Empty renders no strip
 
 (self-managed but presettable/observable — this component toggles its own copy on interaction, the
 same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature works with zero host wiring)
+
 - `hiddenTypes: string[] = []` (attribute: false) — forwarded to both `lr-graph.hiddenTypes` and
   `lr-graph-legend.hiddenTypes`; hidden nodes are also excluded from explorer search results,
   neighbor rows, and activation
@@ -1407,6 +1553,7 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   it up to date afterwards
 
 (presentation)
+
 - `renderer: 'svg' | 'canvas' = 'svg'` — forwarded to `lr-graph.renderer`
 - `width: number = 800`, `height: number = 600`
 - `highlight: 'selection' | 'hover' | 'none' = 'selection'` — what drives the dimming forwarded to
@@ -1414,10 +1561,12 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `'selection'` dims by the selected node's immediate neighborhood; `'hover'` additionally dims by
   the pointer-hovered node (falling back to selection while nothing is hovered); `'none'` forwards
   empty arrays regardless of search/selection state, for a host driving dimming its own way
-- `label: string = ''` — accessible name for the root landmark; falls back to the localized
-  `graphExplorerLabel`
+- `label: string = ''` — fallback name for the root group; defaults to localized
+  `graphExplorerLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
+  explicitly empty host label stays empty on the group
 
 **Events:**
+
 - `lr-selection-change` (`detail: { selectedNodeId: string | null }`) — emitted after the explorer
   changes its own selection through search, graph, keyboard/neighborhood/path activation, or
   closing/invalidating the details selection. Clearing reports `null`. Direct host assignments to
@@ -1440,7 +1589,8 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
 nested `lr-neighbor-list` and a pin toggle). Receives no data; an overriding consumer reads the
 selected entity from `selectedNodeId`/`nodes` itself.
 
-**CSS parts:** `base` (`role="group"`), `toolbar`, `search` (the search `lr-input`), `legend` (the
+**CSS parts:** `base` (`role="group"` unless a non-empty host label owns the component), `toolbar`,
+`search` (the search `lr-input`), `legend` (the
 composed `lr-graph-legend`), `search-results` (only while `searchQuery` is non-empty),
 `search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
@@ -1452,16 +1602,17 @@ tokens (see above).
 **Optional peer deps:** `lr-graph`'s `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` set, transitively.
 
 **Known gotchas:**
+
 - An explicit height on the host bounds the whole explorer: `[part="base"]` fills it and
   `[part="graph"]` takes whatever the toolbar, search results, pinned row and path strip leave over,
   rather than the graph sizing itself from its own intrinsic aspect ratio. With no height on the
   host the column still sizes itself from its content, unchanged.
-- `lr-graph.getNodePosition()` and `lr-node-click`'s `{ x, y }` are graph-*local* drawing
+- `lr-graph.getNodePosition()` and `lr-node-click`'s `{ x, y }` are graph-_local_ drawing
   coordinates, never viewport pixels. For `renderer="svg"` this component resolves the real viewport
   rect from `event.composedPath()`'s `[part="node"]` element; for `renderer="canvas"` (no per-node
   DOM) it uses the click's `clientX`/`clientY`. While an svg-click popover stays open it re-anchors
   on every `lr-viewport-change` from the graph — no `requestAnimationFrame` polling loop.
-- Selecting a node any *other* way (search result, neighbor row, path element, keyboard Enter/Space
+- Selecting a node any _other_ way (search result, neighbor row, path element, keyboard Enter/Space
   on a graph node — which dispatches no native `click`) has no rect to read, so it calls
   `lr-graph.focusNode(id)` and anchors at the graph element's own bounding-box center instead; no
   continuous tracking applies on that path.
@@ -1476,22 +1627,25 @@ Composes `lr-provenance-panel` (per-item provenance, behind a disclosure toggle)
 (every confirmation).
 
 **Properties:**
+
 - `shortTerm: LyraMemoryItem[] = []` / `longTerm: LyraMemoryItem[] = []` (both attribute: false) —
   `LyraMemoryItem { id: string; text: string; confidence?: number; provenance?: LyraProvenance }`
   (exported here). `text` renders as plain text. `confidence` is 0–1; omit it and the confidence
   indicator is omitted entirely rather than showing 0%/unknown. `provenance` reuses
   `lr-provenance-panel`'s own `LyraProvenance` shape verbatim (`{ entities?; relationships?;
-  communities?; chunks? }`); omit it and the disclosure toggle is omitted entirely. Both arrays are
+communities?; chunks? }`); omit it and the disclosure toggle is omitted entirely. Both arrays are
   controlled and never mutated here — approving an action only fires the matching event
-- `types: NodeTypeStyle[] = []` (attribute: false) — `{ id: string; label: string; color?: string;
-  shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded item's
+- `types: LyraNodeTypeStyle[] = []` (attribute: false) — readonly `{ id: string; label: string; color?: string;
+shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded item's
   `lr-provenance-panel`
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   confidence-tier boundaries (reusing `lr-citation-badge`'s high/medium/low confidence vocabulary and
   success/warning/danger tones), also forwarded as the provenance relevance tiers
-- `label: string = ''` — overall accessible label override
+- `label: string = ''` — fallback name for the stable overall group. A non-empty host `aria-label`
+  makes the host the sole overall owner; an explicitly empty host label stays empty
 
 **Events:**
+
 - `lr-add` (`detail: LyraMemoryAddDetail` = `{ item: LyraMemoryItem }`) — a pending "promote to
   long-term" was approved; the short-term item as-is. Only offered on short-term items.
 - `lr-remove` (`detail: LyraMemoryRemoveDetail` = `{ id: string; scope: 'short-term' | 'long-term' }`)
@@ -1531,6 +1685,7 @@ its score bar). Plus shared tokens otherwise.
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - At most one confirmation is pending at a time — starting a new action (same item or not) silently
   cancels whichever confirmation was already open.
 - `remove` (one item, either list) and `forget` (the whole long-term list) are deliberately distinct
@@ -1547,17 +1702,18 @@ array), reusing its score bar, tier coloring, title+page rendering, and expandab
 Large sets window through an internal `lr-virtual-list`.
 
 **Properties:**
+
 - `chunks: RetrievalChunk[] = []` (attribute: false) — **`RetrievalChunk`, imported from
   `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ id: string; text: string; score: number;
-  source: DocumentRef; metadata?: Record<string, unknown>; rank?: number; locator?: DocumentLocator;
-  queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreakdown }`. The raw,
+source: DocumentRef; metadata?: Record<string, unknown>; rank?: number; locator?: DocumentLocator;
+queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreakdown }`. The raw,
   un-deduplicated/unsorted/ungrouped result set; host-owned. Internally mapped to
   `lr-chunk-inspector`'s flatter `LyraChunk` via `source.id → sourceId`, `source.name → title`, and
   `locator → anchor`; a `page`-kind `locator` additionally supplies the inspector's visible `page`.
   Nothing is ever guessed from `metadata` — a chunk with no `locator` simply leaves `anchor`/`page`
   unset
 - `selectedIds: string[] = []` (attribute: false) — controlled selection by chunk `id`. The component
-  updates its own copy on toggle *then* emits `lr-select`; reassign to control. An id with no
+  updates its own copy on toggle _then_ emits `lr-select`; reassign to control. An id with no
   matching chunk is harmless
 - `selectable: boolean = true` (reflected) — shows a per-row `lr-checkbox`
 - `dedupe: boolean = true` (reflected) — drops duplicate `id`s, keeping the higher `score`
@@ -1594,12 +1750,17 @@ Large sets window through an internal `lr-virtual-list`.
   replaces the whole result view with a neutral visible message. Caller-supplied text is not
   localized (app/network data, not library copy). A new non-empty value is announced through a
   shared assertive light-DOM region; initial and reconnect content is not replayed
-- `label: string = ''` — accessible name; defaults to the localized `chunkInspectorLabel`
+- `label: string = ''` — fallback name for the populated result group; defaults to localized
+  `chunkInspectorLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
+  explicitly empty host label stays empty
 
 **Events:**
+
 - `lr-select` (`detail: RetrievalResultsSelectDetail` = `{ ids: string[]; chunks: RetrievalChunk[] }`)
-  — the *complete* updated selection, both as ids and as the matching deduplicated records, so a host
-  needn't re-look-up ids against its own copy on every toggle.
+  — the _complete_ updated selection, both as ids and as exactly one canonical record per id, so a
+  host needn't re-look-up ids against its own copy on every toggle. This derived detail is always
+  deduplicated even when `dedupe=false` keeps duplicate rows visible; the highest finite score wins
+  and equal scores keep first appearance.
 - `lr-load-more` (`detail: undefined`) — from the virtual list's scroll-near-bottom detection while
   virtualized, or the `[part="load-more"]` button otherwise. Only fires while `hasMore` is true and
   `loading` is false.
@@ -1641,7 +1802,7 @@ border rather than a fill by design: the row's own text (the nested chunk inspec
 score line in particular) is sized and colored for the page's default surface, and a tinted
 background can drop it below the required contrast ratio, while a border-only indicator carries no
 such risk — so recoloring this hook is contrast-safe. It is an inline `var()` fallback at the point
-of use rather than a `:host` declaration, so it can be set on the element *or on any ancestor*:
+of use rather than a `:host` declaration, so it can be set on the element _or on any ancestor_:
 `::part(row-body)[data-selected]` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()` — which previously left re-pointing the library-wide `--lr-color-brand` token as the only
 lever, repainting every other brand surface with it. Plus shared tokens otherwise.
@@ -1649,6 +1810,7 @@ lever, repainting every other brand surface with it. Plus shared tokens otherwis
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - While virtualized, each row's content lives inside `lr-virtual-list`'s shadow root, not this
   component's.
 - Below the virtualization threshold, scroll-near-bottom isn't a meaningful gesture, so a
@@ -1666,10 +1828,11 @@ the mode selector and the submit button are all left on the shared `--lr-form-co
 at the same size tier, so the toolbar row renders as one flush line.
 
 **Properties:**
+
 - `query: string = ''` — the query text. The internal `lr-input` updates it optimistically as the
   user types; a host reassignment always wins
 - `mode: LyraRetrievalMode = 'hybrid'` — `LyraRetrievalMode = RetrievalQuery['mode'] = 'vector' |
-  'keyword' | 'hybrid'`, re-exported here rather than redefined
+'keyword' | 'hybrid'`, re-exported here rather than redefined
 - `filters: Record<string, unknown> = {}` (attribute: false) — arbitrary metadata filters, rendered
   as removable `"{key}: {value}"` chips. Controlled
 - `scope: string[] = []` (attribute: false) — source-scope ids/labels this query is restricted to,
@@ -1683,26 +1846,29 @@ at the same size tier, so the toolbar row renders as one flush line.
   results"; never inferred, since this component holds no results data (see `lr-retrieval-results`)
 - `placeholder: string = ''` — falls back to the localized generic "Search" placeholder, which also
   becomes the field's accessible name
-- `label: string = ''` — accessible name for the `role="search"` landmark; falls back to a localized
+- `label: string = ''` — fallback name for the `role="search"` landmark; falls back to a localized
   default
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the landmark's
-  computed accessible name; wins over `label` and the localized default, and attribute-reflects from
-  a host-level `aria-label`
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
+  the host attribute is absent, overrides the search-landmark name. A non-empty authored host
+  `aria-label` makes the host the sole overall owner, so the inner shell omits its duplicate
+  role/name; an explicitly empty host label stays empty on the search landmark
 
 **Events:**
+
 - `lr-search` (`detail: RetrievalQuery` from `@aceshooting/lyra-ui/ai` = `{ text: string;
-  filters?: Record<string, unknown>; mode: 'vector' | 'keyword' | 'hybrid'; scope?: string[] }`) —
+filters?: Record<string, unknown>; mode: 'vector' | 'keyword' | 'hybrid'; scope?: string[] }`) —
   Enter in the query field, or the submit button while not `loading`.
 - `lr-cancel` (`detail: CancelEventDetail` from `@aceshooting/lyra-ui/ai` = `{ reason?: string }`) —
   either the button was clicked while `loading` (`detail: {}`), or a new submission superseded an
-  in-flight one (`detail: { reason: 'superseded' }`, fired immediately *before* the new `lr-search`).
+  in-flight one (`detail: { reason: 'superseded' }`, fired immediately _before_ the new `lr-search`).
 - `lr-filters-change` (`detail: RetrievalFiltersChangeDetail` = `{ filters: Record<string, unknown>;
-  scope: string[] }`) — a chip's remove button was activated; the complete already-updated next
+scope: string[] }`) — a chip's remove button was activated; the complete already-updated next
   state, not a delta. The component updates its own copy first, then emits; reassign to control.
 
 **Slots:** none.
 
-**CSS parts:** `base` (the `role="search"` landmark), `row`, `query`, `mode`, `submit` (reads
+**CSS parts:** `base` (the `role="search"` landmark unless a non-empty host label owns the
+component), `row`, `query`, `mode`, `submit` (reads
 "Search" while idle, "Cancel" while `loading`), `filters` (omitted entirely when both `filters` and
 `scope` are empty), `spinner` (only while `loading`), `error` (neutral visible message, only when
 `errorText` is non-empty and not `loading`), `empty` (only when `empty` and neither `loading` nor
@@ -1713,11 +1879,15 @@ at the same size tier, so the toolbar row renders as one flush line.
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - Submitting while `loading` is already true **supersedes** the in-flight request: `lr-cancel` fires
   immediately before the new `lr-search`. Clicking the submit button (rather than pressing Enter)
   while `loading` only emits `lr-cancel` and does not resubmit.
 - Long unbroken filter keys, values, and scope labels are contained within the search allocation;
   the removable chip label truncates while its remove action remains available.
+- Filter values use a cycle-aware formatter bounded to 128 visited values, six nesting levels,
+  32 entries per container and 256 characters per string. Cycles use the localized invalid-value
+  sentinel and budget/depth truncation uses a stable ellipsis in both SSR and browser rendering.
 
 ---
 
@@ -1728,9 +1898,10 @@ rendered through `lr-span-waterfall`, plus a disclosure list exposing each stage
 fetches, ranks, or computes retrieval results itself.
 
 **Properties:**
+
 - `stages: RetrievalStage[] = []` (attribute: false) — `RetrievalStage { id: string; kind:
-  RetrievalStageKind; label?: string; startMs: number; endMs?: number; status: 'pending' | 'running'
-  | 'success' | 'error' | 'denied'; detail?: string; evidence?: RetrievalStageEvidence }` (exported
+RetrievalStageKind; label?: string; startMs: number; endMs?: number; status: 'pending' | 'running'
+| 'success' | 'error' | 'denied'; detail?: string; evidence?: RetrievalStageEvidence }` (exported
   here), where `RetrievalStageKind = 'query-rewrite' | 'embed' | 'retrieve' | 'rerank' | 'filter'`.
   `startMs`/`endMs` are milliseconds relative to the trace start (`endMs` absent while still
   running); `status` uses `LyraSpan.status`'s vocabulary verbatim; `label` overrides the localized
@@ -1739,21 +1910,24 @@ fetches, ranks, or computes retrieval results itself.
   `query-rewrite → 'llm'`, `embed → 'embedding'`, `retrieve → 'retriever'`,
   `rerank`/`filter` → `'tool'`
 - `RetrievalStageEvidence { text?: string; chunks?: RetrievalChunk[]; metadata?: Record<string,
-  unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** verbatim, rendered
+unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** verbatim, rendered
   through `lr-chunk-inspector` (`source.id → sourceId`, `source.name → title`, `locator → anchor`;
   page locators also supply the visible `page`); `text` is free-form (e.g. the rewritten query, an
   embedding model id); `metadata` renders as a plain key/value list. A
   stage whose evidence has none of the three renders no disclosure row at all
 - `activeStageId: string | null = null` (attribute `active-stage-id`) — controlled selection,
   forwarded verbatim to the internal `lr-span-waterfall`'s `activeSpanId`
-- `label: string = ''` — accessible name for the timeline. A host `aria-label` takes precedence,
-  followed by `label`, then the waterfall's own localized default; late attribute changes and
-  removal update that resolved name
+- `label: string = ''` — accessible name for the timeline, falling back to its localized default.
+  An authored host `aria-label` independently names the trace and is not cloned onto the timeline;
+  explicit-empty/dynamic host changes preserve that single-owner distinction
 
 **Events:** `lr-stage-select` (`detail: { id: string }`, a stage's bar was activated — click, Enter,
 Space), `lr-stage-toggle` (`detail: { id: string; expanded: boolean }`, an evidence panel was
 toggled, either by its own button or implicitly by selecting that stage in the timeline for the
-first time).
+first time), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
+discriminated `{ stageId, action: 'open', id, sourceId, anchor? } | { stageId, action: 'expand', id,
+expanded }`). Generic nested chunk events are stopped at the trace boundary so every action has
+explicit stage identity.
 
 **Slots:** none.
 
@@ -1761,13 +1935,13 @@ first time).
 no stage has evidence), `evidence-row` (omitted for a stage with no evidence), `evidence-toggle`,
 `evidence-toggle-icon`, `evidence-body` (hidden while collapsed), `evidence-text`,
 `evidence-metadata` (a `<dl>`), `evidence-metadata-row` (one key/value pair), `evidence-metadata-key`
-(`<dt>`), `evidence-metadata-value` (`<dd>`).
+(`<dt>`), `evidence-metadata-value` (`<dd>`), `chunk-inspector` (the stage-owned inspector).
 
 **Themeable custom properties:** `--lr-retrieval-trace-active-border` (default
 `var(--lr-color-brand)`) — the border color of the `[part='evidence-row']` whose stage matches
 `activeStageId`, leaving every other row on the resting border token. It is an inline `var()`
-fallback at the point of use rather than a `:host` declaration, so it can be set on the element *or
-on any ancestor*: `::part(evidence-row)[data-active]` is invalid CSS — Shadow Parts forbids an
+fallback at the point of use rather than a `:host` declaration, so it can be set on the element _or
+on any ancestor_: `::part(evidence-row)[data-active]` is invalid CSS — Shadow Parts forbids an
 attribute selector after `::part()` — so marking the active stage previously meant overriding the
 library-wide `--lr-color-brand` token and repainting every other brand surface with it. Unset, it
 falls back to that token, so rendering is unchanged. Plus shared tokens otherwise.
@@ -1775,8 +1949,10 @@ falls back to that token, so rendering is unchanged. Plus shared tokens otherwis
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - Every stage starts collapsed; expansion state is internal `@state` keyed by stage id, not a
   controlled property.
+
 ## `lr-rag-answer`
 
 Controlled grounded-answer surface combining sanitized Markdown, citation badges, grounding
@@ -1790,9 +1966,16 @@ neutral visible caller text; new non-empty values announce through a shared asse
 region, while initial and reconnect content is not replayed — spelled plain `error` before 9.0.0);
 `showSources: boolean = true`; `showClaims: boolean = true`
 (attribute `show-claims`); `label: string = ''`; `accessibleLabel: string | null = null` (attribute
-`aria-label`).
+`aria-label`). The same `<article>` remains the semantic shell in `idle`, `loading`, `answer`, and
+`error` states. With no non-empty host `aria-label` it owns the article role/name; a non-empty host
+label makes the host the sole overall owner, while an explicitly empty host label stays empty on
+the article. The normalized state gives `errorText` precedence over a conflicting `loading`
+flag; `aria-busy="true"` and the spinner appear exactly in the resulting `loading` state, including
+while a partial property or slotted answer is streaming.
 
-**Events:** `lr-citation-select` (`{ citation }`), `lr-claim-select` (`{ claim }`), and `lr-retry`.
+**Events:** `lr-citation-select` (`{ citation, section: 'answer' | 'grounding' }`),
+`lr-claim-select` (`{ claim }`), and `lr-retry`. When `assessment` is present, grounding summary is
+the single citation presentation/action owner; the answer-level duplicate citation row is omitted.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
 source list. Either slot renders from its assigned content without requiring the corresponding
@@ -1810,9 +1993,11 @@ the component only normalizes them into SVG, colors optional clusters, and emits
 y, label?, sourceId?, cluster? }`; `selectedId: string = ''`; `height: string = '360px'` (any CSS length valid for `block-size`,
 including `auto` for `viewBox`-derived aspect-ratio sizing; applied on the host as
 `--lr-embedding-explorer-height`, and a value the browser cannot parse falls back to `auto`);
-`accessibleLabel: string | null = null` (attribute `aria-label`). Non-finite coordinates are
-omitted. Pointer and programmatic focus synchronize the single roving tab stop, and every point
-keeps at least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker.
+`accessibleLabel: string | null = null` (attribute `aria-label`). As a JS-only property with no host
+attribute, it names the plot. Authored host `aria-label` instead names the explorer as a whole and
+is not cloned onto the plot, which retains its localized name. Non-finite coordinates are omitted.
+Pointer and programmatic focus synchronize the single roving tab stop, and every point keeps at
+least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker.
 
 **Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
 
@@ -1822,7 +2007,9 @@ keeps at least a 24×24 CSS px pointer target at narrow allocations without enla
 `var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`
 (default `360px`) — the `block-size` of `[part="plot"]`, set on the host from `height`. A consumer's
 own `::part(plot) { block-size: ... }` rule still overrides it, and the narrow-allocation
-`min-block-size` floor still raises it. Plus shared tokens.
+`min-block-size` floor still raises it. Unspecified clusters cycle through the canonical
+`--lr-color-chart-1` … `--lr-color-chart-8` palette, including its dark and forced-color values.
+Plus shared tokens.
 
 ## `lr-knowledge-base-admin`
 
@@ -1832,13 +2019,15 @@ permissions, and connector settings go in the `settings` slot.
 
 **Properties:** `sources: KnowledgeSource[] = []` (attribute: false); `ingestionItems:
 IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
-`label: string = ''` (visible heading and accessible-name fallback; a host `aria-label` wins);
+`label: string = ''` (the visible heading and the tablist's distinct accessible name; authored host
+`aria-label` independently names the admin component and is not cloned onto either);
 `hideIngestion: boolean = false`. If ingestion is active when it becomes hidden, `activeTab`
 normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources tab when needed.
 An invalid runtime or authored `activeTab` value follows the same fallback instead of leaving every
 tab and panel inactive.
 
-**Events:** `lr-tab-change` (`{ tab }`), `lr-source-create`, `lr-source-sync`, `lr-source-pause`,
+**Events:** `lr-tab-change` (`{ tab }`, emitted only for a distinct accepted selection),
+`lr-source-create`, `lr-source-sync`, `lr-source-pause`,
 `lr-source-delete`, `lr-ingestion-retry`, and `lr-ingestion-cancel` (the latter four preserve the
 correlated ids/details from their composed primitives).
 
@@ -1850,7 +2039,7 @@ correlated ids/details from their composed primitives).
 `var(--lr-color-brand)`) and `--lr-knowledge-base-admin-tab-selected-color` (default
 `var(--lr-color-text)`) — the bottom-border and text color of the selected `[part="tab"]`. State
 hooks: inline `var()` fallbacks at the point of use rather than `:host` declarations, so either can
-be set on the element *or on any ancestor*, and the rule wraps its `[aria-selected='true']` qualifier
+be set on the element _or on any ancestor_, and the rule wraps its `[aria-selected='true']` qualifier
 in `:where()` so a consumer's own `::part(tab)` override still wins. They exist because
 `::part(tab)[aria-selected='true']` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()`. Left unset, rendering is unchanged.
@@ -1863,11 +2052,14 @@ Controlled claim-by-claim grounding audit relating `GroundedClaim[]` to complete
 records. Dangling citation ids are ignored rather than rendered as invented evidence.
 
 **Properties:** `claims: GroundedClaim[] = []` and `citations: Citation[] = []` (attribute: false);
-`selectedClaimId: string = ''` (attribute `selected-claim-id`); `label: string = ''`.
+`selectedClaimId: string = ''` (attribute `selected-claim-id`); `label: string = ''` (fallback name
+for the overall claim region; a non-empty host `aria-label` makes the host the sole overall owner,
+while an explicitly empty host label stays empty on the region).
 `GroundedClaim = { id, text, status, citationIds, answerRange?, confidence?, explanation? }`, with
 `status: 'supported' | 'partially-supported' | 'unsupported' | 'contradicted'`. Claim confidence
 is clamped to 0–1 for localized percent display. `Citation` is the shared AI citation record
 (`id`, source/chunk ids, label, locator/ranges, quote, metadata).
+
 - `compact: boolean = false` (reflected) — tighter `claim-trigger` padding and column gap, for dense
   evidence lists — the same convention as `lr-source-card`'s/`lr-entity-card`'s `compact`. Purely a
   density knob: each claim's border and background stay. `false` (the default) keeps the full
@@ -1894,7 +2086,7 @@ Selection is controlled: activation emits the complete claim but does not assign
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.js';
+import "@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.js";
 ```
 
 ## `lr-retrieval-compare`
@@ -1905,7 +2097,9 @@ dense/sparse/rerank/final score breakdowns.
 **Properties:** `sets: RetrievalComparisonSet[] = []` (attribute: false), where
 `RetrievalComparisonSet = { id: string; label: string; chunks: RetrievalChunk[] }`;
 `topK: number = 10` (attribute `top-k`, finite integer with minimum 1);
-`selectedChunkId: string = ''` (attribute `selected-chunk-id`); `label: string = ''`.
+`selectedChunkId: string = ''` (attribute `selected-chunk-id`); `label: string = ''` (fallback name
+for the overall comparison region; a non-empty host `aria-label` makes the host the sole overall
+owner, while an explicitly empty host label stays empty on the region).
 `RetrievalChunk` is the shared AI record carrying id/text/score/source plus optional rank, locator,
 trace metadata, and `scores?: { dense?, sparse?, rerank?, final }`.
 
@@ -1923,7 +2117,7 @@ is pairwise Jaccard similarity across those visible chunk ids. Selection is cont
 same escape-hatch pattern as `lr-retrieval-results`'s `--lr-retrieval-results-selected-border`.
 
 ```ts
-import '@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.js';
+import "@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.js";
 ```
 
 ## `lr-rag-eval-dashboard`
@@ -1933,7 +2127,9 @@ and run history. The host computes metrics and owns evaluation execution.
 
 **Properties:** `metrics: RagEvaluationMetric[] = []` and `runs: RagEvaluationRun[] = []`
 (attribute: false); `metricId: string = ''` (attribute `metric-id`, with the first metric used for
-display when unset/unmatched); `slice: string = ''`; `label: string = ''`;
+display when unset/unmatched); `slice: string = ''`; `label: string = ''` (visible heading and
+fallback overall-region name; a non-empty host `aria-label` makes the host the sole overall owner,
+while an explicitly empty host label stays empty on the region);
 `showChart: boolean = true` (attribute `show-chart`, reflected, string-aware true-default
 converter); `chartHeight: string = '220px'` (attribute `chart-height`).
 
@@ -1953,7 +2149,7 @@ filtered run order; the host computes every metric and owns evaluation execution
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js';
+import "@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js";
 ```
 
 `lr-grounding-summary` and `lr-rag-answer` now accept `GroundingAssessment.claims` and expose

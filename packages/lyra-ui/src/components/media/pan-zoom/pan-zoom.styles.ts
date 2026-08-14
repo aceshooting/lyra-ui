@@ -11,10 +11,7 @@ export const styles = css`
     min-inline-size: 0;
   }
   [part='viewport'] {
-    min-block-size: var(
-      --lr-pan-zoom-min-block-size,
-      var(--lr-zoomable-frame-min-block-size, var(--lr-size-10rem))
-    );
+    min-block-size: var(--lr-pan-zoom-min-block-size, var(--lr-size-10rem));
     overflow: auto;
     overscroll-behavior: contain;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -37,8 +34,9 @@ export const styles = css`
     min-block-size: 100%;
     inline-size: max-content;
     block-size: max-content;
-    transform: scale(var(--lr-pan-zoom-zoom, var(--lr-zoomable-frame-zoom, 1)));
-    transform-origin: center;
+    /* CSS zoom participates in layout, so scaled content expands the scrollable footprint instead
+       of painting into an unreachable area outside transform-based scroll geometry. */
+    zoom: var(--lr-pan-zoom-zoom, 1);
   }
   [part='content'] ::slotted(*) {
     max-inline-size: none;

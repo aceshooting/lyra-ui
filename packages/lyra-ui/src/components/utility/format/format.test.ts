@@ -9,7 +9,11 @@ import type { LyraFormatNumber } from './format-number.class.js';
 import type { LyraRelativeTime } from './relative-time.class.js';
 
 it('formats numbers and bytes through Intl', async () => {
-  const el = await fixture(html`<div><lr-format-number value="1234.5"></lr-format-number><lr-format-bytes value="1024"></lr-format-bytes></div>`);
+  const el = await fixture(
+    html`<div>
+      <lr-format-number value="1234.5"></lr-format-number><lr-format-bytes value="1024"></lr-format-bytes>
+    </div>`,
+  );
   expect(el.querySelector('lr-format-number')?.shadowRoot?.textContent).to.contain('1,234.5');
   expect(el.querySelector('lr-format-bytes')?.shadowRoot?.textContent).to.match(/1\s?kB/i);
 });
@@ -57,6 +61,39 @@ it('formats dates and relative time', async () => {
     new Intl.DateTimeFormat('en-US').format(new Date('2024-01-01T00:00:00Z')),
   );
   expect(el.querySelector('lr-relative-time')?.shadowRoot?.textContent).to.contain('in');
+});
+
+it('treats numeric date attributes as epoch milliseconds like numeric properties', async () => {
+  const wrapper = await fixture(html`<div>
+    <lr-format-date date="0" locale="en-US"></lr-format-date>
+    <lr-format-date date="-1" locale="en-US"></lr-format-date>
+    <lr-relative-time date="0" locale="en-US"></lr-relative-time>
+  </div>`);
+  const [epoch, negative] = [...wrapper.querySelectorAll('lr-format-date')] as LyraFormatDate[];
+  const relative = wrapper.querySelector('lr-relative-time') as LyraRelativeTime;
+  expect(epoch.date).to.equal(0);
+  expect(epoch.shadowRoot!.querySelector('time')!.getAttribute('datetime')).to.equal('1970-01-01T00:00:00.000Z');
+  expect(negative.date).to.equal(-1);
+  expect(negative.shadowRoot!.querySelector('time')!.getAttribute('datetime')).to.equal('1969-12-31T23:59:59.999Z');
+  expect(relative.date).to.equal(0);
+  expect(relative.shadowRoot!.querySelector('time')!.getAttribute('datetime')).to.equal('1970-01-01T00:00:00.000Z');
+
+  epoch.date = 0;
+  await epoch.updateComplete;
+  expect(epoch.shadowRoot!.querySelector('time')!.getAttribute('datetime')).to.equal('1970-01-01T00:00:00.000Z');
+});
+
+it('keeps ISO strings intact and rejects epochs outside the Date TimeClip boundary', async () => {
+  const iso = (await fixture(html`<lr-format-date date="2024-01-01T00:00:00Z"></lr-format-date>`)) as LyraFormatDate;
+  expect(iso.date).to.equal('2024-01-01T00:00:00Z');
+  expect(iso.shadowRoot!.querySelector('time')!.getAttribute('datetime')).to.equal('2024-01-01T00:00:00.000Z');
+
+  const clipped = (await fixture(
+    html`<lr-format-date date="8640000000000001"><span>Invalid date</span></lr-format-date>`,
+  )) as LyraFormatDate;
+  expect(clipped.date).to.equal(8_640_000_000_000_001);
+  expect(clipped.shadowRoot!.querySelectorAll('time').length).to.equal(0);
+  expect(clipped.shadowRoot!.querySelectorAll('slot').length).to.equal(1);
 });
 
 it('defaults date/relative-time to now and renders machine-readable semantic time elements', async () => {
@@ -156,12 +193,7 @@ it('forwards time-zone through granular and style-based date formatting', async 
   expect(granular.shadowRoot?.textContent).to.contain('January 1, 2024');
 
   const styled = (await fixture(html`
-    <lr-format-date
-      date=${instant}
-      locale="en-US"
-      date-style="full"
-      time-zone="America/Los_Angeles"
-    ></lr-format-date>
+    <lr-format-date date=${instant} locale="en-US" date-style="full" time-zone="America/Los_Angeles"></lr-format-date>
   `)) as LyraFormatDate;
   expect(styled.shadowRoot?.textContent).to.contain('Sunday, December 31, 2023');
 
@@ -185,9 +217,7 @@ it('falls back safely for invalid Intl number/date/relative-time option values',
   await number.updateComplete;
   expect(number.shadowRoot?.textContent?.trim()).to.not.equal('');
 
-  const date = (await fixture(html`
-    <lr-format-date date="2024-01-01T00:00:00Z"></lr-format-date>
-  `)) as LyraFormatDate;
+  const date = (await fixture(html` <lr-format-date date="2024-01-01T00:00:00Z"></lr-format-date> `)) as LyraFormatDate;
   date.year = 'invalid' as Intl.DateTimeFormatOptions['year'];
   date.dateStyle = 'invalid' as Intl.DateTimeFormatOptions['dateStyle'];
   await date.updateComplete;
@@ -253,7 +283,11 @@ it('preserves a valid effective locale while discarding invalid date options', a
 });
 
 it('inherits locale from an ancestor when no explicit locale is set', async () => {
-  const el = await fixture(html`<div lang="de-DE"><lr-format-number value="1234.5"></lr-format-number></div>`);
+  const el = await fixture(
+    html`<div lang="de-DE">
+      <lr-format-number value="1234.5"></lr-format-number>
+    </div>`,
+  );
   expect(el.querySelector('lr-format-number')?.shadowRoot?.textContent).to.contain('1.234,5');
 });
 
@@ -339,14 +373,15 @@ it('does not schedule a sync relative-time refresh when the owner document has n
     <lr-relative-time sync .date=${new Date(Date.now() + 60_000)} locale="en-US"></lr-relative-time>
   `)) as LyraRelativeTime;
   await el.updateComplete;
-  expect((el as unknown as { timer?: number }).timer, 'a normal window schedules a wake timer').to.not.equal(
-    undefined,
-  );
+  expect((el as unknown as { timer?: number }).timer, 'a normal window schedules a wake timer').to.not.equal(undefined);
 
   // `defaultView` is null for a document with no browsing context; shadow it directly on the
   // shared `document` instance (own-property override, restored below) rather than reaching for
   // an actual windowless document, since custom elements never upgrade in one.
-  Object.defineProperty(document, 'defaultView', { configurable: true, get: () => null });
+  Object.defineProperty(document, 'defaultView', {
+    configurable: true,
+    get: () => null,
+  });
   try {
     el.date = new Date(Date.now() + 120_000); // re-triggers updated() -> schedule()
     await el.updateComplete;
@@ -364,7 +399,7 @@ it('safely no-ops for a non-finite date: skips scheduling, reports no relative s
   `)) as LyraRelativeTime;
   await el.updateComplete;
   expect(el.shadowRoot?.textContent?.trim()).to.equal('');
-  expect((el.shadowRoot?.querySelector('time')) === (null)).to.equal(true);
+  expect(el.shadowRoot?.querySelector('time') === null).to.equal(true);
   expect((el as unknown as { timer?: number }).timer, 'an unparseable date must not schedule a wake timer').to.equal(
     undefined,
   );
@@ -412,7 +447,12 @@ it('schedules an additional previous-unit wake boundary for a past date once aut
 
 it('executes the scheduled boundary refresh through a real timer and reschedules the next wake', async () => {
   const el = (await fixture(html`
-    <lr-relative-time .date=${new Date(Date.now() + 100_000)} unit="minute" numeric="always" locale="en-US"></lr-relative-time>
+    <lr-relative-time
+      .date=${new Date(Date.now() + 100_000)}
+      unit="minute"
+      numeric="always"
+      locale="en-US"
+    ></lr-relative-time>
   `)) as LyraRelativeTime; // sync starts false -> connectedCallback's schedule() is a no-op, no timer yet
   expect((el as unknown as { timer?: number }).timer).to.equal(undefined);
 
@@ -461,7 +501,13 @@ it('ignores a stale scheduled callback whose timer/generation no longer match th
   window.clearTimeout = (() => {}) as typeof window.clearTimeout;
   try {
     const el = (await fixture(html`
-      <lr-relative-time .date=${new Date(Date.now() + 100_000)} unit="minute" numeric="always" sync locale="en-US"></lr-relative-time>
+      <lr-relative-time
+        .date=${new Date(Date.now() + 100_000)}
+        unit="minute"
+        numeric="always"
+        sync
+        locale="en-US"
+      ></lr-relative-time>
     `)) as LyraRelativeTime;
     await el.updateComplete;
     expect(handlers.length, 'the initial connect scheduled at least one callback').to.be.greaterThan(0);
@@ -498,7 +544,10 @@ it('passes undefined (not an empty string) to Intl.RelativeTimeFormat when effec
   // always falls back to 'en' at worst -- so shadow the protected getter directly on this
   // instance (same technique lr-heatmap's tests use) to exercise the defensive `|| undefined`
   // fallback that keeps an empty string from ever reaching the Intl constructor.
-  Object.defineProperty(el, 'effectiveLocale', { configurable: true, get: () => '' });
+  Object.defineProperty(el, 'effectiveLocale', {
+    configurable: true,
+    get: () => '',
+  });
   try {
     el.requestUpdate();
     await el.updateComplete;
@@ -559,7 +608,7 @@ it('falls back to slotted content instead of throwing when value is non-finite',
   const el = await fixture(html`<lr-format-bytes value="abc">Unknown size</lr-format-bytes>`);
   expect(el.shadowRoot?.textContent?.trim()).to.equal('');
   const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
-  expect((slot) != null).to.equal(true);
+  expect(slot != null).to.equal(true);
   expect(el.textContent?.trim()).to.equal('Unknown size');
 });
 
@@ -646,12 +695,19 @@ it('reflects the locale property back to the locale attribute (inherited LyraEle
   const numberEl = (await fixture(html`<lr-format-number value="1234.5"></lr-format-number>`)) as LyraFormatNumber;
   const dateEl = (await fixture(html`<lr-format-date date="2024-01-01T00:00:00Z"></lr-format-date>`)) as LyraFormatDate;
   const bytesEl = (await fixture(html`<lr-format-bytes value="1024"></lr-format-bytes>`)) as LyraFormatBytes;
-  const relativeEl = (await fixture(html`<lr-relative-time date="2030-01-01T00:00:00Z"></lr-relative-time>`)) as LyraRelativeTime;
+  const relativeEl = (await fixture(
+    html`<lr-relative-time date="2030-01-01T00:00:00Z"></lr-relative-time>`,
+  )) as LyraRelativeTime;
   numberEl.locale = 'de-DE';
   dateEl.locale = 'de-DE';
   bytesEl.locale = 'de-DE';
   relativeEl.locale = 'de-DE';
-  await Promise.all([numberEl.updateComplete, dateEl.updateComplete, bytesEl.updateComplete, relativeEl.updateComplete]);
+  await Promise.all([
+    numberEl.updateComplete,
+    dateEl.updateComplete,
+    bytesEl.updateComplete,
+    relativeEl.updateComplete,
+  ]);
   expect(numberEl.getAttribute('locale')).to.equal('de-DE');
   expect(dateEl.getAttribute('locale')).to.equal('de-DE');
   expect(bytesEl.getAttribute('locale')).to.equal('de-DE');

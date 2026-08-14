@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './json-viewer.js';
+import type { LyraClipboardWriteSuccess } from '../copy-button/copy-button.js';
 
 const sample = {
   id: 'call_9f2e1',
@@ -62,7 +63,7 @@ export const Copyable: Story = {
       .data=${sample}
       copyable
       style="max-width: 32rem;"
-      @lr-copy=${(e: CustomEvent<{ text: string }>) => console.log('lr-copy', e.detail.text)}
+      @lr-copy=${(e: CustomEvent<LyraClipboardWriteSuccess>) => console.log('lr-copy', e.detail.text)}
     ></lr-json-viewer>
   `,
 };

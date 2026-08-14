@@ -1,39 +1,31 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, query, state } from 'lit/decorators.js';
-import { repeat } from 'lit/directives/repeat.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { isRtl } from '../../../internal/rtl.js';
-import { nextId } from '../../../internal/a11y.js';
-import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
-import { chevronIcon } from '../../../internal/icons.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
-import { tag } from '../../../internal/prefix.js';
-import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
-import { styles } from './tab-group.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
-import type { LyraTab } from './tab.class.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
+import { property, query, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { isRtl } from "../../../internal/rtl.js";
+import { nextId } from "../../../internal/a11y.js";
+import { composedAccessibilityText } from "../../../internal/accessibility-visibility.js";
+import { chevronIcon } from "../../../internal/icons.js";
+import { prefersReducedMotion } from "../../../internal/motion.js";
+import { tag } from "../../../internal/prefix.js";
+import { observeScrollOverflow } from "../../../internal/scroll-overflow.js";
+import { styles } from "./tab-group.styles.js";
+import { activeElementIn } from "../../../internal/active-element.js";
+import type { LyraTab } from "./tab.class.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
-/**
- * One tab, derived from a direct light-DOM child's `slot`/`label`/`disabled`
- * attributes, plus whether a sibling `slot="<id>-icon"` child is also present
- * (see the class doc for the icon mechanism).
- */
+/** One canonical tab descriptor derived from a direct `<lr-tab>` child. */
 interface TabDef {
   slotName: string;
   label: string;
   disabled: boolean;
   /** The source child's own `inert` state — see `isInertChild()`. */
   inert: boolean;
-  hasIcon: boolean;
-  /** `element` when the tab came from an `<lr-tab>`, whose content the button projects instead of
-   *  rendering `label` as text. `attribute` is the panel-attribute shape. */
-  source: 'attribute' | 'element';
-  element?: LyraTab;
+  /** Canonical upstream descriptor whose rich content is projected into the real tab button. */
+  element: LyraTab;
 }
 
 interface ProjectedSourceSnapshot {
@@ -41,6 +33,14 @@ interface ProjectedSourceSnapshot {
   appliedInert: string | null;
   /** True only while the current `inert` attribute was added by this group. */
   libraryOwnsInert: boolean;
+}
+
+interface ProjectedSlotSnapshot {
+  /** Latest author-owned slot value, restored when this group releases the descriptor/panel. */
+  slot: string | null;
+  /** Last value observed or assigned by this group, used to distinguish a later author write. */
+  appliedSlot: string | null;
+  libraryOwnsSlot: boolean;
 }
 
 /**
@@ -55,7 +55,10 @@ interface ProjectedSourceSnapshot {
  * there would reset `active` to `''` and blank every panel for as long as the dialog is open.
  */
 function isHtmlElement(child: Element): child is HTMLElement {
-  return child.nodeType === 1 && child.namespaceURI === 'http://www.w3.org/1999/xhtml';
+  return (
+    child.nodeType === 1 &&
+    child.namespaceURI === "http://www.w3.org/1999/xhtml"
+  );
 }
 
 function isInertChild(child: Element): boolean {
@@ -66,28 +69,30 @@ function isInertChild(child: Element): boolean {
  * source fence can be handled without overlooking author-owned hidden/ARIA/CSS state. */
 function isTabLabelSubtreeExcludedWithoutInert(element: Element): boolean {
   if (
-    element.hasAttribute('hidden') ||
-    element.getAttribute('aria-hidden')?.trim().toLowerCase() === 'true'
+    element.hasAttribute("hidden") ||
+    element.getAttribute("aria-hidden")?.trim().toLowerCase() === "true"
   ) {
     return true;
   }
   const rendered = element.ownerDocument.defaultView?.getComputedStyle(element);
-  return rendered?.display === 'none' || rendered?.contentVisibility === 'hidden';
+  return (
+    rendered?.display === "none" || rendered?.contentVisibility === "hidden"
+  );
 }
 
 /** Which edge the tab strip sits on. `start`/`end` are logical, so they mirror under RTL. */
-export type TabGroupPlacement = 'top' | 'bottom' | 'start' | 'end';
+export type TabGroupPlacement = "top" | "bottom" | "start" | "end";
 
 /**
  * `auto` moves selection with focus (the APG's automatic activation). `manual` moves focus only,
  * and the user commits with Enter or Space — required by the APG whenever revealing a panel is
  * expensive, since automatic activation would load every panel the user arrows past.
  */
-export type TabGroupActivation = 'auto' | 'manual';
+export type TabGroupActivation = "auto" | "manual";
 
 /** Fallback panel name for an `<lr-tab>` with no `panel` attribute -- keyed by position so it is
  *  stable across re-syncs, and prefixed so it cannot collide with an author-chosen name. */
-const SYNTHETIC_PANEL_PREFIX = 'lr-tab-';
+const SYNTHETIC_PANEL_PREFIX = "lr-tab-";
 
 /** How much of the visible tab row one press of a scroll control travels. Short of a full viewport
  *  on purpose: a whole-width jump leaves nothing on screen that was there before it, so there is no
@@ -96,31 +101,14 @@ const SYNTHETIC_PANEL_PREFIX = 'lr-tab-';
 const SCROLL_STEP_RATIO = 0.8;
 
 export interface LyraTabGroupEventMap {
-  'lr-tab-show': CustomEvent<{ tabId: string; name: string }>;
-  'lr-tab-hide': CustomEvent<{ tabId: string; name: string }>;
+  "lr-tab-show": CustomEvent<{ name: string }>;
+  "lr-tab-hide": CustomEvent<{ name: string }>;
 }
 /**
- * `<lr-tab-group>` — a tab strip whose panels are direct light-DOM children,
- * each carrying `slot="<id>"` (the panel's stable id) and `label="<text>"`
- * (the tab button's text). One named `<slot>` is rendered per distinct
- * `slot` name found among the current children — a child with no `label`,
- * or a name with no matching child, simply never produces a tab.
- *
- * A tab button's *visible* content can carry a leading icon without ever
- * changing its *accessible name* (which always stays exactly `label`'s
- * text, nothing else): give a tab an extra direct-child sibling of
- * `<lr-tab-group>` carrying `slot="<id>-icon"` (that sibling's own content --
- * an inline SVG, an emoji span, a custom icon element, anything -- is
- * entirely up to the consumer). Its assigned source is inert while projected,
- * and it renders ahead of the label inside an `aria-hidden="true"` part so it
- * cannot create a nested action. A tab with no matching
- * `<id>-icon` sibling renders no icon wrapper at all, so existing text-only
- * tabs are completely unaffected. (A named slot,
- * rather than a second attribute holding an icon-name lookup, was chosen
- * because this library's `internal/icons.ts` is a small closed set of
- * chrome glyphs for this library's *own* components, not a public
- * name-keyed registry -- a slot lets a consumer supply an arbitrary,
- * domain-specific icon instead of being limited to that internal set.)
+ * `<lr-tab-group>` — a tab strip composed from direct `<lr-tab panel="x">` and
+ * `<lr-tab-panel name="x">` children. This is the one canonical child model shared with both
+ * mapped upstreams; the group assigns private projection slots itself so consumer markup remains
+ * a mechanical tag rename.
  *
  * Implements the WAI-ARIA APG tabs pattern. With the default `activation="auto"`, Left/Right
  * (swapped under RTL, or Up/Down when `placement` is `start`/`end`) move focus *and* selection
@@ -140,11 +128,6 @@ export interface LyraTabGroupEventMap {
  * button is itself marked `inert`, so a pointer cannot reach it either. Only the child's *own*
  * `inert` counts: a whole group inerted by an open modal keeps its selection and panels intact.
  *
- * **Two child models are accepted.** `<lr-tab panel="x">` plus `<lr-tab-panel name="x">` mirrors
- * `wa-tab-group`/`sl-tab-group`, so that markup renames mechanically; the group assigns the `slot`
- * attributes itself. The attribute model described above is this library's own original shape and
- * remains fully supported. A group containing any `<lr-tab>` child is read purely as the element
- * model, so the two never interleave ambiguously.
  * `defaultSlot` exposes the real unnamed shadow slot expected by mapped integrations. Lyra keeps
  * it hidden because every accepted child is assigned to a deterministic named projection slot.
  *
@@ -157,10 +140,10 @@ export interface LyraTabGroupEventMap {
  * `no-scroll-controls`) opts out, leaving the pre-8.0.0 behavior: native scrolling plus the fade.
  * The fade is deliberately kept alongside the controls — it says "the row continues past this
  * edge", which the controls themselves cannot show, and both appear on exactly the same condition.
- * Neither control is ever hidden individually once the row overflows, including at the two extremes
- * of the scroll range. Shoelace does hide an inactive control there and exposes
- * `fixed-scroll-controls` to opt out; Lyra's always-present rendering already *is* that opted-out
- * behavior, so the mirrored flag is accepted and reflected but changes nothing (see its own doc).
+ * By default an inactive edge control is hidden once that direction has nothing left to scroll to.
+ * Shoelace's `fixed-scroll-controls` keeps both controls present throughout an overflowing range;
+ * in that mode an exhausted control stays visible but remains a no-op. Edge state is measured in
+ * logical coordinates, so controls and the one-sided fade remain truthful under RTL too.
  * A vertical `start`/`end` nav stays shrinkable and is capped at
  * `--lr-tab-group-vertical-nav-max-inline-size` (default `var(--lr-size-12rem)`), so long labels
  * ellipsize rather than consuming the panel's allocation.
@@ -173,11 +156,10 @@ export interface LyraTabGroupEventMap {
  * so the name is there for automation and for a consumer that chooses to expose them.
  *
  * @customElement lr-tab-group
- * @slot - Either `<lr-tab>`/`<lr-tab-panel>` pairs, or direct children with `slot="<id>" label="<text>"` (and optionally `disabled`); one becomes each tab's panel.
+ * @slot - Canonical `<lr-tab>`/`<lr-tab-panel>` pairs.
  * @slot nav - Upstream-compatible slot used by `<lr-tab>` descriptors.
- * @slot <id>-icon - Optional inert sibling direct child supplying a tab's leading icon content, in the attribute model only; excluded from the tab button's accessible name.
- * @event lr-tab-show - `detail: { name, tabId }`, fired when a tab becomes active via click or keyboard.
- * @event lr-tab-hide - `detail: { name, tabId }`, fired for the outgoing tab immediately before `lr-tab-show`.
+ * @event lr-tab-show - `detail: { name }`, fired when a tab becomes active via click or keyboard.
+ * @event lr-tab-hide - `detail: { name }`, fired for the outgoing tab immediately before `lr-tab-show`.
  * @csspart base - Compatibility name for the root wrapper; use `tab-group`.
  * @csspart tab-group - The root wrapper around the tablist and panels. It is the same node as
  *   `base`.
@@ -193,7 +175,6 @@ export interface LyraTabGroupEventMap {
  * @csspart scroll-button--end - Upstream modifier alias on `scroll-button-end`.
  * @csspart scroll-button-glyph - The chevron wrapper inside a scroll control. This is the element that mirrors under RTL; the icon itself never rotates.
  * @csspart tab - A single tab button.
- * @csspart tab-icon - The optional aria-hidden leading-icon wrapper inside a tab button. Its assigned source is inert while projected; the wrapper renders only when that tab has a matching `<id>-icon` sibling.
  * @csspart panel - A single `role="tabpanel"` wrapper (one per tab, hidden unless active).
  * @csspart active-tab-indicator - Indicator inside the active tab.
  * @cssprop --indicator-color - Upstream alias for the active indicator color.
@@ -236,82 +217,89 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The active tab's `slot`/id. Falls back to the first enabled tab whenever the current value doesn't resolve to one. */
-  @property({ reflect: true }) active = '';
+  /** The active tab's panel name. Falls back to the first enabled tab whenever the current value doesn't resolve to one. */
+  @property({ reflect: true }) active = "";
 
   /** Accessible name for the `role="tablist"` strip. Attribute-reflects from a host-level
    *  `aria-label` so a plain-markup consumer gets ARIA-name forwarding without setting a JS
    *  property. `null` omits the attribute; an explicit empty string is forwarded (the role has no
    *  localized default name). */
-  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
 
   /** Which edge the tab strip sits on. `start`/`end` are logical and mirror under RTL; both make
    *  the tablist vertical, which swaps the navigation keys to Up/Down per the APG. */
-  @property({ reflect: true }) placement: TabGroupPlacement = 'top';
+  @property({ reflect: true }) placement: TabGroupPlacement = "top";
 
   /** `auto` (the default) moves selection with focus. `manual` moves focus only and waits for
    *  Enter or Space — the APG requirement for panels that are expensive to reveal. */
-  @property({ reflect: true }) activation: TabGroupActivation = 'auto';
+  @property({ reflect: true }) activation: TabGroupActivation = "auto";
 
   /** Suppresses the overflow scroll controls, leaving an overflowing tab row natively scrollable
    *  with the edge fade as its only affordance. Web Awesome's spelling of the flag. */
-  @property({ type: Boolean, attribute: 'without-scroll-controls', reflect: true })
+  @property({
+    type: Boolean,
+    attribute: "without-scroll-controls",
+    reflect: true,
+  })
   withoutScrollControls = false;
 
   /** Shoelace's spelling of `withoutScrollControls`, read alongside it so a consumer arriving from
    *  either upstream finds their own attribute working. Neither is deprecated. */
-  @property({ type: Boolean, attribute: 'no-scroll-controls', reflect: true })
+  @property({ type: Boolean, attribute: "no-scroll-controls", reflect: true })
   noScrollControls = false;
 
-  /**
-   * `sl-tab-group` parity flag, accepted and reflected but inert here.
-   *
-   * Upstream it means *"prevent the scroll buttons from being hidden when inactive"*: Shoelace
-   * tracks the tablist's scroll position and hides an individual control once that direction has
-   * nothing left to scroll to (`shouldHideScrollStartButton`/`shouldHideScrollEndButton`), and
-   * `fixed-scroll-controls` opts out of that per-edge hiding. It never makes controls appear on a
-   * row that fits — that stays gated on the overflow measurement in both libraries.
-   *
-   * Lyra deliberately implements no per-edge hiding at all: both controls stay present for the
-   * whole overflowing range (see the class doc's Overflow section), which is exactly upstream's
-   * `fixed-scroll-controls="true"` rendering. So the flag is read by nothing and setting it changes
-   * nothing; it exists so a mechanical `sl-` -> `lr-` rename does not drop an attribute, and it
-   * remains harmless in both positions.
-   *
-   * The omission is deliberate. Position-tracked hiding would need a scroll listener plus
-   * direction-dependent `scrollLeft` math on a pair of controls that are already `aria-hidden` and
-   * `tabindex="-1"` — pure pointer affordances — to make them vanish exactly when the user is most
-   * likely to be dragging toward them.
-   */
-  @property({ type: Boolean, attribute: 'fixed-scroll-controls', reflect: true })
+  /** Keeps both overflow controls visible while the row overflows, even when one logical edge is
+   * exhausted. Without it, each inactive edge control is hidden, matching Shoelace. */
+  @property({
+    type: Boolean,
+    attribute: "fixed-scroll-controls",
+    reflect: true,
+  })
   fixedScrollControls = false;
 
   /** The group's real unnamed slot. It is kept hidden because Lyra assigns each tab and panel to
    * its own deterministic named slot, but remains exposed for mapped slot observation. */
-  @query('slot:not([name])') defaultSlot!: HTMLSlotElement;
+  @query("slot:not([name])") defaultSlot!: HTMLSlotElement;
 
   @state() private tabs: TabDef[] = [];
   /** Where keyboard focus currently sits under `activation="manual"`, which is allowed to differ
    *  from `active`. Under `auto` the two are always the same, so this simply follows selection. */
-  @state() private focusedTab = '';
+  @state() private focusedTab = "";
 
-  private baseId = nextId('tab-group');
+  private baseId = nextId("tab-group");
   private nextOpaqueId = 0;
-  private readonly idsBySlot = new Map<string, { tab: string; panel: string }>();
+  private readonly idsBySlot = new Map<
+    string,
+    { tab: string; panel: string }
+  >();
   private mutationObserver?: MutationObserver;
   private mutationObserverDocument?: Document;
   private mutationObserverGeneration = 0;
-  private readonly projectedSourceSnapshots = new Map<Element, ProjectedSourceSnapshot>();
+  private readonly projectedSourceSnapshots = new Map<
+    Element,
+    ProjectedSourceSnapshot
+  >();
+  private readonly projectedSlotSnapshots = new Map<
+    Element,
+    ProjectedSlotSnapshot
+  >();
   private projectedSourceObserver?: MutationObserver;
   private projectedSourceObserverDocument?: Document;
   private projectedSourceObserverGeneration = 0;
   private rehomeTabFocus = false;
+  @state() private scrollStartAvailable = false;
+  @state() private scrollEndAvailable = false;
+  private tabScrollResizeObserver?: ResizeObserver;
+  private tabScrollResizeObserverDocument?: Document;
+  private tabScrollResizeObserverGeneration = 0;
 
   constructor() {
     super();
     // Gates the [part="tablist"] edge fade on the strip genuinely overflowing -- see
     // --lr-scroll-fade-size and tabs.styles.ts.
-    observeScrollOverflow(this, () => this.renderRoot.querySelector('[part~="tablist"]'));
+    observeScrollOverflow(this, () =>
+      this.renderRoot.querySelector('[part~="tablist"]')
+    );
   }
 
   override connectedCallback(): void {
@@ -319,13 +307,13 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     // Lit's server custom-element model cannot expose light-DOM children. During hydration keep
     // the deterministic native-slot fallback for the first pass, then enhance it into tabs once
     // real assignment is observable; an ordinary browser-only mount still syncs immediately.
-    this.seedFirstRenderState(this.syncTabs);
-    // Each child carries its own individual `slot` attribute (one named slot
-    // per tab, unlike lr-split's single default-slot-of-many-panels) -- a
+    if (this.hasUpdated) this.syncTabs();
+    else this.seedFirstRenderState(this.syncTabs);
+    // Each accepted descriptor/panel is assigned an individual private projection slot. A
     // brand-new tab's name has no matching `<slot>` to fire `slotchange` on
     // until *this* component has already rendered one for it, and neither
     // `slotchange` nor any Lit lifecycle hook observes a plain attribute
-    // edit (panel/name/slot/label/disabled) on a light-DOM child at all. A
+    // edit (panel/name/slot/disabled) on a light-DOM child at all. A
     // mutation observer on the host is the only thing that sees either case. `attributes: true`
     // alone only reports mutations on the observed node itself (`this`), never
     // on its children, so `subtree: true` is required too -- but that widens
@@ -352,25 +340,30 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       }
       const isDirectChild = (node: Node) => node.parentNode === this;
       const isElementTabContent = (node: Node): boolean => {
-        let current: Element | null = node.nodeType === 1 ? node as Element : node.parentElement;
+        let current: Element | null =
+          node.nodeType === 1 ? (node as Element) : node.parentElement;
         while (current && current !== this) {
-          if (current.localName === tag('tab') && current.parentNode === this) return true;
+          if (current.localName === tag("tab") && current.parentNode === this)
+            return true;
           current = current.parentElement;
         }
         return false;
       };
       const relevant = records.some((record) => {
-        if (record.type === 'childList') {
+        if (record.type === "childList") {
           return record.target === this || isElementTabContent(record.target);
         }
-        if (record.type === 'characterData') return isElementTabContent(record.target);
+        if (record.type === "characterData")
+          return isElementTabContent(record.target);
         if (
-          record.attributeName === 'inert' &&
+          record.attributeName === "inert" &&
           this.projectedSourceSnapshots.has(record.target as Element)
         ) {
           return false;
         }
-        return isDirectChild(record.target) || isElementTabContent(record.target);
+        return (
+          isDirectChild(record.target) || isElementTabContent(record.target)
+        );
       });
       if (relevant) this.syncTabs();
     });
@@ -382,22 +375,22 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       attributes: true,
       characterData: true,
       attributeFilter: [
-        'alt',
-        'aria-hidden',
-        'aria-label',
-        'aria-labelledby',
-        'class',
-        'closable',
-        'disabled',
-        'hidden',
-        'inert',
-        'id',
-        'label',
-        'name',
-        'open',
-        'panel',
-        'slot',
-        'style',
+        "alt",
+        "aria-hidden",
+        "aria-label",
+        "aria-labelledby",
+        "class",
+        "closable",
+        "disabled",
+        "hidden",
+        "inert",
+        "id",
+        "label",
+        "name",
+        "open",
+        "panel",
+        "slot",
+        "style",
       ],
     });
   }
@@ -405,13 +398,17 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   override disconnectedCallback(): void {
     this.resetMutationObserver();
     this.resetProjectedSourceObserver();
+    this.resetTabScrollResizeObserver();
     this.restoreProjectedSources();
+    this.restoreProjectedSlots();
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.resetMutationObserver();
     this.resetProjectedSourceObserver();
+    this.resetTabScrollResizeObserver();
   }
 
   private resetMutationObserver(): void {
@@ -421,52 +418,22 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     this.mutationObserverDocument = undefined;
   }
 
-  /**
-   * Rebuilds `tabs` from the current direct children, in whichever of the two child models they
-   * use. First child wins when two share a name (matching native slot assignment: both would
-   * render into the one panel, but only one label can back the button).
-   *
-   * **Element model** (`<lr-tab panel="x">` + `<lr-tab-panel name="x">`) mirrors both upstreams, so
-   * `wa-tab-group`/`sl-tab-group` markup renames mechanically. **Attribute model** (any child with
-   * `slot="x" label="…"`) is this library's own original shape and stays fully supported — several
-   * components here compose it. A group using any `<lr-tab>` child is read purely as the element
-   * model, so the two never interleave ambiguously within one group.
-   */
+  /** Rebuilds the canonical `<lr-tab>`/`<lr-tab-panel>` model. First panel name wins so every
+   * selection, focus, key, slot, and event identity remains unambiguous. */
   private syncTabs = (): void => {
     const children = Array.from(this.children);
     this.adoptProjectedSourceInertStates();
-    const next = children.some((child) => child.localName === tag('tab'))
-      ? this.readElementModel(children)
-      : this.readAttributeModel(children);
-    this.syncProjectedSources(children, next);
+    this.adoptProjectedSlotStates();
+    const projectedSlots = new Set<Element>();
+    const next = this.readElementModel(children, projectedSlots);
+    this.syncProjectedSlots(projectedSlots);
+    this.syncProjectedSources(next);
     const liveSlots = new Set(next.map((tab) => tab.slotName));
     for (const slotName of this.idsBySlot.keys()) {
       if (!liveSlots.has(slotName)) this.idsBySlot.delete(slotName);
     }
     this.tabs = next;
   };
-
-  private readAttributeModel(children: Element[]): TabDef[] {
-    const seen = new Set<string>();
-    const next: TabDef[] = [];
-    for (const child of children) {
-      const slotName = child.getAttribute('slot');
-      const label = child.getAttribute('label');
-      if (!slotName || !label || seen.has(slotName)) continue;
-      seen.add(slotName);
-      const iconSlot = this.iconSlotName(slotName);
-      const hasIcon = children.some((c) => c.getAttribute('slot') === iconSlot);
-      next.push({
-        slotName,
-        label,
-        disabled: child.hasAttribute('disabled'),
-        inert: isInertChild(child),
-        hasIcon,
-        source: 'attribute',
-      });
-    }
-    return next;
-  }
 
   /**
    * Reads `<lr-tab>`/`<lr-tab-panel>` pairs and assigns each one the `slot` that lands it in the
@@ -477,31 +444,37 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    * A tab with no `panel` still gets a stable synthetic name from its position, so an unpaired tab
    * renders a button with an empty panel instead of silently disappearing.
    */
-  private readElementModel(children: Element[]): TabDef[] {
+  private readElementModel(
+    children: Element[],
+    projectedSlots: Set<Element>
+  ): TabDef[] {
     const seen = new Set<string>();
     const next: TabDef[] = [];
-    const panels = children.filter((child) => child.localName === tag('tab-panel'));
+    const panels = children.filter(
+      (child) => child.localName === tag("tab-panel")
+    );
     let index = 0;
     for (const child of children) {
-      if (child.localName !== tag('tab')) continue;
-      const slotName = child.getAttribute('panel') || `${SYNTHETIC_PANEL_PREFIX}${index}`;
+      if (child.localName !== tag("tab")) continue;
+      const slotName =
+        child.getAttribute("panel") || `${SYNTHETIC_PANEL_PREFIX}${index}`;
       index += 1;
       if (seen.has(slotName)) continue;
       seen.add(slotName);
       const tabSlot = this.tabSlotName(slotName);
-      if (child.getAttribute('slot') !== tabSlot) child.setAttribute('slot', tabSlot);
-      const panel = panels.find((candidate) => candidate.getAttribute('name') === slotName);
-      if (panel && panel.getAttribute('slot') !== slotName) panel.setAttribute('slot', slotName);
+      this.projectSlot(child, tabSlot, projectedSlots);
+      const panel = panels.find(
+        (candidate) => candidate.getAttribute("name") === slotName
+      );
+      if (panel) this.projectSlot(panel, slotName, projectedSlots);
       next.push({
         slotName,
         label: this.readElementLabel(child as LyraTab),
-        disabled: child.hasAttribute('disabled'),
+        disabled: child.hasAttribute("disabled"),
         inert: isInertChild(child),
-        hasIcon: false,
-        source: 'element',
         element: child as LyraTab,
       });
-      if (!this.active && child.hasAttribute('active')) this.active = slotName;
+      if (!this.active && child.hasAttribute("active")) this.active = slotName;
     }
     return next;
   }
@@ -511,58 +484,67 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    * label text. Read that text through the same flattened slot shape while preserving every
    * author-owned accessibility exclusion. */
   private readElementLabel(tab: LyraTab): string {
-    const labelNodes = Array.from(tab.childNodes).filter((node) =>
-        node.nodeType !== Node.ELEMENT_NODE || (node as Element).getAttribute('slot') === null ||
-        (node as Element).getAttribute('slot') === '',
-      );
+    const labelNodes = Array.from(tab.childNodes).filter(
+      (node) =>
+        node.nodeType !== Node.ELEMENT_NODE ||
+        (node as Element).getAttribute("slot") === null ||
+        (node as Element).getAttribute("slot") === ""
+    );
     return composedAccessibilityText(labelNodes, {
       ancestorBoundary: tab,
       isSubtreeExcluded: (element) => this.isTabLabelSubtreeExcluded(element),
     })
-      .replace(/\s+/g, ' ')
+      .replace(/\s+/g, " ")
       .trim();
   }
 
   private libraryOwnsSourceInert(element: Element): boolean {
-    return this.projectedSourceSnapshots.get(element)?.libraryOwnsInert === true;
+    return (
+      this.projectedSourceSnapshots.get(element)?.libraryOwnsInert === true
+    );
   }
 
   private isTabLabelSubtreeExcluded(element: Element): boolean {
     return (
       isTabLabelSubtreeExcludedWithoutInert(element) ||
-      (element.hasAttribute('inert') && !this.libraryOwnsSourceInert(element))
+      (element.hasAttribute("inert") && !this.libraryOwnsSourceInert(element))
     );
   }
 
-
   private snapshotProjectedSource(source: Element): ProjectedSourceSnapshot {
-    const inert = source.getAttribute('inert');
+    const inert = source.getAttribute("inert");
     return { inert, appliedInert: inert, libraryOwnsInert: false };
   }
 
   private adoptProjectedSourceInert(
     source: Element,
-    snapshot: ProjectedSourceSnapshot,
+    snapshot: ProjectedSourceSnapshot
   ): void {
-    const current = source.getAttribute('inert');
+    const current = source.getAttribute("inert");
     if (current !== snapshot.appliedInert) {
       snapshot.inert = current;
       snapshot.libraryOwnsInert = false;
     }
   }
 
-  private makeProjectedSourceInert(source: Element, snapshot: ProjectedSourceSnapshot): void {
-    if (!source.hasAttribute('inert')) {
-      source.setAttribute('inert', '');
+  private makeProjectedSourceInert(
+    source: Element,
+    snapshot: ProjectedSourceSnapshot
+  ): void {
+    if (!source.hasAttribute("inert")) {
+      source.setAttribute("inert", "");
       snapshot.libraryOwnsInert = true;
     }
-    snapshot.appliedInert = source.getAttribute('inert');
+    snapshot.appliedInert = source.getAttribute("inert");
   }
 
-  private restoreProjectedSource(source: Element, snapshot: ProjectedSourceSnapshot): void {
+  private restoreProjectedSource(
+    source: Element,
+    snapshot: ProjectedSourceSnapshot
+  ): void {
     this.adoptProjectedSourceInert(source, snapshot);
-    if (snapshot.inert === null) source.removeAttribute('inert');
-    else source.setAttribute('inert', snapshot.inert);
+    if (snapshot.inert === null) source.removeAttribute("inert");
+    else source.setAttribute("inert", snapshot.inert);
   }
 
   private restoreProjectedSources(): void {
@@ -583,7 +565,11 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     this.resetProjectedSourceObserver();
     const ownerDocument = this.ownerDocument;
     const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor || !this.isConnected || this.projectedSourceSnapshots.size === 0) {
+    if (
+      !MutationObserverCtor ||
+      !this.isConnected ||
+      this.projectedSourceSnapshots.size === 0
+    ) {
       return;
     }
     const generation = this.projectedSourceObserverGeneration;
@@ -597,38 +583,36 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       ) {
         return;
       }
-      if (records.some((record) => this.projectedSourceSnapshots.has(record.target as Element))) {
+      if (
+        records.some((record) =>
+          this.projectedSourceSnapshots.has(record.target as Element)
+        )
+      ) {
         this.syncTabs();
       }
     });
     this.projectedSourceObserver = observer;
     this.projectedSourceObserverDocument = ownerDocument;
     for (const source of this.projectedSourceSnapshots.keys()) {
-      observer.observe(source, { attributes: true, attributeFilter: ['inert'] });
+      observer.observe(source, {
+        attributes: true,
+        attributeFilter: ["inert"],
+      });
     }
   }
 
-  private projectedSources(children: Element[], tabs: readonly TabDef[]): Set<Element> {
+  private projectedSources(tabs: readonly TabDef[]): Set<Element> {
     const sources = new Set<Element>();
-    const iconSlots = new Set(
-      tabs
-        .filter((tab) => tab.source === 'attribute')
-        .map((tab) => this.iconSlotName(tab.slotName)),
-    );
-    for (const child of children) {
-      if (iconSlots.has(child.getAttribute('slot') ?? '')) sources.add(child);
-    }
     for (const tab of tabs) {
-      if (tab.source !== 'element' || !tab.element) continue;
       for (const child of Array.from(tab.element.children)) {
-        if ((child.getAttribute('slot') ?? '') === '') sources.add(child);
+        if ((child.getAttribute("slot") ?? "") === "") sources.add(child);
       }
     }
     return sources;
   }
 
-  private syncProjectedSources(children: Element[], tabs: readonly TabDef[]): void {
-    const sources = this.projectedSources(children, tabs);
+  private syncProjectedSources(tabs: readonly TabDef[]): void {
+    const sources = this.projectedSources(tabs);
     for (const [source, snapshot] of this.projectedSourceSnapshots) {
       this.adoptProjectedSourceInert(source, snapshot);
       if (!sources.has(source)) {
@@ -638,7 +622,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     }
     for (const source of sources) {
       const snapshot =
-        this.projectedSourceSnapshots.get(source) ?? this.snapshotProjectedSource(source);
+        this.projectedSourceSnapshots.get(source) ??
+        this.snapshotProjectedSource(source);
       this.projectedSourceSnapshots.set(source, snapshot);
       this.adoptProjectedSourceInert(source, snapshot);
       this.makeProjectedSourceInert(source, snapshot);
@@ -652,6 +637,70 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     }
   }
 
+  private snapshotProjectedSlot(source: Element): ProjectedSlotSnapshot {
+    const slot = source.getAttribute("slot");
+    return { slot, appliedSlot: slot, libraryOwnsSlot: false };
+  }
+
+  private adoptProjectedSlot(
+    source: Element,
+    snapshot: ProjectedSlotSnapshot
+  ): void {
+    const current = source.getAttribute("slot");
+    if (current !== snapshot.appliedSlot) {
+      snapshot.slot = current;
+      snapshot.libraryOwnsSlot = false;
+    }
+  }
+
+  private projectSlot(
+    source: Element,
+    slot: string,
+    projectedSlots: Set<Element>
+  ): void {
+    const snapshot =
+      this.projectedSlotSnapshots.get(source) ??
+      this.snapshotProjectedSlot(source);
+    this.projectedSlotSnapshots.set(source, snapshot);
+    this.adoptProjectedSlot(source, snapshot);
+    if (source.getAttribute("slot") !== slot) {
+      source.setAttribute("slot", slot);
+      snapshot.libraryOwnsSlot = true;
+    }
+    snapshot.appliedSlot = source.getAttribute("slot");
+    projectedSlots.add(source);
+  }
+
+  private restoreProjectedSlot(
+    source: Element,
+    snapshot: ProjectedSlotSnapshot
+  ): void {
+    this.adoptProjectedSlot(source, snapshot);
+    if (snapshot.slot === null) source.removeAttribute("slot");
+    else source.setAttribute("slot", snapshot.slot);
+  }
+
+  private syncProjectedSlots(projectedSlots: ReadonlySet<Element>): void {
+    for (const [source, snapshot] of this.projectedSlotSnapshots) {
+      if (projectedSlots.has(source)) continue;
+      this.restoreProjectedSlot(source, snapshot);
+      this.projectedSlotSnapshots.delete(source);
+    }
+  }
+
+  private restoreProjectedSlots(): void {
+    for (const [source, snapshot] of this.projectedSlotSnapshots) {
+      this.restoreProjectedSlot(source, snapshot);
+    }
+    this.projectedSlotSnapshots.clear();
+  }
+
+  private adoptProjectedSlotStates(): void {
+    for (const [source, snapshot] of this.projectedSlotSnapshots) {
+      this.adoptProjectedSlot(source, snapshot);
+    }
+  }
+
   /** Whether a tab can hold selection, the roving `tabindex`, and arrow-key focus. `inert` counts
    *  alongside `disabled` — see `isInertChild()` for why, and for why only the child's own inert
    *  state is consulted. */
@@ -662,19 +711,22 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   /** Keeps `active` resolved to a real, navigable tab -- covers the initial default, a tab disappearing/becoming disabled or inert underneath the current selection, and a consumer assigning `.active` directly. Silent (no `lr-tab-show`): this corrects *invalid* state rather than responding to a user picking a different tab. Reading the focused element *before* the render that marks the outgoing button `inert` is what lets `updated()` rehome real focus rather than leaving it stranded on `<body>`. */
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!changed.has('tabs') && !changed.has('active')) return;
+    if (!changed.has("tabs") && !changed.has("active")) return;
     const current = this.tabs.find((t) => t.slotName === this.active);
     if (current && this.isNavigable(current)) return;
     this.rehomeTabFocus =
-      activeElementIn(this.renderRoot as ShadowRoot)?.getAttribute('part') ===
-      'tab';
-    this.active = this.tabs.find((t) => this.isNavigable(t))?.slotName ?? '';
+      activeElementIn(this.renderRoot as ShadowRoot)?.getAttribute("part") ===
+      "tab";
+    this.active = this.tabs.find((t) => this.isNavigable(t))?.slotName ?? "";
     this.focusedTab = this.active;
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('active') || changed.has('tabs')) this.syncElementActiveState();
+    if (changed.has("active") || changed.has("tabs"))
+      this.syncElementActiveState();
+    this.armTabScrollResizeObserver();
+    this.measureTabScrollEdges();
     if (!this.rehomeTabFocus) return;
     this.rehomeTabFocus = false;
     this.renderRoot
@@ -690,11 +742,11 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     const previous = this.active;
     this.active = tab.slotName;
     this.focusedTab = tab.slotName;
-    if (previous) this.emit('lr-tab-hide', { tabId: previous, name: previous });
-    this.emit('lr-tab-show', { tabId: tab.slotName, name: tab.slotName });
+    if (previous) this.emit("lr-tab-hide", { name: previous });
+    this.emit("lr-tab-show", { name: tab.slotName });
   }
 
-  /** Show the panel named by an `<lr-tab panel>` or attribute-model slot. */
+  /** Show the panel named by an `<lr-tab panel>`. */
   show(panel: string): void {
     const tab = this.tabs.find((candidate) => candidate.slotName === panel);
     if (tab) this.selectTab(tab);
@@ -703,10 +755,16 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   /** Mirrors selection onto public `active` hints for SSR-compatible tab/panel children. */
   private syncElementActiveState(): void {
     for (const child of Array.from(this.children)) {
-      if (child.localName === tag('tab')) {
-        child.toggleAttribute('active', child.getAttribute('panel') === this.active);
-      } else if (child.localName === tag('tab-panel')) {
-        child.toggleAttribute('active', child.getAttribute('name') === this.active);
+      if (child.localName === tag("tab")) {
+        child.toggleAttribute(
+          "active",
+          child.getAttribute("panel") === this.active
+        );
+      } else if (child.localName === tag("tab-panel")) {
+        child.toggleAttribute(
+          "active",
+          child.getAttribute("name") === this.active
+        );
       }
     }
   }
@@ -721,34 +779,46 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    *  under `manual` focus may sit elsewhere, and it must fall back to the selection whenever the
    *  remembered tab has gone away or become disabled. */
   private get rovingTab(): string {
-    if (this.activation !== 'manual') return this.active;
-    const candidate = this.tabs.find((t) => t.slotName === this.focusedTab && this.isNavigable(t));
+    if (this.activation !== "manual") return this.active;
+    const candidate = this.tabs.find(
+      (t) => t.slotName === this.focusedTab && this.isNavigable(t)
+    );
     return candidate ? candidate.slotName : this.active;
   }
 
   /** The event-target tab is authoritative even when a controlled `active` write or manual-mode
    * memory points elsewhere. Fall back to real shadow focus, then to the current roving state only
    * when keyboard input did not originate from an owned tab button. */
-  private keyboardOriginTab(event: KeyboardEvent, navigable: TabDef[]): TabDef | undefined {
-    const eventButton = event.composedPath().find(
-      (candidate): candidate is HTMLElement =>
-        (candidate as Partial<Node>).nodeType === 1 &&
-        (candidate as Partial<Element>).getAttribute?.('part') === 'tab' &&
-        (candidate as Element).getRootNode() === this.renderRoot,
-    );
+  private keyboardOriginTab(
+    event: KeyboardEvent,
+    navigable: TabDef[]
+  ): TabDef | undefined {
+    const eventButton = event
+      .composedPath()
+      .find(
+        (candidate): candidate is HTMLElement =>
+          (candidate as Partial<Node>).nodeType === 1 &&
+          (candidate as Partial<Element>).getAttribute?.("part") === "tab" &&
+          (candidate as Element).getRootNode() === this.renderRoot
+      );
     const focused = activeElementIn(this.renderRoot as ShadowRoot);
-    const button = eventButton ??
-      (focused?.getAttribute('part') === 'tab' ? focused as HTMLElement : undefined);
-    const owned = button?.dataset['slot'];
-    return navigable.find((tab) => tab.slotName === owned) ??
-      navigable.find((tab) => tab.slotName === this.rovingTab);
+    const button =
+      eventButton ??
+      (focused?.getAttribute("part") === "tab"
+        ? (focused as HTMLElement)
+        : undefined);
+    const owned = button?.dataset["slot"];
+    return (
+      navigable.find((tab) => tab.slotName === owned) ??
+      navigable.find((tab) => tab.slotName === this.rovingTab)
+    );
   }
 
   /** Moves real DOM focus to tab `slotName`'s button. Safe to call immediately (no `updateComplete` wait): every tab button already exists in the DOM regardless of its current `tabindex`, and `tabindex="-1"` elements are still focusable via script. */
   private focusTab(slotName: string): void {
     const buttons = this.renderRoot.querySelectorAll('[part="tab"]');
     for (const button of Array.from(buttons)) {
-      if ((button as HTMLElement).dataset['slot'] === slotName) {
+      if ((button as HTMLElement).dataset["slot"] === slotName) {
         (button as HTMLElement).focus();
         return;
       }
@@ -758,7 +828,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   /** Whether the strip runs down the side rather than across the top -- which decides both the
    *  navigation keys and `aria-orientation`. */
   private get isVertical(): boolean {
-    return this.placement === 'start' || this.placement === 'end';
+    return this.placement === "start" || this.placement === "end";
   }
 
   private onTabListKeyDown = (e: KeyboardEvent): void => {
@@ -767,23 +837,34 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     const origin = this.keyboardOriginTab(e, navigable);
     const currentIndex = origin ? navigable.indexOf(origin) : -1;
 
-    if (e.key === 'Delete') {
-      if (!origin?.element?.closable) return;
+    if (e.key === "Delete") {
+      if (!origin?.element.closable) return;
       e.preventDefault();
       origin.element.requestCloseFromOwner();
       return;
     }
 
     // A vertical strip navigates with Up/Down per the APG; a horizontal one with Left/Right, which
-    // swap under RTL the same way lr-split/lr-tree handle physical directions. Up/Down are never
+    // swap under RTL the same way lr-multi-split/lr-tree handle physical directions. Up/Down are never
     // direction-dependent -- block flow does not reverse under RTL.
     const rtl = isRtl(this);
-    const forwardKey = this.isVertical ? 'ArrowDown' : rtl ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = this.isVertical ? 'ArrowUp' : rtl ? 'ArrowRight' : 'ArrowLeft';
+    const forwardKey = this.isVertical
+      ? "ArrowDown"
+      : rtl
+      ? "ArrowLeft"
+      : "ArrowRight";
+    const backwardKey = this.isVertical
+      ? "ArrowUp"
+      : rtl
+      ? "ArrowRight"
+      : "ArrowLeft";
 
     // Manual activation commits the focused tab; the APG requires this precisely because automatic
     // activation would reveal every panel arrowed past.
-    if (this.activation === 'manual' && (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar')) {
+    if (
+      this.activation === "manual" &&
+      (e.key === "Enter" || e.key === " " || e.key === "Spacebar")
+    ) {
       if (!origin) return;
       e.preventDefault();
       this.selectTab(origin);
@@ -793,15 +874,19 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     let targetIndex: number;
     switch (e.key) {
       case forwardKey:
-        targetIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % navigable.length;
+        targetIndex =
+          currentIndex < 0 ? 0 : (currentIndex + 1) % navigable.length;
         break;
       case backwardKey:
-        targetIndex = currentIndex < 0 ? navigable.length - 1 : (currentIndex - 1 + navigable.length) % navigable.length;
+        targetIndex =
+          currentIndex < 0
+            ? navigable.length - 1
+            : (currentIndex - 1 + navigable.length) % navigable.length;
         break;
-      case 'Home':
+      case "Home":
         targetIndex = 0;
         break;
-      case 'End':
+      case "End":
         targetIndex = navigable.length - 1;
         break;
       default:
@@ -809,7 +894,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     }
     e.preventDefault();
     const target = navigable[targetIndex]!; // safe: navigable non-empty (checked) and targetIndex in [0, length)
-    if (this.activation === 'manual') {
+    if (this.activation === "manual") {
       this.focusOnly(target);
       return;
     }
@@ -831,11 +916,6 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     this.idsBySlot.set(slotName, ids);
     return ids;
   }
-  /** Derives a tab's optional icon-sibling `slot` name from its own `slotName` -- see the class doc. */
-  private iconSlotName(slotName: string): string {
-    return `${slotName}-icon`;
-  }
-
   /** Derives the `slot` an `<lr-tab>` is projected into -- its own button. */
   private tabSlotName(slotName: string): string {
     return `${slotName}-tab`;
@@ -846,9 +926,94 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     return this.withoutScrollControls || this.noScrollControls;
   }
 
+  private resetTabScrollResizeObserver(): void {
+    this.tabScrollResizeObserverGeneration += 1;
+    this.tabScrollResizeObserver?.disconnect();
+    this.tabScrollResizeObserver = undefined;
+    this.tabScrollResizeObserverDocument = undefined;
+  }
+
+  /** Watches both the allocation and each rendered tab's intrinsic geometry. A label, image, font,
+   * or slot can therefore change scroll reachability without needing a host property update. */
+  private armTabScrollResizeObserver(): void {
+    const tablist =
+      this.renderRoot.querySelector<HTMLElement>('[part~="tablist"]');
+    if (!tablist || !this.isConnected) return;
+    const ownerDocument = this.ownerDocument;
+    if (
+      !this.tabScrollResizeObserver ||
+      this.tabScrollResizeObserverDocument !== ownerDocument
+    ) {
+      this.resetTabScrollResizeObserver();
+      const ResizeObserverCtor = ownerDocument.defaultView?.ResizeObserver;
+      if (!ResizeObserverCtor) return;
+      const generation = this.tabScrollResizeObserverGeneration;
+      const observer = new ResizeObserverCtor(() => {
+        if (
+          this.tabScrollResizeObserver !== observer ||
+          this.tabScrollResizeObserverDocument !== ownerDocument ||
+          this.tabScrollResizeObserverGeneration !== generation ||
+          !this.isConnected ||
+          this.ownerDocument !== ownerDocument
+        ) {
+          return;
+        }
+        this.measureTabScrollEdges();
+      });
+      this.tabScrollResizeObserver = observer;
+      this.tabScrollResizeObserverDocument = ownerDocument;
+    }
+    this.tabScrollResizeObserver.disconnect();
+    this.tabScrollResizeObserver.observe(tablist);
+    for (const tab of this.renderRoot.querySelectorAll('[part="tab"]')) {
+      this.tabScrollResizeObserver.observe(tab);
+    }
+  }
+
+  private measureTabScrollEdges(): void {
+    const tablist =
+      this.renderRoot.querySelector<HTMLElement>('[part~="tablist"]');
+    if (!tablist || this.isVertical) {
+      this.setTabScrollEdges(false, false, tablist);
+      return;
+    }
+    const maximum = Math.max(0, tablist.scrollWidth - tablist.clientWidth);
+    const position = Math.max(
+      0,
+      Math.min(
+        maximum,
+        this.effectiveDirection === "rtl"
+          ? -tablist.scrollLeft
+          : tablist.scrollLeft
+      )
+    );
+    this.setTabScrollEdges(position > 1, position < maximum - 1, tablist);
+  }
+
+  private setTabScrollEdges(
+    start: boolean,
+    end: boolean,
+    tablist?: HTMLElement | null
+  ): void {
+    tablist?.toggleAttribute("data-scroll-start", start);
+    tablist?.toggleAttribute("data-scroll-end", end);
+    if (
+      start === this.scrollStartAvailable &&
+      end === this.scrollEndAvailable
+    ) {
+      return;
+    }
+    this.scrollStartAvailable = start;
+    this.scrollEndAvailable = end;
+  }
+
+  private onTabListScroll = (): void => {
+    this.measureTabScrollEdges();
+  };
+
   /**
-   * Scrolls the tab row one step toward `edge`. Native scrolling does the work -- there is no
-   * scroll listener and no scroll-position state anywhere in this component.
+   * Scrolls the tab row one step toward `edge`. Native scrolling does the work; the lightweight
+   * scroll listener only refreshes logical edge availability for controls and fades.
    *
    * `edge` is logical, so it is `effectiveDirection` that turns it into a physical delta: per the
    * CSSOM View spec (what every browser this library targets implements) `scrollLeft` under RTL
@@ -859,15 +1024,25 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    * a consumer's own `scroll-behavior: smooth` on the tablist would animate the very scroll the
    * preference asks not to animate.
    */
-  private scrollTabs(edge: 'start' | 'end'): void {
+  private scrollTabs(edge: "start" | "end"): void {
+    const available =
+      edge === "start" ? this.scrollStartAvailable : this.scrollEndAvailable;
+    if (!available) return;
     const tablist = this.renderRoot.querySelector('[part~="tablist"]');
-    if (!tablist || !isHtmlElement(tablist) || typeof tablist.scrollBy !== 'function') return;
+    if (
+      !tablist ||
+      !isHtmlElement(tablist) ||
+      typeof tablist.scrollBy !== "function"
+    )
+      return;
     const step = Math.max(1, tablist.clientWidth * SCROLL_STEP_RATIO);
-    const towardEnd = edge === 'end' ? 1 : -1;
-    const physical = this.effectiveDirection === 'rtl' ? -towardEnd : towardEnd;
+    const towardEnd = edge === "end" ? 1 : -1;
+    const physical = this.effectiveDirection === "rtl" ? -towardEnd : towardEnd;
     tablist.scrollBy({
       left: step * physical,
-      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'instant' : 'smooth',
+      behavior: prefersReducedMotion(this.ownerDocument.defaultView)
+        ? "instant"
+        : "smooth",
     });
   }
 
@@ -875,24 +1050,37 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    *  doc: vertical placement, or either upstream's opt-out attribute). Whether a *rendered* control
    *  is laid out is a separate, purely visual question the stylesheet answers from the tablist's own
    *  overflow measurement. */
-  private renderScrollControl(edge: 'start' | 'end'): TemplateResult | typeof nothing {
+  private renderScrollControl(
+    edge: "start" | "end"
+  ): TemplateResult | typeof nothing {
     if (this.isVertical || this.scrollControlsSuppressed) return nothing;
-    const part = edge === 'start'
-      ? 'scroll-button scroll-button__base scroll-button-start scroll-button--start'
-      : 'scroll-button scroll-button__base scroll-button-end scroll-button--end';
+    const available =
+      edge === "start" ? this.scrollStartAvailable : this.scrollEndAvailable;
+    const part =
+      edge === "start"
+        ? "scroll-button scroll-button__base scroll-button-start scroll-button--start"
+        : "scroll-button scroll-button__base scroll-button-end scroll-button--end";
     return html`<button
       type="button"
       part=${part}
       tabindex="-1"
       aria-hidden="true"
-      aria-label=${edge === 'start' ? this.localize('scrollPrevious') : this.localize('scrollNext')}
+      ?hidden=${!this.fixedScrollControls && !available}
+      data-inactive=${available ? nothing : ""}
+      aria-label=${edge === "start"
+        ? this.localize("scrollPrevious")
+        : this.localize("scrollNext")}
       @pointerdown=${this.onScrollControlPointerDown}
       @pointerup=${this.onScrollControlPointerEnd}
       @pointercancel=${this.onScrollControlPointerEnd}
       @lostpointercapture=${this.onScrollControlPointerEnd}
       @mousedown=${this.onScrollControlMouseDown}
       @click=${() => this.scrollTabs(edge)}
-    ><span part="scroll-button-glyph" aria-hidden="true">${chevronIcon()}</span></button>`;
+    >
+      <span part="scroll-button-glyph" aria-hidden="true"
+        >${chevronIcon()}</span
+      >
+    </button>`;
   }
 
   /** Pressing a control must not pull focus off the tab the user was on: Chromium focuses a button
@@ -909,14 +1097,14 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   private onScrollControlPointerDown = (event: PointerEvent): void => {
     const control = event.currentTarget;
     if (!(control instanceof HTMLElement)) return;
-    control.setAttribute('data-pressed', '');
+    control.setAttribute("data-pressed", "");
     control.setPointerCapture(event.pointerId);
   };
 
   private onScrollControlPointerEnd = (event: PointerEvent): void => {
     const control = event.currentTarget;
     if (!(control instanceof HTMLElement)) return;
-    control.removeAttribute('data-pressed');
+    control.removeAttribute("data-pressed");
     if (control.hasPointerCapture(event.pointerId)) {
       control.releasePointerCapture(event.pointerId);
     }
@@ -924,7 +1112,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   private renderTab(tab: TabDef): TemplateResult {
     const selected = tab.slotName === this.active;
-    const closable = this.isNavigable(tab) && Boolean(tab.element?.closable);
+    const closable = this.isNavigable(tab) && tab.element.closable;
     return html`<button
       type="button"
       part="tab"
@@ -932,20 +1120,18 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       data-slot=${tab.slotName}
       role="tab"
       ?inert=${tab.inert}
-      aria-selected=${selected ? 'true' : 'false'}
-      aria-disabled=${tab.disabled ? 'true' : 'false'}
-      aria-label=${tab.source === 'element' && tab.label ? tab.label : nothing}
+      aria-selected=${selected ? "true" : "false"}
+      aria-disabled=${tab.disabled ? "true" : "false"}
+      aria-label=${tab.label ? tab.label : nothing}
       aria-controls=${this.panelId(tab.slotName)}
-      aria-keyshortcuts=${closable ? 'Delete' : nothing}
-      tabindex=${tab.slotName === this.rovingTab ? '0' : '-1'}
+      aria-keyshortcuts=${closable ? "Delete" : nothing}
+      tabindex=${tab.slotName === this.rovingTab ? "0" : "-1"}
       @click=${() => this.selectTab(tab)}
-    >${tab.source === 'element'
-      ? html`<slot name=${this.tabSlotName(tab.slotName)}></slot>`
-      : html`${tab.hasIcon
-          ? html`<span part="tab-icon" aria-hidden="true"><slot name=${this.iconSlotName(tab.slotName)}></slot></span>`
-          : nothing}${tab.label}`}${selected
-      ? html`<span part="active-tab-indicator" aria-hidden="true"></span>`
-      : nothing}</button>`;
+    >
+      ${html`<slot name=${this.tabSlotName(tab.slotName)}></slot>`}${selected
+        ? html`<span part="active-tab-indicator" aria-hidden="true"></span>`
+        : nothing}
+    </button>`;
   }
 
   private renderPanel(tab: TabDef): TemplateResult {
@@ -975,29 +1161,37 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       <slot ?hidden=${this.tabs.length > 0}></slot>
       <div part="base tab-group">
         <div part="nav">
-          ${this.renderScrollControl('start')}
+          ${this.renderScrollControl("start")}
           <div
             part="tablist tabs"
             role="tablist"
             aria-label=${this.accessibleLabel ?? nothing}
-            aria-orientation=${this.isVertical ? 'vertical' : 'horizontal'}
+            aria-orientation=${this.isVertical ? "vertical" : "horizontal"}
             @keydown=${this.onTabListKeyDown}
+            @scroll=${this.onTabListScroll}
           >
-            ${repeat(this.tabs, (tab) => tab.slotName, (tab) => this.renderTab(tab))}
+            ${repeat(
+              this.tabs,
+              (tab) => tab.slotName,
+              (tab) => this.renderTab(tab)
+            )}
           </div>
-          ${this.renderScrollControl('end')}
+          ${this.renderScrollControl("end")}
         </div>
         <div part="body">
-          ${repeat(this.tabs, (tab) => tab.slotName, (tab) => this.renderPanel(tab))}
+          ${repeat(
+            this.tabs,
+            (tab) => tab.slotName,
+            (tab) => this.renderPanel(tab)
+          )}
         </div>
       </div>
     `;
   }
 }
 
-
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-tab-group': LyraTabGroup;
+    "lr-tab-group": LyraTabGroup;
   }
 }

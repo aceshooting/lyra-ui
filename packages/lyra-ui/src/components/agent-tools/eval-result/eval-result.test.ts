@@ -20,14 +20,21 @@ const RUNS: EvalRunResult[] = [
 ];
 
 describe('lr-eval-result', () => {
-  it('renders the comparison grid from runs/columns and forwards a host aria-label', async () => {
+  it('renders a purpose-named comparison grid without cloning the host aria-label', async () => {
     const el = (await fixture(
       html`<lr-eval-result aria-label="Run comparison" .runs=${RUNS} .columns=${COLUMNS}></lr-eval-result>`,
     )) as LyraEvalResult;
     await el.updateComplete;
     const grid = el.shadowRoot!.querySelector('[part="grid"]')!;
-    expect(grid.getAttribute('aria-label')).to.equal('Run comparison');
+    expect(el.getAttribute('aria-label')).to.equal('Run comparison');
+    expect(grid.getAttribute('aria-label')).to.equal('Evaluation runs');
     expect(grid.shadowRoot!.querySelectorAll('[role="gridcell"]')).to.have.length(4);
+    expect((grid as HTMLElement & { selectionMode: string }).selectionMode).to.equal('single');
+    expect(grid.shadowRoot!.querySelector('tbody tr')!.getAttribute('aria-selected')).to.equal('true');
+
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(grid.getAttribute('aria-label')).to.equal('Evaluation runs');
   });
 
   it('gives the populated comparison grid a localized name by default', async () => {
@@ -59,17 +66,17 @@ describe('lr-eval-result', () => {
     expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('Aucune donnée');
   });
 
-  it('emits lr-run-select when a comparison row is activated', async () => {
+  it('emits lr-run-activate with stable id and run context when a comparison row is activated', async () => {
     const el = (await fixture(
       html`<lr-eval-result .runs=${RUNS} .columns=${COLUMNS}></lr-eval-result>`,
     )) as LyraEvalResult;
     await el.updateComplete;
     const grid = el.shadowRoot!.querySelector('[part="grid"]')!;
     const rows = grid.shadowRoot!.querySelectorAll('tbody tr');
-    const listener = oneEvent(el, 'lr-run-select');
+    const listener = oneEvent(el, 'lr-run-activate');
     (rows[1] as HTMLElement).click();
     const ev = await listener;
-    expect(ev.detail).to.deep.equal({ runId: 'run-b' });
+    expect(ev.detail).to.deep.equal({ runId: 'run-b', run: RUNS[1] });
   });
 
   it('defaults the review form to the first run when selected-run-id is unset', async () => {
@@ -80,6 +87,29 @@ describe('lr-eval-result', () => {
     const review = el.shadowRoot!.querySelector('[part="review"]') as HTMLElement & { itemId: string; value: unknown };
     expect(review.itemId).to.equal('run-a');
     expect(review.value).to.deep.equal({});
+  });
+
+  it('distinguishes null fallback selections from valid empty-string run identities', async () => {
+    const emptyIdRun: EvalRunResult = {
+      id: '',
+      label: 'Root run',
+      model: 'root',
+      promptVersion: 'v0',
+      output: 'root output',
+    };
+    const el = await fixture<LyraEvalResult>(html`
+      <lr-eval-result
+        .runs=${[RUNS[0]!, emptyIdRun]}
+        .columns=${COLUMNS}
+        .rubricKeys=${RUBRIC_KEYS}
+        selected-run-id=""
+        baseline-run-id=""
+      ></lr-eval-result>
+    `);
+    const review = el.shadowRoot!.querySelector('[part="review"]') as HTMLElement & { itemId: string };
+    expect(el.selectedRunId).to.equal('');
+    expect(el.baselineRunId).to.equal('');
+    expect(review.itemId).to.equal('');
   });
 
   it('binds the review form to the run named by selected-run-id, including its existing review value', async () => {
@@ -236,7 +266,7 @@ describe('lr-eval-result', () => {
     el.addEventListener('lr-input', () => rawInputs++);
     el.addEventListener('lr-review-input', () => reviewInputs++);
     el.addEventListener('lr-row-click', () => rawRows++);
-    el.addEventListener('lr-run-select', () => runSelects++);
+    el.addEventListener('lr-run-activate', () => runSelects++);
     el.shadowRoot!.querySelector('lr-rubric-form')!.dispatchEvent(new CustomEvent('lr-input', {
       bubbles: true,
       composed: true,
@@ -249,4 +279,66 @@ describe('lr-eval-result', () => {
     }));
     expect([rawInputs, reviewInputs, rawRows, runSelects]).to.deep.equal([0, 1, 0, 1]);
   });
+
+  it('contains auxiliary table, rubric, and diff events not declared by the wrapper', async () => {
+    const el = await fixture<LyraEvalResult>(html`
+      <lr-eval-result .runs=${RUNS} .columns=${COLUMNS} .rubricKeys=${RUBRIC_KEYS}></lr-eval-result>
+    `);
+    const leaked: string[] = [];
+    for (const type of ['lr-selection-change', 'lr-page-change', 'lr-invalid', 'lr-copy', 'lr-copy-error']) {
+      el.addEventListener(type, () => leaked.push(type));
+    }
+    el.shadowRoot!.querySelector('lr-table')!.dispatchEvent(new CustomEvent('lr-selection-change', {
+      bubbles: true,
+      composed: true,
+      detail: { keys: ['run-a'] },
+    }));
+    el.shadowRoot!.querySelector('lr-table')!.dispatchEvent(new CustomEvent('lr-page-change', {
+      bubbles: true,
+      composed: true,
+      detail: { page: 2 },
+    }));
+    el.shadowRoot!.querySelector('lr-rubric-form')!.dispatchEvent(new CustomEvent('lr-invalid', {
+      bubbles: true,
+      composed: true,
+    }));
+    const diff = el.shadowRoot!.querySelector('lr-diff-view')!;
+    diff.dispatchEvent(new CustomEvent('lr-copy', { bubbles: true, composed: true, detail: { text: 'diff' } }));
+    diff.dispatchEvent(new CustomEvent('lr-copy-error', {
+      bubbles: true,
+      composed: true,
+      detail: { text: 'diff', reason: 'failed', error: 'denied' },
+    }));
+    expect(leaked).to.deep.equal([]);
+  });
+});
+
+it('normalizes duplicate run, column, and rubric identities first-wins before composition', async () => {
+  const el = await fixture<LyraEvalResult>(html`
+    <lr-eval-result
+      .runs=${[
+        { id: 'same', label: 'First run', output: 'first' },
+        { id: 'same', label: 'Later run', output: 'later' },
+      ]}
+      .columns=${[
+        { key: 'same', label: 'First column', cell: (run: EvalRunResult) => run.label },
+        { key: 'same', label: 'Later column', cell: (run: EvalRunResult) => run.output },
+      ]}
+      .rubricKeys=${[
+        { key: 'same', type: 'comment', label: 'First rubric' },
+        { key: 'same', type: 'comment', label: 'Later rubric' },
+      ]}
+    ></lr-eval-result>
+  `);
+  const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & {
+    rows: EvalRunResult[];
+    columns: TableColumn<EvalRunResult>[];
+  };
+  const rubric = el.shadowRoot!.querySelector('lr-rubric-form') as HTMLElement & { keys: RubricKey[] };
+  expect(table.rows).to.have.length(1);
+  expect(table.rows[0]!.label).to.equal('First run');
+  expect(table.columns).to.have.length(1);
+  expect(table.columns[0]!.label).to.equal('First column');
+  expect(rubric.keys).to.have.length(1);
+  expect(rubric.keys[0]!.label).to.equal('First rubric');
 });

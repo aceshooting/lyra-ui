@@ -8,10 +8,127 @@ import { QUALIFICATION_DIMENSIONS } from './qualification-core.mjs';
 import {
   buildQualificationLedger,
   parseSsrSource,
+  qualificationApplicabilitySignals,
   renderQualificationDashboard,
   validateQualificationLedger,
   validateVisualQualificationManifest,
 } from './qualification-ledger.mjs';
+
+const sourceFile = (file, source) => ({ file, source });
+
+test('qualification applicability ignores prose-only motion tokens', () => {
+  const signals = qualificationApplicabilitySignals({
+    component: component('lr-static', 'stable'),
+    packageDir: '/fixture',
+    sources: [sourceFile('/fixture/static.class.ts', `
+      /** This component has no transition: or animation: of its own. */
+      export class StaticComponent {}
+    `)],
+    styles: [sourceFile('/fixture/static.styles.ts', `
+      export const styles = css\`
+        /* prefers-reduced-motion and transition: opacity are documentation only. */
+        :host { color: var(--lr-color-text); }
+      \`;
+    `)],
+    tests: [],
+    interactiveTags: new Set(),
+  });
+  assert.equal(signals.motionImplementation, null);
+});
+
+test('qualification applicability recognizes actual CSS and programmatic motion', () => {
+  const cssSignals = qualificationApplicabilitySignals({
+    component: component('lr-moving', 'stable'),
+    packageDir: '/fixture',
+    sources: [],
+    styles: [sourceFile('/fixture/moving.styles.ts', `
+      export const styles = css\`:host { transition: opacity var(--lr-transition-fast); }\`;
+    `)],
+    tests: [],
+    interactiveTags: new Set(),
+  });
+  assert.equal(cssSignals.motionImplementation?.line, 1);
+
+  const programmaticSignals = qualificationApplicabilitySignals({
+    component: component('lr-moving', 'stable'),
+    packageDir: '/fixture',
+    sources: [sourceFile('/fixture/moving.class.ts', `
+      export class Moving { run(node) { node.animate([{ opacity: 0 }, { opacity: 1 }]); } }
+    `)],
+    styles: [],
+    tests: [],
+    interactiveTags: new Set(),
+  });
+  assert.equal(programmaticSignals.motionImplementation?.line, 2);
+});
+
+test('qualification RTL evidence recognizes finite direction loops but not comments', () => {
+  const tests = [sourceFile('/fixture/example.test.ts', `
+    // A future test might use dir="rtl".
+    const DIRECTIONS = ['ltr', 'rtl'] as const;
+    for (const direction of DIRECTIONS) {
+      it(direction, async () => {
+        const el = await fixture(html\`<lr-example dir=\${direction}></lr-example>\`);
+        expect(el.effectiveDirection).to.equal(direction);
+      });
+    }
+  `)];
+  const signals = qualificationApplicabilitySignals({
+    component: component('lr-example', 'stable'),
+    packageDir: '/fixture',
+    sources: [],
+    styles: [],
+    tests,
+    interactiveTags: new Set(),
+  });
+  assert.equal(signals.rtlSignal?.line, 4);
+
+  const commentOnly = qualificationApplicabilitySignals({
+    component: component('lr-example', 'stable'),
+    packageDir: '/fixture',
+    sources: [],
+    styles: [],
+    tests: [sourceFile('/fixture/comment.test.ts', '// dir="rtl"')],
+    interactiveTags: new Set(),
+  });
+  assert.equal(commentOnly.rtlSignal, null);
+});
+
+test('keyboard applicability follows native, peer-created, and composed controls', () => {
+  const native = qualificationApplicabilitySignals({
+    component: component('lr-range', 'stable'),
+    packageDir: '/fixture',
+    sources: [sourceFile('/fixture/range.class.ts', `
+      export class Range { render() { return html\`<input type="range">\`; } }
+    `)],
+    styles: [],
+    tests: [],
+    interactiveTags: new Set(),
+  });
+  assert.ok(native.interactiveSignal);
+
+  const map = qualificationApplicabilitySignals({
+    component: component('lr-map', 'stable', ['maplibre-gl']),
+    packageDir: '/fixture',
+    sources: [],
+    styles: [],
+    tests: [],
+    interactiveTags: new Set(),
+  });
+  assert.ok(map.interactiveSignal);
+
+  const wrapper = component('lr-wrapper', 'stable');
+  wrapper.dependencies = { direct: ['lr-button'], transitive: [] };
+  const composed = qualificationApplicabilitySignals({
+    component: wrapper,
+    packageDir: '/fixture',
+    sources: [],
+    styles: [],
+    tests: [],
+    interactiveTags: new Set(['lr-button']),
+  });
+  assert.ok(composed.interactiveSignal);
+});
 
 function write(file, source) {
   fs.mkdirSync(path.dirname(file), { recursive: true });

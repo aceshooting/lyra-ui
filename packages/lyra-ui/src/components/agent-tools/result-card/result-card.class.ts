@@ -3,10 +3,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame } from '../../../internal/variants.js';
-import { StripHostTitleAttribute } from '../../../internal/strip-host-title.js';
 import { styles } from './result-card.styles.js';
-
-class LyraResultCardBase extends LyraElement {}
 
 /** Visual chrome for `<lr-result-card>`'s root — the library's shared container-frame vocabulary. */
 export type ResultCardAppearance = LyraFrame;
@@ -16,7 +13,7 @@ export type ResultCardAppearance = LyraFrame;
  * renderer's body (see `<lr-tool-result-view>`'s `registerToolRenderer()`
  * in `../tool-result-view/registry.js`). Purely visual, with no state of its
  * own beyond slot-presence tracking: it gives every custom renderer the same
- * "small card" language (border, radius, optional title + header actions)
+ * "small card" language (border, radius, optional heading + header actions)
  * without each one hand-rolling its own box.
  *
  * Pairs with `<lr-result-field>` for the label/value rows that typically
@@ -26,27 +23,24 @@ export type ResultCardAppearance = LyraFrame;
  * @customElement lr-result-card
  * @slot - The card body — typically one or more `<lr-result-field>` rows.
  * @slot actions - Small header controls (e.g. a copy button), rendered
- * alongside the title.
+ * alongside the heading.
  * @csspart base - The outer bordered container.
- * @csspart header - The header row wrapping the title and the `actions`
+ * @csspart header - The header row wrapping the heading and the `actions`
  * slot. Present in the DOM at all times (so a later `slotchange` on
- * `actions` is still observed) but `hidden` whenever there is no `title`
+ * `actions` is still observed) but `hidden` whenever there is no `heading`
  * and no `actions` content — an untitled, action-less card has no visible
  * header bar at all.
- * @csspart title - The title text. Truncates with an ellipsis when it
- * overflows; carries its own native `title` attribute (the full string) so
- * hovering the truncated text reveals it via the browser's default tooltip,
- * scoped to just this element rather than the whole card. The host's own
- * `title` attribute is stripped once Lit has synced it into the `title`
- * property (see `StripHostTitleAttribute` in `internal/strip-host-title.ts`),
- * so the native tooltip never also covers the rest of the card.
+ * @csspart heading - The heading text. Truncates with an ellipsis and carries
+ * its own native `title` attribute (the full string) so hovering the
+ * truncated text reveals it. The host's native `HTMLElement.title` remains
+ * independent and is never repurposed or removed.
  * @csspart actions - The wrapper around the `actions` slot. `hidden`
  * whenever the slot has no assigned content.
  * @csspart body - The wrapper around the default slot.
  * @cssprop [--lr-result-card-compact-header-padding=var(--lr-space-xs)] - `[part="header"]`
  *   block/inline padding while `compact`.
  * @cssprop [--lr-result-card-compact-header-gap=var(--lr-space-xs)] - Gap between `[part="header"]`'s
- *   title and actions while `compact`.
+ *   heading and actions while `compact`.
  * @cssprop [--lr-result-card-compact-body-padding=var(--lr-space-xs)] - `[part="body"]` padding
  *   while `compact`.
  * @cssprop [--lr-result-card-compact-body-gap=var(--lr-space-2xs)] - Gap between `[part="body"]`'s
@@ -54,19 +48,12 @@ export type ResultCardAppearance = LyraFrame;
  * @status stable
  * @since 4.0.0
  */
-export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) {
+export class LyraResultCard extends LyraElement {
   static override styles = [LyraElement.styles, styles];
 
-  /** Small heading for the card. Leave unset for an untitled card (e.g. a
-   *  bare block of `<lr-result-field>` rows with no natural heading).
-   *  Rendered into the truncating `[part="title"]` span, which also carries
-   *  this value as its own `title` attribute so the disclosure tooltip is
-   *  scoped to that element rather than the whole host -- a bare host-level
-   *  `title` attribute (the browser's global tooltip attribute) is actively
-   *  stripped once Lit has synced it into this property, so the card never
-   *  grows an unsolicited native tooltip repeating the same text. See
-   *  `StripHostTitleAttribute` (`internal/strip-host-title.ts`). */
-  @property() override title = '';
+  /** Small visible heading for the card. Leave unset for an untitled card.
+   *  This is deliberately separate from the host's native `title` tooltip. */
+  @property() heading = '';
 
   /** Tighter header/body padding for dense contexts (a card rendered as a row in a transcript or
    *  result list) -- same convention as `lr-agent-run`'s `compact`. Defaults to `false`, i.e. the
@@ -109,13 +96,13 @@ export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) 
   };
 
   override render(): TemplateResult {
-    const hasTitle = this.title.length > 0;
+    const hasHeading = this.heading.length > 0;
     const hasActions = this.withActions || this.hasActionsSlot;
-    const hasHeader = hasTitle || hasActions;
+    const hasHeader = hasHeading || hasActions;
     return html`
       <div part="base">
         <div part="header" ?hidden=${!hasHeader}>
-          ${hasTitle ? html`<span part="title" title=${this.title}>${this.title}</span>` : nothing}
+          ${hasHeading ? html`<span part="heading" title=${this.heading}>${this.heading}</span>` : nothing}
           <div part="actions" ?hidden=${!hasActions}>
             <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
           </div>

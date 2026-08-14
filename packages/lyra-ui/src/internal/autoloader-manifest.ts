@@ -62,7 +62,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/agent-tools/approval-queue/approval-queue.class.js').then((module) => module.LyraApprovalQueue),
   },
   'lr-archive-viewer': {
-    optionalPeers: ['jszip'],
+    optionalPeers: [],
     load: () => import('../components/viewers/archive-viewer/archive-viewer.class.js').then((module) => module.LyraArchiveViewer),
   },
   'lr-artifact-panel': {
@@ -441,9 +441,9 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/data/flow-node/flow-node.class.js').then((module) => module.LyraFlowNode),
   },
-  'lr-flow-run-overlay': {
+  'lr-flow-run-status': {
     optionalPeers: [],
-    load: () => import('../components/data/flow-run-overlay/flow-run-overlay.class.js').then((module) => module.LyraFlowRunOverlay),
+    load: () => import('../components/data/flow-run-status/flow-run-status.class.js').then((module) => module.LyraFlowRunStatus),
   },
   'lr-format-bytes': {
     optionalPeers: [],
@@ -461,9 +461,9 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/data/gauge/gauge.class.js').then((module) => module.LyraGauge),
   },
-  'lr-generation-status': {
+  'lr-generation-metrics': {
     optionalPeers: [],
-    load: () => import('../components/conversation/generation-status/generation-status.class.js').then((module) => module.LyraGenerationStatus),
+    load: () => import('../components/conversation/generation-metrics/generation-metrics.class.js').then((module) => module.LyraGenerationMetrics),
   },
   'lr-geojson-view': {
     optionalPeers: ['maplibre-gl'],
@@ -709,9 +709,9 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/pie-chart.class.js').then((module) => module.LyraPieChart),
   },
-  'lr-playback': {
+  'lr-sequence-playback': {
     optionalPeers: [],
-    load: () => import('../components/media/playback/playback.class.js').then((module) => module.LyraPlayback),
+    load: () => import('../components/media/sequence-playback/sequence-playback.class.js').then((module) => module.LyraSequencePlayback),
   },
   'lr-polar-area-chart': {
     optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
@@ -769,9 +769,9 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: ['qrcode'],
     load: () => import('../components/media/qr-code/qr-code.class.js').then((module) => module.LyraQrCode),
   },
-  'lr-query-builder': {
+  'lr-condition-builder': {
     optionalPeers: [],
-    load: () => import('../components/data/query-builder/query-builder.class.js').then((module) => module.LyraQueryBuilder),
+    load: () => import('../components/data/condition-builder/condition-builder.class.js').then((module) => module.LyraConditionBuilder),
   },
   'lr-radar-chart': {
     optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],

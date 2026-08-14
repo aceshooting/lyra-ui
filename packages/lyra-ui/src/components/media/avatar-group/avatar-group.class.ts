@@ -1,28 +1,31 @@
 import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { styleMap } from 'lit/directives/style-map.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { tag } from '../../../internal/prefix.js';
+import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
 import { styles } from './avatar-group.styles.js';
 // Type-only import — erased at build. Importing the value module (`avatar.ts`/`avatar.js`) here
 // would side-effect-register `<lr-avatar>` just from importing `<lr-avatar-group>`, which this
 // component must not do: consumers register `lr-avatar` themselves.
-import type { AvatarSize, AvatarShape, AvatarVariant, LyraAvatar } from '../avatar/avatar.class.js';
+import type { LyraAvatar, LyraAvatarShape } from '../avatar/avatar.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreCount } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+type AvatarPresentationAttribute = 'size' | 'shape' | 'variant';
 
-export interface AvatarGroupOverflowClickDetail {
-  hiddenCount: number;
-  hiddenAvatars: LyraAvatar[];
+export interface LyraAvatarGroupOverflowDetail {
+  readonly hiddenCount: number;
+  readonly hiddenAvatars: readonly LyraAvatar[];
 }
 
 export interface LyraAvatarGroupEventMap {
-  'lr-overflow-click': CustomEvent<AvatarGroupOverflowClickDetail>;
+  'lr-overflow-click': CustomEvent<LyraAvatarGroupOverflowDetail>;
 }
 
 /**
@@ -30,19 +33,13 @@ export interface LyraAvatarGroupEventMap {
  * overlapping row (negative-margin overlap, ring border so each circle reads as distinct) and,
  * past a configurable `max` count, collapses the excess into a "+N" overflow badge. First-party
  * invention (no Web Awesome equivalent), composed over `<lr-avatar>` rather than reimplementing
- * it — plain light-DOM slotted content is the group's items, the same shape `<lr-split>`'s
+ * it — plain light-DOM slotted content is the group's items, the same shape `<lr-multi-split>`'s
  * panels / `<lr-source-list>`'s cards / `<lr-chip-group>`'s chips already use, not a
  * `.items` array prop.
  *
- * **`size`/`shape`/`variant` do not cascade onto slotted avatars.** They drive only this
- * component's own ring, overlap amount, and the overflow badge's rendering — they cannot resize
- * or reshape the `<lr-avatar>` children themselves, since each avatar's own `--lr-avatar-size`
- * lives inside *its own* shadow-scoped `:host` block and unconditionally overrides anything of
- * the same custom-property name inherited from an ancestor. This mirrors every other group
- * component in this library (`button-group`, `checkbox-group`, `radio`): none of them cascade a
- * size/variant prop onto their children either. The consumer is responsible for setting a
- * matching `size`/`shape` on both the group and each `<lr-avatar>` child for a visually coherent
- * stack.
+ * `size`/`shape`/`variant` provide defaults to assigned avatars that omit the corresponding
+ * attribute. Explicit child attributes always win; group-owned defaults are removed on disconnect
+ * or removal without overwriting later author writes.
  *
  * **Deliberate divergence from `<lr-chip-group>`'s overflow pattern.** Chip-group's overflow
  * indicator is a disclosure toggle that reveals the excess children in place (`aria-expanded`,
@@ -62,19 +59,18 @@ export interface LyraAvatarGroupEventMap {
  * sequence with no custom keyboard handling required.
  *
  * @customElement lr-avatar-group
- * @slot - `<lr-avatar>` elements (or any content, though the avatar pairing is the intended
- * usage).
+ * @slot - Direct or forwarded `<lr-avatar>` elements. Other assigned elements are ignored and
+ * remain untouched.
  * @event lr-overflow-click - The overflow badge was activated (click, or Enter/Space while
  * focused — native `<button>` behavior). `detail: { hiddenCount, hiddenAvatars }` where
- * `hiddenAvatars` is the current set of children the component has hidden past `max`.
+ * `hiddenAvatars` is a fresh readonly snapshot of eligible avatars hidden past `max`.
  * Non-cancelable — informational hook, no default action to veto.
  * @csspart base - The outer inline-flex container (holds the slot and the overflow badge).
  * @csspart overflow-badge - The "+N" button. Only rendered while `max` is actively causing an
  * overflow.
- * @cssprop [--lr-avatar-group-avatar-size=var(--lr-size-2rem)] - Sizes the overflow badge to
- * match the slotted avatars, tier for tier with `<lr-avatar>`'s own `--lr-avatar-size`. Does not
- * resize the avatars themselves (see class doc) — set a matching `size` on each `<lr-avatar>`
- * child directly for that.
+ * @csspart overflow-badge-visual - The avatar-sized painted disc inside the 40px action surface.
+ * @cssprop [--lr-avatar-group-avatar-size=var(--lr-size-3rem)] - Sizes the overflow badge to
+ * match the slotted avatars, tier for tier with `<lr-avatar>`'s own `--lr-avatar-size`.
  * @cssprop [--lr-avatar-group-overlap=var(--lr-size-neg-6px)] - Horizontal overlap between
  * consecutive avatars (a logical `margin-inline-start`, so it auto-mirrors under `dir="rtl"`).
  * Setting this to `0` or a positive length is a supported escape hatch that turns the stack into
@@ -121,127 +117,283 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     this.requestUpdate('max', old);
   }
 
-  /** Visual size, reused verbatim from `<lr-avatar>`'s own `AvatarSize` union — the shared
-   *  `LyraSize` ladder plus the `sm`/`md`/`lg` shorthands — and defaulting to the same `'medium'`
-   *  tier, so a group and the avatars inside it read as one vocabulary. Drives the overflow
-   *  badge's size and the overlap amount — does not resize slotted avatars (see class doc). */
-  @property({ reflect: true }) size: AvatarSize = 'medium';
+  /** Shared size default for the badge and avatars that omit their own `size`. */
+  @property({ reflect: true }) size: LyraSize = 'medium';
 
-  /** `'circle'` (the default) or `'square'`, reused verbatim from `<lr-avatar>`'s own
-   *  `AvatarShape` union. Drives the overflow badge's shape — does not reshape slotted avatars
-   *  (see class doc); each avatar's own ring already adapts to that avatar's own `shape`
-   *  attribute independently. */
-  @property({ reflect: true }) shape: AvatarShape = 'circle';
+  /** `'circle'` (the default), `'rounded'`, or `'square'`. Also provides the default to assigned
+   * avatars that omit their own `shape`. */
+  @property({ reflect: true }) shape: LyraAvatarShape = 'circle';
 
-  /** Recolors the overflow badge, reused verbatim from `<lr-avatar>`'s own `AvatarVariant` union.
-   *  `'neutral'` (the default) reads as a plain, unaccented badge. */
-  @property({ reflect: true }) variant: AvatarVariant = 'neutral';
+  /** Recolors the overflow badge and defaults avatars that omit their own `variant`.
+   * `'neutral'` (the default) reads as a plain, unaccented badge. */
+  @property({ reflect: true }) variant: LyraVariant = 'neutral';
 
   /** The group's own accessible name (`role="group"`'s `aria-label`). A host-level `aria-label`
    *  wins if both are set. Unset (the default) renders no `aria-label` at all — a screen reader
    *  announces "group" with no name, then reads each avatar's own accessible name in turn. */
   @property() label = '';
 
-  // Tracks the default slot's assigned-element count, the same connectedCallback/willUpdate +
-  // slotchange convention `<lr-chip-group>`'s `childCount` already establishes.
-  @state() private childCount = 0;
-  private readonly overflowHiddenChildren = new Map<HTMLElement, HTMLElement['hidden']>();
+  @state() private eligibleAvatarCount = 0;
+  @state() private overflowHiddenAvatars: readonly LyraAvatar[] = Object.freeze([]);
+  private assignedAvatars: readonly LyraAvatar[] = Object.freeze([]);
+  private observedAvatars: readonly LyraAvatar[] = Object.freeze([]);
+  private avatarObserver?: MutationObserver;
+  private avatarObserverWindow?: Window;
+  private readonly defaultOwnership = new Map<
+    LyraAvatar,
+    Map<AvatarPresentationAttribute, string>
+  >();
+  private readonly pendingOwnedAttributeWrites = new WeakMap<
+    LyraAvatar,
+    Map<AvatarPresentationAttribute, number>
+  >();
 
-  protected override willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated) this.seedFirstRenderState(() => {
-      this.childCount = this.children.length;
-    });
-  }
+    if (
+      changed.has('size') &&
+      this.size !== '2xs' && this.size !== 'xs' && this.size !== 's' && this.size !== 'm' &&
+      this.size !== 'l' && this.size !== 'xl' && this.size !== 'small' && this.size !== 'medium' &&
+      this.size !== 'large'
+    ) this.size = 'medium';
+    if (changed.has('shape') && this.shape !== 'circle' && this.shape !== 'rounded' && this.shape !== 'square') {
+      this.shape = 'circle';
+    }
+    if (
+      changed.has('variant') &&
+      this.variant !== 'neutral' && this.variant !== 'brand' && this.variant !== 'success' &&
+      this.variant !== 'warning' && this.variant !== 'danger'
+    ) this.variant = 'neutral';
 
-  override firstUpdated(changed: PropertyValues): void {
-    super.firstUpdated(changed);
-    // Fallback reconciliation for slot-forwarding / engines that don't fire `slotchange` for
-    // content present at parse time — same idiom as `<lr-chip-group>`'s identical
-    // `firstUpdated`. `updated()` (below) always runs right after this and recomputes visibility
-    // from this same corrected count.
-    const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
-    this.updateBrowserDerivedState(() => {
-      this.childCount = slot.assignedElements({ flatten: true }).length;
-    });
+    if (!this.hasUpdated) {
+      this.seedFirstRenderState(() => {
+        this.assignedAvatars = Object.freeze(
+          Array.from(this.children).filter((element): element is LyraAvatar => this.isAvatar(element)),
+        );
+        this.recomputeWindow();
+      });
+    } else if (changed.has('max')) {
+      this.recomputeWindow();
+    }
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // disconnectedCallback() deliberately restores author-owned `hidden` values. A reconnect
-    // does not necessarily schedule a Lit update, so re-establish this component's overflow
-    // ownership synchronously once a prior render already supplied the slot.
-    if (this.hasUpdated) this.syncChildVisibility();
+    if (!this.hasUpdated) return;
+    const slot = this.renderRoot.querySelector('slot');
+    if (slot?.localName === 'slot') {
+      this.reconcileAvatars((slot as HTMLSlotElement).assignedElements({ flatten: true }));
+    }
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    this.syncChildVisibility();
+    this.connectAvatarObserver(this.assignedAvatars);
+    this.applyGroupDefaults();
+    this.applyVisibilityMarkers();
   }
 
   override disconnectedCallback(): void {
-    this.restoreOverflowHiddenChildren();
+    this.disconnectAvatarObserver();
+    this.restoreOwnedState();
     super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.disconnectAvatarObserver();
+    if (!this.isConnected) return;
+    const slot = this.renderRoot.querySelector('slot');
+    if (slot?.localName === 'slot') {
+      this.reconcileAvatars((slot as HTMLSlotElement).assignedElements({ flatten: true }));
+    }
   }
 
   private get hasOverflow(): boolean {
     // `max`'s own accessor already sanitizes to a finite, non-negative integer (or `undefined`)
     // on assignment, so no further finiteness check is needed here.
     const max = this.max;
-    return max != null && this.childCount > max;
+    return max != null && this.eligibleAvatarCount > max;
   }
 
   private get hiddenCount(): number {
-    return this.hasOverflow ? this.childCount - (this.max as number) : 0;
+    return this.overflowHiddenAvatars.length;
   }
 
-  private syncChildVisibility(): void {
-    const overflowing = this.hasOverflow;
-    const max = this.max as number;
-    const slot = this.shadowRoot?.querySelector('slot');
-    const assignedChildren = (slot?.assignedElements({ flatten: true }) ??
-      Array.from(this.children)) as HTMLElement[];
-    const shouldHide = new Set(
-      overflowing ? assignedChildren.filter((_child, index) => index >= max) : [],
+  private isAvatar(element: Element): element is LyraAvatar {
+    return element.localName === tag('avatar');
+  }
+
+  private sameAvatars(a: readonly LyraAvatar[], b: readonly LyraAvatar[]): boolean {
+    return a.length === b.length && a.every((avatar, index) => avatar === b[index]);
+  }
+
+  private reconcileAvatars(elements: readonly Element[]): void {
+    if (!this.isConnected) return;
+    const next = Object.freeze(elements.filter((element): element is LyraAvatar => this.isAvatar(element)));
+    const nextSet = new Set(next);
+    for (const avatar of this.assignedAvatars) {
+      if (!nextSet.has(avatar)) this.restoreAvatarState(avatar);
+    }
+    this.assignedAvatars = next;
+    this.connectAvatarObserver(next);
+    this.applyGroupDefaults();
+    this.recomputeWindow();
+    this.applyVisibilityMarkers();
+  }
+
+  private recomputeWindow(): void {
+    const eligible = this.assignedAvatars.filter(
+      (avatar) => !avatar.hasAttribute('hidden') && !avatar.hasAttribute('inert'),
     );
-
-    for (const [child, authorHidden] of this.overflowHiddenChildren) {
-      if (!shouldHide.has(child)) {
-        child.hidden = authorHidden;
-        this.overflowHiddenChildren.delete(child);
-      }
-    }
-
-    for (const child of shouldHide) {
-      if (!this.overflowHiddenChildren.has(child)) {
-        this.overflowHiddenChildren.set(child, child.hidden);
-      }
-      child.hidden = true;
+    const hidden = this.max == null ? [] : eligible.slice(this.max);
+    if (this.eligibleAvatarCount !== eligible.length) this.eligibleAvatarCount = eligible.length;
+    if (!this.sameAvatars(this.overflowHiddenAvatars, hidden)) {
+      this.overflowHiddenAvatars = Object.freeze([...hidden]);
     }
   }
 
-  private restoreOverflowHiddenChildren(): void {
-    for (const [child, authorHidden] of this.overflowHiddenChildren) {
-      child.hidden = authorHidden;
+  private connectAvatarObserver(avatars: readonly LyraAvatar[]): void {
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    const identitiesChanged = !this.sameAvatars(this.observedAvatars, avatars);
+    if (!identitiesChanged && this.avatarObserverWindow === ownerWindow && this.avatarObserver) return;
+    this.disconnectAvatarObserver();
+    this.observedAvatars = Object.freeze([...avatars]);
+    this.avatarObserverWindow = ownerWindow;
+    const observer = new ownerWindow.MutationObserver((records) => {
+      if (this.avatarObserver !== observer || !this.isConnected || this.ownerDocument.defaultView !== ownerWindow) return;
+      for (const record of records) {
+        const attribute = record.attributeName as AvatarPresentationAttribute | null;
+        if (
+          !attribute
+          || (attribute !== 'size' && attribute !== 'shape' && attribute !== 'variant')
+          || !this.isAvatar(record.target as Element)
+        ) continue;
+        const avatar = record.target as LyraAvatar;
+        if (this.consumeOwnedAttributeWrite(avatar, attribute)) continue;
+        const ownership = this.defaultOwnership.get(avatar);
+        ownership?.delete(attribute);
+        if (ownership?.size === 0) this.defaultOwnership.delete(avatar);
+      }
+      this.applyGroupDefaults();
+      this.recomputeWindow();
+      this.applyVisibilityMarkers();
+    });
+    this.avatarObserver = observer;
+    for (const avatar of avatars) {
+      observer.observe(avatar, {
+        attributes: true,
+        attributeFilter: ['hidden', 'inert', 'size', 'shape', 'variant'],
+      });
     }
-    this.overflowHiddenChildren.clear();
+  }
+
+  private disconnectAvatarObserver(): void {
+    this.avatarObserver?.disconnect();
+    for (const avatar of this.observedAvatars) this.pendingOwnedAttributeWrites.delete(avatar);
+    this.avatarObserver = undefined;
+    this.avatarObserverWindow = undefined;
+    this.observedAvatars = Object.freeze([]);
+  }
+
+  private markOwnedAttributeWrite(
+    avatar: LyraAvatar,
+    attribute: AvatarPresentationAttribute,
+  ): void {
+    if (!this.avatarObserver || !this.observedAvatars.includes(avatar)) return;
+    let writes = this.pendingOwnedAttributeWrites.get(avatar);
+    if (!writes) {
+      writes = new Map();
+      this.pendingOwnedAttributeWrites.set(avatar, writes);
+    }
+    writes.set(attribute, (writes.get(attribute) ?? 0) + 1);
+  }
+
+  private consumeOwnedAttributeWrite(
+    avatar: LyraAvatar,
+    attribute: AvatarPresentationAttribute,
+  ): boolean {
+    const writes = this.pendingOwnedAttributeWrites.get(avatar);
+    const count = writes?.get(attribute) ?? 0;
+    if (count === 0) return false;
+    if (count === 1) writes!.delete(attribute);
+    else writes!.set(attribute, count - 1);
+    if (writes!.size === 0) this.pendingOwnedAttributeWrites.delete(avatar);
+    return true;
+  }
+
+  private applyGroupDefaults(): void {
+    const values = { size: this.size, shape: this.shape, variant: this.variant } as const;
+    for (const avatar of this.assignedAvatars) {
+      let ownership = this.defaultOwnership.get(avatar);
+      for (const attribute of ['size', 'shape', 'variant'] as const) {
+        const applied = ownership?.get(attribute);
+        if (applied != null && avatar.getAttribute(attribute) !== applied) {
+          ownership!.delete(attribute);
+        }
+        if (!avatar.hasAttribute(attribute)) {
+          ownership ??= new Map();
+          ownership.set(attribute, values[attribute]);
+          this.markOwnedAttributeWrite(avatar, attribute);
+          avatar.setAttribute(attribute, values[attribute]);
+        } else if (ownership?.has(attribute) && avatar.getAttribute(attribute) === applied && applied !== values[attribute]) {
+          ownership.set(attribute, values[attribute]);
+          this.markOwnedAttributeWrite(avatar, attribute);
+          avatar.setAttribute(attribute, values[attribute]);
+        }
+      }
+      if (ownership?.size) this.defaultOwnership.set(avatar, ownership);
+      else this.defaultOwnership.delete(avatar);
+    }
+  }
+
+  private applyVisibilityMarkers(): void {
+    const hidden = new Set(this.overflowHiddenAvatars);
+    const firstVisible = this.assignedAvatars.find(
+      (avatar) => !avatar.hasAttribute('hidden') && !avatar.hasAttribute('inert') && !hidden.has(avatar),
+    );
+    for (const avatar of this.assignedAvatars) {
+      if (hidden.has(avatar)) avatar.setAttribute('data-lr-avatar-group-hidden', '');
+      else avatar.removeAttribute('data-lr-avatar-group-hidden');
+      if (avatar === firstVisible) avatar.setAttribute('data-lr-avatar-group-first', '');
+      else avatar.removeAttribute('data-lr-avatar-group-first');
+    }
+  }
+
+  private restoreAvatarState(avatar: LyraAvatar): void {
+    avatar.removeAttribute('data-lr-avatar-group-hidden');
+    avatar.removeAttribute('data-lr-avatar-group-first');
+    const ownership = this.defaultOwnership.get(avatar);
+    if (ownership) {
+      for (const [attribute, applied] of ownership) {
+        if (avatar.getAttribute(attribute) === applied) avatar.removeAttribute(attribute);
+      }
+      this.defaultOwnership.delete(avatar);
+    }
+  }
+
+  private restoreOwnedState(): void {
+    for (const avatar of this.assignedAvatars) this.restoreAvatarState(avatar);
+    this.assignedAvatars = Object.freeze([]);
+    this.overflowHiddenAvatars = Object.freeze([]);
+    this.eligibleAvatarCount = 0;
   }
 
   private onSlotChange = (e: Event): void => {
     const slot = e.target as HTMLSlotElement;
     this.updateBrowserDerivedState(() => {
       if (!this.isConnected) return;
-      this.childCount = slot.assignedElements({ flatten: true }).length;
+      this.reconcileAvatars(slot.assignedElements({ flatten: true }));
     });
   };
 
   private onOverflowClick = (): void => {
-    const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
-    const hiddenAvatars = slot.assignedElements({ flatten: true }).slice(this.max as number) as LyraAvatar[];
-    this.emit('lr-overflow-click', {
+    const hiddenAvatars = Object.freeze([...this.overflowHiddenAvatars]);
+    this.emit('lr-overflow-click', Object.freeze({
       hiddenCount: hiddenAvatars.length,
       hiddenAvatars,
-    });
+    }));
   };
 
   override render(): TemplateResult {
@@ -250,8 +402,8 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     // The badge is the first *visible* element in the row only when every avatar is hidden
     // (max <= 0) — there's no selector that can express "first visible thing regardless of DOM
     // position", so the margin override is computed here instead of in CSS.
-    const badgeIsFirstVisible = overflowing && hiddenCount === this.childCount;
-    const accessibleLabel = this.getAttribute('aria-label') || this.label || nothing;
+    const badgeIsFirstVisible = overflowing && hiddenCount === this.eligibleAvatarCount;
+    const accessibleLabel = hostAriaLabel(this) ?? (this.label || nothing);
     const localizedHiddenCount = getNumberFormat(this.effectiveLocale).format(hiddenCount);
 
     return html`
@@ -261,14 +413,14 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
           ? html`<button
               part="overflow-badge"
               type="button"
-              style=${styleMap({ marginInlineStart: badgeIsFirstVisible ? '0' : undefined })}
+              ?data-first-visible=${badgeIsFirstVisible}
               aria-label=${this.localize('showMoreCount', undefined, {
                 count: localizedHiddenCount,
               })}
               @click=${this.onOverflowClick}
-            >${this.localize('showMoreCollapsed', undefined, {
-              count: localizedHiddenCount,
-            })}</button>`
+            ><span part="overflow-badge-visual" aria-hidden="true">${this.localize(
+              'showMoreCollapsed', undefined, { count: localizedHiddenCount },
+            )}</span></button>`
           : nothing}
       </div>
     `;

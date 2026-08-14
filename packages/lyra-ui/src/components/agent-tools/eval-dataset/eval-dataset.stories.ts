@@ -31,7 +31,7 @@ const examples: EvalExample[] = [
     id: '3',
     input: 'Translate "good morning" to Spanish.',
     expectedOutput: 'Buenos días',
-    tags: ['translation', 'easy'],
+    tags: ['translation', 'écriture', 'easy'],
   },
   {
     id: '4',

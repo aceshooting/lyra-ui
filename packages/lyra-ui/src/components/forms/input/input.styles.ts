@@ -142,6 +142,19 @@ export const styles = css`
   [part='input'][type='time']::-webkit-calendar-picker-indicator {
     cursor: pointer;
     border-radius: var(--lr-radius-xs);
+    background-color: transparent;
+    outline: var(--lr-focus-ring-width) solid transparent;
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='input'][type='time']:not(:disabled):hover::-webkit-calendar-picker-indicator {
+    background-color: var(--lr-input-time-picker-hover-bg, var(--lr-color-brand-quiet));
+  }
+  [part='input'][type='time']:not(:disabled):active::-webkit-calendar-picker-indicator {
+    background-color: var(--lr-input-time-picker-active-bg, var(--lr-color-brand));
+  }
+  [part='input'][type='time']:not(:disabled):focus-visible::-webkit-calendar-picker-indicator {
+    background-color: var(--lr-input-time-picker-focus-bg, var(--lr-color-brand-quiet));
+    outline-color: var(--lr-input-time-picker-focus-ring, var(--lr-focus-ring-color));
   }
   [part='start'],
   [part='end'] {

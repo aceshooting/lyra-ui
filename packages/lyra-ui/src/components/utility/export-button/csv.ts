@@ -17,19 +17,25 @@ const NEEDS_QUOTING = /[",\r\n]/;
 
 /** Escapes a CSV field: quotes as needed, guards against formula injection. */
 export function escapeCsvField(value: unknown): string {
+  // Keep real finite numbers as numeric spreadsheet cells. Formula guarding applies to caller
+  // strings, where a leading minus is data rather than trusted numeric type information.
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   let s = value == null ? '' : String(value);
   if (UNSAFE_LEADING.test(s)) s = `'${s}`;
   if (NEEDS_QUOTING.test(s)) s = `"${s.replace(/"/g, '""')}"`;
   return s;
 }
 
-export interface CsvColumn {
-  key: string;
-  label: string;
+export interface LyraCsvColumn {
+  readonly key: string;
+  readonly label: string;
 }
 
 /** Builds a CRLF-joined CSV string with a header row. */
-export function buildCsv(rows: Record<string, unknown>[], columns: CsvColumn[]): string {
+export function buildCsv(
+  rows: readonly Readonly<Record<string, unknown>>[],
+  columns: readonly LyraCsvColumn[],
+): string {
   const header = columns.map((c) => escapeCsvField(c.label)).join(',');
   const body = rows.map((row) => columns.map((c) => escapeCsvField(row[c.key])).join(','));
   return [header, ...body].join('\r\n');

@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
@@ -20,6 +22,7 @@ import {
   waitForSuccessfulCi,
   waitForSuccessfulFullEngine,
 } from './release-integrity.mjs';
+import { normalizeBrowserInput } from './plan-test-browsers.mjs';
 import { updateReadmeStatusLine } from './update-readme-status.mjs';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -40,18 +43,120 @@ const successfulFullEngineJobs = () =>
   }));
 
 test('budgets the platform matrix for degraded fresh-runner OS dependency setup', () => {
-  const workflow = readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8');
+  const workflow = readFileSync(
+    path.join(repoRoot, '.github/workflows/ci.yml'),
+    'utf8'
+  );
   const platformStart = workflow.indexOf('\n  platform-contracts:');
   const stepsStart = workflow.indexOf('\n    steps:', platformStart);
   assert.ok(
     platformStart >= 0 && stepsStart > platformStart,
-    'CI must define the platform-contracts job',
+    'CI must define the platform-contracts job'
   );
   const platformHeader = workflow.slice(platformStart, stepsStart);
   assert.match(
     platformHeader,
     /timeout-minutes: 30/,
-    'platform contracts must budget the observed 15-minute install-deps path before tests begin',
+    'platform contracts must budget the observed 15-minute install-deps path before tests begin'
+  );
+});
+
+test('normalizes the manually dispatched browser matrix through a closed allowlist', () => {
+  assert.deepEqual(
+    [
+      ...normalizeBrowserInput(
+        ' chromium,firefox,chrome,edge,safari,chromium '
+      ),
+    ],
+    ['chromium', 'firefox', 'chrome', 'edge', 'safari']
+  );
+
+  for (const input of [
+    '',
+    'chromium,',
+    'chromium,,firefox',
+    'Chromium',
+    'webkit',
+    'chromium; touch /tmp/unsafe',
+    'chromium,$(touch /tmp/unsafe)',
+    'chromium\nfirefox',
+  ]) {
+    assert.throws(() => normalizeBrowserInput(input), /browser/iu, input);
+  }
+});
+
+test('keeps workflow-dispatch browser input out of shell source after allowlist validation', () => {
+  const workflow = readFileSync(
+    path.join(repoRoot, '.github/workflows/test-all-browsers.yml'),
+    'utf8'
+  );
+  const planJob = workflow.slice(
+    workflow.indexOf('  plan:'),
+    workflow.indexOf('\n  test:')
+  );
+  const testJob = workflow.slice(workflow.indexOf('\n  test:'));
+
+  assert.match(planJob, /BROWSERS_INPUT: \$\{\{ inputs\.browsers \}\}/u);
+  assert.match(
+    planJob,
+    /node scripts\/plan-test-browsers\.mjs >> "\$GITHUB_OUTPUT"/u
+  );
+  assert.doesNotMatch(planJob, /<<<\s*"\$\{\{ inputs\.browsers \}\}"/u);
+  assert.match(testJob, /TEST_BROWSER: \$\{\{ matrix\.browser \}\}/u);
+  assert.match(testJob, /--browsers "\$TEST_BROWSER"/u);
+  assert.doesNotMatch(testJob, /--browsers\s+"\$\{\{ matrix\.browser \}\}"/u);
+});
+
+test('scopes GitHub Pages write credentials to the deployment job', () => {
+  const workflow = readFileSync(
+    path.join(repoRoot, '.github/workflows/deploy-docs.yml'),
+    'utf8'
+  );
+  const workflowPermissions = workflow.slice(
+    workflow.indexOf('\npermissions:'),
+    workflow.indexOf('\nconcurrency:')
+  );
+  const buildJob = workflow.slice(
+    workflow.indexOf('  build:'),
+    workflow.indexOf('\n  deploy:')
+  );
+  const deployJob = workflow.slice(workflow.indexOf('\n  deploy:'));
+
+  assert.match(workflowPermissions, /contents: read/u);
+  assert.doesNotMatch(workflowPermissions, /pages: write|id-token: write/u);
+  assert.doesNotMatch(buildJob, /pages: write|id-token: write/u);
+  assert.match(deployJob, /permissions:\n\s+pages: write\n\s+id-token: write/u);
+});
+
+test('runs a checksum-pinned actionlint in CI and the local aggregate', () => {
+  const rootPackage = JSON.parse(
+    readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
+  );
+  const workflowCheck = readFileSync(
+    path.join(repoRoot, 'scripts/check-workflows.sh'),
+    'utf8'
+  );
+  const ciWorkflow = readFileSync(
+    path.join(repoRoot, '.github/workflows/ci.yml'),
+    'utf8'
+  );
+  const ciScript = readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8');
+
+  assert.equal(
+    rootPackage.scripts['check:workflows'],
+    './scripts/check-workflows.sh'
+  );
+  assert.match(workflowCheck, /ACTIONLINT_VERSION="1\.7\.12"/u);
+  assert.match(
+    workflowCheck,
+    /ACTIONLINT_SHA256="8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"/u
+  );
+  assert.match(workflowCheck, /sha256sum --check/u);
+  assert.doesNotMatch(workflowCheck, /releases\/latest|:latest/u);
+  assert.match(ciWorkflow, /- run: pnpm check:workflows/u);
+  assert.match(
+    ciScript,
+    /step "workflow syntax and policy"\s+pnpm check:workflows/u
   );
 });
 
@@ -73,7 +178,7 @@ test('collects every GitHub API page and fails closed at its page bound', async 
       pageSize: 100,
       maxPages: 2,
     }),
-    /pagination exceeded 2 pages/,
+    /pagination exceeded 2 pages/
   );
 });
 
@@ -95,18 +200,28 @@ test('requires one successful CI workflow run for the exact release commit and e
   });
 
   const requiredSampleJob = REQUIRED_CI_JOBS[REQUIRED_CI_JOBS.length - 1];
-  const missingRequiredJob = successfulJobs().filter((job) => job.name !== requiredSampleJob);
+  const missingRequiredJob = successfulJobs().filter(
+    (job) => job.name !== requiredSampleJob
+  );
   assert.deepEqual(evaluateCiRun({ run, jobs: missingRequiredJob, sha }), {
     state: 'failed',
     message: `CI run 42 is missing required job '${requiredSampleJob}'.`,
   });
   assert.equal(
-    evaluateCiRun({ run: { ...run, head_sha: 'f'.repeat(40) }, jobs: successfulJobs(), sha }).state,
-    'failed',
+    evaluateCiRun({
+      run: { ...run, head_sha: 'f'.repeat(40) },
+      jobs: successfulJobs(),
+      sha,
+    }).state,
+    'failed'
   );
   assert.equal(
-    evaluateCiRun({ run: { ...run, conclusion: 'failure' }, jobs: successfulJobs(), sha }).state,
-    'failed',
+    evaluateCiRun({
+      run: { ...run, conclusion: 'failure' },
+      jobs: successfulJobs(),
+      sha,
+    }).state,
+    'failed'
   );
   assert.equal(
     evaluateCiRun({
@@ -114,21 +229,25 @@ test('requires one successful CI workflow run for the exact release commit and e
       jobs: successfulJobs(),
       sha,
     }).state,
-    'failed',
+    'failed'
   );
   assert.deepEqual(
     evaluateCiRun({
       run,
       jobs: [
         ...successfulJobs(),
-        { name: 'new-required-job', status: 'completed', conclusion: 'failure' },
+        {
+          name: 'new-required-job',
+          status: 'completed',
+          conclusion: 'failure',
+        },
       ],
       sha,
     }),
     {
       state: 'failed',
       message: "CI run 42 job 'new-required-job' is completed/failure.",
-    },
+    }
   );
 });
 
@@ -144,17 +263,21 @@ test('requires one successful full-engine run for the exact release commit and a
     conclusion: 'success',
   };
 
-  assert.deepEqual(evaluateFullEngineRun({ run, jobs: successfulFullEngineJobs(), sha }), {
-    state: 'success',
-    message: `Full browser-engine suite run 84 passed all ${REQUIRED_FULL_ENGINE_JOBS.length} required jobs for ${sha}.`,
-  });
+  assert.deepEqual(
+    evaluateFullEngineRun({ run, jobs: successfulFullEngineJobs(), sha }),
+    {
+      state: 'success',
+      message: `Full browser-engine suite run 84 passed all ${REQUIRED_FULL_ENGINE_JOBS.length} required jobs for ${sha}.`,
+    }
+  );
 
   const missingShard = successfulFullEngineJobs().filter(
-    (job) => job.name !== 'webkit / shard 4/4',
+    (job) => job.name !== 'webkit / shard 4/4'
   );
   assert.deepEqual(evaluateFullEngineRun({ run, jobs: missingShard, sha }), {
     state: 'failed',
-    message: "Full browser-engine suite run 84 is missing required job 'webkit / shard 4/4'.",
+    message:
+      "Full browser-engine suite run 84 is missing required job 'webkit / shard 4/4'.",
   });
   assert.equal(
     evaluateFullEngineRun({
@@ -162,7 +285,7 @@ test('requires one successful full-engine run for the exact release commit and a
       jobs: successfulFullEngineJobs(),
       sha,
     }).state,
-    'failed',
+    'failed'
   );
   assert.equal(
     evaluateFullEngineRun({
@@ -170,7 +293,7 @@ test('requires one successful full-engine run for the exact release commit and a
       jobs: successfulFullEngineJobs(),
       sha,
     }).state,
-    'failed',
+    'failed'
   );
 });
 
@@ -192,7 +315,12 @@ test('waits for a pending exact-SHA CI run without treating the publish check as
     pollMs: 1,
     listRuns: async () => {
       calls += 1;
-      return [{ ...pendingRun, ...(calls > 1 ? { status: 'completed', conclusion: 'success' } : {}) }];
+      return [
+        {
+          ...pendingRun,
+          ...(calls > 1 ? { status: 'completed', conclusion: 'success' } : {}),
+        },
+      ];
     },
     listJobs: async () => successfulJobs(),
     delay: async () => {},
@@ -212,16 +340,18 @@ test('times out when exact-SHA CI never completes', async () => {
       sha,
       timeoutMs: 2,
       pollMs: 1,
-      listRuns: async () => [{
-        id: 9,
-        name: 'CI',
-        path: '.github/workflows/ci.yml',
-        event: 'push',
-        head_branch: 'main',
-        head_sha: sha,
-        status: 'queued',
-        conclusion: null,
-      }],
+      listRuns: async () => [
+        {
+          id: 9,
+          name: 'CI',
+          path: '.github/workflows/ci.yml',
+          event: 'push',
+          head_branch: 'main',
+          head_sha: sha,
+          status: 'queued',
+          conclusion: null,
+        },
+      ],
       listJobs: async () => [],
       delay: async () => {},
       now: (() => {
@@ -229,7 +359,7 @@ test('times out when exact-SHA CI never completes', async () => {
         return () => value++;
       })(),
     }),
-    /Timed out waiting for a successful CI run/,
+    /Timed out waiting for a successful CI run/
   );
 });
 
@@ -266,7 +396,10 @@ test('resolves only supported release tags', () => {
     packageName: '@aceshooting/lyra-flags',
     version: '1.4.1',
   });
-  assert.throws(() => parseReleaseTag('other@1.0.0'), /Unsupported release tag/);
+  assert.throws(
+    () => parseReleaseTag('other@1.0.0'),
+    /Unsupported release tag/
+  );
   assert.throws(() => parseReleaseTag('lyra-ui@8'), /Unsupported release tag/);
   assert.throws(() => parseReleaseTag('lyra-ui@8.1.0-beta.1'), /stable/);
   assert.throws(() => parseReleaseTag('lyra-ui@8.1.0+rebuild.1'), /stable/);
@@ -286,37 +419,40 @@ test('binds privileged workflow context to the requested peeled tag', () => {
       commitSha: sha,
       ref: 'refs/tags/lyra-ui@8.1.0',
       eventName: 'workflow_dispatch',
-    },
+    }
   );
   assert.throws(
-    () => validateWorkflowSource({
-      tag: 'lyra-ui@8.1.0',
-      eventName: 'workflow_dispatch',
-      githubRef: 'refs/heads/main',
-      githubSha: sha,
-      tagCommitSha: sha,
-    }),
-    /Dispatch the workflow with --ref 'lyra-ui@8.1.0'/,
+    () =>
+      validateWorkflowSource({
+        tag: 'lyra-ui@8.1.0',
+        eventName: 'workflow_dispatch',
+        githubRef: 'refs/heads/main',
+        githubSha: sha,
+        tagCommitSha: sha,
+      }),
+    /Dispatch the workflow with --ref 'lyra-ui@8.1.0'/
   );
   assert.throws(
-    () => validateWorkflowSource({
-      tag: 'lyra-ui@8.1.0',
-      eventName: 'workflow_dispatch',
-      githubRef: 'refs/tags/lyra-ui@8.1.0',
-      githubSha: 'f'.repeat(40),
-      tagCommitSha: sha,
-    }),
-    /does not match tag/,
+    () =>
+      validateWorkflowSource({
+        tag: 'lyra-ui@8.1.0',
+        eventName: 'workflow_dispatch',
+        githubRef: 'refs/tags/lyra-ui@8.1.0',
+        githubSha: 'f'.repeat(40),
+        tagCommitSha: sha,
+      }),
+    /does not match tag/
   );
   assert.throws(
-    () => validateWorkflowSource({
-      tag: 'lyra-ui@8.1.0',
-      eventName: 'pull_request',
-      githubRef: 'refs/tags/lyra-ui@8.1.0',
-      githubSha: sha,
-      tagCommitSha: sha,
-    }),
-    /not permitted/,
+    () =>
+      validateWorkflowSource({
+        tag: 'lyra-ui@8.1.0',
+        eventName: 'pull_request',
+        githubRef: 'refs/tags/lyra-ui@8.1.0',
+        githubSha: sha,
+        tagCommitSha: sha,
+      }),
+    /not permitted/
   );
 });
 
@@ -328,60 +464,83 @@ test('requires an annotated tag whose peeled commit is the checkout', () => {
       checkoutSha: sha,
       tagCommitSha: sha,
     }),
-    { tag: 'lyra-ui@8.1.0', commitSha: sha },
+    { tag: 'lyra-ui@8.1.0', commitSha: sha }
   );
   assert.throws(
-    () => validateAnnotatedTag({
-      tag: 'lyra-ui@8.1.0',
-      objectType: 'commit',
-      checkoutSha: sha,
-      tagCommitSha: sha,
-    }),
-    /must be annotated/,
+    () =>
+      validateAnnotatedTag({
+        tag: 'lyra-ui@8.1.0',
+        objectType: 'commit',
+        checkoutSha: sha,
+        tagCommitSha: sha,
+      }),
+    /must be annotated/
   );
   assert.throws(
-    () => validateAnnotatedTag({
-      tag: 'lyra-ui@8.1.0',
-      objectType: 'tag',
-      checkoutSha: sha,
-      tagCommitSha: 'f'.repeat(40),
-    }),
-    /does not match tag/,
+    () =>
+      validateAnnotatedTag({
+        tag: 'lyra-ui@8.1.0',
+        objectType: 'tag',
+        checkoutSha: sha,
+        tagCommitSha: 'f'.repeat(40),
+      }),
+    /does not match tag/
   );
 });
 
 test('requires exactly one release tarball and verifies its package identity', () => {
   assert.equal(selectReleaseTarball(['/tmp/a.tgz']), '/tmp/a.tgz');
   assert.throws(() => selectReleaseTarball([]), /exactly one/);
-  assert.throws(() => selectReleaseTarball(['/tmp/a.tgz', '/tmp/b.tgz']), /exactly one/);
+  assert.throws(
+    () => selectReleaseTarball(['/tmp/a.tgz', '/tmp/b.tgz']),
+    /exactly one/
+  );
 
   const expected = parseReleaseTag('lyra-ui@8.1.0');
   assert.deepEqual(
-    validateTarballIdentity({ name: '@aceshooting/lyra-ui', version: '8.1.0' }, expected),
-    { name: '@aceshooting/lyra-ui', version: '8.1.0' },
+    validateTarballIdentity(
+      { name: '@aceshooting/lyra-ui', version: '8.1.0' },
+      expected
+    ),
+    { name: '@aceshooting/lyra-ui', version: '8.1.0' }
   );
   assert.throws(
-    () => validateTarballIdentity({ name: '@aceshooting/lyra-flags', version: '8.1.0' }, expected),
-    /package name/,
+    () =>
+      validateTarballIdentity(
+        { name: '@aceshooting/lyra-flags', version: '8.1.0' },
+        expected
+      ),
+    /package name/
   );
   assert.throws(
-    () => validateTarballIdentity({ name: '@aceshooting/lyra-ui', version: '8.0.0' }, expected),
-    /package version/,
+    () =>
+      validateTarballIdentity(
+        { name: '@aceshooting/lyra-ui', version: '8.0.0' },
+        expected
+      ),
+    /package version/
   );
 });
 
 test('requires the downloaded release tarball to byte-match a tagged-source rebuild', () => {
   assert.deepEqual(
-    validateRebuiltTarballBytes(Buffer.from('same tarball'), Buffer.from('same tarball')),
-    { byteLength: 12 },
+    validateRebuiltTarballBytes(
+      Buffer.from('same tarball'),
+      Buffer.from('same tarball')
+    ),
+    { byteLength: 12 }
   );
   assert.throws(
-    () => validateRebuiltTarballBytes(Buffer.from('release'), Buffer.from('rebuilt')),
-    /does not byte-match the exact tagged-source rebuild/,
+    () =>
+      validateRebuiltTarballBytes(
+        Buffer.from('release'),
+        Buffer.from('rebuilt')
+      ),
+    /does not byte-match the exact tagged-source rebuild/
   );
   assert.throws(
     () => validateRebuiltTarballBytes('release', Buffer.from('rebuilt')),
-    /requires two Buffer values/,
+    /requires two Buffer values/
   );
 });
 
@@ -393,66 +552,79 @@ test('updates exactly one narrowly anchored README Status line and fails closed 
       lyraUiVersion: '8.1.0',
       lyraFlagsVersion: '2.0.1',
     }),
-    '`@aceshooting/lyra-ui` source is versioned at `8.1.0`; `@aceshooting/lyra-flags` source at `2.0.1` — releases.',
+    '`@aceshooting/lyra-ui` source is versioned at `8.1.0`; `@aceshooting/lyra-flags` source at `2.0.1` — releases.'
   );
   assert.throws(
-    () => updateReadmeStatusLine('No release status here.', {
-      lyraUiVersion: '8.1.0',
-      lyraFlagsVersion: '2.0.1',
-    }),
-    /expected exactly one source-version line, found 0/,
+    () =>
+      updateReadmeStatusLine('No release status here.', {
+        lyraUiVersion: '8.1.0',
+        lyraFlagsVersion: '2.0.1',
+      }),
+    /expected exactly one source-version line, found 0/
   );
   assert.throws(
-    () => updateReadmeStatusLine(`${line}\n${line}`, {
-      lyraUiVersion: '8.1.0',
-      lyraFlagsVersion: '2.0.1',
-    }),
-    /expected exactly one source-version line, found 2/,
+    () =>
+      updateReadmeStatusLine(`${line}\n${line}`, {
+        lyraUiVersion: '8.1.0',
+        lyraFlagsVersion: '2.0.1',
+      }),
+    /expected exactly one source-version line, found 2/
   );
   assert.throws(
-    () => updateReadmeStatusLine(line, {
-      lyraUiVersion: 'not-semver',
-      lyraFlagsVersion: '2.0.1',
-    }),
-    /invalid version/,
+    () =>
+      updateReadmeStatusLine(line, {
+        lyraUiVersion: 'not-semver',
+        lyraFlagsVersion: '2.0.1',
+      }),
+    /invalid version/
   );
   assert.throws(
-    () => updateReadmeStatusLine(
-      '`@aceshooting/lyra-ui` is published at `8.0.0`; `@aceshooting/lyra-flags` at `2.0.0`.',
-      { lyraUiVersion: '8.1.0', lyraFlagsVersion: '2.0.1' },
-    ),
-    /expected exactly one source-version line, found 0/,
+    () =>
+      updateReadmeStatusLine(
+        '`@aceshooting/lyra-ui` is published at `8.0.0`; `@aceshooting/lyra-flags` at `2.0.0`.',
+        { lyraUiVersion: '8.1.0', lyraFlagsVersion: '2.0.1' }
+      ),
+    /expected exactly one source-version line, found 0/
   );
   assert.throws(
-    () => updateReadmeStatusLine(line, {
-      lyraUiVersion: '8.1.0+rebuild.1',
-      lyraFlagsVersion: '2.0.1',
-    }),
-    /invalid version/,
+    () =>
+      updateReadmeStatusLine(line, {
+        lyraUiVersion: '8.1.0+rebuild.1',
+        lyraFlagsVersion: '2.0.1',
+      }),
+    /invalid version/
   );
   assert.throws(
-    () => updateReadmeStatusLine(line, {
-      lyraUiVersion: '8.1.0-beta.1',
-      lyraFlagsVersion: '2.0.1',
-    }),
-    /invalid version/,
+    () =>
+      updateReadmeStatusLine(line, {
+        lyraUiVersion: '8.1.0-beta.1',
+        lyraFlagsVersion: '2.0.1',
+      }),
+    /invalid version/
   );
 });
 
 test('release workflows verify tagged-source bytes without exposing protected credentials', () => {
+  const reusableVerification = readFileSync(
+    path.join(repoRoot, '.github/workflows/release-verification.yml'),
+    'utf8'
+  );
   const publishWorkflow = readFileSync(
     path.join(repoRoot, '.github/workflows/publish.yml'),
-    'utf8',
+    'utf8'
   );
   const signWorkflow = readFileSync(
     path.join(repoRoot, '.github/workflows/sign-release.yml'),
-    'utf8',
+    'utf8'
   );
 
-  const protectedPublish = publishWorkflow.slice(publishWorkflow.indexOf('\n  publish:\n'));
+  const protectedPublish = publishWorkflow.slice(
+    publishWorkflow.indexOf('\n  publish:\n')
+  );
   const protectedSign = signWorkflow.slice(signWorkflow.indexOf('\n  sign:\n'));
 
-  for (const workflow of [publishWorkflow, signWorkflow]) {
+  for (const caller of [publishWorkflow, signWorkflow]) {
+    const workflow = `${reusableVerification}\n${caller}`;
     assert.match(workflow, /persist-credentials: false/);
     assert.match(workflow, /validate-workflow-source/);
     assert.match(workflow, /wait-ci/);
@@ -464,53 +636,92 @@ test('release workflows verify tagged-source bytes without exposing protected cr
     assert.match(workflow, /EXPECTED_SHA256/);
     assert.match(workflow, /tag_sha:/);
     assert.match(workflow, /git ls-remote --tags/);
-    assert.match(workflow, /gh release upload "\$TAG" "\$TARBALL"[^\n]+--clobber/);
+    assert.match(
+      workflow,
+      /gh release upload "\$TAG" "\$TARBALL"[^\n]+--clobber/
+    );
     assert.match(workflow, /release-roundtrip/);
     assert.match(workflow, /retention-days: 14/);
     assert.match(workflow, /\.sigstore\.json/);
     assert.doesNotMatch(workflow, /\.intoto\.jsonl/);
-    assert.ok(workflow.indexOf('compare-rebuild') < workflow.indexOf('actions/upload-artifact@'));
-    assert.ok(workflow.indexOf('Rebind release tag and tarball after approval') <
-      workflow.indexOf('actions/attest@'));
-    assert.ok(workflow.indexOf('Verify transferred artifact digest') < workflow.indexOf('actions/attest@'));
+    assert.ok(
+      workflow.indexOf('compare-rebuild') <
+        workflow.indexOf('actions/upload-artifact@')
+    );
+    assert.ok(
+      workflow.indexOf('Rebind release tag and tarball after approval') <
+        workflow.indexOf('actions/attest@')
+    );
+    assert.ok(
+      workflow.indexOf('Verify transferred artifact digest') <
+        workflow.indexOf('actions/attest@')
+    );
   }
 
   for (const protectedJob of [protectedPublish, protectedSign]) {
     assert.match(protectedJob, /environment: npm-publish/);
-    assert.doesNotMatch(protectedJob, /actions\/checkout@|pnpm\/action-setup|pnpm install/);
+    assert.doesNotMatch(
+      protectedJob,
+      /actions\/checkout@|pnpm\/action-setup|pnpm install/
+    );
     assert.doesNotMatch(protectedJob, /scripts\/release-integrity\.mjs/);
   }
 
-  assert.match(publishWorkflow, /npm publish "\$TARBALL" --access public --dry-run/);
+  assert.match(
+    publishWorkflow,
+    /npm publish "\$TARBALL" --access public --dry-run/
+  );
   assert.match(publishWorkflow, /npm publish "\$TARBALL" --access public\n/);
   assert.ok(
-    publishWorkflow.indexOf('actions/attest@') < publishWorkflow.indexOf('npm publish "$TARBALL"'),
+    publishWorkflow.indexOf('actions/attest@') <
+      publishWorkflow.indexOf('npm publish "$TARBALL"')
   );
 });
 
 test('release script pins its repository and pushes release refs atomically', () => {
-  const publishScript = readFileSync(path.join(repoRoot, 'scripts/publish.sh'), 'utf8');
+  const publishScript = readFileSync(
+    path.join(repoRoot, 'scripts/publish.sh'),
+    'utf8'
+  );
 
   assert.match(publishScript, /GH_REPOSITORY="\$GH_ACCOUNT\/lyra-ui"/);
   assert.match(publishScript, /git remote get-url --push --all origin/);
   assert.match(publishScript, /git remote get-url --all origin/);
   assert.match(publishScript, /origin fetch URL/);
   assert.match(publishScript, /git ls-remote --tags origin/);
-  assert.match(publishScript, /git push origin "\$release_sha:refs\/heads\/main"/);
+  assert.match(
+    publishScript,
+    /git push origin "\$release_sha:refs\/heads\/main"/
+  );
   assert.doesNotMatch(publishScript, /git push origin HEAD:/);
   assert.match(
     publishScript,
-    /git tag -a "\$\{TAG\[\$dir\]\}" -m "Release \$\{TAG\[\$dir\]\}" "\$release_sha"/,
+    /git tag -a "\$\{TAG\[\$dir\]\}" -m "Release \$\{TAG\[\$dir\]\}" "\$release_sha"/
   );
-  assert.match(publishScript, /current_head="\$\(git rev-parse HEAD\^\{commit\}\)"/);
-  assert.match(publishScript, /local HEAD moved during exact-commit qualification/);
-  assert.match(publishScript, /working tree changed during exact-commit qualification/);
+  assert.match(
+    publishScript,
+    /current_head="\$\(git rev-parse HEAD\^\{commit\}\)"/
+  );
+  assert.match(
+    publishScript,
+    /local HEAD moved during exact-commit qualification/
+  );
+  assert.match(
+    publishScript,
+    /working tree changed during exact-commit qualification/
+  );
   assert.match(publishScript, /git push --atomic origin "\$\{tag_args\[@\]\}"/);
-  assert.match(publishScript, /gh release create[\s\S]*--repo "\$GH_REPOSITORY"/);
+  assert.match(
+    publishScript,
+    /gh release create[\s\S]*--repo "\$GH_REPOSITORY"/
+  );
   assert.doesNotMatch(publishScript, /git add -A/);
   assert.doesNotMatch(publishScript, /export GH_TOKEN/);
   assert.match(publishScript, /Working tree is not clean/);
-  assert.match(publishScript, /pnpm --filter "\$name" --if-present run package-metadata/);
+  assert.match(
+    publishScript,
+    /pnpm --filter "\$name" --if-present run package-metadata/
+  );
   assert.match(publishScript, /src\/internal\/package-metadata\.ts/);
   assert.match(publishScript, /scripts\/fixtures\/component-metadata\.json/);
   assert.match(publishScript, /scripts\/fixtures\/component-inventory\.json/);
@@ -520,7 +731,10 @@ test('release script pins its repository and pushes release refs atomically', ()
   assert.match(publishScript, /node scripts\/sync-plugin-version\.mjs/);
   assert.match(publishScript, /\.\/package\.sh/);
   assert.match(publishScript, /pnpm skill:check/);
-  assert.match(publishScript, /plugins\/lyra-ui\/\.claude-plugin\/plugin\.json/);
+  assert.match(
+    publishScript,
+    /plugins\/lyra-ui\/\.claude-plugin\/plugin\.json/
+  );
   assert.match(publishScript, /plugins\/lyra-ui\/\.codex-plugin\/plugin\.json/);
   assert.match(publishScript, /\.claude-plugin\/marketplace\.json/);
   assert.match(publishScript, /plugins\/lyra-ui\/skills\/lyra-ui\/references/);
@@ -533,15 +747,24 @@ test('release script pins its repository and pushes release refs atomically', ()
   assert.match(publishScript, /not a stable core semver/);
   assert.match(publishScript, /QUALIFICATION_PASSED/);
   assert.match(publishScript, /Do NOT tag or release this commit/);
-  assert.match(publishScript, /custom-elements\.json[\s\S]*llms\.txt[\s\S]*llms-full\.txt/);
+  assert.match(
+    publishScript,
+    /custom-elements\.json[\s\S]*llms\.txt[\s\S]*llms-full\.txt/
+  );
   const changedReleaseBlock = publishScript.slice(
     publishScript.indexOf('RELEASE_DIRS=()'),
-    publishScript.indexOf('declare -A NEW_VERSION'),
+    publishScript.indexOf('declare -A NEW_VERSION')
   );
   assert.match(changedReleaseBlock, /for dir in "\$\{PKG_DIRS\[@\]\}"/);
-  assert.doesNotMatch(changedReleaseBlock, /for name in "\$\{EFFECTIVE_NAMES\[@\]\}"/);
+  assert.doesNotMatch(
+    changedReleaseBlock,
+    /for name in "\$\{EFFECTIVE_NAMES\[@\]\}"/
+  );
   assert.match(changedReleaseBlock, /AUTO_EXPANDED_RELEASE_DIRS/);
-  assert.match(changedReleaseBlock, /Changesets expanded the release to publishable dependents/);
+  assert.match(
+    changedReleaseBlock,
+    /Changesets expanded the release to publishable dependents/
+  );
   assert.match(publishScript, /Changesets auto-expanded dependent/);
   let gateCursor = publishScript.indexOf('pnpm changeset version');
   for (const command of [
@@ -559,7 +782,10 @@ test('release script pins its repository and pushes release refs atomically', ()
     'run llms',
   ]) {
     const commandIndex = publishScript.indexOf(command, gateCursor + 1);
-    assert.ok(commandIndex > gateCursor, `${command} must follow the preceding release gate`);
+    assert.ok(
+      commandIndex > gateCursor,
+      `${command} must follow the preceding release gate`
+    );
     gateCursor = commandIndex;
   }
   for (const command of [
@@ -568,22 +794,30 @@ test('release script pins its repository and pushes release refs atomically', ()
     'pnpm skill:check',
   ]) {
     const commandIndex = publishScript.indexOf(command, gateCursor + 1);
-    assert.ok(commandIndex > gateCursor, `${command} must follow release-time LLM generation`);
+    assert.ok(
+      commandIndex > gateCursor,
+      `${command} must follow release-time LLM generation`
+    );
     gateCursor = commandIndex;
   }
-  const pushMain = publishScript.indexOf('git push origin "$release_sha:refs/heads/main"');
+  const pushMain = publishScript.indexOf(
+    'git push origin "$release_sha:refs/heads/main"'
+  );
   const dispatch = publishScript.indexOf('gh workflow run full-engine.yml');
   const waitCi = publishScript.indexOf('wait-ci', dispatch);
   const waitFullEngine = publishScript.indexOf('wait-full-engine', waitCi);
   const qualificationDriftGuard = publishScript.indexOf(
     'current_head="$(git rev-parse HEAD^{commit})"',
-    waitFullEngine,
+    waitFullEngine
   );
   const qualificationStatus = publishScript.indexOf(
     'qualification_status="$(git status --porcelain)"',
-    qualificationDriftGuard,
+    qualificationDriftGuard
   );
-  const qualificationPassed = publishScript.indexOf('QUALIFICATION_PASSED=1', waitFullEngine);
+  const qualificationPassed = publishScript.indexOf(
+    'QUALIFICATION_PASSED=1',
+    waitFullEngine
+  );
   const tag = publishScript.indexOf('git tag -a', waitFullEngine);
   const pushTags = publishScript.indexOf('git push --atomic origin', tag);
   const release = publishScript.lastIndexOf('gh release create');
@@ -597,15 +831,18 @@ test('release script pins its repository and pushes release refs atomically', ()
   assert.ok(tag < pushTags);
   assert.ok(pushTags < release);
 
-  const qualificationGuardBlock = publishScript.slice(qualificationDriftGuard, tag);
+  const qualificationGuardBlock = publishScript.slice(
+    qualificationDriftGuard,
+    tag
+  );
   assert.match(
     qualificationGuardBlock,
-    /qualification_status="\$\(git status --porcelain\)"/,
+    /qualification_status="\$\(git status --porcelain\)"/
   );
 
   const packageExecution = publishScript.slice(
     publishScript.indexOf('pnpm install'),
-    publishScript.indexOf('release_sha='),
+    publishScript.indexOf('release_sha=')
   );
   assert.doesNotMatch(packageExecution, /GH_TOKEN=/);
 
@@ -613,55 +850,319 @@ test('release script pins its repository and pushes release refs atomically', ()
   assert.doesNotMatch(readme, /`@aceshooting\/lyra-ui` is published at/);
   assert.match(readme, /source is versioned at/);
 
-  const ciWorkflow = readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8');
-  const lintJob = ciWorkflow.slice(ciWorkflow.indexOf('  lint:'), ciWorkflow.indexOf('\n  static-checks:'));
+  const ciWorkflow = readFileSync(
+    path.join(repoRoot, '.github/workflows/ci.yml'),
+    'utf8'
+  );
+  const lintJob = ciWorkflow.slice(
+    ciWorkflow.indexOf('  lint:'),
+    ciWorkflow.indexOf('\n  static-checks:')
+  );
   assert.match(lintJob, /fetch-depth: 0/);
 });
 
 test('package lifecycle and root custom-elements metadata are clean-checkout safe', () => {
-  const rootPackage = JSON.parse(readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  const rootPackage = JSON.parse(
+    readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
+  );
   const lyraPackage = JSON.parse(
-    readFileSync(path.join(repoRoot, 'packages/lyra-ui/package.json'), 'utf8'),
+    readFileSync(path.join(repoRoot, 'packages/lyra-ui/package.json'), 'utf8')
   );
   const lyraManifestRelativePath = path.posix.join(
     'packages/lyra-ui',
-    lyraPackage.customElements,
+    lyraPackage.customElements
   );
   const rootManifestPath = path.resolve(repoRoot, rootPackage.customElements);
   const lyraManifestPath = path.resolve(repoRoot, lyraManifestRelativePath);
 
   assert.equal(rootPackage.customElements, lyraManifestRelativePath);
   assert.equal(rootManifestPath, lyraManifestPath);
-  const customElementsManifest = JSON.parse(readFileSync(rootManifestPath, 'utf8'));
+  const customElementsManifest = JSON.parse(
+    readFileSync(rootManifestPath, 'utf8')
+  );
   assert.equal(customElementsManifest.schemaVersion, '1.0.0');
   assert.ok(
-    Array.isArray(customElementsManifest.modules) && customElementsManifest.modules.length > 0,
-    'the root customElements target must be a populated custom-elements manifest',
+    Array.isArray(customElementsManifest.modules) &&
+      customElementsManifest.modules.length > 0,
+    'the root customElements target must be a populated custom-elements manifest'
   );
   assert.equal(lyraPackage.scripts.pretest, 'pnpm run build');
   assert.match(lyraPackage.scripts.prepack, /^pnpm run package-metadata &&/);
 });
 
 test('contributor docs follow the package-manager authority', () => {
-  const rootPackage = JSON.parse(readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
-  const packageManagerVersion = rootPackage.packageManager.replace(/^pnpm@/u, '');
-  const guide = readFileSync(path.join(repoRoot, 'docs/agents/ci-and-gates.md'), 'utf8');
+  const rootPackage = JSON.parse(
+    readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
+  );
+  const packageManagerVersion = rootPackage.packageManager.replace(
+    /^pnpm@/u,
+    ''
+  );
+  const guide = readFileSync(
+    path.join(repoRoot, 'docs/agents/ci-and-gates.md'),
+    'utf8'
+  );
 
-  assert.match(guide, new RegExp(`pnpm ${packageManagerVersion.replaceAll('.', '\\.')}`, 'u'));
+  assert.match(
+    guide,
+    new RegExp(`pnpm ${packageManagerVersion.replaceAll('.', '\\.')}`, 'u')
+  );
   assert.doesNotMatch(guide, /pnpm 11\.20\.0/u);
+});
+
+test('contributor docs derive the local platform modes from the runner and CI matrix', () => {
+  const ciScript = readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8');
+  const workflow = readFileSync(
+    path.join(repoRoot, '.github/workflows/ci.yml'),
+    'utf8'
+  );
+  const guide = readFileSync(
+    path.join(repoRoot, 'docs/agents/ci-and-gates.md'),
+    'utf8'
+  );
+  const localAggregate = guide
+    .split('## Local aggregate: `scripts/ci.sh`')[1]
+    ?.split('\n## ')[0];
+  assert.ok(
+    localAggregate,
+    'the contributor guide must document scripts/ci.sh'
+  );
+  const normalizedAggregate = localAggregate.replace(/\s+/gu, ' ');
+
+  const browserLoop = ciScript.match(
+    /if \[\[ "\$RUN_PLATFORM" == "1" \]\]; then\s+for browser in ([^;]+); do/u
+  );
+  assert.ok(
+    browserLoop,
+    'scripts/ci.sh must expose a parseable --platform browser loop'
+  );
+  const platformBrowsers = browserLoop[1].trim().split(/\s+/u);
+  const displayName = (browser) => browser[0].toUpperCase() + browser.slice(1);
+  const formattedBrowserList = platformBrowsers
+    .map(displayName)
+    .map((browser, index, all) =>
+      index === all.length - 1 && all.length > 1 ? `and ${browser}` : browser
+    )
+    .join(platformBrowsers.length > 2 ? ', ' : ' ');
+  assert.ok(
+    normalizedAggregate.includes(
+      `The ${platformBrowsers.length}-browser Node 22 sweep is ${formattedBrowserList}.`
+    ),
+    'the guide must list every browser in scripts/ci.sh --platform'
+  );
+
+  const platformStart = workflow.indexOf('\n  platform-contracts:');
+  const stepsStart = workflow.indexOf('\n    steps:', platformStart);
+  assert.ok(
+    platformStart >= 0 && stepsStart > platformStart,
+    'CI must define platform-contracts'
+  );
+  const platformHeader = workflow.slice(platformStart, stepsStart);
+  const legs = [
+    ...platformHeader.matchAll(
+      /          - browser: (\S+)\n            node-version: (\d+)\n            shard_index: (\d+)\n            shard_total: (\d+)/gu
+    ),
+  ].map((match) => ({
+    browser: displayName(match[1]),
+    node: Number(match[2]),
+    shard: Number(match[3]),
+    total: Number(match[4]),
+  }));
+  assert.ok(
+    legs.length > 0,
+    'the CI platform matrix must have parseable include rows'
+  );
+
+  const nodeSummaries = [...new Set(legs.map(({ node }) => node))]
+    .sort((a, b) => a - b)
+    .map((node) => {
+      const nodeLegs = legs.filter((leg) => leg.node === node);
+      const browserTotals = [
+        ...new Map(nodeLegs.map(({ browser, total }) => [browser, total])),
+      ];
+      const list = browserTotals
+        .map(
+          ([browser, total]) =>
+            `${browser} (${total} ${total === 1 ? 'shard' : 'shards'})`
+        )
+        .map((entry, index, all) =>
+          index === all.length - 1 && all.length > 1 ? `and ${entry}` : entry
+        )
+        .join(browserTotals.length > 2 ? ', ' : ' ');
+      return `Node ${node} runs ${list}`;
+    });
+  assert.ok(
+    normalizedAggregate.includes(
+      `Its ${legs.length} legs are source-derived: ${nodeSummaries.join('; ')}.`
+    ),
+    'the guide must enumerate every CI platform leg from the workflow matrix'
+  );
+});
+
+test('catalog prose uses the shipped strict virtualization threshold contract', () => {
+  const readme = readFileSync(
+    path.join(repoRoot, 'packages/lyra-ui/README.md'),
+    'utf8'
+  );
+  const shared = readFileSync(
+    path.join(repoRoot, 'packages/lyra-ui/llms/shared.md'),
+    'utf8'
+  );
+  const catalogRows = ['lr-ingestion-queue', 'lr-activity-feed'].map(
+    (tagName) => {
+      const row = readme
+        .split('\n')
+        .find((line) => line.startsWith(`| \`<${tagName}>\``));
+      assert.ok(row, `README catalog must contain <${tagName}>`);
+      return row;
+    }
+  );
+
+  for (const row of catalogRows) {
+    assert.match(row, /`virtualizeAt`/u);
+    assert.match(row, /(?:above|more than) `virtualizeAt`/u);
+    assert.doesNotMatch(row, /virtualizeThreshold|at or above/iu);
+  }
+  assert.match(shared, /`virtualizeThreshold` → `virtualizeAt`/u);
+});
+
+test('MCP catalog prose matches the validated resource and request-event contract', () => {
+  const readme = readFileSync(
+    path.join(repoRoot, 'packages/lyra-ui/README.md'),
+    'utf8'
+  );
+  const row = readme
+    .split('\n')
+    .find((line) => line.startsWith('| `<lr-mcp-app>`'));
+  assert.ok(row, 'README catalog must contain <lr-mcp-app>');
+  assert.match(row, /required resource descriptor/iu);
+  assert.match(row, /exactly one of HTML or source URL/iu);
+  assert.match(row, /host-authorized request events/iu);
+  assert.doesNotMatch(row, /origin allowlist|error event/iu);
+});
+
+test('typed chart catalog prose matches the writable type contract', () => {
+  const readme = readFileSync(
+    path.join(repoRoot, 'packages/lyra-ui/README.md'),
+    'utf8'
+  );
+  const row = readme
+    .split('\n')
+    .find((line) => line.startsWith('| `<lr-bar-chart>`'));
+  assert.ok(row, 'README catalog must contain the typed chart row');
+  assert.match(row, /tag-specific defaults/iu);
+  assert.match(row, /full writable `LyraChartType` vocabulary/iu);
+  assert.doesNotMatch(row, /type` locked/iu);
+});
+
+test('sequence playback catalog prose uses the v9 domain surface', () => {
+  const readme = readFileSync(
+    path.join(repoRoot, 'packages/lyra-ui/README.md'),
+    'utf8'
+  );
+  const row = readme
+    .split('\n')
+    .find((line) => line.startsWith('| `<lr-sequence-playback>`'));
+  assert.ok(row, 'README catalog must contain <lr-sequence-playback>');
+  assert.match(row, /`itemCount`/u);
+  assert.match(row, /`currentIndex`/u);
+  assert.match(row, /`lr-sequence-step`/u);
+  assert.doesNotMatch(readme, /^\| `<lr-playback>`/mu);
+});
+
+test('the authored provider-neutral AI import example compiles against the shipped source entry', () => {
+  const shared = readFileSync(
+    path.join(repoRoot, 'packages/lyra-ui/llms/shared.md'),
+    'utf8'
+  );
+  const section = shared
+    .split('## Provider-neutral AI types: `@aceshooting/lyra-ui/ai`')[1]
+    ?.split('\n## ')[0];
+  assert.ok(section, 'shared.md must contain the provider-neutral AI section');
+  assert.match(section, /monotonic `generation`/u);
+  assert.match(section, /strictly increasing `sequence`/u);
+  assert.match(section, /DEFAULT_AGENT_STREAM_LIMITS/u);
+  assert.match(section, /success\/error\s+union/u);
+  assert.doesNotMatch(
+    section,
+    /src\/ai\/types\.contract\.ts|adaptAiSdkStream|adaptAgUiEvents/u
+  );
+  const snippet = section.match(/```ts\n([\s\S]*?)\n```/u)?.[1];
+  assert.ok(snippet, 'the AI section must contain a TypeScript import example');
+
+  const tempDir = mkdtempSync(path.join(tmpdir(), 'lyra-ai-doc-example-'));
+  try {
+    const sourcePath = path.join(tempDir, 'example.ts');
+    const configPath = path.join(tempDir, 'tsconfig.json');
+    writeFileSync(sourcePath, `${snippet}\n`, 'utf8');
+    writeFileSync(
+      configPath,
+      JSON.stringify(
+        {
+          compilerOptions: {
+            target: 'ES2022',
+            module: 'ESNext',
+            moduleResolution: 'bundler',
+            strict: true,
+            noEmit: true,
+            skipLibCheck: true,
+            noUnusedLocals: false,
+            noUnusedParameters: false,
+            verbatimModuleSyntax: true,
+            experimentalDecorators: true,
+            useDefineForClassFields: false,
+            paths: {
+              '@aceshooting/lyra-ui/ai': [
+                path.relative(
+                  tempDir,
+                  path.join(repoRoot, 'packages/lyra-ui/src/ai/index.ts')
+                ),
+              ],
+            },
+          },
+          files: [sourcePath],
+        },
+        null,
+        2
+      )
+    );
+
+    const tsc = path.join(repoRoot, 'packages/lyra-ui/node_modules/.bin/tsc');
+    const result = spawnSync(
+      tsc,
+      ['--project', configPath, '--pretty', 'false'],
+      {
+        cwd: repoRoot,
+        encoding: 'utf8',
+      }
+    );
+    assert.equal(
+      result.status,
+      0,
+      `shared.md AI example must compile against src/ai/index.ts:\n${result.stdout}${result.stderr}`
+    );
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
 });
 
 test('local platform legs keep nested package-manager calls on their selected toolchain', () => {
   const ciScript = readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8');
-  const pnpmProxy = readFileSync(path.join(repoRoot, 'scripts/ci-bin/pnpm'), 'utf8');
+  const pnpmProxy = readFileSync(
+    path.join(repoRoot, 'scripts/ci-bin/pnpm'),
+    'utf8'
+  );
   const runWithToolchain = ciScript.slice(
     ciScript.indexOf('run_with_toolchain()'),
-    ciScript.indexOf('\nvalidate_platform_toolchain()', ciScript.indexOf('run_with_toolchain()')),
+    ciScript.indexOf(
+      '\nvalidate_platform_toolchain()',
+      ciScript.indexOf('run_with_toolchain()')
+    )
   );
 
   assert.match(
     runWithToolchain,
-    /PATH="\$CI_SH_ROOT\/scripts\/ci-bin:\$\(dirname "\$node_bin"\):\$PATH"/u,
+    /PATH="\$CI_SH_ROOT\/scripts\/ci-bin:\$\(dirname "\$node_bin"\):\$PATH"/u
   );
   assert.match(runWithToolchain, /CI_SH_SELECTED_PNPM_BIN="\$pnpm_bin"/u);
   assert.match(runWithToolchain, /npm_config_scripts_prepend_node_path=false/u);
@@ -673,20 +1174,26 @@ test('policy-summary registration and authored docs match its actual composition
   const registration = readFileSync(
     path.join(
       repoRoot,
-      'packages/lyra-ui/src/components/agent-tools/policy-summary/policy-summary.ts',
+      'packages/lyra-ui/src/components/agent-tools/policy-summary/policy-summary.ts'
     ),
-    'utf8',
+    'utf8'
   );
-  const readme = readFileSync(path.join(repoRoot, 'packages/lyra-ui/README.md'), 'utf8');
+  const readme = readFileSync(
+    path.join(repoRoot, 'packages/lyra-ui/README.md'),
+    'utf8'
+  );
   const authored = readFileSync(
     path.join(repoRoot, 'packages/lyra-ui/llms/agent-tools.md'),
-    'utf8',
+    'utf8'
   );
 
   assert.doesNotMatch(registration, /overlays\/callout/u);
-  const catalogRow = readme.split('\n').find((line) => line.includes('<lr-policy-summary>')) ?? '';
+  const catalogRow =
+    readme.split('\n').find((line) => line.includes('<lr-policy-summary>')) ??
+    '';
   assert.doesNotMatch(catalogRow, /lr-callout/u);
-  const section = authored.split('## `lr-policy-summary`')[1]?.split('\n## ')[0] ?? '';
+  const section =
+    authored.split('## `lr-policy-summary`')[1]?.split('\n## ')[0] ?? '';
   assert.doesNotMatch(section, /tones? the badge and callout/iu);
 });
 
@@ -694,9 +1201,9 @@ test('interactive graph-legend story exposes visible feedback without a duplicat
   const story = readFileSync(
     path.join(
       repoRoot,
-      'packages/lyra-ui/src/components/retrieval/graph-legend/graph-legend.stories.ts',
+      'packages/lyra-ui/src/components/retrieval/graph-legend/graph-legend.stories.ts'
     ),
-    'utf8',
+    'utf8'
   );
 
   assert.doesNotMatch(story, /@lr-visibility-change=\$\{[^}]*console\.log/su);

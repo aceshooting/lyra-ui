@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A chronological list of an agent run\'s tool calls, composing `<lr-tool-call-chip>` and `<lr-tool-result-view>` per entry plus one shared `<lr-tool-approval-dialog>` for entries gated behind a human decision. `entries` is sorted by `startedAt`; per-entry `redactedFields` mask sensitive `args`/`result`/`error` values in the detail view only — the approval dialog always sees the real, unmasked arguments.',
+          'A chronological list of an agent run\'s tool calls, composing `<lr-tool-call-chip>` and `<lr-tool-result-view>` per entry plus one shared `<lr-tool-approval-dialog>` for entries gated behind a human decision. Duplicate `(sourceKey,id)` pairs normalize first-wins and foreign statuses normalize to pending. At most 500 entries mount while open/reviewed identities are reserved. `redactedFields` work is deferred until disclosure, memoized, and bounded; it masks only the read-only detail view, while approval always sees the real arguments.',
       },
     },
   },
@@ -24,8 +24,10 @@ function mixedEntries(): ToolTimelineEntry[] {
   return [
     {
       id: 'call-1',
+      sourceKey: 'run-2026-08-14',
       name: 'search_web',
       category: 'research',
+      icon: '🔎',
       args: { query: 'solar inverter efficiency 2026' },
       result: { resultCount: 8 },
       status: 'success',
@@ -34,6 +36,7 @@ function mixedEntries(): ToolTimelineEntry[] {
     },
     {
       id: 'call-2',
+      sourceKey: 'run-2026-08-14',
       name: 'run_python',
       args: { code: 'sum(range(101))' },
       status: 'error',
@@ -44,6 +47,7 @@ function mixedEntries(): ToolTimelineEntry[] {
     },
     {
       id: 'call-3',
+      sourceKey: 'run-2026-08-14',
       name: 'send_email',
       args: { to: 'ops@example.com', subject: 'Nightly build failed' },
       status: 'pending',

@@ -52,7 +52,7 @@ it('moves the start handle with ArrowRight and emits lr-input then lr-change', a
   expect(startHandle.getAttribute('role')).to.equal('slider');
   // lr-input/lr-change are emitted synchronously from the keydown/keyup
   // handlers, so the listener must be attached before dispatch (matches the
-  // convention used by lr-split's keyboard-step tests).
+  // convention used by lr-multi-split's keyboard-step tests).
   let inputDetail: { start: number; end: number } | undefined;
   el.addEventListener('lr-input', (e) => (inputDetail = (e as CustomEvent).detail));
   startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -187,6 +187,22 @@ it('re-clamps when only `start` is set above the current `end` (controlled/two-w
   await el.updateComplete;
   expect(el.start).to.be.at.most(el.end);
   expect(el.start).to.equal(60);
+});
+
+it('normalizes a batched controlled endpoint pair atomically without losing either value', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+  )) as LyraTimeRange;
+
+  // Both writes join one Lit update. Sequential normalization used to store the new start (90),
+  // collapse it against the old end (80), then collapse the new end (10) against that mutation,
+  // producing 10/10 and permanently losing 90.
+  el.start = 90;
+  el.end = 10;
+  await el.updateComplete;
+
+  expect(el.start).to.equal(10);
+  expect(el.end).to.equal(90);
 });
 
 it('does not emit lr-change on keyup of a non-arrow key', async () => {
@@ -1281,6 +1297,31 @@ it('resolves the rangeStart/rangeEnd aria-label keys through a .strings override
   expect(endHandle.getAttribute('aria-label')).to.equal('Fin de plage');
 });
 
+it('treats every supplied handle label literally, including the former English sentinels and empty strings', async () => {
+  const el = (await fixture(html`
+    <lr-time-range
+      min="0"
+      max="100"
+      start="20"
+      end="80"
+      start-label="Range start"
+      end-label="Range end"
+      .strings=${{ rangeStart: 'Début de plage', rangeEnd: 'Fin de plage' }}
+    ></lr-time-range>
+  `)) as LyraTimeRange;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
+
+  expect(startHandle.getAttribute('aria-label')).to.equal('Range start');
+  expect(endHandle.getAttribute('aria-label')).to.equal('Range end');
+
+  el.startLabel = '';
+  el.endLabel = '';
+  await el.updateComplete;
+  expect(startHandle.getAttribute('aria-label')).to.equal('');
+  expect(endHandle.getAttribute('aria-label')).to.equal('');
+});
+
 it('reflects startLabel/endLabel from their start-label/end-label content attributes', async () => {
   const el = (await fixture(
     html`<lr-time-range
@@ -1518,6 +1559,17 @@ it('renders no [part="presets"] row at all when presets is empty (the default)',
   expect(el.shadowRoot!.querySelectorAll('[part="preset-button"]').length).to.equal(0);
 });
 
+it('owns a bounded readonly snapshot of assigned preset rows', async () => {
+  const source = [{ label: 'Initial', start: 1, end: 2 }];
+  const el = (await fixture(html`<lr-time-range .presets=${source}></lr-time-range>`)) as LyraTimeRange;
+  source[0]!.label = 'Forged';
+  source.push({ label: 'Injected', start: 3, end: 4 });
+  expect(el.presets).to.deep.equal([{ label: 'Initial', start: 1, end: 2 }]);
+  expect(Object.isFrozen(el.presets)).to.be.true;
+  expect(Object.isFrozen(el.presets[0])).to.be.true;
+  expect(el.shadowRoot!.querySelectorAll('[part="preset-button"]')).to.have.lengthOf(1);
+});
+
 it('renders a [part="presets"] row of [part="preset-button"] buttons when presets is non-empty', async () => {
   const el = (await fixture(
     html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
@@ -1575,6 +1627,26 @@ it('marks only the preset matching the current start/end as active (aria-pressed
   expect(buttons[1].getAttribute('aria-pressed')).to.equal('false');
   expect(buttons[2].getAttribute('aria-pressed')).to.equal('true');
   expect(buttons[2].hasAttribute('data-active')).to.be.true;
+});
+
+it('projects clamped and reversed presets through the same normalization before exposing active state', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="10" max="90" start="10" end="90"></lr-time-range>`,
+  )) as LyraTimeRange;
+  el.presets = [{ label: 'Everything', start: 120, end: -5 }];
+  await el.updateComplete;
+
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="preset-button"]')!;
+  expect(button.getAttribute('aria-pressed')).to.equal('true');
+  expect(button.hasAttribute('data-active')).to.be.true;
+
+  const events: string[] = [];
+  el.addEventListener('lr-input', () => events.push('input'));
+  el.addEventListener('lr-change', () => events.push('change'));
+  button.click();
+  expect(el.start).to.equal(10);
+  expect(el.end).to.equal(90);
+  expect(events, 'an already-active normalized preset is event-silent').to.deep.equal([]);
 });
 
 it('handles a preset that shifts the whole range past the previous end (clamp() cross-reference must not clip it)', async () => {
@@ -1939,6 +2011,42 @@ const supportsStateSelector = (() => {
 })();
 
 describe('lr-time-range setCustomValidity()', () => {
+  it('exposes a reflected customError property that delegates to the native validity surface', async () => {
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+    )) as LyraTimeRange;
+
+    el.customError = 'That range is unavailable';
+    expect(el.getAttribute('custom-error')).to.equal('That range is unavailable');
+    expect(el.validationMessage).to.equal('That range is unavailable');
+    expect(el.validity.customError).to.be.true;
+
+    el.customError = null;
+    expect(el.hasAttribute('custom-error')).to.be.false;
+    expect(el.validationMessage).to.equal('');
+    expect(el.validity.customError).to.be.false;
+  });
+
+  it('emits one cancelable lr-invalid alias and forwards cancellation to native invalid', async () => {
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+    )) as LyraTimeRange;
+    const aliases: CustomEvent[] = [];
+    el.addEventListener('lr-invalid', (event) => {
+      aliases.push(event as CustomEvent);
+      event.preventDefault();
+    });
+    const natives: Event[] = [];
+    el.addEventListener('invalid', (event) => natives.push(event));
+    el.setCustomValidity('That range is unavailable');
+
+    expect(el.checkValidity()).to.be.false;
+    expect(aliases).to.have.lengthOf(1);
+    expect(aliases[0].bubbles && aliases[0].composed && aliases[0].cancelable).to.be.true;
+    expect(natives).to.have.lengthOf(1);
+    expect(natives[0].defaultPrevented).to.be.true;
+  });
+
   it('blocks form submission and becomes the validationMessage', async () => {
     const form = (await fixture(html`
       <form><lr-time-range min="0" max="100" start="20" end="80"></lr-time-range></form>
@@ -2051,6 +2159,33 @@ it('treats a blur as interaction for the user-* validity states', async function
   handle.blur();
   expect(el.matches(':state(user-invalid)'), 'focusout is the observable blur signal').to.be.true;
   expect(el.start, 'blur alone must not move a handle').to.equal(20);
+});
+
+it('does not mark a pristine invalid range as user-invalid when disablement forces focusout', async function () {
+  if (!supportsCustomStates || !supportsStateSelector) this.skip();
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <fieldset>
+        <lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>
+      </fieldset>
+    </form>
+  `);
+  const fieldset = form.querySelector('fieldset')!;
+  const el = form.querySelector('lr-time-range') as LyraTimeRange;
+  const handle = el.shadowRoot!.querySelector<HTMLElement>('[part="handle-start"]')!;
+  el.setCustomValidity('That range is unavailable');
+  handle.focus();
+
+  fieldset.disabled = true;
+  // Model the observed Chromium ordering explicitly: the selector is already live while the
+  // callback-backed cache can still report its previous value when forced focusout arrives.
+  el.formDisabledCallback(false);
+  handle.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+  fieldset.disabled = false;
+  await el.updateComplete;
+
+  expect(el.matches(':state(user-invalid)')).to.be.false;
+  expect(el.matches(':state(invalid)'), 'the custom error itself remains after re-enable').to.be.true;
 });
 
 describe('lr-time-range form reset', () => {

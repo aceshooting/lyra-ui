@@ -1,6 +1,10 @@
-import { fixture, expect, html, oneEvent, aTimeout } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from "@open-wc/testing";
 import "./virtual-list.js";
-import { MAX_OVERSCAN_ROWS, type LyraVirtualList } from "./virtual-list.js";
+import {
+  MAX_OVERSCAN_ROWS,
+  type LyraVirtualList,
+  type VirtualListIndexedSource,
+} from "./virtual-list.js";
 import { styles } from "./virtual-list.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
@@ -90,6 +94,139 @@ it("is accessible with a populated, windowed item list", async () => {
   await el.updateComplete;
   await nextFrame();
   await expect(el).to.be.accessible();
+});
+
+it("accepts a readonly array through source while preserving items as the unset fallback", async () => {
+  const el = (await fixture(html`
+    <lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      row-height="40"
+      .items=${["items fallback"]}
+      .source=${["source row"] as const}
+      .renderItem=${renderText}
+    ></lr-virtual-list>
+  `)) as LyraVirtualList;
+  await nextFrame();
+  expect(el.shadowRoot!.querySelector('[part="row"]')?.textContent).to.contain("source row");
+
+  el.source = undefined;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="row"]')?.textContent).to.contain("items fallback");
+});
+
+it("keeps a 100,000-row indexed source sparse across ordinary state updates", async () => {
+  let itemReads = 0;
+  let keyReads = 0;
+  const source: VirtualListIndexedSource<number> = {
+    count: 100_000,
+    itemAt(index) {
+      itemReads++;
+      return index + 1;
+    },
+    keyAt(index) {
+      keyReads++;
+      return index + 1;
+    },
+  };
+  const el = (await fixture(html`
+    <lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      row-height="40"
+      .source=${source}
+      .renderItem=${renderText}
+    ></lr-virtual-list>
+  `)) as LyraVirtualList;
+  await nextFrame();
+  await el.updateComplete;
+
+  const firstReadCount = itemReads;
+  const internals = el as unknown as { offsets: number[]; rowIdentities: string[] };
+  expect(el.shadowRoot!.querySelector('[part="spacer"]')?.getAttribute("style")).to.contain("4000000px");
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.be.lessThan(40);
+  expect(itemReads).to.be.lessThan(40);
+  expect(keyReads).to.be.lessThan(80);
+  expect(internals.offsets).to.have.lengthOf(1);
+  expect(internals.rowIdentities).to.have.lengthOf(0);
+
+  el.loading = true;
+  await el.updateComplete;
+  expect(itemReads - firstReadCount).to.be.lessThan(40);
+  expect(internals.offsets).to.have.lengthOf(1);
+  expect(internals.rowIdentities).to.have.lengthOf(0);
+});
+
+it("uses an indexed source's reverse-key lookup for active-id without scanning the collection", async () => {
+  let reads = 0;
+  let reverseLookups = 0;
+  const source: VirtualListIndexedSource<number> = {
+    count: 100_000,
+    itemAt(index) {
+      reads++;
+      return index + 1;
+    },
+    keyAt(index) {
+      return index + 1;
+    },
+    indexOfKey(key) {
+      reverseLookups++;
+      return typeof key === "number" ? key - 1 : -1;
+    },
+  };
+  const el = await fixture<LyraVirtualList>(html`
+    <lr-virtual-list
+      row-height="40"
+      .source=${source}
+      .activeId=${99_999}
+      .renderItem=${(item: unknown) => String(item)}
+    ></lr-virtual-list>
+  `);
+  await el.updateComplete;
+
+  expect(reverseLookups).to.equal(1);
+  expect(reads).to.be.lessThan(30);
+});
+
+it("does not scan an indexed source's declared count when active-id has no reverse lookup", async () => {
+  let reads = 0;
+  let keyReads = 0;
+  const source: VirtualListIndexedSource<number> = {
+    count: 1_000_000_000,
+    itemAt(index) {
+      reads++;
+      return index;
+    },
+    keyAt(index) {
+      keyReads++;
+      return index;
+    },
+  };
+  const el = await fixture<LyraVirtualList>(html`
+    <lr-virtual-list
+      row-height="40"
+      .source=${source}
+      .activeId=${999_999_999}
+      .renderItem=${(item: unknown) => String(item)}
+    ></lr-virtual-list>
+  `);
+  await el.updateComplete;
+
+  expect(reads).to.be.lessThan(100);
+  expect(keyReads).to.be.lessThan(100);
+  expect(el.shadowRoot!.querySelector('[aria-current="true"]') === null).to.equal(true);
+});
+
+it("normalizes an invalid indexed count to an empty collection without reading it", async () => {
+  let reads = 0;
+  const el = (await fixture(html`
+    <lr-virtual-list
+      .source=${{ count: Number.NaN, itemAt: () => { reads++; return "bad"; } }}
+      .renderItem=${renderText}
+    ></lr-virtual-list>
+  `)) as LyraVirtualList;
+  await el.updateComplete;
+  expect(reads).to.equal(0);
+  expect(el.renderedRows).to.have.lengthOf(0);
+  expect(el.indexAtOffset(0)).to.equal(-1);
 });
 
 it("renders only a small window of DOM rows for a large items array, not every item", async () => {
@@ -711,6 +848,76 @@ it("in row-height='auto' mode, issues one corrective re-scroll once the target r
   expect(base.scrollTop).to.be.greaterThan(estimateBasedTop);
 });
 
+it("keeps an active-id target visible while tall preceding rows replace their estimates", async () => {
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches: query === "(prefers-reduced-motion: reduce)",
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as typeof window.matchMedia;
+  try {
+    const items = Array.from({ length: 50 }, (_, index) => index);
+    const el = await fixture<LyraVirtualList>(html`
+      <lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        overscan="3"
+        .items=${items}
+        .renderItem=${(_item: unknown, index: number) => html`
+          <div style="block-size:${index >= 20 && index < 25 ? 220 : 40}px"></div>
+        `}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>
+    `);
+    await nextFrame();
+    el.activeId = 25;
+    await el.updateComplete;
+
+    await waitUntil(() => {
+      const row = el.shadowRoot!.querySelector<HTMLElement>(
+        '[part="row"][data-row-index="25"]'
+      );
+      if (!row) return false;
+      const rowRect = row.getBoundingClientRect();
+      const viewportRect = el.scrollContainer!.getBoundingClientRect();
+      return rowRect.top >= viewportRect.top - 0.5 && rowRect.bottom <= viewportRect.bottom + 0.5;
+    }, "active row remains inside the viewport after measurement correction", {
+      timeout: 4000,
+      interval: 20,
+    });
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});
+
+it("cancels an estimate correction on manual scroll intent and source replacement", async () => {
+  const el = await fixture<LyraVirtualList>(html`
+    <lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      .items=${Array.from({ length: 50 }, (_, index) => index)}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lr-virtual-list>
+  `);
+  await nextFrame();
+  const internals = el as unknown as { pendingScrollCorrection?: unknown };
+  el.scrollToIndex(25, { align: "end", behavior: "auto" });
+  expect(internals.pendingScrollCorrection === undefined).to.equal(false);
+  el.scrollContainer!.dispatchEvent(new WheelEvent("wheel"));
+  expect(internals.pendingScrollCorrection === undefined).to.equal(true);
+
+  el.scrollToIndex(25, { align: "end", behavior: "auto" });
+  expect(internals.pendingScrollCorrection === undefined).to.equal(false);
+  el.scrollContainer!.dispatchEvent(new KeyboardEvent("keydown", { key: "PageDown" }));
+  expect(internals.pendingScrollCorrection === undefined).to.equal(true);
+
+  el.scrollToIndex(25, { align: "end", behavior: "auto" });
+  expect(internals.pendingScrollCorrection === undefined).to.equal(false);
+  el.items = Array.from({ length: 50 }, (_, index) => index + 100);
+  await el.updateComplete;
+  expect(internals.pendingScrollCorrection === undefined).to.equal(true);
+});
+
 it("emits lr-visible-range-changed once the container is measured after mount", async () => {
   const el = document.createElement("lr-virtual-list") as LyraVirtualList;
   el.setAttribute("style", "--lr-virtual-list-height:200px");
@@ -886,10 +1093,11 @@ it("binds observers and frames to the adopted owner and rejects retired callback
   try {
     frameDocument.body.append(frameDocument.adoptNode(el));
     await el.updateComplete;
-    expect(resizeRecords.length, "row, sticky, and container observers use the owner window").to.equal(3);
-    const focusObserver = (el as unknown as { stickyFocusObserver?: MutationObserver }).stickyFocusObserver;
-    const focusRecord = mutationRecords.find((record) => record.instance === focusObserver);
-    expect(focusRecord !== undefined, "sticky focus observation uses the owner window").to.equal(true);
+    expect(resizeRecords.length, "row, group, sticky, and container observers use the owner window").to.equal(4);
+    expect(
+      "stickyFocusObserver" in (el as unknown as Record<string, unknown>),
+      "inert sticky copies install no caller-subtree traversal observer",
+    ).to.equal(false);
 
     resizeRecords[0]!.callback([], {} as ResizeObserver);
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -898,14 +1106,12 @@ it("binds observers and frames to the adopted owner and rejects retired callback
     expect(frameCallbacks.size, "resize and scroll work schedule through the owner window").to.equal(2);
 
     let scrollEvents = 0;
-    el.addEventListener("lr-scroll", () => { scrollEvents += 1; });
+    el.addEventListener("lr-virtual-scroll", () => { scrollEvents += 1; });
     document.adoptNode(el);
     expect(cancelledFrames.length, "adoption cancels both owner-window frames").to.equal(2);
     expect(resizeRecords.every((record) => record.disconnects > 0)).to.equal(true);
-    expect(focusRecord!.disconnects).to.be.greaterThan(0);
 
     resizeRecords.forEach((record) => record.callback([], {} as ResizeObserver));
-    focusRecord!.callback([], {} as MutationObserver);
     retiredFrameCallbacks.forEach((callback) => callback(0));
     expect(scrollEvents, "retired observer/frame work cannot emit after adoption").to.equal(0);
     expect(frameCallbacks.size, "retired callbacks cannot schedule new owner work").to.equal(0);
@@ -943,9 +1149,6 @@ it("fails closed when an adopted owner lacks observer capabilities", async () =>
     frameDocument.body.append(frameDocument.adoptNode(el));
     await el.updateComplete;
     expect((el as unknown as { rowResizeObserver?: ResizeObserver }).rowResizeObserver === undefined).to.be.true;
-    expect(
-      (el as unknown as { stickyFocusObserver?: MutationObserver }).stickyFocusObserver === undefined,
-    ).to.be.true;
   } finally {
     el.remove();
     Object.defineProperty(frameWindow, "ResizeObserver", {
@@ -1127,6 +1330,24 @@ it('falls back to auto (measured) mode when row-height is neither "auto" nor a v
   const height = parseFloat(spacer.style.height);
   expect(height).to.be.greaterThan(0);
   expect(Number.isNaN(height)).to.be.false;
+  expect(el.rowHeight).to.equal("auto");
+});
+
+it("parses numeric row-height markup as a number and accepts numeric property writes", async () => {
+  const el = await fixture<LyraVirtualList>(html`
+    <lr-virtual-list
+      row-height="40"
+      .items=${["a", "b", "c"]}
+      .renderItem=${renderText}
+    ></lr-virtual-list>
+  `);
+  await el.updateComplete;
+  expect(el.rowHeight).to.equal(40);
+  expect(el.offsetForIndex(3)).to.equal(120);
+
+  el.rowHeight = 28;
+  await el.updateComplete;
+  expect(el.offsetForIndex(3)).to.equal(84);
 });
 
 it("positions rows via a transform instead of a padding-based spacer, so a new measurement only shifts later rows, not a page-wide reflow", () => {
@@ -1407,7 +1628,7 @@ it("keeps duplicate public keys as distinct occurrence-owned rows and activates 
   ).to.equal(3);
 });
 
-it("renders valid group labels at their indexed row offsets", async () => {
+it("measures group markers as virtual entries before their indexed rows", async () => {
   const el = (await fixture(
     html`<lr-virtual-list
       style="--lr-virtual-list-height:200px"
@@ -1430,7 +1651,72 @@ it("renders valid group labels at their indexed row offsets", async () => {
     "First",
     "Second",
   ]);
-  expect(groups[1].style.transform).to.equal("translateY(80px)");
+  const firstHeight = groups[0].getBoundingClientRect().height;
+  const secondHeight = groups[1].getBoundingClientRect().height;
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
+  expect(parseFloat(rows[0]!.style.transform.replace(/[^\d.-]/g, ""))).to.be.closeTo(firstHeight, 1);
+  expect(parseFloat(groups[1].style.transform.replace(/[^\d.-]/g, ""))).to.be.closeTo(
+    firstHeight + 80,
+    1
+  );
+  expect(parseFloat(rows[2]!.style.transform.replace(/[^\d.-]/g, ""))).to.be.closeTo(
+    firstHeight + 80 + secondHeight,
+    1
+  );
+  expect(el.offsetForIndex(3)).to.be.closeTo(120 + firstHeight + secondHeight, 1);
+  expect(rows[2]!.getBoundingClientRect().top).to.be.gte(
+    groups[1]!.getBoundingClientRect().bottom - 0.5
+  );
+});
+
+it("reflows variable-height group markers without covering their first rows", async () => {
+  const el = await fixture<LyraVirtualList>(html`
+    <lr-virtual-list
+      style="--lr-virtual-list-height:240px"
+      row-height="40"
+      .items=${["a", "b", "c", "d"]}
+      .groups=${[
+        { key: "a", label: "Tall", startIndex: 0 },
+        { key: "b", label: "Short", startIndex: 2 },
+      ]}
+      .renderItem=${renderText}
+    ></lr-virtual-list>
+  `);
+  await nextFrame();
+  const markers = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="group"]')];
+  markers[0]!.style.blockSize = "72px";
+  markers[0]!.style.boxSizing = "border-box";
+  markers[1]!.style.blockSize = "24px";
+  markers[1]!.style.boxSizing = "border-box";
+  await nextFrame();
+  await el.updateComplete;
+  await nextFrame();
+
+  for (const marker of markers) {
+    const index = Number(marker.dataset['groupIndex']);
+    const row = el.shadowRoot!.querySelector<HTMLElement>(
+      `[part="row"][data-row-index="${index}"]`
+    )!;
+    expect(row.getBoundingClientRect().top).to.be.gte(
+      marker.getBoundingClientRect().bottom - 0.5
+    );
+  }
+  expect(el.offsetForIndex(4)).to.be.closeTo(72 + 24 + 4 * 40, 1);
+});
+
+it("keeps an empty-label position anchor size-free", async () => {
+  const el = await fixture<LyraVirtualList>(html`
+    <lr-virtual-list
+      row-height="40"
+      .items=${["a", "b"]}
+      .groups=${[{ key: "anchor", label: "", startIndex: 0 }]}
+      .renderItem=${renderText}
+    ></lr-virtual-list>
+  `);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="group"]') === null).to.equal(true);
+  expect(el.offsetForIndex(0)).to.equal(0);
+  expect(el.offsetForIndex(2)).to.equal(80);
 });
 
 it("falls back to a group key when a group has no explicit label", async () => {
@@ -1574,6 +1860,7 @@ describe("itemRole / rowIndexOffset", () => {
     const cases = [
       { value: "NaN", expected: 0 },
       { value: "Infinity", expected: 0 },
+      { value: "-20", expected: 0 },
       { value: "2.9", expected: 2 },
     ];
     for (const { value, expected } of cases) {
@@ -1609,6 +1896,12 @@ describe("itemRole / rowIndexOffset", () => {
     await aTimeout(0);
     const firstRow = el.shadowRoot!.querySelector('[part="row"]')!;
     expect(firstRow.getAttribute("aria-rowindex")).to.equal("1");
+
+    el.rowIndexOffset = Number.MAX_SAFE_INTEGER;
+    await el.updateComplete;
+    expect(firstRow.getAttribute("aria-rowindex")).to.equal(
+      String(Number.MAX_SAFE_INTEGER)
+    );
   });
 });
 
@@ -1794,7 +2087,7 @@ describe("public offset/index queries", () => {
   });
 });
 
-describe("public scroll container and lr-scroll", () => {
+describe("public scroll container and lr-virtual-scroll", () => {
   async function scrollFixture(): Promise<LyraVirtualList> {
     const el = (await fixture(
       html`<lr-virtual-list
@@ -1830,13 +2123,15 @@ describe("public scroll container and lr-scroll", () => {
     ).to.be.true;
   });
 
-  it("coalesces a burst of scroll events within one frame into exactly one lr-scroll", async () => {
+  it("coalesces a burst of scroll events within one frame into exactly one lr-virtual-scroll", async () => {
     const el = await scrollFixture();
     const base = el.scrollContainer!;
     const details: { scrollTop: number; viewportHeight: number }[] = [];
-    el.addEventListener("lr-scroll", (e) =>
+    let legacyEvents = 0;
+    el.addEventListener("lr-virtual-scroll", (e) =>
       details.push((e as CustomEvent).detail)
     );
+    el.addEventListener("lr-scroll", () => legacyEvents++);
 
     base.scrollTop = 100;
     base.dispatchEvent(new Event("scroll"));
@@ -1849,11 +2144,12 @@ describe("public scroll container and lr-scroll", () => {
 
     expect(
       details.length,
-      "three scroll events in one frame produce one lr-scroll"
+      "three scroll events in one frame produce one lr-virtual-scroll"
     ).to.equal(1);
     expect(details[0].scrollTop).to.equal(base.scrollTop);
     expect(details[0].scrollTop).to.equal(375);
     expect(details[0].viewportHeight).to.be.closeTo(base.clientHeight, 1);
+    expect(legacyEvents, "the scroller event name is not aliased").to.equal(0);
   });
 
   it("reports sub-row scroll deltas that never change the visible index range", async () => {
@@ -1874,7 +2170,7 @@ describe("public scroll container and lr-scroll", () => {
     const base = el.scrollContainer!;
     let scrollEvents = 0;
     let rangeEvents = 0;
-    el.addEventListener("lr-scroll", () => scrollEvents++);
+    el.addEventListener("lr-virtual-scroll", () => scrollEvents++);
     el.addEventListener("lr-visible-range-changed", () => rangeEvents++);
 
     // 3px: far less than the 40px row height, so the rendered index range cannot change.
@@ -1883,18 +2179,18 @@ describe("public scroll container and lr-scroll", () => {
     await nextFrame();
     await el.updateComplete;
 
-    expect(scrollEvents, "lr-scroll tracks sub-row movement").to.equal(1);
+    expect(scrollEvents, "lr-virtual-scroll tracks sub-row movement").to.equal(1);
     expect(
       rangeEvents,
       "lr-visible-range-changed is not a substitute"
     ).to.equal(0);
   });
 
-  it("does not fire lr-scroll when nothing actually scrolled", async () => {
+  it("does not fire lr-virtual-scroll when nothing actually scrolled", async () => {
     const el = await scrollFixture();
     const base = el.scrollContainer!;
     let count = 0;
-    el.addEventListener("lr-scroll", () => count++);
+    el.addEventListener("lr-virtual-scroll", () => count++);
 
     base.dispatchEvent(new Event("scroll")); // scrollTop still 0
     await nextFrame();
@@ -1964,9 +2260,9 @@ describe("sticky group overlay", () => {
   const STICKY_HEIGHT = 32;
   const ROW = 40;
   const groups = [
-    { key: "a", label: "Group A", startIndex: 5 },
-    { key: "b", label: "Group B", startIndex: 20 },
-    { key: "c", label: "Group C", startIndex: 40 },
+    { key: "Group A", label: "", startIndex: 5 },
+    { key: "Group B", label: "", startIndex: 20 },
+    { key: "Group C", label: "", startIndex: 40 },
   ];
   const items = Array.from({ length: 60 }, (_, i) => i);
 
@@ -1979,7 +2275,7 @@ describe("sticky group overlay", () => {
           aria-level="2"
           style="block-size:${ROW}px;box-sizing:border-box"
         >
-          ${groups.find((group) => group.startIndex === index)!.label}
+          ${groups.find((group) => group.startIndex === index)!.key}
         </div>`
       : html`item ${item}#${index}`;
 
@@ -1999,7 +2295,7 @@ describe("sticky group overlay", () => {
       aria-level="2"
       style="block-size:${STICKY_HEIGHT}px;box-sizing:border-box;background:var(--lr-color-surface)"
     >
-      <button type="button" class="sticky-button">${group.label}</button>
+      <button type="button" class="sticky-button">${group.label || group.key}</button>
     </div>
   `;
 
@@ -2065,23 +2361,6 @@ describe("sticky group overlay", () => {
     return outline.map((entry) =>
       entry.replace(/ ?style="scroll-padding-block-start:[^"]*"/, "")
     );
-  }
-
-  /** Elements the browser would stop at during a forward Tab walk, in DOM order: `tabIndex` is the
-   *  browser's own computed value (0 for a bare `<button>`), not a stylesheet or markup guess. */
-  function tabStops(el: LyraVirtualList): string[] {
-    return [
-      ...el.shadowRoot!.querySelectorAll<HTMLElement>(
-        "a[href], button, input, select, textarea, [tabindex]"
-      ),
-    ]
-      .filter((node) => node.tabIndex >= 0)
-      .map(
-        (node) =>
-          `${node.localName}.${
-            node.className || node.getAttribute("part") || ""
-          }`
-      );
   }
 
   it("renders no sticky layer or scroll inset when only renderStickyGroup is configured", async () => {
@@ -2255,8 +2534,7 @@ describe("sticky group overlay", () => {
     ).to.be.closeTo(0, 1);
   });
 
-  it("is aria-hidden, adds no tab stop, and leaves exactly one exposed heading per group", async () => {
-    const plain = await mount(false);
+  it("is aria-hidden and inert without mutating caller focus metadata", async () => {
     const el = await mount(true);
     // Group A's real header row sits exactly at the viewport top here, so the real header and the
     // pinned copy are both in the DOM at once -- the only state in which a duplicate heading or a
@@ -2265,12 +2543,13 @@ describe("sticky group overlay", () => {
 
     const copy = overlay(el)!;
     expect(copy.getAttribute("aria-hidden")).to.equal("true");
+    expect(copy.hasAttribute("inert")).to.equal(true);
 
-    // The copy's own button is focusable by script at most -- never a Tab stop, so the Tab order is
-    // exactly the one the list has without any overlay.
+    // `inert` owns focus exclusion without rewriting the consumer callback's button contract.
     const stickyButton = copy.querySelector<HTMLElement>(".sticky-button")!;
-    expect(stickyButton.tabIndex).to.equal(-1);
-    expect(tabStops(el)).to.deep.equal(tabStops(plain));
+    expect(stickyButton.tabIndex).to.equal(0);
+    stickyButton.focus();
+    expect(el.shadowRoot!.activeElement === stickyButton).to.equal(false);
 
     const headings = [...el.shadowRoot!.querySelectorAll('[role="heading"]')];
     expect(
@@ -2288,7 +2567,7 @@ describe("sticky group overlay", () => {
     ).to.be.true;
   });
 
-  it("removes focus stops nested inside an open custom-element shadow root from the aria-hidden copy", async () => {
+  it("makes an open-shadow control inert without traversing or rewriting its tabindex", async () => {
     const tagName = "test-sticky-shadow-control";
     if (!customElements.get(tagName)) {
       customElements.define(
@@ -2318,10 +2597,12 @@ describe("sticky group overlay", () => {
     const customControl = overlay(el)!.querySelector<HTMLElement>(tagName)!;
     const shadowButton =
       customControl.shadowRoot!.querySelector<HTMLButtonElement>("button")!;
-    expect(shadowButton.tabIndex).to.equal(-1);
+    expect(shadowButton.tabIndex).to.equal(0);
+    shadowButton.focus();
+    expect(customControl.shadowRoot!.activeElement === shadowButton).to.equal(false);
   });
 
-  it("removes shadow focus stops added or replaced after the sticky copy renders", async () => {
+  it("keeps later shadow content inert without observing or mutating it", async () => {
     const tagName = "test-async-sticky-shadow-control";
     if (!customElements.get(tagName)) {
       customElements.define(
@@ -2364,17 +2645,19 @@ describe("sticky group overlay", () => {
     ) as HTMLElement & { renderAction(label: string): void };
     const firstButton =
       customControl.shadowRoot!.querySelector<HTMLButtonElement>("button")!;
-    expect(firstButton.tabIndex).to.equal(-1);
+    expect(firstButton.tabIndex).to.equal(0);
 
     customControl.renderAction("Replacement action");
     await aTimeout(0);
     const replacementButton =
       customControl.shadowRoot!.querySelector<HTMLButtonElement>("button")!;
     expect((replacementButton) !== (firstButton)).to.equal(true);
-    expect(replacementButton.tabIndex).to.equal(-1);
+    expect(replacementButton.tabIndex).to.equal(0);
+    replacementButton.focus();
+    expect(customControl.shadowRoot!.activeElement === replacementButton).to.equal(false);
   });
 
-  it("is pointer-transparent by default and interactive only when the consumer opts in", async () => {
+  it("is pointer-transparent and inert even if a part rule changes its paint hit-testing", async () => {
     const el = await mount(true);
     await scrollTo(el, 10 * ROW);
     const copy = overlay(el)!;
@@ -2396,16 +2679,20 @@ describe("sticky group overlay", () => {
     document.head.append(style);
     try {
       expect(getComputedStyle(copy).pointerEvents).to.equal("auto");
-      const hitOptedIn = el.shadowRoot!.elementFromPoint(
-        rect.left + rect.width / 2,
-        rect.top + rect.height / 2
-      );
-      expect(
-        hitOptedIn?.closest('[part~="sticky-group"]') !== null,
-        "the opted-in band receives the hit"
-      ).to.be.true;
+      let activations = 0;
+      const stickyButton = copy.querySelector<HTMLButtonElement>("button")!;
+      stickyButton.addEventListener("click", () => activations++);
+      await sendMouse({
+        type: "click",
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      expect(activations, "inert suppresses activation without mutating the button").to.equal(0);
     } finally {
       style.remove();
+      await resetMouse();
     }
   });
 

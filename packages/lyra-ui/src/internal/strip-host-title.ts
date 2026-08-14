@@ -1,4 +1,4 @@
-import type { LitElement, PropertyValues } from 'lit';
+import type { LitElement } from 'lit';
 
 type Constructor<T> = new (...args: any[]) => T;
 
@@ -12,11 +12,10 @@ type Constructor<T> = new (...args: any[]) => T;
  * making the whole element show a native tooltip that repeats the same text
  * the shadow-tree element already shows on its own.
  *
- * Removing an observed attribute fires `attributeChangedCallback`
- * synchronously just like setting one does; a re-entrancy guard
- * (`stripHostTitleAttr`) prevents that from being mistaken for a fresh
- * (empty) attribute value, which would otherwise reset the `title` property
- * right back to `null`, losing the value it just finished syncing in.
+ * Normalization lives in `attributeChangedCallback`, not Lit's later update hook: assigning the
+ * same title value twice does not schedule a second reactive update, but it still must not leave a
+ * native tooltip on the host. Removing an observed attribute fires the callback synchronously just
+ * like setting one does; a re-entrancy guard prevents that removal from resetting the property.
  *
  * The explicit return-type annotation is required so TypeScript can emit a
  * declaration file for the (otherwise anonymous) mixin class (avoids TS4094).
@@ -28,18 +27,16 @@ export function StripHostTitleAttribute<T extends Constructor<LitElement>>(Base:
     override attributeChangedCallback(name: string, old: string | null, value: string | null): void {
       if (name === 'title' && this.stripHostTitleAttr) return;
       super.attributeChangedCallback(name, old, value);
-    }
-
-    protected override updated(changed: PropertyValues): void {
-      super.updated(changed);
-      if (changed.has('title') && this.hasAttribute('title')) {
-        // The attribute has already been converted into the `title` property
-        // by this point (that's how it got here), so the DOM attribute itself
-        // is now redundant -- and, left in place, would make the whole host
-        // show a native tooltip repeating the title text on hover.
+      if (name === 'title' && value !== null && this.hasAttribute('title')) {
+        // The base callback synchronously converted the attribute into the public property. Strip
+        // only the redundant host attribute; the guarded removal callback must not clear the value
+        // that was just stored. This also runs during late upgrade/hydration.
         this.stripHostTitleAttr = true;
-        this.removeAttribute('title');
-        this.stripHostTitleAttr = false;
+        try {
+          this.removeAttribute('title');
+        } finally {
+          this.stripHostTitleAttr = false;
+        }
       }
     }
   }

@@ -43,6 +43,19 @@ export const Empty: Story = {
   render: () => html`<lr-source-picker></lr-source-picker>`,
 };
 
+export const ResourceBoundedInput: Story = {
+  name: 'Cycle-safe bounded input',
+  render: () => {
+    const root: LyraSourceEntry = { id: 'root', label: 'Reports', children: [] };
+    root.children = [
+      root,
+      { id: 'report', label: 'annual-report.pdf', mimeType: 'application/pdf' },
+      { id: 'report', label: 'duplicate id skipped' },
+    ];
+    return html`<lr-source-picker .sources=${[root]}></lr-source-picker>`;
+  },
+};
+
 export const Narrow: Story = {
   name: 'Narrow long content (320px)',
   render: () => html`

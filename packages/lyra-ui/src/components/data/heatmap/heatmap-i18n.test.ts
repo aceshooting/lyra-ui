@@ -5,11 +5,11 @@ import type { LyraHeatmap } from './heatmap.js';
 it('localizes the built-in value label in the legend and generated accessible name', async () => {
   const el = (await fixture(html`
     <lr-heatmap
-      .values=${[[1, 2]]}
-      .rowLabels=${['A']}
-      .colLabels=${['B', 'C']}
+
+
+
       .strings=${{ heatmapValueLabel: 'valeur' }}
-    ></lr-heatmap>
+     .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['B', 'C'], values: [[1, 2]] }}></lr-heatmap>
   `)) as LyraHeatmap;
   const legendLabel = el.shadowRoot!.querySelector('[part="legend"] > span:last-of-type')!;
 
@@ -21,10 +21,10 @@ it('keeps an explicitly customized value-label verbatim', async () => {
   const el = (await fixture(html`
     <lr-heatmap
       value-label="requests"
-      .values=${[[1, 2]]}
-      .rowLabels=${['A']}
-      .colLabels=${['B', 'C']}
-    ></lr-heatmap>
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['B', 'C'], values: [[1, 2]] }}></lr-heatmap>
   `)) as LyraHeatmap;
   const legendLabel = el.shadowRoot!.querySelector('[part="legend"] > span:last-of-type')!;
 
@@ -36,10 +36,10 @@ it('formats legend ranges with the effective locale', async () => {
   const el = (await fixture(html`
     <lr-heatmap
       locale="de-DE"
-      .values=${[[1234.5, 2345.6]]}
-      .rowLabels=${['A']}
-      .colLabels=${['B', 'C']}
-    ></lr-heatmap>
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['B', 'C'], values: [[1234.5, 2345.6]] }}></lr-heatmap>
   `)) as LyraHeatmap;
 
   expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('1.234,5');
@@ -51,10 +51,10 @@ it('formats matrix row and column counts with the effective locale', async () =>
   const el = (await fixture(html`
     <lr-heatmap
       locale="fa-IR"
-      .values=${[[1, 2]]}
-      .rowLabels=${['A']}
-      .colLabels=${['B', 'C']}
-    ></lr-heatmap>
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['B', 'C'], values: [[1, 2]] }}></lr-heatmap>
   `)) as LyraHeatmap;
   const number = new Intl.NumberFormat('fa-IR');
 
@@ -63,7 +63,7 @@ it('formats matrix row and column counts with the effective locale', async () =>
 
 it('derives calendar-mode month labels from the same `locale` as weekday labels, so the two never disagree on language', async () => {
   const el = (await fixture(html`
-    <lr-heatmap mode="calendar" locale="fr-FR" .days=${[{ date: '2026-03-01', value: 5 }]}></lr-heatmap>
+    <lr-heatmap locale="fr-FR"  .data=${{ kind: 'calendar', days: [{ date: '2026-03-01', value: 5 }] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
 
@@ -86,7 +86,7 @@ it('derives calendar-mode month labels from the same `locale` as weekday labels,
 
 it('re-derives the default calendar month label once `locale` changes on an already-built grid', async () => {
   const el = (await fixture(html`
-    <lr-heatmap mode="calendar" .days=${[{ date: '2026-03-01', value: 5 }]}></lr-heatmap>
+    <lr-heatmap  .data=${{ kind: 'calendar', days: [{ date: '2026-03-01', value: 5 }] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
   type CachedGrid = { cachedCalendarGrid: { monthLabels: { label: string }[] } };

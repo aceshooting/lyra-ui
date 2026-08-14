@@ -11,9 +11,9 @@ const POSTER_GREEN =
 const POSTER_GOLD =
   'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 960 540%22%3E%3Crect width=%22960%22 height=%22540%22 fill=%22%233a2c17%22/%3E%3Ccircle cx=%22480%22 cy=%22270%22 r=%22110%22 fill=%22%23d79a36%22/%3E%3C/svg%3E';
 const INITIAL_ITEMS: readonly LyraVideoPlaylistItem[] = [
-  { title: 'Getting started with Lyra', poster: POSTER_BLUE },
-  { title: 'Build an accessible conversation', poster: POSTER_GREEN },
-  { title: 'Ship the finished interface', poster: POSTER_GOLD },
+  { title: 'Getting started with Lyra', poster: POSTER_BLUE, duration: 65 },
+  { title: 'Build an accessible conversation', poster: POSTER_GREEN, duration: 125 },
+  { title: 'Ship the finished interface', poster: POSTER_GOLD, duration: 185 },
 ];
 
 const meta: Meta = {
@@ -24,7 +24,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Experimental direct-child video playlist with full/standard/none control forwarding, safe current-video switching, automatic advancement, repeat modes, immutable change metadata, and an accessible roving item list. Row focus transitions relay exactly one native `FocusEvent` plus the `lr-focus`/`lr-blur` alias.',
+          'Experimental direct-child video playlist with reversible child-state ownership, safe current-video switching, ended-only automatic advancement, repeat modes, fresh detached mutable change snapshots, and ordinary Tab-reachable row buttons with optional arrow shortcuts. Visible durations are programmatic row descriptions. Row focus transitions relay exactly one native `FocusEvent` plus the `lr-focus`/`lr-blur` alias.',
       },
     },
   },
@@ -57,7 +57,7 @@ export const DeterministicFirstRender: Story = {
     docs: {
       description: {
         story:
-          'Assign `items` before the server and browser first render to emit deterministic playlist rows before live child metadata is observable. The direct videos take ownership after hydration.',
+          'Assign `items` before the server and browser first render to emit deterministic playlist rows, including localized duration descriptions, before live child metadata is observable. The direct videos take ownership after hydration.',
       },
     },
   },
@@ -79,7 +79,7 @@ export const UnavailableItem: Story = {
     docs: {
       description: {
         story:
-          'Set the native `inert` property on an `<lr-video>` child to make it unavailable. The playlist skips it and disables its corresponding row; `<lr-video>` intentionally has no `disabled` API.',
+          'Set the native `inert` property on an `<lr-video>` child to make it unavailable. The playlist skips it and disables its corresponding row; every other row remains an ordinary Tab stop, and `<lr-video>` intentionally has no `disabled` API.',
       },
     },
   },

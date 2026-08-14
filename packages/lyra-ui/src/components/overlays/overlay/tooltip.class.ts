@@ -466,7 +466,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.stopAnchorIdentityObservation?.();
     this.stopAnchorIdentityObservation = undefined;
     // Every asynchronous primitive is paired with the Window that created it. Adoption normally

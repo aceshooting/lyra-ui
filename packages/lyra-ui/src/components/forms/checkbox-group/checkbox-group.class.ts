@@ -33,21 +33,6 @@ import { LYRA_DEFAULT_checkboxGroupRequired, LYRA_DEFAULT_fieldRequired } from '
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** Fired once per group instance -- a repeat assignment is the same mistake, not new information.
- *  Plain `console.warn`, matching every other authoring-mistake warning in the library
- *  (`<lr-task-list>`'s over-nesting warning, `<lr-dashboard-grid>`'s unmatched-`cell-id` warning,
- *  `<lr-flow-canvas>`'s unrecognized-child warning): the package ships as plain `tsc` ESM with no
- *  build-time `define`, so there is no existing dev-only gate to reuse and inventing one here would
- *  diverge from the rest of the tree. */
-function warnValueAssigned(group: LyraCheckboxGroup): void {
-  console.warn(
-    '<lr-checkbox-group> `value` is derived from its <lr-checkbox> children and is overwritten by ' +
-      'the next sync (any child toggle, a slot change, a `name`/`required` change, blur, or ' +
-      `form reset), so assigning it has no lasting effect${group.name ? ` (name="${group.name}")` : ''}. ` +
-      'Set `checked` on the children instead.',
-  );
-}
-
 /** Fired once per duplicated value per group instance, so a group re-syncing on every child toggle
  *  does not spam the console. */
 function warnDuplicateValue(group: LyraCheckboxGroup, value: string): void {
@@ -60,9 +45,9 @@ function warnDuplicateValue(group: LyraCheckboxGroup, value: string): void {
 
 export interface LyraCheckboxGroupEventMap {
   'lr-invalid': CustomEvent<undefined>;
-  input: CustomEvent<{ value: string[] }>;
-  change: CustomEvent<{ value: string[] }>;
-  'lr-change': CustomEvent<{ value: string[] }>;
+  input: CustomEvent<{ value: readonly string[] }>;
+  change: CustomEvent<{ value: readonly string[] }>;
+  'lr-change': CustomEvent<{ value: readonly string[] }>;
 }
 
 export type CheckboxGroupOrientation = 'horizontal' | 'vertical';
@@ -151,19 +136,11 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
    * its options off the same `--lr-form-control-*` values the controls themselves use, and
    * propagates the selected tier to every owned checkbox so the aggregate control stays coherent.
    *
-   * **Deliberate divergence from the mirrored upstream attribute, stated here because it changes
-   * what a bare migrated tag does.** Upstream describes its own `size` as applying to every item
-   * *when present*, i.e. an unset group leaves each child's individually-authored `size` alone.
-   * Here the group is always authoritative: `size` has a real `'m'` default rather than an absent
-   * sentinel, and the tier is (re-)pushed onto every owned `<lr-checkbox>` on connect, on every
-   * slot change, and again whenever a child's own `size` attribute is mutated afterwards. A group
-   * of uniformly-sized options is the shape this control exists to produce — one visually
-   * emphasized option inside an otherwise default-sized group reads as a rendering bug, and a
-   * per-option tier that survives until the next slot change and then silently snaps back would be
-   * worse than either consistent behaviour. Migrating markup that relied on per-child sizes should
-   * split the odd option out of the group, or size the whole group.
+   * When omitted, each checkbox keeps its authored size, matching the mirrored upstream default.
+   * An explicit group size temporarily overrides every owned checkbox; removal/reparenting restores
+   * the latest author value rather than leaving owner state behind.
    */
-  size: LyraSize = 'm';
+  size?: LyraSize;
 
   /** Option flow and the matching WA public attribute. */
   orientation: CheckboxGroupOrientation = 'vertical';
@@ -208,17 +185,13 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   private _required = false;
   private _disabled = false;
   private _value: string[] = [];
-  // Distinguishes `sync()`'s own write-back from a host assignment, so the read-out-only warning
-  // below fires for the latter only. `sync()` writes `value` on *every* child toggle, slot change,
-  // blur and form reset, so without this the warning would fire constantly during normal use.
-  private _writingValue = false;
-  private _warnedValueAssigned = false;
   private _warnedDuplicateValues = new Set<string>();
   private pendingRestoreValues?: string[];
   private childObserver?: MutationObserver;
   private childObserverDocument?: Document;
   private childObserverGeneration = 0;
   private childControllers = new Map<LyraCheckbox, ReactiveController>();
+  private authoredChildSizes = new Map<LyraCheckbox, LyraSize>();
 
   /** The form submission key each checked child checkbox's value is grouped under in the group's
    *  own `FormData` entry (see `sync()`). Reflected synchronously for native form APIs; renaming
@@ -233,31 +206,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.requestUpdate('name', old);
   }
 
-  /**
-   * The `value` of every currently-checked `<lr-checkbox>` child, in DOM order — a **read-out of
-   * child state, not an input**. The children are the single source of truth: `sync()` recomputes
-   * this from them and assigns it on every child toggle, `slotchange`, `name`/`required` change,
-   * blur, and `form.reset()`, so a host assignment is silently overwritten by the next one of those.
-   * `connectedCallback()` calls `onSlotChange()` → `sync()` **before the first render**, so even a
-   * constructor-time or template-time `.value=` binding is discarded before it is ever observed.
-   * Assigning it logs a console warning naming the property.
-   *
-   * To preselect options, set `checked` on the children (`<lr-checkbox value="a" checked>`); to read
-   * the selection, use this property or the `lr-change` event detail. Making `value` authoritative is
-   * deliberately not implemented: `<lr-checkbox>`'s `value` defaults to `'on'`, so a host assigning
-   * `['on']` would check every undifferentiated child. A future change can add a distinct
-   * `defaultValue` API without reversing anything documented here.
-   */
-  get value(): string[] { return this._value; }
-  set value(next: string[]) {
-    if (!this._writingValue && !this._warnedValueAssigned) {
-      this._warnedValueAssigned = true;
-      warnValueAssigned(this);
-    }
-    const old = this._value;
-    this._value = Array.isArray(next) ? next : [];
-    this.requestUpdate('value', old);
-  }
+  /** Readonly defensive snapshot of checked child values, in DOM order. Selection is controlled
+   * through each child's `checked` state. */
+  get value(): readonly string[] { return [...this._value]; }
 
   get required(): boolean { return this._required; }
   set required(next: boolean) {
@@ -333,7 +284,16 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
 
   private propagateSize(): void {
-    this.boxes.forEach((box) => { box.size = this.size; });
+    for (const box of this.boxes) {
+      if (!this.authoredChildSizes.has(box)) this.authoredChildSizes.set(box, box.size);
+      if (this.size === undefined || this.size === null) {
+        const authored = this.authoredChildSizes.get(box);
+        if (authored !== undefined && box.size !== authored) box.size = authored;
+        this.authoredChildSizes.delete(box);
+      } else if (box.size !== this.size) {
+        box.size = this.size;
+      }
+    }
   }
 
   private readValue(): string[] {
@@ -362,12 +322,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   private sync(): void {
     const next = this.readValue();
     this.warnOnDuplicateValues();
-    this._writingValue = true;
-    try {
-      this.value = next;
-    } finally {
-      this._writingValue = false;
-    }
+    const old = this._value;
+    this._value = next;
+    this.requestUpdate('value', old);
     const data = new FormData();
     if (this.name) next.forEach((value) => data.append(this.name, value));
     this.internals.setFormValue(
@@ -380,6 +337,11 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     if (!this.barredFromValidation && this.required && next.length === 0) this.validityController.setValidity({ valueMissing: true }, this.localize('checkboxGroupRequired'));
     else this.validityController.setValidity({});
     this.reflectValidityStates();
+  }
+
+  /** @internal Same-task child-to-owner state transaction; emits no user event. */
+  notifyCheckboxStateChange(checkbox: LyraCheckbox): void {
+    if (this.isConnected && this.ownsCheckbox(checkbox)) this.sync();
   }
 
   /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
@@ -416,9 +378,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     if (event.type !== 'change' || this.effectiveDisabled) return;
     this.hasInteracted = true;
     this.sync();
-    this.emit('input', { value: this.value });
-    this.emit('change', { value: this.value });
-    this.emit('lr-change', { value: this.value });
+    this.emit('input', { value: [...this.value] });
+    this.emit('change', { value: [...this.value] });
+    this.emit('lr-change', { value: [...this.value] });
   };
 
   private reconcileChildControllers(): void {
@@ -427,6 +389,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
       if (current.has(box)) continue;
       box.removeController(controller);
       this.childControllers.delete(box);
+      const authoredSize = this.authoredChildSizes.get(box);
+      if (authoredSize !== undefined && box.size !== authoredSize) box.size = authoredSize;
+      this.authoredChildSizes.delete(box);
       // A checkbox removed from every group must not retain this group's disabled state. If it
       // moved directly into another group, that new owner is responsible for its own state. A
       // checkbox moved into this group's label/hint/error subtree still has this as its closest
@@ -451,16 +416,21 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
       this.onSlotChange();
       return;
     }
-    if (records.some(
-      (record) => record.attributeName === 'size' && this.isOwnedCheckbox(record.target),
-    )) {
+    for (const record of records) {
+      if (record.attributeName !== 'size' || !this.isOwnedCheckbox(record.target)) continue;
+      const box = record.target;
+      if (this.size !== undefined && box.size !== this.size) {
+        this.authoredChildSizes.set(box, box.size);
+      }
+    }
+    if (records.some((record) => record.attributeName === 'size' && this.isOwnedCheckbox(record.target))) {
       this.propagateSize();
     }
     if (records.some((record) => this.isOwnedCheckbox(record.target))) this.sync();
   };
 
   private hasDirectSupportSlot(name: 'label' | 'hint' | 'error'): boolean {
-    return Array.from(this.children).some((child) => child.getAttribute('slot') === name);
+    return Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === name);
   }
 
   private onSlotChange = (): void => {
@@ -541,12 +511,16 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     for (const [box, controller] of this.childControllers) {
       box.removeController(controller);
       box.setGroupDisabled?.(false);
+      const authoredSize = this.authoredChildSizes.get(box);
+      if (authoredSize !== undefined && box.size !== authoredSize) box.size = authoredSize;
     }
     this.childControllers.clear();
+    this.authoredChildSizes.clear();
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.resetChildObserver();
   }
 

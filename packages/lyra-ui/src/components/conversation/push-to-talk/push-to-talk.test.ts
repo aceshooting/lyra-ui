@@ -1,9 +1,16 @@
-import { fixture, expect, oneEvent, aTimeout, html, waitUntil } from '@open-wc/testing';
-import './push-to-talk.js';
-import '../../utility/live-region/live-region.js';
-import type { LyraPushToTalk } from './push-to-talk.js';
-import { MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
-import { styles } from './push-to-talk.styles.js';
+import {
+  fixture,
+  expect,
+  oneEvent,
+  aTimeout,
+  html,
+  waitUntil,
+} from "@open-wc/testing";
+import "./push-to-talk.js";
+import "../../utility/live-region/live-region.js";
+import type { LyraPushToTalk } from "./push-to-talk.js";
+import { MAX_TIMEOUT_MS } from "../../../internal/numbers.js";
+import { styles } from "./push-to-talk.styles.js";
 
 // -- Fakes for getUserMedia / MediaRecorder / AudioContext -----------------
 // No `sinon` in this repo -- plain manual monkey-patching (save the real
@@ -24,22 +31,23 @@ class FakeStream {
 }
 class FakeMediaRecorder extends EventTarget {
   static isTypeSupported(type: string): boolean {
-    return type === 'audio/webm;codecs=opus';
+    return type === "audio/webm;codecs=opus";
   }
-  state: 'inactive' | 'recording' = 'inactive';
+  state: "inactive" | "recording" = "inactive";
   ondataavailable: ((e: { data: Blob }) => void) | null = null;
   onstop: (() => void) | null = null;
+  onerror: ((e: Event & { error?: DOMException }) => void) | null = null;
   mimeType: string;
   constructor(public stream: FakeStream, options?: { mimeType?: string }) {
     super();
-    this.mimeType = options?.mimeType ?? 'audio/webm';
+    this.mimeType = options?.mimeType ?? "audio/webm";
   }
   start(_timeslice?: number): void {
-    this.state = 'recording';
+    this.state = "recording";
   }
   stop(): void {
-    this.state = 'inactive';
-    this.ondataavailable?.({ data: new Blob(['x'], { type: this.mimeType }) });
+    this.state = "inactive";
+    this.ondataavailable?.({ data: new Blob(["x"], { type: this.mimeType }) });
     this.onstop?.();
   }
 }
@@ -53,11 +61,14 @@ class DelayedStopMediaRecorder extends FakeMediaRecorder {
   }
 
   override stop(): void {
-    if (this.state === 'inactive') throw new DOMException('already inactive', 'InvalidStateError');
+    if (this.state === "inactive")
+      throw new DOMException("already inactive", "InvalidStateError");
     this.stopCalls++;
-    this.state = 'inactive';
+    this.state = "inactive";
     queueMicrotask(() => {
-      this.ondataavailable?.({ data: new Blob(['x'], { type: this.mimeType }) });
+      this.ondataavailable?.({
+        data: new Blob(["x"], { type: this.mimeType }),
+      });
       this.onstop?.();
     });
   }
@@ -70,7 +81,7 @@ class FakeAnalyserNode {
   }
 }
 class FakeAudioContext {
-  state = 'running';
+  state = "running";
   createMediaStreamSource(_stream: unknown): { connect: () => void } {
     return { connect: () => {} };
   }
@@ -89,17 +100,23 @@ function stubSuccessfulCapture(): () => void {
   navigator.mediaDevices.getUserMedia = (async () =>
     new FakeStream() as unknown as MediaStream) as typeof navigator.mediaDevices.getUserMedia;
   window.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
-  (window as unknown as { AudioContext: unknown }).AudioContext = FakeAudioContext;
+  (window as unknown as { AudioContext: unknown }).AudioContext =
+    FakeAudioContext;
   return () => {
     navigator.mediaDevices.getUserMedia = originalGetUserMedia;
     window.MediaRecorder = originalMediaRecorder;
-    (window as unknown as { AudioContext: unknown }).AudioContext = originalAudioContext;
+    (window as unknown as { AudioContext: unknown }).AudioContext =
+      originalAudioContext;
   };
 }
 
 /** Stubs getUserMedia with a promise the test controls, to simulate a still-pending permission
  *  prompt (state === 'requesting') and exercise release-while-requesting handling. */
-function stubDeferredCapture(): { restore: () => void; resolve: () => void; stream: FakeStream } {
+function stubDeferredCapture(): {
+  restore: () => void;
+  resolve: () => void;
+  stream: FakeStream;
+} {
   const original = navigator.mediaDevices.getUserMedia;
   const originalMediaRecorder = window.MediaRecorder;
   const stream = new FakeStream();
@@ -123,7 +140,7 @@ function stubDeniedCapture(): () => void {
   const original = navigator.mediaDevices.getUserMedia;
   const originalMediaRecorder = window.MediaRecorder;
   navigator.mediaDevices.getUserMedia = (async () => {
-    throw new DOMException('denied', 'NotAllowedError');
+    throw new DOMException("denied", "NotAllowedError");
   }) as typeof navigator.mediaDevices.getUserMedia;
   window.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
   return () => {
@@ -136,7 +153,7 @@ function stubErroringCapture(): () => void {
   const original = navigator.mediaDevices.getUserMedia;
   const originalMediaRecorder = window.MediaRecorder;
   navigator.mediaDevices.getUserMedia = (async () => {
-    throw new Error('device busy');
+    throw new Error("device busy");
   }) as typeof navigator.mediaDevices.getUserMedia;
   window.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
   return () => {
@@ -149,27 +166,33 @@ function trigger(el: LyraPushToTalk): HTMLButtonElement {
   return el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
 }
 function status(el: LyraPushToTalk): string {
-  return el.shadowRoot!.querySelector('[part="status"]')?.textContent?.trim() ?? '';
+  return (
+    el.shadowRoot!.querySelector('[part="status"]')?.textContent?.trim() ?? ""
+  );
 }
 
 async function mountServerRenderedPushToTalk(): Promise<LyraPushToTalk> {
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement & {
     setHTMLUnsafe(value: string): void;
   };
-  container.setHTMLUnsafe('<lr-push-to-talk><template shadowrootmode="open"></template></lr-push-to-talk>');
+  container.setHTMLUnsafe(
+    '<lr-push-to-talk><template shadowrootmode="open"></template></lr-push-to-talk>'
+  );
   return container.firstElementChild as LyraPushToTalk;
 }
 
 // -- Defaults ----------------------------------------------------------
 
-it('defaults to mode=hold, state=idle, and every capture prop at its documented default', async () => {
-  const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
-  expect(el.mode).to.equal('hold');
-  expect(el.state).to.equal('idle');
-  expect(el.getAttribute('data-state')).to.equal('idle');
+it("defaults to mode=hold, state=idle, and every capture prop at its documented default", async () => {
+  const el = (await fixture(
+    html`<lr-push-to-talk></lr-push-to-talk>`
+  )) as LyraPushToTalk;
+  expect(el.mode).to.equal("hold");
+  expect(el.state).to.equal("idle");
+  expect(el.getAttribute("data-state")).to.equal("idle");
   expect(el.timesliceMs).to.equal(0);
-  expect(el.mimeType).to.equal('');
-  expect(el.deviceId).to.equal('');
+  expect(el.mimeType).to.equal("");
+  expect(el.deviceId).to.equal("");
   expect(el.levelEvents).to.be.false;
   expect(el.maxDurationMs).to.equal(0);
   expect(el.showTimer).to.be.true;
@@ -178,33 +201,45 @@ it('defaults to mode=hold, state=idle, and every capture prop at its documented 
 });
 
 it('accepts show-timer="false" as a plain-HTML attribute string, not just a property binding', async () => {
-  const el = (await fixture(html`<lr-push-to-talk show-timer="false"></lr-push-to-talk>`)) as LyraPushToTalk;
+  const el = (await fixture(
+    html`<lr-push-to-talk show-timer="false"></lr-push-to-talk>`
+  )) as LyraPushToTalk;
   expect(el.showTimer).to.be.false;
 });
 
-it('leaving show-timer unset keeps the documented true default', async () => {
-  const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+it("leaving show-timer unset keeps the documented true default", async () => {
+  const el = (await fixture(
+    html`<lr-push-to-talk></lr-push-to-talk>`
+  )) as LyraPushToTalk;
   expect(el.showTimer).to.be.true;
 });
 
-it('formats the elapsed timer with the effective locale’s digits and zero-padding', async () => {
-  const locale = 'fa-u-nu-arab';
-  const el = (await fixture(html`<lr-push-to-talk locale=${locale}></lr-push-to-talk>`)) as LyraPushToTalk;
-  const runtime = el as unknown as { _state: 'recording'; elapsedMs: number };
-  runtime._state = 'recording';
+it("formats the elapsed timer with the effective locale’s digits and zero-padding", async () => {
+  const locale = "fa-u-nu-arab";
+  const el = (await fixture(
+    html`<lr-push-to-talk locale=${locale}></lr-push-to-talk>`
+  )) as LyraPushToTalk;
+  const runtime = el as unknown as { _state: "recording"; elapsedMs: number };
+  runtime._state = "recording";
   runtime.elapsedMs = 65_000;
   el.requestUpdate();
   await el.updateComplete;
 
-  const expected = `${new Intl.NumberFormat(locale, { useGrouping: false }).format(1)}:${new Intl.NumberFormat(
-    locale,
-    { minimumIntegerDigits: 2, useGrouping: false },
-  ).format(5)}`;
-  expect(el.shadowRoot!.querySelector('[part="timer"]')?.textContent).to.equal(expected);
+  const expected = `${new Intl.NumberFormat(locale, {
+    useGrouping: false,
+  }).format(1)}:${new Intl.NumberFormat(locale, {
+    minimumIntegerDigits: 2,
+    useGrouping: false,
+  }).format(5)}`;
+  expect(el.shadowRoot!.querySelector('[part="timer"]')?.textContent).to.equal(
+    expected
+  );
 });
 
-it('forwards focus/blur to the trigger and keeps state read-only under assignment', async () => {
-  const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+it("forwards focus/blur to the trigger and exposes state as a true getter-only property", async () => {
+  const el = (await fixture(
+    html`<lr-push-to-talk></lr-push-to-talk>`
+  )) as LyraPushToTalk;
   const button = trigger(el);
   const originalFocus = button.focus;
   const originalBlur = button.blur;
@@ -226,53 +261,104 @@ it('forwards focus/blur to the trigger and keeps state read-only under assignmen
     button.blur = originalBlur;
   }
 
-  (el as unknown as { state: string }).state = 'recording';
-  expect(el.state).to.equal('idle');
-  expect(el.getAttribute('data-state')).to.equal('idle');
+  const descriptor = Object.getOwnPropertyDescriptor(
+    Object.getPrototypeOf(el),
+    "state"
+  );
+  expect(descriptor?.get).to.be.a("function");
+  expect(descriptor?.set).to.equal(undefined);
+  expect(Reflect.set(el, "state", "recording")).to.be.false;
+  expect(el.state).to.equal("idle");
+  expect(el.getAttribute("data-state")).to.equal("idle");
 });
 
-it('gives the trigger a hover state while enabled', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='trigger'\]\):hover:where\(:not\(:disabled\)\)[^{]*\{[^}]*background:/);
+it("normalizes invalid mode values consistently for attributes and direct property writes", async () => {
+  const el = (await fixture(
+    html`<lr-push-to-talk mode="invalid"></lr-push-to-talk>`
+  )) as LyraPushToTalk;
+  expect(el.mode).to.equal("hold");
+  expect(el.getAttribute("mode")).to.equal("hold");
+
+  (el as unknown as { mode: string }).mode = "also-invalid";
+  await el.updateComplete;
+  expect(el.mode).to.equal("hold");
+  expect(el.getAttribute("mode")).to.equal("hold");
 });
 
-it('wraps the trigger hover rule in :where() so a consumer ::part(trigger):hover override does not need !important (regression)', () => {
+it("emits the recording-specific state event once for each actual lifecycle transition", async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    const states: string[] = [];
+    el.addEventListener("lr-record-state-change", (event) => {
+      states.push((event as CustomEvent<{ state: string }>).detail.state);
+    });
+
+    await el.start();
+    el.stop();
+    expect(states).to.deep.equal(["requesting", "recording", "idle"]);
+  } finally {
+    restore();
+  }
+});
+
+it("gives the trigger a hover state while enabled", () => {
+  const css = styles.cssText.replace(/\s+/g, " ");
+  expect(css).to.match(
+    /\[part='trigger'\]\):hover:where\(:not\(:disabled\)\)[^{]*\{[^}]*background:/
+  );
+});
+
+it("wraps the trigger hover rule in :where() so a consumer ::part(trigger):hover override does not need !important (regression)", () => {
   // The pre-fix shape -- `[part='trigger']:hover:not(:disabled)` with no `:where()` -- has
   // specificity (0,3,0), beating a consumer's `::part(trigger):hover` ((0,1,1)); matches
   // lr-attachment-trigger's established `:where()`-wrapped fix.
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/:where\(\[part='trigger'\]\):hover:where\(:not\(:disabled\)\)/);
+  const css = styles.cssText.replace(/\s+/g, " ");
+  expect(css).to.match(
+    /:where\(\[part='trigger'\]\):hover:where\(:not\(:disabled\)\)/
+  );
 });
 
-describe('recording-state cssprop escape hatches', () => {
-  it('keeps the aggregate recording-color hook as the fallback for every recording longhand', async () => {
+describe("recording-state cssprop escape hatches", () => {
+  it("keeps the aggregate recording-color hook as the fallback for every recording longhand", async () => {
     const restore = stubSuccessfulCapture();
     try {
-      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
-      el.style.setProperty('--lr-push-to-talk-recording-color', 'rgb(10, 20, 30)');
-      const startPromise = oneEvent(el, 'lr-record-start');
+      const el = (await fixture(
+        html`<lr-push-to-talk></lr-push-to-talk>`
+      )) as LyraPushToTalk;
+      el.style.setProperty(
+        "--lr-push-to-talk-recording-color",
+        "rgb(10, 20, 30)"
+      );
+      const startPromise = oneEvent(el, "lr-record-start");
       void el.start();
       await startPromise;
       await el.updateComplete;
 
       const btn = trigger(el);
-      const glyph = btn.querySelector('svg') as SVGElement;
-      expect(getComputedStyle(btn).borderTopColor).to.equal('rgb(10, 20, 30)');
-      expect(getComputedStyle(btn).color).to.equal('rgb(10, 20, 30)');
-      expect(getComputedStyle(glyph).stroke).to.equal('rgb(10, 20, 30)');
+      const glyph = btn.querySelector("svg") as SVGElement;
+      expect(getComputedStyle(btn).borderTopColor).to.equal("rgb(10, 20, 30)");
+      expect(getComputedStyle(btn).color).to.equal("rgb(10, 20, 30)");
+      expect(getComputedStyle(glyph).stroke).to.equal("rgb(10, 20, 30)");
 
-      const pulse = el.shadowRoot!.querySelector('[part="pulse"]') as HTMLElement;
+      const pulse = el.shadowRoot!.querySelector(
+        '[part="pulse"]'
+      ) as HTMLElement;
       expect(
         el.shadowRoot!.querySelectorAll('[part="pulse"]').length,
-        'pulse must actually render while recording'
+        "pulse must actually render while recording"
       ).to.equal(1);
-      expect(getComputedStyle(pulse).borderTopColor).to.equal('rgb(10, 20, 30)');
+      expect(getComputedStyle(pulse).borderTopColor).to.equal(
+        "rgb(10, 20, 30)"
+      );
     } finally {
       restore();
     }
   });
 
-  it('independently retints the recording trigger border, glyph, and pulse border from an ancestor', async () => {
+  it("independently retints the recording trigger border, glyph, and pulse border from an ancestor", async () => {
     const restore = stubSuccessfulCapture();
     try {
       const wrapper = (await fixture(html`
@@ -287,19 +373,25 @@ describe('recording-state cssprop escape hatches', () => {
           <lr-push-to-talk></lr-push-to-talk>
         </div>
       `)) as HTMLElement;
-      const el = wrapper.querySelector('lr-push-to-talk') as LyraPushToTalk;
-      const startPromise = oneEvent(el, 'lr-record-start');
+      const el = wrapper.querySelector("lr-push-to-talk") as LyraPushToTalk;
+      const startPromise = oneEvent(el, "lr-record-start");
       void el.start();
       await startPromise;
       await el.updateComplete;
 
-      const pulse = el.shadowRoot!.querySelector('[part="pulse"]') as HTMLElement;
-      const glyph = trigger(el).querySelector('svg') as SVGElement;
-      expect(el.shadowRoot!.querySelectorAll('[part="pulse"]').length).to.equal(1);
-      expect(getComputedStyle(trigger(el)).borderTopColor).to.equal('rgb(1, 2, 3)');
-      expect(getComputedStyle(trigger(el)).color).to.equal('rgb(4, 5, 6)');
-      expect(getComputedStyle(glyph).stroke).to.equal('rgb(4, 5, 6)');
-      expect(getComputedStyle(pulse).borderTopColor).to.equal('rgb(7, 8, 9)');
+      const pulse = el.shadowRoot!.querySelector(
+        '[part="pulse"]'
+      ) as HTMLElement;
+      const glyph = trigger(el).querySelector("svg") as SVGElement;
+      expect(el.shadowRoot!.querySelectorAll('[part="pulse"]').length).to.equal(
+        1
+      );
+      expect(getComputedStyle(trigger(el)).borderTopColor).to.equal(
+        "rgb(1, 2, 3)"
+      );
+      expect(getComputedStyle(trigger(el)).color).to.equal("rgb(4, 5, 6)");
+      expect(getComputedStyle(glyph).stroke).to.equal("rgb(4, 5, 6)");
+      expect(getComputedStyle(pulse).borderTopColor).to.equal("rgb(7, 8, 9)");
     } finally {
       restore();
     }
@@ -308,49 +400,54 @@ describe('recording-state cssprop escape hatches', () => {
 
 // -- Unsupported environment ---------------------------------------------
 
-it('keeps the server unsupported branch for the first hydration update before enabling capture', async () => {
+it("keeps the server unsupported branch for the first hydration update before enabling capture", async () => {
   const restore = stubSuccessfulCapture();
   try {
     const el = await mountServerRenderedPushToTalk();
 
     await el.updateComplete;
     expect(trigger(el).disabled).to.be.true;
-    expect(status(el)).to.equal('Recording is not supported in this browser');
+    expect(status(el)).to.equal("Recording is not supported in this browser");
 
     // The deferred seed is intentionally queued from the first update's settled promise, so
     // re-reading updateComplete can still return that already-settled promise before Firefox has
     // exposed the corrective update. Wait for the rendered contract instead of a fixed tick count.
     await waitUntil(
-      () => !trigger(el).disabled && status(el) === '',
-      'capture should become available after the hydration update',
+      () => !trigger(el).disabled && status(el) === "",
+      "capture should become available after the hydration update"
     );
     expect(trigger(el).disabled).to.be.false;
-    expect(status(el)).to.equal('');
+    expect(status(el)).to.equal("");
   } finally {
     restore();
   }
 });
 
-it('renders the trigger disabled and shows the unsupported status when MediaRecorder is unavailable', async () => {
+it("renders the trigger disabled and shows the unsupported status when MediaRecorder is unavailable", async () => {
   const original = window.MediaRecorder;
   // @ts-expect-error deliberately undefining a browser global for the test
   delete window.MediaRecorder;
   try {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     expect(trigger(el).disabled).to.be.true;
-    expect(status(el)).to.equal('Recording is not supported in this browser');
+    expect(status(el)).to.equal("Recording is not supported in this browser");
     expect(await el.start()).to.be.false;
   } finally {
     window.MediaRecorder = original;
   }
 });
 
-describe('owner-window capture runtime', () => {
-  it('uses the adopted owner for capture, recorder, clock, timers, Blob, AudioContext, typed data, and animation frames', async () => {
+describe("owner-window capture runtime", () => {
+  it("uses the adopted owner for capture, recorder, clock, timers, Blob, AudioContext, typed data, and animation frames", async () => {
     const el = (await fixture(
-      html`<lr-push-to-talk level-events max-duration-ms="500"></lr-push-to-talk>`
+      html`<lr-push-to-talk
+        level-events
+        max-duration-ms="500"
+      ></lr-push-to-talk>`
     )) as LyraPushToTalk;
-    const iframe = document.createElement('iframe');
+    const iframe = document.createElement("iframe");
     document.body.append(iframe);
     const frameWindow = iframe.contentWindow!;
     const frameDocument = iframe.contentDocument!;
@@ -360,7 +457,8 @@ describe('owner-window capture runtime', () => {
       Blob: typeof Blob;
     };
 
-    const originalGetUserMedia = frameWindow.navigator.mediaDevices.getUserMedia;
+    const originalGetUserMedia =
+      frameWindow.navigator.mediaDevices.getUserMedia;
     const originalMediaRecorder = runtime.MediaRecorder;
     const originalAudioContext = runtime.AudioContext;
     const originalSetTimeout = frameWindow.setTimeout;
@@ -369,7 +467,10 @@ describe('owner-window capture runtime', () => {
     const originalClearInterval = frameWindow.clearInterval;
     const originalRequestAnimationFrame = frameWindow.requestAnimationFrame;
     const originalCancelAnimationFrame = frameWindow.cancelAnimationFrame;
-    const ownNowDescriptor = Object.getOwnPropertyDescriptor(frameWindow.performance, 'now');
+    const ownNowDescriptor = Object.getOwnPropertyDescriptor(
+      frameWindow.performance,
+      "now"
+    );
 
     const stream = new FakeStream();
     let getUserMediaCalls = 0;
@@ -387,23 +488,23 @@ describe('owner-window capture runtime', () => {
 
     class OwnerMediaRecorder extends EventTarget {
       static isTypeSupported(type: string): boolean {
-        return type === 'audio/webm;codecs=opus';
+        return type === "audio/webm;codecs=opus";
       }
-      state: RecordingState = 'inactive';
+      state: RecordingState = "inactive";
       mimeType: string;
       ondataavailable: ((event: BlobEvent) => void) | null = null;
       onstop: (() => void) | null = null;
       constructor(_stream: MediaStream, options?: MediaRecorderOptions) {
         super();
         recorderCreations++;
-        this.mimeType = options?.mimeType ?? 'audio/webm';
+        this.mimeType = options?.mimeType ?? "audio/webm";
       }
       start(): void {
-        this.state = 'recording';
+        this.state = "recording";
       }
       stop(): void {
-        this.state = 'inactive';
-        const data = new runtime.Blob(['owner'], { type: this.mimeType });
+        this.state = "inactive";
+        const data = new runtime.Blob(["owner"], { type: this.mimeType });
         this.ondataavailable?.({ data } as BlobEvent);
         this.onstop?.();
       }
@@ -430,8 +531,10 @@ describe('owner-window capture runtime', () => {
         getUserMediaCalls++;
         return stream as unknown as MediaStream;
       }) as typeof frameWindow.navigator.mediaDevices.getUserMedia;
-      runtime.MediaRecorder = OwnerMediaRecorder as unknown as typeof MediaRecorder;
-      runtime.AudioContext = OwnerAudioContext as unknown as typeof AudioContext;
+      runtime.MediaRecorder =
+        OwnerMediaRecorder as unknown as typeof MediaRecorder;
+      runtime.AudioContext =
+        OwnerAudioContext as unknown as typeof AudioContext;
       frameWindow.setTimeout = ((_handler: TimerHandler, _delay?: number) => {
         const handle = nextHandle++;
         timeoutHandles.add(handle);
@@ -454,7 +557,9 @@ describe('owner-window capture runtime', () => {
           intervalHandles.delete(handle);
         }
       }) as typeof frameWindow.clearInterval;
-      frameWindow.requestAnimationFrame = ((_callback: FrameRequestCallback) => {
+      frameWindow.requestAnimationFrame = ((
+        _callback: FrameRequestCallback
+      ) => {
         const handle = nextHandle++;
         frameHandles.add(handle);
         return handle;
@@ -463,7 +568,7 @@ describe('owner-window capture runtime', () => {
         canceledFrames.push(handle);
         frameHandles.delete(handle);
       }) as typeof frameWindow.cancelAnimationFrame;
-      Object.defineProperty(frameWindow.performance, 'now', {
+      Object.defineProperty(frameWindow.performance, "now", {
         configurable: true,
         value: () => (nowMs += 125),
       });
@@ -472,7 +577,7 @@ describe('owner-window capture runtime', () => {
       frameDocument.body.append(el);
       await el.updateComplete;
 
-      const levelEvent = oneEvent(el, 'lr-level');
+      const levelEvent = oneEvent(el, "lr-level");
       expect(await el.start()).to.be.true;
       expect((await levelEvent).detail.level).to.be.greaterThan(0);
       expect(getUserMediaCalls).to.equal(1);
@@ -493,7 +598,7 @@ describe('owner-window capture runtime', () => {
       expect(intervalHandles.has(tickTimer.handle)).to.be.true;
       expect(frameHandles.has(levelFrame.handle)).to.be.true;
 
-      const stopped = oneEvent(el, 'lr-record-stop');
+      const stopped = oneEvent(el, "lr-record-stop");
       el.stop();
       const stopEvent = await stopped;
       expect(stopEvent.detail.blob instanceof runtime.Blob).to.be.true;
@@ -516,13 +621,14 @@ describe('owner-window capture runtime', () => {
       frameWindow.clearInterval = originalClearInterval;
       frameWindow.requestAnimationFrame = originalRequestAnimationFrame;
       frameWindow.cancelAnimationFrame = originalCancelAnimationFrame;
-      if (ownNowDescriptor) Object.defineProperty(frameWindow.performance, 'now', ownNowDescriptor);
+      if (ownNowDescriptor)
+        Object.defineProperty(frameWindow.performance, "now", ownNowDescriptor);
       else delete (frameWindow.performance as unknown as { now?: unknown }).now;
       iframe.remove();
     }
   });
 
-  it('discards a stale permission result when adoption changes owners before getUserMedia resolves', async () => {
+  it("discards a stale permission result when adoption changes owners before getUserMedia resolves", async () => {
     const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
     const originalMediaRecorder = window.MediaRecorder;
     const stream = new FakeStream();
@@ -533,11 +639,13 @@ describe('owner-window capture runtime', () => {
       })) as typeof navigator.mediaDevices.getUserMedia;
     window.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
 
-    const iframe = document.createElement('iframe');
+    const iframe = document.createElement("iframe");
     document.body.append(iframe);
     const frameWindow = iframe.contentWindow!;
     const frameDocument = iframe.contentDocument!;
-    const frameRuntime = frameWindow as unknown as Window & { MediaRecorder: typeof MediaRecorder };
+    const frameRuntime = frameWindow as unknown as Window & {
+      MediaRecorder: typeof MediaRecorder;
+    };
     const originalFrameRecorder = frameRuntime.MediaRecorder;
     let frameRecorderCreations = 0;
     frameRuntime.MediaRecorder = class extends FakeMediaRecorder {
@@ -549,19 +657,21 @@ describe('owner-window capture runtime', () => {
 
     let el: LyraPushToTalk | undefined;
     try {
-      el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      el = (await fixture(
+        html`<lr-push-to-talk></lr-push-to-talk>`
+      )) as LyraPushToTalk;
       const startPromise = el.start();
       await el.updateComplete;
-      expect(el.state).to.equal('requesting');
+      expect(el.state).to.equal("requesting");
 
       frameDocument.adoptNode(el);
       frameDocument.body.append(el);
-      const canceled = oneEvent(el, 'lr-record-cancel');
+      const canceled = oneEvent(el, "lr-record-cancel");
       resolvePermission(stream as unknown as MediaStream);
 
       expect(await startPromise).to.be.false;
       await canceled;
-      expect(el.state).to.equal('idle');
+      expect(el.state).to.equal("idle");
       expect(stream.getTracks()[0]?.stopped).to.be.true;
       expect(frameRecorderCreations).to.equal(0);
     } finally {
@@ -573,25 +683,31 @@ describe('owner-window capture runtime', () => {
     }
   });
 
-  it('recognizes a cross-realm NotAllowedError without relying on instanceof', async () => {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
-    const iframe = document.createElement('iframe');
+  it("recognizes a cross-realm NotAllowedError without relying on instanceof", async () => {
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    const iframe = document.createElement("iframe");
     document.body.append(iframe);
     const frameWindow = iframe.contentWindow!;
     const frameDocument = iframe.contentDocument!;
-    const runtime = frameWindow as unknown as Window & { MediaRecorder: typeof MediaRecorder };
-    const originalGetUserMedia = frameWindow.navigator.mediaDevices.getUserMedia;
+    const runtime = frameWindow as unknown as Window & {
+      MediaRecorder: typeof MediaRecorder;
+    };
+    const originalGetUserMedia =
+      frameWindow.navigator.mediaDevices.getUserMedia;
     const originalMediaRecorder = runtime.MediaRecorder;
-    runtime.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
+    runtime.MediaRecorder =
+      FakeMediaRecorder as unknown as typeof MediaRecorder;
     frameWindow.navigator.mediaDevices.getUserMedia = (async () => {
-      throw new frameWindow.DOMException('denied', 'NotAllowedError');
+      throw new frameWindow.DOMException("denied", "NotAllowedError");
     }) as typeof frameWindow.navigator.mediaDevices.getUserMedia;
     try {
       frameDocument.adoptNode(el);
       frameDocument.body.append(el);
       await el.updateComplete;
       expect(await el.start()).to.be.false;
-      expect(el.state).to.equal('denied');
+      expect(el.state).to.equal("denied");
     } finally {
       el.remove();
       frameWindow.navigator.mediaDevices.getUserMedia = originalGetUserMedia;
@@ -603,117 +719,187 @@ describe('owner-window capture runtime', () => {
 
 // -- Hold mode: full lifecycle --------------------------------------------
 
-describe('hold mode', () => {
-  it('pointerdown starts a take (emitting lr-record-start with the stream) and pointerup stops it (emitting lr-record-stop with a blob and durationMs)', async () => {
+describe("hold mode", () => {
+  it("pointerdown starts a take (emitting lr-record-start with the stream) and pointerup stops it (emitting lr-record-stop with a blob and durationMs)", async () => {
     const restore = stubSuccessfulCapture();
     try {
-      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(
+        html`<lr-push-to-talk></lr-push-to-talk>`
+      )) as LyraPushToTalk;
       const btn = trigger(el);
 
-      const startPromise = oneEvent(el, 'lr-record-start');
-      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+      const startPromise = oneEvent(el, "lr-record-start");
+      btn.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 })
+      );
       const startEvent = await startPromise;
       expect(startEvent.detail.stream).to.exist;
-      expect(el.state).to.equal('recording');
-      expect(el.getAttribute('data-state')).to.equal('recording');
+      expect(el.state).to.equal("recording");
+      expect(el.getAttribute("data-state")).to.equal("recording");
       expect(el.stream === startEvent.detail.stream).to.equal(true);
 
-      const stopPromise = oneEvent(el, 'lr-record-stop');
-      btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
+      const stopPromise = oneEvent(el, "lr-record-stop");
+      btn.dispatchEvent(
+        new PointerEvent("pointerup", { bubbles: true, pointerId: 1 })
+      );
       const stopEvent = await stopPromise;
       expect(stopEvent.detail.blob).to.be.instanceOf(Blob);
-      expect(stopEvent.detail.durationMs).to.be.a('number');
-      expect(el.state).to.equal('idle');
+      expect(stopEvent.detail.durationMs).to.be.a("number");
+      expect(el.state).to.equal("idle");
       expect(el.stream).to.be.null;
     } finally {
       restore();
     }
   });
 
-  it('renders no aria-pressed in hold mode (it is not a toggle button)', async () => {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
-    expect(trigger(el).hasAttribute('aria-pressed')).to.be.false;
+  it("renders no aria-pressed in hold mode (it is not a toggle button)", async () => {
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    expect(trigger(el).hasAttribute("aria-pressed")).to.be.false;
   });
 
-  it('ignores a repeated (auto-repeat) Enter keydown -- only the first keydown starts a take', async () => {
+  it("ignores a repeated (auto-repeat) Enter keydown -- only the first keydown starts a take", async () => {
     const restore = stubSuccessfulCapture();
     try {
-      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(
+        html`<lr-push-to-talk></lr-push-to-talk>`
+      )) as LyraPushToTalk;
       const btn = trigger(el);
       let starts = 0;
-      el.addEventListener('lr-record-start', () => starts++);
+      el.addEventListener("lr-record-start", () => starts++);
 
-      btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, repeat: false }));
+      btn.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Enter",
+          bubbles: true,
+          repeat: false,
+        })
+      );
       await aTimeout(20);
-      btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, repeat: true }));
+      btn.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Enter",
+          bubbles: true,
+          repeat: true,
+        })
+      );
       await aTimeout(20);
       expect(starts).to.equal(1);
 
-      btn.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+      btn.dispatchEvent(
+        new KeyboardEvent("keyup", { key: "Enter", bubbles: true })
+      );
       await aTimeout(20);
-      expect(el.state).to.equal('idle');
+      expect(el.state).to.equal("idle");
     } finally {
       restore();
     }
   });
 
-  it('stops an in-progress take on blur', async () => {
+  it("stops an in-progress take on blur", async () => {
     const restore = stubSuccessfulCapture();
     try {
-      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(
+        html`<lr-push-to-talk></lr-push-to-talk>`
+      )) as LyraPushToTalk;
       const btn = trigger(el);
-      const startPromise = oneEvent(el, 'lr-record-start');
-      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+      const startPromise = oneEvent(el, "lr-record-start");
+      btn.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 })
+      );
       await startPromise;
 
-      const stopPromise = oneEvent(el, 'lr-record-stop');
-      btn.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+      const stopPromise = oneEvent(el, "lr-record-stop");
+      btn.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
       await stopPromise;
-      expect(el.state).to.equal('idle');
+      expect(el.state).to.equal("idle");
     } finally {
       restore();
     }
   });
 
-  it('releasing (pointerup) while a permission request is still pending cancels it instead of letting recording start (regression)', async () => {
+  it("releasing (pointerup) while a permission request is still pending cancels it instead of letting recording start (regression)", async () => {
     const { restore, resolve } = stubDeferredCapture();
     try {
-      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(
+        html`<lr-push-to-talk></lr-push-to-talk>`
+      )) as LyraPushToTalk;
       const btn = trigger(el);
-      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+      btn.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 })
+      );
       await el.updateComplete;
-      expect(el.state).to.equal('requesting');
+      expect(el.state).to.equal("requesting");
 
-      btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
+      btn.dispatchEvent(
+        new PointerEvent("pointerup", { bubbles: true, pointerId: 1 })
+      );
 
-      const cancelPromise = oneEvent(el, 'lr-record-cancel');
+      const cancelPromise = oneEvent(el, "lr-record-cancel");
       resolve();
       await cancelPromise;
-      expect(el.state).to.equal('idle');
+      expect(el.state).to.equal("idle");
     } finally {
       restore();
     }
   });
 
-  it('pointercancel stops an active hold-mode take', async () => {
+  it("releases the initiating hold when mode changes before pending permission resolves", async () => {
+    const { restore, resolve, stream } = stubDeferredCapture();
+    try {
+      const el = (await fixture(
+        html`<lr-push-to-talk></lr-push-to-talk>`
+      )) as LyraPushToTalk;
+      const btn = trigger(el);
+      btn.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, pointerId: 41 })
+      );
+      await el.updateComplete;
+      expect(el.state).to.equal("requesting");
+
+      // Exercise the same-dispatch race: release arrives before Lit can process the mode update.
+      el.mode = "toggle";
+      btn.dispatchEvent(
+        new PointerEvent("pointerup", { bubbles: true, pointerId: 41 })
+      );
+      const canceled = oneEvent(el, "lr-record-cancel");
+      resolve();
+      await canceled;
+
+      expect(el.state).to.equal("idle");
+      expect(el.stream).to.be.null;
+      expect(stream.getTracks()[0]?.stopped).to.be.true;
+    } finally {
+      restore();
+    }
+  });
+
+  it("pointercancel stops an active hold-mode take", async () => {
     const restore = stubSuccessfulCapture();
     try {
-      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(
+        html`<lr-push-to-talk></lr-push-to-talk>`
+      )) as LyraPushToTalk;
       const btn = trigger(el);
-      const started = oneEvent(el, 'lr-record-start');
-      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+      const started = oneEvent(el, "lr-record-start");
+      btn.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 })
+      );
       await started;
 
-      const stopped = oneEvent(el, 'lr-record-stop');
-      btn.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 1 }));
+      const stopped = oneEvent(el, "lr-record-stop");
+      btn.dispatchEvent(
+        new PointerEvent("pointercancel", { bubbles: true, pointerId: 1 })
+      );
       await stopped;
-      expect(el.state).to.equal('idle');
+      expect(el.state).to.equal("idle");
     } finally {
       restore();
     }
   });
 
-  it('pointercancel suppresses a later rejected permission request as cancellation, not an error', async () => {
+  it("pointercancel suppresses a later rejected permission request as cancellation, not an error", async () => {
     const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
     const originalMediaRecorder = window.MediaRecorder;
     let rejectPermission!: (error: unknown) => void;
@@ -723,33 +909,42 @@ describe('hold mode', () => {
       })) as typeof navigator.mediaDevices.getUserMedia;
     window.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
     try {
-      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(
+        html`<lr-push-to-talk></lr-push-to-talk>`
+      )) as LyraPushToTalk;
       const btn = trigger(el);
-      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+      btn.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 })
+      );
       await el.updateComplete;
-      expect(el.state).to.equal('requesting');
+      expect(el.state).to.equal("requesting");
 
-      btn.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 1 }));
-      const canceled = oneEvent(el, 'lr-record-cancel');
-      rejectPermission(new Error('permission prompt dismissed'));
+      btn.dispatchEvent(
+        new PointerEvent("pointercancel", { bubbles: true, pointerId: 1 })
+      );
+      const canceled = oneEvent(el, "lr-record-cancel");
+      rejectPermission(new Error("permission prompt dismissed"));
       await canceled;
-      expect(el.state).to.equal('idle');
+      expect(el.state).to.equal("idle");
     } finally {
       navigator.mediaDevices.getUserMedia = originalGetUserMedia;
       window.MediaRecorder = originalMediaRecorder;
     }
   });
 
-  it('coalesces repeated releases while the recorder stop event is still pending', async () => {
+  it("coalesces repeated releases while the recorder stop event is still pending", async () => {
     const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
     const originalMediaRecorder = window.MediaRecorder;
     navigator.mediaDevices.getUserMedia = (async () =>
       new FakeStream() as unknown as MediaStream) as typeof navigator.mediaDevices.getUserMedia;
-    window.MediaRecorder = DelayedStopMediaRecorder as unknown as typeof MediaRecorder;
+    window.MediaRecorder =
+      DelayedStopMediaRecorder as unknown as typeof MediaRecorder;
     try {
-      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(
+        html`<lr-push-to-talk></lr-push-to-talk>`
+      )) as LyraPushToTalk;
       await el.start();
-      const stopped = oneEvent(el, 'lr-record-stop');
+      const stopped = oneEvent(el, "lr-record-stop");
 
       expect(() => {
         el.stop();
@@ -758,7 +953,7 @@ describe('hold mode', () => {
 
       await stopped;
       expect(DelayedStopMediaRecorder.last?.stopCalls).to.equal(1);
-      expect(el.state).to.equal('idle');
+      expect(el.state).to.equal("idle");
     } finally {
       navigator.mediaDevices.getUserMedia = originalGetUserMedia;
       window.MediaRecorder = originalMediaRecorder;
@@ -766,30 +961,39 @@ describe('hold mode', () => {
     }
   });
 
-  it('releasing (Enter keyup) while a permission request is still pending cancels it instead of letting recording start (regression)', async () => {
+  it("releasing (Enter keyup) while a permission request is still pending cancels it instead of letting recording start (regression)", async () => {
     const { restore, resolve } = stubDeferredCapture();
     try {
-      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(
+        html`<lr-push-to-talk></lr-push-to-talk>`
+      )) as LyraPushToTalk;
       const btn = trigger(el);
-      btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      btn.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+      );
       await el.updateComplete;
-      expect(el.state).to.equal('requesting');
+      expect(el.state).to.equal("requesting");
 
-      btn.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+      btn.dispatchEvent(
+        new KeyboardEvent("keyup", { key: "Enter", bubbles: true })
+      );
 
-      const cancelPromise = oneEvent(el, 'lr-record-cancel');
+      const cancelPromise = oneEvent(el, "lr-record-cancel");
       resolve();
       await cancelPromise;
-      expect(el.state).to.equal('idle');
+      expect(el.state).to.equal("idle");
     } finally {
       restore();
     }
   });
 
-  it('stubDeferredCapture.restore() fully restores window.MediaRecorder, not just getUserMedia (regression)', () => {
+  it("stubDeferredCapture.restore() fully restores window.MediaRecorder, not just getUserMedia (regression)", () => {
     const originalMediaRecorder = window.MediaRecorder;
     const { restore } = stubDeferredCapture();
-    expect(window.MediaRecorder === (FakeMediaRecorder as unknown as typeof MediaRecorder)).to.equal(true);
+    expect(
+      window.MediaRecorder ===
+        (FakeMediaRecorder as unknown as typeof MediaRecorder)
+    ).to.equal(true);
     restore();
     // Pre-fix, restore() only reset navigator.mediaDevices.getUserMedia -- window.MediaRecorder
     // stayed pointed at FakeMediaRecorder for the rest of the file's run.
@@ -799,41 +1003,49 @@ describe('hold mode', () => {
 
 // -- Toggle mode -----------------------------------------------------------
 
-describe('toggle mode', () => {
-  it('click starts and a second click stops, toggling aria-pressed', async () => {
+describe("toggle mode", () => {
+  it("click starts and a second click stops, toggling aria-pressed", async () => {
     const restore = stubSuccessfulCapture();
     try {
-      const el = (await fixture(html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(
+        html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`
+      )) as LyraPushToTalk;
       const btn = trigger(el);
-      expect(btn.getAttribute('aria-pressed')).to.equal('false');
+      expect(btn.getAttribute("aria-pressed")).to.equal("false");
 
-      const startPromise = oneEvent(el, 'lr-record-start');
+      const startPromise = oneEvent(el, "lr-record-start");
       btn.click();
       await startPromise;
       await el.updateComplete;
-      expect(btn.getAttribute('aria-pressed')).to.equal('true');
-      expect(el.state).to.equal('recording');
+      expect(btn.getAttribute("aria-pressed")).to.equal("true");
+      expect(el.state).to.equal("recording");
 
-      const stopPromise = oneEvent(el, 'lr-record-stop');
+      const stopPromise = oneEvent(el, "lr-record-stop");
       btn.click();
       await stopPromise;
       await el.updateComplete;
-      expect(btn.getAttribute('aria-pressed')).to.equal('false');
-      expect(el.state).to.equal('idle');
+      expect(btn.getAttribute("aria-pressed")).to.equal("false");
+      expect(el.state).to.equal("idle");
     } finally {
       restore();
     }
   });
 
-  it('a pointerdown/pointerup pair does nothing in toggle mode', async () => {
+  it("a pointerdown/pointerup pair does nothing in toggle mode", async () => {
     const restore = stubSuccessfulCapture();
     try {
-      const el = (await fixture(html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`)) as LyraPushToTalk;
+      const el = (await fixture(
+        html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`
+      )) as LyraPushToTalk;
       const btn = trigger(el);
       let fired = false;
-      el.addEventListener('lr-record-start', () => (fired = true));
-      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
-      btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
+      el.addEventListener("lr-record-start", () => (fired = true));
+      btn.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 })
+      );
+      btn.dispatchEvent(
+        new PointerEvent("pointerup", { bubbles: true, pointerId: 1 })
+      );
       await aTimeout(20);
       expect(fired).to.be.false;
     } finally {
@@ -844,37 +1056,45 @@ describe('toggle mode', () => {
 
 // -- Escape cancels in both modes ------------------------------------------
 
-it('Escape cancels an in-progress take, firing lr-record-cancel (never lr-record-stop)', async () => {
+it("Escape cancels an in-progress take, firing lr-record-cancel (never lr-record-stop)", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     const btn = trigger(el);
-    const startPromise = oneEvent(el, 'lr-record-start');
-    btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+    const startPromise = oneEvent(el, "lr-record-start");
+    btn.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1 })
+    );
     await startPromise;
 
     let stopped = false;
-    el.addEventListener('lr-record-stop', () => (stopped = true));
-    const cancelPromise = oneEvent(el, 'lr-record-cancel');
-    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    el.addEventListener("lr-record-stop", () => (stopped = true));
+    const cancelPromise = oneEvent(el, "lr-record-cancel");
+    btn.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
     await cancelPromise;
     expect(stopped).to.be.false;
-    expect(el.state).to.equal('idle');
+    expect(el.state).to.equal("idle");
   } finally {
     restore();
   }
 });
 
-it('the public cancel() method works identically to the Escape key', async () => {
+it("the public cancel() method works identically to the Escape key", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     await el.start();
-    expect(el.state).to.equal('recording');
-    const cancelPromise = oneEvent(el, 'lr-record-cancel');
+    expect(el.state).to.equal("recording");
+    const cancelPromise = oneEvent(el, "lr-record-cancel");
     el.cancel();
     await cancelPromise;
-    expect(el.state).to.equal('idle');
+    expect(el.state).to.equal("idle");
   } finally {
     restore();
   }
@@ -882,120 +1102,136 @@ it('the public cancel() method works identically to the Escape key', async () =>
 
 // -- Permission / error paths -----------------------------------------------
 
-it('resolves start() false and transitions to denied on NotAllowedError, emitting lr-record-error', async () => {
+it("resolves start() false and transitions to denied on NotAllowedError, emitting lr-record-error", async () => {
   const restore = stubDeniedCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
-    const errorPromise = oneEvent(el, 'lr-record-error');
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    const errorPromise = oneEvent(el, "lr-record-error");
     const started = await el.start();
     const errorEvent = await errorPromise;
     expect(started).to.be.false;
-    expect(el.state).to.equal('denied');
-    expect(el.getAttribute('data-state')).to.equal('denied');
-    expect((errorEvent.detail.error as DOMException).name).to.equal('NotAllowedError');
-    expect(status(el)).to.equal('Microphone access denied');
+    expect(el.state).to.equal("denied");
+    expect(el.getAttribute("data-state")).to.equal("denied");
+    expect((errorEvent.detail.error as DOMException).name).to.equal(
+      "NotAllowedError"
+    );
+    expect(status(el)).to.equal("Microphone access denied");
   } finally {
     restore();
   }
 });
 
-it('transitions to the generic error state for a non-permission failure', async () => {
+it("transitions to the generic error state for a non-permission failure", async () => {
   const restore = stubErroringCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     await el.start();
-    expect(el.state).to.equal('error');
-    expect(status(el)).to.equal('Recording failed');
+    expect(el.state).to.equal("error");
+    expect(status(el)).to.equal("Recording failed");
   } finally {
     restore();
   }
 });
 
-it('disabled suppresses start() entirely', async () => {
+it("disabled suppresses start() entirely", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk disabled></lr-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(
+      html`<lr-push-to-talk disabled></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     expect(await el.start()).to.be.false;
-    expect(el.state).to.equal('idle');
+    expect(el.state).to.equal("idle");
   } finally {
     restore();
   }
 });
 
-it('host click forwards to the configured recording control', async () => {
+it("host click forwards to the configured recording control", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`)) as LyraPushToTalk;
-    const started = oneEvent(el, 'lr-record-start');
+    const el = (await fixture(
+      html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    const started = oneEvent(el, "lr-record-start");
     el.click();
     await started;
-    expect(el.state).to.equal('recording');
+    expect(el.state).to.equal("recording");
 
-    const stopped = oneEvent(el, 'lr-record-stop');
+    const stopped = oneEvent(el, "lr-record-stop");
     el.click();
     await stopped;
-    expect(el.state).to.equal('idle');
+    expect(el.state).to.equal("idle");
   } finally {
     restore();
   }
 });
 
-it('host click starts and stops directly in hold mode', async () => {
+it("host click starts and stops directly in hold mode", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
-    const started = oneEvent(el, 'lr-record-start');
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    const started = oneEvent(el, "lr-record-start");
     el.click();
     await started;
-    expect(el.state).to.equal('recording');
+    expect(el.state).to.equal("recording");
 
-    const stopped = oneEvent(el, 'lr-record-stop');
+    const stopped = oneEvent(el, "lr-record-stop");
     el.click();
     await stopped;
-    expect(el.state).to.equal('idle');
+    expect(el.state).to.equal("idle");
   } finally {
     restore();
   }
 });
 
-it('disabling an active recording cancels it and stops the granted track', async () => {
+it("disabling an active recording cancels it and stops the granted track", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     await el.start();
     const stream = el.stream as unknown as FakeStream;
-    const cancelled = oneEvent(el, 'lr-record-cancel');
+    const cancelled = oneEvent(el, "lr-record-cancel");
     el.disabled = true;
     await el.updateComplete;
     await cancelled;
-    expect(el.state).to.equal('idle');
+    expect(el.state).to.equal("idle");
     expect(stream.getTracks()[0]?.stopped).to.be.true;
   } finally {
     restore();
   }
 });
 
-it('rechecks disabled after pending permission resolves and stops the newly granted track', async () => {
+it("rechecks disabled after pending permission resolves and stops the newly granted track", async () => {
   const deferred = stubDeferredCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     const started = el.start();
     await el.updateComplete;
-    expect(el.state).to.equal('requesting');
+    expect(el.state).to.equal("requesting");
     el.disabled = true;
     await el.updateComplete;
-    const cancelled = oneEvent(el, 'lr-record-cancel');
+    const cancelled = oneEvent(el, "lr-record-cancel");
     deferred.resolve();
     expect(await started).to.be.false;
     await cancelled;
-    expect(el.state).to.equal('idle');
+    expect(el.state).to.equal("idle");
     expect(deferred.stream.getTracks()[0]?.stopped).to.be.true;
   } finally {
     deferred.restore();
   }
 });
 
-it('stops the granted stream when MediaRecorder construction fails', async () => {
+it("stops the granted stream when MediaRecorder construction fails", async () => {
   const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
   const originalMediaRecorder = window.MediaRecorder;
   const stream = new FakeStream();
@@ -1006,13 +1242,15 @@ it('stops the granted stream when MediaRecorder construction fails', async () =>
       return true;
     }
     constructor() {
-      throw new Error('recorder construction failed');
+      throw new Error("recorder construction failed");
     }
   } as unknown as typeof MediaRecorder;
   try {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     expect(await el.start()).to.be.false;
-    expect(el.state).to.equal('error');
+    expect(el.state).to.equal("error");
     expect(stream.getTracks()[0]?.stopped).to.be.true;
     expect(el.stream === null).to.equal(true);
   } finally {
@@ -1021,26 +1259,111 @@ it('stops the granted stream when MediaRecorder construction fails', async () =>
   }
 });
 
-// -- Chunked streaming -------------------------------------------------------
-
-it('emits lr-record-chunk once per timeslice when timeslice-ms > 0, and never when it is 0', async () => {
+it("handles an asynchronous MediaRecorder failure exactly once and ignores late terminal callbacks", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk timeslice-ms="250"></lr-push-to-talk>`)) as LyraPushToTalk;
-    const chunks: Blob[] = [];
-    el.addEventListener('lr-record-chunk', (e) => chunks.push((e as CustomEvent<{ blob: Blob }>).detail.blob));
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    let errors = 0;
+    let stops = 0;
+    let cancels = 0;
+    el.addEventListener("lr-record-error", () => errors++);
+    el.addEventListener("lr-record-stop", () => stops++);
+    el.addEventListener("lr-record-cancel", () => cancels++);
     await el.start();
-    const recorder = (el as unknown as { recorder: FakeMediaRecorder }).recorder;
-    recorder.ondataavailable!({ data: new Blob(['a']) });
-    recorder.ondataavailable!({ data: new Blob(['b']) });
+
+    const stream = el.stream as unknown as FakeStream;
+    const recorder = (el as unknown as { recorder: FakeMediaRecorder })
+      .recorder;
+    const lateStop = recorder.onstop!;
+    const lateData = recorder.ondataavailable!;
+    const recorderError = new DOMException("encoder failed", "EncodingError");
+    recorder.onerror?.(
+      Object.assign(new Event("error"), { error: recorderError })
+    );
+    recorder.onerror?.(
+      Object.assign(new Event("error"), { error: recorderError })
+    );
+    lateData({ data: new Blob(["late"]) });
+    lateStop();
+    await el.updateComplete;
+
+    expect(errors).to.equal(1);
+    expect(stops).to.equal(0);
+    expect(cancels).to.equal(0);
+    expect(el.state).to.equal("error");
+    expect(el.stream).to.be.null;
+    expect(stream.getTracks()[0]?.stopped).to.be.true;
+  } finally {
+    restore();
+  }
+});
+
+it("keeps deviceId as the sole microphone-device authority", async () => {
+  const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
+  const originalMediaRecorder = window.MediaRecorder;
+  let requested: MediaStreamConstraints | undefined;
+  navigator.mediaDevices.getUserMedia = (async (constraints) => {
+    requested = constraints;
+    return new FakeStream() as unknown as MediaStream;
+  }) as typeof navigator.mediaDevices.getUserMedia;
+  window.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
+  try {
+    const el = (await fixture(
+      html`<lr-push-to-talk device-id="canonical"></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    (
+      el as unknown as { audioConstraints: MediaTrackConstraints }
+    ).audioConstraints = {
+      echoCancellation: true,
+      deviceId: { exact: "nested-must-not-win" },
+    };
+    await el.start();
+
+    expect(requested?.audio).to.deep.equal({
+      echoCancellation: true,
+      deviceId: { exact: "canonical" },
+    });
+    el.cancel();
+  } finally {
+    navigator.mediaDevices.getUserMedia = originalGetUserMedia;
+    window.MediaRecorder = originalMediaRecorder;
+  }
+});
+
+// -- Chunked streaming -------------------------------------------------------
+
+it("snapshots chunk emission from the sanitized timeslice at the start of each take", async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const el = (await fixture(
+      html`<lr-push-to-talk timeslice-ms="250"></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    const chunks: Blob[] = [];
+    el.addEventListener("lr-record-chunk", (e) =>
+      chunks.push((e as CustomEvent<{ blob: Blob }>).detail.blob)
+    );
+    await el.start();
+    const recorder = (el as unknown as { recorder: FakeMediaRecorder })
+      .recorder;
+    el.timesliceMs = 0;
+    recorder.ondataavailable!({ data: new Blob(["a"]) });
+    recorder.ondataavailable!({ data: new Blob(["b"]) });
     expect(chunks.length).to.equal(2);
 
-    const noSlice = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const noSlice = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     let fired = false;
-    noSlice.addEventListener('lr-record-chunk', () => (fired = true));
+    noSlice.addEventListener("lr-record-chunk", () => (fired = true));
     await noSlice.start();
-    (noSlice as unknown as { recorder: FakeMediaRecorder }).recorder.ondataavailable!({ data: new Blob(['c']) });
+    noSlice.timesliceMs = 250;
+    (noSlice as unknown as { recorder: FakeMediaRecorder }).recorder
+      .ondataavailable!({ data: new Blob(["c"]) });
     expect(fired).to.be.false;
+    el.cancel();
+    noSlice.cancel();
   } finally {
     restore();
   }
@@ -1048,11 +1371,13 @@ it('emits lr-record-chunk once per timeslice when timeslice-ms > 0, and never wh
 
 // -- Level meter -------------------------------------------------------------
 
-it('emits lr-level while recording when level-events is set', async () => {
+it("emits lr-level while recording when level-events is set", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk level-events></lr-push-to-talk>`)) as LyraPushToTalk;
-    const levelPromise = oneEvent(el, 'lr-level');
+    const el = (await fixture(
+      html`<lr-push-to-talk level-events></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    const levelPromise = oneEvent(el, "lr-level");
     await el.start();
     const levelEvent = await levelPromise;
     expect(levelEvent.detail.level).to.be.within(0, 1);
@@ -1062,12 +1387,14 @@ it('emits lr-level while recording when level-events is set', async () => {
   }
 });
 
-it('emits no lr-level when level-events is unset (the default)', async () => {
+it("emits no lr-level when level-events is unset (the default)", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     let fired = false;
-    el.addEventListener('lr-level', () => (fired = true));
+    el.addEventListener("lr-level", () => (fired = true));
     await el.start();
     await aTimeout(50);
     expect(fired).to.be.false;
@@ -1076,11 +1403,15 @@ it('emits no lr-level when level-events is unset (the default)', async () => {
   }
 });
 
-it('starts and stops the elapsed timer when show-timer changes during recording', async () => {
+it("starts and stops the elapsed timer when show-timer changes during recording", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk show-timer="false"></lr-push-to-talk>`)) as LyraPushToTalk;
-    const runtime = el as unknown as { tickTimer?: { owner: Window; handle: number } };
+    const el = (await fixture(
+      html`<lr-push-to-talk show-timer="false"></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    const runtime = el as unknown as {
+      tickTimer?: { owner: Window; handle: number };
+    };
     await el.start();
     expect(runtime.tickTimer === undefined).to.equal(true);
 
@@ -1097,10 +1428,12 @@ it('starts and stops the elapsed timer when show-timer changes during recording'
   }
 });
 
-it('starts and stops level sampling when level-events changes during recording', async () => {
+it("starts and stops level sampling when level-events changes during recording", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     const runtime = el as unknown as {
       audioCtx?: AudioContext;
       levelFrame?: { owner: Window; handle: number };
@@ -1123,7 +1456,7 @@ it('starts and stops level sampling when level-events changes during recording',
   }
 });
 
-it('starts, reschedules, and disables the recording-start deadline when max-duration-ms changes', async () => {
+it("starts, reschedules, and disables the recording-start deadline when max-duration-ms changes", async () => {
   const restore = stubSuccessfulCapture();
   const originalSetTimeout = window.setTimeout;
   const originalClearTimeout = window.clearTimeout;
@@ -1131,8 +1464,12 @@ it('starts, reschedules, and disables the recording-start deadline when max-dura
   const clearedHandles: number[] = [];
   let nextHandle = 500;
   try {
-    const el = (await fixture(html`<lr-push-to-talk show-timer="false"></lr-push-to-talk>`)) as LyraPushToTalk;
-    const runtime = el as unknown as { maxDurationTimer?: { owner: Window; handle: number } };
+    const el = (await fixture(
+      html`<lr-push-to-talk show-timer="false"></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    const runtime = el as unknown as {
+      maxDurationTimer?: { owner: Window; handle: number };
+    };
     await el.start();
     expect(runtime.maxDurationTimer === undefined).to.equal(true);
     window.setTimeout = ((_handler: TimerHandler, delay?: number) => {
@@ -1170,14 +1507,16 @@ it('starts, reschedules, and disables the recording-start deadline when max-dura
 
 // -- max-duration-ms auto-stop -----------------------------------------------
 
-it('auto-stops at max-duration-ms', async () => {
+it("auto-stops at max-duration-ms", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk max-duration-ms="40"></lr-push-to-talk>`)) as LyraPushToTalk;
-    const stopPromise = oneEvent(el, 'lr-record-stop');
+    const el = (await fixture(
+      html`<lr-push-to-talk max-duration-ms="40"></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    const stopPromise = oneEvent(el, "lr-record-stop");
     await el.start();
     await stopPromise;
-    expect(el.state).to.equal('idle');
+    expect(el.state).to.equal("idle");
   } finally {
     restore();
   }
@@ -1185,16 +1524,21 @@ it('auto-stops at max-duration-ms', async () => {
 
 // -- Numeric safety (finiteDuration clamping) --------------------------------
 
-it('clamps a NaN/oversized timeslice-ms before it reaches MediaRecorder.start() instead of an unsanitized value reaching that native API (regression)', async () => {
+it("clamps a NaN/oversized timeslice-ms before it reaches MediaRecorder.start() instead of an unsanitized value reaching that native API (regression)", async () => {
   const restore = stubSuccessfulCapture();
   const originalStart = FakeMediaRecorder.prototype.start;
   const startArgs: (number | undefined)[] = [];
-  FakeMediaRecorder.prototype.start = function (this: FakeMediaRecorder, timeslice?: number) {
+  FakeMediaRecorder.prototype.start = function (
+    this: FakeMediaRecorder,
+    timeslice?: number
+  ) {
     startArgs.push(timeslice);
     return originalStart.call(this, timeslice);
   };
   try {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     el.timesliceMs = Number.MAX_SAFE_INTEGER;
     await el.start();
     expect(startArgs).to.have.lengthOf(1);
@@ -1210,12 +1554,18 @@ it("clamps an oversized max-duration-ms to the browser timer ceiling instead of 
   const restore = stubSuccessfulCapture();
   const originalSetTimeout = window.setTimeout;
   const delays: number[] = [];
-  window.setTimeout = ((handler: TimerHandler, delay?: number, ...args: unknown[]) => {
+  window.setTimeout = ((
+    handler: TimerHandler,
+    delay?: number,
+    ...args: unknown[]
+  ) => {
     delays.push(delay ?? 0);
     return originalSetTimeout(handler, delay, ...args);
   }) as typeof window.setTimeout;
   try {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     el.maxDurationMs = Number.MAX_SAFE_INTEGER;
     await el.start();
     expect(delays.length).to.be.greaterThan(0);
@@ -1227,28 +1577,32 @@ it("clamps an oversized max-duration-ms to the browser timer ceiling instead of 
   }
 });
 
-it('never schedules a max-duration-ms auto-stop for a NaN value', async () => {
+it("never schedules a max-duration-ms auto-stop for a NaN value", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const nan = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const nan = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     nan.maxDurationMs = NaN;
     await nan.start();
     await aTimeout(30);
-    expect(nan.state).to.equal('recording'); // never auto-stopped
+    expect(nan.state).to.equal("recording"); // never auto-stopped
     nan.cancel();
   } finally {
     restore();
   }
 });
 
-it('never schedules a max-duration-ms auto-stop for a negative value', async () => {
+it("never schedules a max-duration-ms auto-stop for a negative value", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const negative = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const negative = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     negative.maxDurationMs = -100;
     await negative.start();
     await aTimeout(30);
-    expect(negative.state).to.equal('recording');
+    expect(negative.state).to.equal("recording");
     negative.cancel();
   } finally {
     restore();
@@ -1258,42 +1612,48 @@ it('never schedules a max-duration-ms auto-stop for a negative value', async () 
 // -- Announcements -----------------------------------------------------------
 
 function liveRegionText(el: LyraPushToTalk): string {
-  const region = el.shadowRoot!.querySelector('lr-live-region')!;
-  return region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
+  const region = el.shadowRoot!.querySelector("lr-live-region")!;
+  return region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? "";
 }
 
-it('announces start/stop/cancel via the internal live region', async () => {
+it("announces start/stop/cancel via the internal live region", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     await el.start();
     await aTimeout(20);
-    expect(liveRegionText(el)).to.equal('Recording started');
+    expect(liveRegionText(el)).to.equal("Recording started");
     await el.stop();
     await aTimeout(20);
-    expect(liveRegionText(el)).to.equal('Recording stopped');
+    expect(liveRegionText(el)).to.equal("Recording stopped");
   } finally {
     restore();
   }
 });
 
-it('announces permission and generic recording failures via the internal live region', async () => {
+it("announces permission and generic recording failures via the internal live region", async () => {
   const deniedRestore = stubDeniedCapture();
   try {
-    const denied = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const denied = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     await denied.start();
     await aTimeout(20);
-    expect(liveRegionText(denied)).to.equal('Microphone access denied');
+    expect(liveRegionText(denied)).to.equal("Microphone access denied");
   } finally {
     deniedRestore();
   }
 
   const errorRestore = stubErroringCapture();
   try {
-    const failed = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const failed = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     await failed.start();
     await aTimeout(20);
-    expect(liveRegionText(failed)).to.equal('Recording failed');
+    expect(liveRegionText(failed)).to.equal("Recording failed");
   } finally {
     errorRestore();
   }
@@ -1301,69 +1661,79 @@ it('announces permission and generic recording failures via the internal live re
 
 // -- Slots --------------------------------------------------------------
 
-it('renders microphone-icon ahead of the legacy icon slot and falls back live', async () => {
+it("uses only the purpose-specific microphone-icon slot and falls back live", async () => {
   const el = (await fixture(html`
     <lr-push-to-talk>
       <span id="legacy-icon" slot="icon">legacy</span>
       <span id="microphone-icon" slot="microphone-icon">microphone</span>
     </lr-push-to-talk>
   `)) as LyraPushToTalk;
-  const microphoneSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="microphone-icon"]')!;
-  const iconSlot = microphoneSlot.querySelector<HTMLSlotElement>('slot[name="icon"]')!;
-  const canonical = el.querySelector<HTMLElement>('#microphone-icon')!;
-  const legacy = el.querySelector<HTMLElement>('#legacy-icon')!;
+  const microphoneSlot = el.shadowRoot!.querySelector<HTMLSlotElement>(
+    'slot[name="microphone-icon"]'
+  )!;
+  const canonical = el.querySelector<HTMLElement>("#microphone-icon")!;
+  const legacy = el.querySelector<HTMLElement>("#legacy-icon")!;
 
-  expect(microphoneSlot.assignedElements().map((item) => item.id)).to.deep.equal(['microphone-icon']);
+  expect(
+    microphoneSlot.assignedElements().map((item) => item.id)
+  ).to.deep.equal(["microphone-icon"]);
+  expect(el.shadowRoot!.querySelector('slot[name="icon"]') === null).to.be.true;
   expect(canonical.getClientRects().length).to.be.greaterThan(0);
   expect(legacy.getClientRects().length).to.equal(0);
 
-  const changed = oneEvent(microphoneSlot, 'slotchange');
+  const changed = oneEvent(microphoneSlot, "slotchange");
   canonical.remove();
   await changed;
   await el.updateComplete;
-  expect(iconSlot.assignedElements().map((item) => item.id)).to.deep.equal(['legacy-icon']);
-  expect(legacy.getClientRects().length).to.be.greaterThan(0);
-
-  const legacyChanged = oneEvent(iconSlot, 'slotchange');
-  legacy.remove();
-  await legacyChanged;
-  await el.updateComplete;
-  expect(iconSlot.assignedElements().length).to.equal(0);
-  expect(el.shadowRoot!.querySelectorAll('[part="icon"] svg').length).to.equal(1);
+  expect(legacy.getClientRects().length).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('[part="icon"] svg').length).to.equal(
+    1
+  );
 });
 
-it('keeps an undersized public size override above the shared icon-button hit floor', async () => {
+it("keeps an undersized public size override above the shared icon-button hit floor", async () => {
   const el = (await fixture(html`
-    <lr-push-to-talk style="--lr-push-to-talk-size:8px;--lr-theme-icon-button-size:44px"></lr-push-to-talk>
+    <lr-push-to-talk
+      style="--lr-push-to-talk-size:8px;--lr-theme-icon-button-size:44px"
+    ></lr-push-to-talk>
   `)) as LyraPushToTalk;
   const rect = trigger(el).getBoundingClientRect();
   expect(rect.width).to.be.at.least(44);
   expect(rect.height).to.be.at.least(44);
 });
 
-it('makes interactive icon-slot content decorative and unfocusable inside the trigger', async () => {
+it("makes interactive icon-slot content decorative and unfocusable inside the trigger", async () => {
   const el = (await fixture(html`
-    <lr-push-to-talk><button id="nested-icon" slot="icon">Nested action</button></lr-push-to-talk>
+    <lr-push-to-talk
+      ><button id="nested-icon" slot="microphone-icon">
+        Nested action
+      </button></lr-push-to-talk
+    >
   `)) as LyraPushToTalk;
-  const nested = el.querySelector<HTMLElement>('#nested-icon')!;
+  const nested = el.querySelector<HTMLElement>("#nested-icon")!;
   nested.focus();
 
-  expect(el.ownerDocument.activeElement?.id).to.not.equal('nested-icon');
-  expect(el.shadowRoot!.querySelector('[part="icon"]')?.hasAttribute('inert')).to.be.true;
+  expect(el.ownerDocument.activeElement?.id).to.not.equal("nested-icon");
+  expect(el.shadowRoot!.querySelector('[part="icon"]')?.hasAttribute("inert"))
+    .to.be.true;
   await expect(el).to.be.accessible();
 });
 
 // -- Accessibility -------------------------------------------------------
 
-it('is accessible in hold mode', async () => {
-  const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+it("is accessible in hold mode", async () => {
+  const el = (await fixture(
+    html`<lr-push-to-talk></lr-push-to-talk>`
+  )) as LyraPushToTalk;
   await expect(el).to.be.accessible();
 });
 
-it('is accessible in toggle mode while recording', async () => {
+it("is accessible in toggle mode while recording", async () => {
   const restore = stubSuccessfulCapture();
   try {
-    const el = (await fixture(html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`)) as LyraPushToTalk;
+    const el = (await fixture(
+      html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`
+    )) as LyraPushToTalk;
     await el.start();
     await expect(el).to.be.accessible();
   } finally {
@@ -1373,28 +1743,39 @@ it('is accessible in toggle mode while recording', async () => {
 
 // -- Localization ------------------------------------------------------------
 
-it('localizes trigger labels and status text via this.localize()', async () => {
+it("localizes trigger labels and status text via this.localize()", async () => {
   const el = (await fixture(html`
     <lr-push-to-talk
-      .strings=${{ pushToTalkHold: 'Maintenir pour parler', pushToTalkDenied: 'Accès micro refusé' }}
+      .strings=${{
+        pushToTalkHold: "Maintenir pour parler",
+        pushToTalkDenied: "Accès micro refusé",
+      }}
     ></lr-push-to-talk>
   `)) as LyraPushToTalk;
-  expect(trigger(el).getAttribute('aria-label')).to.equal('Maintenir pour parler');
+  expect(trigger(el).getAttribute("aria-label")).to.equal(
+    "Maintenir pour parler"
+  );
 });
 
 // -- ARIA-name forwarding ------------------------------------------------------
 
-it('a host-level aria-label overrides the computed trigger label', async () => {
+it("a host-level aria-label overrides the computed trigger label", async () => {
   const el = (await fixture(
     html`<lr-push-to-talk aria-label="Talk to the assistant"></lr-push-to-talk>`
   )) as LyraPushToTalk;
-  expect(trigger(el).getAttribute('aria-label')).to.equal('Talk to the assistant');
+  expect(trigger(el).getAttribute("aria-label")).to.equal(
+    "Talk to the assistant"
+  );
 });
 
-describe('recording-state cssprop escape hatch', () => {
-  function resolvedInShadow(el: LyraPushToTalk, declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
+describe("recording-state cssprop escape hatch", () => {
+  function resolvedInShadow(
+    el: LyraPushToTalk,
+    declaration: string,
+    property: string
+  ): string {
+    const probe = document.createElement("span");
+    probe.setAttribute("style", declaration);
     el.shadowRoot!.appendChild(probe);
     const value = getComputedStyle(probe).getPropertyValue(property);
     probe.remove();
@@ -1404,32 +1785,42 @@ describe('recording-state cssprop escape hatch', () => {
   // The recording tint keys purely on the `data-state` attribute, so setting it directly is enough
   // to activate the `[part='trigger']` treatment under test (the internal lifecycle sets the same
   // attribute when a real take begins).
-  async function recording(style = ''): Promise<LyraPushToTalk> {
+  async function recording(style = ""): Promise<LyraPushToTalk> {
     const wrapper = (await fixture(html`
-      <div style=${style}><lr-push-to-talk data-state="recording"></lr-push-to-talk></div>
+      <div style=${style}>
+        <lr-push-to-talk data-state="recording"></lr-push-to-talk>
+      </div>
     `)) as HTMLElement;
-    const el = wrapper.querySelector('lr-push-to-talk') as LyraPushToTalk;
+    const el = wrapper.querySelector("lr-push-to-talk") as LyraPushToTalk;
     await el.updateComplete;
     return el;
   }
 
-  it('recolors the recording trigger border+text from an ancestor via --lr-push-to-talk-recording-color', async () => {
-    const el = await recording('--lr-push-to-talk-recording-color: rgb(0, 51, 102)');
+  it("recolors the recording trigger border+text from an ancestor via --lr-push-to-talk-recording-color", async () => {
+    const el = await recording(
+      "--lr-push-to-talk-recording-color: rgb(0, 51, 102)"
+    );
     const t = trigger(el);
-    expect(getComputedStyle(t).borderTopColor).to.equal('rgb(0, 51, 102)');
-    expect(getComputedStyle(t).color).to.equal('rgb(0, 51, 102)');
+    expect(getComputedStyle(t).borderTopColor).to.equal("rgb(0, 51, 102)");
+    expect(getComputedStyle(t).color).to.equal("rgb(0, 51, 102)");
   });
 
-  it('renders byte-identical to the danger token when unset', async () => {
+  it("renders byte-identical to the danger token when unset", async () => {
     const el = await recording();
     const t = trigger(el);
-    const danger = resolvedInShadow(el, 'color: var(--lr-color-danger)', 'color');
+    const danger = resolvedInShadow(
+      el,
+      "color: var(--lr-color-danger)",
+      "color"
+    );
     expect(getComputedStyle(t).borderTopColor).to.equal(danger);
     expect(getComputedStyle(t).color).to.equal(danger);
   });
 
-  it('is accessible with the recording-state prop themed', async () => {
-    const el = await recording('--lr-push-to-talk-recording-color: rgb(0, 51, 102)');
+  it("is accessible with the recording-state prop themed", async () => {
+    const el = await recording(
+      "--lr-push-to-talk-recording-color: rgb(0, 51, 102)"
+    );
     await expect(el).to.be.accessible();
   });
 });

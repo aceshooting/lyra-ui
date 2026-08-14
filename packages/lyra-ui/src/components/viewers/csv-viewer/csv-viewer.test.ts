@@ -1,6 +1,7 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './csv-viewer.js';
 import type { LyraCsvViewer } from './csv-viewer.js';
+import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 
 const CSV = 'Name,Role\nAda Lovelace,Mathematician\nGrace Hopper,Computer scientist';
 const GRID_CSV = 'Name,Role\nAda,Mathematician\nGrace,Scientist\nAda,Programmer';
@@ -122,6 +123,73 @@ describe('lr-csv-viewer', () => {
     const restore = fetchText('Name,Notes\nAda,"Wrote notes on the ""Engine"", 1843"');
     try { el.src = 'https://example.test/people.csv'; await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null); expect((el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[][] }).items[0]).to.deep.equal(['Ada', 'Wrote notes on the "Engine", 1843']); } finally { restore(); }
   });
+  it('preserves auto-detected delimiters and quoted newlines through the bounded parser path', async () => {
+    const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+    const restore = fetchText('Name;Notes\r\nAda;"first; clause\r\nsecond clause"\r\nGrace;plain');
+    try {
+      el.src = 'https://example.test/people.csv';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[][] };
+      expect(list.items).to.deep.equal([
+        ['Ada', 'first; clause\r\nsecond clause'],
+        ['Grace', 'plain'],
+      ]);
+    } finally {
+      restore();
+    }
+  });
+  it('emits bounded parser diagnostics while retaining a recoverable partial grid', async () => {
+    const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+    const diagnostics: unknown[] = [];
+    el.addEventListener('lr-render-error', (event) => {
+      diagnostics.push((event as CustomEvent<{ error: unknown }>).detail.error);
+    });
+    const restore = fetchText('Name,Role\nAda,Math\n"Grace,Science');
+    try {
+      el.src = 'https://example.test/recoverable.csv';
+      await waitUntil(() => diagnostics.length === 1);
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      const codes = (diagnostics[0] as Array<{ code?: string }>).map((error) => error.code);
+      expect(codes).to.include('MissingQuotes');
+      expect(el.shadowRoot!.querySelectorAll('[part="error"]')).to.have.lengthOf(0);
+      expect(el.shadowRoot!.querySelectorAll('lr-virtual-list')).to.have.lengthOf(1);
+    } finally {
+      restore();
+    }
+  });
+  it('rejects a compact million-row resource before PapaParse is invoked', async () => {
+    const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+    let parseCalls = 0;
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      parse() {
+        parseCalls++;
+        return { data: [], errors: [], meta: {} };
+      },
+    });
+    const restore = fetchText('x\n'.repeat(1_000_000));
+    try {
+      const errorEvent = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/compact-million.csv';
+      const event = await errorEvent as CustomEvent<{ error: unknown }>;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(event.detail.error instanceof LyraResourceLimitError).to.be.true;
+      expect(parseCalls).to.equal(0);
+      expect(el.shadowRoot!.querySelectorAll('lr-virtual-list')).to.have.lengthOf(0);
+    } finally {
+      restore();
+    }
+  });
+  it('keeps a fetched empty document in neutral no-data state', async () => {
+    const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+    const restore = fetchText('');
+    try {
+      el.src = 'https://example.test/empty.csv';
+      await waitUntil(() => el.shadowRoot!.querySelector('.empty-note')?.textContent === 'No data');
+      expect(el.shadowRoot!.querySelectorAll('[part="error"]')).to.have.lengthOf(0);
+    } finally {
+      restore();
+    }
+  });
   it('renders data rows as a grid, matching the header row, not as unstyled stacked text', async () => {
     // Regression test: renderRow()/renderCell()'s output for data rows is rendered inside
     // <lr-virtual-list>'s own shadow root via its renderItem callback, a different shadow tree
@@ -197,13 +265,14 @@ describe('lr-csv-viewer', () => {
     const unnamed = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
     expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('CSV document');
   });
-  it('exposes the accessible name on a region and lets the host aria-label override name', async () => {
+  it('leaves a non-empty host aria-label on the host instead of duplicating a shadow owner', async () => {
     const el = (await fixture(html`<lr-csv-viewer name="quarterly.csv" aria-label="Quarterly report"></lr-csv-viewer>`)) as LyraCsvViewer;
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
-    expect(base.getAttribute('role')).to.equal('region');
-    expect(base.getAttribute('aria-label')).to.equal('Quarterly report');
+    expect(base.getAttribute('role')).to.be.null;
+    expect(base.getAttribute('aria-label')).to.be.null;
+    expect(el.getAttribute('aria-label')).to.equal('Quarterly report');
   });
-  it('preserves an explicitly empty host aria-label on both region and loaded table', async () => {
+  it('preserves an explicitly empty host aria-label on the stable region without duplicating it on the table', async () => {
     const el = (await fixture(html`<lr-csv-viewer name="quarterly.csv" aria-label=""></lr-csv-viewer>`)) as LyraCsvViewer;
     const restore = fetchText(CSV);
     try {
@@ -213,8 +282,7 @@ describe('lr-csv-viewer', () => {
       const sheet = el.shadowRoot!.querySelector('[part="sheet"]')!;
       expect(base.hasAttribute('aria-label')).to.be.true;
       expect(base.getAttribute('aria-label')).to.equal('');
-      expect(sheet.hasAttribute('aria-label')).to.be.true;
-      expect(sheet.getAttribute('aria-label')).to.equal('');
+      expect(sheet.hasAttribute('aria-label')).to.be.false;
     } finally {
       restore();
     }
@@ -556,7 +624,7 @@ describe('lr-csv-viewer', () => {
       el.src = 'https://example.test/people.csv';
       await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
       let leaked = 0;
-      for (const name of ['lr-load-more', 'lr-visible-range-changed', 'lr-scroll']) {
+      for (const name of ['lr-load-more', 'lr-visible-range-changed', 'lr-virtual-scroll']) {
         el.addEventListener(name as never, () => { leaked++; });
         el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
       }

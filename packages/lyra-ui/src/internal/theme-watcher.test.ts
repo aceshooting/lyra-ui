@@ -338,6 +338,116 @@ describe('ThemeWatcher', () => {
     }
   });
 
+  it('ignores inline declaration writes outside the watched host ancestry', async () => {
+    const { host, connect, disconnect } = await makeHost();
+    const unrelated = document.body.appendChild(document.createElement('div'));
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    try {
+      connect();
+      unrelated.style.setProperty('--lr-theme-test', 'unrelated');
+      await aTimeout(0);
+      expect(calls).to.equal(0);
+
+      host.style.setProperty('--lr-theme-test', 'host');
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+    } finally {
+      unrelated.remove();
+      disconnect();
+    }
+  });
+
+  it('ignores an unadopted constructed stylesheet until it can affect the watched root', async () => {
+    const { host, connect, disconnect } = await makeHost();
+    const originalSheets = document.adoptedStyleSheets;
+    const sheet = new CSSStyleSheet();
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    try {
+      connect();
+      sheet.replaceSync(':root { --lr-theme-test: red; }');
+      await aTimeout(0);
+      expect(calls).to.equal(0);
+
+      document.adoptedStyleSheets = [...originalSheets, sheet];
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+      calls = 0;
+
+      (sheet.cssRules[0] as CSSStyleRule).style.setProperty('--lr-theme-test', 'blue');
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+    } finally {
+      document.adoptedStyleSheets = originalSheets;
+      disconnect();
+    }
+  });
+
+  it('ignores CSSOM writes in a sibling shadow tree that cannot style the host', async () => {
+    const { host, connect, disconnect } = await makeHost();
+    const sibling = document.body.appendChild(document.createElement('div'));
+    const siblingRoot = sibling.attachShadow({ mode: 'open' });
+    const style = siblingRoot.appendChild(document.createElement('style'));
+    style.textContent = ':host { --lr-theme-test: red; }';
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    try {
+      connect();
+      (style.sheet!.cssRules[0] as CSSStyleRule).style.setProperty(
+        '--lr-theme-test',
+        'blue',
+      );
+      await aTimeout(0);
+      expect(calls).to.equal(0);
+    } finally {
+      sibling.remove();
+      disconnect();
+    }
+  });
+
+  it('reacts to inline custom-property writes on the host assigned slot', async () => {
+    const { host, connect, disconnect } = await makeHost();
+    const shell = document.body.appendChild(document.createElement('div'));
+    const root = shell.attachShadow({ mode: 'open' });
+    const slot = root.appendChild(document.createElement('slot'));
+    shell.append(host);
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    try {
+      connect();
+      expect(host.assignedSlot).to.equal(slot);
+      slot.style.setProperty('--lr-theme-test', 'slotted');
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+      expect(getComputedStyle(host).getPropertyValue('--lr-theme-test').trim()).to.equal('slotted');
+    } finally {
+      disconnect();
+      shell.remove();
+    }
+  });
+
+  it("reacts to CSSOM writes in the watched host's own :host stylesheet", async () => {
+    const { host, connect, disconnect } = await makeHost();
+    const root = host.attachShadow({ mode: 'open' });
+    const style = root.appendChild(document.createElement('style'));
+    style.textContent = ':host { --lr-theme-test: initial; }';
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    try {
+      connect();
+      (style.sheet!.cssRules[0] as CSSStyleRule).style.setProperty(
+        '--lr-theme-test',
+        'updated',
+      );
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+      expect(getComputedStyle(host).getPropertyValue('--lr-theme-test').trim()).to.equal('updated');
+    } finally {
+      disconnect();
+    }
+  });
+
   it('reacts to media-query-only theme changes and removes the listener on disconnect', async () => {
     const originalMatchMedia = window.matchMedia;
     const listeners = new Map<string, Set<(event: MediaQueryListEvent) => void>>();

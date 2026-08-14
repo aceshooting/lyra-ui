@@ -32,6 +32,7 @@ import {
   type ExternalLabelActivation,
 } from '../../../internal/form-control-labels.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
@@ -128,11 +129,6 @@ export interface LyraButtonEventMap {
  * @slot end - Trailing icon/content, rendered after the label.
  * @slot suffix - Shoelace alias for `end`, rendered through the same wrapper.
  * @attr form - ID of an external form owner. The `form` property still reads as the resolved form.
- * @attr {string} form-action - Compatibility alias for `formaction`.
- * @attr {ButtonFormEnctype} form-enctype - Compatibility alias for `formenctype`.
- * @attr {ButtonFormMethod} form-method - Compatibility alias for `formmethod`.
- * @attr {boolean} form-no-validate - Compatibility alias for `formnovalidate`.
- * @attr {string} form-target - Compatibility alias for `formtarget`.
  * @attr rel - Compatibility input whose rendered value is always derived from `target`; author
  *   values never weaken the `noopener noreferrer` reverse-tabnabbing guard.
  * @csspart base - Compatibility name for the internal control; use `button`.
@@ -250,6 +246,10 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  /** Public WA-compatible intrinsic validator catalog. */
+  static get validators(): LyraFormValidator<LyraButton>[] {
+    return [currentValidityValidator('required', 'disabled', 'loading', 'href', 'value')];
+  }
   // `sizes` supplies the one form-control ladder (both the `s`/`m`/`l` and the `small`/`medium`/
   // `large` spellings of every tier); `variants` re-points the nine generic colour slots at the
   // active `variant`'s row of the semantic grid. Between them this component needs no per-tier and
@@ -269,19 +269,6 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
   };
 
-  static override get observedAttributes(): string[] {
-    return [
-      ...new Set([
-        ...super.observedAttributes,
-        'form-action',
-        'form-enctype',
-        'form-method',
-        'form-no-validate',
-        'form-target',
-      ]),
-    ];
-  }
-
   private _fieldsetDisabled = false;
   private _disabled = false;
   private _name = '';
@@ -291,6 +278,8 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   private hasSyncedDescribedByElements = false;
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  /** Consumer validity retained while a non-action mode is barred from validation. */
+  private customValidityMessage = '';
   private reflectingCustomError = false;
   /** Consumer-supplied validation message reflected through `custom-error`.
    * @default null */
@@ -304,6 +293,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
     this.requestUpdate('disabled', old);
+    this.updateValidity();
   }
 
   /** Submitted as a `name`/`value` pair with the form data, but only while this button is the
@@ -349,21 +339,9 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
       this.internals,
       () => this[VALIDITY_ANCHOR](),
     );
-    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
+    installCustomErrorProperty(this, () => this.customValidityMessage);
     this.updateValidity();
     this.syncButtonStates();
-  }
-
-  override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
-    super.attributeChangedCallback(name, oldValue, newValue);
-    if (oldValue === newValue) return;
-    switch (name) {
-      case 'form-action': this.formAction = newValue ?? undefined; break;
-      case 'form-enctype': this.formEnctype = newValue as ButtonFormEnctype | null ?? undefined; break;
-      case 'form-method': this.formMethod = newValue as ButtonFormMethod | null ?? undefined; break;
-      case 'form-no-validate': this.formNoValidate = newValue !== null; break;
-      case 'form-target': this.formTarget = newValue ?? undefined; break;
-    }
   }
 
   /** Accessible name forwarded to the internal native button or anchor. Bound to the host's
@@ -585,9 +563,10 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
 
   /** Sets or clears a consumer-supplied validation error without disturbing `required`. */
   setCustomValidity(message: string): void {
-    const old = this.validityController.customValidityMessage || null;
+    const old = this.customValidityMessage || null;
     const next = message ?? '';
-    this.validityController.setCustomValidity(next);
+    this.customValidityMessage = next;
+    this.validityController.setCustomValidity(this.isValidationBarred ? '' : next);
     if (!this.reflectingCustomError) {
       this.reflectingCustomError = true;
       try {
@@ -602,6 +581,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
 
   /** Clears consumer custom validity and republishes the current intrinsic constraint. */
   resetValidity(): void {
+    this.customValidityMessage = '';
     this.validityController.setCustomValidity('');
     this.updateValidity();
   }
@@ -666,15 +646,11 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    *  triggering it. Only then is the transient native submitter worth creating: with none of these
    *  set, a plain `requestSubmit()` keeps `SubmitEvent.submitter` `null` as before. */
   private get hasSubmitterOverrides(): boolean {
-    return Boolean(
-      this.name ||
-        this.value ||
-        this.formAction ||
-        this.formEnctype ||
-        this.formMethod ||
-        this.formNoValidate ||
-        this.formTarget,
-    );
+    return Boolean(this.name || this.value || this.formNoValidate) ||
+      this.formAction !== undefined ||
+      this.formEnctype !== undefined ||
+      this.formMethod !== undefined ||
+      this.formTarget !== undefined;
   }
 
   /**
@@ -690,7 +666,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    * validation-blocked submission can't leave it behind.
    */
   private submitAsNamedSubmitter(form: HTMLFormElement): void {
-    const submitter = document.createElement('button');
+    const submitter = this.ownerDocument.createElement('button');
     submitter.type = 'submit';
     submitter.hidden = true;
     submitter.tabIndex = -1;
@@ -698,13 +674,14 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
       submitter.name = this.name;
       submitter.value = this.value;
     }
-    // Assigned only when set: an empty `formaction` resolves against the document URL, which would
-    // silently redirect the submission instead of leaving the form's own action in place.
-    if (this.formAction) submitter.formAction = this.formAction;
-    if (this.formEnctype) submitter.formEnctype = this.formEnctype;
-    if (this.formMethod) submitter.formMethod = this.formMethod;
+    // Presence, not truthiness, is the platform contract. Empty override attributes are meaningful:
+    // for example, `formaction=""` resolves against the current document rather than inheriting the
+    // form owner's action. Copy raw attributes so native normalization happens on the real submitter.
+    if (this.formAction !== undefined) submitter.setAttribute('formaction', this.formAction);
+    if (this.formEnctype !== undefined) submitter.setAttribute('formenctype', this.formEnctype);
+    if (this.formMethod !== undefined) submitter.setAttribute('formmethod', this.formMethod);
     if (this.formNoValidate) submitter.formNoValidate = true;
-    if (this.formTarget) submitter.formTarget = this.formTarget;
+    if (this.formTarget !== undefined) submitter.setAttribute('formtarget', this.formTarget);
 
     if (this.parentElement && this.closest('form') === form) this.insertAdjacentElement('afterend', submitter);
     else form.append(submitter);
@@ -723,6 +700,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    */
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
+    this.updateValidity();
     this.syncButtonStates();
     this.requestUpdate();
   }
@@ -746,7 +724,11 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   }
 
   private syncAdornmentSlots(): void {
-    const children = Array.from(this.children);
+    // Nested Lit SSR shims implement the reactive host surface without necessarily exposing the
+    // browser's Element.children collection. Treat that pre-hydration shape as empty light DOM;
+    // real slotchange reconciliation fills the flags after hydration.
+    const collection = (this as unknown as { children?: HTMLCollection }).children;
+    const children = collection ? Array.from(collection) : [];
     this.hasStartSlot = children.some((element) => {
       const slot = element.getAttribute('slot');
       return slot === 'start' || slot === 'prefix';
@@ -766,10 +748,14 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   };
 
   private hasIconOnlyDefaultContent(): boolean {
-    const elements = Array.from(this.children).filter((element) => !element.getAttribute('slot'));
+    const childElements = (this as unknown as { children?: HTMLCollection }).children;
+    const elements = (childElements ? Array.from(childElements) : []).filter(
+      (element) => !element.getAttribute('slot'),
+    );
     if (elements.length !== 1) return false;
-    const directText = Array.from(this.childNodes)
-      .filter((node) => node.nodeType === Node.TEXT_NODE)
+    const childNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
+    const directText = (childNodes ? Array.from(childNodes) : [])
+      .filter((node) => node.nodeType === 3)
       .map((node) => node.textContent ?? '')
       .join('')
       .trim();
@@ -785,16 +771,33 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     super.updated(changed);
     syncAriaControlsElements(this, this.baseEl, this.triggerControls);
     this.syncDescribedByElements();
+    // Rendering can replace the native button with an anchor, and `loading` disables only the
+    // rendered control. Reconcile validation after that mode transition so non-actions never block
+    // their form, then restore the retained intrinsic/custom state when button mode returns.
+    this.updateValidity();
     this.syncButtonStates();
   }
 
   private updateValidity(): void {
     if (!this.validityController) return;
+    if (this.isValidationBarred) {
+      // Retain consumer state in `customValidityMessage` while clearing both controller layers;
+      // otherwise its hostUpdated anchor refresh would reapply a barred custom error.
+      this.validityController.setCustomValidity('');
+      this.validityController.setValidity({});
+      return;
+    }
     if (this.required && !this.value) {
       this.validityController.setValidity({ valueMissing: true }, this.localize('fieldRequired'));
     } else {
       this.validityController.setValidity({});
     }
+    this.validityController.setCustomValidity(this.customValidityMessage);
+  }
+
+  /** Disabled/loading controls and a link-rendering button are not form actions. */
+  private get isValidationBarred(): boolean {
+    return this.effectiveDisabled || this.loading || this.baseEl?.localName === 'a';
   }
 
   private syncButtonStates(): void {
@@ -833,9 +836,10 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
 
     // `download` turns the anchor from a navigation sink into a resource sink, and the two carry
     // different allowlists -- `mailto:` is a legitimate destination but names no retrievable bytes.
-    // The condition mirrors the `download=${this.download || nothing}` binding below exactly, so
-    // the href is validated against whichever sink the rendered anchor actually is.
-    const href = this.download ? safeDownloadHref(this.href) : safeLinkHref(this.href);
+    // Presence is deliberate: native `download=""` is meaningful and still selects the stricter
+    // resource URL policy even though it supplies no filename.
+    const hasDownload = this.download !== undefined;
+    const href = hasDownload ? safeDownloadHref(this.href) : safeLinkHref(this.href);
     if (href) {
       const disabled = this.effectiveDisabled || this.loading;
       // A disabled link button omits `href` entirely. An anchor with no `href` is
@@ -848,7 +852,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         href=${disabled ? nothing : href}
         target=${this.target || nothing}
         rel=${this.resolvedRel ?? nothing}
-        download=${this.download || nothing}
+        download=${hasDownload ? this.download ?? '' : nothing}
         aria-label=${this.accessibleLabel || nothing}
         aria-haspopup=${this.triggerHasPopup ?? nothing}
         aria-expanded=${this.triggerExpanded ?? nothing}

@@ -14,7 +14,11 @@
  */
 
 import { hostAriaLabel } from '../../../internal/a11y.js';
-import { composedAccessibleVisibleText } from '../../../internal/accessibility-visibility.js';
+import {
+  composedAccessibilityText,
+  composedAccessibleVisibleText,
+  type ComposedAccessibilityTextOptions,
+} from '../../../internal/accessibility-visibility.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
 
@@ -48,13 +52,48 @@ export function formatProgressPercent(locale: string, percent: number): string {
   }).format(percent / 100);
 }
 
+/**
+ * Resolve inherited visibility parent-first before the bounded accessibility walk samples a
+ * descendant override. WebKit can otherwise return the previous inherited value for a freshly
+ * revealed `visibility: visible` child of a `visibility: hidden` label root. Keep this probe under
+ * the same fixed-depth envelope as the accessible-text traversal so adversarial labels cannot
+ * turn one update into an unbounded style walk.
+ */
+function primeVisibilityCascade(nodes: readonly Node[]): void {
+  const stack = [...nodes].reverse();
+  let remaining = 256;
+  while (stack.length > 0 && remaining > 0) {
+    const node = stack.pop();
+    if (!node || node.nodeType !== 1) continue;
+    const element = node as Element;
+    remaining--;
+    try {
+      void element.ownerDocument.defaultView?.getComputedStyle(element).visibility;
+    } catch {
+      // Detached/server realms can lack a style engine; authored state remains authoritative.
+    }
+    const assigned = element.localName === 'slot'
+      ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
+      : [];
+    const children = assigned.length > 0 ? assigned : Array.from(element.childNodes);
+    for (let index = children.length - 1; index >= 0; index--) {
+      const child = children[index];
+      if (child) stack.push(child);
+    }
+  }
+}
+
 /** Collapses the accessible, visible text of `nodes` into one whitespace-normalized string. */
-export function joinAccessibleVisibleText(nodes: Iterable<Node>): string {
-  return Array.from(nodes)
-    .map(composedAccessibleVisibleText)
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+export function joinAccessibleVisibleText(
+  nodes: Iterable<Node>,
+  options?: ComposedAccessibilityTextOptions,
+): string {
+  const boundedRoots = Array.from(nodes).slice(0, 256);
+  primeVisibilityCascade(boundedRoots);
+  const text = options
+    ? composedAccessibilityText(boundedRoots, options)
+    : boundedRoots.map(composedAccessibleVisibleText).join(' ');
+  return text.replace(/\s+/g, ' ').trim();
 }
 
 /**

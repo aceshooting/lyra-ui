@@ -21,6 +21,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
+import { expandManifestInheritance } from './manifest-compact.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const sourceDir = path.join(packageDir, 'src');
@@ -126,19 +127,28 @@ function collectEventMaps() {
   return maps;
 }
 
-/** Tag names and advertised event names, keyed by the declaring class name. */
 function readManifest() {
-  const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
+  return JSON.parse(readFileSync(manifestFile, 'utf8'));
+}
+
+/** Effective tag/event contracts after standard superclass inheritance is expanded. */
+function manifestEventContracts(manifest) {
+  const expanded = expandManifestInheritance(manifest);
   const tagByClassName = new Map();
   const manifestEvents = new Set();
-  for (const module of manifest.modules ?? []) {
+  const emittersByEvent = new Map();
+  for (const module of expanded.modules ?? []) {
     for (const declaration of module.declarations ?? []) {
       if (!declaration.customElement || !declaration.tagName) continue;
       tagByClassName.set(declaration.name, declaration.tagName);
-      for (const event of declaration.events ?? []) manifestEvents.add(event.name);
+      for (const event of declaration.events ?? []) {
+        manifestEvents.add(event.name);
+        if (!emittersByEvent.has(event.name)) emittersByEvent.set(event.name, new Set());
+        emittersByEvent.get(event.name).add(declaration.tagName);
+      }
     }
   }
-  return { tagByClassName, manifestEvents };
+  return { tagByClassName, manifestEvents, emittersByEvent };
 }
 
 function aliasTypeName(eventName, prefix) {
@@ -176,11 +186,13 @@ function docComment(paragraphs, indent = '') {
   return lines;
 }
 
-export function generate({ write = true } = {}) {
-  const prefix = readTagPrefix();
+export function generateEventTypeSource({ prefix, maps, manifest }) {
+  if (typeof prefix !== 'string' || prefix.length === 0) {
+    throw new TypeError('event type generation requires a non-empty tag prefix');
+  }
+  if (!Array.isArray(maps)) throw new TypeError('event type generation requires event maps');
   const eventPrefix = `${prefix}-`;
-  const maps = collectEventMaps();
-  const { tagByClassName, manifestEvents } = readManifest();
+  const { tagByClassName, manifestEvents, emittersByEvent } = manifestEventContracts(manifest);
 
   const mapByName = new Map(maps.map((map) => [map.name, map]));
 
@@ -220,7 +232,12 @@ export function generate({ write = true } = {}) {
   const entries = eventNames.map((event) => {
     const owners = [...declarers.get(event)].sort(byLocale);
     const alias = aliasTypeName(event, prefix);
-    const labels = [...new Set(owners.map(labelFor))].sort(byLocale);
+    const manifestLabels = [...(emittersByEvent.get(event) ?? [])]
+      .map((tag) => `\`<${tag}>\``)
+      .sort(byLocale);
+    const labels = manifestLabels.length > 0
+      ? manifestLabels
+      : [...new Set(owners.map(labelFor))].sort(byLocale);
     return { event, owners, alias, labels };
   });
 
@@ -343,7 +360,15 @@ export function generate({ write = true } = {}) {
   lines.push('  interface GlobalEventHandlersEventMap extends LyraGlobalEventMap {}');
   lines.push('}', '');
 
-  const text = `${lines.join('\n').replace(/\n+$/, '')}\n`;
+  return `${lines.join('\n').replace(/\n+$/, '')}\n`;
+}
+
+export function generate({ write = true } = {}) {
+  const text = generateEventTypeSource({
+    prefix: readTagPrefix(),
+    maps: collectEventMaps(),
+    manifest: readManifest(),
+  });
   const output = new Map([[outputFile, text]]);
   if (write) {
     for (const [file, contents] of output) writeFileSync(file, contents);
@@ -363,4 +388,3 @@ function main() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main();
 }
-

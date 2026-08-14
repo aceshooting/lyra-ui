@@ -6,7 +6,7 @@ import '../../utility/live-region/live-region.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
 import { styles } from './push-to-talk.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pushToTalkCancelled, LYRA_DEFAULT_pushToTalkDenied, LYRA_DEFAULT_pushToTalkError, LYRA_DEFAULT_pushToTalkHold, LYRA_DEFAULT_pushToTalkRequesting, LYRA_DEFAULT_pushToTalkStart, LYRA_DEFAULT_pushToTalkStarted, LYRA_DEFAULT_pushToTalkStop, LYRA_DEFAULT_pushToTalkStopped, LYRA_DEFAULT_pushToTalkUnsupported } from '../../../internal/default-strings.generated.js';
@@ -14,6 +14,11 @@ import { LYRA_DEFAULT_pushToTalkCancelled, LYRA_DEFAULT_pushToTalkDenied, LYRA_D
 
 export type PushToTalkMode = 'hold' | 'toggle';
 export type PushToTalkState = 'idle' | 'requesting' | 'denied' | 'recording' | 'error';
+export type PushToTalkAudioConstraints = Omit<MediaTrackConstraints, 'deviceId'> & {
+  readonly deviceId?: never;
+};
+
+const PUSH_TO_TALK_MODE = literalSetConverter<PushToTalkMode>(['hold', 'toggle'], 'hold');
 
 const CANDIDATE_MIME_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
 
@@ -68,10 +73,10 @@ export interface LyraPushToTalkEventMap {
   'lr-record-start': CustomEvent<{ stream: MediaStream }>;
   'lr-record-chunk': CustomEvent<{ blob: Blob }>;
   'lr-record-stop': CustomEvent<{ blob: Blob; durationMs: number }>;
-  'lr-record-cancel': CustomEvent<undefined>;
+  'lr-record-cancel': CustomEvent<null>;
   'lr-record-error': CustomEvent<{ error: DOMException | Error }>;
   'lr-level': CustomEvent<{ level: number }>;
-  'lr-state-change': CustomEvent<{ state: PushToTalkState }>;
+  'lr-record-state-change': CustomEvent<{ state: PushToTalkState }>;
 }
 
 /**
@@ -89,11 +94,8 @@ export interface LyraPushToTalkEventMap {
  * overrides the computed trigger label.
  *
  * @customElement lr-push-to-talk
- * @slot microphone-icon - Canonical replacement for the default mic glyph. Takes precedence over
- *   the established `icon` slot. Decorative: assigned content is inert and hidden from
- *   accessibility APIs because it is rendered inside the named trigger button.
- * @slot icon - Established mic-glyph alias, retained as the fallback for `microphone-icon`.
- *   Decorative and inert inside the trigger button.
+ * @slot microphone-icon - Replaces the default mic glyph. Decorative: assigned content is inert
+ *   and hidden from accessibility APIs because it is rendered inside the named trigger button.
  * @slot recording-icon - Replaces the default recording-state pulse glyph. Decorative and inert.
  * @event lr-record-start - Capture began. `detail: { stream: MediaStream }` — the same object the
  *   `stream` getter then returns for the duration of the take.
@@ -108,9 +110,10 @@ export interface LyraPushToTalkEventMap {
  *   `NotAllowedError` transitions `state` to `'denied'`, anything else to `'error'`.
  * @event lr-level - `detail: { level: number }` (0-1 RMS amplitude), opt-in via `level-events`,
  *   rAF-throttled, only while `state === 'recording'`.
- * @event lr-state-change - `detail: { state: PushToTalkState }` — fires on every `state` transition.
+ * @event lr-record-state-change - `detail: { state: PushToTalkState }` — fires on every recording
+ *   lifecycle transition.
  * @csspart trigger - The capture button.
- * @csspart icon - Wrapper around the `microphone-icon`/`icon` slots and default mic glyph.
+ * @csspart icon - Wrapper around the `microphone-icon` slot and default mic glyph.
  * @csspart pulse - Wrapper around the `recording-icon` slot / default pulse glyph, rendered only
  *   while recording.
  * @csspart timer - The localized `M:SS` elapsed-time readout, rendered only while recording and
@@ -147,7 +150,18 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  @property({ reflect: true }) mode: PushToTalkMode = 'hold';
+  private _mode: PushToTalkMode = 'hold';
+  @property({ reflect: true, converter: PUSH_TO_TALK_MODE })
+  get mode(): PushToTalkMode {
+    return this._mode;
+  }
+  set mode(next: PushToTalkMode) {
+    const normalized = PUSH_TO_TALK_MODE.normalize(next);
+    const old = this._mode;
+    if (old === normalized) return;
+    this._mode = normalized;
+    this.requestUpdate('mode', old);
+  }
   /** `> 0` requests periodic `lr-record-chunk` slices from `MediaRecorder` every this-many
    *  milliseconds; `0` (the default) requests one slice at stop. Clamped to
    *  `[1, MAX_TIMEOUT_MS]` at the point it's handed to `MediaRecorder.start()` -- see `start()` --
@@ -155,18 +169,25 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   @property({ type: Number, attribute: 'timeslice-ms' }) timesliceMs = 0;
   @property({ attribute: 'mime-type' }) mimeType = '';
   @property({ attribute: 'device-id' }) deviceId = '';
-  /** Merged into the audio constraints (`echoCancellation`, …); unset keeps browser defaults. */
-  @property({ attribute: false }) audioConstraints?: MediaTrackConstraints;
+  /** Additional audio constraints (`echoCancellation`, …). `deviceId` has one authority: the
+   *  top-level `deviceId` property. */
+  @property({ attribute: false }) audioConstraints?: PushToTalkAudioConstraints;
   /** Enables `lr-level` sampling. Changes take effect immediately during an active recording. */
   @property({ type: Boolean, attribute: 'level-events' }) levelEvents = false;
   /** `> 0` auto-stops the take at this many milliseconds (a stuck-key guard); `0` (the default)
    *  never auto-stops. Clamped to `[1, MAX_TIMEOUT_MS]` at the point it's handed to `setTimeout()`
-   *  -- see `start()` -- the browser timer ceiling, matching `lr-playback`'s `interval-ms`
+   *  -- see `start()` -- the browser timer ceiling, matching
+   *  `lr-sequence-playback`'s `interval-ms`
    *  handling of its own duration-like property. Changes during recording reschedule the deadline
    *  relative to the original recording start; setting `0` cancels it. */
   @property({ type: Number, attribute: 'max-duration-ms' }) maxDurationMs = 0;
   /** Shows and samples the elapsed timer. Changes take effect immediately while recording. */
-  @property({ type: Boolean, attribute: 'show-timer', converter: trueDefaultBooleanConverter }) showTimer = true;
+  @property({
+    type: Boolean,
+    attribute: 'show-timer',
+    converter: trueDefaultBooleanConverter,
+  })
+  showTimer = true;
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   @state() private elapsedMs = 0;
@@ -180,9 +201,6 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   get state(): PushToTalkState {
     return this._state;
   }
-  // No-op setter so `el.state = x` doesn't throw in strict mode -- mirrors lr-animated-image's
-  // identical read-only `playing` accessor.
-  set state(_next: PushToTalkState) {}
 
   private _stream: MediaStream | null = null;
   /** The active `MediaStream` — the same object `lr-record-start` carries. `null` outside an
@@ -202,6 +220,14 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private captureWindow?: PushToTalkWindow;
   private cancelRequested = false;
   private recorderStopRequested = false;
+  private recorderFailed = false;
+  private holdGesture?: {
+    generation: number;
+    source: 'pointer' | 'keyboard';
+    pointerId?: number;
+    key?: string;
+  };
+  private holdGestureGeneration = 0;
   private tickTimer?: OwnedTimer;
   private maxDurationTimer?: OwnedTimer;
   private audioCtx?: AudioContext;
@@ -220,15 +246,18 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.requestUpdate('mode', undefined);
     if (!this.hasAttribute('data-state')) this.setAttribute('data-state', this._state);
   }
 
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
+    this.releaseHoldGesture();
     if (this._state === 'recording' || this._state === 'requesting') this.cancel();
+    super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.syncCaptureSupport();
   }
 
@@ -236,8 +265,10 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     super.willUpdate(changed);
     if (this.hasUpdated) this.syncCaptureSupport();
     else this.seedFirstRenderState(() => this.syncCaptureSupport());
-    if (changed.has('disabled') && this.disabled && (this._state === 'recording' || this._state === 'requesting')) {
-      this.cancel();
+    if (changed.has('mode') && this.holdGesture) this.releaseHoldGesture();
+    if (changed.has('disabled') && this.disabled) {
+      this.releaseHoldGesture();
+      if (this._state === 'recording' || this._state === 'requesting') this.cancel();
     }
     const owner = this.captureWindow;
     if (this._state !== 'recording' || !owner) return;
@@ -280,7 +311,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     this._state = next;
     this.setAttribute('data-state', next);
     this.requestUpdate('state', old);
-    this.emit('lr-state-change', { state: next });
+    this.emit('lr-record-state-change', { state: next });
   }
 
   private announce(text: string): void {
@@ -300,10 +331,14 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     this.cancelRequested = false;
     this.setState('requesting');
     try {
+      const additionalConstraints = {
+        ...(this.audioConstraints ?? {}),
+      } as MediaTrackConstraints;
+      delete additionalConstraints.deviceId;
       const constraints: MediaStreamConstraints = {
         audio: {
+          ...additionalConstraints,
           ...(this.deviceId ? { deviceId: { exact: this.deviceId } } : {}),
-          ...(this.audioConstraints ?? {}),
         },
       };
       const stream = await owner.navigator.mediaDevices.getUserMedia(constraints);
@@ -318,7 +353,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
         this.cancelRequested = false;
         if (this.captureWindow === owner) this.captureWindow = undefined;
         this.setState('idle');
-        this.emit('lr-record-cancel');
+        this.emit('lr-record-cancel', null);
         this.announce(this.localize('pushToTalkCancelled'));
         return false;
       }
@@ -327,21 +362,30 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       const recorder = new owner.MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       this.recorder = recorder;
       this.recorderStopRequested = false;
+      this.recorderFailed = false;
       this.chunks = [];
+      const timeslice =
+        this.timesliceMs > 0 ? finiteDuration(this.timesliceMs, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS) : undefined;
+      const emitChunksForTake = timeslice !== undefined;
       recorder.ondataavailable = (e: BlobEvent) => {
         if (this.recorder !== recorder || this.captureWindow !== owner) return;
         if (!e.data || e.data.size === 0) return;
         this.chunks.push(e.data);
-        if (this.timesliceMs > 0) this.emit('lr-record-chunk', { blob: e.data });
+        if (emitChunksForTake) this.emit('lr-record-chunk', { blob: e.data });
       };
       recorder.onstop = () => this.finalizeStop(recorder, owner);
+      recorder.onerror = (event: Event) =>
+        this.failRecorder(
+          recorder,
+          owner,
+          (event as Event & { error?: DOMException }).error ?? new Error('MediaRecorder failed')
+        );
       // Both duration-like properties are clamped right here, at the point they reach a native
       // timer/API, rather than by normalizing the public property itself -- same convention as
-      // lr-playback's scheduleTick() for interval-ms. `> 0` already excludes NaN/negative (both
+      // lr-sequence-playback's scheduleTick() for interval-ms. `> 0` already excludes
+      // NaN/negative (both
       // fail that comparison), but not Infinity or an oversized finite value that would otherwise
       // overflow setTimeout's 32-bit delay or fail MediaRecorder.start()'s unsigned-long timeslice.
-      const timeslice =
-        this.timesliceMs > 0 ? finiteDuration(this.timesliceMs, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS) : undefined;
       recorder.start(timeslice);
       this.recordingStartedAt = owner.performance.now();
       this.elapsedMs = 0;
@@ -357,7 +401,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       if (this.cancelRequested || this.disabled || !this.isConnected || this.ownerWindow !== owner) {
         this.cancelRequested = false;
         this.setState('idle');
-        this.emit('lr-record-cancel');
+        this.emit('lr-record-cancel', null);
         if (this.isConnected) this.announce(this.localize('pushToTalkCancelled'));
         return false;
       }
@@ -395,7 +439,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   }
 
   private finalizeStop(recorder: MediaRecorder, owner: PushToTalkWindow): void {
-    if (this.recorder !== recorder || this.captureWindow !== owner) return;
+    if (this.recorder !== recorder || this.captureWindow !== owner || this.recorderFailed) return;
     const cancelled = this.cancelRequested;
     const durationMs = Math.round(owner.performance.now() - this.recordingStartedAt);
     const mimeType = recorder.mimeType || this.resolveMimeType(owner) || 'audio/webm';
@@ -403,7 +447,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     this.teardownStream();
     this.setState('idle');
     if (cancelled) {
-      this.emit('lr-record-cancel');
+      this.emit('lr-record-cancel', null);
       this.announce(this.localize('pushToTalkCancelled'));
     } else {
       this.emit('lr-record-stop', { blob, durationMs });
@@ -412,12 +456,23 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     this.cancelRequested = false;
   }
 
+  private failRecorder(recorder: MediaRecorder, owner: PushToTalkWindow, error: DOMException | Error): void {
+    if (this.recorder !== recorder || this.captureWindow !== owner || this.recorderFailed) return;
+    this.recorderFailed = true;
+    this.cancelRequested = false;
+    this.teardownStream();
+    this.setState('error');
+    this.emit('lr-record-error', { error });
+    this.announce(this.localize('pushToTalkError'));
+  }
+
   private teardownStream(): void {
     for (const track of this._stream?.getTracks() ?? []) track.stop();
     this._stream = null;
     if (this.recorder) {
       this.recorder.ondataavailable = null;
       this.recorder.onstop = null;
+      this.recorder.onerror = null;
     }
     this.recorder = undefined;
     this.recorderStopRequested = false;
@@ -522,7 +577,10 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     const seconds = totalSeconds % 60;
     const locale = this.effectiveLocale;
     const minuteText = getNumberFormat(locale, { useGrouping: false }).format(minutes);
-    const secondText = getNumberFormat(locale, { minimumIntegerDigits: 2, useGrouping: false }).format(seconds);
+    const secondText = getNumberFormat(locale, {
+      minimumIntegerDigits: 2,
+      useGrouping: false,
+    }).format(seconds);
     return `${minuteText}:${secondText}`;
   }
 
@@ -539,20 +597,29 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     } catch {
       // Continue with the hold gesture; pointerup/blur/cancel still share the same release path.
     }
+    if (this.holdGesture) return;
+    this.holdGesture = {
+      generation: ++this.holdGestureGeneration,
+      source: 'pointer',
+      pointerId: e.pointerId,
+    };
     void this.start();
   };
-  private onPointerUp = (): void => {
-    if (this.mode !== 'hold') return;
-    this.releaseHold();
+  private onPointerUp = (event: PointerEvent): void => {
+    if (this.holdGesture?.source !== 'pointer' || this.holdGesture.pointerId !== event.pointerId) return;
+    this.releaseHoldGesture();
   };
-  private onPointerCancel = (): void => {
-    if (this.mode !== 'hold') return;
-    this.releaseHold();
+  private onPointerCancel = (event: PointerEvent): void => {
+    if (this.holdGesture?.source !== 'pointer' || this.holdGesture.pointerId !== event.pointerId) return;
+    this.releaseHoldGesture();
   };
   /** Ends a hold-mode press: stops an active take, or cancels a still-pending permission request
    *  so recording never silently starts after the user already let go. Mirrors
    *  disconnectedCallback()'s identical dual check. */
-  private releaseHold(): void {
+  private releaseHoldGesture(): void {
+    if (!this.holdGesture) return;
+    this.holdGesture = undefined;
+    this.holdGestureGeneration += 1;
     if (this._state === 'requesting') this.cancel();
     else this.stop();
   }
@@ -574,15 +641,21 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     // pointerup-driven stop() never races a spurious toggle-mode-style click.
     if (e.repeat) return;
     e.preventDefault();
+    if (this.holdGesture) return;
+    this.holdGesture = {
+      generation: ++this.holdGestureGeneration,
+      source: 'keyboard',
+      key: e.key,
+    };
     void this.start();
   };
   private onKeyUp = (e: KeyboardEvent): void => {
-    if (this.mode !== 'hold') return;
     if (e.key !== 'Enter' && e.key !== ' ') return;
-    this.releaseHold();
+    if (this.holdGesture?.source !== 'keyboard' || this.holdGesture.key !== e.key) return;
+    this.releaseHoldGesture();
   };
   private onBlur = (): void => {
-    if (this.mode === 'hold') this.releaseHold();
+    this.releaseHoldGesture();
   };
 
   // -- Toggle mode ----------------------------------------------------------
@@ -637,9 +710,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
         @blur=${this.onBlur}
         @click=${this.onClick}
       >
-        <span part="icon" aria-hidden="true" inert
-          ><slot name="microphone-icon"><slot name="icon">${micIcon()}</slot></slot
-        ></span>
+        <span part="icon" aria-hidden="true" inert><slot name="microphone-icon">${micIcon()}</slot></span>
         ${recording
           ? html`<span part="pulse" aria-hidden="true" inert><slot name="recording-icon">${pulseGlyph()}</slot></span>`
           : nothing}

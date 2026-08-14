@@ -3,6 +3,7 @@ import {
   layoutWordCloud,
   GAP,
   MAX_FONT_SIZE_PX,
+  MAX_SKIPPED_DIAGNOSTICS,
   MAX_SPIRAL_ITERATIONS,
   MAX_WORDS,
   type PlacedWord,
@@ -23,7 +24,7 @@ const baseOptions = {
   minFontSize: 10,
   maxFontSize: 50,
   scale: 'linear' as const,
-  orientations: 'horizontal' as const,
+  wordRotation: 'none' as const,
   measureText: stubMeasure,
 };
 
@@ -31,6 +32,7 @@ it('returns an empty result for no words', () => {
   const result = layoutWordCloud([], baseOptions);
   expect(result.placed).to.deep.equal([]);
   expect(result.skipped).to.deep.equal([]);
+  expect(result.skippedCount).to.equal(0);
   expect(result.width).to.equal(0);
   expect(result.height).to.equal(0);
 });
@@ -84,7 +86,7 @@ it('gives every word the same, minimum font size when all weights are equal', ()
   for (const w of result.placed) expect(w.fontSize).to.equal(baseOptions.minFontSize);
 });
 
-it('clamps a negative or non-finite weight for font-size scaling, without changing the reported weight', () => {
+it('uses one normalized finite nonnegative weight for both scaling and returned records', () => {
   const result = layoutWordCloud(
     [
       { text: 'negative', weight: -5 },
@@ -95,10 +97,8 @@ it('clamps a negative or non-finite weight for font-size scaling, without changi
   );
   const negative = result.placed.find((w) => w.text === 'negative')!;
   const nan = result.placed.find((w) => w.text === 'nan')!;
-  // The original weight is echoed back untouched -- callers (event detail, aria-label)
-  // must see what they passed in, not an internal clamped value.
-  expect(negative.weight).to.equal(-5);
-  expect(nan.weight).to.be.NaN;
+  expect(negative.weight).to.equal(0);
+  expect(nan.weight).to.equal(0);
   expect(negative.fontSize).to.equal(baseOptions.minFontSize);
   expect(nan.fontSize).to.equal(baseOptions.minFontSize);
 });
@@ -114,24 +114,24 @@ it('places no two words overlapping', () => {
   }
 });
 
-it('never rotates a word when orientations is "horizontal", even with a random() stub that always would', () => {
+it('never rotates a word when wordRotation is "none", even with a random() stub that always would', () => {
   const result = layoutWordCloud([{ text: 'a', weight: 1 }], {
     ...baseOptions,
-    orientations: 'horizontal',
+    wordRotation: 'none',
     random: () => 0,
   });
   expect(result.placed[0]!.rotated).to.equal(false);
 });
 
-it('rotates every word when orientations is "mixed" and random() always clears the threshold', () => {
+it('rotates every word when wordRotation is "mixed" and random() always clears the threshold', () => {
   const words = Array.from({ length: 5 }, (_, i) => ({ text: `w${i}`, weight: i + 1 }));
-  const result = layoutWordCloud(words, { ...baseOptions, orientations: 'mixed', random: () => 0 });
+  const result = layoutWordCloud(words, { ...baseOptions, wordRotation: 'mixed', random: () => 0 });
   expect(result.placed.every((w) => w.rotated)).to.be.true;
 });
 
-it('never rotates a word when orientations is "mixed" but random() never clears the threshold', () => {
+it('never rotates a word when wordRotation is "mixed" but random() never clears the threshold', () => {
   const words = Array.from({ length: 5 }, (_, i) => ({ text: `w${i}`, weight: i + 1 }));
-  const result = layoutWordCloud(words, { ...baseOptions, orientations: 'mixed', random: () => 0.999 });
+  const result = layoutWordCloud(words, { ...baseOptions, wordRotation: 'mixed', random: () => 0.999 });
   expect(result.placed.every((w) => !w.rotated)).to.be.true;
 });
 
@@ -143,6 +143,7 @@ it('caps placement at MAX_WORDS by weight, dropping the lightest words as skippe
   const result = layoutWordCloud(words, baseOptions);
   expect(result.placed).to.have.length(MAX_WORDS);
   expect(result.skipped).to.have.length(5);
+  expect(result.skippedCount).to.equal(5);
   const skippedTexts = result.skipped.map((w) => w.text).sort();
   expect(skippedTexts).to.deep.equal(['w0', 'w1', 'w2', 'w3', 'w4']);
   // The heaviest word, despite being last in the input, must survive.
@@ -161,6 +162,7 @@ it('filters out blank/whitespace-only word text as skipped, not placed', () => {
   expect(result.placed).to.have.length(1);
   expect(result.placed[0]!.text).to.equal('real');
   expect(result.skipped).to.have.length(2);
+  expect(result.skippedCount).to.equal(2);
 });
 
 it('retains the original array index on each placed word, independent of weight-sort order', () => {
@@ -178,7 +180,7 @@ it('clamps non-finite/negative minFontSize/maxFontSize to a sane positive defaul
     minFontSize: NaN,
     maxFontSize: -5,
     scale: 'linear',
-    orientations: 'horizontal',
+    wordRotation: 'none',
     measureText: stubMeasure,
   });
   expect(placed[0]!.fontSize).to.be.greaterThan(0);
@@ -191,7 +193,7 @@ it('swaps a reversed minFontSize/maxFontSize instead of inverting the weight-to-
       { text: 'small', weight: 1 },
       { text: 'big', weight: 10 },
     ],
-    { minFontSize: 40, maxFontSize: 10, scale: 'linear', orientations: 'horizontal', measureText: stubMeasure },
+    { minFontSize: 40, maxFontSize: 10, scale: 'linear', wordRotation: 'none', measureText: stubMeasure },
   );
   const big = placed.find((p) => p.text === 'big')!;
   const small = placed.find((p) => p.text === 'small')!;
@@ -231,5 +233,21 @@ it('stops a pathological spiral after the hard iteration cap', () => {
 
   expect(MAX_SPIRAL_ITERATIONS).to.equal(4096);
   expect(result.placed.length).to.be.lessThan(words.length);
-  expect(result.skipped.length).to.equal(words.length - result.placed.length);
+  expect(result.skippedCount).to.equal(words.length - result.placed.length);
+  expect(result.skipped.length).to.be.at.most(MAX_SKIPPED_DIAGNOSTICS);
+});
+
+it('scans 200,000 words with bounded top-K storage and bounded skipped diagnostics', () => {
+  const words = Array.from({ length: 200_000 }, (_, index) => ({ text: `w${index}`, weight: index }));
+  const result = layoutWordCloud(words, {
+    ...baseOptions,
+    minFontSize: 1,
+    maxFontSize: 1,
+    measureText: () => 1,
+  });
+
+  expect(result.placed.length).to.be.at.most(MAX_WORDS);
+  expect(result.placed.length + result.skippedCount).to.equal(words.length);
+  expect(result.skipped.length).to.be.at.most(MAX_SKIPPED_DIAGNOSTICS);
+  expect(result.placed.some((word) => word.text === 'w199999')).to.be.true;
 });

@@ -45,7 +45,11 @@ export const BlindThenRevealed: Story = {
 
 export const StrictAbChoice: Story = {
   render: () => html`
-    <lr-compare-panel style="max-width: 44rem" hide-tie hide-both-bad item-id="pair-3">
+    <lr-compare-panel
+      style="max-width: 44rem"
+      .allowedVotes=${['a', 'b'] satisfies readonly CompareVote[]}
+      item-id="pair-3"
+    >
       <p slot="a">Answer A.</p>
       <p slot="b">Answer B.</p>
     </lr-compare-panel>

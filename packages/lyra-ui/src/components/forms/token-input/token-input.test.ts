@@ -159,6 +159,57 @@ it('skips a draft token that duplicates an existing one unless allowDuplicates i
   expect(added).to.equal(1);
 });
 
+it('normalizes foreign array members at every public value boundary', async () => {
+  const el = (await fixture(html`<lr-token-input name="tags"></lr-token-input>`)) as LyraTokenInput;
+  (el as unknown as { value: unknown }).value = [null, 'alpha', 42, 'beta', {}];
+  expect(el.value).to.deep.equal(['alpha', 'beta']);
+
+  (el as unknown as { defaultValue: unknown }).defaultValue = ['default', null];
+  el.formResetCallback();
+  expect(el.value).to.deep.equal(['default']);
+});
+
+it('owns readonly value snapshots and freezes emitted collection details', async () => {
+  const source = ['alpha'];
+  const el = (await fixture(html`<lr-token-input .value=${source}></lr-token-input>`)) as LyraTokenInput;
+  source.push('forged');
+  expect(el.value).to.deep.equal(['alpha']);
+  expect(Object.isFrozen(el.value)).to.be.true;
+
+  const input = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+  const inputEvent = oneEvent(el, 'lr-input') as Promise<CustomEvent<{ value: readonly string[] }>>;
+  typeInto(input, 'beta');
+  press(input, 'Enter');
+  const detail = (await inputEvent).detail;
+  expect(detail.value).to.deep.equal(['alpha', 'beta']);
+  expect(Object.isFrozen(detail)).to.be.true;
+  expect(Object.isFrozen(detail.value)).to.be.true;
+  expect(() => (detail.value as string[]).push('forged')).to.throw(TypeError);
+  expect(el.value).to.deep.equal(['alpha', 'beta']);
+});
+
+it('commits a delimiter batch as one value transaction and one batched add event', async () => {
+  const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
+  const input = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+  let inputs = 0;
+  let changes = 0;
+  const additions: Array<{ value: string; values: readonly string[] }> = [];
+  el.addEventListener('input', () => { inputs += 1; });
+  el.addEventListener('change', () => { changes += 1; });
+  el.addEventListener('lr-add', (event) => { additions.push(event.detail); });
+
+  typeInto(input, 'alpha,beta,alpha,gamma');
+  press(input, 'Enter');
+
+  expect(el.value).to.deep.equal(['alpha', 'beta', 'gamma']);
+  expect(inputs).to.equal(1);
+  expect(changes).to.equal(1);
+  expect(additions).to.deep.equal([{
+    value: 'gamma',
+    values: ['alpha', 'beta', 'gamma'],
+  }]);
+});
+
 it('ignores keystrokes on the draft input while disabled, leaving the draft uncommitted', async () => {
   const el = (await fixture(html`<lr-token-input disabled></lr-token-input>`)) as LyraTokenInput;
   const input = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
@@ -545,7 +596,8 @@ it('forwards editing-assistance attributes to the draft input and inline token e
   const draft = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
   expect(el.spellcheck).to.be.false;
   expect(el.autocapitalize).to.equal('off');
-  expect(el.autoCorrect).to.equal('off');
+  expect(el.autocorrect).to.be.false;
+  expect('autoCorrect' in el).to.be.false;
   expect(draft.spellcheck).to.be.false;
   expect(draft.getAttribute('autocapitalize')).to.equal('off');
   expect(draft.getAttribute('autocorrect')).to.equal('off');
@@ -556,6 +608,23 @@ it('forwards editing-assistance attributes to the draft input and inline token e
   expect(tokenEditor.spellcheck).to.be.false;
   expect(tokenEditor.getAttribute('autocapitalize')).to.equal('off');
   expect(tokenEditor.getAttribute('autocorrect')).to.equal('off');
+});
+
+it('normalizes boolean and string autocorrect writes through the lowercase native IDL', async () => {
+  const el = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
+  const draft = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+  expect(el.autocorrect).to.be.true;
+  expect(draft.hasAttribute('autocorrect')).to.be.false;
+
+  el.autocorrect = 'false';
+  await el.updateComplete;
+  expect(el.autocorrect).to.be.false;
+  expect(draft.getAttribute('autocorrect')).to.equal('off');
+
+  el.autocorrect = 'on';
+  await el.updateComplete;
+  expect(el.autocorrect).to.be.true;
+  expect(draft.hasAttribute('autocorrect')).to.be.false;
 });
 
 it('closes positional edit state rather than transferring it to a reordered replacement', async () => {
@@ -886,20 +955,23 @@ it('separates its live token array from the reflected JSON current default', asy
   expect(el.value, 'after reset the live value is pristine again').to.deep.equal(['pristine']);
 });
 
-it('treats malformed JSON reset defaults as an empty token list', async () => {
-  for (const serialized of ['not JSON', '["alpha", 2]']) {
+it('normalizes JSON reset defaults through the same string-only boundary as property writes', async () => {
+  for (const [serialized, normalized] of [
+    ['not JSON', []],
+    ['["alpha", 2]', ['alpha']],
+  ] as const) {
     const form = (await fixture(html`
       <form><lr-token-input name="tags" value=${serialized}></lr-token-input></form>
     `)) as HTMLFormElement;
     const el = form.querySelector('lr-token-input') as LyraTokenInput;
 
-    expect(el.defaultValue, serialized).to.deep.equal([]);
-    expect(el.value, serialized).to.deep.equal([]);
+    expect(el.defaultValue, serialized).to.deep.equal(normalized);
+    expect(el.value, serialized).to.deep.equal(normalized);
 
     el.value = ['draft'];
     form.reset();
     await el.updateComplete;
-    expect(el.value, `form reset after ${serialized}`).to.deep.equal([]);
+    expect(el.value, `form reset after ${serialized}`).to.deep.equal(normalized);
   }
 });
 

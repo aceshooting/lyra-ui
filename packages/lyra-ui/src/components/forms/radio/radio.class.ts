@@ -19,6 +19,7 @@ import {
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { hasRealContent } from '../../../internal/a11y.js';
+import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings.generated.js';
@@ -39,6 +40,8 @@ export interface LyraRadioEventMap {
 
 interface RadioGroupController {
   disabled: boolean;
+  readonly name?: string;
+  readonly size?: LyraSize;
   readonly customError?: string | null;
   setCustomValidity?: (message: string) => void;
   ownsRadio?: (radio: LyraRadio) => boolean;
@@ -49,6 +52,7 @@ interface RadioGroupController {
 }
 
 export type RadioAppearance = 'default' | 'button';
+type RadioButtonRunPosition = 'standalone' | 'start' | 'middle' | 'end';
 
 /**
  * `<lr-radio>` — a form-associated single-choice control. Radios can be used
@@ -151,6 +155,10 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  /** Public WA-compatible intrinsic validator catalog, inherited by radio-button. */
+  static get validators(): LyraFormValidator<LyraRadio>[] {
+    return [currentValidityValidator('required', 'disabled', 'checked', 'value')];
+  }
   static override styles = [LyraElement.styles, sizes, styles, appearanceStyles];
   static formAssociated = true;
 
@@ -179,7 +187,9 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
    * is a tag rename. Scales the indicator off the same `--lr-form-control-*` values
    * `<lr-input>`/`<lr-select>`/`<lr-button>` use, so controls of one `size` line up in a row. The
    * slotted label keeps the library's standard control-label type size at every tier; restyle it
-   * through `::part(label)` if you want it to track the control.
+   * through `::part(label)` if you want it to track the control. An owning group exposes its
+   * projected tier through `effectiveSize` without overwriting this authored property; likewise,
+   * `effectiveName` reports aggregate name authority without rewriting `name`.
    */
   size: LyraSize = 'm';
 
@@ -213,7 +223,9 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   private _fieldsetDisabled = false;
   private _groupDisabled = false;
   private _groupRequired = false;
+  private _groupSize: LyraSize | null = null;
   private _tabbable = true;
+  private _buttonRunPosition: RadioButtonRunPosition = 'standalone';
   private groupOwner: RadioGroupController | null = null;
   private _defaultChecked = false;
   private _checkedDirty = false;
@@ -297,6 +309,14 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   }
   get effectiveRequired(): boolean {
     return this.required || (this.currentGroup() ? this._groupRequired : false);
+  }
+  /** Name used by the owning aggregate group without rewriting this option's authored `name`. */
+  get effectiveName(): string {
+    return this.currentGroup()?.name || this.name;
+  }
+  /** Size projected by the owning group without rewriting this option's authored `size`. */
+  get effectiveSize(): LyraSize {
+    return this.currentGroup()?.size ?? this._groupSize ?? this.size;
   }
   get form(): HTMLFormElement | null { return getFormOwner(this.internals); }
   set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
@@ -383,6 +403,11 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   }
 
   formResetCallback(): void {
+    // An owning radio group is the aggregate FACE/reset authority. Every radio is itself
+    // form-associated, so the browser also invokes this callback on each child during the same
+    // form reset; letting those child callbacks participate would overwrite the selection the
+    // group has just restored (or is about to restore) from its own default value.
+    if (this.currentGroup()) return;
     this.hasInteracted = false;
     this.restoreCheckedFromDefault();
     this.reflectValidityStates();
@@ -464,10 +489,23 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.updateValidity();
     this.requestUpdate();
   }
+  /** @internal Projects aggregate size while preserving the authored public property/attribute. */
+  setGroupSize(value: LyraSize | null): void {
+    if (this._groupSize === value) return;
+    this._groupSize = value;
+    this.toggleAttribute('data-lr-group-size', value !== null);
+    this.requestUpdate();
+  }
   /** @internal Roving-tabindex state driven by an owning `<lr-radio-group>`. */
   setGroupTabbable(value: boolean): void {
     if (this._tabbable === value) return;
     this._tabbable = value;
+    this.requestUpdate();
+  }
+  /** @internal Actual visual-run position projected by an owning group after layout. */
+  setButtonRunPosition(value: RadioButtonRunPosition): void {
+    if (this._buttonRunPosition === value) return;
+    this._buttonRunPosition = value;
     this.requestUpdate();
   }
   /** @internal Claims this radio for one owning `<lr-radio-group>`. */
@@ -483,13 +521,14 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.syncFormState();
   }
   /** @internal Releases state imposed by the specified owning `<lr-radio-group>`. */
-  releaseGroupOwner(owner: RadioGroupController, authorName: string): void {
+  releaseGroupOwner(owner: RadioGroupController): void {
     if (this.groupOwner !== owner) return;
     this.groupOwner = null;
-    this.name = authorName;
     this.setGroupRequired(false);
     this.setGroupDisabled(false);
+    this.setGroupSize(null);
     this.setGroupTabbable(true);
+    this.setButtonRunPosition('standalone');
     const reflectedCustomError = this.getAttribute('custom-error') ?? '';
     if (reflectedCustomError) this.validityController.setCustomValidity(reflectedCustomError);
     this.syncFormState();
@@ -559,7 +598,12 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.updateValidity();
   }
   private currentGroup(): RadioGroupController | null {
-    const group = this.closest(tag('radio-group')) as (HTMLElement & RadioGroupController) | null;
+    // Construction and nested Lit SSR happen before usable light-DOM ancestry exists. Defer
+    // ownership discovery until connection, and tolerate partial DOM shims with no `closest()`.
+    if (!this.isConnected) return null;
+    const closest = (this as unknown as { closest?: (selector: string) => Element | null }).closest;
+    if (typeof closest !== 'function') return null;
+    const group = closest.call(this, tag('radio-group')) as (HTMLElement & RadioGroupController) | null;
     return group?.isConnected && group.ownsRadio?.(this) ? group : null;
   }
   private group(): RadioGroupController | null {
@@ -595,6 +639,8 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   /** Roving-tabindex state an owning group imposes; `<lr-radio-button>` reads it for its own
    *  `tabindex`, which is the only reason it is not private. */
   protected get groupTabbable(): boolean { return this._tabbable; }
+  /** Actual contiguous button-run position. Standalone and non-adjacent controls stay rounded. */
+  protected get buttonRunPosition(): RadioButtonRunPosition { return this._buttonRunPosition; }
 
   // Protected rather than private so `<lr-radio-button>` can render different chrome around the
   // identical activation contract instead of reimplementing (and drifting from) it.
@@ -662,7 +708,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
     const nodes: Node[] = slot
       ? slot.assignedNodes({ flatten: true })
-      : Array.from(this.childNodes)
+      : Array.from(this.childNodes ?? [])
           .filter((node) => this.isDefaultLabelNode(node))
           .flatMap((node) => {
             if (node.nodeType !== 1 || (node as Element).localName !== 'slot') return [node];
@@ -698,7 +744,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
         this.effectiveDisabled ? 'disabled' : '',
       ].filter(Boolean).join(' ');
       return html`
-        <span part=${parts} role="radio"
+        <span part=${parts} data-run=${this.buttonRunPosition} role="radio"
           tabindex=${this.effectiveDisabled || !this._tabbable ? '-1' : '0'}
           aria-checked=${this.checked ? 'true' : 'false'}
           aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
@@ -714,8 +760,9 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       'control',
       this.checked ? 'checked control--checked' : '',
     ].filter(Boolean).join(' ');
+    const baseParts = ['base', this.effectiveDisabled ? 'disabled' : ''].filter(Boolean).join(' ');
     return html`
-      <span part="base" role="radio" tabindex=${this.effectiveDisabled || !this._tabbable ? '-1' : '0'}
+      <span part=${baseParts} role="radio" tabindex=${this.effectiveDisabled || !this._tabbable ? '-1' : '0'}
         aria-checked=${this.checked ? 'true' : 'false'}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         aria-required=${this.effectiveRequired ? 'true' : 'false'}

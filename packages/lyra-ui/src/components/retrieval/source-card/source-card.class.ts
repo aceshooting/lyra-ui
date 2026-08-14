@@ -1,15 +1,14 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraFrame } from '../../../internal/variants.js';
-import { nextId } from '../../../internal/a11y.js';
-import { StripHostTitleAttribute } from '../../../internal/strip-host-title.js';
-import { styles } from './source-card.styles.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
+import { property, state } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import type { LyraFrame } from "../../../internal/variants.js";
+import { nextId } from "../../../internal/a11y.js";
+import { StripHostTitleAttribute } from "../../../internal/strip-host-title.js";
+import { styles } from "./source-card.styles.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export interface SourceCardExpandDetail {
   sourceId: string;
@@ -21,13 +20,9 @@ export interface SourceCardOpenDetail {
   href?: string;
 }
 
-/** Container treatment for `<lr-source-card>`'s root. The library-wide {@linkcode LyraFrame}
- *  vocabulary under this component's own export name. */
-export type SourceCardAppearance = LyraFrame;
-
 export interface LyraSourceCardEventMap {
-  'lr-expand': CustomEvent<SourceCardExpandDetail>;
-  'lr-open': CustomEvent<SourceCardOpenDetail>;
+  "lr-expand": CustomEvent<SourceCardExpandDetail>;
+  "lr-open": CustomEvent<SourceCardOpenDetail>;
 }
 
 class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
@@ -100,7 +95,9 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  * @status stable
  * @since 4.0.0
  */
-export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) {
+export class LyraSourceCard extends StripHostTitleAttribute(
+  LyraSourceCardBase
+) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -115,7 +112,7 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
   static override styles = [LyraElement.styles, styles];
 
   /** Stable identifier matching a `<lr-citation-badge>` elsewhere on the page. */
-  @property({ attribute: 'source-id' }) sourceId = '';
+  @property({ attribute: "source-id" }) sourceId = "";
 
   /** The source's display title, e.g. a filename. Rendered only as the
    *  title button's own text -- a bare host-level `title` attribute (the
@@ -123,7 +120,7 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
    *  synced it into this property, so the card never grows an unsolicited
    *  native tooltip repeating the same text. See `StripHostTitleAttribute`
    *  (`internal/strip-host-title.ts`). */
-  @property() override title = '';
+  @property() override title = "";
 
   /** Optional page reference, e.g. `12` or `"iv"` — rendered as-is (never
    *  parsed/validated as a number), so a non-numeric page label works too. */
@@ -144,7 +141,7 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
    *  border/dividers) doesn't double the frame. `plain` wins over `compact` when both are set
    *  (nothing left to tighten); the title and toggle keep their brand color and hover underline,
    *  which never depended on the card chrome. */
-  @property({ reflect: true }) frame: LyraFrame = 'card';
+  @property({ reflect: true }) frame: LyraFrame = "card";
 
   // See `<lr-widget>`'s `hasActionsSlot` for the identical
   // presence-tracking convention -- a `[part]` always contains a literal
@@ -154,57 +151,73 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
   @state() private hasExcerptSlot = false;
   @state() private fullExpanded = false;
 
-  private readonly fullId = nextId('source-card-full');
+  private readonly fullId = nextId("source-card-full");
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
-      this.hasFullSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'full');
-      this.hasExcerptSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'excerpt');
+      this.hasFullSlot = Array.from(this.children).some(
+        (el) => el.getAttribute("slot") === "full"
+      );
+      this.hasExcerptSlot = Array.from(this.children).some(
+        (el) => el.getAttribute("slot") === "excerpt"
+      );
     }
   }
 
   override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
-    const fullSlot = this.shadowRoot!.querySelector('slot[name="full"]') as HTMLSlotElement;
+    const fullSlot = this.shadowRoot!.querySelector(
+      'slot[name="full"]'
+    ) as HTMLSlotElement;
     const fullCount = fullSlot.assignedElements({ flatten: true }).length;
     this.hasFullSlot = fullCount > 0;
     if (fullCount === 0) this.fullExpanded = false;
 
-    const excerptSlot = this.shadowRoot!.querySelector('slot[name="excerpt"]') as HTMLSlotElement;
-    this.hasExcerptSlot = excerptSlot.assignedElements({ flatten: true }).length > 0;
+    const excerptSlot = this.shadowRoot!.querySelector(
+      'slot[name="excerpt"]'
+    ) as HTMLSlotElement;
+    this.hasExcerptSlot =
+      excerptSlot.assignedElements({ flatten: true }).length > 0;
   }
 
   private onFullSlotChange = (e: Event): void => {
-    const count = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length;
+    const count = (e.target as HTMLSlotElement).assignedElements({
+      flatten: true,
+    }).length;
     this.hasFullSlot = count > 0;
     // Losing the slotted content collapses the card, which changes aria-expanded and the toggle
     // label exactly as a click would. A host tracking expansion off the event stream would silently
     // desync if only the manual toggle announced itself, so the automatic path emits too.
     if (count === 0 && this.fullExpanded) {
       this.fullExpanded = false;
-      this.emit('lr-expand', { sourceId: this.sourceId, expanded: false });
+      this.emit("lr-expand", { sourceId: this.sourceId, expanded: false });
     }
   };
 
   private onExcerptSlotChange = (e: Event): void => {
-    this.hasExcerptSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasExcerptSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
 
   private get titleText(): string {
-    const base = this.title || this.localize('untitledSource');
-    return this.page == null || this.page === ''
+    const base = this.title || this.localize("untitledSource");
+    return this.page == null || this.page === ""
       ? base
-      : this.localize('sourcePageSuffix', undefined, { base, page: this.page });
+      : this.localize("sourcePageSuffix", undefined, { base, page: this.page });
   }
 
   private onTitleClick = (): void => {
-    this.emit('lr-open', { sourceId: this.sourceId, href: this.href });
+    this.emit("lr-open", { sourceId: this.sourceId, href: this.href });
   };
 
   private toggleFull = (): void => {
     this.fullExpanded = !this.fullExpanded;
-    this.emit('lr-expand', { sourceId: this.sourceId, expanded: this.fullExpanded });
+    this.emit("lr-expand", {
+      sourceId: this.sourceId,
+      expanded: this.fullExpanded,
+    });
   };
 
   override render(): TemplateResult {
@@ -213,7 +226,6 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
         <button
           part="title"
           type="button"
-          aria-label=${this.getAttribute('aria-label') || nothing}
           @click=${this.onTitleClick}
         >
           ${this.titleText}
@@ -225,11 +237,11 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
           ? html`<button
               part="toggle"
               type="button"
-              aria-expanded=${this.fullExpanded ? 'true' : 'false'}
+              aria-expanded=${this.fullExpanded ? "true" : "false"}
               aria-controls=${this.fullId}
               @click=${this.toggleFull}
             >
-              ${this.localize(this.fullExpanded ? 'showLess' : 'showMore')}
+              ${this.localize(this.fullExpanded ? "showLess" : "showMore")}
             </button>`
           : nothing}
         <div part="full" id=${this.fullId} ?hidden=${!this.fullExpanded}>
@@ -240,9 +252,8 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
   }
 }
 
-
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-source-card': LyraSourceCard;
+    "lr-source-card": LyraSourceCard;
   }
 }

@@ -1,5 +1,4 @@
 import { expect } from '@open-wc/testing';
-import { loadArchiveLibrary } from './archive-viewer/archive-loader.js';
 import { loadIcalDeps } from './calendar-viewer/calendar-loader.js';
 import { loadMammothAndSanitizer } from './docx-viewer/docx-loader.js';
 import { loadEpubJs } from './ebook-viewer/ebook-loader.js';
@@ -12,7 +11,6 @@ import { loadSvgSanitizerDeps } from './svg-viewer/dompurify-loader.js';
 
 describe('viewer optional-peer capability validation', () => {
   it('rejects malformed parser, renderer, and sanitizer module shapes', async () => {
-    expect(await loadArchiveLibrary(async () => ({}) as never)).to.equal(null);
     expect(await loadIcalDeps(async () => ({}) as never)).to.equal(null);
     expect(await loadEpubJs(async () => ({}) as never)).to.equal(null);
     expect(await loadHtmlSanitizerDeps(async () => ({}) as never)).to.equal(null);

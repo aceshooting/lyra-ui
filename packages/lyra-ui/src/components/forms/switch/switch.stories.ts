@@ -41,7 +41,7 @@ export const SupportingTextAliases: Story = {
   render: () => html`
     <div style="display:grid; gap:var(--lr-space-m);">
       <lr-switch hint="Applies to this browser">Desktop notifications</lr-switch>
-      <lr-switch default-checked>
+      <lr-switch checked>
         Weekly digest
         <span slot="help-text">Shoelace-compatible supporting-text slot</span>
       </lr-switch>

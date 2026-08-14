@@ -83,7 +83,7 @@ export const styles = css`
   }
   /*
    * Column priority (columns[].priority) hides [data-priority='low']/
-   * ['medium'] header/cells as the container narrows. showAllColumns
+   * ['medium'] header/cells as the container narrows. priorityColumnsVisible
    * (toggled by [part='reveal-columns-button']) needs to override this, but
    * a @container query can only condition on ancestor inline-size, not
    * component state — so it's surfaced instead as the data-force-visible

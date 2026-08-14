@@ -165,12 +165,12 @@ export const styles = css`
     font: inherit;
   }
 
-  [part~="navigation-button"]:hover {
+  [part~="navigation-button"]:not(:disabled):hover {
     background: var(--lr-carousel-navigation-hover-bg, var(--lr-color-brand-quiet));
     border-color: var(--lr-carousel-navigation-hover-border-color, var(--lr-color-brand));
   }
 
-  [part~="navigation-button"]:active {
+  [part~="navigation-button"]:not(:disabled):active {
     background: var(
       --lr-carousel-navigation-active-bg,
       color-mix(

@@ -54,6 +54,23 @@ export const Seconds: Story = {
   `,
 };
 
+/** The picker derives every column from the complete offset step grid. Focus an option and use
+ * ArrowUp/ArrowDown/Home/End; Enter or Space activates the focused native button. */
+export const OffsetStepGrid: Story = {
+  render: () => html`
+    <lr-time-input
+      open
+      hour-format="24"
+      label="Ten-minute grid offset by five"
+      hint="Valid minutes are 05, 15, 25, 35, 45, and 55."
+      min="00:05"
+      step="600"
+      value="09:05"
+      style="max-width: 20rem"
+    ></lr-time-input>
+  `,
+};
+
 /** Reversed bounds describe a valid range that crosses midnight. */
 export const OvernightRange: Story = {
   render: () => html`

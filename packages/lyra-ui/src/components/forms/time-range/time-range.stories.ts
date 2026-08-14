@@ -82,6 +82,38 @@ export const HumanReadableValueText: Story = {
   `,
 };
 
+export const LocalizedAndLiteralHandleLabels: Story = {
+  name: 'Localized and literal handle labels',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The first range leaves startLabel/endLabel absent, so its per-instance strings catalog supplies both accessible names. The second explicitly supplies the former English defaults; every supplied string is caller-owned and remains literal.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: 2rem;">
+      <lr-time-range
+        min="0"
+        max="100"
+        start="20"
+        end="80"
+        .strings=${{ rangeStart: 'Début de plage', rangeEnd: 'Fin de plage' }}
+      ></lr-time-range>
+      <lr-time-range
+        min="0"
+        max="100"
+        start="20"
+        end="80"
+        start-label="Range start"
+        end-label="Range end"
+        .strings=${{ rangeStart: 'Début de plage', rangeEnd: 'Fin de plage' }}
+      ></lr-time-range>
+    </div>
+  `,
+};
+
 export const DiscretePresets: Story = {
   render: () => html`
     <lr-time-range min="0" max="90" start="0" end="30" .presets=${presets}></lr-time-range>

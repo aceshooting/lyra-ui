@@ -135,6 +135,38 @@ it('submits through the native submit button, naming it as SubmitEvent.submitter
   expect(submitter && (submitter as HTMLElement).id).to.equal('go');
 });
 
+it('submits the platform form owner even when it is not an ancestor', async () => {
+  const container = (await fixture(html`
+    <div>
+      <form id="external-owner"><button type="submit" id="go">Go</button></form>
+      <input id="field" name="q" form="external-owner" value="hi" />
+    </div>
+  `)) as HTMLDivElement;
+  const form = container.querySelector('form')!;
+  const field = container.querySelector('#field') as HTMLInputElement;
+  const submits = countSubmits(form);
+
+  expect(field.closest('form')).to.equal(null);
+  expect(field.form?.id).to.equal('external-owner');
+  expect(submitOnEnter(field, enterEvent())).to.be.true;
+  expect(submits()).to.equal(1);
+});
+
+it('does not fall back to an ancestor when an explicit form owner is unresolved', async () => {
+  const form = (await fixture(html`
+    <form>
+      <input id="field" name="q" form="missing-owner" value="hi" />
+      <button type="submit">Go</button>
+    </form>
+  `)) as HTMLFormElement;
+  const field = form.querySelector('#field') as HTMLInputElement;
+  const submits = countSubmits(form);
+
+  expect(field.form).to.equal(null);
+  expect(submitOnEnter(field, enterEvent())).to.be.false;
+  expect(submits()).to.equal(0);
+});
+
 it('clicks an lr-button submitter instead of handing it to requestSubmit(), which would throw', async () => {
   const form = (await fixture(html`
     <form><input id="field" name="q" value="hi" /><lr-button id="go" type="submit">Go</lr-button></form>

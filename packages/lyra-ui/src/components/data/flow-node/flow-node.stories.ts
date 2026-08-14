@@ -49,11 +49,11 @@ export const RetintedRunStates: Story = {
         flex-direction:column;
         gap:1rem;
         align-items:flex-start;
-        --lr-flow-node-status-pending-color: var(--lr-color-text);
-        --lr-flow-node-status-running-color: var(--lr-color-danger);
-        --lr-flow-node-status-success-color: var(--lr-color-brand);
-        --lr-flow-node-status-error-color: var(--lr-color-warning);
-        --lr-flow-node-status-denied-color: var(--lr-color-success);
+        --lr-flow-status-pending-color: var(--lr-color-text);
+        --lr-flow-status-running-color: var(--lr-color-danger);
+        --lr-flow-status-success-color: var(--lr-color-brand);
+        --lr-flow-status-error-color: var(--lr-color-warning);
+        --lr-flow-status-denied-color: var(--lr-color-success);
       "
     >
       <lr-flow-node heading="Queued" status="pending"></lr-flow-node>
@@ -147,12 +147,12 @@ export const Compact: Story = {
 };
 
 export const RetintedSelection: Story = {
-  name: 'Retinted selection border',
+  name: 'Retinted selection outline',
   parameters: {
     docs: {
       description: {
         story:
-          '`--lr-flow-node-selected-border` recolors the `selected` card border without touching the library-wide `--lr-color-brand` token (the right pair is retinted, the left keeps the default). Unset, it renders exactly as before.',
+          '`--lr-flow-node-selected-outline-color` recolors the `selected` card outline without replacing an execution-state border (the right pair is retinted, the left keeps the default).',
       },
     },
   },
@@ -160,7 +160,7 @@ export const RetintedSelection: Story = {
     <div style="display:flex; gap:1rem; align-items:flex-start">
       <lr-flow-node heading="Fetch data" selected></lr-flow-node>
       <lr-flow-node
-        style="--lr-flow-node-selected-border: var(--lr-color-success)"
+        style="--lr-flow-node-selected-outline-color: var(--lr-color-success)"
         heading="Summarize"
         selected
       ></lr-flow-node>

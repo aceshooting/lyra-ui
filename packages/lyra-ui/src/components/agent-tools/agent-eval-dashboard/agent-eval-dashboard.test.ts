@@ -4,13 +4,63 @@ import type { LyraAgentEvalDashboard } from './agent-eval-dashboard.class.js';
 import type { LyraStat } from '../../data/stat/stat.class.js';
 describe('lr-agent-eval-dashboard', () => {
   it('renders metrics, trend, and runs', async () => { const el = (await fixture(html`<lr-agent-eval-dashboard .strings=${{ evaluationDashboardLabel: 'Evaluation overview' }} .metrics=${[{ id: 'pass', label: 'Pass rate', value: 0.9, format: 'percent' }]} .runs=${[{ id: 'r1', label: 'Run 1', status: 'done', metrics: { pass: 0.9 } }]}></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard; await el.updateComplete; expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist; expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(1); });
+
+  it('bounds both the chart and rendered history to max-rendered-runs', async () => {
+    const runs = Array.from({ length: 140 }, (_, index) => ({
+      id: `r-${index}`,
+      label: `Run ${index}`,
+      status: 'done' as const,
+      metrics: { score: index },
+    }));
+    const el = await fixture<LyraAgentEvalDashboard>(html`
+      <lr-agent-eval-dashboard
+        max-rendered-runs="12"
+        .metrics=${[{ id: 'score', label: 'Score', value: 139 }]}
+        .runs=${runs}
+      ></lr-agent-eval-dashboard>
+    `);
+    expect(el.shadowRoot!.querySelectorAll('[part="run"]')).to.have.length(12);
+    const chart = el.shadowRoot!.querySelector('lr-lite-chart') as HTMLElement & { labels: string[] };
+    expect(chart.labels).to.have.length(12);
+    expect(chart.labels[0]).to.equal('Run 0');
+  });
+
+  it('preserves caller status label, variant, and message for extensible kinds', async () => {
+    const el = await fixture<LyraAgentEvalDashboard>(html`
+      <lr-agent-eval-dashboard .runs=${[{
+        id: 'r-custom',
+        label: 'Provider run',
+        status: { kind: 'rate-limited', label: 'Throttled', variant: 'warning', message: 'Retry in 30 seconds' },
+      }]}></lr-agent-eval-dashboard>
+    `);
+    const badge = el.shadowRoot!.querySelector('lr-badge') as HTMLElement & { variant: string };
+    expect(badge.textContent!.trim()).to.equal('Throttled');
+    expect(badge.variant).to.equal('warning');
+    expect(el.shadowRoot!.querySelector('[part="run-status-message"]')!.textContent).to.equal('Retry in 30 seconds');
+  });
+
+  it('emits the shared lr-run-activate detail with id and run context', async () => {
+    const run = { id: 'r-1', label: 'Run one', status: 'done' as const };
+    const el = await fixture<LyraAgentEvalDashboard>(html`
+      <lr-agent-eval-dashboard .runs=${[run]}></lr-agent-eval-dashboard>
+    `);
+    const pending = oneEvent(el, 'lr-run-activate');
+    (el.shadowRoot!.querySelector('[part="run"]') as HTMLButtonElement).click();
+    expect((await pending).detail).to.deep.equal({ runId: 'r-1', run });
+  });
   it('is accessible in empty and populated states', async () => { await expect((await fixture(html`<lr-agent-eval-dashboard></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard).to.be.accessible(); await expect((await fixture(html`<lr-agent-eval-dashboard .runs=${[{ id: 'r', label: 'Run', status: 'done' }]}></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard).to.be.accessible(); });
 
-  it('forwards the host aria-label to the section that owns the region name', async () => {
+  it('keeps a non-empty host name on the host and preserves an explicit-empty inner region name', async () => {
     const el = (await fixture(html`
       <lr-agent-eval-dashboard aria-label="Author dashboard" label="Visible dashboard"></lr-agent-eval-dashboard>
     `)) as LyraAgentEvalDashboard;
-    expect(el.shadowRoot!.querySelector('section')!.getAttribute('aria-label')).to.equal('Author dashboard');
+    expect(el.getAttribute('aria-label')).to.equal('Author dashboard');
+    expect(el.shadowRoot!.querySelector('section')!.hasAttribute('aria-label')).to.equal(false);
+
+    const decorative = (await fixture(html`
+      <lr-agent-eval-dashboard aria-label="" label="Visible dashboard"></lr-agent-eval-dashboard>
+    `)) as LyraAgentEvalDashboard;
+    expect(decorative.shadowRoot!.querySelector('section')!.getAttribute('aria-label')).to.equal('');
   });
 
   it('formats percent, unit, and currency metrics with the effective locale and currency', async () => {
@@ -77,6 +127,21 @@ describe('lr-agent-eval-dashboard', () => {
     expect((await event).detail).to.deep.equal({ metricId: 'second' });
   });
 
+  it('distinguishes null fallback selection from a valid empty-string metric id', async () => {
+    const el = await fixture<LyraAgentEvalDashboard>(html`
+      <lr-agent-eval-dashboard
+        metric-id=""
+        .metrics=${[
+          { id: 'first', label: 'First', value: 1 },
+          { id: '', label: 'Root metric', value: 2 },
+        ]}
+      ></lr-agent-eval-dashboard>
+    `);
+    const metrics = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="metric"]')];
+    expect(el.metricId).to.equal('');
+    expect(metrics.map((metric) => metric.getAttribute('aria-pressed'))).to.deep.equal(['false', 'true']);
+  });
+
   it('localizes the metric accessible value label with placeholders', async () => {
     const el = (await fixture(html`
       <lr-agent-eval-dashboard
@@ -131,4 +196,24 @@ describe('lr-agent-eval-dashboard', () => {
     expect(run.scrollWidth).to.be.at.most(Math.ceil(run.getBoundingClientRect().width) + 1);
     expect(runLabel.scrollWidth).to.be.at.most(Math.ceil(runLabel.getBoundingClientRect().width) + 1);
   });
+});
+
+it('normalizes duplicate metric and run ids first-wins across cards, chart, and rows', async () => {
+  const el = await fixture<LyraAgentEvalDashboard>(html`
+    <lr-agent-eval-dashboard
+      .metrics=${[
+        { id: 'metric', label: 'First metric', value: 1 },
+        { id: 'metric', label: 'Later metric', value: 2 },
+      ]}
+      .runs=${[
+        { id: 'run', label: 'First run', status: 'done', metrics: { metric: 1 } },
+        { id: 'run', label: 'Later run', status: 'error', metrics: { metric: 2 } },
+      ]}
+    ></lr-agent-eval-dashboard>
+  `);
+  expect(el.shadowRoot!.querySelectorAll('[part="metric"]')).to.have.length(1);
+  const metric = el.shadowRoot!.querySelector('lr-stat') as LyraStat;
+  expect(metric.label).to.equal('First metric');
+  expect(el.shadowRoot!.querySelectorAll('[part="run"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelector('[part="run"]')!.textContent).to.contain('First run');
 });

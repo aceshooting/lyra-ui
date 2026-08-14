@@ -89,15 +89,23 @@ describe('lr-docx-viewer', () => {
   it('converts and sanitizes DOCX HTML', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     useLibrary(el, {
-      mammoth: { convertToHtml: () => Promise.resolve({ value: '<h1>Report</h1><script>bad()</script>', messages: [] }) },
-      DOMPurify: { sanitize: (value: string) => value.replace('<script>bad()</script>', '') },
+      mammoth: { convertToHtml: () => Promise.resolve({ value: '<style>@import url(https://example.test/a.css)</style><h1 style="background:url(https://example.test/bg.png)">Report</h1><img src="https://example.test/pixel.png"><a href="https://example.test/nav">link</a><form><button>send</button></form><script>bad()</script>', messages: [] }) },
+      // The post-sanitization passive profile is independently fail-closed even if a peer-shaped
+      // test double returns its input unchanged.
+      DOMPurify: { sanitize: (value: string) => value },
     });
     const restore = stubFetch(BUFFER);
     try {
       el.src = 'https://example.test/report.docx';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent!.trim()).to.equal('Report');
+      expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent).to.contain('Report');
       expect((el.shadowRoot!.querySelector('script')) == null).to.equal(true);
+      const content = el.shadowRoot!.querySelector('[part="content"]')!;
+      expect(content.querySelectorAll('style,a,form,button').length).to.equal(0);
+      expect(content.querySelector('h1')!.hasAttribute('style')).to.equal(false);
+      expect(content.querySelector('img')!.hasAttribute('src')).to.equal(false);
+      expect(content.textContent).to.contain('link');
+      expect(content.textContent).to.contain('send');
     } finally {
       restore();
     }
@@ -146,10 +154,20 @@ describe('lr-docx-viewer', () => {
     });
     const restore = stubFetch(BUFFER);
     try {
-      const event = new Promise<CustomEvent<{ error: unknown }>>((resolve) => el.addEventListener('lr-render-error', resolve, { once: true }));
+      let renderErrors = 0;
+      el.addEventListener('lr-render-error', () => renderErrors++);
+      const diagnostic = oneEvent(el, 'lr-viewer-diagnostic');
       el.src = 'https://example.test/report.docx';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
-      expect((await event).detail.error).to.be.an('array');
+      expect((await diagnostic).detail.diagnostic).to.deep.include({
+        code: 'docx-conversion-message',
+        severity: 'warning',
+        fatal: false,
+        source: 'mammoth',
+        cause: { type: 'warning', message: 'style' },
+      });
+      await aTimeout(0);
+      expect(renderErrors).to.equal(0);
     } finally {
       restore();
     }
@@ -1348,6 +1366,32 @@ describe('search', () => {
       el.lang = 'tr';
       await el.updateComplete;
       expect(await el.search('istanbul')).to.equal(1);
+    } finally { restore(); }
+  });
+
+  it('maps length-changing locale folds back to the exact raw text offsets', async () => {
+    const { el, restore } = await loadWithMarkup('<p>İSTANBUL</p>');
+    try {
+      el.lang = 'en';
+      await el.updateComplete;
+      expect(await el.search('tan')).to.equal(1);
+      const active = el.shadowRoot!.querySelector('[part~="search-match-active"]')!;
+      expect(active.textContent).to.equal('TAN');
+
+      expect(await el.search('i')).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part~="search-match-active"]')!.textContent).to.equal('İ');
+    } finally { restore(); }
+  });
+
+  it('keeps fold-expansion offsets correct across text-node boundaries and combining marks', async () => {
+    const { el, restore } = await loadWithMarkup('<p>ÍS<strong>TAN</strong>BUL</p>');
+    try {
+      el.lang = 'lt';
+      await el.updateComplete;
+      expect(await el.search('stan')).to.equal(1);
+      const marks = [...el.shadowRoot!.querySelectorAll('[part~="search-match"]')];
+      expect(marks.map((mark) => mark.textContent).join('')).to.equal('STAN');
+      expect(el.shadowRoot!.querySelector('[part~="search-match-active"]')!.textContent).to.equal('S');
     } finally { restore(); }
   });
 

@@ -18,7 +18,7 @@ export const styles = css`
   [part='axis'] {
     position: relative;
     block-size: var(--lr-size-1-25rem);
-    margin-inline-start: var(--lr-span-waterfall-name-width);
+    margin-inline-start: calc(var(--lr-span-waterfall-name-width) + var(--lr-space-xs));
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     overflow: hidden;
   }
@@ -73,6 +73,9 @@ export const styles = css`
     border-radius: var(--lr-radius-xs);
     padding: 0;
     cursor: pointer;
+  }
+  [part='bar'][hidden] {
+    display: none;
   }
   /* The hover/pressed tint is a veil on a pseudo-element rather than a background swap on the bar
      itself, because a bar's fill is one of five different things: four solid tones, a striped
@@ -157,7 +160,16 @@ export const styles = css`
     padding: var(--lr-space-l);
   }
 
+  [part='limit'] {
+    margin: var(--lr-space-s) 0 0;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+  }
+
   @container (max-inline-size: 479.98px) {
+    [part='axis'] {
+      margin-inline-start: 0;
+    }
     [part='row'] {
       grid-template-columns: 1fr;
     }

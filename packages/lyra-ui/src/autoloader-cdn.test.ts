@@ -183,7 +183,7 @@ describe('autoloader CDN entry', () => {
       await loadCdnEntry({
         'data-lyra-autoloader': '',
         'data-lyra-autoload-events': '',
-        'data-lyra-optional-peers': ' jszip ',
+        'data-lyra-optional-peers': ' dompurify ',
       }, true);
       const event = await errorEvent as CustomEvent<{ tag: string; error: unknown }>;
       expect(event.detail.tag).to.equal(tag);

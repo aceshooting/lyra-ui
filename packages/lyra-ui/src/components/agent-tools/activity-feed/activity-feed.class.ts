@@ -12,9 +12,10 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import type { LyraVirtualList, VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './activity-feed.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_activityFeedCompletedStep, LYRA_DEFAULT_activityFeedCompletedSteps, LYRA_DEFAULT_activityFeedLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_activityFeedCompletedStep, LYRA_DEFAULT_activityFeedCompletedSteps, LYRA_DEFAULT_activityFeedLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -89,9 +90,11 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * is over. Entries never change state once added (a step whose status mutates in place belongs to
  * `<lr-task-list>` instead). Implements the shared follow (stick-to-bottom) contract: `follow`
  * is a component-managed, host-assignable property, released on user scroll-up and re-engaged at
- * the bottom, firing `lr-follow-change` on every transition (mount excluded). At/above
+ * the bottom. `lr-follow-change` reports user-driven transitions only; direct host assignments are
+ * controlled input and never echo an event. At/above
  * `virtualizeAt` entries, the body renders through an internal `<lr-virtual-list>`
- * instead of a plain keyed list — same list semantics either way, keyed by `id`.
+ * instead of a plain keyed list — same list semantics either way, keyed by `id`. Duplicate ids
+ * normalize before counts, follow calculations, and rendering; the first occurrence wins.
  *
  * Each entry's `text` renders as plain text by default; a host needing richer per-entry content
  * (rendered markdown, a trailing tool-call chip list, etc.) sets `renderText` to fully replace it,
@@ -100,9 +103,8 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @customElement lr-activity-feed
  * @event lr-toggle - The header was activated, expanding or collapsing the body. `detail: {
  *   expanded }`.
- * @event lr-follow-change - `follow` released or re-engaged (user scroll, or a host
- *   assignment). `detail: { following }`. Never fired for the value `follow` happens to mount
- *   with.
+ * @event lr-follow-change - A user scroll released or re-engaged `follow`. `detail: {
+ *   following }`. Direct property/attribute assignments never echo an event.
  * @csspart base - The outer container.
  * @csspart header - The clickable header (`<button>`).
  * @csspart status-dot - The decorative mode indicator dot; pulses while `mode="live"`.
@@ -144,13 +146,18 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     activityFeedLabel: LYRA_DEFAULT_activityFeedLabel,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
 
-  /** Append-only: stable ids, new entries at the end. Entries never change state once added. */
+  /** Append-only: stable ids, new entries at the end. Entries never change state once added.
+   *  Duplicate ids normalize first-wins before summary, virtualization, and rendering. */
   @property({ attribute: false }) entries: ActivityEntry[] = [];
 
   /** `'live'` follows the tail (per `follow`) and pulses; `'post-hoc'` shows the completed-count
@@ -191,8 +198,8 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   private readonly headerId = nextId('activity-feed-header');
   private readonly bodyId = nextId('activity-feed-body');
 
-  /** `true` until the first completed update -- gates `lr-follow-change` and the mode-transition
-   *  announcement so mounting with a non-default `follow`/`mode` never itself fires either. */
+  /** `true` until the first completed update -- gates the mode-transition announcement so
+   *  mounting in a non-default mode never announces historical state. */
   private isMounting = true;
 
   private scrollRafId?: number;
@@ -215,7 +222,8 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.resetOwnerRealmWork();
     if (this.isConnected && this.shouldFollowLiveTail) this.scrollToLatest();
   }
@@ -228,8 +236,12 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     return finiteCount(this.virtualizeAt, 199);
   }
 
+  private get normalizedEntries(): ActivityEntry[] {
+    return firstByIdentity(Array.isArray(this.entries) ? this.entries : [], (entry) => entry.id);
+  }
+
   private get isVirtualized(): boolean {
-    return this.entries.length > this.effectiveVirtualizeAt;
+    return this.normalizedEntries.length > this.effectiveVirtualizeAt;
   }
 
   private get shouldFollowLiveTail(): boolean {
@@ -267,7 +279,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     if ((changed.has('expanded') || changed.has('mode')) && this.expanded && this.mode === 'live') {
       // Resetting to "anchored" on expand/live-transition, in willUpdate (not updated) so this
       // stays part of the SAME update pass rather than scheduling a second one -- identical
-      // willUpdate/updated split rationale to lr-generation-status's elapsedMs computation.
+      // willUpdate/updated split rationale to lr-generation-metrics's elapsedMs computation.
       this.follow = true;
     }
   }
@@ -276,10 +288,6 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
-
-    if (!wasMounting && changed.has('follow')) {
-      this.emit('lr-follow-change', { following: this.follow });
-    }
 
     if (!wasMounting && changed.has('mode')) {
       const previousMode = changed.get('mode') as ActivityFeedMode | undefined;
@@ -330,7 +338,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
           this.anchoringVirtualTail = false;
           return;
         }
-        list.scrollToIndex(this.entries.length - 1, { align: 'end', behavior: 'auto' });
+        list.scrollToIndex(this.normalizedEntries.length - 1, { align: 'end', behavior: 'auto' });
         const firstHandle = ownerWindow.requestAnimationFrame(() => {
           if (
             this.virtualAnchorReleaseRafId !== firstHandle ||
@@ -408,7 +416,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   }
 
   private completedStepsSummary(): string {
-    const count = this.entries.length;
+    const count = this.normalizedEntries.length;
     const key =
       getPluralRules(this.effectiveLocale).select(count) === 'one'
         ? 'activityFeedCompletedStep'
@@ -421,19 +429,26 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     this.emit('lr-toggle', { expanded: this.expanded });
   };
 
+  private setFollowFromUser(following: boolean): void {
+    if (following === this.follow) return;
+    this.follow = following;
+    this.emit('lr-follow-change', { following });
+  }
+
   private onBodyScroll = (e: Event): void => {
     if (this.isVirtualized || this.mode !== 'live') return;
     const body = e.currentTarget as HTMLElement;
     const nearBottom = body.scrollHeight - body.scrollTop - body.clientHeight <= NEAR_BOTTOM_PX;
-    if (nearBottom !== this.follow) this.follow = nearBottom;
+    this.setFollowFromUser(nearBottom);
   };
 
   private onVirtualListRangeChanged = (e: CustomEvent<VirtualListRange>): void => {
     e.stopPropagation();
     if (this.mode !== 'live') return;
     if (this.anchoringVirtualTail) return;
-    const atBottom = this.entries.length > 0 && e.detail.end >= this.entries.length - 1;
-    if (atBottom !== this.follow) this.follow = atBottom;
+    const entries = this.normalizedEntries;
+    const atBottom = entries.length > 0 && e.detail.end >= entries.length - 1;
+    this.setFollowFromUser(atBottom);
   };
 
   private normalizedTimestamp(value: Date | string | undefined): Date | undefined {
@@ -459,9 +474,10 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   }
 
   override render(): TemplateResult {
+    const entries = this.normalizedEntries;
     const label = this.label === 'Activity' ? this.localize('activityFeedLabel') : this.label;
-    const ariaLabel = this.getAttribute('aria-label') || label;
-    const headerText = this.mode === 'live' ? (this.entries[this.entries.length - 1]?.text ?? '') : this.completedStepsSummary();
+    const ariaLabel = label;
+    const headerText = this.mode === 'live' ? (entries[entries.length - 1]?.text ?? '') : this.completedStepsSummary();
     const virtualized = this.isVirtualized;
 
     return html`
@@ -491,13 +507,13 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
           ${virtualized
             ? html`<lr-virtual-list
                 exportparts="entry:entry, entry-icon:entry-icon, variant-dot:variant-dot, variant-dot-neutral:variant-dot-neutral, variant-dot-brand:variant-dot-brand, variant-dot-success:variant-dot-success, variant-dot-warning:variant-dot-warning, variant-dot-danger:variant-dot-danger, entry-text:entry-text, entry-timestamp:entry-timestamp"
-                .items=${this.entries}
+                .items=${entries}
                 .renderItem=${(item: unknown) => this.entryTemplate(item as ActivityEntry, false)}
                 .keyFunction=${(item: unknown) => (item as ActivityEntry).id}
                 aria-label=${ariaLabel}
                 @lr-visible-range-changed=${this.onVirtualListRangeChanged}
               ></lr-virtual-list>`
-            : repeat(this.entries, (entry) => entry.id, (entry) => this.entryTemplate(entry, true))}
+            : repeat(entries, (entry) => entry.id, (entry) => this.entryTemplate(entry, true))}
         </div>
         <lr-live-region></lr-live-region>
       </div>

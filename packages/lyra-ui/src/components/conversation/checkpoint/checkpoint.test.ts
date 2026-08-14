@@ -66,6 +66,12 @@ it('has an accessible name with context distinct from its visible text', async (
   expect(button.getAttribute('aria-label')).to.equal('Restore conversation to Before refactor');
 });
 
+it('preserves an explicitly empty host aria-label on the semantic group', async () => {
+  const el = (await fixture(html`<lr-checkpoint aria-label="" label="Visible checkpoint"></lr-checkpoint>`)) as LyraCheckpoint;
+  const group = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(group.getAttribute('aria-label')).to.equal('');
+});
+
 describe('restoring state', () => {
   it('shows a spinner and "Restoring…" text, and aria-disabled="true", while restoring', async () => {
     const el = (await fixture(html`<lr-checkpoint restoring></lr-checkpoint>`)) as LyraCheckpoint;
@@ -139,6 +145,64 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     await new Promise((r) => requestAnimationFrame(r));
     const confirmButton = el.shadowRoot!.querySelector('[part="confirm-button"]') as HTMLButtonElement;
     expect((el.shadowRoot!.activeElement) === (confirmButton)).to.equal(true);
+    const prompt = el.shadowRoot!.querySelector('[part="confirm-prompt"]') as HTMLElement;
+    expect(confirmButton.getAttribute('aria-describedby')).to.equal(prompt.id);
+    expect(
+      (el.shadowRoot!.querySelector('[part="cancel-button"]') as HTMLButtonElement).getAttribute(
+        'aria-describedby',
+      ),
+    ).to.equal(prompt.id);
+  });
+
+  it('abandons confirmation when configuration becomes incompatible', async () => {
+    const cases: Array<(element: LyraCheckpoint) => void> = [
+      (element) => {
+        element.restorable = false;
+      },
+      (element) => {
+        element.confirmRestore = false;
+      },
+      (element) => {
+        element.restoring = true;
+      },
+    ];
+
+    for (const mutate of cases) {
+      const el = (await fixture(html`<lr-checkpoint></lr-checkpoint>`)) as LyraCheckpoint;
+      (el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement).click();
+      await el.updateComplete;
+      mutate(el);
+      await el.updateComplete;
+      expect((el.shadowRoot!.querySelector('[part="confirm-group"]')) == null).to.equal(true);
+    }
+  });
+
+  it('resets confirmation across disconnect/reconnect and cancels deferred focus', async () => {
+    const wrapper = (await fixture(html`<div><lr-checkpoint></lr-checkpoint></div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-checkpoint') as LyraCheckpoint;
+    (el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement).click();
+    wrapper.removeChild(el);
+    wrapper.appendChild(el);
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect((el.shadowRoot!.querySelector('[part="confirm-group"]')) == null).to.equal(true);
+    expect((el.shadowRoot!.activeElement) == null).to.equal(true);
+  });
+
+  it('does not emit a second restore when restoring becomes true before the confirm handler', async () => {
+    const el = (await fixture(html`<lr-checkpoint></lr-checkpoint>`)) as LyraCheckpoint;
+    (el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    let count = 0;
+    el.addEventListener('lr-restore', () => count++);
+    const confirm = el.shadowRoot!.querySelector('[part="confirm-button"]') as HTMLButtonElement;
+    confirm.addEventListener('click', () => {
+      el.restoring = true;
+    }, { capture: true });
+    confirm.click();
+    await el.updateComplete;
+    expect(count).to.equal(0);
+    expect((el.shadowRoot!.querySelector('[part="confirm-group"]')) == null).to.equal(true);
   });
 
   it('fires lr-restore with checkpointId/label on confirm, and reverts the group', async () => {
@@ -227,6 +291,30 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
       await resetMouse();
     }
   });
+});
+
+it('forwards host click to Restore only while the primary action is available', async () => {
+  const immediate = (await fixture(
+    html`<lr-checkpoint confirm-restore="false"></lr-checkpoint>`,
+  )) as LyraCheckpoint;
+  let count = 0;
+  immediate.addEventListener('lr-restore', () => count++);
+  immediate.click();
+  expect(count).to.equal(1);
+
+  immediate.restoring = true;
+  immediate.click();
+  immediate.restoring = false;
+  immediate.restorable = false;
+  immediate.click();
+  expect(count).to.equal(1);
+
+  const confirming = (await fixture(html`<lr-checkpoint></lr-checkpoint>`)) as LyraCheckpoint;
+  confirming.click();
+  await confirming.updateComplete;
+  expect((confirming.shadowRoot!.querySelector('[part="confirm-group"]')) != null).to.equal(true);
+  confirming.click();
+  expect(count).to.equal(1);
 });
 
 describe('confirmRestore=false', () => {

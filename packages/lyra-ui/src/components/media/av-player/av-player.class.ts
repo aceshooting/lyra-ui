@@ -17,46 +17,116 @@ import {
   NativeMediaController,
   safeNativeMediaSource as safeMediaSrc,
 } from '../../../internal/media-controller.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
+import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './av-player.styles.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
+import {
+  EMPTY_LYRA_AV_CUES,
+  EMPTY_LYRA_AV_TRACKS,
+  snapshotLyraAvCues,
+  snapshotLyraAvTracks,
+  type LyraAvCue,
+  type LyraAvTrack,
+} from './av-metadata.js';
+export type { LyraAvCue, LyraAvTrack } from './av-metadata.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerLabel, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_avPlayerTimeline, LYRA_DEFAULT_avPlayerTranscript, LYRA_DEFAULT_viewerHighlightLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerLabel, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_avPlayerTimeline, LYRA_DEFAULT_avPlayerTranscript, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_viewerHighlightLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type AvKind = 'audio' | 'video';
+export type LyraAvKind = 'audio' | 'video';
 export type LyraAvPreload = 'none' | 'metadata' | 'auto';
 
-/** One synced transcript entry. `end` is exclusive; an omitted `end` extends to the next cue (or
- *  forever, for the last one). */
-export interface LyraAvCue {
-  id: string;
-  start: number;
-  end?: number;
-  text: string;
-  speaker?: string;
-}
-
-/** A native `<track>` source (subtitles/captions/descriptions), wired straight through to the
- *  underlying media element. */
-export interface LyraAvTrack {
-  src: string;
-  kind: 'subtitles' | 'captions' | 'descriptions';
-  srclang: string;
-  label: string;
-  default?: boolean;
+export interface LyraAvCueChangeDetail {
+  readonly cueId: string | null;
+  readonly index: number;
 }
 
 /** Throttle window for `lr-time-change` while playing -- at most 4/s, plus one extra emission per
  *  discrete `seek()` regardless of the window. */
 const TIME_CHANGE_THROTTLE_MS = 250;
+const MAX_AV_RATES = 32;
+const MAX_AV_PEAKS = 65_536;
+const MAX_CANVAS_DIMENSION = 4096;
+const MAX_CANVAS_PIXELS = 8_388_608;
+const OWNED_AV_COLLECTIONS = new WeakSet<object>();
+const NO_REPORTED_ERROR = Symbol('no-reported-av-error');
+
+function ownedSnapshot<T>(values: T[]): readonly T[] {
+  const snapshot = Object.freeze(values);
+  OWNED_AV_COLLECTIONS.add(snapshot);
+  return snapshot;
+}
+
+const EMPTY_RATES = ownedSnapshot<number>([]);
+const DEFAULT_RATES = ownedSnapshot([0.75, 1, 1.25, 1.5, 2]);
+const EMPTY_CUES = EMPTY_LYRA_AV_CUES;
+const EMPTY_PEAKS = ownedSnapshot<number>([]);
+const EMPTY_TRACKS = EMPTY_LYRA_AV_TRACKS;
+
+function normalizeArray<T>(
+  value: unknown,
+  limit: number,
+  normalize: (candidate: unknown, index: number) => T | undefined,
+  fallback: readonly T[],
+): readonly T[] {
+  try {
+    if (!Array.isArray(value)) return fallback;
+    if (OWNED_AV_COLLECTIONS.has(value)) return value as readonly T[];
+    const result: T[] = [];
+    const length = Math.min(value.length, limit);
+    for (let index = 0; index < length; index++) {
+      try {
+        const normalized = normalize(value[index], index);
+        if (normalized !== undefined) result.push(normalized);
+      } catch {
+        // A hostile entry does not discard earlier valid entries.
+      }
+    }
+    return ownedSnapshot(result);
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeRates(value: unknown): readonly number[] {
+  const seen = new Set<number>();
+  return normalizeArray(
+    value,
+    MAX_AV_RATES,
+    (candidate) => {
+      if (
+        typeof candidate !== 'number' ||
+        !Number.isFinite(candidate) ||
+        candidate < MIN_PLAYBACK_RATE ||
+        candidate > MAX_PLAYBACK_RATE ||
+        seen.has(candidate)
+      ) {
+        return undefined;
+      }
+      seen.add(candidate);
+      return candidate;
+    },
+    EMPTY_RATES,
+  );
+}
+
+function normalizePeaks(value: unknown): readonly number[] {
+  return normalizeArray(
+    value,
+    MAX_AV_PEAKS,
+    (candidate) => typeof candidate === 'number' ? finiteRange(candidate, 0, 0, 1) : undefined,
+    EMPTY_PEAKS,
+  );
+}
 
 interface OwnedAnimationFrame {
   owner: Window;
@@ -117,20 +187,20 @@ export interface LyraAvPlayerEventMap {
   play: Event;
   timeupdate: Event;
   volumechange: Event;
-  'lr-play': CustomEvent<undefined>;
-  'lr-pause': CustomEvent<undefined>;
-  'lr-load': CustomEvent<{ duration: number; kind: AvKind }>;
+  'lr-play': CustomEvent<null>;
+  'lr-pause': CustomEvent<null>;
+  'lr-load': CustomEvent<{ duration: number; kind: LyraAvKind }>;
   'lr-time-change': CustomEvent<{ currentTime: number }>;
   'lr-rate-change': CustomEvent<{ rate: number }>;
-  'lr-cue-change': CustomEvent<{ id: string | null }>;
+  'lr-cue-change': CustomEvent<LyraAvCueChangeDetail>;
   'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
 }
 
 class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
@@ -140,7 +210,8 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * transcript synced to `currentTime`, `time-range` anchor/highlight support, an optional
  * dependency-free waveform (peaks in, no in-component decoding), and playback-rate control. Owns
  * recorded-media transcript sync; distinct from `<lr-transcript-feed>` (live captions for an
- * in-progress voice session) and `<lr-playback>` (an index stepper over `[0, length)` for
+ * in-progress voice session) and `<lr-sequence-playback>` (an index stepper over
+ * `[0, itemCount)` for
  * time-series dashboards — no media involved in either).
  *
  * Adopts `DocumentAnchorTarget` with `anchorKinds: ['time-range']` only. No text selection is bound:
@@ -151,8 +222,10 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * virtualizes pages: `items`/`renderItem`/`keyFunction`/`activeId` props. Playback follows its
  * active cue through `activeId`; search navigation reveals its active match through the list's
  * `scrollToIndex()` API without seeking the media.
- * `[part="base"]` remains a named `role="region"` in every render branch, including an unsafe
- * initial source and a later transition into the visible error state.
+ * An authored host `aria-label` remains the aggregate name on the host. Otherwise a nonempty
+ * `name` labels `[part="base"]` as a region. The native media element keeps the distinct localized
+ * player-purpose label, avoiding duplicate semantic owners; a bare loaded player uses the native
+ * media element as its sole named owner.
  *
  * **RTL behavior:** surrounding controls stay logical, but `[part="timeline"]` is a physical
  * elapsed-time axis and remains left-to-right under `dir="rtl"`. ArrowLeft rewinds and ArrowRight
@@ -177,14 +250,15 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * @event lr-time-change - `detail: { currentTime }`, throttled to at most 4/s while playing, plus
  *   one extra emission per `seek()` regardless of the throttle window.
  * @event lr-rate-change - `detail: { rate }`.
- * @event lr-cue-change - The active transcript cue changed. `detail: { id }` (`null` when none is
- *   active).
+ * @event lr-cue-change - The active transcript cue changed. `detail: { cueId, index }`
+ *   (`cueId:null,index:-1` when none is active).
  * @event lr-highlight-activate - A `time-range` highlight marker was activated. `detail: { id }`.
  * @event lr-anchor-result - Fired after `anchor` (or a `scrollToAnchor()` call) is applied.
  *   `detail: { found }`.
  * @event lr-search-change - Fired from `search()`/`searchNext()`/`searchPrevious()`/
  *   `clearSearch()`. `detail: { query, matchCount, activeIndex }`.
- * @event lr-render-error - The native media element reported an `error` event. `detail: { error }`.
+ * @event lr-render-error - Native media failure, unsafe-source rejection, or an internal playback
+ *   rejection. `detail: { error }`; native `MediaError` identity is preserved.
  * @event {FocusEvent} focus - Relayed once from the native media element as a bubbling, composed
  *   native event.
  * @event {FocusEvent} blur - Relayed once from the native media element as a bubbling, composed
@@ -196,6 +270,7 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * @csspart toolbar - The playback-rate control row.
  * @csspart rate-select - The playback-rate `<select>`.
  * @csspart timeline - The waveform canvas or plain seek rail; click-to-seek and arrow-key seeking.
+ *   It is disabled and removed from sequential focus until duration is positive.
  * @csspart timeline-marker - One clickable marker per `time-range` highlight (`data-tone`,
  *   `data-active`).
  * @csspart transcript - The virtualized cue list (`<lr-virtual-list>` itself).
@@ -253,6 +328,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     avPlayerRateOption: LYRA_DEFAULT_avPlayerRateOption,
     avPlayerTimeline: LYRA_DEFAULT_avPlayerTimeline,
     avPlayerTranscript: LYRA_DEFAULT_avPlayerTranscript,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
     viewerHighlightLabel: LYRA_DEFAULT_viewerHighlightLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -266,6 +342,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   // `updated()` flush.
   static override properties = {
     playbackRate: { type: Number, attribute: 'playback-rate', reflect: true, noAccessor: true },
+    volume: { type: Number, reflect: true, noAccessor: true },
   };
 
   /** Media URL; validated with `safeMediaSrc` before it ever reaches the `<audio>`/`<video>` `src`. */
@@ -276,7 +353,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   @property() name = '';
   /** Forces exact `audio`/`video` rendering, overriding the `mime-type`-based auto-detection.
    *  Unrecognized runtime or attribute values continue MIME auto-detection. */
-  @property() kind?: AvKind;
+  @property() kind?: LyraAvKind;
   /** Drives auto-detection: an `audio/*` mime type renders `<audio>`; anything else renders
    *  `<video>`. Ignored once `kind` is set explicitly. */
   @property({ attribute: 'mime-type' }) mimeType = '';
@@ -287,6 +364,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   @property({ type: Boolean }) muted = false;
   @property() preload: LyraAvPreload = 'metadata';
   private _playbackRate = 1;
+  private _volume = 1;
   /** Playback-rate multiplier, reflected to the native media element. Clamped to
    *  `[MIN_PLAYBACK_RATE, MAX_PLAYBACK_RATE]` -- a non-finite or wildly out-of-range assignment
    *  (e.g. a bad computed value) self-heals rather than reaching `HTMLMediaElement.playbackRate`
@@ -299,15 +377,26 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this._playbackRate = finiteRange(next, 1, MIN_PLAYBACK_RATE, MAX_PLAYBACK_RATE);
     this.requestUpdate('playbackRate', old);
   }
-  /** Selectable rates offered by `[part="rate-select"]`. */
-  @property({ attribute: false }) rates: number[] = [0.75, 1, 1.25, 1.5, 2];
-  /** Transcript entries, rendered as a virtualized, `currentTime`-synced list. */
-  @property({ attribute: false }) cues: LyraAvCue[] = [];
+  /** Native volume on the canonical `0..1` scale. Native `volumechange` updates this property, and
+   * direct property writes update the current media generation without feedback duplicates. */
+  get volume(): number {
+    return this._volume;
+  }
+  set volume(next: number) {
+    const old = this._volume;
+    this._volume = finiteRange(next, 1, 0, 1);
+    this.requestUpdate('volume', old);
+  }
+  /** Selectable rates offered by `[part="rate-select"]`; snapshotted, deduplicated, bounded to 32. */
+  @property({ attribute: false }) rates: readonly number[] = DEFAULT_RATES;
+  /** Transcript entries, rendered as a virtualized, `currentTime`-synced list. Valid nonempty cue
+   * IDs are unique; the first occurrence wins. Inputs are bounded, cloned, and frozen. */
+  @property({ attribute: false }) cues: readonly LyraAvCue[] = EMPTY_CUES;
   /** Normalized `0..1` waveform amplitude samples. Empty renders a plain seek rail instead of a
    *  canvas -- this component never decodes audio itself. */
-  @property({ attribute: false }) peaks: number[] = [];
-  /** Native `<track>` sources (subtitles/captions/descriptions). */
-  @property({ attribute: false }) tracks: LyraAvTrack[] = [];
+  @property({ attribute: false }) peaks: readonly number[] = EMPTY_PEAKS;
+  /** Native `<track>` sources (subtitles/captions/descriptions), bounded and snapshotted. */
+  @property({ attribute: false }) tracks: readonly LyraAvTrack[] = EMPTY_TRACKS;
 
   /** From `DocumentAnchorTarget` — only `time-range` anchors resolve here. */
   override readonly anchorKinds: readonly LyraAnchorKind[] = ['time-range'];
@@ -320,28 +409,42 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   @state() private searchMatches: number[] = [];
   @state() private activeSearchIndex = -1;
   @state() private metadataLoaded = false;
-  @state() private renderError = false;
+  @state() private sourceError = false;
+  @state() private playbackError = false;
 
   @query('[part="timeline"] canvas') private canvasEl?: HTMLCanvasElement;
 
   private readonly mediaController = new NativeMediaController(this, {
     onEvent: (event) => this.onNativeMediaEvent(event),
   });
+  private readonly semanticInternals = attachInternalsSafely(this);
   private lastTimeChangeAt = 0;
   private searchLocale = '';
   private transcriptLocale = '';
   private searchMatchIndices = new Set<number>();
   private cueKeys: string[] = [];
-  private readonly cueTokens = new WeakMap<LyraAvCue, number>();
-  private nextCueToken = 0;
   private errorAnnouncementSink?: AnnouncementSink;
   private resizeWindow?: Window;
+  private waveformResizeObserver?: ResizeObserver;
+  private waveformResizeObserverWindow?: Window;
+  private waveformResizeTarget?: HTMLCanvasElement;
   private waveformIntersectionObserver?: IntersectionObserver;
   private waveformObserverWindow?: Window;
   private waveformDetachedObserverWindow?: Window;
   private waveformDrawFrame?: OwnedAnimationFrame;
   private waveformVisible = true;
   private waveformDirty = false;
+  private lastWaveformAllocation?: {
+    target: HTMLCanvasElement;
+    width: number;
+    height: number;
+    dpr: number;
+  };
+  private pendingSeekEmission: number | null = null;
+  private lastEmittedTime: number | null = null;
+  private lastReportedSourceError: unknown = NO_REPORTED_ERROR;
+  /** A connection begins from state, not from a publicly observable source transition. */
+  private connectionEventBaselinePending = true;
 
   constructor() {
     super();
@@ -373,12 +476,12 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   private onMediaFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
+    this.emit('lr-focus', null);
   };
 
   private onMediaBlur = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
+    this.emit('lr-blur', null);
   };
 
   /** Live playback position: the media element's own `currentTime` once mounted, else the last
@@ -391,22 +494,48 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.currentTimeState = this.mediaController.currentTime;
   }
 
-  private detectedKind(): AvKind {
+  private detectedKind(): LyraAvKind {
     if (this.kind === 'audio' || this.kind === 'video') return this.kind;
     return this.mimeType.startsWith('audio/') ? 'audio' : 'video';
   }
 
+  private get effectivePreload(): LyraAvPreload {
+    return this.preload === 'none' || this.preload === 'auto' ? this.preload : 'metadata';
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // A host aria-label names the aggregate player, so give it a real default semantic owner.
+    // An explicit author `role` attribute still overrides ElementInternals semantics.
+    this.semanticInternals.role = hostAriaLabel(this) !== null ? 'region' : null;
+    const mayEmitConnectionTransition = this.isConnected && !this.connectionEventBaselinePending;
     const locale = this.effectiveLocale;
     let refreshTranscript = false;
-    if (changed.has('cues')) this.rebuildCueKeys();
+    if (changed.has('kind') && this.kind !== undefined && this.kind !== 'audio' && this.kind !== 'video') {
+      this.kind = undefined;
+    }
+    if (changed.has('preload') && this.preload !== this.effectivePreload) this.preload = this.effectivePreload;
+    if (changed.has('rates')) {
+      const normalized = normalizeRates(this.rates);
+      if (this.rates !== normalized) this.rates = normalized;
+    }
+    if (changed.has('cues')) {
+      const normalized = snapshotLyraAvCues(this.cues);
+      if (this.cues !== normalized) this.cues = normalized;
+      this.rebuildCueKeys();
+      if (this.metadataLoaded) this.reconcileActiveCue();
+    }
+    if (changed.has('peaks')) {
+      const normalized = normalizePeaks(this.peaks);
+      if (this.peaks !== normalized) this.peaks = normalized;
+    }
+    if (changed.has('tracks')) {
+      const normalized = snapshotLyraAvTracks(this.tracks);
+      if (this.tracks !== normalized) this.tracks = normalized;
+    }
     if (this.transcriptLocale !== locale) {
       this.transcriptLocale = locale;
       refreshTranscript = true;
-    }
-    if (this.hasUpdated && changed.has('src') && this.src && !safeMediaSrc(this.src)) {
-      this.announceRenderError();
     }
     if (
       this.hasUpdated &&
@@ -417,15 +546,26 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       this.activeCueId = null;
       this.activeCueIndex = -1;
       this.metadataLoaded = false;
-      this.renderError = false;
+      this.sourceError = false;
+      this.playbackError = false;
       this.lastTimeChangeAt = 0;
+      this.pendingSeekEmission = null;
+      this.lastEmittedTime = null;
+      this.lastReportedSourceError = NO_REPORTED_ERROR;
       this.mediaController.startGeneration();
+      if (changed.has('src') && this.src && !safeMediaSrc(this.src)) {
+        const error = new TypeError('The media source URL is not allowed.');
+        if (mayEmitConnectionTransition) {
+          this.announceRenderError();
+          this.emit('lr-render-error', { error });
+        }
+      }
     }
     if (
       this.searchQuery &&
       (changed.has('cues') || this.searchLocale !== locale)
     ) {
-      this.reconcileSearchMatches(changed.get('cues') as LyraAvCue[] | undefined);
+      this.reconcileSearchMatches(changed.get('cues') as readonly LyraAvCue[] | undefined);
       refreshTranscript = true;
     }
     if (refreshTranscript) this.refreshTranscriptRenderItem();
@@ -437,21 +577,28 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       this.mediaController.playbackRate = this.playbackRate;
       if (changed.get('playbackRate') !== undefined) this.emit('lr-rate-change', { rate: this.playbackRate });
     }
+    if (changed.has('volume')) this.mediaController.volume = this.volume;
+    if (changed.has('muted')) this.mediaController.muted = this.muted;
     if (changed.has('peaks')) {
       this.syncWaveformVisibilityObserver();
+      this.syncWaveformResizeObserver();
       this.drawWaveform();
     }
+    if (this.isConnected) this.connectionEventBaselinePending = false;
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.connectionEventBaselinePending = true;
     this.syncErrorAnnouncementSink();
     this.mediaController.reconnect();
     // Added here (not in firstUpdated) so every reconnect, including cross-document adoption,
     // binds the window that actually owns the component and pairs with disconnectedCallback.
     this.bindResizeWindow();
     this.syncWaveformVisibilityObserver();
+    this.syncWaveformResizeObserver();
     if (this.waveformDirty) this.drawWaveform();
+    this.requestUpdate();
   }
 
   override firstUpdated(changed: PropertyValues): void {
@@ -460,9 +607,11 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   }
 
   override disconnectedCallback(): void {
+    this.connectionEventBaselinePending = true;
     this.mediaController.disconnect();
     this.releaseErrorAnnouncementSink();
     this.unbindResizeWindow();
+    this.unbindWaveformResizeObserver();
     this.cancelWaveformDrawFrame();
     // An old same-realm observation cannot describe where a reattached host now sits. Preserve
     // the owner long enough for syncWaveformVisibilityObserver() to require a fresh delivery on
@@ -473,11 +622,13 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.releaseErrorAnnouncementSink();
     this.syncErrorAnnouncementSink();
     this.bindResizeWindow();
     this.syncWaveformVisibilityObserver();
+    this.syncWaveformResizeObserver();
     if (this.isConnected && this.waveformDirty) this.drawWaveform();
   }
 
@@ -563,6 +714,59 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   private onWindowResize = (): void => this.drawWaveform();
 
+  private syncWaveformResizeObserver(): void {
+    const target = this.isConnected && this.peaks.length > 0 ? this.canvasEl : undefined;
+    const owner = target?.ownerDocument.defaultView;
+    if (
+      target &&
+      owner &&
+      this.waveformResizeObserver &&
+      this.waveformResizeObserverWindow === owner &&
+      this.waveformResizeTarget === target
+    ) {
+      return;
+    }
+    this.unbindWaveformResizeObserver();
+    if (!target || !owner || typeof owner.ResizeObserver !== 'function') return;
+    let observer: ResizeObserver;
+    observer = new owner.ResizeObserver((entries) => {
+      if (
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== owner ||
+        this.waveformResizeObserver !== observer ||
+        this.waveformResizeTarget !== target ||
+        !entries.some((entry) => entry.target === target)
+      ) {
+        return;
+      }
+      const width = positiveFinite(target.clientWidth);
+      const height = positiveFinite(target.clientHeight);
+      const dpr = positiveFinite(owner.devicePixelRatio);
+      const previous = this.lastWaveformAllocation;
+      if (
+        previous?.target === target &&
+        previous.width === width &&
+        previous.height === height &&
+        previous.dpr === dpr
+      ) {
+        return;
+      }
+      this.drawWaveform();
+    });
+    this.waveformResizeObserver = observer;
+    this.waveformResizeObserverWindow = owner;
+    this.waveformResizeTarget = target;
+    observer.observe(target);
+  }
+
+  private unbindWaveformResizeObserver(): void {
+    this.waveformResizeObserver?.disconnect();
+    this.waveformResizeObserver = undefined;
+    this.waveformResizeObserverWindow = undefined;
+    this.waveformResizeTarget = undefined;
+    this.lastWaveformAllocation = undefined;
+  }
+
   // A stable, class-field-bound callback (not a fresh arrow-function literal per `render()` call)
   // so `ref()` sees the same identity across unrelated re-renders -- Lit treats a changed ref
   // callback as an unmount (undefined) immediately followed by a remount even though the canvas
@@ -572,10 +776,13 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   // `pdf-viewer.class.ts`'s per-page-memoized `pageCanvasRef()`/`textLayerContainerRef()` maps --
   // this component only ever has one canvas, so a single bound method suffices in place of a Map.
   private canvasRef = (el?: Element): void => {
-    if (el) {
-      this.syncWaveformVisibilityObserver();
-      this.drawWaveform();
+    if (!el) {
+      this.unbindWaveformResizeObserver();
+      return;
     }
+    this.syncWaveformVisibilityObserver();
+    this.syncWaveformResizeObserver();
+    this.drawWaveform();
   };
 
   private mediaRef = (el?: Element): void => {
@@ -596,13 +803,24 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   }
   /** Plays if paused, pauses if playing. A no-op before the element mounts. */
   toggle(): void {
-    if (this.mediaEl?.paused) void this.play().catch(this.onPlaybackFailure);
-    else this.pause();
+    const media = this.mediaEl;
+    if (media?.paused) {
+      const generation = this.mediaController.generation;
+      void this.play().catch((error: unknown) => {
+        if (
+          !this.isConnected
+          || !this.mediaController.isCurrentGeneration(generation, media)
+        ) return;
+        this.onPlaybackFailure(error);
+      });
+    } else this.pause();
   }
   /** Sets `currentTime` and forces an immediate `lr-time-change`, bypassing the playing-time throttle. */
   seek(seconds: number): void {
     this.currentTime = seconds;
-    this.emitTimeChange(true);
+    this.emitTimeChange(true, true);
+    this.pendingSeekEmission = this.currentTimeState;
+    this.reconcileActiveCue();
   }
 
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
@@ -615,20 +833,29 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.metadataLoaded = true;
     this.duration = this.mediaController.duration;
     this.currentTimeState = this.mediaController.currentTime;
-    this.renderError = false;
+    this.sourceError = false;
+    this.playbackError = false;
+    this.lastReportedSourceError = NO_REPORTED_ERROR;
+    this.reconcileActiveCue();
     this.emit('lr-load', { duration: this.duration, kind: this.detectedKind() });
   }
 
   private onPlay(): void {
-    this.emit('lr-play');
+    this.playbackError = false;
+    this.emit('lr-play', null);
   }
   private onPause(): void {
-    this.emit('lr-pause');
+    this.emit('lr-pause', null);
   }
   private onMediaError(): void {
-    this.renderError = true;
+    const error = this.mediaEl?.error ?? null;
+    const identity = error ?? 'native-media-error-without-detail';
+    if (identity === this.lastReportedSourceError) return;
+    this.lastReportedSourceError = identity;
+    this.sourceError = true;
+    this.playbackError = false;
     this.announceRenderError();
-    this.emit('lr-render-error', { error: new Error('The media failed to load.') });
+    this.emit('lr-render-error', { error: error ?? new Error('The media failed to load.') });
   }
 
   private onNativeMediaEvent(event: Event): void {
@@ -638,6 +865,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         break;
       case 'durationchange':
         this.duration = this.mediaController.duration;
+        this.reconcileActiveCue();
         break;
       case 'play':
         this.onPlay();
@@ -648,6 +876,18 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       case 'error':
         this.onMediaError();
         break;
+      case 'volumechange': {
+        const nextVolume = this.mediaController.volume;
+        const nextMuted = this.mediaController.muted;
+        if (this.volume !== nextVolume) this.volume = nextVolume;
+        if (this.muted !== nextMuted) this.muted = nextMuted;
+        break;
+      }
+      case 'ratechange': {
+        const nextRate = this.mediaController.playbackRate;
+        if (this.playbackRate !== nextRate) this.playbackRate = nextRate;
+        break;
+      }
       case 'timeupdate':
         this.onTimeUpdate();
         break;
@@ -660,27 +900,34 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   }
 
   private onPlaybackFailure = (error: unknown): void => {
-    this.renderError = true;
+    this.playbackError = true;
     this.announceRenderError();
     this.emit('lr-render-error', { error });
   };
 
-  private emitTimeChange(force: boolean): void {
+  private emitTimeChange(force: boolean, allowDuplicate = false): void {
     const now = Date.now();
     if (!force && now - this.lastTimeChangeAt < TIME_CHANGE_THROTTLE_MS) return;
+    const nextTime = this.currentTime;
+    this.currentTimeState = nextTime;
+    if (!allowDuplicate && nextTime === this.lastEmittedTime) return;
     this.lastTimeChangeAt = now;
-    this.currentTimeState = this.currentTime;
+    this.lastEmittedTime = nextTime;
     this.emit('lr-time-change', { currentTime: this.currentTimeState });
   }
 
   private onTimeUpdate(): void {
     this.emitTimeChange(false);
+    this.reconcileActiveCue();
+  }
+
+  private reconcileActiveCue(): void {
     const time = this.currentTime;
     let active: LyraAvCue | undefined;
     let activeIndex = -1;
     this.cues.forEach((cue, index) => {
       const start = this.safeCueStart(cue);
-      const end = this.safeCueEnd(cue, start);
+      const end = this.safeCueEnd(cue, start, index);
       if (time >= start && time < end) {
         if (!active || start >= this.safeCueStart(active)) {
           active = cue;
@@ -689,15 +936,26 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       }
     });
     const nextId = active?.id ?? null;
+    this.setActiveCue(nextId, activeIndex);
+  }
+
+  private setActiveCue(nextId: string | null, activeIndex: number): void {
     if (nextId !== this.activeCueId || activeIndex !== this.activeCueIndex) {
       this.activeCueId = nextId;
       this.activeCueIndex = activeIndex;
-      this.emit('lr-cue-change', { id: nextId });
+      this.emit('lr-cue-change', Object.freeze({ cueId: nextId, index: activeIndex }));
     }
   }
 
   private onSeeked(): void {
-    this.emitTimeChange(true);
+    const completedTime = this.currentTime;
+    if (this.pendingSeekEmission === null || completedTime !== this.pendingSeekEmission) {
+      this.emitTimeChange(true);
+    } else {
+      this.currentTimeState = completedTime;
+    }
+    this.pendingSeekEmission = null;
+    this.reconcileActiveCue();
   }
 
   /** Case-insensitive substring match over cue text and speaker. Reveals the active matching
@@ -712,7 +970,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     return this.searchMatches.length;
   }
 
-  private reconcileSearchMatches(previousCues?: LyraAvCue[]): void {
+  private reconcileSearchMatches(previousCues?: readonly LyraAvCue[]): void {
     const locale = this.effectiveLocale;
     const q = this.searchQuery.trim().toLocaleLowerCase(locale);
     const previousMatchIndex = this.searchMatches[this.activeSearchIndex];
@@ -831,12 +1089,20 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     const dpr = positiveFinite(ownerWindow.devicePixelRatio);
     const width = positiveFinite(canvas.clientWidth);
     const height = positiveFinite(canvas.clientHeight);
-    canvas.width = Math.max(1, Math.floor(finiteNumber(width * dpr, 1)));
-    canvas.height = Math.max(1, Math.floor(finiteNumber(height * dpr, 1)));
+    const allocation = resolveBoundedCanvasAllocation({
+      cssWidth: width,
+      cssHeight: height,
+      desiredScale: dpr,
+      maxDimension: MAX_CANVAS_DIMENSION,
+      maxPixels: MAX_CANVAS_PIXELS,
+    });
+    this.lastWaveformAllocation = { target: canvas, width, height, dpr };
+    canvas.width = allocation.pixelWidth;
+    canvas.height = allocation.pixelHeight;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const scaleX = finiteNumber(canvas.width / width, 1);
-    const scaleY = finiteNumber(canvas.height / height, 1);
+    const scaleX = allocation.scaleX;
+    const scaleY = allocation.scaleY;
     ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
     ctx.clearRect(0, 0, width, height);
     const computed = ownerWindow.getComputedStyle(this);
@@ -917,6 +1183,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   };
 
   private onTimelineKeyDown = (event: KeyboardEvent): void => {
+    if (!(this.duration > 0)) return;
     const delta = event.shiftKey ? 15 : 5;
     switch (event.key) {
       // policy-allow(rtl-arrow-keys): the time axis never mirrors -- [part='timeline'] is pinned
@@ -972,30 +1239,22 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     return finiteRange(cue.start, 0, 0, max);
   }
 
-  private safeCueEnd(cue: LyraAvCue, start: number): number {
-    if (cue.end == null) return Infinity;
+  private safeCueEnd(cue: LyraAvCue, start: number, cueIndex: number): number {
+    if (cue.end == null) {
+      let nextStart = Infinity;
+      this.cues.forEach((candidate, index) => {
+        if (index === cueIndex) return;
+        const candidateStart = this.safeCueStart(candidate);
+        if (candidateStart > start && candidateStart < nextStart) nextStart = candidateStart;
+      });
+      return nextStart;
+    }
     const max = this.duration > 0 ? this.duration : Infinity;
     return finiteRange(cue.end, start, start, max);
   }
 
   private rebuildCueKeys(): void {
-    // Allocate every cue object an opaque token, even while its public id is unique. Otherwise,
-    // adding or removing another cue with the same id would switch the first cue between an id-only
-    // key and a duplicate key, remounting its virtual row. Repeating the exact same object twice
-    // has no separately-addressable identity in LyraAvCue, so its final occurrence suffix is
-    // necessarily positional.
-    const objectOccurrences = new Map<LyraAvCue, number>();
-    this.cueKeys = this.cues.map((cue) => {
-      const idToken = `${cue.id.length}:${cue.id}`;
-      let objectToken = this.cueTokens.get(cue);
-      if (objectToken === undefined) {
-        objectToken = ++this.nextCueToken;
-        this.cueTokens.set(cue, objectToken);
-      }
-      const occurrence = objectOccurrences.get(cue) ?? 0;
-      objectOccurrences.set(cue, occurrence + 1);
-      return `cue:${idToken}:${objectToken}:${occurrence}`;
-    });
+    this.cueKeys = this.cues.map((cue) => `cue:${cue.id.length}:${cue.id}`);
   }
 
   private cueKey = (_cue: unknown, index: number): string => this.cueKeys[index] ?? `index:${index}`;
@@ -1043,26 +1302,38 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   }
 
   override render(): TemplateResult {
-    const label = this.getAttribute('aria-label') || this.name || this.localize('avPlayerLabel');
+    const explicitHostLabel = hostAriaLabel(this);
+    const aggregateLabel = explicitHostLabel ?? (this.name || this.localize('avPlayerLabel'));
     const safeSrc = this.src ? safeMediaSrc(this.src) : null;
     const safePoster = this.poster ? safeMediaSrc(this.poster) : null;
     const kind = this.detectedKind();
+    const baseOwnsAggregate = explicitHostLabel === null && Boolean(this.name || (!safeSrc && this.src));
+    const mediaLabel = explicitHostLabel === '' ? '' : this.localize('avPlayerLabel');
     if (!safeSrc && this.src) {
-      return html`<div part="base" role="region" aria-label=${label}>
+      return html`<div
+        part="base"
+        role=${baseOwnsAggregate ? 'region' : nothing}
+        aria-label=${baseOwnsAggregate ? aggregateLabel : nothing}
+      >
         <div part="error">${this.localize('avPlayerFailedToLoad')}</div>
         ${this.renderAnchorLiveRegion()}
       </div>`;
     }
-    return html`<div part="base" role="region" aria-label=${label}>
+    return html`<div
+      part="base"
+      role=${baseOwnsAggregate ? 'region' : nothing}
+      aria-label=${baseOwnsAggregate ? aggregateLabel : nothing}
+    >
       ${kind === 'audio'
         ? keyed(`${kind}:${safeSrc ?? ''}`, html`<audio
             part="media"
             controls
-            aria-label=${label}
+            aria-label=${mediaLabel}
             src=${safeSrc ?? nothing}
             ?loop=${this.loop}
-            ?muted=${this.muted}
-            preload=${this.preload}
+            .muted=${this.muted}
+            .volume=${this.volume}
+            preload=${this.effectivePreload}
             @focus=${this.onMediaFocus}
             @blur=${this.onMediaBlur}
             ${ref(this.mediaRef)}
@@ -1071,18 +1342,21 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         : keyed(`${kind}:${safeSrc ?? ''}`, html`<video
             part="media"
             controls
-            aria-label=${label}
+            aria-label=${mediaLabel}
             src=${safeSrc ?? nothing}
             poster=${safePoster ?? nothing}
             ?loop=${this.loop}
-            ?muted=${this.muted}
-            preload=${this.preload}
+            .muted=${this.muted}
+            .volume=${this.volume}
+            preload=${this.effectivePreload}
             @focus=${this.onMediaFocus}
             @blur=${this.onMediaBlur}
             ${ref(this.mediaRef)}
             >${this.renderTracks()}</video
           >`)}
-      ${this.renderError ? html`<div part="error">${this.localize('avPlayerFailedToLoad')}</div>` : nothing}
+      ${this.sourceError || this.playbackError
+        ? html`<div part="error">${this.localize('avPlayerFailedToLoad')}</div>`
+        : nothing}
       <div part="toolbar">
         <span class="rate-select-wrapper">
           <select
@@ -1102,20 +1376,23 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
           <span class="rate-select-chevron" aria-hidden="true">${chevronIcon()}</span>
         </span>
       </div>
-      <div
-        part="timeline"
-        role="slider"
-        tabindex="0"
-        aria-valuemin="0"
-        aria-valuemax=${String(this.duration)}
-        aria-valuenow=${String(this.currentTimeState)}
-        aria-valuetext=${this.localize('avPlayerPosition', undefined, { current: formatTime(this.currentTimeState, this.effectiveLocale), duration: formatTime(this.duration, this.effectiveLocale) })}
-        aria-label=${this.localize('avPlayerTimeline')}
-        @click=${this.onTimelineClick}
-        @keydown=${this.onTimelineKeyDown}
-      >
-        ${this.peaks.length ? html`<canvas ${ref(this.canvasRef)}></canvas>` : nothing}
-        ${this.renderMarkers()}
+      <div class="timeline-positioner">
+        <div
+          part="timeline"
+          role="slider"
+          tabindex=${this.duration > 0 ? '0' : '-1'}
+          aria-disabled=${this.duration > 0 ? 'false' : 'true'}
+          aria-valuemin="0"
+          aria-valuemax=${String(this.duration)}
+          aria-valuenow=${String(this.currentTimeState)}
+          aria-valuetext=${this.localize('avPlayerPosition', undefined, { current: formatTime(this.currentTimeState, this.effectiveLocale), duration: formatTime(this.duration, this.effectiveLocale) })}
+          aria-label=${this.localize('avPlayerTimeline')}
+          @click=${this.onTimelineClick}
+          @keydown=${this.onTimelineKeyDown}
+        >
+          ${this.peaks.length ? html`<canvas ${ref(this.canvasRef)}></canvas>` : nothing}
+        </div>
+        <div class="timeline-markers">${this.renderMarkers()}</div>
       </div>
       ${this.cues.length
         ? html`<lr-virtual-list

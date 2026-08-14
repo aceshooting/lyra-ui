@@ -1,6 +1,9 @@
 import { expect } from '@open-wc/testing';
 import type { TextQuoteScope } from './text-quote.js';
 import {
+  TEXT_QUOTE_LIMITS,
+  createTextQuoteIndex,
+  findTextQuoteMatches,
   normalizeQuoteText,
   scopeFromElement,
   scopeFromItems,
@@ -8,6 +11,112 @@ import {
   findTextQuoteRanges,
   buildQuoteAnchor,
 } from './text-quote.js';
+
+describe('bounded text quote indexing', () => {
+  it('bounds a multi-megabyte text node without retaining one JavaScript number per character', () => {
+    const root = document.createElement('div');
+    root.textContent = 'a'.repeat(TEXT_QUOTE_LIMITS.maxCorpusCodeUnits + 1);
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      expect(scope.text).to.have.lengthOf(TEXT_QUOTE_LIMITS.maxCorpusCodeUnits);
+      expect(scope.truncated).to.be.true;
+      expect(scope.segments).to.have.lengthOf(1);
+      expect(scope.segments[0]!.rawOffsetRuns).to.be.instanceOf(Uint32Array);
+      expect(scope.segments[0]!.rawOffsetRuns).to.have.lengthOf(0);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('stores only sparse raw-offset discontinuities and still maps exact DOM boundaries', () => {
+    const root = document.createElement('div');
+    root.textContent = `${'a'.repeat(20_000)}\u00ad   needle`;
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      const segment = scope.segments[0]!;
+      expect(segment.rawOffsetRuns.length).to.be.lessThan(10);
+      const range = resolveTextQuote(scope, { quote: 'needle' });
+      expect(range?.toString()).to.equal('needle');
+      expect(range?.startOffset).to.equal(20_004);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('marks a scope as truncated when the text-node ceiling omits later content', () => {
+    const root = document.createElement('div');
+    root.append('first', 'second', 'third');
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root, { maxNodes: 2 });
+      expect(scope.text).to.equal('firstsecond');
+      expect(scope.truncated).to.be.true;
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('packs matches and distinguishes an exact cap boundary from a lower bound', () => {
+    const exactRoot = document.createElement('div');
+    exactRoot.textContent = 'x x x';
+    const truncatedRoot = document.createElement('div');
+    truncatedRoot.textContent = 'x x x x';
+    document.body.append(exactRoot, truncatedRoot);
+    try {
+      const limits = { maxMatches: 3 };
+      const exact = findTextQuoteMatches(scopeFromElement(exactRoot), 'x', 'en', limits);
+      const truncated = findTextQuoteMatches(scopeFromElement(truncatedRoot), 'x', 'en', limits);
+      expect(exact.packedOffsets).to.be.instanceOf(Uint32Array);
+      expect(exact.length).to.equal(3);
+      expect(exact.matchCountExact).to.be.true;
+      expect(truncated.length).to.equal(3);
+      expect(truncated.matchCountExact).to.be.false;
+    } finally {
+      exactRoot.remove();
+      truncatedRoot.remove();
+    }
+  });
+
+  it('fails closed with a lower-bound result when query or work ceilings are exceeded', () => {
+    const root = document.createElement('div');
+    root.textContent = 'find this text';
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      const oversized = findTextQuoteMatches(scope, 'find', 'en', { maxQueryCodeUnits: 3 });
+      expect(oversized.length).to.equal(0);
+      expect(oversized.matchCountExact).to.be.false;
+
+      const index = createTextQuoteIndex(scope, 'en');
+      const starved = index.search('find', index.createWorkBudget(scope.text.length - 1));
+      expect(starved.length).to.equal(0);
+      expect(starved.matchCountExact).to.be.false;
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('reuses one occurrence scan for identical queries while bounding distinct-query work', () => {
+    const root = document.createElement('div');
+    root.textContent = `${'alpha '.repeat(2_000)}omega`;
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      const index = createTextQuoteIndex(scope, 'en');
+      const budget = index.createWorkBudget(scope.text.length * 2);
+      expect(index.search('alpha', budget).length).to.equal(2_000);
+      const scansAfterFirst = index.scanCount;
+      expect(index.search('alpha', budget).length).to.equal(2_000);
+      expect(index.scanCount).to.equal(scansAfterFirst);
+      expect(index.search('omega', budget).length).to.equal(0);
+      expect(index.scanCount).to.equal(scansAfterFirst);
+    } finally {
+      root.remove();
+    }
+  });
+});
 
 describe('normalizeQuoteText', () => {
   it('collapses whitespace runs (including NBSP) to a single space and trims', () => {
@@ -317,9 +426,10 @@ describe('resolveTextQuote defensive edge cases against hand-built scopes', () =
     const scope: TextQuoteScope = {
       text: 'abXcd',
       segments: [
-        { node: node1, normalizedStart: 0, rawOffsets: [0, 1] },
-        { node: node2, normalizedStart: 3, rawOffsets: [0, 1] },
+        { node: node1, normalizedStart: 0, normalizedLength: 2, rawOffsetRuns: new Uint32Array() },
+        { node: node2, normalizedStart: 3, normalizedLength: 2, rawOffsetRuns: new Uint32Array() },
       ],
+      truncated: false,
     };
     const range = resolveTextQuote(scope, { quote: 'abX' });
     expect(range).to.exist;
@@ -331,19 +441,18 @@ describe('resolveTextQuote defensive edge cases against hand-built scopes', () =
   });
 
   it('returns null when the scope text matches but has no segments to map the match to', () => {
-    const scope: TextQuoteScope = { text: 'hello world', segments: [] };
+    const scope: TextQuoteScope = { text: 'hello world', segments: [], truncated: false };
     expect(resolveTextQuote(scope, { quote: 'hello' })).to.be.null;
   });
 
-  it('resolves an offset landing on a segment with no mapped raw offsets at all', () => {
-    // A segment can only end up with an empty `rawOffsets` array via a hand-built scope --
-    // `scopeFromElement`/`scopeFromItems` always skip a segment whose normalized text (and thus
-    // its `rawOffsets`) would be empty. This exercises `locate`'s defensive `?? 0` fallback for
-    // when there is no last raw offset to step past.
+  it('resolves an offset landing on a hand-built zero-length segment', () => {
+    // Generated scopes skip empty segments. This hand-built one exercises locate()'s defensive
+    // no-last-character fallback when a caller supplies inconsistent segment metadata.
     const node = document.createTextNode('X');
     const scope: TextQuoteScope = {
       text: 'Y',
-      segments: [{ node, normalizedStart: 0, rawOffsets: [] }],
+      segments: [{ node, normalizedStart: 0, normalizedLength: 0, rawOffsetRuns: new Uint32Array() }],
+      truncated: false,
     };
     const range = resolveTextQuote(scope, { quote: 'Y' });
     expect(range).to.exist;

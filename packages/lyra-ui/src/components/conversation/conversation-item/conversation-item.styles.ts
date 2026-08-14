@@ -8,7 +8,7 @@ export const styles = css`
   }
 
   /* [part='base'] is a plain layout wrapper (no ARIA role of its own) --
-     the interactive/selectable region is [part='option'] alone, kept free
+     the interactive/selectable region is [part='select-button'] alone, kept free
      of focusable descendants (see the class doc's nested-interactive note).
      The row-level hover/active background treatments still live here so
      hovering anywhere across the row -- including over the trailing
@@ -47,7 +47,7 @@ export const styles = css`
      Deliberately NOT changed by compact: [part='rename-button']'s min-inline-size/min-block-size
      (the shared --lr-icon-button-size target floor -- a density flag must never silently opt a row
      out of it; a consumer who really wants a sub-floor row lowers that token at an ancestor),
-     [part='leading']'s min sizes, and the excerpt/timestamp font sizes (already the smallest steps
+     [part='start']'s min sizes, and the excerpt/timestamp font sizes (already the smallest steps
      in use here; font size is retuned through the host's inherited font-size instead). The excerpt
      also stays visible: it is already single-line ellipsised and ?hidden-bindable per row, so it
      costs exactly one line -- hiding content is a per-row consumer decision, not a side effect of a
@@ -63,7 +63,7 @@ export const styles = css`
      pointer/keyboard press, :host([active]) below is "this is the open session". The press tint is
      the hover tint escalated to --lr-color-mix-active, mixed toward --lr-color-mix-partner (which
      tracks the text color) so it moves in the right direction on a light and a dark surface alike.
-     [part='base'] is a plain wrapper div, but :active propagates from the pressed [part='option']
+     [part='base'] is a plain wrapper div, but :active propagates from the pressed [part='select-button']
      inside it up through the host, so the whole row answers a press the way it answers hover. */
   :host(:active) [part='base'] {
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
@@ -86,17 +86,17 @@ export const styles = css`
     color: var(--lr-conversation-item-active-color, var(--lr-color-text));
   }
 
-  [part='option'] {
+  [part='select-button'] {
     display: flex;
     align-items: flex-start;
     gap: var(--lr-space-s);
     flex: 1 1 auto;
     min-inline-size: 0;
     cursor: pointer;
-    outline: none; /* the visible ring below targets [part='option'] directly */
+    outline: none; /* the visible ring below targets [part='select-button'] directly */
     -webkit-tap-highlight-color: transparent;
   }
-  [part='leading'] {
+  [part='start'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -104,10 +104,10 @@ export const styles = css`
     min-inline-size: var(--lr-size-1-5rem);
     min-block-size: var(--lr-size-1-5rem);
   }
-  [part='leading'][hidden] {
+  [part='start'][hidden] {
     display: none;
   }
-  [part='option']:focus-visible {
+  [part='select-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -119,14 +119,14 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-size-0-125rem);
   }
-  /* The title/excerpt/meta column's own inter-row gap collapses entirely under compact -- the three
+  /* The label/excerpt/meta column's own inter-row gap collapses entirely under compact -- the three
      lines already carry their own line-height, so the extra hairline is the first thing to go. No
      var() hatch here: this one has no smaller step left to retune to. */
   :host([compact]) [part='content'] {
     gap: 0;
   }
 
-  [part='title'] {
+  [part='label'] {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -135,7 +135,7 @@ export const styles = css`
     color: var(--lr-color-text);
   }
 
-  [part='title-input'] {
+  [part='label-input'] {
     display: block;
     inline-size: 100%;
     box-sizing: border-box;
@@ -147,7 +147,7 @@ export const styles = css`
     font: inherit;
     font-weight: var(--lr-font-weight-semibold);
   }
-  [part='title-input']:focus-visible {
+  [part='label-input']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }

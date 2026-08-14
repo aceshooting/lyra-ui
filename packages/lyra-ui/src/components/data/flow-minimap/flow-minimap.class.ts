@@ -1,7 +1,6 @@
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { tag } from '../../../internal/prefix.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -9,7 +8,8 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
-import type { FlowStructureSnapshot } from '../flow-canvas/flow-canvas.class.js';
+import type { FlowStructureSnapshot } from '../flow-canvas/flow-types.js';
+import { FlowCanvasCompanionController } from '../flow-canvas/flow-companion-controller.js';
 import { styles } from './flow-minimap.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -33,9 +33,20 @@ interface FlowCanvasLike extends HTMLElement {
   readonly locked: boolean;
 }
 
-/** Fallback for `--lr-flow-minimap-viewport-min-size` when the token resolves to nothing usable:
- *  WCAG 2.2 SC 2.5.8's 24px minimum target size, in CSS px. */
-const DEFAULT_VIEWPORT_MIN_SIZE_PX = 24;
+function isFlowCanvasLike(element: HTMLElement): element is FlowCanvasLike {
+  const candidate = element as Partial<FlowCanvasLike>;
+  return (
+    typeof candidate.registerCompanion === 'function' &&
+    typeof candidate.setViewport === 'function' &&
+    typeof candidate.zoomIn === 'function' &&
+    typeof candidate.zoomOut === 'function' &&
+    typeof candidate.fit === 'function' &&
+    typeof candidate.locked === 'boolean'
+  );
+}
+
+/** Lyra's fallback interaction floor when the live shared hit-area token cannot be resolved. */
+const DEFAULT_VIEWPORT_MIN_SIZE_PX = 40;
 
 /**
  * `<lr-flow-minimap>` — a corner overview map of a `lr-flow-canvas`: scaled node rectangles plus
@@ -54,26 +65,27 @@ const DEFAULT_VIEWPORT_MIN_SIZE_PX = 24;
  * @csspart base - The root wrapper.
  * @csspart map - The scaled SVG.
  * @csspart node - One rect per node.
- * @csspart viewport - The draggable, focusable view rectangle.
+ * @csspart viewport - The exact visible canvas-view rectangle.
+ * @csspart viewport-hit-area - The transparent, draggable/focusable interaction rectangle, floored
+ *   to the shared hit-area size without changing the visible viewport geometry.
  * @csspart instructions - Visually hidden keyboard instructions for the viewport.
  * @csspart live-region - An aria-hidden shadow mirror of viewport-change announcements; the actual
  *   announcements use the shared light-DOM polite sink.
  * @cssprop [--lr-flow-minimap-inline-size=var(--lr-size-12rem)] - Map inline size.
  * @cssprop [--lr-flow-minimap-block-size=var(--lr-size-8rem)] - Map block size.
- * @cssprop [--lr-flow-minimap-node-color=var(--lr-color-border-strong)] - Fill of nodes without
+ * @cssprop [--lr-flow-status-color=var(--lr-color-border-strong)] - Fill of nodes without
  *   an execution status.
- * @cssprop [--lr-flow-minimap-node-pending-color=var(--lr-color-border-strong)] - Pending-node fill.
- * @cssprop [--lr-flow-minimap-node-running-color=var(--lr-color-brand)] - Running-node fill.
- * @cssprop [--lr-flow-minimap-node-success-color=var(--lr-color-success)] - Successful-node fill.
- * @cssprop [--lr-flow-minimap-node-error-color=var(--lr-color-danger)] - Failed-node fill.
- * @cssprop [--lr-flow-minimap-node-denied-color=var(--lr-color-warning)] - Denied-node fill.
- * @cssprop [--lr-flow-minimap-viewport-min-size=var(--lr-size-1-5rem)] - Smallest rendered size,
- *   in physical pixels, of the draggable `viewport` rectangle along either axis. On a canvas whose
+ * @cssprop [--lr-flow-status-pending-color=var(--lr-color-border-strong)] - Pending-node fill.
+ * @cssprop [--lr-flow-status-running-color=var(--lr-color-brand)] - Running-node fill.
+ * @cssprop [--lr-flow-status-success-color=var(--lr-color-success)] - Successful-node fill.
+ * @cssprop [--lr-flow-status-error-color=var(--lr-color-danger)] - Failed-node fill.
+ * @cssprop [--lr-flow-status-denied-color=var(--lr-color-warning)] - Denied-node fill.
+ * @cssprop [--lr-flow-minimap-viewport-min-size=var(--lr-icon-button-size)] - Smallest rendered size,
+ *   in physical pixels, of the transparent `viewport-hit-area` along either axis. On a canvas whose
  *   node bounds dwarf the visible viewport the raw rectangle collapses to a few pixels, which
  *   leaves the only pointer-drag handle for panning effectively unclickable; the floor grows it
- *   symmetrically about its own centre so it still points at what the viewport shows. Defaults to
- *   WCAG 2.2 SC 2.5.8's 24px minimum target size. Set `0` to opt out and render the exact
- *   viewport-to-content ratio instead.
+ *   symmetrically about its own centre so it still points at what the viewport shows. The visible
+ *   `viewport` stays exact. Defaults to Lyra's 40px interaction floor; set `0` to opt out.
  * @status stable
  * @since 4.0.0
  */
@@ -126,14 +138,16 @@ export class LyraFlowMinimap extends LyraElement {
    *  from the SVG's rendered box. */
   private baseBorderPx = 0;
   private readonly instructionsId = nextId('flow-minimap-instructions');
-  /** Watches target lifecycle so late, removed, and same-id replacement canvases are reconciled. */
-  private canvasWatcher?: MutationObserver;
+  private readonly companionController = new FlowCanvasCompanionController<FlowCanvasLike>(
+    this,
+    isFlowCanvasLike,
+    (next) => this.attachCanvas(next),
+  );
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.syncAnnouncementSink();
-    this.watchForCanvas();
-    this.resolveAndAttach();
+    this.companionController.connect();
   }
 
   /** Re-reads the live token values the viewport-rect floor depends on. */
@@ -148,12 +162,12 @@ export class LyraFlowMinimap extends LyraElement {
     // The token is deliberately NOT declared on :host -- a :host declaration would shadow a value
     // a consumer set on any ancestor, which is the natural place to theme a whole canvas. So its
     // default is read from the shared size token instead, exactly as the documented
-    // `var(--lr-size-1-5rem)` default says, and the numeric constant below only guards an
+    // `var(--lr-icon-button-size)` default says, and the numeric constant below only guards an
     // environment where neither resolves at all.
     const minSize = resolveCssLength(
       computed.getPropertyValue('--lr-flow-minimap-viewport-min-size').trim() ||
-        computed.getPropertyValue('--lr-size-1-5rem').trim(),
-      this,
+        computed.getPropertyValue('--lr-icon-button-size').trim(),
+      { host: this },
     );
     this.viewportMinSizePx =
       minSize !== undefined && Number.isFinite(minSize) && minSize >= 0
@@ -161,7 +175,7 @@ export class LyraFlowMinimap extends LyraElement {
         : DEFAULT_VIEWPORT_MIN_SIZE_PX;
     const border = resolveCssLength(
       computed.getPropertyValue('--lr-border-width-thin').trim(),
-      this,
+      { host: this },
     );
     this.baseBorderPx =
       border !== undefined && Number.isFinite(border) && border >= 0 ? border : 0;
@@ -172,16 +186,13 @@ export class LyraFlowMinimap extends LyraElement {
     this.releaseAnnouncementSink();
     this.announceNextSnapshot = false;
     this.liveText = '';
-    this.unsubscribe?.();
-    this.unsubscribe = undefined;
-    this.canvasEl = undefined;
-    this.canvasWatcher?.disconnect();
-    this.canvasWatcher = undefined;
-    // If the element is removed mid-drag, nothing else ever detaches the owner-window drag
-    // listeners, so they are removed unconditionally here.
-    this.dragState = undefined;
-    this.justDraggedViewport = false;
-    this.detachViewportDragListeners();
+    this.companionController.disconnect();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.syncAnnouncementSink();
+    this.companionController.adopt();
   }
 
   private releaseAnnouncementSink(): void {
@@ -231,30 +242,21 @@ export class LyraFlowMinimap extends LyraElement {
     // consumer set on any ancestor, and a root font-size change all have to reach the floor.
     this.refreshViewportMetrics();
     if (this.hasUpdated && changed.has('for')) {
-      this.resolveAndAttach();
+      this.companionController.targetIdChanged();
     }
   }
 
-  private resolveCanvas(): FlowCanvasLike | null {
-    if (this.for) {
-      const root = this.getRootNode() as Document | ShadowRoot;
-      const byId = root.getElementById?.(this.for);
-      if (byId && byId.tagName.toLowerCase() === tag('flow-canvas')) return byId as unknown as FlowCanvasLike;
-    }
-    const ancestor = this.closest(tag('flow-canvas'));
-    return (ancestor as unknown as FlowCanvasLike) ?? null;
-  }
-
-  private resolveAndAttach(): void {
-    const canvas = this.resolveCanvas() ?? undefined;
-    if (canvas === this.canvasEl) return;
+  private attachCanvas(canvas: FlowCanvasLike | null): void {
+    this.cancelViewportDrag();
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.snapshot = null;
-    this.canvasEl = canvas;
+    this.canvasEl = canvas ?? undefined;
     if (!canvas) return;
     this.unsubscribe = canvas.registerCompanion((snapshot) => {
+      if (!this.isConnected || this.canvasEl !== canvas) return;
       this.snapshot = snapshot;
+      if (snapshot.locked) this.cancelViewportDrag();
       if (this.announceNextSnapshot) {
         this.announceNextSnapshot = false;
         this.announceViewport(snapshot.viewport);
@@ -262,25 +264,11 @@ export class LyraFlowMinimap extends LyraElement {
     });
   }
 
-  private watchForCanvas(): void {
-    if (this.canvasWatcher) return;
-    const root = this.getRootNode() as Document | ShadowRoot;
-    const owner = this.ownerDocument.defaultView;
-    const MutationObserverCtor = owner?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    let observer: MutationObserver | undefined;
-    observer = new MutationObserverCtor(() => {
-      if (
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== owner ||
-        this.canvasWatcher !== observer
-      ) {
-        return;
-      }
-      this.resolveAndAttach();
-    });
-    this.canvasWatcher = observer;
-    observer.observe(root, { childList: true, subtree: true });
+  private cancelViewportDrag(): void {
+    this.dragState = undefined;
+    this.justDraggedViewport = false;
+    this.announceNextSnapshot = false;
+    this.detachViewportDragListeners();
   }
 
   private contentBounds(): { minX: number; minY: number; maxX: number; maxY: number } {
@@ -329,6 +317,7 @@ export class LyraFlowMinimap extends LyraElement {
   private viewportRectContent(
     viewBoxWidth: number,
     viewBoxHeight: number,
+    minimumPhysicalSize = this.viewportMinSizePx,
   ): { x: number; y: number; width: number; height: number } {
     const vp = this.snapshot?.viewport;
     if (!vp || vp.zoom === 0) return { x: 0, y: 0, width: 0, height: 0 };
@@ -341,7 +330,7 @@ export class LyraFlowMinimap extends LyraElement {
       map.width > 0 && map.height > 0 && viewBoxWidth > 0 && viewBoxHeight > 0
         ? Math.min(map.width / viewBoxWidth, map.height / viewBoxHeight)
         : 0;
-    const floor = scale > 0 ? this.viewportMinSizePx / scale : 0;
+    const floor = scale > 0 ? minimumPhysicalSize / scale : 0;
     if (!Number.isFinite(floor) || floor <= 0) return { x, y, width, height };
     const flooredWidth = Math.max(width, floor);
     const flooredHeight = Math.max(height, floor);
@@ -409,7 +398,11 @@ export class LyraFlowMinimap extends LyraElement {
 
   private onViewportPointerMove = (e: PointerEvent): void => {
     const drag = this.dragState;
-    if (!drag || e.pointerId !== drag.pointerId || !this.canvasEl || this.canvasEl.locked) return;
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    if (!this.canvasEl || this.canvasEl.locked) {
+      this.cancelViewportDrag();
+      return;
+    }
     const svgEl = this.renderRoot.querySelector('[part="map"]') as SVGSVGElement | null;
     const ctm = svgEl?.getScreenCTM();
     if (!ctm) return;
@@ -508,8 +501,16 @@ export class LyraFlowMinimap extends LyraElement {
     const vbY = bounds.minY - padding;
     const vbW = Math.max(1, bounds.maxX - bounds.minX + padding * 2);
     const vbH = Math.max(1, bounds.maxY - bounds.minY + padding * 2);
-    const viewportRect = this.viewportRectContent(vbW, vbH);
-    return html`<div part="base" role="region" aria-label=${label}>
+    const viewportRect = this.viewportRectContent(vbW, vbH, 0);
+    const viewportHitRect = this.viewportRectContent(vbW, vbH);
+    const locked = this.snapshot.locked || this.canvasEl.locked;
+    return html`<div
+      part="base"
+      role="region"
+      aria-label=${label}
+      aria-disabled=${locked ? 'true' : 'false'}
+      ?data-locked=${locked}
+    >
       <svg
         part="map"
         viewBox="${vbX} ${vbY} ${vbW} ${vbH}"
@@ -518,20 +519,33 @@ export class LyraFlowMinimap extends LyraElement {
         @wheel=${this.onMapWheel}
       >
         ${this.renderNodes()}
-        <rect
-          part="viewport"
-          role="group"
-          tabindex="0"
-          aria-label=${this.localize('flowMinimapViewport')}
-          aria-describedby=${this.instructionsId}
-          aria-keyshortcuts="+ - Enter Home ArrowUp ArrowDown ArrowLeft ArrowRight"
-          x=${viewportRect.x}
-          y=${viewportRect.y}
-          width=${viewportRect.width}
-          height=${viewportRect.height}
-          @pointerdown=${this.onViewportPointerDown}
-          @keydown=${this.onViewportKeyDown}
-        ></rect>
+        <g data-viewport-control>
+          <rect
+            part="viewport"
+            aria-hidden="true"
+            x=${viewportRect.x}
+            y=${viewportRect.y}
+            width=${viewportRect.width}
+            height=${viewportRect.height}
+          ></rect>
+          <rect
+            part="viewport-hit-area"
+            role="group"
+            tabindex=${locked ? '-1' : '0'}
+            aria-disabled=${locked ? 'true' : 'false'}
+            aria-label=${this.localize('flowMinimapViewport')}
+            aria-describedby=${this.instructionsId}
+            aria-keyshortcuts=${locked
+              ? nothing
+              : '+ - Enter Home ArrowUp ArrowDown ArrowLeft ArrowRight'}
+            x=${viewportHitRect.x}
+            y=${viewportHitRect.y}
+            width=${viewportHitRect.width}
+            height=${viewportHitRect.height}
+            @pointerdown=${this.onViewportPointerDown}
+            @keydown=${this.onViewportKeyDown}
+          ></rect>
+        </g>
       </svg>
       <div part="instructions" class="sr-only" id=${this.instructionsId}>
         ${this.localize('flowMinimapInstructions')}

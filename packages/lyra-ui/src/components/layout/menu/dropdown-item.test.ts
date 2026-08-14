@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame, oneEvent } from '@open-wc/testing';
 import './dropdown-item.js';
 import './menu.js';
 import { LyraDropdownItem } from './dropdown-item.class.js';
@@ -15,50 +15,100 @@ async function submenuParent(): Promise<LyraDropdownItem> {
   `)) as HTMLElement;
   const item = wrapper.querySelector('#share') as LyraDropdownItem;
   for (let frame = 0; frame < 20 && !item.hasSubmenu; frame += 1) {
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
     await item.updateComplete;
   }
   expect(item.hasSubmenu).to.equal(true);
   return item;
 }
 
-async function waitForSubmenuState(item: LyraDropdownItem, open: boolean): Promise<void> {
+async function waitForSubmenuState(
+  item: LyraDropdownItem,
+  open: boolean
+): Promise<void> {
   for (let frame = 0; frame < 20 && item.submenuOpen !== open; frame += 1) {
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
     await item.updateComplete;
   }
+  await item.updateComplete;
+  const panel = item.shadowRoot?.querySelector<TestSubmenuPanel>(
+    '[data-generated-submenu]'
+  );
+  if (panel) await panel.updateComplete;
+  await nextFrame();
+  await item.updateComplete;
+  if (panel) await panel.updateComplete;
+}
+
+interface TestSubmenuPanel extends HTMLElement {
+  updateComplete: Promise<boolean>;
+}
+
+function expectSubmenuReflection(item: LyraDropdownItem, open: boolean): void {
+  expect(item.submenuOpen).to.equal(open);
+  expect(item.hasAttribute('submenu-open')).to.equal(open);
+  expect(item.hasAttribute('submenuopen')).to.equal(open);
+}
+
+async function openFromUpstreamAlias(item: LyraDropdownItem): Promise<void> {
+  item.setAttribute('submenuopen', '');
+  await waitForSubmenuState(item, true);
+  expectSubmenuReflection(item, true);
 }
 
 describe('<lr-dropdown-item>', () => {
   it('uses the menu-item behavior and role', async () => {
-    const menu = await fixture(html`<lr-menu><button slot="trigger">Actions</button><lr-dropdown-item value="archive">Archive</lr-dropdown-item></lr-menu>`);
+    const menu = await fixture(html`
+      <lr-menu label="Actions"
+        ><lr-dropdown-item value="archive">Archive</lr-dropdown-item></lr-menu
+      >
+    `);
     const el = menu.querySelector('lr-dropdown-item') as LyraDropdownItem;
     expect(el.getAttribute('role')).to.equal('menuitem');
-    expect(el.tabIndex).to.equal(-1);
+    expect(el.tabIndex).to.equal(0);
   });
 
   it('inherits host click() forwarding from lr-menu-item', async () => {
-    const el = await fixture<LyraDropdownItem>(html`<lr-dropdown-item value="archive">Archive</lr-dropdown-item>`);
+    const menu = await fixture<HTMLElement>(html`
+      <lr-menu label="Actions"
+        ><lr-dropdown-item value="archive">Archive</lr-dropdown-item></lr-menu
+      >
+    `);
+    const el = menu.querySelector<LyraDropdownItem>('lr-dropdown-item')!;
+    await nextFrame();
     const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
     let baseClicks = 0;
     let selections = 0;
+    let selected: LyraDropdownItem | undefined;
     base.addEventListener('click', () => {
       baseClicks += 1;
     });
-    el.addEventListener('lr-menu-item-select', () => {
+    menu.addEventListener('lr-select', (event) => {
       selections += 1;
+      selected = (event as CustomEvent<{ item: LyraDropdownItem }>).detail.item;
     });
 
     el.click();
 
     expect(baseClicks).to.equal(1);
     expect(selections).to.equal(1);
+    expect(selected === el).to.equal(true);
   });
 
   it('inherits the cancelable checkbox change proposal while preserving selection', async () => {
-    const item = await fixture<LyraDropdownItem>(
-      html`<lr-dropdown-item type="checkbox" value="wrap">Wrap text</lr-dropdown-item>`,
-    );
+    const menu = await fixture<HTMLElement>(html`
+      <lr-menu label="Actions">
+        <lr-dropdown-item type="checkbox" value="wrap"
+          >Wrap text</lr-dropdown-item
+        >
+      </lr-menu>
+    `);
+    const item = menu.querySelector<LyraDropdownItem>('lr-dropdown-item')!;
+    await nextFrame();
     let checkedDuringChange = true;
     let changeCancelable = false;
     let selections = 0;
@@ -67,7 +117,7 @@ describe('<lr-dropdown-item>', () => {
       changeCancelable = event.cancelable;
       event.preventDefault();
     });
-    item.addEventListener('lr-menu-item-select', () => {
+    menu.addEventListener('lr-select', () => {
       selections += 1;
     });
 
@@ -80,8 +130,11 @@ describe('<lr-dropdown-item>', () => {
   });
 
   it('inherits menu-item row chrome defaults and fallback hooks from an ancestor', async () => {
-    const defaultItem = await fixture<LyraDropdownItem>(html`<lr-dropdown-item>Archive</lr-dropdown-item>`);
-    const defaultBase = defaultItem.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    const defaultItem = await fixture<LyraDropdownItem>(
+      html`<lr-dropdown-item>Archive</lr-dropdown-item>`
+    );
+    const defaultBase =
+      defaultItem.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
     const defaultChrome = getComputedStyle(defaultBase);
     expect(defaultChrome.gap).to.equal('4px');
     expect(defaultChrome.borderRadius).to.equal('6px');
@@ -102,41 +155,53 @@ describe('<lr-dropdown-item>', () => {
   });
 
   it('reflects the pinned Web Awesome type property', async () => {
-    const el = await fixture<LyraDropdownItem>(html`<lr-dropdown-item>Archive</lr-dropdown-item>`);
+    const el = await fixture<LyraDropdownItem>(
+      html`<lr-dropdown-item>Archive</lr-dropdown-item>`
+    );
     el.type = 'checkbox';
     await el.updateComplete;
     expect(el.getAttribute('type')).to.equal('checkbox');
   });
 
   it('is accessible', async () => {
-    const menu = await fixture(html`<lr-menu label="Actions"><button slot="trigger">Actions</button><lr-dropdown-item value="archive">Archive</lr-dropdown-item></lr-menu>`);
+    const menu = await fixture(html`
+      <lr-menu label="Actions"
+        ><lr-dropdown-item value="archive">Archive</lr-dropdown-item></lr-menu
+      >
+    `);
     await expect(menu).to.be.accessible();
   });
 
   it('inherits decorative display-slot isolation without losing its host label or action', async () => {
     const wrapper = (await fixture(html`
-      <div role="menu" aria-label="Actions">
+      <lr-menu label="Actions">
         <lr-dropdown-item id="archive" value="archive" tabindex="0">
           <button id="label" type="button">Archive</button>
-          <button id="details" slot="details" type="button">Shortcut action</button>
+          <button id="details" slot="details" type="button">
+            Shortcut action
+          </button>
         </lr-dropdown-item>
-      </div>
+      </lr-menu>
     `)) as HTMLElement;
     const item = wrapper.querySelector<LyraDropdownItem>('#archive')!;
     const label = wrapper.querySelector<HTMLButtonElement>('#label')!;
     const details = wrapper.querySelector<HTMLButtonElement>('#details')!;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
     await item.updateComplete;
 
     for (const control of [label, details]) {
       control.focus();
       expect(
         item.ownerDocument.activeElement?.id,
-        `${control.id} cannot become a second focus stop inside the menuitem`,
+        `${control.id} cannot become a second focus stop inside the menuitem`
       ).to.not.equal(control.id);
       expect(
-        control.assignedSlot?.closest<HTMLElement>('[inert]')?.getAttribute('aria-hidden'),
-        `${control.id} is visual-only item chrome`,
+        control.assignedSlot
+          ?.closest<HTMLElement>('[inert]')
+          ?.getAttribute('aria-hidden'),
+        `${control.id} is visual-only item chrome`
       ).to.equal('true');
     }
 
@@ -145,13 +210,16 @@ describe('<lr-dropdown-item>', () => {
 
     let slottedClicks = 0;
     let selections = 0;
-    label.addEventListener('click', () => slottedClicks += 1);
-    item.addEventListener('lr-menu-item-select', () => selections += 1);
+    label.addEventListener('click', () => (slottedClicks += 1));
+    wrapper.addEventListener('lr-select', () => (selections += 1));
     const rect = label.getBoundingClientRect();
     try {
       await sendMouse({
         type: 'click',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
       });
     } finally {
       await resetMouse();
@@ -164,38 +232,41 @@ describe('<lr-dropdown-item>', () => {
 
   it('exposes submenu-open as a reflected, controllable state with a false default', async () => {
     const item = await submenuParent();
-    expect(item.submenuOpen).to.equal(false);
-    expect(item.hasAttribute('submenu-open')).to.equal(false);
+    expectSubmenuReflection(item, false);
 
     item.submenuOpen = true;
     await waitForSubmenuState(item, true);
-    expect(item.submenuOpen).to.equal(true);
-    expect(item.getAttribute('submenu-open')).to.equal('');
+    expectSubmenuReflection(item, true);
 
     item.submenuOpen = false;
     await waitForSubmenuState(item, false);
-    expect(item.submenuOpen).to.equal(false);
-    expect(item.hasAttribute('submenu-open')).to.equal(false);
+    expectSubmenuReflection(item, false);
 
     item.setAttribute('submenu-open', '');
     await waitForSubmenuState(item, true);
-    expect(item.submenuOpen).to.equal(true);
+    expectSubmenuReflection(item, true);
     item.removeAttribute('submenu-open');
     await waitForSubmenuState(item, false);
-    expect(item.submenuOpen).to.equal(false);
+    expectSubmenuReflection(item, false);
   });
 
   it('accepts the normalized upstream submenuopen attribute as a synchronized alias', async () => {
-    const authored = (await fixture(html`
-      <div role="menu" aria-label="Share actions">
-        <lr-dropdown-item submenuOpen>
-          Share
-          <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
-        </lr-dropdown-item>
-      </div>
-    `)).querySelector('lr-dropdown-item') as LyraDropdownItem;
+    const authored = (
+      await fixture(html`
+        <div role="menu" aria-label="Share actions">
+          <lr-dropdown-item submenuOpen>
+            Share
+            <lr-dropdown-item slot="submenu" value="email"
+              >Email</lr-dropdown-item
+            >
+          </lr-dropdown-item>
+        </div>
+      `)
+    ).querySelector('lr-dropdown-item') as LyraDropdownItem;
     for (let frame = 0; frame < 20 && !authored.hasSubmenu; frame += 1) {
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve())
+      );
       await authored.updateComplete;
     }
     await waitForSubmenuState(authored, true);
@@ -207,60 +278,131 @@ describe('<lr-dropdown-item>', () => {
 
     item.setAttribute('submenuopen', '');
     await waitForSubmenuState(item, true);
-    expect(item.submenuOpen).to.equal(true);
-    expect(item.hasAttribute('submenu-open')).to.equal(true);
+    expectSubmenuReflection(item, true);
 
     item.removeAttribute('submenuopen');
     await waitForSubmenuState(item, false);
-    expect(item.submenuOpen).to.equal(false);
-    expect(item.hasAttribute('submenu-open')).to.equal(false);
+    expectSubmenuReflection(item, false);
 
     item.setAttribute('submenuopen', '');
     await waitForSubmenuState(item, true);
     item.removeAttribute('submenu-open');
-    await item.updateComplete;
-    expect(item.submenuOpen).to.equal(true);
-    expect(item.hasAttribute('submenu-open')).to.equal(true);
+    await waitForSubmenuState(item, false);
+    expectSubmenuReflection(item, false);
 
+    item.setAttribute('submenu-open', '');
+    await waitForSubmenuState(item, true);
+    expectSubmenuReflection(item, true);
     item.removeAttribute('submenuopen');
     await waitForSubmenuState(item, false);
-    expect(item.submenuOpen).to.equal(false);
-    expect(item.hasAttribute('submenu-open')).to.equal(false);
+    expectSubmenuReflection(item, false);
+  });
+
+  it('clears both reflected spellings after closeSubmenu() dismisses an alias-opened submenu', async () => {
+    const item = await submenuParent();
+    await openFromUpstreamAlias(item);
+
+    await item.closeSubmenu();
+    await waitForSubmenuState(item, false);
+
+    expectSubmenuReflection(item, false);
+  });
+
+  it('clears both reflected spellings after Escape dismisses an alias-opened submenu', async () => {
+    const item = await submenuParent();
+    await openFromUpstreamAlias(item);
+    const child = item.querySelector<LyraDropdownItem>('[slot="submenu"]')!;
+    child.focus();
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    child.dispatchEvent(event);
+    await waitForSubmenuState(item, false);
+
+    expect(event.defaultPrevented).to.equal(true);
+    expectSubmenuReflection(item, false);
+  });
+
+  it('clears both reflected spellings after an outside pointer dismissal', async () => {
+    const item = await submenuParent();
+    await openFromUpstreamAlias(item);
+
+    document.body.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, composed: true })
+    );
+    await waitForSubmenuState(item, false);
+
+    expectSubmenuReflection(item, false);
+  });
+
+  it('clears both reflected spellings after submenu selection', async () => {
+    const item = await submenuParent();
+    await openFromUpstreamAlias(item);
+    const child = item.querySelector<LyraDropdownItem>('[slot="submenu"]')!;
+
+    child.select();
+    await waitForSubmenuState(item, false);
+
+    expectSubmenuReflection(item, false);
+  });
+
+  it('does not resurrect alias-opened transient state after disconnect and reconnect', async () => {
+    const item = await submenuParent();
+    await openFromUpstreamAlias(item);
+    const parent = item.parentElement!;
+
+    item.remove();
+    parent.append(item);
+    await waitForSubmenuState(item, false);
+
+    expectSubmenuReflection(item, false);
   });
 
   it('declares the mapped submenu methods on this class and preserves their promise settlement', async () => {
-    expect(Object.hasOwn(LyraDropdownItem.prototype, 'openSubmenu')).to.equal(true);
-    expect(Object.hasOwn(LyraDropdownItem.prototype, 'closeSubmenu')).to.equal(true);
+    expect(Object.hasOwn(LyraDropdownItem.prototype, 'openSubmenu')).to.equal(
+      true
+    );
+    expect(Object.hasOwn(LyraDropdownItem.prototype, 'closeSubmenu')).to.equal(
+      true
+    );
     const item = await submenuParent();
 
     const opening = item.openSubmenu();
     expect(opening).to.be.instanceOf(Promise);
     await opening;
-    expect(item.submenuOpen).to.equal(true);
-    expect(item.getAttribute('submenu-open')).to.equal('');
+    expectSubmenuReflection(item, true);
 
     const closing = item.closeSubmenu();
     expect(closing).to.be.instanceOf(Promise);
     await closing;
-    expect(item.submenuOpen).to.equal(false);
-    expect(item.hasAttribute('submenu-open')).to.equal(false);
+    expectSubmenuReflection(item, false);
   });
 
   it('uses the host native focus and blur events without translating or re-emitting them', async () => {
-    const item = (await fixture(html`
-      <div role="menu" aria-label="Actions">
-        <lr-dropdown-item>Archive</lr-dropdown-item>
-      </div>
-    `)).querySelector('lr-dropdown-item') as LyraDropdownItem;
+    const item = (
+      await fixture(html`
+        <div role="menu" aria-label="Actions">
+          <lr-dropdown-item>Archive</lr-dropdown-item>
+        </div>
+      `)
+    ).querySelector('lr-dropdown-item') as LyraDropdownItem;
     let translatedEvents = 0;
-    item.addEventListener('lr-focus', () => { translatedEvents += 1; });
-    item.addEventListener('lr-blur', () => { translatedEvents += 1; });
+    item.addEventListener('lr-focus', () => {
+      translatedEvents += 1;
+    });
+    item.addEventListener('lr-blur', () => {
+      translatedEvents += 1;
+    });
 
     const focused = oneEvent(item, 'focus');
     item.focus();
     const focusEvent = await focused;
     expect(focusEvent).to.be.instanceOf(FocusEvent);
-    expect((focusEvent.target) === (item)).to.equal(true);
+    expect(focusEvent.target === item).to.equal(true);
     expect(focusEvent.bubbles).to.equal(false);
     expect(focusEvent.cancelable).to.equal(false);
 
@@ -268,7 +410,7 @@ describe('<lr-dropdown-item>', () => {
     item.blur();
     const blurEvent = await blurred;
     expect(blurEvent).to.be.instanceOf(FocusEvent);
-    expect((blurEvent.target) === (item)).to.equal(true);
+    expect(blurEvent.target === item).to.equal(true);
     expect(blurEvent.bubbles).to.equal(false);
     expect(blurEvent.cancelable).to.equal(false);
     expect(translatedEvents).to.equal(0);
@@ -284,24 +426,32 @@ describe('<lr-dropdown-item>', () => {
   // superclass's `static styles`, which a subclass silently loses the moment it declares its own.
   describe('size', () => {
     const rowHeight = (el: LyraDropdownItem): number =>
-      (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getBoundingClientRect().height;
+      (
+        el.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+      ).getBoundingClientRect().height;
 
     it('defaults to size="m", reflected', async () => {
-      const el = (await fixture(html`<lr-dropdown-item>Archive</lr-dropdown-item>`)) as LyraDropdownItem;
+      const el = (await fixture(
+        html`<lr-dropdown-item>Archive</lr-dropdown-item>`
+      )) as LyraDropdownItem;
       expect(el.size).to.equal('m');
       expect(el.getAttribute('size')).to.equal('m');
     });
 
     it('grows the rendered row measurably from size="s" to size="l"', async () => {
-      const small = (await fixture(html`<lr-dropdown-item size="s">Archive</lr-dropdown-item>`)) as LyraDropdownItem;
-      const large = (await fixture(html`<lr-dropdown-item size="l">Archive</lr-dropdown-item>`)) as LyraDropdownItem;
+      const small = (await fixture(
+        html`<lr-dropdown-item size="s">Archive</lr-dropdown-item>`
+      )) as LyraDropdownItem;
+      const large = (await fixture(
+        html`<lr-dropdown-item size="l">Archive</lr-dropdown-item>`
+      )) as LyraDropdownItem;
       expect(rowHeight(large)).to.be.greaterThan(rowHeight(small));
     });
 
     it('keeps every tier at or above the 24px pointer-target floor', async () => {
       for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl']) {
         const el = (await fixture(
-          html`<lr-dropdown-item size=${size}>Archive</lr-dropdown-item>`,
+          html`<lr-dropdown-item size=${size}>Archive</lr-dropdown-item>`
         )) as LyraDropdownItem;
         expect(rowHeight(el), size).to.be.at.least(24);
       }

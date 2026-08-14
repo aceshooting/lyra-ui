@@ -100,7 +100,7 @@ function isSourceLabelAvailable(node: Node): boolean {
  * active-filter/scope indicator, etc. Distinct from `<lr-attachment-chip>`
  * (specifically file-shaped, with a thumbnail/size/upload-progress) — this
  * one carries no domain assumptions at all, just a label and an optional
- * leading icon/dot.
+ * leading adornment.
  *
  * `variant` tints the whole pill using the same loud-color-on-quiet-tint
  * convention `<lr-tool-call-chip>`/`<lr-citation-badge>` already
@@ -122,14 +122,17 @@ function isSourceLabelAvailable(node: Node): boolean {
  * list and decides whether/how the click actually removes anything.
  * `disabled` disables whichever native action control is active and suppresses
  * selection/removal requests without changing the controlled state.
+ * If an interactive chip has a host `aria-label`, the host becomes the single aggregate
+ * `role="group"` owner. The native toggle/remove action keeps a purpose-specific name derived from
+ * visible label text (or its localized fallback), avoiding two owners with the same copied name.
  *
  * @customElement lr-chip
  * @slot - The chip's label content. Visible accessible text and forwarding-slot reassignment stay
  * synchronized with toggle/remove action names. In toggle mode its flattened subtree is inert and
  * hidden from assistive technology while the separate native toggle owns the action and name.
- * @slot icon - Optional decorative leading icon or status dot. Its flattened subtree remains
- * visible but is inert and hidden from assistive technology. Nothing is reserved for it (no extra
- * gap) when left empty.
+ * @slot start - Optional decorative leading adornment, such as an icon or status dot. Its
+ * flattened subtree remains visible but is inert and hidden from assistive technology. Nothing is
+ * reserved for it (no extra gap) when left empty.
  * @slot end - Optional trailing content, typically an icon, placed after the label and before the
  * toggle/remove button. Nothing is reserved for it (no extra gap) when left empty, mirroring
  * `<lr-badge>`'s identical `end` slot. It remains ordinary consumer content in passive/removable
@@ -140,7 +143,7 @@ function isSourceLabelAvailable(node: Node): boolean {
  * — `value` is `undefined` when the `value` prop was never set. Only
  * rendered while `removable`.
  * @event lr-chip-select - Fired on click, or Enter/Space while focused, once the chip has
- * opted into toggle mode (via `selected` or `toggleable`) and `removable` is not set.
+ * opted into toggle mode via `toggleable` and `removable` is not set.
  * `detail: { value, selected }` contains the proposed next state. Cancelable; preventing it keeps
  * the current `selected` state unchanged.
  * @method focus - Forwards focus to the chip's active remove or toggle button.
@@ -148,7 +151,7 @@ function isSourceLabelAvailable(node: Node): boolean {
  * @method click - Activates the chip's active remove or toggle button; passive chips retain the
  * ordinary `HTMLElement.click()` behavior.
  * @csspart base - The pill's root container.
- * @csspart icon - Inert, aria-hidden wrapper around the decorative `icon` slot. Hidden entirely
+ * @csspart start - Inert, aria-hidden wrapper around the decorative `start` slot. Hidden entirely
  *   while empty.
  * @csspart label - Wrapper around the default slot; inert and aria-hidden in toggle mode.
  * @csspart end - Wrapper around the `end` slot. Hidden entirely while empty, and inert plus
@@ -169,7 +172,7 @@ function isSourceLabelAvailable(node: Node): boolean {
  * @cssprop [--lr-chip-radius=var(--lr-radius)] - Corner radius of the pill and of the remove
  * button, kept in sync so retuning one retunes both. `pill` raises it to
  * `var(--lr-radius-pill)`. Does not vary by `size` tier.
- * @cssprop [--lr-chip-icon-size=var(--lr-font-size-sm)] - Font size of the `icon` slot wrapper.
+ * @cssprop [--lr-chip-icon-size=var(--lr-font-size-sm)] - Font size of the `start` slot wrapper.
  * Each `size` sets it to that step's icon size.
  * @cssprop [--lr-chip-padding-block=var(--lr-size-0-25rem)] - Block padding of the pill. Each
  * `size` sets it to that step's block padding.
@@ -217,41 +220,15 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
    *  `<lr-badge>`/`<lr-tag>`'s identical property. */
   @property({ type: Boolean, reflect: true }) pill = false;
 
-  /** Opt-in toggle/pressed mode -- the current pressed value. Setting `selected` (to `true`, the
-   *  common way to start a chip already pressed) opts the chip into toggle mode automatically, so
-   *  `<lr-chip selected>` alone is enough: `[part='toggle-button']` renders as a native,
-   *  keyboard-activatable button and reflects
-   *  `aria-pressed`, and toggles on click/activation, emitting `lr-chip-select`. That opt-in
-   *  (tracked by `toggleable`, see below) persists once made, so toggling `selected` back to
-   *  `false` never strips the chip's interactivity -- a chip a user has clicked "off" must stay
-   *  clickable to turn it back "on". Has no effect when combined with `removable`, since that
-   *  mode already owns the chip's one native action. The label slot is inert in toggle mode, so
-   *  unrestricted slotted descendants can never nest inside or double-activate the real button.
-   *  This component's two real use cases (a chart-series visibility
-   *  toggle, a category filter chip) never need both at once. `false` (the default, with
-   *  `toggleable` also left at its default) reproduces today's exact passive-label-pill output. */
-  private _selected = false;
-  @property({ type: Boolean, reflect: true })
-  get selected(): boolean {
-    return this._selected;
-  }
-  set selected(next: boolean) {
-    const normalized = Boolean(next);
-    const old = this._selected;
-    // Latch at assignment time rather than update time: Lit batches same-task writes, so looking
-    // only at the final value would lose an explicit `true` followed by `false`.
-    if (normalized) this.toggleable = true;
-    this._selected = normalized;
-    this.requestUpdate('selected', old);
-  }
+  /** Current pressed state. This does not make the chip interactive by itself; set `toggleable`
+   *  to opt into the native toggle action. Keeping state and mode independent makes declarative
+   *  SSR and property-update order deterministic. Has no visual or interactive effect while
+   *  `toggleable` is unset or while `removable` owns the chip's action. */
+  @property({ type: Boolean, reflect: true }) selected = false;
 
-  /** Explicit opt-in into `selected`'s toggle/pressed interactive mode, independent of the
-   *  *current* value of `selected`. Setting `selected` to `true` at any point opts in
-   *  automatically (see its doc comment) and keeps this `true` from then on, which is enough for
-   *  a chip that starts already pressed. Set `toggleable` directly for a chip that must be
-   *  clickable from the outset while starting **unselected** -- e.g. an initially-inactive
-   *  category filter chip -- since `selected`'s own default (`false`) can't be distinguished from
-   *  "never opted in" on its own. */
+  /** Sole opt-in for the chip's toggle/pressed interactive mode. Set `selected` independently for
+   *  the current pressed state. The default is a passive label pill. Has no effect while
+   *  `removable` owns the chip's action. */
   @property({ type: Boolean, reflect: true }) toggleable = false;
 
   /** Opaque consumer bookkeeping value — never read, validated, or rendered
@@ -263,8 +240,8 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   // assigned content, so `:empty` never matches — real emptiness is tracked
   // in JS instead, the same fix `<lr-stat>`'s `hasIcon`/
   // `<lr-tool-call-chip>`'s `hasDetailSlot` etc. already establish.
-  @state() private hasIconSlot = false;
-  // Same rationale as hasIconSlot above -- mirrors <lr-badge>'s hasEndSlot, adapted to chip's
+  @state() private hasStartSlot = false;
+  // Same rationale as hasStartSlot above -- mirrors <lr-badge>'s hasEndSlot, adapted to chip's
   // already-established SSR-safe seeding path (recomputeHasEndSlot + seedFirstRenderState) rather
   // than badge's willUpdate-based seed, since only this file needs to survive server-rendered
   // hydration.
@@ -273,61 +250,80 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   // then seed from light DOM before a browser-only first paint (or immediately after hydration).
   private cachedLabelText = '';
   private labelObserver?: MutationObserver;
+  private managedActionGroupRole = false;
   private pendingControlFocusRepair?: ComposedFocusRepairSnapshot;
   private readonly onLabelSlotChange = (event: Event): void => {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
+    if (!this.tracksActionLabel) return;
     this.bindLabelObserverTargets();
     this.updateBrowserDerivedState(() => this.recomputeLabelText());
   };
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.addEventListener('slotchange', this.onLabelSlotChange);
+    this.syncLabelObservation();
+    const sampleBrowserState = (): void => {
+      this.recomputeHasStartSlot();
+      this.recomputeHasEndSlot();
+      if (this.tracksActionLabel) this.recomputeLabelText(true, true);
+    };
+    if (this.hasUpdated) {
+      sampleBrowserState();
+      this.ownerDocument.defaultView?.queueMicrotask(() => {
+        if (this.isConnected && this.tracksActionLabel) this.recomputeLabelText();
+      });
+    } else this.seedFirstRenderState(sampleBrowserState);
+  }
+
+  private get tracksActionLabel(): boolean {
+    return this.toggleable || this.removable;
+  }
+
+  private syncLabelObservation(): void {
+    this.labelObserver?.disconnect();
+    this.labelObserver = undefined;
+    if (!this.isConnected || !this.tracksActionLabel) return;
     const MutationObserverCtor = (this.ownerDocument as Document | undefined)?.defaultView
       ?.MutationObserver;
     this.labelObserver = MutationObserverCtor
       ? new MutationObserverCtor(() => {
           this.bindLabelObserverTargets();
+          this.syncHostActionRole();
           this.updateBrowserDerivedState(() => this.recomputeLabelText());
         })
       : undefined;
-    this.addEventListener('slotchange', this.onLabelSlotChange);
     this.bindLabelObserverTargets();
-    const sampleBrowserState = (): void => {
-      this.recomputeHasIconSlot();
-      this.recomputeHasEndSlot();
-      this.recomputeLabelText();
-    };
-    if (this.hasUpdated) sampleBrowserState();
-    else this.seedFirstRenderState(sampleBrowserState);
   }
 
   // `'slot'` widens the shared content-node filter: only the default slot's content names this
-  // chip's actions, so a light-DOM child moving to or from the decorative `icon`/`end` slots
+  // chip's actions, so a light-DOM child moving to or from the decorative `start`/`end` slots
   // changes the name.
   private bindLabelObserverTargets(): void {
-    bindAccessibleTextObserver(this.labelObserver, this, ['slot']);
+    bindAccessibleTextObserver(this.labelObserver, this, ['slot', 'role']);
   }
 
   override disconnectedCallback(): void {
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
+    this.releaseHostActionRole();
     this.pendingControlFocusRepair = undefined;
     super.disconnectedCallback();
   }
 
-  private recomputeHasIconSlot(): void {
+  private recomputeHasStartSlot(): void {
     const children = (this as unknown as { children?: HTMLCollection }).children;
     if (!children) return;
-    this.hasIconSlot = Array.from(children).some((el) => el.getAttribute('slot') === 'icon');
+    this.hasStartSlot = Array.from(children).some((el) => el.getAttribute('slot') === 'start');
   }
 
-  private onIconSlotChange = (e: Event): void => {
+  private onStartSlotChange = (e: Event): void => {
     const slot = e.target as HTMLSlotElement;
     const update = (): void => {
       if (!this.isConnected) return;
-      this.hasIconSlot = slot.assignedElements({ flatten: true }).length > 0;
+      this.hasStartSlot = slot.assignedElements({ flatten: true }).length > 0;
     };
     this.updateBrowserDerivedState(update);
   };
@@ -348,7 +344,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   };
 
   // Only the default slot's own content counts toward the remove/toggle button's accessible name --
-  // text incidentally living inside the (decorative) `icon`/`end` slots shouldn't leak into
+  // text incidentally living inside the (decorative) `start`/`end` slots shouldn't leak into
   // "Remove {text}", which is what the node selection below is for. The extraction itself is the
   // library's shared `composedAccessibleVisibleText()`: it walks slots, honors hidden/inert/
   // `aria-hidden`/CSS-hidden branches, and counts only Text and Element nodes. That last part
@@ -356,15 +352,15 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   // (`html\`<lr-chip>${label}</lr-chip>\``, the ordinary way a data-driven label gets bound) rather
   // than a static string, lit-html inserts a marker Comment node alongside the Text node in the
   // light DOM, and that comment's own (non-empty) data is internal bookkeeping, not label content.
-  private computeLabelText(): string {
+  private computeLabelText(preferLightDom = false): string {
     const renderRoot = this.renderRoot as ParentNode | undefined;
     const slot = renderRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
     const lightDomNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
-    const nodes = slot
-      ? slot.assignedNodes({ flatten: true })
-      : Array.from(lightDomNodes ?? []).filter(
+    const assigned = slot?.assignedNodes({ flatten: true }) ?? [];
+    const direct = Array.from(lightDomNodes ?? []).filter(
           (node) => node.nodeType !== 1 || ((node as Element).getAttribute('slot') ?? '') === '',
         );
+    const nodes = !preferLightDom && assigned.length > 0 ? assigned : direct;
     return nodes
       .map((node) => composedAccessibilityText(node, {
         ancestorBoundary: this,
@@ -375,7 +371,11 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
           element.getAttribute('part')?.split(/\s+/).includes('label')
             ? false
             : isAccessibilitySubtreeExcluded(element),
-        requireRendered: node.nodeType !== 1 || (node as Element).localName !== 'slot',
+        // A reconnect sample can precede layout in the new owner realm. It still honors authored
+        // hidden/inert/ARIA state and is replaced by the ordinary rendered sample on slotchange.
+        requireRendered: preferLightDom
+          ? false
+          : node.nodeType !== 1 || (node as Element).localName !== 'slot',
         shouldPruneNode: (candidate) =>
           !this.contains(candidate) && !isSourceLabelAvailable(candidate),
       }))
@@ -384,27 +384,23 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
       .trim();
   }
 
-  private recomputeLabelText(): void {
-    const next = this.computeLabelText();
+  private recomputeLabelText(request = true, preferLightDom = false): void {
+    const next = this.computeLabelText(preferLightDom);
     if (next === this.cachedLabelText) return;
     this.cachedLabelText = next;
-    this.requestUpdate();
+    if (request) this.requestUpdate();
   }
 
-  /** Accessible name for the real toggle control. A host `aria-label` wins; otherwise the chip's
-   *  own label text names it. An icon-only toggleable chip (a colour swatch standing in for a
-   *  chart series, a bare status dot) has neither, and a focusable control with no name at all is
+  /** Accessible name for the real toggle control. The chip's own visible label text names the
+   *  action; a host `aria-label`, when present, names the aggregate group instead. A start-only
+   *  toggleable chip has no visible label, and a focusable control with no name at all is
    *  announced as a nameless "button" — so it falls back to the generic localized action the same
    *  way the remove button falls back to `remove`. */
   private get accessibleToggleLabel(): string {
-    const hostLabel = this.getAttribute('aria-label');
-    if (hostLabel !== null) return hostLabel;
     return this.cachedLabelText || this.localize('select');
   }
 
   private get accessibleRemoveLabel(): string {
-    const hostLabel = this.getAttribute('aria-label');
-    if (hostLabel !== null) return hostLabel;
     const text = this.cachedLabelText;
     return text ? this.localize('removeWithContext', undefined, { label: text }) : this.localize('remove');
   }
@@ -449,6 +445,13 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    if (changed.has('removable') || changed.has('toggleable')) {
+      this.syncLabelObservation();
+      if (this.hasUpdated) {
+        if (this.tracksActionLabel) this.recomputeLabelText(false);
+        else this.cachedLabelText = '';
+      }
+    }
     if (this.pendingControlFocusRepair) return;
     const oldRemovable = changed.get('removable') ?? this.removable;
     const oldToggleable = changed.get('toggleable') ?? this.toggleable;
@@ -467,6 +470,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    this.syncHostActionRole();
     const repair = this.pendingControlFocusRepair;
     this.pendingControlFocusRepair = undefined;
     if (!repair) return;
@@ -474,10 +478,24 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     applyComposedFocusRepair(repair, replacement ?? repair.candidate);
   }
 
+  private syncHostActionRole(): void {
+    const needsGroup = this.tracksActionLabel && this.hasAttribute('aria-label');
+    if (needsGroup && !this.hasAttribute('role')) {
+      this.setAttribute('role', 'group');
+      this.managedActionGroupRole = true;
+    } else if (!needsGroup) {
+      this.releaseHostActionRole();
+    }
+  }
+
+  private releaseHostActionRole(): void {
+    if (this.managedActionGroupRole && this.getAttribute('role') === 'group') this.removeAttribute('role');
+    this.managedActionGroupRole = false;
+  }
+
   override render(): TemplateResult {
-    // `toggleMode` is sticky (see `toggleable`'s doc comment) and gates the chip's structural
-    // interactivity, so it survives `selected` toggling back to false. `pressed` tracks only the
-    // *current* value, for `aria-pressed`.
+    // `toggleable` alone gates structural interactivity. `selected` is only the current pressed
+    // value, which keeps mode and state independent.
     const toggleMode = this.toggleable && !this.removable;
     const pressed = this.selected && !this.removable;
     return html`
@@ -485,10 +503,10 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
         part="base"
       >
         ${renderInertPresentation(
-          html`<slot name="icon" @slotchange=${this.onIconSlotChange}></slot>`,
+          html`<slot name="start" @slotchange=${this.onStartSlotChange}></slot>`,
           {
-            part: 'icon',
-            hidden: !this.renderSlotPresence(this.hasIconSlot),
+            part: 'start',
+            hidden: !this.renderSlotPresence(this.hasStartSlot),
           },
         )}
         ${renderInertPresentation(

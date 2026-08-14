@@ -15,7 +15,7 @@ export type CardAppearance = LyraAppearance;
 export type CardOrientation = "horizontal" | "vertical";
 
 export interface LyraCardEventMap {
-  "lr-card-activate": CustomEvent<undefined>;
+  "lr-card-activate": CustomEvent<null>;
 }
 
 /**
@@ -79,7 +79,7 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @slot footer-actions - Controls rendered alongside the vertical footer.
  * @csspart base - The outer container (a `<div>`, or a stretched `<a>` behind the consumer slots
  *   when `href` is set).
- * @csspart activation-button - The native whole-card action, rendered while `interactive`
+ * @csspart activation-button - The native whole-card action, rendered while `actionable`
  *   without `href`. It is a sibling of slotted controls, so actionable descendants are never
  *   nested inside another actionable role.
  * @csspart media - Wrapper around the `media` and `image` slots. Hidden entirely when empty.
@@ -91,7 +91,7 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @csspart footer - Wrapper around the `footer` and `footer-actions` slots. Hidden entirely when
  *   both are empty.
  * @event lr-card-activate - The whole card was activated (click, or Enter/Space on the native
- * `activation-button`). No detail. Only fired while `interactive` is set **without** `href`
+ * `activation-button`). No detail. Only fired while `actionable` is set **without** `href`
  * -- with `href` the stretched native `<a>` is the activation. Never fired for an interaction that
  * originated in a slotted control (a button, link, input, or anything else focusable), so a card
  * can keep its own action buttons.
@@ -132,13 +132,13 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   @property({ type: Boolean, attribute: "with-footer-actions", reflect: true })
   withFooterActions = false;
 
-  /** Opt-in clickable-tile behavior: the hover/focus-visible treatment (border-color shift,
+  /** Opt-in no-link whole-card action behavior: the hover/focus-visible treatment (border-color shift,
    *  `cursor: pointer`) plus, when `href` is **not** also set, real activation semantics --
    *  `[part='activation-button']` becomes the focusable native button, responds to Enter/Space,
    *  and emits `lr-card-activate`. With `href` set the stretched native `<a>` owns navigation and
    *  `lr-card-activate` is never fired. `false` (the default) reproduces today's exact static
    *  output: no button, no listeners, no events. */
-  @property({ type: Boolean, reflect: true }) interactive = false;
+  @property({ type: Boolean, reflect: true }) actionable = false;
 
   /** Accessible name forwarded to the native activation owner. The `aria-label` attribute/property
    *  applies by presence to the interactive button or linked anchor, including an explicitly empty
@@ -151,12 +151,25 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
    *  `<div>`. */
   @property() href?: string;
 
-  /** Native anchor target, used only while `href` resolves to a link. Setting this to `'_blank'`
-   *  (or any other target) automatically derives `rel="noopener noreferrer"` on the rendered
-   *  anchor -- there is no separately-settable `rel` property, so a consumer can't forget it and
-   *  leave the opened page holding a `window.opener` back-reference (reverse-tabnabbing). Matches
-   *  `lr-stat`'s/`lr-app-rail-item`'s identical pattern. */
+  /** Native anchor target, used only while `href` resolves to a link. Any target forces the
+   *  `noopener noreferrer` security floor while preserving safe author `rel` tokens. */
   @property() target?: string;
+
+  /** Author-settable relationship tokens. `opener` is always stripped; whenever `target` is set,
+   *  the rendered link force-adds `noopener noreferrer` without discarding other tokens. */
+  @property() rel?: string;
+
+  private get resolvedRel(): string | undefined {
+    const authored = (this.rel ?? '')
+      .split(/\s+/)
+      .filter((token) => token !== '' && token.toLowerCase() !== 'opener');
+    const tokens = new Set(authored);
+    if (this.target) {
+      tokens.add('noopener');
+      tokens.add('noreferrer');
+    }
+    return tokens.size > 0 ? [...tokens].join(' ') : undefined;
+  }
 
   @state() private hasHeaderSlot = false;
   @state() private hasMediaSlot = false;
@@ -181,11 +194,11 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has("href") || changed.has("interactive")) {
+    if (changed.has("href") || changed.has("actionable")) {
       const previous = this.semanticOwner();
       const nextKind = safeLinkHref(this.href)
         ? "a"
-        : this.interactive
+        : this.actionable
           ? "button"
           : "div";
       this.semanticFocusOrigin =
@@ -305,15 +318,19 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
       isElementNode(origin) &&
       origin.getAttribute("part") === "activation-button"
     ) {
-      this.emit("lr-card-activate");
+      this.emit("lr-card-activate", null);
       return;
     }
     if (this.originatesInNestedControl(e, e.currentTarget)) return;
-    this.emit("lr-card-activate");
+    this.emit("lr-card-activate", null);
   };
 
   private onLinkedContentClick = (e: Event): void => {
-    if (this.originatesInNestedControl(e, e.currentTarget)) return;
+    if (e.defaultPrevented || this.originatesInNestedControl(e, e.currentTarget)) return;
+    // Replace the proxy source click with the native anchor click. Without containment, both
+    // composed events escape the card and one physical activation looks like two application
+    // clicks even though navigation happens only once.
+    e.stopPropagation();
     this.renderRoot
       .querySelector<HTMLAnchorElement>('a[part~="base"][href]')
       ?.click();
@@ -362,7 +379,8 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     this.resetContentObserver();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.resetContentObserver();
   }
 
@@ -374,7 +392,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   }
 
   /** Activates the native whole-card owner: the linked anchor when `href` is safe, or the
-   *  activation button while `interactive` is set without a link. Passive cards remain inert. */
+   *  activation button while `actionable` is set without a link. Passive cards remain inert. */
   override click(): void {
     this.renderRoot
       .querySelector<HTMLAnchorElement | HTMLButtonElement>(
@@ -391,7 +409,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     const hasFooterActions = this.withFooterActions || this.hasFooterActionsSlot;
     const hasFooter = this.withFooter || this.hasFooterSlot || hasFooterActions;
     const href = safeLinkHref(this.href);
-    const activatable = this.interactive && !href;
+    const activatable = this.actionable && !href;
     const accessibleLabel = hostAriaLabel(this) ?? this.accessibleLabel;
     const body = html`
       ${activatable
@@ -437,7 +455,8 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
             part="base"
             href=${href}
             target=${this.target || nothing}
-            rel=${this.target ? "noopener noreferrer" : nothing}
+            rel=${this.resolvedRel ?? nothing}
+            data-actionable="true"
             aria-label=${accessibleLabel ?? nothing}
             aria-labelledby=${accessibleLabel === null ? "linked-content" : nothing}
           ></a>
@@ -447,6 +466,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
         </div>`
       : html`<div
           part="base"
+          data-actionable=${activatable ? "true" : nothing}
           tabindex=${!activatable && this.semanticFocusOrigin ? "-1" : nothing}
           @click=${activatable ? this.onBaseClick : nothing}
         >

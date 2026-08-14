@@ -206,6 +206,8 @@ export const styles = css`
     flex-direction: column;
     min-inline-size: 0;
     max-inline-size: calc(100% - var(--lr-space-s) - var(--lr-space-s));
+    max-block-size: calc(100% - var(--lr-space-s) - var(--lr-space-s));
+    overflow: auto;
     box-sizing: border-box;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-s);
@@ -216,6 +218,12 @@ export const styles = css`
        above the map rather than a panel resting beside it. */
     box-shadow: var(--lr-shadow-m);
     font-size: var(--lr-font-size-xs);
+  }
+  .legend-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-space-xs);
+    min-inline-size: 0;
   }
   .legend-row {
     display: flex;
@@ -228,10 +236,54 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   [part='legend-swatch'] {
+    position: relative;
+    overflow: hidden;
     inline-size: var(--lr-size-0-75rem);
     block-size: var(--lr-size-0-75rem);
+    box-sizing: border-box;
+    border: var(--lr-border-width-thin) solid currentColor;
     border-radius: var(--lr-size-2px);
     flex: 0 0 auto;
+  }
+  [part='legend-swatch'][data-pattern='diagonal'] {
+    border-style: dashed;
+  }
+  [part='legend-swatch'][data-pattern='dots'] {
+    border-style: dotted;
+    border-radius: 50%;
+  }
+  [part='legend-swatch'][data-pattern='crosshatch'] {
+    border-style: double;
+    border-radius: 0;
+  }
+  [part='legend-swatch'][data-pattern='diagonal']::before,
+  [part='legend-swatch'][data-pattern='crosshatch']::before,
+  [part='legend-swatch'][data-pattern='crosshatch']::after,
+  [part='legend-swatch'][data-pattern='dots']::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: 150%;
+    block-size: var(--lr-border-width-thin);
+    background: currentColor;
+    transform: translate(-50%, -50%) rotate(-45deg);
+  }
+  [part='legend-swatch'][data-pattern='crosshatch']::after {
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+  [part='legend-swatch'][data-pattern='dots']::before {
+    inline-size: var(--lr-size-2px);
+    block-size: var(--lr-size-2px);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
+  [part='legend-limit'] {
+    min-inline-size: 0;
+    padding-block-start: var(--lr-space-xs);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    color: var(--lr-color-text-quiet);
+    overflow-wrap: anywhere;
   }
 
   /* MapLibre's attribution control is generated in the same shadow-local container. Keep it
@@ -327,5 +379,16 @@ export const styles = css`
   }
   .maplibregl-ctrl-attrib summary::marker {
     content: '';
+  }
+
+  @media (forced-colors: active) {
+    [part='legend-swatch'] {
+      background: Canvas !important;
+      border-color: CanvasText;
+      color: CanvasText;
+    }
+    [part='legend-swatch'][data-pattern='solid'] {
+      background: CanvasText !important;
+    }
   }
 `;

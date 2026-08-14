@@ -69,7 +69,6 @@ describe('tree declarative child model', () => {
     await el.updateComplete;
 
     const [install, usage] = [...guides.querySelectorAll(':scope > lr-tree-item')] as LyraTreeItem[];
-    expect(install!.depth).to.equal(1);
     expect(install!.getAttribute('aria-level')).to.equal('2');
     expect(install!.getAttribute('aria-setsize')).to.equal('2');
     expect(usage!.getAttribute('aria-posinset')).to.equal('2');
@@ -100,7 +99,7 @@ describe('tree declarative child model', () => {
     const guides = el.querySelector('lr-tree-item') as LyraTreeItem;
     await el.expandAll();
     expect(guides.expanded).to.be.true;
-    el.collapseAll();
+    await el.collapseAll();
     await el.updateComplete;
     expect(guides.expanded).to.be.false;
   });

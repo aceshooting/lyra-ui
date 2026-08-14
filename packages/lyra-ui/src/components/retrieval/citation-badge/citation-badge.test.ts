@@ -152,12 +152,21 @@ describe('accessible name', () => {
     expect(base.getAttribute('aria-label')).to.equal('rapport.pdf — référence 3');
   });
 
-  it('lets an explicit host aria-label override both the label prop and the computed name', async () => {
+  it('keeps host naming distinct from the citation button across explicit-empty and dynamic changes', async () => {
     const el = (await fixture(
       html`<lr-citation-badge index="3" label="ignored" aria-label="Custom"></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('aria-label')).to.equal('Custom');
+    expect(el.getAttribute('aria-label')).to.equal('Custom');
+    expect(base.getAttribute('aria-label')).to.equal('Citation 3, ignored');
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.equal('');
+    expect(base.getAttribute('aria-label')).to.equal('Citation 3, ignored');
+    el.setAttribute('aria-label', 'Revised');
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.equal('Revised');
+    expect(base.getAttribute('aria-label')).to.equal('Citation 3, ignored');
   });
 });
 

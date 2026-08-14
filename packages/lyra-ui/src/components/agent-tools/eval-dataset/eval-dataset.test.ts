@@ -1,8 +1,8 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './eval-dataset.js';
 import type { LyraEvalDataset, EvalExample } from './eval-dataset.js';
 import type { LyraChip } from '../../overlays/chip/chip.class.js';
-import { styles } from './eval-dataset.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function examples(): EvalExample[] {
   return [
@@ -64,14 +64,14 @@ it('keeps the remove button disabled until a row is selected, then emits lr-exam
   const selectListener = oneEvent(el, 'lr-example-select');
   secondRow.click();
   const selectEvent = await selectListener;
-  expect(selectEvent.detail).to.deep.equal({ id: 'ex-2' });
+  expect(selectEvent.detail).to.deep.equal({ exampleId: 'ex-2' });
   await el.updateComplete;
   expect(removeButton.disabled).to.be.false;
 
   const removeListener = oneEvent(el, 'lr-example-remove-request');
   removeButton.click();
   const removeEvent = await removeListener;
-  expect(removeEvent.detail).to.deep.equal({ id: 'ex-2' });
+  expect(removeEvent.detail).to.deep.equal({ exampleId: 'ex-2' });
 });
 
 it('clamps a stale selection back to null once the selected example is removed from `examples`', async () => {
@@ -87,7 +87,7 @@ it('clamps a stale selection back to null once the selected example is removed f
   el.examples = examples().filter((e) => e.id !== 'ex-1');
   await el.updateComplete;
   expect(removeButton.disabled).to.be.true;
-  expect((await cleared).detail).to.deep.equal({ id: null });
+  expect((await cleared).detail).to.deep.equal({ exampleId: null });
 });
 
 it('clears a private search filter when searchable becomes false', async () => {
@@ -183,6 +183,43 @@ it('does not leak raw composed child events alongside its translated request eve
   expect(translatedRows).to.equal(1);
 });
 
+it('contains auxiliary native/child events while deliberately passing through table sorting', async () => {
+  const el = await fixture<LyraEvalDataset>(html`
+    <lr-eval-dataset searchable .examples=${examples()}></lr-eval-dataset>
+  `);
+  const leaked: string[] = [];
+  for (const type of ['input', 'change', 'lr-invalid', 'lr-show', 'lr-hide', 'lr-selection-change', 'lr-page-change']) {
+    el.addEventListener(type, () => leaked.push(type));
+  }
+  const search = el.shadowRoot!.querySelector('[part="search-input"]')!;
+  search.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  const fileInput = el.shadowRoot!.querySelector('lr-file-input')!;
+  fileInput.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+  fileInput.dispatchEvent(new CustomEvent('lr-invalid', { bubbles: true, composed: true }));
+  const exportButton = el.shadowRoot!.querySelector('lr-export-button')!;
+  exportButton.dispatchEvent(new CustomEvent('lr-show', { bubbles: true, composed: true }));
+  exportButton.dispatchEvent(new CustomEvent('lr-hide', { bubbles: true, composed: true }));
+  const table = el.shadowRoot!.querySelector('lr-table')!;
+  table.dispatchEvent(new CustomEvent('lr-selection-change', {
+    bubbles: true,
+    composed: true,
+    detail: { keys: ['ex-1'] },
+  }));
+  table.dispatchEvent(new CustomEvent('lr-page-change', {
+    bubbles: true,
+    composed: true,
+    detail: { page: 2 },
+  }));
+  const sorted = oneEvent(el, 'lr-sort');
+  table.dispatchEvent(new CustomEvent('lr-sort', {
+    bubbles: true,
+    composed: true,
+    detail: { key: 'input' },
+  }));
+  expect((await sorted).detail).to.deep.equal({ key: 'input' });
+  expect(leaked).to.deep.equal([]);
+});
+
 it('automatically pages catalogs larger than the component rendering ceiling', async () => {
   const many = Array.from({ length: 250 }, (_, index) => ({
     id: `ex-${index}`,
@@ -261,6 +298,22 @@ it('renders one toggleable tag chip per distinct tag and filters the grid to an 
   expect(gridRowCount(el)).to.equal(3);
 });
 
+it('orders tag chips with the effective locale collation', async () => {
+  const wrapper = await fixture(html`
+    <div lang="de">
+      <lr-eval-dataset
+        .examples=${[
+          { id: 'z', input: 'Z', tags: ['z'] },
+          { id: 'umlaut', input: 'Umlaut', tags: ['ä'] },
+        ]}
+      ></lr-eval-dataset>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-eval-dataset') as LyraEvalDataset;
+  const values = Array.from(el.shadowRoot!.querySelectorAll('lr-chip'), (chip) => chip.value);
+  expect(values).to.deep.equal(['ä', 'z']);
+});
+
 it('drops an active tag filter that no longer matches any example once `examples` changes', async () => {
   const el = (await fixture(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`)) as LyraEvalDataset;
   await el.updateComplete;
@@ -311,7 +364,7 @@ it('clears selection and emits null when a search filter hides the selected exam
   const event = await selectionCleared;
   await el.updateComplete;
 
-  expect(event.detail).to.deep.equal({ id: null });
+  expect(event.detail).to.deep.equal({ exampleId: null });
   expect(gridRowCount(el)).to.equal(1);
   expect(removeButton.disabled).to.be.true;
 });
@@ -330,7 +383,7 @@ it('clears selection and emits null when a tag filter hides the selected example
   const event = await selectionCleared;
   await el.updateComplete;
 
-  expect(event.detail).to.deep.equal({ id: null });
+  expect(event.detail).to.deep.equal({ exampleId: null });
   expect(gridRowCount(el)).to.equal(2);
   expect(removeButton.disabled).to.be.true;
 });
@@ -441,10 +494,13 @@ it("colors the search-input's placeholder and undoes Firefox's reduced default o
   expect(placeholderStyle.opacity).to.equal('1');
 });
 
-it('resets the native webkit search-cancel glyph on the search input', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='search-input'\]::-webkit-search-cancel-button/);
-  expect(css).to.match(/\[part='search-input'\]::-webkit-search-decoration/);
+it('removes the native webkit search-cancel glyph where that pseudo-element exists', async () => {
+  const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset searchable></lr-eval-dataset>`);
+  const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+  input.value = 'query';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+  expect(getComputedStyle(input).appearance).to.equal('none');
 });
 
 it('bridges native focus/blur on the search field to the host element', async () => {
@@ -461,7 +517,7 @@ it('bridges native focus/blur on the search field to the host element', async ()
   await blurListener;
 });
 
-it('lets a host aria-label win over `label` and the localized default on the internal grid', async () => {
+it('uses `label` or the localized fallback for the grid without cloning a host aria-label', async () => {
   const defaultEl = (await fixture(html`<lr-eval-dataset></lr-eval-dataset>`)) as LyraEvalDataset;
   await defaultEl.updateComplete;
   expect(defaultEl.shadowRoot!.querySelector('lr-table')!.getAttribute('aria-label')).to.equal(
@@ -476,17 +532,46 @@ it('lets a host aria-label win over `label` and the localized default on the int
     html`<lr-eval-dataset label="My dataset" aria-label="Pairwise eval run 3"></lr-eval-dataset>`,
   )) as LyraEvalDataset;
   await hostLabeled.updateComplete;
-  expect(hostLabeled.shadowRoot!.querySelector('lr-table')!.getAttribute('aria-label')).to.equal(
-    'Pairwise eval run 3',
-  );
+  expect(hostLabeled.getAttribute('aria-label')).to.equal('Pairwise eval run 3');
+  expect(hostLabeled.shadowRoot!.querySelector('lr-table')!.getAttribute('aria-label')).to.equal('My dataset');
+
+  hostLabeled.setAttribute('aria-label', '');
+  await hostLabeled.updateComplete;
+  expect(hostLabeled.shadowRoot!.querySelector('lr-table')!.getAttribute('aria-label')).to.equal('My dataset');
 });
 
-it('lets a ::part(add-button):hover / ::part(remove-button):hover override win without needing !important', async () => {
-  const el = (await fixture(html`<lr-eval-dataset></lr-eval-dataset>`)) as LyraEvalDataset;
-  await el.updateComplete;
-  const internalSheet = (el.shadowRoot!.adoptedStyleSheets ?? [])
-    .flatMap((sheet) => Array.from(sheet.cssRules))
-    .map((rule) => rule.cssText)
-    .find((text) => text.includes(':hover') && text.includes("add-button"));
-  expect(internalSheet).to.contain(':where(');
+it('applies a consumer ::part(add-button):hover override in the rendered cascade', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <style>
+        lr-eval-dataset.consumer-hover::part(add-button):hover { border-color: rgb(1, 2, 3); }
+      </style>
+      <lr-eval-dataset class="consumer-hover"></lr-eval-dataset>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-eval-dataset') as LyraEvalDataset;
+  const add = el.shadowRoot!.querySelector('[part="add-button"]') as HTMLButtonElement;
+  const rect = add.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(() => getComputedStyle(add).borderTopColor === 'rgb(1, 2, 3)');
+    expect(getComputedStyle(add).borderTopColor).to.equal('rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('normalizes duplicate example ids first-wins before the nested grid', async () => {
+  const el = await fixture<LyraEvalDataset>(html`
+    <lr-eval-dataset .examples=${[
+      { id: 'same', input: 'First example' },
+      { id: 'same', input: 'Later example' },
+    ]}></lr-eval-dataset>
+  `);
+  expect(gridRowCount(el)).to.equal(1);
+  const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & { rows: EvalExample[] };
+  expect(table.rows[0]!.input).to.equal('First example');
 });

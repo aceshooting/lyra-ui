@@ -1,18 +1,31 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './tool-param-form.js';
-import type { LyraToolParamForm, ToolParamFormSchema } from './tool-param-form.js';
-import { styles } from './tool-param-form.styles.js';
+import type { LyraToolParamForm, FlatToolParamSchema } from './tool-param-form.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
-it('provides hover feedback for native text and number controls', () => {
-  // Pseudo-class presence is the behavior under test; synthetic pointer events do not
-  // activate browser :hover state under Web Test Runner.
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/:where\(input\.control\):hover:where\(:not\(:disabled\)\)/);
+it('provides rendered hover feedback for native text and number controls', async () => {
+  const el = await fixture<LyraToolParamForm>(html`
+    <lr-tool-param-form
+      style="--lr-color-brand: rgb(1, 2, 3)"
+      .schema=${basicSchema}
+    ></lr-tool-param-form>
+  `);
+  const input = el.shadowRoot!.querySelector('input.control') as HTMLInputElement;
+  const rect = input.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(() => input.matches(':hover'));
+    expect(getComputedStyle(input).borderTopColor).to.equal('rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
+  }
 });
 
-const basicSchema: ToolParamFormSchema = {
+const basicSchema: FlatToolParamSchema = {
   type: 'object',
   properties: {
     city: { type: 'string', title: 'City', description: 'Where to look up the forecast.' },
@@ -85,7 +98,7 @@ it('renders one control per property, in schema key order, matched to its type',
   const daysInput = field(el, 'days').querySelector('input[type="number"]') as HTMLInputElement;
   expect((daysInput) != null).to.equal(true);
   expect(daysInput.step).to.equal('1');
-  expect(field(el, 'notify').querySelector('lr-checkbox')).to.exist;
+  expect(field(el, 'notify').querySelector('lr-select')).to.exist;
 });
 
 it('exposes the string and number/integer native inputs as [part="control"] for external theming', async () => {
@@ -120,15 +133,15 @@ it('marks a required field without applying HTML nonempty semantics to the inner
 });
 
 it('marks a required nested lr-select through its composed control contract', async () => {
-  const schema: ToolParamFormSchema = {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: { mode: { type: 'string', enum: ['fast', 'careful'] } },
     required: ['mode'],
   };
   const el = (await fixture(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`)) as LyraToolParamForm;
   const select = field(el, 'mode').querySelector('lr-select') as HTMLElement & { required: boolean };
-  expect(select.required).to.be.true;
-  expect(select.shadowRoot!.querySelector('[part="trigger"]')!.getAttribute('aria-required')).to.equal('true');
+  expect(select.required).to.be.false;
+  expect(select.getAttribute('aria-required')).to.equal('true');
 });
 
 it('falls back to schema default for a field missing from value, without mutating the value property', async () => {
@@ -182,11 +195,14 @@ it('emits lr-input on a number field edit, clearing to undefined on an empty inp
   expect(ev.detail.value.days).to.be.undefined;
 });
 
-it('emits lr-input on a boolean field toggle', async () => {
+it('emits lr-input on an explicit boolean selection', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
-  const checkbox = field(el, 'notify').querySelector('lr-checkbox') as HTMLElement & { checked: boolean };
+  const select = field(el, 'notify').querySelector('lr-select') as HTMLElement & { value: string };
 
-  setTimeout(() => (checkbox.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click());
+  setTimeout(() => {
+    select.value = 'true';
+    select.dispatchEvent(new CustomEvent('lr-change', { bubbles: true, composed: true }));
+  });
   const ev = await oneEvent(el, 'lr-input');
   expect(ev.detail.value.notify).to.be.true;
 });
@@ -274,7 +290,7 @@ it('retints only an invalid native control border through its component CSS prop
 });
 
 it('announces newly visible validation errors once through the shared assertive light-DOM sink', async () => {
-  const schema: ToolParamFormSchema = {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: { city: { type: 'string', title: 'City' } },
     required: ['city'],
@@ -319,7 +335,7 @@ it('reportValidity() reveals inline errors immediately and returns overall valid
 });
 
 it('focuses the first invalid nested or native field during direct and form validation', async () => {
-  const focusSchema: ToolParamFormSchema = {
+  const focusSchema: FlatToolParamSchema = {
     type: 'object',
     properties: {
       mode: { type: 'string', enum: ['fast', 'careful'] },
@@ -370,19 +386,19 @@ it('focuses the first invalid nested or native field during direct and form vali
 
   el.value = { mode: 'fast', city: 'Paris' };
   await el.updateComplete;
-  const nestedCheckbox = field(el, 'confirm').querySelector('lr-checkbox') as HTMLElement & {
+  const nestedBooleanSelect = field(el, 'confirm').querySelector('lr-select') as HTMLElement & {
     updateComplete: Promise<unknown>;
   };
-  await nestedCheckbox.updateComplete;
+  await nestedBooleanSelect.updateComplete;
   sentinel.focus();
   expect(el.reportValidity()).to.be.false;
   expect(document.activeElement?.localName).to.equal('lr-tool-param-form');
-  expect(el.shadowRoot!.activeElement?.localName).to.equal('lr-checkbox');
-  expect(nestedCheckbox.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base checkbox');
+  expect(el.shadowRoot!.activeElement?.localName).to.equal('lr-select');
+  expect(nestedBooleanSelect.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
 });
 
 it('treats a required boolean as property presence, so false and true are both valid values', async () => {
-  const requiredBoolSchema: ToolParamFormSchema = {
+  const requiredBoolSchema: FlatToolParamSchema = {
     type: 'object',
     properties: { confirm: { type: 'boolean' } },
     required: ['confirm'],
@@ -390,11 +406,12 @@ it('treats a required boolean as property presence, so false and true are both v
   const el = (await fixture(
     html`<lr-tool-param-form .schema=${requiredBoolSchema}></lr-tool-param-form>`,
   )) as LyraToolParamForm;
-  const checkbox = field(el, 'confirm').querySelector('lr-checkbox') as HTMLElement & { required: boolean };
+  const booleanSelect = field(el, 'confirm').querySelector('lr-select') as HTMLElement & { required: boolean };
   expect(
-    checkbox.required,
-    'JSON Schema required means the property must be present, not that a checkbox must be checked',
+    booleanSelect.required,
+    'the outer schema validator owns presence rather than imposing nested select nonempty semantics',
   ).to.be.false;
+  expect(booleanSelect.getAttribute('aria-required')).to.equal('true');
   expect(el.checkValidity()).to.be.false;
 
   el.value = { confirm: false };
@@ -413,7 +430,7 @@ it('treats a required boolean as property presence, so false and true are both v
 });
 
 it('accepts empty strings, zero, and false when their required properties are present', async () => {
-  const schema: ToolParamFormSchema = {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: {
       text: { type: 'string' },
@@ -438,7 +455,7 @@ it('accepts empty strings, zero, and false when their required properties are pr
 });
 
 it('validates every supported property type and string enum even when fields are optional', async () => {
-  const schema: ToolParamFormSchema = {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: {
       text: { type: 'string' },
@@ -476,7 +493,7 @@ it('validates every supported property type and string enum even when fields are
 });
 
 it('localizes validation messages via .strings, leaving English default output unchanged elsewhere', async () => {
-  const schema: ToolParamFormSchema = {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: {
       text: { type: 'string' },
@@ -508,7 +525,7 @@ it('localizes the unsupported-field-type and schema-shape messages via .strings,
   const weirdSchema = {
     type: 'object',
     properties: { nested: { type: 'object' } },
-  } as unknown as ToolParamFormSchema;
+  } as unknown as FlatToolParamSchema;
   const el = (await fixture(
     html`<lr-tool-param-form
       .schema=${weirdSchema}
@@ -521,7 +538,7 @@ it('localizes the unsupported-field-type and schema-shape messages via .strings,
     'Type de champ non pris en charge : "object".',
   );
 
-  const flatSchema = { type: 'object', properties: [] } as unknown as ToolParamFormSchema;
+  const flatSchema = { type: 'object', properties: [] } as unknown as FlatToolParamSchema;
   const flatEl = (await fixture(
     html`<lr-tool-param-form
       .schema=${flatSchema}
@@ -535,7 +552,7 @@ it('falls back to the empty schema ({ type: "object", properties: {} }) when sch
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   expect(el.shadowRoot!.querySelectorAll('[part="field"]').length).to.equal(4);
 
-  el.schema = null as unknown as ToolParamFormSchema;
+  el.schema = null as unknown as FlatToolParamSchema;
   await el.updateComplete;
   expect(el.schema).to.deep.equal({ type: 'object', properties: {} });
   expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
@@ -554,7 +571,7 @@ it('falls back to {} when value is set to null', async () => {
 });
 
 it('flags a non-numeric value on an integer field as a type mismatch, not merely a step mismatch', async () => {
-  const schema: ToolParamFormSchema = {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: { count: { type: 'integer' } },
   };
@@ -567,7 +584,7 @@ it('flags a non-numeric value on an integer field as a type mismatch, not merely
 });
 
 it('surfaces a form-level required error for a key listed in required but absent from properties (a dangling reference)', async () => {
-  const schema: ToolParamFormSchema = {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: { city: { type: 'string' } },
     required: ['city', 'ghost'],
@@ -584,7 +601,7 @@ it('surfaces a form-level required error for a key listed in required but absent
 });
 
 it('renders and focuses a localized error for an unmet required key that has no matching property', async () => {
-  const schema: ToolParamFormSchema = {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: {},
     required: ['ghost'],
@@ -627,19 +644,20 @@ it('fails closed when a value key shadows toJSON such that JSON.stringify would 
   expect(el.checkValidity()).to.be.false;
 });
 
-it('ignores a checkbox change event while effectively disabled', async () => {
-  const schema: ToolParamFormSchema = {
+it('ignores a boolean-select change event while effectively disabled', async () => {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: { confirm: { type: 'boolean' } },
   };
   const el = (await fixture(
     html`<lr-tool-param-form disabled .schema=${schema}></lr-tool-param-form>`,
   )) as LyraToolParamForm;
-  const checkbox = field(el, 'confirm').querySelector('lr-checkbox') as HTMLElement;
+  const select = field(el, 'confirm').querySelector('lr-select') as HTMLElement & { value: string };
   let inputFired = false;
   el.addEventListener('lr-input', () => (inputFired = true));
 
-  checkbox.dispatchEvent(new CustomEvent('lr-change', { detail: { checked: true }, bubbles: true, composed: true }));
+  select.value = 'true';
+  select.dispatchEvent(new CustomEvent('lr-change', { bubbles: true, composed: true }));
   await el.updateComplete;
 
   expect(inputFired, 'setFieldValue must no-op while effectively disabled').to.be.false;
@@ -647,7 +665,7 @@ it('ignores a checkbox change event while effectively disabled', async () => {
 });
 
 it("associates a touched select's error through the select's own form-control chrome", async () => {
-  const schema: ToolParamFormSchema = {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: { mode: { type: 'string', enum: ['fast', 'safe'], title: 'Mode' } },
   };
@@ -677,7 +695,7 @@ it('emits lr-input on a select field change, driven by the selected option value
 });
 
 it('contains nested control input/change aliases and emits only the form-level lr-input contract', async () => {
-  const schema: ToolParamFormSchema = {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: {
       mode: { type: 'string', enum: ['fast', 'safe'] },
@@ -706,8 +724,9 @@ it('contains nested control input/change aliases and emits only the form-level l
     new CustomEvent('lr-option-change', { bubbles: true, composed: true }),
   );
 
-  const checkbox = field(el, 'confirm').querySelector('lr-checkbox') as HTMLElement;
-  (checkbox.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
+  const booleanSelect = field(el, 'confirm').querySelector('lr-select') as HTMLElement & { value: string };
+  booleanSelect.value = 'true';
+  booleanSelect.dispatchEvent(new CustomEvent('lr-change', { bubbles: true, composed: true }));
   await el.updateComplete;
 
   expect(leaked).to.deep.equal({
@@ -723,7 +742,7 @@ it('contains nested control input/change aliases and emits only the form-level l
 });
 
 it('rejects non-finite numbers and schema defaults that do not match their declared type', async () => {
-  const schema: ToolParamFormSchema = {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: {
       amount: { type: 'number' },
@@ -743,7 +762,7 @@ it('rejects non-finite numbers and schema defaults that do not match their decla
 });
 
 it('supports primitive const so a must-confirm boolean is distinct from required presence', async () => {
-  const schema: ToolParamFormSchema = {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: { confirm: { type: 'boolean', const: true, title: 'Confirm' } },
     required: ['confirm'],
@@ -756,7 +775,9 @@ it('supports primitive const so a must-confirm boolean is distinct from required
   expect(el.internals.validity.customError).to.be.true;
   expect(el.checkValidity()).to.be.false;
   await el.updateComplete;
-  expect((field(el, 'confirm').querySelector('lr-checkbox') as HTMLElement & { required: boolean }).required).to.be.true;
+  const booleanSelect = field(el, 'confirm').querySelector('lr-select') as HTMLElement & { required: boolean };
+  expect(booleanSelect.required).to.be.false;
+  expect(booleanSelect.getAttribute('aria-required')).to.equal('true');
 
   el.value = { confirm: true };
   expect(el.errors).to.deep.equal({});
@@ -821,14 +842,69 @@ it('fails closed for malformed root schemas without retaining form data', async 
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-tool-param-form') as LyraToolParamForm;
 
-  el.schema = { type: 'array', properties: {} } as unknown as ToolParamFormSchema;
+  el.schema = { type: 'array', properties: {} } as unknown as FlatToolParamSchema;
   expect(el.formError).to.equal('Schema must describe an object.');
   expect(el.internals.validity.customError).to.be.true;
   expect(new FormData(form).has('args')).to.be.false;
 
-  el.schema = { type: 'object', properties: null } as unknown as ToolParamFormSchema;
+  el.schema = { type: 'object', properties: null } as unknown as FlatToolParamSchema;
   expect(el.formError).to.equal('Schema properties must be a flat object.');
   expect(new FormData(form).has('args')).to.be.false;
+});
+
+it('treats a null property definition as a schema error without throwing or misreporting the value', async () => {
+  const form = (await fixture(html`
+    <form><lr-tool-param-form name="args"></lr-tool-param-form></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-tool-param-form') as LyraToolParamForm;
+  const malformed = {
+    type: 'object',
+    properties: { broken: null },
+  } as unknown as FlatToolParamSchema;
+
+  expect(() => {
+    el.schema = malformed;
+  }).not.to.throw();
+  expect(el.formError).to.equal('Schema properties must be a flat object.');
+  expect(el.formError).to.not.equal('Value must be JSON-serializable.');
+  expect(el.checkValidity()).to.be.false;
+  expect(new FormData(form).has('args')).to.be.false;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="field"]')).to.have.length(0);
+  expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
+});
+
+it('bounds field and enum projections and fails oversized schemas closed with a localized message', async () => {
+  const properties = Object.fromEntries(
+    Array.from({ length: 101 }, (_, index) => [
+      `field-${index}`,
+      {
+        type: 'string',
+        enum: index === 0 ? Array.from({ length: 501 }, (__, option) => `option-${option}`) : undefined,
+      },
+    ]),
+  );
+  const schema = { type: 'object', properties } as FlatToolParamSchema;
+  const form = (await fixture(html`
+    <form>
+      <lr-tool-param-form
+        name="args"
+        .schema=${schema}
+        .strings=${{
+          toolParamSchemaLimit: 'At most {fields} fields and {options} choices are supported.',
+        }}
+      ></lr-tool-param-form>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-tool-param-form') as LyraToolParamForm;
+
+  expect(el.formError).to.equal('At most 100 fields and 500 choices are supported.');
+  expect(el.checkValidity()).to.be.false;
+  expect(new FormData(form).has('args')).to.be.false;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="field"]')).to.have.length(100);
+  expect(field(el, 'field-0').querySelectorAll('lr-option')).to.have.length(500);
+  expect(field(el, 'field-100') === null).to.be.true;
 });
 
 it('contains enumerable getter failures without throwing from value assignment or rendering', async () => {
@@ -853,7 +929,7 @@ it('renders a visible fallback note for an unsupported nested object property in
   const weirdSchema = {
     type: 'object',
     properties: { nested: { type: 'object' } },
-  } as unknown as ToolParamFormSchema;
+  } as unknown as FlatToolParamSchema;
   const el = (await fixture(html`<lr-tool-param-form .schema=${weirdSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   expect(field(el, 'nested').querySelector('.unsupported')).to.exist;
   expect(el.errors.nested).to.equal('Unsupported field type "object".');
@@ -865,7 +941,7 @@ it('gives the unsupported-type fallback an id matching its <label for>, instead 
   const weirdSchema = {
     type: 'object',
     properties: { nested: { type: 'object' } },
-  } as unknown as ToolParamFormSchema;
+  } as unknown as FlatToolParamSchema;
   const el = (await fixture(html`<lr-tool-param-form .schema=${weirdSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   const label = field(el, 'nested').querySelector('label') as HTMLLabelElement;
   const unsupported = field(el, 'nested').querySelector('.unsupported') as HTMLElement;
@@ -890,8 +966,8 @@ it('flags a fractional value on an integer field as invalid, independent of requ
   expect(el.reportValidity()).to.be.false;
 });
 
-it("associates a touched checkbox's error through aria-describedby", async () => {
-  const requiredBoolSchema: ToolParamFormSchema = {
+it("associates a touched boolean select's error through its composed form-control chrome", async () => {
+  const requiredBoolSchema: FlatToolParamSchema = {
     type: 'object',
     properties: { confirm: { type: 'boolean', title: 'Confirm' } },
     required: ['confirm'],
@@ -899,23 +975,13 @@ it("associates a touched checkbox's error through aria-describedby", async () =>
   const el = (await fixture(
     html`<lr-tool-param-form .schema=${requiredBoolSchema}></lr-tool-param-form>`,
   )) as LyraToolParamForm;
-  const checkbox = field(el, 'confirm').querySelector('lr-checkbox') as HTMLElement;
-  expect(checkbox.hasAttribute('aria-describedby')).to.be.false;
+  const select = field(el, 'confirm').querySelector('lr-select') as HTMLElement & { errorText: string };
+  expect(select.errorText).to.equal('');
 
   field(el, 'confirm').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(checkbox.getAttribute('aria-describedby')).to.include('-err');
-  const base = checkbox.shadowRoot!.querySelector('[part~="base"]') as HTMLElement & {
-    ariaDescribedByElements?: Element[];
-  };
-  if ('ariaDescribedByElements' in base) {
-    expect(base.ariaDescribedByElements?.map((element) => element.id)).to.include(
-      checkbox.getAttribute('aria-describedby'),
-    );
-    expect(base.getAttribute('aria-describedby')).to.equal('');
-  } else {
-    expect(base.getAttribute('aria-describedby')).to.include('-err');
-  }
+  expect(select.errorText).to.equal('This field is required.');
+  expect(select.shadowRoot!.querySelector('[part="trigger"]')!.getAttribute('aria-describedby')).to.include('select-error');
 });
 
 it('participates in a form: submits the resolved value as JSON under name', async () => {
@@ -1087,7 +1153,7 @@ it('temporarily disables every field through a fieldset without overwriting auth
   expect((field(el, 'units').querySelector('lr-select') as HTMLElement & { disabled: boolean }).disabled).to.be.true;
   expect((field(el, 'days').querySelector('input') as HTMLInputElement).disabled).to.be.true;
   expect(
-    (field(el, 'notify').querySelector('lr-checkbox') as HTMLElement & { disabled: boolean }).disabled,
+    (field(el, 'notify').querySelector('lr-select') as HTMLElement & { disabled: boolean }).disabled,
   ).to.be.true;
   expect(new FormData(form).get('args')).to.equal(null);
 
@@ -1099,7 +1165,7 @@ it('temporarily disables every field through a fieldset without overwriting auth
   expect((field(el, 'units').querySelector('lr-select') as HTMLElement & { disabled: boolean }).disabled).to.be.false;
   expect((field(el, 'days').querySelector('input') as HTMLInputElement).disabled).to.be.false;
   expect(
-    (field(el, 'notify').querySelector('lr-checkbox') as HTMLElement & { disabled: boolean }).disabled,
+    (field(el, 'notify').querySelector('lr-select') as HTMLElement & { disabled: boolean }).disabled,
   ).to.be.false;
   expect(new FormData(form).has('args')).to.be.true;
 
@@ -1153,7 +1219,7 @@ it('renders numeric controls with textfield chrome and no native spin buttons', 
 });
 
 it('associates enum and boolean descriptions/errors without imposing must-check semantics', async () => {
-  const schema: ToolParamFormSchema = {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: {
       mode: { type: 'string', enum: ['fast', 'safe'], description: 'Execution mode' },
@@ -1165,15 +1231,16 @@ it('associates enum and boolean descriptions/errors without imposing must-check 
   el.reportValidity();
   await el.updateComplete;
   const select = field(el, 'mode').querySelector('lr-select')!;
-  const checkbox = field(el, 'confirm').querySelector('lr-checkbox')!;
+  const booleanSelect = field(el, 'confirm').querySelector('lr-select')!;
   expect(select.shadowRoot!.querySelector('[part="trigger"]')!.getAttribute('aria-describedby')).to.equal('select-error select-hint');
-  expect(checkbox.getAttribute('aria-describedby')).to.include('-desc');
-  expect((checkbox as HTMLElement & { required: boolean }).required).to.be.false;
+  expect(booleanSelect.shadowRoot!.querySelector('[part="trigger"]')!.getAttribute('aria-describedby')).to.equal('select-error select-hint');
+  expect((booleanSelect as HTMLElement & { required: boolean }).required).to.be.false;
+  expect(booleanSelect.getAttribute('aria-required')).to.equal('true');
 });
 
 it('wraps long titles and descriptions without widening a 320px allocation', async () => {
   const longWord = 'customer_support_escalation_identifier_'.repeat(8);
-  const schema: ToolParamFormSchema = {
+  const schema: FlatToolParamSchema = {
     type: 'object',
     properties: {
       plain: { type: 'string', title: longWord, description: longWord },
@@ -1201,12 +1268,12 @@ it('forwards schema-defined native editing hints to generated text inputs', asyn
         autocomplete: 'email',
         spellcheck: false,
         autocapitalize: 'off',
-        autocorrect: 'off',
-        inputmode: 'email',
-        enterkeyhint: 'send',
+        autoCorrect: 'off',
+        inputMode: 'email',
+        enterKeyHint: 'send',
       },
     },
-  } as ToolParamFormSchema;
+  } as FlatToolParamSchema;
   const el = (await fixture(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`)) as LyraToolParamForm;
   const input = field(el, 'email').querySelector('input')!;
   // Gecko normalizes the `autocomplete` IDL getter to `''` on a detached-form text input even
@@ -1218,7 +1285,7 @@ it('forwards schema-defined native editing hints to generated text inputs', asyn
   expect(input.getAttribute('enterkeyhint')).to.equal('send');
 });
 
-it('suppresses raw composed select/checkbox changes and emits only aggregate lr-input', async () => {
+it('suppresses raw composed enum/boolean select changes and emits only aggregate lr-input', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   let rawChanges = 0;
   let aggregate = 0;
@@ -1228,9 +1295,9 @@ it('suppresses raw composed select/checkbox changes and emits only aggregate lr-
   field(el, 'units').querySelector('lr-select')!.dispatchEvent(
     new Event('change', { bubbles: true, composed: true }),
   );
-  field(el, 'notify').querySelector('lr-checkbox')!.dispatchEvent(
-    new CustomEvent('lr-change', { detail: { checked: true }, bubbles: true, composed: true }),
-  );
+  const booleanSelect = field(el, 'notify').querySelector('lr-select') as HTMLElement & { value: string };
+  booleanSelect.value = 'true';
+  booleanSelect.dispatchEvent(new CustomEvent('lr-change', { bubbles: true, composed: true }));
   expect(rawChanges).to.equal(0);
   expect(aggregate).to.equal(2);
 });
@@ -1260,7 +1327,7 @@ describe('validity custom states', () => {
 
   it('publishes required/optional and valid/invalid, kept in sync with the schema', async function () {
     if (!supportsCustomStates) this.skip();
-    const optionalSchema: ToolParamFormSchema = { type: 'object', properties: { city: { type: 'string' } } };
+    const optionalSchema: FlatToolParamSchema = { type: 'object', properties: { city: { type: 'string' } } };
     const el = (await fixture(
       html`<lr-tool-param-form .schema=${optionalSchema}></lr-tool-param-form>`,
     )) as LyraToolParamForm;
@@ -1415,7 +1482,7 @@ describe('setCustomValidity()', () => {
     }
   })();
 
-  const optionalSchema: ToolParamFormSchema = {
+  const optionalSchema: FlatToolParamSchema = {
     type: 'object',
     properties: { city: { type: 'string' } },
   };
@@ -1507,7 +1574,7 @@ describe('setCustomValidity()', () => {
     // This control raises `customError` intrinsically too (a malformed schema, an unsupported field
     // type). A consumer's `setCustomValidity('')` must clear only the consumer's own layer.
     const el = (await fixture(
-      html`<lr-tool-param-form .schema=${{ type: 'array' } as unknown as ToolParamFormSchema}></lr-tool-param-form>`,
+      html`<lr-tool-param-form .schema=${{ type: 'array' } as unknown as FlatToolParamSchema}></lr-tool-param-form>`,
     )) as LyraToolParamForm;
     await el.updateComplete;
     expect(el.validity.customError, 'the malformed schema is itself a customError').to.be.true;

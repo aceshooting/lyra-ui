@@ -1,29 +1,30 @@
-import { html, svg, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteRange } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import { styles } from './embedding-explorer.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { html, svg, type PropertyValues, type TemplateResult } from "lit";
+import { property, state } from "lit/decorators.js";
+import { hostAriaLabel } from "../../../internal/a11y.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { finiteRange } from "../../../internal/numbers.js";
+import { getNumberFormat } from "../../../internal/intl-cache.js";
+import { sanitizeCssLength } from "../../../internal/safe-css.js";
+import { specialistTokens } from "../../../internal/specialist-tokens.styles.js";
+import { styles } from "./embedding-explorer.styles.js";
+import { activeElementIn } from "../../../internal/active-element.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_embeddingExplorerEmpty, LYRA_DEFAULT_embeddingExplorerLabel, LYRA_DEFAULT_embeddingExplorerPoint } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 const WIDTH = 640;
 const HEIGHT = 360;
 const PAD = 24;
 const PALETTE = [
-  'var(--lr-chart-color-1)',
-  'var(--lr-chart-color-2)',
-  'var(--lr-chart-color-3)',
-  'var(--lr-chart-color-4)',
-  'var(--lr-chart-color-5)',
-  'var(--lr-chart-color-6)',
-  'var(--lr-chart-color-7)',
-  'var(--lr-chart-color-8)',
+  "var(--lr-color-chart-1)",
+  "var(--lr-color-chart-2)",
+  "var(--lr-color-chart-3)",
+  "var(--lr-color-chart-4)",
+  "var(--lr-color-chart-5)",
+  "var(--lr-color-chart-6)",
+  "var(--lr-color-chart-7)",
+  "var(--lr-color-chart-8)",
 ];
 
 /** A projected embedding point. Coordinates must already be projected by the host. */
@@ -37,7 +38,7 @@ export interface EmbeddingPoint {
 }
 
 export interface LyraEmbeddingExplorerEventMap {
-  'lr-point-select': CustomEvent<{ point: EmbeddingPoint }>;
+  "lr-point-select": CustomEvent<{ point: EmbeddingPoint }>;
 }
 
 /**
@@ -58,6 +59,15 @@ export interface LyraEmbeddingExplorerEventMap {
  *   a `block-size` is dropped, leaving the `viewBox`-derived aspect-ratio size. A consumer's own
  *   `::part(plot) { block-size: ... }` rule still overrides it, and the narrow-allocation
  *   `min-block-size` floor still raises it.
+ * @cssprop [--lr-color-chart-1=var(--lr-theme-color-chart-1,#0e006e)] - First cluster color.
+ * @cssprop [--lr-color-chart-2=var(--lr-theme-color-chart-2,#4d011a)] - Second cluster color.
+ * @cssprop [--lr-color-chart-3=var(--lr-theme-color-chart-3,#862002)] - Third cluster color.
+ * @cssprop [--lr-color-chart-4=var(--lr-theme-color-chart-4,#503983)] - Fourth cluster color.
+ * @cssprop [--lr-color-chart-5=var(--lr-theme-color-chart-5,#315fdd)] - Fifth cluster color.
+ * @cssprop [--lr-color-chart-6=var(--lr-theme-color-chart-6,#935e7c)] - Sixth cluster color.
+ * @cssprop [--lr-color-chart-7=var(--lr-theme-color-chart-7,#de6906)] - Seventh cluster color.
+ * @cssprop [--lr-color-chart-8=var(--lr-theme-color-chart-8,#8f81d3)] - Eighth cluster color;
+ *   later clusters wrap through the same ordered palette.
  * @status stable
  * @since 6.2.0
  */
@@ -72,46 +82,55 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, specialistTokens, styles];
 
   /** Projected points in host order. Non-finite coordinates are omitted. */
   @property({ attribute: false }) points: EmbeddingPoint[] = [];
   /** The selected point id. Controlled by the host. */
-  @property({ attribute: 'selected-id' }) selectedId = '';
+  @property({ attribute: "selected-id" }) selectedId = "";
   /**
    * The plot's block size, as any CSS length the browser accepts for `block-size` — including
    * `auto`, which restores the aspect-ratio-preserved size derived from the `viewBox`. It is
    * applied through `--lr-embedding-explorer-height`; an unparseable value leaves that property
    * unset, so the plot falls back to `auto` rather than collapsing.
    */
-  @property() height = '360px';
-  /** Accessible name for the plot. */
-  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  @property() height = "360px";
+  /** JS-only accessible name for the plot while no host `aria-label` is authored. A host label
+   *  independently names the explorer and is not cloned onto the plot. */
+  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
   @state() private activeIndex = 0;
   private refocusAfterUpdate = false;
 
   private get validPoints(): EmbeddingPoint[] {
-    return this.points.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+    return this.points.filter(
+      (point) => Number.isFinite(point.x) && Number.isFinite(point.y)
+    );
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (!changed.has('points')) return;
+    if (!changed.has("points")) return;
     const active = activeElementIn(this.shadowRoot) ?? null;
-    const focusedId = active?.getAttribute('data-id');
+    const focusedId = active?.getAttribute("data-id");
     const points = this.validPoints;
-    const matchingIndex = focusedId ? points.findIndex((point) => point.id === focusedId) : -1;
+    const matchingIndex = focusedId
+      ? points.findIndex((point) => point.id === focusedId)
+      : -1;
     this.activeIndex =
-      matchingIndex >= 0 ? matchingIndex : Math.min(this.activeIndex, Math.max(0, points.length - 1));
-    this.refocusAfterUpdate = active?.getAttribute('part') === 'point';
+      matchingIndex >= 0
+        ? matchingIndex
+        : Math.min(this.activeIndex, Math.max(0, points.length - 1));
+    this.refocusAfterUpdate = active?.getAttribute("part") === "point";
   }
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    if (changed.has('height')) this.applyHeight();
+    if (changed.has("height")) this.applyHeight();
     if (!this.refocusAfterUpdate) return;
     this.refocusAfterUpdate = false;
-    this.renderRoot.querySelector<SVGGElement>(`[data-index="${this.activeIndex}"]`)?.focus();
+    this.renderRoot
+      .querySelector<SVGGElement>(`[data-index="${this.activeIndex}"]`)
+      ?.focus();
   }
 
   /**
@@ -121,30 +140,38 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
    * inline `block-size` also keeps the value visible to a consumer retheming the property.
    */
   private applyHeight(): void {
-    const height = sanitizeCssLength(this.height, 'height');
-    if (height) this.style.setProperty('--lr-embedding-explorer-height', height);
-    else this.style.removeProperty('--lr-embedding-explorer-height');
+    const height = sanitizeCssLength(this.height, "height");
+    if (height)
+      this.style.setProperty("--lr-embedding-explorer-height", height);
+    else this.style.removeProperty("--lr-embedding-explorer-height");
   }
 
   private position(
     point: EmbeddingPoint,
-    bounds: { minX: number; maxX: number; minY: number; maxY: number },
+    bounds: { minX: number; maxX: number; minY: number; maxY: number }
   ): { x: number; y: number } {
     const { minX, maxX, minY, maxY } = bounds;
-    const x = PAD + finiteRange((point.x - minX) / (maxX - minX || 1), 0.5, 0, 1) * (WIDTH - PAD * 2);
-    const y = HEIGHT - PAD - finiteRange((point.y - minY) / (maxY - minY || 1), 0.5, 0, 1) * (HEIGHT - PAD * 2);
+    const x =
+      PAD +
+      finiteRange((point.x - minX) / (maxX - minX || 1), 0.5, 0, 1) *
+        (WIDTH - PAD * 2);
+    const y =
+      HEIGHT -
+      PAD -
+      finiteRange((point.y - minY) / (maxY - minY || 1), 0.5, 0, 1) *
+        (HEIGHT - PAD * 2);
     return { x, y };
   }
 
   private announceLabel(point: EmbeddingPoint, index: number): string {
-    return this.localize('embeddingExplorerPoint', undefined, {
+    return this.localize("embeddingExplorerPoint", undefined, {
       label: point.label || point.id,
       index: getNumberFormat(this.effectiveLocale).format(index + 1),
     });
   }
 
   private select(point: EmbeddingPoint): void {
-    this.emit('lr-point-select', { point });
+    this.emit("lr-point-select", { point });
   }
 
   private activatePoint(point: EmbeddingPoint, index: number): void {
@@ -152,26 +179,34 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     this.select(point);
   }
 
-  private onPointKeyDown(event: KeyboardEvent, point: EmbeddingPoint, index: number): void {
+  private onPointKeyDown(
+    event: KeyboardEvent,
+    point: EmbeddingPoint,
+    index: number
+  ): void {
     const points = this.validPoints;
-    if (event.key === 'Enter' || event.key === ' ') {
+    if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       this.select(point);
       return;
     }
-    const rtl = this.effectiveDirection === 'rtl';
-    const forward = rtl ? 'ArrowLeft' : 'ArrowRight';
-    const backward = rtl ? 'ArrowRight' : 'ArrowLeft';
+    const rtl = this.effectiveDirection === "rtl";
+    const forward = rtl ? "ArrowLeft" : "ArrowRight";
+    const backward = rtl ? "ArrowRight" : "ArrowLeft";
     let next = index;
-    if (event.key === forward || event.key === 'ArrowDown') next = Math.min(points.length - 1, index + 1);
-    else if (event.key === backward || event.key === 'ArrowUp') next = Math.max(0, index - 1);
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = points.length - 1;
+    if (event.key === forward || event.key === "ArrowDown")
+      next = Math.min(points.length - 1, index + 1);
+    else if (event.key === backward || event.key === "ArrowUp")
+      next = Math.max(0, index - 1);
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = points.length - 1;
     else return;
     event.preventDefault();
     this.activeIndex = next;
     void this.updateComplete.then(() => {
-      this.renderRoot.querySelector<SVGCircleElement>(`[data-index="${next}"]`)?.focus();
+      this.renderRoot
+        .querySelector<SVGCircleElement>(`[data-index="${next}"]`)
+        ?.focus();
     });
   }
 
@@ -179,7 +214,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     point: EmbeddingPoint,
     index: number,
     bounds: { minX: number; maxX: number; minY: number; maxY: number },
-    clusterIndices: Map<string, number>,
+    clusterIndices: Map<string, number>
   ): TemplateResult {
     const { x, y } = this.position(point, bounds);
     const label = this.announceLabel(point, index);
@@ -188,17 +223,18 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       part="point"
       data-index=${index}
       data-id=${point.id}
-      data-selected=${selected ? 'true' : 'false'}
+      data-selected=${selected ? "true" : "false"}
       transform="translate(${x} ${y})"
-      tabindex=${index === this.activeIndex ? '0' : '-1'}
+      tabindex=${index === this.activeIndex ? "0" : "-1"}
       role="option"
-      aria-selected=${selected ? 'true' : 'false'}
+      aria-selected=${selected ? "true" : "false"}
       aria-label=${label}
       @click=${() => this.activatePoint(point, index)}
       @focus=${() => {
         if (this.activeIndex !== index) this.activeIndex = index;
       }}
-      @keydown=${(event: KeyboardEvent) => this.onPointKeyDown(event, point, index)}
+      @keydown=${(event: KeyboardEvent) =>
+        this.onPointKeyDown(event, point, index)}
     >
       <line
         class="point-hit"
@@ -210,15 +246,27 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
         focusable="false"
         vector-effect="non-scaling-stroke"
       ></line>
-      <circle class="point-marker" r="6" fill=${PALETTE[(clusterIndices.get(String(point.cluster ?? '')) ?? 0) % PALETTE.length]}></circle>
+      <circle class="point-marker" r="6" fill=${
+        PALETTE[
+          (clusterIndices.get(String(point.cluster ?? "")) ?? 0) %
+            PALETTE.length
+        ]
+      }></circle>
       <title>${label}</title>
     </g>`;
   }
 
   override render(): TemplateResult {
     const points = this.validPoints;
-    const label = this.accessibleLabel || this.localize('embeddingExplorerLabel');
-    if (points.length === 0) return html`<div part="base" role="region" aria-label=${label}><p part="empty">${this.localize('embeddingExplorerEmpty')}</p></div>`;
+    const hostLabel = hostAriaLabel(this);
+    const label =
+      hostLabel === null
+        ? this.accessibleLabel ?? this.localize("embeddingExplorerLabel")
+        : this.localize("embeddingExplorerLabel");
+    if (points.length === 0)
+      return html`<div part="base" role="region" aria-label=${label}>
+        <p part="empty">${this.localize("embeddingExplorerEmpty")}</p>
+      </div>`;
     const bounds = points.reduce(
       (result, point) => ({
         minX: Math.min(result.minX, point.x),
@@ -226,13 +274,24 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
         minY: Math.min(result.minY, point.y),
         maxY: Math.max(result.maxY, point.y),
       }),
-      { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity },
+      { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
     );
-    const clusters = [...new Set(points.map((point) => String(point.cluster ?? '')))].sort();
-    const clusterIndices = new Map(clusters.map((cluster, index) => [cluster, index]));
-    return html`<div part="base" role="region" aria-label=${label}>
-      <svg part="plot" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="listbox" aria-label=${label}>
-        ${points.map((point, index) => this.renderPoint(point, index, bounds, clusterIndices))}
+    const clusters = [
+      ...new Set(points.map((point) => String(point.cluster ?? ""))),
+    ].sort();
+    const clusterIndices = new Map(
+      clusters.map((cluster, index) => [cluster, index])
+    );
+    return html`<div part="base">
+      <svg
+        part="plot"
+        viewBox="0 0 ${WIDTH} ${HEIGHT}"
+        role="listbox"
+        aria-label=${label}
+      >
+        ${points.map((point, index) =>
+          this.renderPoint(point, index, bounds, clusterIndices)
+        )}
       </svg>
     </div>`;
   }
@@ -240,6 +299,6 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-embedding-explorer': LyraEmbeddingExplorer;
+    "lr-embedding-explorer": LyraEmbeddingExplorer;
   }
 }

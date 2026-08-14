@@ -2,9 +2,9 @@ import { fixture, expect, html, oneEvent } from "@open-wc/testing";
 import "./responsive-panel.js";
 import type {
   LyraResponsivePanel,
-  ResponsivePanelModeChangeDetail,
+  LyraResponsivePanelModeChangeDetail,
 } from "./responsive-panel.js";
-import { resolveEffectiveMode } from "./responsive-panel.js";
+import { resolveResponsivePanelEffectiveMode } from "./responsive-panel.js";
 
 it("pads an open bottom sheet with the --lr-safe-area-bottom token, not a hardcoded value", async () => {
   // Reads the real rendered/computed padding instead of substring-matching the exported
@@ -90,21 +90,26 @@ function asAny(el: LyraResponsivePanel): any {
   return el;
 }
 
-describe("resolveEffectiveMode", () => {
+function applyAllocation(el: LyraResponsivePanel, inlineSize: number): void {
+  el.style.inlineSize = `${inlineSize}px`;
+  asAny(el).applyMeasuredInlineSize(inlineSize);
+}
+
+describe("resolveResponsivePanelEffectiveMode", () => {
   it("returns the forced mode regardless of breakpoint when mode is inline or overlay", () => {
-    expect(resolveEffectiveMode("inline", true)).to.equal("inline");
-    expect(resolveEffectiveMode("inline", false)).to.equal("inline");
-    expect(resolveEffectiveMode("overlay", true)).to.equal("overlay");
-    expect(resolveEffectiveMode("overlay", false)).to.equal("overlay");
+    expect(resolveResponsivePanelEffectiveMode("inline", true)).to.equal("inline");
+    expect(resolveResponsivePanelEffectiveMode("inline", false)).to.equal("inline");
+    expect(resolveResponsivePanelEffectiveMode("overlay", true)).to.equal("overlay");
+    expect(resolveResponsivePanelEffectiveMode("overlay", false)).to.equal("overlay");
   });
 
   it("tracks the breakpoint when mode is auto", () => {
-    expect(resolveEffectiveMode("auto", true)).to.equal("overlay");
-    expect(resolveEffectiveMode("auto", false)).to.equal("inline");
+    expect(resolveResponsivePanelEffectiveMode("auto", true)).to.equal("overlay");
+    expect(resolveResponsivePanelEffectiveMode("auto", false)).to.equal("inline");
   });
 });
 
-it('defaults to mode="auto", variant="fullscreen", closed, mobile-breakpoint="768px"', async () => {
+it('defaults to mode="auto", variant="fullscreen", closed, overlay-breakpoint="768px"', async () => {
   const el = (await fixture(
     html`<lr-responsive-panel>body</lr-responsive-panel>`
   )) as LyraResponsivePanel;
@@ -112,7 +117,8 @@ it('defaults to mode="auto", variant="fullscreen", closed, mobile-breakpoint="76
   expect(el.getAttribute("mode")).to.equal("auto");
   expect(el.variant).to.equal("fullscreen");
   expect(el.open).to.be.false;
-  expect(el.mobileBreakpoint).to.equal("768px");
+  expect(el.overlayBreakpoint).to.equal("768px");
+  expect(el.effectiveMode).to.equal("inline");
 });
 
 it('resolves to inline in mode="auto" on a viewport wider than the breakpoint (the default jsdom/browser test width)', async () => {
@@ -160,7 +166,7 @@ it("keeps an explicit empty host aria-label ahead of the fallback", async () => 
 
 it("forces the inline presentation even at a breakpoint that would otherwise resolve to overlay", async () => {
   const el = (await fixture(
-    html`<lr-responsive-panel mode="inline" mobile-breakpoint="99999px" open
+    html`<lr-responsive-panel mode="inline" overlay-breakpoint="99999px" open
       >body</lr-responsive-panel
     >`
   )) as LyraResponsivePanel;
@@ -169,122 +175,49 @@ it("forces the inline presentation even at a breakpoint that would otherwise res
   expect((el.shadowRoot!.querySelector('[part="backdrop"]')) == null).to.be.true;
 });
 
-it("uses a real matchMedia query against mobile-breakpoint: an absurdly large breakpoint resolves auto mode to overlay", async () => {
-  const el = (await fixture(
-    html`<lr-responsive-panel mobile-breakpoint="99999px" open
-      >body</lr-responsive-panel
-    >`
-  )) as LyraResponsivePanel;
-  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
-  expect(panel.getAttribute("role")).to.equal("dialog");
-});
-
-it("uses a real matchMedia query against mobile-breakpoint: an absurdly small breakpoint resolves auto mode to inline", async () => {
-  const el = (await fixture(
-    html`<lr-responsive-panel mobile-breakpoint="1px" open
-      >body</lr-responsive-panel
-    >`
-  )) as LyraResponsivePanel;
-  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
-  expect(panel.hasAttribute("role")).to.be.false;
-});
-
-it('re-evaluates against the new mobile-breakpoint when it changes at runtime while connected in mode="auto"', async () => {
-  const el = (await fixture(
-    html`<lr-responsive-panel mobile-breakpoint="1px" open
-      >body</lr-responsive-panel
-    >`
-  )) as LyraResponsivePanel;
+it("resolves auto mode from the component allocation rather than the viewport", async () => {
+  const el = (await fixture(html`
+    <lr-responsive-panel overlay-breakpoint="600px" open>body</lr-responsive-panel>
+  `)) as LyraResponsivePanel;
+  applyAllocation(el, 500);
   await el.updateComplete;
-  let panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
-  expect(
-    panel.hasAttribute("role"),
-    "starts inline: viewport is wider than 1px"
-  ).to.be.false;
+  expect(el.effectiveMode).to.equal("overlay");
+  expect((el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement).getAttribute("role")).to.equal(
+    "dialog"
+  );
 
-  // Flips the real matchMedia result for this instance (the test viewport is
-  // never actually below 99999px, so this only proves anything if the
-  // component re-queries matchMedia against the new value and picks up the
-  // now-true match -- a stale belowBreakpoint would leave this stuck inline).
-  el.mobileBreakpoint = "99999px";
+  applyAllocation(el, 900);
   await el.updateComplete;
-  panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
-  expect(
-    panel.getAttribute("role"),
-    "switches to overlay once the new breakpoint matches"
-  ).to.equal("dialog");
+  expect(el.effectiveMode).to.equal("inline");
+  expect((el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement).hasAttribute("role")).to.equal(
+    false
+  );
 });
 
-it("uses its live MediaQueryList listener and ignores a retired query after mobile-breakpoint changes", async () => {
-  interface MediaRecord {
-    list: MediaQueryList;
-    listeners: Set<(event: MediaQueryListEvent) => void>;
-  }
+it('re-evaluates a live overlay-breakpoint write against the same allocation', async () => {
+  const el = (await fixture(html`
+    <lr-responsive-panel overlay-breakpoint="400px" open>body</lr-responsive-panel>
+  `)) as LyraResponsivePanel;
+  el.style.inlineSize = "500px";
+  applyAllocation(el, 500);
+  await el.updateComplete;
+  expect(el.effectiveMode).to.equal("inline");
 
-  const originalMatchMedia = window.matchMedia;
-  const records: MediaRecord[] = [];
-  window.matchMedia = ((query: string) => {
-    const listeners = new Set<(event: MediaQueryListEvent) => void>();
-    const list = {
-      matches: false,
-      media: query,
-      addEventListener: (
-        _type: string,
-        listener: (event: MediaQueryListEvent) => void
-      ) => listeners.add(listener),
-      removeEventListener: (
-        _type: string,
-        listener: (event: MediaQueryListEvent) => void
-      ) => listeners.delete(listener),
-    } as unknown as MediaQueryList;
-    records.push({ list, listeners });
-    return list;
-  }) as typeof window.matchMedia;
+  el.overlayBreakpoint = "600px";
+  await el.updateComplete;
+  expect(el.effectiveMode).to.equal("overlay");
+});
 
-  try {
-    const el = (await fixture(
-      html`<lr-responsive-panel open>body</lr-responsive-panel>`
-    )) as LyraResponsivePanel;
-    await el.updateComplete;
-    const first = records.find(
-      (record) => record.list === asAny(el).mediaQuery
-    )!;
-    const retiredListener = [...first.listeners][0]!;
-
-    el.mobileBreakpoint = "900px";
-    await el.updateComplete;
-    const current = records.find(
-      (record) => record.list === asAny(el).mediaQuery
-    )!;
-    expect(current === first).to.be.false;
-
-    // A delayed event from the old query must not re-open modal chrome after
-    // the component has subscribed to the replacement query.
-    retiredListener({
-      matches: true,
-      currentTarget: first.list,
-    } as unknown as MediaQueryListEvent);
-    await el.updateComplete;
-    expect(
-      (el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement).hasAttribute(
-        "role"
-      )
-    ).to.be.false;
-
-    const currentListener = [...current.listeners][0]!;
-    currentListener({
-      matches: true,
-      currentTarget: current.list,
-    } as unknown as MediaQueryListEvent);
-    await el.updateComplete;
-    expect(
-      (el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement).getAttribute(
-        "role"
-      )
-    ).to.equal("dialog");
-  } finally {
-    window.matchMedia = originalMatchMedia;
-  }
+it("normalizes invalid allocation and breakpoint inputs without leaving the closed union", async () => {
+  const el = (await fixture(html`
+    <lr-responsive-panel overlay-breakpoint="garbage" open>body</lr-responsive-panel>
+  `)) as LyraResponsivePanel;
+  asAny(el).applyMeasuredInlineSize(Number.NaN);
+  await el.updateComplete;
+  expect(el.effectiveMode).to.equal("inline");
+  applyAllocation(el, 320);
+  await el.updateComplete;
+  expect(el.effectiveMode).to.equal("overlay");
 });
 
 it('hides [part="base"] entirely while closed, in both presentations', async () => {
@@ -303,7 +236,7 @@ it('hides [part="base"] entirely while closed, in both presentations', async () 
   ).to.equal("none");
 });
 
-it("directly invoking the breakpoint-response handler updates the effective presentation without a real resize", async () => {
+it("applying an allocation measurement updates the effective presentation without a viewport resize", async () => {
   const el = (await fixture(
     html`<lr-responsive-panel open>body</lr-responsive-panel>`
   )) as LyraResponsivePanel;
@@ -312,12 +245,12 @@ it("directly invoking the breakpoint-response handler updates the effective pres
   expect(panel.hasAttribute("role"), "starts inline on a wide test viewport").to
     .be.false;
 
-  asAny(el).handleBreakpointChange(true);
+  applyAllocation(el, 320);
   await el.updateComplete;
   panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(panel.getAttribute("role")).to.equal("dialog");
 
-  asAny(el).handleBreakpointChange(false);
+  applyAllocation(el, 1200);
   await el.updateComplete;
   panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(panel.hasAttribute("role")).to.be.false;
@@ -332,10 +265,10 @@ it("emits lr-mode-change with the new effective mode when the breakpoint is cros
   el.addEventListener("lr-mode-change", () => (fired = true));
 
   const listener = oneEvent(el, "lr-mode-change");
-  asAny(el).handleBreakpointChange(true);
+  applyAllocation(el, 320);
   const event = await listener;
   expect(fired).to.be.true;
-  expect((event.detail as ResponsivePanelModeChangeDetail).mode).to.equal(
+  expect((event.detail as LyraResponsivePanelModeChangeDetail).mode).to.equal(
     "overlay"
   );
 });
@@ -348,7 +281,7 @@ it("does not emit lr-mode-change when the breakpoint state is reported without a
   let count = 0;
   el.addEventListener("lr-mode-change", () => count++);
 
-  asAny(el).handleBreakpointChange(true); // mode is forced inline, so this can't change the effective mode
+  applyAllocation(el, 320); // mode is forced inline, so this can't change the effective mode
   await el.updateComplete;
 
   expect(count).to.equal(0);
@@ -364,7 +297,7 @@ it("a live breakpoint crossing while already open in overlay mode engages scroll
   expect(el.open, "stays open through the transition").to.be.true;
   expect(document.documentElement.style.overflow).to.equal("");
 
-  asAny(el).handleBreakpointChange(true);
+  applyAllocation(el, 320);
   await el.updateComplete;
 
   expect(el.open).to.be.true;
@@ -373,7 +306,7 @@ it("a live breakpoint crossing while already open in overlay mode engages scroll
   expect(document.documentElement.style.overflow).to.equal("hidden");
 
   // Crossing back releases it again.
-  asAny(el).handleBreakpointChange(false);
+  applyAllocation(el, 1200);
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal("");
 });
@@ -392,7 +325,7 @@ it("moves outside focus into the panel when a breakpoint crossing makes it modal
   await el.updateComplete;
 
   el.mode = "auto";
-  asAny(el).handleBreakpointChange(true);
+  applyAllocation(el, 320);
   await el.updateComplete;
 
   expect(document.activeElement?.textContent).to.equal("inside");
@@ -994,7 +927,7 @@ it("captures lastTrigger only on a genuine open transition, so it survives a lat
   // Crossing into overlay while still open must not re-capture "inside" as
   // the trigger, even though the overlay-chrome-engage branch fires here.
   el.mode = "auto";
-  (el as any).handleBreakpointChange(true);
+  applyAllocation(el, 320);
   await el.updateComplete;
   expect(el.open, "stays open through the transition").to.be.true;
 

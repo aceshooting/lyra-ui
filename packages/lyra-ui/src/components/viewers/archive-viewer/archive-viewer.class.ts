@@ -1,10 +1,10 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { fileIcon, folderIcon } from '../../../internal/icons.js';
-import { isAbortError, isResourceLimitError, LyraResourceLimitError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { isAbortError, isResourceLimitError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   buildQuoteAnchor,
@@ -15,22 +15,18 @@ import {
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../../media/attachment-chip/attachment-chip.class.js';
 import type { LyraAnchor } from '../document-viewer/anchors.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
-import {
-  loadArchiveLibraryCached,
-  type ArchiveFileApi,
-  type ArchiveLibraryApi,
-} from './archive-loader.js';
 import { assertZipArchiveMetadataWithinLimits } from './zip-resource-guard.js';
 import { styles, virtualListHighlightStyles } from './archive-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_archiveViewerEmpty, LYRA_DEFAULT_archiveViewerFile, LYRA_DEFAULT_archiveViewerFolder, LYRA_DEFAULT_archiveViewerUnavailable, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_archiveViewerEmpty, LYRA_DEFAULT_archiveViewerFile, LYRA_DEFAULT_archiveViewerFolder, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 export interface ArchiveEntry { name: string; dir: boolean; size: number; }
-type ArchiveFile = ArchiveFileApi;
 type ArchiveState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; entries: ArchiveEntry[] } | { kind: 'error'; message: string };
 export interface LyraArchiveViewerEventMap extends LyraTextViewerTargetEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
 
@@ -38,56 +34,6 @@ const MAX_ARCHIVE_ENTRIES = 10_000;
 const MAX_ARCHIVE_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
 class LyraArchiveViewerBase extends LyraElement<LyraArchiveViewerEventMap> {}
 const ArchiveTextViewerTargetBase = TextViewerTarget(LyraArchiveViewerBase);
-
-/** Measures one JSZip entry incrementally. Failing closed when the public stream API is absent is
- * intentional: `file.async('uint8array')` would allocate the entire unknown-size entry before the
- * viewer had any opportunity to enforce its uncompressed-byte ceiling. */
-function measureArchiveEntry(
-  file: ArchiveFile,
-  remainingBytes: number,
-  isCurrent: () => boolean,
-): Promise<number> {
-  const stream = file.internalStream?.('uint8array');
-  if (!stream) {
-    return Promise.reject(new LyraResourceLimitError('The archive entry size cannot be measured safely.'));
-  }
-  return new Promise<number>((resolve, reject) => {
-    let total = 0;
-    let settled = false;
-    const fail = (error: unknown): void => {
-      if (settled) return;
-      settled = true;
-      stream.pause?.();
-      reject(error);
-    };
-    stream
-      .on('data', (chunk) => {
-        if (!isCurrent()) {
-          const error = new Error('The operation was aborted.');
-          error.name = 'AbortError';
-          fail(error);
-          return;
-        }
-        total += chunk.length;
-        if (total > remainingBytes) {
-          fail(new LyraResourceLimitError('The expanded archive is too large.'));
-        }
-      })
-      .on('error', fail)
-      .on('end', () => {
-        if (settled) return;
-        if (!isCurrent()) {
-          const error = new Error('The operation was aborted.');
-          error.name = 'AbortError';
-          fail(error);
-          return;
-        }
-        settled = true;
-        resolve(total);
-      });
-    stream.resume();
-  });
-}
 
 function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range | null {
   const document = viewer.ownerDocument;
@@ -126,11 +72,10 @@ function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range
   return selection.getRangeAt(0);
 }
 
-/** Lists names and uncompressed sizes in a ZIP archive without rendering entry contents. The
- * central directory is checked for the 10,000-entry and 100 MB declared-expansion ceilings before
- * the optional ZIP peer materializes entries. Sizes use archive metadata when available; file
- * entries without size metadata are inflated sequentially once for measurement. The combined
- * declared and measured uncompressed size is capped at 100 MB.
+/** Lists names and declared uncompressed sizes in a ZIP archive without rendering entry contents
+ * or loading an archive parser. One owned central-directory parser is the listing and validation
+ * authority: it enforces the 10,000-entry and 100 MB declared-expansion ceilings, validates local
+ * header bounds and supported compression methods, and never inflates entry bodies.
  * Fragment anchors use the exact ZIP entry path as their `id`; text-quote anchors resolve against
  * each complete entry path before the matching virtual row is scrolled into view. Text selections
  * and painted highlights are likewise scoped to entry paths rendered in the nested virtual list.
@@ -142,7 +87,7 @@ function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range
  *   rects }`; `anchor` is an entry-scoped text quote, or `null` when it cannot be anchored.
  * @event lr-anchor-result - Fired after an `anchor` assignment or `scrollToAnchor()` call is
  *   applied. `detail: { found }`.
- * @csspart base - The root container.
+ * @csspart base - The root container with explicit `aria-busy` loading state.
  * @csspart body - The archive listing body.
  * @csspart entry - An archive entry row.
  * @csspart entry-icon - The decorative folder or file icon.
@@ -150,7 +95,7 @@ function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range
  * @csspart entry-name-dir - The entry path of a directory row (also carries `entry-name`).
  * @csspart entry-size - The human-readable file size.
  * @csspart highlight - A painted entry-path highlight (`<mark>` fallback path only).
- * @csspart spinner - The loading region.
+ * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
  * @csspart error - The error region.
  * @cssprop --lr-archive-viewer-highlight-accent-background - Accent highlight background.
  * @cssprop --lr-archive-viewer-highlight-success-background - Success highlight background.
@@ -173,7 +118,6 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     archiveViewerEmpty: LYRA_DEFAULT_archiveViewerEmpty,
     archiveViewerFile: LYRA_DEFAULT_archiveViewerFile,
     archiveViewerFolder: LYRA_DEFAULT_archiveViewerFolder,
-    archiveViewerUnavailable: LYRA_DEFAULT_archiveViewerUnavailable,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
@@ -188,15 +132,19 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
     loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
   /** URL to fetch and parse as a ZIP archive. */
   @property() src = '';
-  /** Display name used as the archive listing's accessible label when the host has no
-   *  `aria-label`. Host `aria-label` wins by attribute presence, including an empty value. */
+  /** Display name used on the shadow listing owner when host `aria-label` is absent. A non-empty
+   *  host label remains on the host; an explicitly empty one is preserved on the shadow owner. */
   @property() name = '';
 
   /** Case-insensitive search over loaded entry paths, with next/previous navigation that scrolls
@@ -242,7 +190,6 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   @state() private archiveSearchActiveIndex = -1;
   private generation = 0;
   private archiveSearchQuery = '';
-  private loadLibrary: () => Promise<ArchiveLibraryApi | null> = loadArchiveLibraryCached;
   private archiveSelectionRoot: Element | null = null;
   private archiveSelectionCleanup?: () => void;
   private styledVirtualListRoot: ShadowRoot | null = null;
@@ -276,7 +223,8 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.announcements.adopted();
   }
 
@@ -374,56 +322,23 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       if (!this.isConnected || generation !== this.generation) return;
-      const library = await this.loadLibrary();
-      if (!this.isConnected || generation !== this.generation) return;
-      if (!library) {
-        const error = new Error('Archive renderer unavailable');
-        this.fetchState = { kind: 'error', message: this.localize('archiveViewerUnavailable') };
-        this.emit('lr-render-error', { error });
-        return;
-      }
       const buffer = await readResponseArrayBuffer(response);
       if (!this.isConnected || generation !== this.generation) return;
-      // Enforce central-directory entry and declared-expansion ceilings before JSZip constructs
-      // its entry graph. Non-ZIP input is left to the peer so malformed-input behavior remains
-      // consistent, but a structurally recognizable ZIP cannot bypass the preflight.
-      assertZipArchiveMetadataWithinLimits(buffer, {
+      // The local-file signature must be byte zero; an appended valid ZIP must not turn an
+      // arbitrary prefix into an accepted archive. The returned immutable metadata is also the
+      // listing authority, so the validated entry graph cannot diverge from a peer parser's view.
+      const metadata = assertZipArchiveMetadataWithinLimits(buffer, {
         description: 'ZIP',
         maxEntries: MAX_ARCHIVE_ENTRIES,
         maxUncompressedBytes: MAX_ARCHIVE_UNCOMPRESSED_BYTES,
-        allowNonZip: true,
         signal,
       });
-      const zip = await library.loadAsync(buffer);
       if (!this.isConnected || generation !== this.generation) return;
-      const entries: ArchiveEntry[] = [];
-      // Only fall back to decompressing an entry when its header didn't declare a size; JSZip
-      // always populates `_data.uncompressedSize` from the local file header, so listing normally
-      // never has to pay the cost of inflating every entry just to measure it.
-      const fallbackSizes: Array<{ entry: ArchiveEntry; file: ArchiveFile }> = [];
-      let totalUncompressed = 0;
-      zip.forEach((_path: string, file: ArchiveFile) => {
-        if (entries.length >= MAX_ARCHIVE_ENTRIES) throw new LyraResourceLimitError();
-        const declaredSize = file._data?.uncompressedSize;
-        const hasDeclaredSize = Number.isFinite(declaredSize);
-        if (hasDeclaredSize && declaredSize! > MAX_ARCHIVE_UNCOMPRESSED_BYTES) throw new LyraResourceLimitError();
-        totalUncompressed += hasDeclaredSize ? declaredSize! : 0;
-        if (totalUncompressed > MAX_ARCHIVE_UNCOMPRESSED_BYTES) throw new LyraResourceLimitError();
-        const entry = { name: file.name, dir: file.dir, size: hasDeclaredSize ? declaredSize! : 0 };
-        entries.push(entry);
-        if (!file.dir && !hasDeclaredSize) fallbackSizes.push({ entry, file });
-      });
-      for (const fallback of fallbackSizes) {
-        const size = await measureArchiveEntry(
-          fallback.file,
-          MAX_ARCHIVE_UNCOMPRESSED_BYTES - totalUncompressed,
-          () => this.isConnected && generation === this.generation,
-        );
-        if (!this.isConnected || generation !== this.generation) return;
-        fallback.entry.size = size;
-        totalUncompressed += size;
-        if (totalUncompressed > MAX_ARCHIVE_UNCOMPRESSED_BYTES) throw new LyraResourceLimitError();
-      }
+      const entries = metadata!.entries.map(({ name, dir, uncompressedBytes }) => ({
+        name,
+        dir,
+        size: uncompressedBytes,
+      }));
       this.fetchState = { kind: 'loaded', entries };
       if (this.archiveSearchQuery) this.recomputeArchiveSearch();
     } catch (error) {
@@ -555,21 +470,19 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list exportparts="entry:entry, entry-icon:entry-icon, entry-name:entry-name, entry-name-dir:entry-name-dir, entry-size:entry-size, highlight:highlight" .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${this.archiveEntryKey} .activeId=${this.archiveSearchMatches[this.archiveSearchActiveIndex]?.name ?? ''} @lr-visible-range-changed=${this.stopVirtualListEvent} @lr-scroll=${this.stopVirtualListEvent}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
-      case 'loading': return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+      case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list exportparts="entry:entry, entry-icon:entry-icon, entry-name:entry-name, entry-name-dir:entry-name-dir, entry-size:entry-size, highlight:highlight" .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${this.archiveEntryKey} .activeId=${this.archiveSearchMatches[this.archiveSearchActiveIndex]?.name ?? ''} @lr-visible-range-changed=${this.stopVirtualListEvent} @lr-virtual-scroll=${this.stopVirtualListEvent}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
+      case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     }
   }
 
   override render(): TemplateResult {
-    // `name` (or a host-level aria-label) names the archive listing region; with neither set
-    // there is nothing meaningful to announce, so the region role is only added once a name exists.
-    const authoredLabel = hostAriaLabel(this);
-    const label = authoredLabel ?? this.name;
-    return authoredLabel !== null || Boolean(this.name)
-      ? html`<div part="base" role="region" aria-label=${label}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`
-      : html`<div part="base"><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
+    // `name` names the shadow listing region. A non-empty host label owns the overall semantics
+    // itself; with neither source there is nothing meaningful to announce, so no region is added.
+    const label = viewerSemanticLabel(this, this.name || null);
+    const role = label === null ? null : viewerSemanticRole(this, 'region');
+    return html`<div part="base" role=${role ?? nothing} aria-label=${label ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

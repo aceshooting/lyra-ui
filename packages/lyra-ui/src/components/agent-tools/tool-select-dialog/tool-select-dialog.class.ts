@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { nextId, srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { styles } from './tool-select-dialog.styles.js';
 import '../../forms/checkbox/checkbox.class.js';
 import '../../forms/switch/switch.class.js';
@@ -10,13 +10,15 @@ import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../
 import { getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatchesQuery, LYRA_DEFAULT_otherCategory, LYRA_DEFAULT_searchToolsPlaceholder, LYRA_DEFAULT_selectTools, LYRA_DEFAULT_toolCount, LYRA_DEFAULT_toolSelectCustomizeHint, LYRA_DEFAULT_toolSelectNoneAvailable, LYRA_DEFAULT_toolSelectSummary, LYRA_DEFAULT_useDefaultTools } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_noMatchesQuery, LYRA_DEFAULT_otherCategory, LYRA_DEFAULT_searchToolsPlaceholder, LYRA_DEFAULT_selectTools, LYRA_DEFAULT_toolCount, LYRA_DEFAULT_toolSelectCustomizeHint, LYRA_DEFAULT_toolSelectLimit, LYRA_DEFAULT_toolSelectNoneAvailable, LYRA_DEFAULT_toolSelectSummary, LYRA_DEFAULT_useDefaultTools } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** One selectable agent tool. `category` groups the row; tools with no
- *  `category` (or an empty one) fall into the trailing localized "Other" bucket. A literal caller
- *  category named "Other" remains a separate ordinary category. */
+/** One selectable agent tool. `id` is the stable selection identity; when the input collection
+ *  repeats an id, its first occurrence wins before grouping, searching, counting, or rendering.
+ *  `category` groups the row; tools with no `category` (or an empty one) fall into the trailing
+ *  localized "Other" bucket. A literal caller category named "Other" remains a separate ordinary
+ *  category. */
 export interface ToolSelectDialogTool {
   id: string;
   name: string;
@@ -77,6 +79,13 @@ interface ToolGroup {
   tools: ToolSelectDialogTool[];
 }
 
+interface ToolProjection {
+  groups: ToolGroup[];
+  renderedCount: number;
+  totalMatches: number;
+  truncated: boolean;
+}
+
 /**
  * `<lr-tool-select-dialog>` — a category-grouped, filterable, searchable
  * tool-enablement dialog for picking which agent tools are available in a
@@ -102,8 +111,12 @@ interface ToolGroup {
  * first focusable element in the panel with no special-casing needed, so
  * it's what receives focus on open (see `updated()`).
  *
- * At most the first 200 matching tools are mounted at once. Filtering narrows that bounded
- * projection; `tools`, selection counts, and emitted ids retain the caller's complete catalog.
+ * Matching tools mount in user-driven batches of 200. Matching selected identities reserve batch
+ * positions before ordinary input-order matches, so the checked rows behind the controlled
+ * `selected` summary remain available without first loading every preceding tool. When more
+ * matches remain, a localized limit notice and Load more button make the bounded projection
+ * explicit and provide a keyboard-reachable continuation; search can independently narrow the
+ * complete catalog. `tools`, selection counts, and emitted ids retain the caller's complete catalog.
  *
  * @customElement lr-tool-select-dialog
  * @slot footer - Optional action buttons (e.g. a "Done" button), rendered in a bottom row.
@@ -125,8 +138,10 @@ interface ToolGroup {
  * @csspart defaults-row - The wrapper around the use-defaults switch and its hint.
  * @csspart defaults-toggle - The built-in `<lr-switch>` bound to `useDefaults`.
  * @csspart defaults-hint - The "turn off to customize" hint, shown only while `useDefaults` is true.
- * @csspart body - The scrollable wrapper around the grouped tool list.
+ * @csspart body - The keyboard-focusable scrollable wrapper around the grouped tool list.
  * @csspart empty - The "no tools" / "no matches" message.
+ * @csspart limit - Localized notice shown while additional matching tools remain unmounted.
+ * @csspart load-more - Button that mounts the next bounded batch of matching tools.
  * @csspart category - A single category's wrapper (`role="group"`).
  * @csspart category-heading - A category's heading.
  * @csspart category-count - The terse, `aria-hidden` tool count next to a category heading
@@ -151,12 +166,14 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
+    loadMore: LYRA_DEFAULT_loadMore,
     noMatchesQuery: LYRA_DEFAULT_noMatchesQuery,
     otherCategory: LYRA_DEFAULT_otherCategory,
     searchToolsPlaceholder: LYRA_DEFAULT_searchToolsPlaceholder,
     selectTools: LYRA_DEFAULT_selectTools,
     toolCount: LYRA_DEFAULT_toolCount,
     toolSelectCustomizeHint: LYRA_DEFAULT_toolSelectCustomizeHint,
+    toolSelectLimit: LYRA_DEFAULT_toolSelectLimit,
     toolSelectNoneAvailable: LYRA_DEFAULT_toolSelectNoneAvailable,
     toolSelectSummary: LYRA_DEFAULT_toolSelectSummary,
     useDefaultTools: LYRA_DEFAULT_useDefaultTools,
@@ -165,13 +182,14 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
-  /** Whether the dialog is open. Set this (or call `close()`) — there is no separate `show()`/`hide()` pair. */
+  /** Whether the dialog is open. Set this directly or use `show()`/`hide()`/`close()`. */
   @property({ type: Boolean, reflect: true }) open = false;
 
-  /** The full set of tools a consumer offers, across all categories. */
+  /** The full set of tools a consumer offers, across all categories. Duplicate ids use a
+   *  deterministic first-wins projection. */
   @property({ attribute: false }) tools: ToolSelectDialogTool[] = [];
 
-  /** The currently-enabled tool ids. */
+  /** The currently-enabled tool ids. Duplicate ids are treated as one selection. */
   @property({ attribute: false }) selected: string[] = [];
 
   /** Whether the conversation is using the default tool set (`true`) or a custom selection (`false`) — see the class doc for the exact interaction with `selected`/per-tool editing. */
@@ -180,9 +198,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   /** The dialog's visible heading and accessible name. */
   @property() label = 'Select tools';
 
-  /** Overrides the dialog panel's accessible name, taking precedence over the visible `label`
-   *  heading -- mirrors `<lr-dialog>`'s/`<lr-tool-result-dialog>`'s own host-`aria-label`
-   *  override pattern. Fed only by a host `aria-label`. */
+  /** Accessible name for the component. When assigned directly as a property without a host
+   *  attribute it names the dialog panel; a host `aria-label` remains on the host and the panel
+   *  stays labelled by its visible heading to avoid cloning the same owner. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @property({ attribute: 'search-placeholder' }) searchPlaceholder = 'Search tools…';
@@ -199,6 +217,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   @state() private query = '';
   @state() private hasFooterSlot = false;
+  @state() private renderedToolLimit = MAX_RENDERED_TOOLS;
 
   private overlay?: OverlayHandle;
   private readonly titleId = nextId('tool-select-dialog-title');
@@ -213,6 +232,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     if (!this.hasUpdated) {
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
     }
+    if (changed.has('tools') || changed.has('filter')) {
+      this.renderedToolLimit = MAX_RENDERED_TOOLS;
+    }
     if (changed.has('open')) {
       if (this.open) {
         this.activateOverlay();
@@ -223,6 +245,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
         // search filter/collapsed-category state the previous session left
         // behind, rather than the fresh, unfiltered list a reopen implies.
         this.query = '';
+        this.renderedToolLimit = MAX_RENDERED_TOOLS;
       }
     }
   }
@@ -284,6 +307,17 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     this.emit('lr-close', reason);
   }
 
+  /** Opens the dialog. No-op when already open. */
+  show(): void {
+    if (this.open) return;
+    this.open = true;
+  }
+
+  /** Closes the dialog through the same reasoned lifecycle as `close()`. */
+  hide(reason: ToolSelectDialogCloseReason = 'api'): void {
+    this.close(reason);
+  }
+
   private onBackdropClick = (): void => {
     this.overlay?.dismissBackdrop();
   };
@@ -306,6 +340,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   private onSearchInput = (e: Event): void => {
     this.query = (e.target as HTMLInputElement).value;
+    this.renderedToolLimit = MAX_RENDERED_TOOLS;
   };
   private onSearchFocus = (): void => { this.emit('focus'); };
   private onSearchBlur = (): void => { this.emit('blur'); };
@@ -313,7 +348,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   private onDefaultsToggle = (e: CustomEvent<{ checked: boolean }>): void => {
     e.stopPropagation();
     const next: ToolSelectionChangeDetail = {
-      selected: [...this.selected],
+      selected: this.uniqueSelectedIds,
       useDefaults: e.detail.checked,
     };
     if (this.emitChange(next)) {
@@ -348,14 +383,27 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     return id;
   }
 
+  private get uniqueTools(): ToolSelectDialogTool[] {
+    const seen = new Set<string>();
+    return this.tools.filter((tool) => {
+      if (seen.has(tool.id)) return false;
+      seen.add(tool.id);
+      return true;
+    });
+  }
+
+  private get uniqueSelectedIds(): string[] {
+    return [...new Set(this.selected)];
+  }
+
   /** Tools grouped by `category` (first-seen order), with an uncategorized
    *  bucket always last, then filtered by the active search query -- a
    *  category left with zero matches is dropped entirely rather than
    *  rendered as an empty heading. */
-  private get groups(): ToolGroup[] {
+  private get projection(): ToolProjection {
     const order: ToolCategoryKey[] = [];
     const byCategory = new Map<ToolCategoryKey, ToolSelectDialogTool[]>();
-    for (const tool of this.tools) {
+    for (const tool of this.uniqueTools) {
       const category: ToolCategoryKey = tool.category?.trim() || UNCATEGORIZED;
       let bucket = byCategory.get(category);
       if (!bucket) {
@@ -372,17 +420,48 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
       ? (tool: ToolSelectDialogTool) =>
           this.filter ? this.filter(tool, q) : defaultFilter(tool, q, this.effectiveLocale)
       : () => true;
-    let remaining = MAX_RENDERED_TOOLS;
-    return order
+    const matchingGroups = order
       .map((category) => ({ category, tools: byCategory.get(category)!.filter(matches) }))
-      .filter((group) => group.tools.length > 0)
-      .map((group) => {
-        const tools = group.tools.slice(0, remaining);
-        remaining -= tools.length;
-        return { category: group.category, tools };
-      })
       .filter((group) => group.tools.length > 0);
+    const totalMatches = matchingGroups.reduce((total, group) => total + group.tools.length, 0);
+    const selectedIds = new Set(this.uniqueSelectedIds);
+    const chosenIds = new Set<string>();
+    for (const group of matchingGroups) {
+      for (const tool of group.tools) {
+        if (chosenIds.size >= this.renderedToolLimit) break;
+        if (selectedIds.has(tool.id)) chosenIds.add(tool.id);
+      }
+      if (chosenIds.size >= this.renderedToolLimit) break;
+    }
+    for (const group of matchingGroups) {
+      for (const tool of group.tools) {
+        if (chosenIds.size >= this.renderedToolLimit) break;
+        chosenIds.add(tool.id);
+      }
+      if (chosenIds.size >= this.renderedToolLimit) break;
+    }
+    const groups = matchingGroups
+      .map((group) => ({ category: group.category, tools: group.tools.filter((tool) => chosenIds.has(tool.id)) }))
+      .filter((group) => group.tools.length > 0);
+    const renderedCount = chosenIds.size;
+    return {
+      groups,
+      renderedCount,
+      totalMatches,
+      truncated: renderedCount < totalMatches,
+    };
   }
+
+  private onLoadMore = (): void => {
+    this.renderedToolLimit += MAX_RENDERED_TOOLS;
+    void this.updateComplete.then(() => {
+      if (!this.isConnected || !this.open) return;
+      const nextTarget =
+        this.shadowRoot?.querySelector<HTMLElement>('[part="load-more"]') ??
+        this.shadowRoot?.querySelector<HTMLElement>('[part="body"]');
+      nextTarget?.focus();
+    });
+  };
 
   private renderTool(tool: ToolSelectDialogTool): TemplateResult {
     const rowDisabled = Boolean(tool.disabled) || this.useDefaults;
@@ -432,24 +511,27 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   }
 
   override render(): TemplateResult {
-    const groups = this.groups;
-    const hasTools = this.tools.length > 0;
+    const projection = this.projection;
+    const groups = projection.groups;
+    const uniqueTools = this.uniqueTools;
+    const hasTools = uniqueTools.length > 0;
     const label = this.localize('selectTools', this.label === 'Select tools' ? undefined : this.label);
     const searchPlaceholder = this.localize(
       'searchToolsPlaceholder',
       this.searchPlaceholder === 'Search tools…' ? undefined : this.searchPlaceholder,
     );
-    const knownIds = new Set(this.tools.map((tool) => tool.id));
+    const knownIds = new Set(uniqueTools.map((tool) => tool.id));
     const selectedCount = new Set(this.selected.filter((id) => knownIds.has(id))).size;
     const number = getNumberFormat(this.effectiveLocale);
+    const panelLabel = hostAriaLabel(this) === null && this.accessibleLabel ? this.accessibleLabel : null;
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
         part="panel"
         role=${this.open ? 'dialog' : nothing}
         aria-modal=${this.open ? 'true' : nothing}
-        aria-label=${this.accessibleLabel || nothing}
-        aria-labelledby=${this.accessibleLabel ? nothing : this.titleId}
+        aria-label=${panelLabel ?? nothing}
+        aria-labelledby=${panelLabel === null ? this.titleId : nothing}
         tabindex="-1"
       >
         <div part="header">
@@ -493,7 +575,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
             ? html`<p part="defaults-hint">${this.localize('toolSelectCustomizeHint')}</p>`
             : nothing}
         </div>
-        <div part="body">
+        <div part="body" tabindex="0">
           ${groups.length === 0
             ? html`<p part="empty">
                 ${hasTools
@@ -501,6 +583,16 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
                   : this.localize('toolSelectNoneAvailable')}
               </p>`
             : groups.map((group) => this.renderCategory(group))}
+          ${projection.truncated
+            ? html`<div part="limit">
+                <span>${this.localize('toolSelectLimit', undefined, {
+                  count: number.format(projection.renderedCount),
+                })}</span>
+                <button part="load-more" type="button" @click=${this.onLoadMore}>
+                  ${this.localize('loadMore')}
+                </button>
+              </div>`
+            : nothing}
         </div>
         <div part="footer" ?hidden=${!this.hasFooterSlot}>
           <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>

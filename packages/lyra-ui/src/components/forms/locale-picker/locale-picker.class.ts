@@ -15,7 +15,7 @@ import {
 import type { LyraLocaleDirection } from '../../../internal/localization.js';
 import { localeNativeName } from '../../media/flag/language-map.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './locale-picker.styles.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import {
@@ -48,30 +48,60 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_localePickerLabel, LYRA_DEFAUL
  *  for an `'ar'` row instead of the library's default Saudi Arabia mapping. */
 export interface LyraLocaleEntry {
   /** BCP-47 locale tag, e.g. `'pt-BR'`. */
-  tag: string;
+  readonly tag: string;
   /** Overrides `localeNativeName(tag)` when given. */
-  label?: string;
+  readonly label?: string;
   /** ISO 3166-1 alpha-2 country code (e.g. `'lb'`) overriding this row's `<lr-flag>` derivation
    *  -- when given, the row renders `<lr-flag country={country}>` instead of the default
    *  `<lr-flag language={tag}>`. Unset (the default) keeps today's tag-derived flag. Ignored
    *  while `showFlags` is `false`. */
-  country?: string;
+  readonly country?: string;
 }
 
 /** `locales` accepts either a plain array of BCP-47 tags (endonym label derived automatically,
  *  no per-row flag override available) or `{ tag, label, country }` rows for custom
  *  labels/ordering/subsets/flag overrides. */
-export type LyraLocaleCatalog = string[] | LyraLocaleEntry[];
+export type LyraLocaleCatalog = readonly string[] | readonly LyraLocaleEntry[];
+
+const MAX_LOCALE_ENTRIES = 512;
+
+function snapshotLocaleCatalog(source: unknown): LyraLocaleCatalog {
+  if (!Array.isArray(source)) return Object.freeze([]);
+  const rows: Array<string | LyraLocaleEntry> = [];
+  for (let index = 0; index < Math.min(source.length, MAX_LOCALE_ENTRIES); index += 1) {
+    try {
+      const raw = source[index];
+      if (typeof raw === 'string') {
+        if (raw.length > 0) rows.push(raw);
+        continue;
+      }
+      if (raw === null || typeof raw !== 'object') continue;
+      const candidate = raw as Record<string, unknown>;
+      const tag = candidate['tag'];
+      const label = candidate['label'];
+      const country = candidate['country'];
+      if (
+        typeof tag !== 'string' || tag.length === 0 ||
+        (label !== undefined && typeof label !== 'string') ||
+        (country !== undefined && typeof country !== 'string')
+      ) continue;
+      rows.push(Object.freeze({
+        tag,
+        ...(label === undefined ? {} : { label }),
+        ...(country === undefined ? {} : { country }),
+      }));
+    } catch {
+      // A hostile getter invalidates only that row; later valid locales remain reachable.
+    }
+  }
+  return Object.freeze(rows) as LyraLocaleCatalog;
+}
 
 interface NormalizedLocaleEntry {
   tag: string;
   label: string;
   country?: string;
 }
-
-/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
- *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
-export type LyraLocalePickerSize = LyraSizeStep;
 
 /** `lr-change`'s detail. `direction` is the picked locale's writing direction, resolved through
  *  `getLyraLocaleDirection()` — the component never applies it (see the class doc), it just hands
@@ -224,12 +254,19 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     name: { reflect: true, noAccessor: true },
   };
 
-  /** The offered locale list. Empty (the default) auto-discovers every locale registered via
+  /** The offered locale list. `undefined` (the default) auto-discovers every locale registered via
    *  `registerLyraLocale()` (plus `'en'`) through `getRegisteredLyraLocales()`, kept live via
-   *  `subscribeLyraLocaleRegistry()`. An explicit array overrides the auto-discovered list
-   *  entirely. If the catalog changes while the listbox is open, an active row beyond the new
-   *  end is rehomed to the last remaining row. */
-  @property({ attribute: false }) locales: LyraLocaleCatalog = [];
+   *  `subscribeLyraLocaleRegistry()`. Any explicit array overrides the auto-discovered list
+   *  entirely, including `[]` as an authoritative empty catalog. If the catalog changes while
+   *  the listbox is open, an active row beyond the new end is rehomed to the last remaining row. */
+  private _locales?: LyraLocaleCatalog;
+  @property({ attribute: false })
+  get locales(): LyraLocaleCatalog | undefined { return this._locales; }
+  set locales(next: LyraLocaleCatalog | undefined) {
+    const previous = this._locales;
+    this._locales = next === undefined ? undefined : snapshotLocaleCatalog(next);
+    this.requestUpdate('locales', previous);
+  }
 
   /** Each row's leading `<lr-flag>`. The composition recipe this component supersedes
    *  (`lr-popover` + `lr-flag`) already pairs a locale switcher with flags by convention --
@@ -239,7 +276,22 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
-  @property({ type: Boolean, reflect: true }) open = false;
+  /** Whether the option popup is open. Disabled controls reject direct reopen attempts, including
+   * the synchronous fieldset cascade before `formDisabledCallback()` runs. */
+  @property({ type: Boolean, reflect: true })
+  get open(): boolean { return this._open; }
+  set open(next: boolean) {
+    const old = this._open;
+    const liveDisabled = this.effectiveDisabled ||
+      (typeof this.matches === 'function' && this.matches(':disabled'));
+    this._open = Boolean(next) && !liveDisabled;
+    if (this._open === old) {
+      if (next && !this._open && this.hasAttribute('open')) this.removeAttribute('open');
+      return;
+    }
+    if (!this._open) this.activeIndex = -1;
+    this.requestUpdate('open', old);
+  }
   /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-select`. The Web Awesome /
    *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
    *  tag rename with no attribute rewrite. */
@@ -267,6 +319,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private pointerListener?: (event: PointerEvent) => void;
   private stopRegistrySubscription?: () => void;
   private _value = '';
+  private _open = false;
   private _fieldsetDisabled = false;
   private _name = '';
   private _disabled = false;
@@ -281,6 +334,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private typeAheadTimer?: number;
   private typeAheadTimerWindow?: Window;
   private typeAheadTimerGeneration = 0;
+  private activeScrollGeneration = 0;
 
   constructor() {
     super();
@@ -356,6 +410,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.stopRegistrySubscription?.();
     this.stopRegistrySubscription = undefined;
     this.clearTypeAheadTimer();
+    this.activeScrollGeneration += 1;
     this.typeAheadBuffer = '';
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers updated()'s open-driven
     // branch -- without this, `open` stays `true` across the disconnect/reconnect and
@@ -364,7 +419,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.open = false;
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
     this.unbindDocumentPointer();
@@ -375,11 +431,12 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     super.willUpdate(changed);
     if (this.open && (changed.has('locales') || changed.has('registryTick')) && this.activeIndex >= 0) {
       this.activeIndex = Math.min(this.activeIndex, this.normalizedEntries.length - 1);
+      this.queueActiveScroll();
     }
     if (!this.hasUpdated) {
-      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
-      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
-      this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
+      this.hasHintSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'hint');
+      this.hasErrorSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'error');
+      this.hasLabelSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'label');
     }
   }
 
@@ -569,12 +626,12 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.requestUpdate();
   }
 
-  /** `locales` normalized to `{ tag, label }[]`: an explicit non-empty catalog wins outright
-   *  (in either the `string[]` or `{tag,label}[]` form); otherwise every locale
+  /** `locales` normalized to `{ tag, label }[]`: every explicit catalog wins outright, including
+   *  an empty array; only `undefined` selects every locale
    *  `getRegisteredLyraLocales()` currently reports. */
   private get normalizedEntries(): NormalizedLocaleEntry[] {
     const raw = this.locales;
-    if (raw && raw.length > 0) {
+    if (raw !== undefined) {
       return raw.map((entry): NormalizedLocaleEntry =>
         typeof entry === 'string'
           ? { tag: entry, label: localeNativeName(entry) }
@@ -606,7 +663,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private hide(): void {
     if (!this.open) return;
     this.open = false;
-    this.activeIndex = -1;
+    this.setActiveIndex(-1);
   }
   private onDocPointer = (e: PointerEvent): void => {
     if (!e.composedPath().includes(this)) this.hide();
@@ -758,7 +815,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       const row = rows[idx]; // modulo n keeps idx in-bounds; guard satisfies the checker
       if (row && row.label.toLocaleLowerCase(this.effectiveLocale).startsWith(this.typeAheadBuffer)) {
         if (this.open) {
-          this.activeIndex = idx;
+          this.setActiveIndex(idx);
         } else {
           this.commit(row.tag);
         }
@@ -776,6 +833,29 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.typeAheadTimerWindow = undefined;
   }
 
+  /** Updates active-descendant ownership and keeps the resulting row visible after render. */
+  private setActiveIndex(index: number): void {
+    const last = this.normalizedEntries.length - 1;
+    const next = last < 0 || index < 0 ? -1 : Math.min(last, index);
+    this.activeIndex = next;
+    this.queueActiveScroll();
+  }
+
+  private queueActiveScroll(): void {
+    const generation = ++this.activeScrollGeneration;
+    const index = this.activeIndex;
+    if (index < 0 || !this.open) return;
+    void this.updateComplete.then(() => {
+      if (
+        generation !== this.activeScrollGeneration ||
+        !this.isConnected ||
+        !this.open ||
+        this.activeIndex !== index
+      ) return;
+      this.shadowRoot?.getElementById(`${this.listId}-opt-${index}`)?.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.liveDisabled) return;
     const rows = this.normalizedEntries;
@@ -783,12 +863,12 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       case 'ArrowDown':
         e.preventDefault();
         if (!this.open) return this.show();
-        this.activeIndex = Math.min(rows.length - 1, this.activeIndex + 1);
+        this.setActiveIndex(Math.min(rows.length - 1, this.activeIndex + 1));
         break;
       case 'ArrowUp':
         e.preventDefault();
         if (!this.open) return this.show();
-        this.activeIndex = Math.max(0, this.activeIndex - 1);
+        this.setActiveIndex(Math.max(0, this.activeIndex - 1));
         break;
       case 'Enter':
       case ' ':
@@ -813,13 +893,13 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       case 'Home':
         if (this.open) {
           e.preventDefault();
-          this.activeIndex = 0;
+          this.setActiveIndex(0);
         }
         break;
       case 'End':
         if (this.open) {
           e.preventDefault();
-          this.activeIndex = rows.length - 1;
+          this.setActiveIndex(rows.length - 1);
         }
         break;
       default:
@@ -858,8 +938,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       >
         ${this.showFlags
           ? entry.country
-            ? html`<lr-flag part="option-flag" country=${entry.country} variant="compact" aria-hidden="true"></lr-flag>`
-            : html`<lr-flag part="option-flag" language=${entry.tag} variant="compact" aria-hidden="true"></lr-flag>`
+            ? html`<lr-flag part="option-flag" country=${entry.country} variant="compact" aria-hidden="true" inert></lr-flag>`
+            : html`<lr-flag part="option-flag" language=${entry.tag} variant="compact" aria-hidden="true" inert></lr-flag>`
           : ''}
         <span part="option-label">
           <span>${entry.label}</span>
@@ -906,11 +986,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         >
           ${this.showFlags
             ? previewEntry?.country
-              ? html`<lr-flag part="trigger-flag" country=${previewEntry.country} variant="compact" aria-hidden="true"></lr-flag>`
-              : html`<lr-flag part="trigger-flag" language=${previewTag} variant="compact" aria-hidden="true"></lr-flag>`
+              ? html`<lr-flag part="trigger-flag" country=${previewEntry.country} variant="compact" aria-hidden="true" inert></lr-flag>`
+              : html`<lr-flag part="trigger-flag" language=${previewTag} variant="compact" aria-hidden="true" inert></lr-flag>`
             : ''}
           <span class="trigger-label">${this.labelFor(previewTag)}</span>
-          <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>
+          <span part="expand-icon" aria-hidden="true" inert>${chevronIcon()}</span>
         </button>
         <div
           part="listbox"

@@ -21,7 +21,7 @@ export default meta;
 type Story = StoryObj;
 
 const navItems = html`
-  <lr-app-rail-item href="#inbox" aria-label="Inbox" active><span slot="icon">📥</span>Inbox</lr-app-rail-item>
+  <lr-app-rail-item href="#inbox" aria-label="Inbox" current><span slot="icon">📥</span>Inbox</lr-app-rail-item>
   <lr-app-rail-item href="#chats" aria-label="Chats"><span slot="icon">💬</span>Chats</lr-app-rail-item>
   <lr-app-rail-item href="#settings" aria-label="Settings"><span slot="icon">⚙️</span>Settings</lr-app-rail-item>
 `;

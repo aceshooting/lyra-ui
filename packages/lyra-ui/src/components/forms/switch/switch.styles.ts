@@ -19,17 +19,21 @@ export const styles = css`
        rules each restating a colour. */
     --lr-switch-track-fill: var(--lr-color-border);
   }
-  [part~='base'] {
+  .switch-layout {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-switch-gap, var(--lr-space-s));
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .switch-owner {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
-    gap: var(--lr-switch-gap, var(--lr-space-s));
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
   }
-  [part~='base']:focus-visible {
+  .switch-owner:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -42,13 +46,13 @@ export const styles = css`
      [part~='base'] before 8.0.0, which was wrong twice over: a filter multiplies every channel, so
      it moved the track only by luck of its tone, and it applies to the whole subtree, so it faded
      the label text sitting next to the track as well. */
-  :host(:not(:disabled)) [part~='base']:hover [part~='track'] {
+  :host(:not(:disabled)) .switch-layout:hover [part~='track'] {
     background: var(--lr-switch-track-hover-fill, color-mix(in oklab, var(--lr-switch-track-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
   }
-  :host(:not(:disabled)) [part~='base']:active [part~='track'] {
+  :host(:not(:disabled)) .switch-layout:active [part~='track'] {
     background: var(--lr-switch-track-active-fill, color-mix(in oklab, var(--lr-switch-track-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
-  :host(:disabled) [part~='base'] {
+  :host(:disabled) .switch-layout {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }

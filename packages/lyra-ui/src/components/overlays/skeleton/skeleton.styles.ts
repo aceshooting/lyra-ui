@@ -11,11 +11,9 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
     background: var(--lr-skeleton-color, var(--color, var(--lr-color-border)));
-  }
-  :host(:where([variant='text'], [variant='rect'])) [part~='indicator'] {
     border-radius: var(--lr-skeleton-border-radius, var(--border-radius, var(--lr-radius)));
   }
-  :host(:where([variant='circle'])) [part~='indicator'] {
+  :host([shape='circle']) [part~='indicator'] {
     border-radius: 50%;
   }
   [part~='indicator'][data-effect='pulse'] {

@@ -40,7 +40,7 @@ recommends got an inert, never-upgrading element — no error, no warning, an em
 aggregate entry that pulls in every registration module (the all-registrations barrel, and the
 Storybook/test setups built on it) hides the defect completely, which is why it survived a colocated
 test that imports only its own `./<name>.js` and asserts on `[part]` attributes. The fix is always an
-`import '<dep>/<dep>.js'` line in the *registration entry*, never a registration side effect pulled
+`import '<dep>/<dep>.js'` line in the _registration entry_, never a registration side effect pulled
 into a class module. The rare genuinely cycle-bound pair is suppressed in the registration entry
 with `policy-allow(component-dependency: lr-menu): <reason>`; the reason is mandatory and a
 suppression that no longer silences anything is itself reported, so the list cannot rot.
@@ -59,11 +59,14 @@ self, Storybook, and zero-accounting fixtures; it never rewrites the workspace m
 Two gates deliberately sit **outside** `contract-policy`, because both read artifacts that a static
 lint run does not produce:
 
-- `check:build-artifacts` (`scripts/check-build-artifacts.mjs`) is chained into `build` itself —
-  `"build": "node scripts/build.mjs && node scripts/check-build-artifacts.mjs"` — so it runs at the
-  only point where `dist/` is guaranteed present and current, which also covers `prepack` and
-  therefore every published tarball. It fails on any `.map` file in `dist` and on any emitted file
-  carrying a `sourceMappingURL` comment. See "`tsconfig.build.json` and dist hygiene" below.
+- `check:build-artifacts` is chained into `build` itself —
+  `"build": "node scripts/build.mjs && pnpm run check:build-artifacts"` — so it runs at the only
+  point where `dist/` is guaranteed present and current, which also covers `prepack` and therefore
+  every published tarball. `scripts/check-build-artifacts.mjs` fails on any `.map` file in `dist`
+  and on any emitted file carrying a `sourceMappingURL` comment; the same script entry then runs
+  `scripts/ai-compile-contract.test.mjs`, proving compile-only AI assertions have no source,
+  emitted module, package subpath, or tarball entry. See "`tsconfig.build.json` and dist hygiene"
+  below.
 - `check:coverage-floors` (`scripts/write-coverage-floors.mjs`) reads a finished coverage report;
   see "Coverage floors" below.
 
@@ -80,20 +83,21 @@ the PR checks list tells you which of these to reproduce locally:
    `contract-policy` + `tsc --noEmit` + `test:types` are pure static analysis.
 2. **`static-checks`** — everything needing neither a library build nor a docs build. Its inputs are
    already-committed files except for one read-only, content-addressed npm fetch. After `pnpm install
-   --frozen-lockfile`, its exact command order is: the pure release-integrity, public-API and pinned-
-   upstream helper tests; the networked `check:pinned-upstream-manifests`, which downloads the exact
+--frozen-lockfile`, its exact command order is: the checksum-pinned `pnpm check:workflows`
+   actionlint gate; the pure release-integrity, public-API and pinned-upstream helper tests; the
+   networked `check:pinned-upstream-manifests`, which downloads the exact
    package versions without lifecycle scripts, validates both tarball and manifest digests, and runs
    the strict inventory comparison; `pnpm --filter
-   '!@aceshooting/lyra-ui' -r test`; `pnpm run check:dead-code`; `pnpm run check:secrets`; `pnpm
-   registrations` then a targeted diff of the generated `src/all.ts`, `src/ssr/all.ts`, root
+'!@aceshooting/lyra-ui' -r test`; `pnpm run check:dead-code`; `pnpm run check:secrets`; `pnpm
+registrations` then a targeted diff of the generated `src/all.ts`, `src/ssr/all.ts`, root
    `src/components/lr-*.ts` aliases, root-registration allowlist, and `package.json`; `pnpm
-   manifest` then a targeted diff of `custom-elements.json`; `pnpm --filter
-   @aceshooting/lyra-ui run generate-editor-data` then a targeted diff of the two VS Code data
+manifest` then a targeted diff of `custom-elements.json`; `pnpm --filter
+@aceshooting/lyra-ui run generate-editor-data` then a targeted diff of the two VS Code data
    files and `web-types.json`; `pnpm readme:check`; `./package.sh` then a targeted diff of the
    generated plugin references and both tracked skill archives; `pnpm skill:check`
    (tested Claude/Codex version synchronization plus plugin, marketplace, and repo-discovery
    consistency, not archive freshness); `pnpm
-   storybook:check-theme`.
+storybook:check-theme`.
 
    `pnpm readme:check` covers two intentionally different files: root `README.md` (monorepo
    overview) and `packages/lyra-ui/README.md` (what npm actually renders on the registry page).
@@ -101,12 +105,14 @@ the PR checks list tells you which of these to reproduce locally:
    components" figure alongside the tag count — only a single count derived from
    `custom-elements.json` (e.g. "N custom elements") is self-verifying, a separately hand-bumped
    "components" number silently drifts every release.
+
 3. **`build-and-coverage`** — this is still the critical gate, but it is now a split matrix of
    four dependent lanes plus a final aggregator:
+
    - `build_and_coverage_build` (`pnpm build`) uploads `packages/lyra-ui/dist/` as artifact.
    - `build_and_coverage_quality` (`pnpm --filter @aceshooting/lyra-ui check:component-quality:built`,
      `pnpm --filter @aceshooting/lyra-ui check:bundle-size`, `pnpm --filter
-     @aceshooting/lyra-ui codecov:bundle`) consumes the shared dist.
+@aceshooting/lyra-ui codecov:bundle`) consumes the shared dist.
    - `build_and_coverage_ssr` (`pnpm --filter @aceshooting/lyra-ui test:ssr`) consumes the shared
      dist.
    - `build_and_coverage_hydration` (`pnpm --filter @aceshooting/lyra-ui test:hydration`) consumes
@@ -124,21 +130,23 @@ the PR checks list tells you which of these to reproduce locally:
    `playwright install-deps` step as well as the complete deterministic sweep: a 20-minute ceiling
    once cancelled a zero-failure run at 284/456 files after apt setup alone consumed more than ten
    minutes, so the measured end-to-end allowance is 30 minutes.
+
 4. **`packed-consumer`** — needs `dist/` (the tarball's `files` list includes it) but nothing
    else `build-and-coverage` needs, so it gets its own `pnpm build` rather than waiting on that
    job. It then runs `pnpm --filter @aceshooting/lyra-ui pack --dry-run`, verifies
    `dist/ssr-loader.js`, `custom-elements.json`, `llms.txt`, `llms-full.txt`, and the required
    `llms/` index/shared/tokens/peers/migration/component files, then runs `pnpm
-   check:packed-consumer`, the packed-size budget, and the networked public-API semver gate.
+check:packed-consumer`, the packed-size budget, and the networked public-API semver gate.
 
    `packages/lyra-ui/tsconfig.json` sets `"stripInternal": true` — a declaration whose JSDoc
-   carries `@internal` is erased from the emitted `.d.ts` even if a *public* property's type
+   carries `@internal` is erased from the emitted `.d.ts` even if a _public_ property's type
    alias points at it (e.g. a type living in `src/internal/` but referenced by a public
    `@property`). `pnpm lint`/`build`/`test`/`manifest` all compile the source tree directly and
    stay green regardless; only this job compiles a real consumer against the packed tarball and
    surfaces `TS2305: has no exported member`. The tag also matches anywhere in the JSDoc block,
    including prose — a comment describing "deliberately not tagged internal" re-triggers the
    strip.
+
 5. **`docs-and-storybook`** — `docs_build` (`docs:build` only needs the already-committed
    `custom-elements.json` via its internal `manifest:check`, not `dist/`, so it's independent of
    the two build jobs above) runs `pnpm docs:build` once (with `CODECOV_TOKEN`) and uploads
@@ -148,7 +156,7 @@ the PR checks list tells you which of these to reproduce locally:
    instead of independently rebuilding Storybook from source — three fewer redundant rebuilds per
    run than the previous design. `docs-and-storybook`'s own steps (after installing Playwright and
    downloading the artifact) are: targeted sitemap diff; `pnpm docs:check`; `pnpm
-   storybook:check`; `pnpm docs:check-show-code` (drives Chromium against the downloaded
+storybook:check`; `pnpm docs:check-show-code` (drives Chromium against the downloaded
    `storybook-static/`, hence still installing Playwright here too).
 6. **`visual-regression`** — blocking as of the 2026-07-20 font-substitution determinism fix (see
    `packages/lyra-ui/visual-baselines/README.md`). The 253 axis-level captures are lexically sorted
@@ -190,7 +198,8 @@ per-job overhead (checkout/install/browser setup) rather than test execution aga
 `test:platform` suite -- oversharded legs pay that fixed cost repeatedly for little parallelism
 gain. Node 20 uses the pnpm version pinned in `.github/ci-pnpm10.json` (`pnpm@10.34.5`); Node 22
 uses `package.json#packageManager` (`pnpm@11.21.0`). The package's supported engine remains `node
->=20`; this matrix uses 11 legs total (9 on Node 22, 2 on Node 20), well under the public-repo
+
+> =20`; this matrix uses 11 legs total (9 on Node 22, 2 on Node 20), well under the public-repo
 20-job throughput limit, so `max-parallel` no longer needs to chase that cap.
 
 ## Scheduled full Firefox/WebKit suite
@@ -229,13 +238,18 @@ It also omits external Codecov/upload-artifact reporting actions; the blocking l
 (`check:bundle-size`, coverage, and visual regression) still run. `codecov:bundle` is reporting
 only and does not replace the blocking bundle-size gate. The aggregate includes the static job's
 networked, content-addressed pinned-upstream-manifest check; an unavailable registry or changed
-artifact fails the run instead of silently falling back to a clone-generated manifest.
+artifact fails the run instead of silently falling back to a clone-generated manifest. It also runs
+the same checksum-pinned actionlint workflow gate as `static-checks`.
 
-- `./scripts/ci.sh --platform` adds Firefox and WebKit `test:platform` runs under the active Node
-  22/pnpm 11 toolchain. It is useful for browser-engine coverage but is not the two-Node CI matrix.
-- `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and then all four
-  Node 20/22 × Firefox/WebKit legs. Node 20 needs pnpm 10.34.5; Node 22 needs pnpm 11.21.0. The
-  `CI_SH_NODE20_BIN`, `CI_SH_NODE22_BIN`, `CI_SH_PNPM20_BIN`, and `CI_SH_PNPM22_BIN` overrides
+- `./scripts/ci.sh --platform` adds the unsharded `test:platform` browser sweep under the active
+  Node 22/pnpm 11 toolchain. The 5-browser Node 22 sweep is Firefox, Chromium, Chrome, Edge, and
+  Safari. It is useful for broad installed-browser coverage, but it is not the sharded two-Node CI
+  matrix.
+- `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and then the exact
+  local counterpart of CI's platform matrix. Its 11 legs are source-derived: Node 20 runs Firefox
+  (1 shard) and Safari (1 shard); Node 22 runs Chromium (2 shards), Chrome (1 shard), Edge (1 shard),
+  Firefox (4 shards), and Safari (1 shard). Node 20 needs pnpm 10.34.5; Node 22 needs pnpm 11.21.0.
+  The `CI_SH_NODE20_BIN`, `CI_SH_NODE22_BIN`, `CI_SH_PNPM20_BIN`, and `CI_SH_PNPM22_BIN` overrides
   accept explicit executable paths. NVM installations are discovered by major version, with the
   newest installed patch selected by version order.
 - `CI_SH_SKIP_INSTALL=1` skips only the primary dependency installation and Chromium download;
@@ -304,9 +318,11 @@ successful `push`/`main` `ci.yml` run and one successful `workflow_dispatch`/`ma
 `full-engine.yml` run whose `head_sha` is that commit. A manual invocation must therefore be
 dispatched on the tag itself (for example, `gh workflow run publish.yml --ref <tag> -f tag=<tag>`),
 not on the default branch. The CI run must contain
-successful results for the six primary jobs and all four Firefox/WebKit × Node 20/22 platform legs,
-and every job present in that
-CI run must succeed so a future gate cannot be added without becoming release-blocking. The
+successful results for every job marked `release-qualification: required` or
+`release-qualification: matrix` in the workflow, and every job present in that CI run must succeed
+so a future gate cannot be added without becoming release-blocking. The exact expanded job names
+live in `.github/release-qualification.json`; `generate-release-qualification.mjs --check` derives
+them from `ci.yml`/`full-engine.yml` and makes matrix or display-name drift a freshness failure. The
 full-engine run must contain all four Firefox and all four WebKit shards, with every job successful.
 The helper deliberately reads the named workflow runs and their jobs, not every check on the commit:
 the latter set includes the currently-running publish job and would deadlock on itself. Its pure
@@ -327,7 +343,9 @@ A manual dry run validates and passes that same existing release asset to
 action's native Sigstore-bundle JSON representation and `.sigstore.json` suffix; it is not copied
 under an in-toto JSONL suffix, which is a different serialization.
 
-The manual `sign-release.yml` recovery path uses the same read-only rebuild/byte-verification job,
+`publish.yml` and the manual `sign-release.yml` recovery path both call
+`release-verification.yml`; this is the single read-only rebuild/byte-verification implementation.
+The recovery path retains the same
 14-day artifact handoff, protected minimal signer, post-approval tag check, and release-asset
 round-trip. Dispatch it on the requested tag, never on `main`.
 
@@ -364,16 +382,16 @@ fixed at the source:
   lint → build → test → default-string-slices → framework-types → design-tokens → editor-data →
   llms) never regenerates `docs/component-integration.md`/
   `scripts/fixtures/component-integration.json`, but every version bump shifts every component's
-  *built* gzip size regardless (the regenerated `package-metadata.ts`, embedding the new version
+  _built_ gzip size regardless (the regenerated `package-metadata.ts`, embedding the new version
   plus release history, is imported by the shared base every component bundles) — so CI's
   `build-and-coverage / quality` job (`check:component-quality:built`) reliably fails on the pushed
   release commit. Fix: rebuild, `node scripts/generate-component-quality.mjs --write
-  --measure-gzip`, `check:bundle-size`, then a follow-up commit on top of the already-pushed release
+--measure-gzip`, `check:bundle-size`, then a follow-up commit on top of the already-pushed release
   commit, re-qualified through `wait-ci`/`wait-full-engine` like any other commit before tagging.
 - **The same regeneration is owed by ANY change under `src/`, not just a version bump — and not just
   changes to shipped code.** `generate-component-quality.mjs` measures two things a source diff does
-  not obviously touch: the *built* per-component gzip size (so it reads `dist/`, and needs a fresh
-  build first) and per-component *test* quality (so it reads `src/**/*.test.ts` too). Both bit this
+  not obviously touch: the _built_ per-component gzip size (so it reads `dist/`, and needs a fresh
+  build first) and per-component _test_ quality (so it reads `src/**/*.test.ts` too). Both bit this
   repo in sequence on 2026-08-12: a one-method source fix, then a test-only edit, each turned CI's
   `lint` job red with `component-qualification.json: stale or missing` after local `pnpm lint` had
   passed. Critically, `pnpm manifest` came back **byte-identical** both times, which made each
@@ -384,11 +402,11 @@ fixed at the source:
   another engine.** On 2026-08-12 `lr-zoomable-frame`'s host `focus`/`blur` forwarding re-dispatched
   nothing at all on Firefox — that engine dispatches neither `focus` nor `focusin` on an `<iframe>`
   ELEMENT for a programmatic `.focus()`, moving focus into the frame's own document instead. The
-  element still became `shadowRoot.activeElement`, so the assertion that focus *moved* passed and
+  element still became `shadowRoot.activeElement`, so the assertion that focus _moved_ passed and
   only the missing events failed. Anything that wraps an `<iframe>`, or that re-emits a
   non-composed native event, needs a `WTR_BROWSER=firefox`/`webkit` run before it is believed;
   `pnpm exec wtr --files <path>` accepts that env var per file, and a full local sweep on one engine
-  is far cheaper than a `workflow_dispatch` round trip. It also sees what CI's *sharding* can hide:
+  is far cheaper than a `workflow_dispatch` round trip. It also sees what CI's _sharding_ can hide:
   the same sweep surfaced a second, unrelated load-sensitive timeout that the sharded run missed.
 
 ## Coverage floors (`scripts/coverage-floors.json`)
@@ -411,7 +429,7 @@ alongside the floors.
   source tree could have gone uncovered without the gate firing. A floor is only a gate while it
   sits just under the measurement, and it only stays there if refreshing it is one mechanical
   command producing a reviewable diff.
-- **The mirror-image failure is a threshold set *tighter* than measurement from day one** — an
+- **The mirror-image failure is a threshold set _tighter_ than measurement from day one** — an
   "aspirational" budget that's red the moment it lands, which trains everyone to ignore that gate
   entirely rather than fix it. This has recurred independently in the package-size budget
   (`check:package-size`'s minimum-reduction figure) and the qualification axe scanner's evidence
@@ -437,7 +455,9 @@ missing `.ts` and fails there instead of falling back to the readable `.d.ts` be
 asserts the result on the emitted bytes rather than on the config that produced them, so it survives
 any change in how the build is spelled: it fails on any `.map` under `dist`, and separately on any
 emitted `.js`/`.d.ts`/`.css` carrying a `sourceMappingURL` comment (a referenced-then-pruned map,
-which leaves consumers' devtools chasing a 404).
+which leaves consumers' devtools chasing a 404). The script entry also runs the AI compile-contract
+test after those byte checks, so a no-emit assertion file cannot silently reappear in source,
+`dist`, the exported subpath surface, or the packed file list.
 
 ## `prepack` and editor data
 
@@ -455,7 +475,7 @@ The generated public-surface outputs are CI-gated across the lint and static job
 `pnpm --filter @aceshooting/lyra-ui run generate-editor-data` →
 `git diff --exit-code -- packages/lyra-ui/vscode-html-data.json packages/lyra-ui/vscode-css-data.json packages/lyra-ui/web-types.json`
 (`.github/workflows/ci.yml`, and that file remains the authority). Note the ordering dependency:
-the editor data is derived *from* `custom-elements.json`, so a stale manifest reddens the first
+the editor data is derived _from_ `custom-elements.json`, so a stale manifest reddens the first
 `git diff` and the editor-data regeneration then runs against the fixed manifest. Framework type
 and LLM freshness are enforced inside `pnpm lint`. Locally, regenerate in dependency order and
 commit the complete set whenever you touch the public surface (JSDoc, attributes, parts, or CSS

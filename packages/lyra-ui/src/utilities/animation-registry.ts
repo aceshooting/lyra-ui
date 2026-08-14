@@ -1,38 +1,38 @@
 import { prefersReducedMotion } from '../internal/motion.js';
 
 /** A component animation expressed in the native Web Animations API vocabulary. */
-export interface ElementAnimation {
-  keyframes: Keyframe[];
+export interface LyraElementAnimation {
+  readonly keyframes: readonly Readonly<Keyframe>[];
   /** Logical-direction alternative. Falls back to `keyframes` when omitted. */
-  rtlKeyframes?: Keyframe[];
-  options?: KeyframeAnimationOptions;
+  readonly rtlKeyframes?: readonly Readonly<Keyframe>[];
+  readonly options?: Readonly<KeyframeAnimationOptions>;
 }
-
-/** Lyra-prefixed alias for consumers that prefer library-qualified public types. */
-export type LyraElementAnimation = ElementAnimation;
 
 /** The normalized value returned by {@link getAnimation}. */
-export interface ResolvedElementAnimation {
-  keyframes: Keyframe[];
-  options: KeyframeAnimationOptions;
+export interface LyraResolvedElementAnimation {
+  readonly keyframes: readonly Readonly<Keyframe>[];
+  readonly options: Readonly<KeyframeAnimationOptions>;
 }
 
-export interface GetAnimationOptions {
+export interface LyraGetAnimationOptions {
   /** Text direction used to select `rtlKeyframes`. Inferred from the element when omitted. */
   dir?: 'ltr' | 'rtl';
   /** Component-owned animation used when neither registry level has an entry. Registry timing
    * overrides are merged over this fallback's options so token-derived duration/easing survive a
    * keyframes-only customization. */
-  fallback?: ElementAnimation | null;
+  fallback?: LyraElementAnimation | null;
   /** Defaults to true. Set false only when the caller owns a stronger reduced-motion policy. */
   respectReducedMotion?: boolean;
 }
 
 /** Idempotently removes the exact registration made by one setter call. */
-export type AnimationCleanup = () => void;
+export type LyraAnimationCleanup = () => void;
+
+const INVALID_ANIMATION = Symbol('invalid-animation');
+type StoredAnimation = LyraElementAnimation | null | typeof INVALID_ANIMATION;
 
 interface RegistryEntry {
-  animation: ElementAnimation | null;
+  animation: StoredAnimation;
   previous?: RegistryEntry;
   active: boolean;
 }
@@ -65,11 +65,11 @@ function currentEntry(entry: RegistryEntry | undefined): RegistryEntry | undefin
 function register(
   registry: Map<string, RegistryEntry>,
   animationName: string,
-  animation: ElementAnimation | null,
-): AnimationCleanup {
+  animation: LyraElementAnimation | null,
+): LyraAnimationCleanup {
   assertAnimationName(animationName);
   const entry: RegistryEntry = {
-    animation,
+    animation: snapshotAnimation(animation),
     previous: currentEntry(registry.get(animationName)),
     active: true,
   };
@@ -91,8 +91,8 @@ function register(
  */
 export function setDefaultAnimation(
   animationName: string,
-  animation: ElementAnimation | null,
-): AnimationCleanup {
+  animation: LyraElementAnimation | null,
+): LyraAnimationCleanup {
   return register(defaultAnimations, animationName, animation);
 }
 
@@ -104,8 +104,8 @@ export function setDefaultAnimation(
 export function setAnimation(
   element: Element,
   animationName: string,
-  animation: ElementAnimation | null,
-): AnimationCleanup {
+  animation: LyraElementAnimation | null,
+): LyraAnimationCleanup {
   if (!isElement(element)) throw new TypeError('setAnimation() requires an Element.');
   let registry = elementAnimations.get(element);
   if (!registry) {
@@ -115,14 +115,29 @@ export function setAnimation(
   return register(registry, animationName, animation);
 }
 
-function cloneKeyframes(keyframes: Keyframe[]): Keyframe[] {
+function cloneKeyframes(keyframes: readonly Readonly<Keyframe>[]): Readonly<Keyframe>[] {
   return keyframes.map((keyframe) => ({ ...keyframe }));
 }
 
-function isElementAnimation(animation: unknown): animation is ElementAnimation {
+function isElementAnimation(animation: unknown): animation is LyraElementAnimation {
   return typeof animation === 'object' &&
     animation !== null &&
-    Array.isArray((animation as Partial<ElementAnimation>).keyframes);
+    Array.isArray((animation as Partial<LyraElementAnimation>).keyframes);
+}
+
+function snapshotAnimation(animation: LyraElementAnimation | null): StoredAnimation {
+  if (animation === null) return null;
+  if (!isElementAnimation(animation)) return INVALID_ANIMATION;
+  const keyframes = Object.freeze(
+    animation.keyframes.map((keyframe) => Object.freeze({ ...keyframe })),
+  );
+  const rtlKeyframes = Array.isArray(animation.rtlKeyframes)
+    ? Object.freeze(animation.rtlKeyframes.map((keyframe) => Object.freeze({ ...keyframe })))
+    : undefined;
+  const options = animation.options === undefined
+    ? undefined
+    : Object.freeze({ ...animation.options });
+  return Object.freeze({ keyframes, rtlKeyframes, options });
 }
 
 function inferredDirection(element: Element): 'ltr' | 'rtl' {
@@ -131,8 +146,18 @@ function inferredDirection(element: Element): 'ltr' | 'rtl' {
   return view.getComputedStyle(element).direction === 'rtl' ? 'rtl' : 'ltr';
 }
 
-function disabledAnimation(): ResolvedElementAnimation {
-  return { keyframes: [], options: { duration: 0 } };
+function resolvedAnimation(
+  keyframes: readonly Readonly<Keyframe>[],
+  options: Readonly<KeyframeAnimationOptions>,
+): LyraResolvedElementAnimation {
+  return Object.freeze({
+    keyframes: Object.freeze(keyframes.map((keyframe) => Object.freeze({ ...keyframe }))),
+    options: Object.freeze({ ...options }),
+  });
+}
+
+function disabledAnimation(): LyraResolvedElementAnimation {
+  return resolvedAnimation([], { duration: 0 });
 }
 
 /**
@@ -146,8 +171,8 @@ function disabledAnimation(): ResolvedElementAnimation {
 export function getAnimation(
   element: Element,
   animationName: string,
-  options: GetAnimationOptions = {},
-): ResolvedElementAnimation {
+  options: LyraGetAnimationOptions = {},
+): LyraResolvedElementAnimation {
   if (!isElement(element)) throw new TypeError('getAnimation() requires an Element.');
   assertAnimationName(animationName);
 
@@ -186,5 +211,5 @@ export function getAnimation(
     resolvedOptions.iterations = 1;
   }
 
-  return { keyframes, options: resolvedOptions };
+  return resolvedAnimation(keyframes, resolvedOptions);
 }

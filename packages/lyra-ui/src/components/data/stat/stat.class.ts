@@ -13,20 +13,15 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_statTrendAnnouncement, LYRA_DEFAULT_statTrendBad, LYRA_DEFAULT_statTrendDecreased, LYRA_DEFAULT_statTrendGood, LYRA_DEFAULT_statTrendIncreased, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-/** The shared semantic tone. Kept as a local name so existing imports keep resolving. */
-export type StatVariant = LyraVariant;
 export type StatGoodDirection = 'up' | 'down';
-/** The shared container treatment, now spelled `frame` on this component (it was never a fill).
- *  Kept as a local name so existing type imports keep resolving. */
-export type StatAppearance = LyraFrame;
 export type StatOrientation = 'vertical' | 'horizontal';
 export interface StatRow {
-  label: string;
-  value: string;
+  readonly label: string;
+  readonly value: string;
   /** Exact value shown as a hover/focus tooltip on this row's `row-value` (mirrors the headline
    *  `exactValue`/`exact-value` behavior). Also makes this row's `[part='row-value']`
    *  keyboard-focusable so the tooltip is reachable without a pointer. */
-  exactValue?: string;
+  readonly exactValue?: string;
 }
 
 const NESTED_CONTROL_SELECTOR = [
@@ -83,7 +78,7 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @csspart value-row - Wrapper around the value and unit.
  * @csspart value - The value text. Accessibly labelled by the `label` part (via
  *   `aria-labelledby`) whenever `label` is set, so tabbing directly to this
- *   (focusable when `exactValue` is set) control still announces which metric it is.
+ *   (focusable when `exactValue` is set) control still announces which metric and visible unit it is.
  * @csspart unit - The unit text.
  * @csspart trend - The trend pill.
  * @csspart sub - Container for the `sub` attribute/slot.
@@ -141,7 +136,7 @@ export class LyraStat extends LyraElement {
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property() value = '';
   @property() unit = '';
-  @property({ reflect: true }) variant: StatVariant = 'neutral';
+  @property({ reflect: true }) variant: LyraVariant = 'neutral';
   /** When set to a safe URL, renders the whole stat as a real anchor instead of a static div. */
   @property() href?: string;
   /** Native anchor target, used only while `href` resolves to a link. Setting this to `'_blank'`
@@ -151,30 +146,41 @@ export class LyraStat extends LyraElement {
    *  `app-rail-item.class.ts`'s pattern. */
   @property() target?: string;
 
-  private _trend = NaN;
-  /** Percentage/delta value for the trend pill (e.g. `-12.5` renders a down arrow at "12.5%").
-   *  `NaN` (the default, and what a removed `trend` attribute resolves to — Lit's `type: Number`
-   *  converter maps a missing attribute to `null`, treated the same as `NaN` here) is a
-   *  deliberate sentinel meaning "no trend": it hides the pill entirely and is preserved as-is,
-   *  never coerced away. Any other non-finite input (e.g. a literal `trend="Infinity"` attribute)
-   *  is normalized via `finiteNumber` to a flat `0` instead of rendering a bogus
-   *  "Infinity%"/"-Infinity%" pill; genuine finite numbers pass through unclamped. */
-  @property({ type: Number })
-  get trend(): number {
-    return this._trend;
+  private _deltaPercent: number | null = null;
+  /** Percentage delta for the trend pill. Null (the JSON-safe default) hides the pill;
+   * non-finite input normalizes to null and finite numbers remain unclamped. */
+  @property({ type: Number, attribute: 'delta-percent' })
+  get deltaPercent(): number | null {
+    return this._deltaPercent;
   }
-  set trend(value: number | null) {
-    const old = this._trend;
-    this._trend = value == null || Number.isNaN(value) ? NaN : finiteNumber(value, 0);
-    this.requestUpdate('trend', old);
+  set deltaPercent(value: number | null) {
+    const old = this._deltaPercent;
+    this._deltaPercent = value != null && Number.isFinite(value) ? finiteNumber(value, 0) : null;
+    this.requestUpdate('deltaPercent', old);
   }
 
   @property() caption = '';
   /** Which trend direction counts as "good" — inverts arrow/color polarity for
    *  cost/latency/error-rate-style metrics where a decrease is the win. */
   @property({ attribute: 'good-direction' }) goodDirection: StatGoodDirection = 'up';
-  /** Breakdown rows rendered as a simple label/value list beneath the caption. */
-  @property({ attribute: false }) rows: StatRow[] = [];
+  private _rows: readonly StatRow[] = [];
+  /** Breakdown rows rendered as a simple label/value list beneath the caption. Values are
+   * snapshotted so caller mutation cannot bypass the reactive boundary. */
+  @property({ attribute: false })
+  get rows(): readonly StatRow[] { return this._rows; }
+  set rows(value: readonly StatRow[]) {
+    const previous = this._rows;
+    this._rows = Object.freeze(
+      Array.isArray(value)
+        ? value.map((row) => Object.freeze({
+            label: typeof row?.label === 'string' ? row.label : '',
+            value: typeof row?.value === 'string' ? row.value : '',
+            ...(typeof row?.exactValue === 'string' ? { exactValue: row.exactValue } : {}),
+          }))
+        : [],
+    );
+    this.requestUpdate('rows', previous);
+  }
   /** Visual emphasis (e.g. for a "headline" stat in a group) — orthogonal to
    *  the status `variant`; see the `[part='value']` selector below for how
    *  the two combine. */
@@ -225,6 +231,7 @@ export class LyraStat extends LyraElement {
   // $1.2K" instead of the bare value.
   private readonly labelId = nextId('stat-label');
   private readonly valueId = `${this.labelId}-value`;
+  private readonly unitId = `${this.labelId}-unit`;
   // One id per `rows` entry, regenerated only when the `rows` array itself is
   // reassigned (not on every render) so `aria-labelledby` references stay
   // stable across unrelated re-renders.
@@ -233,13 +240,17 @@ export class LyraStat extends LyraElement {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but keeps any future LyraElement/mixin willUpdate logic wired in
     if (!this.hasUpdated) {
-      this.hasIcon = Array.from(this.children).some((el) => {
+      // Lit's server element shim has no light-DOM `children` collection. Slot assignment is a
+      // browser-only refinement, so seed from an empty collection during SSR and let slotchange
+      // establish the real browser state after hydration.
+      const lightChildren = Array.from(this.children ?? []);
+      this.hasIcon = lightChildren.some((el) => {
         const slotName = el.getAttribute('slot');
         return slotName === null || slotName === 'start';
       });
-      this.hasCaptionSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'caption');
-      this.hasSparkSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'spark');
-      this.hasSubSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'sub');
+      this.hasCaptionSlot = lightChildren.some((el) => el.getAttribute('slot') === 'caption');
+      this.hasSparkSlot = lightChildren.some((el) => el.getAttribute('slot') === 'spark');
+      this.hasSubSlot = lightChildren.some((el) => el.getAttribute('slot') === 'sub');
     }
     if (changed.has('rows')) {
       this.rowLabelIds = this.rows.map(() => nextId('stat-row-label'));
@@ -275,15 +286,19 @@ export class LyraStat extends LyraElement {
     this.shadowRoot?.querySelector<HTMLAnchorElement>('[part="base"][href]')?.click();
   };
 
+  /** Activates the real whole-card anchor when this stat is linked. */
+  override click(): void {
+    const anchor = this.shadowRoot?.querySelector<HTMLAnchorElement>('[part="base"][href]');
+    if (anchor) anchor.click();
+    else super.click();
+  }
+
   override render(): TemplateResult {
     const href = safeLinkHref(this.href);
     const linked = Boolean(href);
-    // `trend`'s own accessor above already normalizes a removed/absent attribute (which Lit's
-    // `type: Number` converter delivers as `null`, not `NaN`) to the same `NaN` "no trend"
-    // sentinel, so `this.trend` is never actually `null` here — the `!= null` check is kept as a
-    // defensive belt-and-suspenders against the static type lying.
-    const hasTrend = this.trend != null && !isNaN(this.trend);
-    const rawDirection = this.trend > 0 ? 'up' : this.trend < 0 ? 'down' : 'flat';
+    const hasTrend = this.deltaPercent !== null;
+    const effectiveDelta = this.deltaPercent ?? 0;
+    const rawDirection = effectiveDelta > 0 ? 'up' : effectiveDelta < 0 ? 'down' : 'flat';
     const isGood = rawDirection === 'flat' ? null : rawDirection === this.goodDirection;
     // The trend pill previously rendered literal ▲/▼ glyphs — font-dependent
     // and inconsistent with the rest of the icon set — swapped for the
@@ -295,7 +310,7 @@ export class LyraStat extends LyraElement {
     const formattedTrend = getNumberFormat(this.effectiveLocale, {
       style: 'percent',
       maximumFractionDigits: 20,
-    }).format(Math.abs(this.trend) / 100);
+    }).format(Math.abs(effectiveDelta) / 100);
     // The visible pill only ever shows the icon rotation + color to convey
     // direction and good/bad polarity; both are invisible to screen readers,
     // so mirror them into a plain-language sr-only announcement.
@@ -322,10 +337,12 @@ export class LyraStat extends LyraElement {
           id=${this.valueId}
           title=${this.exactValue || nothing}
           tabindex=${this.exactValue && !linked ? '0' : nothing}
-          aria-labelledby=${this.label ? `${this.labelId} ${this.valueId}` : nothing}
+          aria-labelledby=${this.label || this.unit
+            ? [this.label ? this.labelId : '', this.valueId, this.unit ? this.unitId : ''].filter(Boolean).join(' ')
+            : nothing}
           >${this.value}</span
         >
-        <span part="unit">${this.unit}</span>
+        <span part="unit" id=${this.unitId}>${this.unit}</span>
       </div>
       ${hasTrend
         ? html`<span

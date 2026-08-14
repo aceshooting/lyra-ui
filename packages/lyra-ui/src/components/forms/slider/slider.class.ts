@@ -31,6 +31,7 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeStart, LYRA_DEFAULT_sliderLabel } from '../../../internal/default-strings.generated.js';
@@ -42,18 +43,6 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeSt
  *  (and native `<input type=range>`). Mirrors lr-time-range's identical
  *  constant. */
 const PAGE_STEP_MULTIPLIER = 10;
-
-function isFormDataValue(value: unknown): value is FormData {
-  if (value === null || typeof value !== 'object') return false;
-  try {
-    const candidate = value as Partial<FormData>;
-    return Object.prototype.toString.call(value) === '[object FormData]'
-      && typeof candidate.append === 'function'
-      && typeof candidate.values === 'function';
-  } catch {
-    return false;
-  }
-}
 
 /** Upper bound on the number of `step` intervals `with-markers` will draw.
  *  A legitimate fractional step (`step="1e-7"` over `[0, 1]`) implies ten
@@ -284,6 +273,10 @@ export class LyraSlider extends LyraSliderBase {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  /** Public WA-compatible intrinsic validator catalog. */
+  static get validators(): LyraFormValidator<LyraSlider>[] {
+    return [currentValidityValidator('required', 'disabled', 'value', 'min', 'max', 'step')];
+  }
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
 
@@ -702,7 +695,7 @@ export class LyraSlider extends LyraSliderBase {
     if (!this._minValueDirty) this._minValue = this.clampValue(this._defaultMinValue);
     if (!this._maxValueDirty) this._maxValue = this.clampValue(this._defaultMaxValue);
     this.sanitizeHandles();
-    const slots = Array.from(this.children, (child) => child.getAttribute('slot'));
+    const slots = Array.from(this.children ?? [], (child) => child.getAttribute('slot'));
     this.hasHintSlot = slots.some((slot) => slot === 'hint' || slot === 'help-text');
     this.hasErrorSlot = slots.includes('error');
     this.hasLabelSlot = slots.includes('label');
@@ -775,7 +768,7 @@ export class LyraSlider extends LyraSliderBase {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    // Mirror lr-split/lr-time-range's cleanup: if the element is removed
+    // Mirror lr-multi-split/lr-time-range's cleanup: if the element is removed
     // mid-drag (or a pointercancel/alt-tab means pointerup never reaches
     // `window`), these window-level listeners would otherwise leak. The
     // transient tooltip state is reset for the same reason a reconnected
@@ -790,7 +783,8 @@ export class LyraSlider extends LyraSliderBase {
     this.cancelAutofocusFrame();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     // Adoption can happen while already disconnected, so do not rely on another disconnect to
     // retire work retained from the previous realm.
     this.rangeFocusGeneration++;
@@ -880,8 +874,8 @@ export class LyraSlider extends LyraSliderBase {
     reason: 'autocomplete' | 'restore',
   ): void {
     void reason;
-    if (isFormDataValue(state)) {
-      const values = [...state.values()].filter((entry): entry is string => typeof entry === 'string');
+    const values = this.readFormDataStrings(state);
+    if (values) {
       if (values.length >= 2) {
         this.minValue = finiteNumber(Number(values[0]), this._defaultMinValue);
         this.maxValue = finiteNumber(Number(values[1]), this._defaultMaxValue);
@@ -889,6 +883,24 @@ export class LyraSlider extends LyraSliderBase {
       return;
     }
     this.value = typeof state === 'string' ? state : this._defaultValue;
+  }
+
+  /** Intrinsic owner-realm read: calling the native prototype performs the unspoofable brand
+   * check and ignores a hostile/shadowed instance `.values` method. */
+  private readFormDataStrings(value: unknown): string[] | null {
+    if (value === null || typeof value !== 'object') return null;
+    const FormDataCtor = this.ownerDocument.defaultView?.FormData;
+    if (!FormDataCtor) return null;
+    try {
+      const iterator = FormDataCtor.prototype.values.call(value as FormData);
+      const strings: string[] = [];
+      for (const entry of iterator) {
+        if (typeof entry === 'string') strings.push(entry);
+      }
+      return strings;
+    } catch {
+      return null;
+    }
   }
 
   private restoreLiveValueFromDefault(): void {
@@ -985,7 +997,19 @@ export class LyraSlider extends LyraSliderBase {
     const count = Math.trunc(finiteNumber(steps, 1));
     if (count === 0) return;
     const handle = this.range && this.focusedHandle !== 'max' ? 'min' : this.focusedHandle ?? 'value';
-    this.assignValueFor(handle, this.valueForHandle(handle) + step * count);
+    this.assignValueFor(handle, this.directionalStep(this.valueForHandle(handle), count));
+  }
+
+  /** Add a signed number of steps without allowing IEEE-754 overflow to reverse direction when
+   * the downstream finite fallback runs. */
+  private directionalStep(current: number, count: number): number {
+    const { lo, hi } = this.domain();
+    if (count === 0) return current;
+    const direction = Math.sign(count);
+    const magnitude = this.step * Math.abs(count);
+    if (!Number.isFinite(magnitude)) return direction > 0 ? hi : lo;
+    const candidate = current + direction * magnitude;
+    return Number.isFinite(candidate) ? candidate : direction > 0 ? hi : lo;
   }
 
   private firstThumb(): HTMLElement | null {
@@ -1182,7 +1206,7 @@ export class LyraSlider extends LyraSliderBase {
     const current = this.valueForHandle(handle);
     // Under RTL, physical ArrowRight moves toward inset-inline-start, i.e. a
     // lower value — swap which physical key counts as "forward", matching
-    // lr-split/lr-time-range's onKeyDown/onPointerMove convention.
+    // lr-multi-split/lr-time-range's onKeyDown/onPointerMove convention.
     // ArrowUp/ArrowDown are never swapped (direction only affects the
     // horizontal inline axis), which also makes them the stable primary keys
     // for orientation="vertical".
@@ -1194,10 +1218,10 @@ export class LyraSlider extends LyraSliderBase {
       e.preventDefault();
       if (this.setValueFor(handle, next, false)) this.pendingKeyHandle = handle;
     };
-    if (e.key === forwardKey || e.key === 'ArrowUp') move(current + this.step);
-    else if (e.key === backwardKey || e.key === 'ArrowDown') move(current - this.step);
-    else if (e.key === 'PageUp') move(current + this.step * PAGE_STEP_MULTIPLIER);
-    else if (e.key === 'PageDown') move(current - this.step * PAGE_STEP_MULTIPLIER);
+    if (e.key === forwardKey || e.key === 'ArrowUp') move(this.directionalStep(current, 1));
+    else if (e.key === backwardKey || e.key === 'ArrowDown') move(this.directionalStep(current, -1));
+    else if (e.key === 'PageUp') move(this.directionalStep(current, PAGE_STEP_MULTIPLIER));
+    else if (e.key === 'PageDown') move(this.directionalStep(current, -PAGE_STEP_MULTIPLIER));
     else if (e.key === 'Home') move(bounds.min);
     else if (e.key === 'End') move(bounds.max);
   };
@@ -1451,9 +1475,13 @@ export class LyraSlider extends LyraSliderBase {
     const { lo, hi } = this.domain();
     const span = hi - lo;
     if (!Number.isFinite(span) || span <= 0) return [];
-    const intervals = Math.round(span / step);
+    const ratio = span / step;
+    const intervals = Math.floor(ratio + Number.EPSILON * Math.max(1, Math.abs(ratio)) * 4);
     if (!Number.isFinite(intervals) || intervals < 1 || intervals > MAX_MARKER_INTERVALS) return [];
-    return Array.from({ length: intervals + 1 }, (_unused, index) => (index / intervals) * 100);
+    return Array.from({ length: intervals + 1 }, (_unused, index) => {
+      const value = lo + index * step;
+      return finiteRatio(value, lo, hi) * 100;
+    });
   }
 
   private renderHandle(

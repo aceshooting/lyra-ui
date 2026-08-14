@@ -5,14 +5,23 @@ import { hostAriaLabel } from '../../../internal/a11y.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
 import type { DialogCloseReason } from '../../overlays/dialog/dialog.class.js';
 import {
+  adaptDocumentRenderer,
+  createDocumentRendererRegistry,
   findDocumentRenderer,
-  getDefaultDocumentRendererRegistry,
   loadDocumentRenderer,
+  snapshotLyraDocumentRendererPayload,
   type DocumentFile,
   type DocumentRendererDefinition,
   type DocumentRendererRegistry,
+  type LyraDocumentRendererPayload,
+  type LyraResolvedDocumentRendererDefinition,
 } from './registry.js';
-import type { AnchorResultDetail, LyraAnchor, LyraHighlight } from './anchors.js';
+import type {
+  AnchorResultDetail,
+  AnchorTargetCapabilities,
+  LyraAnchor,
+  LyraHighlight,
+} from './anchors.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import { styles } from './document-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
@@ -33,7 +42,11 @@ export interface LyraDocumentViewerEventMap {
 /**
  * A dialog-hosted document viewer with a pluggable MIME-type renderer registry.
  * A registered renderer receives the current file; files without a matching
- * renderer use `<lr-document-preview>` as a safe built-in fallback.
+ * renderer use `<lr-document-preview>` as a safe built-in fallback. Each instance snapshots the
+ * registered built-ins at construction; an explicit readonly `registry` provides deterministic
+ * overrides, and MIME dispatch ignores casing and parameters. An opt-in immutable `payload`
+ * becomes authoritative for the file when set; scalar file properties remain the compatible
+ * default when it is unset.
  * A host `aria-label` names the nested dialog by attribute presence, including an explicitly
  * empty value; `name` remains the visible dialog heading.
  *
@@ -82,9 +95,30 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   /** Source URL passed to the renderer or fallback preview. */
   @property() src = '';
 
-  /** Optional per-instance registry; the default registry is used when unset. A consumer matcher
-   * or renderer that throws is contained as the localized error state, and a pending anchor
-   * completes once with `{ found: false }`. */
+  private _payload?: LyraDocumentRendererPayload;
+
+  /**
+   * Optional renderer-specific file payload. Assignment clones, bounds, and freezes the complete
+   * snapshot immediately. While set, `payload.file` is authoritative for dispatch, heading,
+   * renderer/fallback input, and download; `name`, `mimeType`, `src`, `anchor`, `highlights`, and
+   * `alt` resume their legacy authority when this is reset to `undefined`.
+   */
+  @property({ attribute: false })
+  get payload(): LyraDocumentRendererPayload | undefined {
+    return this._payload;
+  }
+  set payload(value: LyraDocumentRendererPayload | undefined) {
+    const old = this._payload;
+    this._payload = value === undefined
+      ? undefined
+      : snapshotLyraDocumentRendererPayload(value);
+    this.requestUpdate('payload', old);
+  }
+
+  /** Optional per-instance immutable/read-only registry override. When unset, this instance owns a
+   * snapshot of the built-ins that existed when it was constructed; later registrations cannot
+   * mutate it. A consumer matcher or renderer that throws is contained as the localized error
+   * state, and a pending anchor completes once with `{ found: false }`. */
   @property({ attribute: false }) registry?: DocumentRendererRegistry;
 
   /** Declarative scroll-to-anchor target, forwarded to the resolved renderer. A string is a
@@ -108,7 +142,11 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     | { kind: 'error' } = { kind: 'fallback' };
 
   private generation = 0;
-  private resolvedLazy?: { def: DocumentRendererDefinition; resolved: DocumentRendererDefinition };
+  private readonly builtInRegistry = createDocumentRendererRegistry();
+  private resolvedLazy?: {
+    def: DocumentRendererDefinition;
+    resolved: LyraResolvedDocumentRendererDefinition;
+  };
   @query('lr-document-preview') private fallbackPreviewEl?: LyraDocumentPreview;
   private readonly announcements = new ViewerAnnouncementController(this);
 
@@ -122,7 +160,8 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.announcements.adopted();
   }
 
@@ -141,6 +180,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
       changed.has('name') ||
       changed.has('mimeType') ||
       changed.has('src') ||
+      changed.has('payload') ||
       changed.has('registry') ||
       changed.has('anchor') ||
       changed.has('highlights') ||
@@ -162,6 +202,17 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   }
 
   private currentFile(): DocumentFile {
+    if (this.payload) {
+      const file = this.payload.file;
+      return {
+        name: file.name,
+        mimeType: file.mimeType,
+        src: file.src,
+        ...(file.anchor !== undefined ? { anchor: file.anchor } : {}),
+        ...(file.highlights ? { highlights: [...file.highlights] } : {}),
+        ...(file.alt !== undefined ? { alt: file.alt } : {}),
+      };
+    }
     return {
       name: this.name,
       mimeType: this.mimeType,
@@ -175,7 +226,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   private async resolve(): Promise<void> {
     const generation = ++this.generation;
     const file = this.currentFile();
-    const registry = this.registry ?? getDefaultDocumentRendererRegistry();
+    const registry = this.registry ?? this.builtInRegistry;
     let def: DocumentRendererDefinition | undefined;
     try {
       def = findDocumentRenderer(file, registry);
@@ -192,26 +243,28 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     }
 
     if (this.resolvedLazy?.def === def) {
-      if (!this.renderWith(this.resolvedLazy.resolved, file)) {
+      const capabilities = this.renderWith(this.resolvedLazy.resolved, file);
+      if (capabilities === false) {
         this.failResolution(file, generation);
         return;
       }
-      this.finishAnchorResult(this.resolvedLazy.resolved, file, generation);
+      this.finishAnchorResult(capabilities, file, generation);
       return;
     }
 
     if (!def.load) {
       this.resolvedLazy = { def, resolved: def };
-      if (!this.renderWith(def, file)) {
+      const capabilities = this.renderWith(def, file);
+      if (capabilities === false) {
         this.failResolution(file, generation);
         return;
       }
-      this.finishAnchorResult(def, file, generation);
+      this.finishAnchorResult(capabilities, file, generation);
       return;
     }
 
     this.renderState = { kind: 'loading' };
-    let resolved: DocumentRendererDefinition;
+    let resolved: LyraResolvedDocumentRendererDefinition;
     try {
       resolved = await loadDocumentRenderer(def);
     } catch {
@@ -223,11 +276,12 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     }
     if (generation !== this.generation) return;
     this.resolvedLazy = { def, resolved };
-    if (!this.renderWith(resolved, file)) {
+    const capabilities = this.renderWith(resolved, file);
+    if (capabilities === false) {
       this.failResolution(file, generation);
       return;
     }
-    this.finishAnchorResult(resolved, file, generation);
+    this.finishAnchorResult(capabilities, file, generation);
   }
 
   /** Consumer registries are extension points, so a throwing matcher/renderer must fail like a
@@ -248,10 +302,14 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
    *  capability at all). A capable embedded viewer's own `DocumentAnchorTarget` mixin emits after
    *  its scroll attempt and that composed event surfaces through this element unchanged, so the
    *  shell must not also emit in that case. */
-  private finishAnchorResult(def: DocumentRendererDefinition | undefined, file: DocumentFile, generation: number): void {
+  private finishAnchorResult(
+    capabilities: AnchorTargetCapabilities | undefined,
+    file: DocumentFile,
+    generation: number,
+  ): void {
     if (file.anchor == null) return;
     if (generation !== this.generation) return;
-    if (!def) {
+    if (!capabilities) {
       this.scheduleAfterUpdate(() => {
         void (async () => {
           const found = (await this.fallbackPreviewEl?.scrollToAnchor(file.anchor!)) ?? false;
@@ -261,25 +319,28 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
       });
       return;
     }
-    if (this.isAnchorCapable(def, file.anchor)) return;
+    if (this.isAnchorCapable(capabilities, file.anchor)) return;
     this.scheduleAfterUpdate(() => {
       if (generation !== this.generation) return;
       this.emit('lr-anchor-result', { found: false });
     });
   }
 
-  private isAnchorCapable(def: DocumentRendererDefinition | undefined, anchor: LyraAnchor | string): boolean {
-    const anchors = def?.capabilities?.anchors;
+  private isAnchorCapable(capabilities: AnchorTargetCapabilities, anchor: LyraAnchor | string): boolean {
+    const anchors = capabilities.anchors;
     if (!anchors || anchors.length === 0) return false;
     if (typeof anchor === 'string') return true; // highlight id -- any declared anchor kind implies highlight support
     return anchors.includes(anchor.kind);
   }
 
-  private renderWith(def: DocumentRendererDefinition, file: DocumentFile): boolean {
-    if (!def.render) return false;
+  private renderWith(
+    definition: LyraResolvedDocumentRendererDefinition,
+    file: DocumentFile,
+  ): AnchorTargetCapabilities | undefined | false {
     try {
-      this.renderState = { kind: 'rendered', template: def.render(file) };
-      return true;
+      const adapted = adaptDocumentRenderer(definition, file, this.payload);
+      this.renderState = { kind: 'rendered', template: adapted.render() };
+      return adapted.capabilities;
     } catch {
       return false;
     }
@@ -295,10 +356,12 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   };
 
   private onDownload = (): void => {
-    this.emit('lr-download', { src: this.src, filename: this.name });
+    const file = this.currentFile();
+    this.emit('lr-download', { src: file.src, filename: file.name });
   };
 
   private renderBody(): unknown {
+    const file = this.currentFile();
     switch (this.renderState.kind) {
       case 'rendered':
         return this.renderState.template;
@@ -310,11 +373,11 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
       default:
         return html`
           <lr-document-preview
-            src=${this.src}
-            mime-type=${this.mimeType}
-            filename=${this.name}
-            .alt=${this.alt}
-            .highlights=${this.highlights}
+            src=${file.src}
+            mime-type=${file.mimeType}
+            filename=${file.name}
+            .alt=${file.alt}
+            .highlights=${file.highlights ?? []}
             .suppressDownload=${true}
           ></lr-document-preview>
         `;
@@ -322,11 +385,12 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   }
 
   override render(): TemplateResult {
-    const downloadHref = safeDownloadHref(this.src);
+    const file = this.currentFile();
+    const downloadHref = safeDownloadHref(file.src);
     return html`
       <lr-dialog
         ?open=${this.open}
-        heading=${this.name || nothing}
+        heading=${file.name || nothing}
         label=${this.localize('documentViewerLabel')}
         aria-label=${hostAriaLabel(this) ?? nothing}
         closable
@@ -341,7 +405,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
                 slot="footer"
                 part="download-link"
                 href=${downloadHref}
-                download=${this.name || nothing}
+                download=${file.name || nothing}
                 @click=${this.onDownload}
               >${this.localize('download')}</a>
             `

@@ -8,6 +8,7 @@ focused) fires `lr-tool-call-chip-select`; a consumer wires that to opening a
 a compact call summary is useful, with or without a detail surface behind it.
 
 **Properties:**
+
 - `name: string = ''` — the tool/function name, e.g. `web_search`
 - `category: string = ''` — optional grouping label, e.g. `research`
 - `status: 'pending'|'running'|'success'|'error'|'denied' = 'pending'` (reflected) — drives the
@@ -59,7 +60,7 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
 > Retheming a chip from outside `<lr-tool-call-chip>` (e.g. per-tool or per-status colors)?
 > Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
 > "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
-> wrapper's *direct* children, not a nested `<lr-*>` host's shadow DOM.
+> wrapper's _direct_ children, not a nested `<lr-*>` host's shadow DOM.
 
 **Optional peer deps:** none.
 
@@ -88,12 +89,15 @@ identical status vocabulary so a call reads the same way in both places. Duratio
 sub-1000ms `"820ms"`, else trimmed to at most one decimal of seconds (`"1.5s"`, `"2s"`).
 
 **Known gotchas:**
+
 - the default slot is checked for emptiness by scanning `Array.from(this.children)` for elements
-  once on first update, then kept in sync via `slotchange` — only *element* children count (a bare
+  once on first update, then kept in sync via `slotchange` — only _element_ children count (a bare
   text node assigned to the default slot won't trigger the tooltip)
-- `aria-label` on the host element (if you set one) wins over the component's own generated
-  accessible label (`"name — summary — Status — duration"`); otherwise that generated string is
-  what's announced
+- the native button always keeps its purpose-specific generated name (`"name — summary — Status —
+duration"`). A host `aria-label` remains on the host and is not cloned onto that button; even an
+  explicit empty host label never leaves the actionable button unnamed
+- the `icon` slot is decorative by contract. Its wrapper is both `aria-hidden` and `inert`, so do
+  not place links, buttons, or other controls there; use the chip activation or detail slot instead
 - Escape only dismisses the tooltip when it's open; it does not fire any event or otherwise affect
   `status`/`open` state, since the chip has no "open" state of its own beyond the tooltip
 
@@ -110,8 +114,9 @@ registered renderer returns; `<lr-tool-result-view>` is just the dispatch + fall
 shell around it.
 
 **Properties:**
+
 - `registry?: ToolRendererRegistry` (property only, no attribute) — a custom `Map<string,
-  ToolRendererDefinition>` to dispatch against instead of the module-level default registry (see
+ToolRendererDefinition>` to dispatch against instead of the module-level default registry (see
   `registry.ts` below)
 - `toolName: string = ''` (attribute `tool-name`) — the tool's name; the primary dispatch key
 - `result: unknown` (property only, no attribute) — the tool call's result payload, handed to the
@@ -119,11 +124,12 @@ shell around it.
   `<lr-json-viewer>` fallback)
 - `args: unknown` (property only, no attribute) — the tool call's original arguments, if available,
   handed to the matched renderer's `render()` alongside `result`
-- `fallback: string = 'json'` (reflected) — fallback-kind selector. `"json"` (the default) is
-  an unconditional `<lr-json-viewer>`. `"text"` renders a *string* `result` as preformatted text
+- `fallback: ToolResultFallback = 'json'` (reflected), where exported `ToolResultFallback =
+  'json' | 'text'` — fallback-kind selector. `"json"` (the default) is
+  an unconditional `<lr-json-viewer>`. `"text"` renders a _string_ `result` as preformatted text
   instead — falling back to the `"json"` behavior when `result` isn't a string, so setting
   `fallback="text"` defensively against an unpredictable result shape never renders broken output.
-  Any other value also uses the `"json"` behavior, forward-compatible plumbing only.
+  Foreign runtime values normalize to the reflected `"json"` default.
 - `copyable: boolean = false` (reflected) — shows a copy-to-clipboard affordance alongside the
   fallback view, for either `fallback` kind: forwarded to `<lr-json-viewer>`'s own `copyable` for
   `"json"`, or a `<lr-copy-button>` rendered next to the text for `"text"`.
@@ -175,24 +181,30 @@ without this library knowing anything about either. Every registered instance di
 this same module-level registry unless a given `<lr-tool-result-view>`'s `registry` property is
 set to a different `Map` instance.
 
-**`ToolRendererDefinition`** — the shape of one registered renderer:
-- `render?: (result: unknown, args: unknown, context?: ToolRenderContext) => unknown` — renders the
+**`ToolRendererDefinition`** — an exclusive
+`DirectToolRendererDefinition | LazyToolRendererDefinition` union. Runtime registration, custom
+registry lookup, and loaded-module boundaries validate the same shape, so plain JavaScript cannot
+silently register `{}`, combine `render` with `load`, or cache an invalid loaded definition:
+
+- direct: `render: (result: unknown, args: unknown, context?: ToolRenderContext) => unknown` and
+  `load?: never` — renders the
   result (and the args that produced it) as UI. Typed as `unknown` rather than Lit's
   `TemplateResult` so any lit-html-renderable value works (a plain string, a DOM node, an array of
   templates) — consumers already own their own Lit import and don't need this module to add one.
-  The 3rd `context` argument is additive: it's the *last* positional parameter, so a pre-existing
+  The 3rd `context` argument is additive: it's the _last_ positional parameter, so a pre-existing
   2-arg `render(result, args)` function stays assignable to this type unchanged — JS/TS function
-  assignability allows an implementation with fewer parameters than its declared type. Use
-  Direct callers may omit `context`; component invocations always provide it. Use
+  assignability allows an implementation with fewer parameters than its declared type. Direct
+  callers may omit `context`; component invocations always provide it. Use
   `context?.reportStatus(status)` (see `ToolRenderContext` below) to signal a non-throwing outcome
   — e.g. an application-level failure the renderer still drew real UI for — instead of throwing,
   which discards that UI for the `<lr-json-viewer>` fallback instead
-- `matches?: (payload: unknown) => boolean` — facade/shape-based dispatch predicate, consulted only
-  when no exact `toolName` key matches (see dispatch order below); only ever consulted *before*
+- either branch may include `matches?: (payload: unknown) => boolean` — facade/shape-based dispatch predicate, consulted only
+  when no exact `toolName` key matches (see dispatch order below); only ever consulted _before_
   `load` resolves when supplied inline at registration time — a definition that needs shape-based
   dispatch and also wants to lazy-load its `render` should register a lightweight synchronous
   `matches` up front alongside `load`
-- `load?: () => Promise<ToolRendererDefinition | { default: ToolRendererDefinition }>` — lazy loader
+- lazy: `load: () => Promise<DirectToolRendererDefinition | { default:
+  DirectToolRendererDefinition }>` and `render?: never` — lazy loader
   for a code-split renderer, so a host app can defer the cost of a rarely-used or heavy renderer
   (e.g. one pulling in a charting library) instead of paying for it on every page that merely
   registers it. Resolves to either a definition directly, or a `{ default }`-shaped module namespace
@@ -200,6 +212,7 @@ set to a different `Map` instance.
   export is itself a `ToolRendererDefinition`
 
 **`ToolRenderContext`** — the shape of `render()`'s 3rd argument:
+
 - `reportStatus: (status: ToolResultStatus) => void` — reports this render's outcome without
   throwing. `ToolResultStatus` is `'pending' | 'running' | 'success' | 'error' | 'denied'`, the same
   union `<lr-tool-result-dialog>`/`<lr-tool-call-chip>` use, re-exported from this module. Calling
@@ -209,27 +222,30 @@ set to a different `Map` instance.
   registered directly.
 
 ```ts
-registerToolRenderer('run_query', {
+registerToolRenderer("run_query", {
   render: (result, _args, context) => {
     if ((result as { rows?: unknown[] })?.rows === undefined) {
-      context.reportStatus('error');
+      context?.reportStatus("error");
       return html`<p class="query-error">The query returned no result set.</p>`;
     }
-    return html`<query-result-table .rows=${(result as { rows: unknown[] }).rows}></query-result-table>`;
+    return html`<query-result-table
+      .rows=${(result as { rows: unknown[] }).rows}
+    ></query-result-table>`;
   },
 });
 ```
 
 **Exports:**
+
 - `registerToolRenderer(name: string, def: ToolRendererDefinition): void` — registers (or
   overwrites) the renderer for `name` in the module-level default registry
 - `getDefaultToolRendererRegistry(): ToolRendererRegistry` — returns the default `Map` that
   `registerToolRenderer()` writes to and every `<lr-tool-result-view>` reads from unless its own
   `registry` prop is set
 - `findToolRenderer(toolName: string, payload: unknown, registry?: ToolRendererRegistry):
-  ToolRendererDefinition | undefined` — the dispatch function `<lr-tool-result-view>` calls
+ToolRendererDefinition | undefined` — the dispatch function `<lr-tool-result-view>` calls
   internally on every resolve; exposed for direct use/testing too
-- `loadToolRenderer(def: ToolRendererDefinition): Promise<ToolRendererDefinition>` — resolves `def`
+- `loadToolRenderer(def: ToolRendererDefinition): Promise<DirectToolRendererDefinition>` — resolves `def`
   to a definition guaranteed to carry a real `render`, awaiting/unwrapping `def.load()` when present
   (or returning `def` unchanged otherwise)
 - `clearToolRenderers(): void` — test-only utility that empties the default registry and its
@@ -237,6 +253,7 @@ registerToolRenderer('run_query', {
 
 **Dispatch order** (`findToolRenderer`), exactly as `<lr-tool-result-view>`'s own `resolve()` uses
 it:
+
 1. An exact `toolName` key match in the registry.
 2. Failing that, the first entry — in registration order, since a `Map` already iterates that way —
    whose `matches(payload)` returns `true`. Useful when several tool names share one result shape
@@ -246,33 +263,36 @@ it:
    fires `lr-render-error`.
 
 Once a definition is found, if it carries `load`, `<lr-tool-result-view>` shows a
-decorative `<lr-skeleton variant="rect" height="4rem">` while `loadToolRenderer()` resolves it.
+decorative `<lr-skeleton shape="rect" height="4rem">` while `loadToolRenderer()` resolves it.
 The nested skeleton has announcements disabled; the stable `base` busy state and an ordinary,
 visually hidden localized Loading label expose the in-progress state without creating a shadow-root
 live region. The resolved
-`load()` promise is cached keyed by *definition object identity* (a `WeakMap`, not by tool-name
+`load()` promise is cached keyed by _definition object identity_ (a `WeakMap`, not by tool-name
 string) — two different registries that happen to reuse the same tool-name string get independently
 cached loads, and any given lazy definition's `load()` runs at most once no matter how many times
 it's dispatched to, across every `<lr-tool-result-view>` instance that resolves to it. A **rejected**
-`load()` is *not* cached — the definition stays registered, so a later resolution attempt (e.g. after
-a transient network failure) gets a fresh `load()` call rather than being stuck replaying one failed
-promise forever.
+`load()` is _not_ cached — nor is a load that resolves to an invalid/another-lazy definition. The
+definition stays registered, so a later resolution attempt (e.g. after a transient network failure)
+gets a fresh `load()` call rather than being stuck replaying one failed promise forever.
 
 ```ts
-import { registerToolRenderer } from '@aceshooting/lyra-ui/components/agent-tools/tool-result-view/registry.js';
+import { registerToolRenderer } from "@aceshooting/lyra-ui/components/agent-tools/tool-result-view/registry.js";
 
-registerToolRenderer('get_weather', {
-  render: (result, args) => html`<weather-card .data=${result} .city=${args?.city}></weather-card>`,
+registerToolRenderer("get_weather", {
+  render: (result, args) =>
+    html`<weather-card .data=${result} .city=${args?.city}></weather-card>`,
 });
 
 // Lazily loaded, shape-based fallback for every *_search tool:
-registerToolRenderer('web_search', {
-  matches: (payload) => typeof payload === 'object' && payload !== null && 'results' in payload,
-  load: () => import('./search-result-renderer.js'), // default export is a ToolRendererDefinition
+registerToolRenderer("web_search", {
+  matches: (payload) =>
+    typeof payload === "object" && payload !== null && "results" in payload,
+  load: () => import("./search-result-renderer.js"), // default export is a ToolRendererDefinition
 });
 ```
 
 **Known gotchas:**
+
 - `<lr-tool-result-view>` re-resolves (re-runs the full dispatch → load → render pipeline)
   whenever `toolName`, `result`, `args`, or `registry` changes, or on first update — a stale
   in-flight `load()` superseded by a newer change is detected via an internal generation counter and
@@ -285,7 +305,7 @@ registerToolRenderer('web_search', {
 - `status` is reset to `'success'` immediately before every `render()` call, not merely at
   construction — a renderer that reported `'error'` on one result does not leave that status
   behind once dispatch moves on to a different (quiet) renderer; a `reportStatus()` call that
-  arrives asynchronously after a *newer* resolve has already started (a stale promise the previous
+  arrives asynchronously after a _newer_ resolve has already started (a stale promise the previous
   render kicked off) is detected via the same generation counter as the `load()` staleness guard
   and discarded rather than clobbering the newer status
 - **don't type a custom renderer against a hand-rolled, over-generic function signature** (e.g.
@@ -296,8 +316,9 @@ registerToolRenderer('web_search', {
   parameter and the exact `ToolResultStatus` string union `reportStatus` accepts. A loosened/`any`
   signature type-checks either way but silently gives up the compiler's ability to catch a typo'd
   status string or a dropped `context` parameter
-- `fallback` implements exactly two kinds, `"json"` and `"text"`; any *other* value silently behaves
-  as `"json"`, as does `"text"` whenever `result` isn't a string. Only `"text"` renders
+- `fallback` implements exactly two kinds, `"json"` and `"text"`; any _other_ runtime value
+  normalizes to reflected `"json"`, while `"text"` with a non-string result uses the JSON view.
+  Only `"text"` renders
   `[part="fallback-text"]`/`[part="fallback-copy"]`
 
 ---
@@ -313,10 +334,12 @@ child scan expects real projected content, while its modal behavior participates
 overlay stack.
 
 **Properties:**
-- `open: boolean = false` (reflected) — whether the dialog is open; set this (or call `close()`) —
-  there is no separate `show()`/`hide()` pair
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — directly names the internal
-  dialog panel; otherwise the tool-name title supplies `aria-labelledby`
+
+- `open: boolean = false` (reflected) — whether the dialog is open; set it directly or use the
+  lifecycle methods below
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
+  host itself, while the dialog panel remains labelled by its visible tool-name title instead of
+  cloning that name. A direct property assignment made without the attribute can name the panel
 - `toolName: string = ''` (attribute `tool-name`) — the tool's name, rendered prominently in the
   header
 - `status: 'pending'|'running'|'success'|'error'|'denied' = 'pending'` (reflected) — drives the
@@ -325,8 +348,10 @@ overlay stack.
   from the header entirely when unset
 - `maximized: boolean = false` (reflected) — near-fullscreen presentation of the same open dialog
 
-**Methods:** `close(reason: ToolResultDialogCloseReason = 'api'): void` — closes the dialog (no-op if
-already closed), emits `lr-close` with `reason`, and returns focus to whatever had it before
+**Methods:** `show(): void` opens the dialog; `hide(reason: ToolResultDialogCloseReason = 'api'):
+void` is the reasoned API dismissal;
+`close(reason: ToolResultDialogCloseReason = 'api'): void` closes the dialog (no-op if already
+closed), emits `lr-close` with `reason`, and returns focus to whatever had it before
 the dialog opened. Built-in triggers call this with `'escape'`/`'backdrop'`/`'close-button'`; a
 consumer's own close affordance (e.g. a footer action button) should call it directly with its own
 reason string so every dismissal path funnels through the same event.
@@ -386,6 +411,7 @@ open/close lifecycle — unlike `<lr-widget>`'s fullscreen mode there's no separ
 state, so no additional scroll-lock/focus-trap bookkeeping is needed for that transition alone.
 
 **Known gotchas:**
+
 - a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
   shared overlay registration and re-acquires the scroll lock if `open` was still `true` across the
   move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no intervening update, so
@@ -421,8 +447,9 @@ it has no dependency on the general-purpose dialog, while its modal behavior par
 shared overlay stack. First-party invention (no Web Awesome equivalent).
 
 **Exported types:**
+
 - `ToolSelectDialogTool { id: string; name: string; description?: string; category?: string; icon?:
-  string; disabled?: boolean; disabledReason?: string }` — one selectable agent tool. `category` groups
+string; disabled?: boolean; disabledReason?: string }` — one selectable agent tool. `category` groups
   the row into a heading; tools with no `category` (or an empty/whitespace-only one) fall into a
   trailing localized "Other" bucket. A caller category literally named `"Other"` remains its own
   ordinary, first-seen category and is not merged into or reordered with that uncategorized bucket.
@@ -441,17 +468,19 @@ shared overlay stack. First-party invention (no Web Awesome equivalent).
   whatever a caller passes to `close()` directly.
 
 **Properties:**
-- `open: boolean = false` (reflected) — set this (or call `close()`) to dismiss; there is no separate
-  `show()`/`hide()` pair.
+
+- `open: boolean = false` (reflected) — set it directly or use the lifecycle methods below.
 - `tools: ToolSelectDialogTool[] = []` (attribute: false) — the full set of tools a consumer offers,
-  across all categories.
-- `selected: string[] = []` (attribute: false) — the currently-enabled tool ids.
+  across all categories. `id` is the public identity: when provider data repeats one, the first
+  occurrence wins consistently for grouping, filtering, counts, selection, and emitted ids.
+- `selected: string[] = []` (attribute: false) — the currently-enabled tool ids. Repeated ids are
+  treated as one selection.
 - `useDefaults: boolean = false` (attribute `use-defaults`, reflected) — whether the conversation is
   using the default tool set (`true`) or a custom selection (`false`).
 - `label: string = 'Select tools'` — the dialog's visible heading and accessible name.
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the dialog panel's
-  accessible name, taking precedence over the visible `label` heading; mirrors `<lr-dialog>`'s
-  own host-`aria-label` override pattern.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
+  host; the panel remains labelled by its visible heading instead of cloning that name. A direct
+  property assignment made without the attribute can name the panel.
 - `searchPlaceholder: string = 'Search tools…'` (attribute `search-placeholder`)
 - `filter: ToolSelectFilter | null = null` (attribute: false) — overrides the built-in
   case-insensitive name/description substring match.
@@ -459,8 +488,10 @@ shared overlay stack. First-party invention (no Web Awesome equivalent).
   `autoCorrect: string = ''` (`autocorrect`), `inputMode: string = ''` (`inputmode`), and
   `enterKeyHint: string = ''` (`enterkeyhint`) — forwarded to the search `<input>`.
 
-**Methods:** `close(reason: ToolSelectDialogCloseReason = 'api'): void` — closes the dialog, emits
-`lr-close` with `reason`, and returns focus to whatever had it before the dialog opened.
+**Methods:** `show(): void` opens the dialog; `hide(reason: ToolSelectDialogCloseReason = 'api'):
+void` performs the reasoned API dismissal;
+`close(reason: ToolSelectDialogCloseReason = 'api'): void` closes the dialog, emits `lr-close` with
+`reason`, and returns focus to whatever had it before the dialog opened.
 
 **Events:** `lr-change` (`detail: ToolSelectionChangeDetail` — the proposed enabled-tool selection and
 `useDefaults` state) is cancelable and fires before either property changes. Calling
@@ -476,7 +507,8 @@ already apply live via `lr-change`, so this slot is purely optional; only visual
 assigned elements.
 
 **CSS parts:** `backdrop`, `panel`, `header`, `title`, `subtitle`, `search-row`, `search-input`,
-`defaults-row`, `defaults-toggle`, `defaults-hint`, `body`, `empty`, `category`, `category-heading`,
+`defaults-row`, `defaults-toggle`, `defaults-hint`, `body` (the keyboard-focusable scroll region),
+`empty`, `category`, `category-heading`,
 `category-count`, `category-list`, `tool-row`, `tool-checkbox`, `tool-name`, `tool-icon`,
 `tool-description`, `tool-disabled-reason`, `footer`
 
@@ -512,13 +544,14 @@ dependencies of this package imported directly, not optional peers.
 `useDefaults` is a single top-level switch: while `true`, every per-tool checkbox renders disabled
 (still reflecting whatever `selected` holds — populate that with the actual default tool set whenever
 `useDefaults` is true) alongside a hint explaining that turning the switch off is how to customize.
-Turning it off is the only control that both flips `useDefaults` to `false` *and* unlocks the per-tool
+Turning it off is the only control that both flips `useDefaults` to `false` _and_ unlocks the per-tool
 checkboxes for editing.
 
 **Known gotchas:**
+
 - No built-in footer/close button — dismissal happens via Escape, a backdrop click, or a consumer's own
   `footer`-slotted action calling `close()` directly.
-- A row is effectively disabled whenever *either* its own `tool.disabled` is true *or* the top-level
+- A row is effectively disabled whenever _either_ its own `tool.disabled` is true _or_ the top-level
   `useDefaults` switch is on — a tool without `disabled` set can still render as a locked checkbox while
   `useDefaults` is true.
 - `disabledReason` text only renders when both `tool.disabled` and `tool.disabledReason` are set.
@@ -531,6 +564,9 @@ checkboxes for editing.
   instance) resumes its shared overlay registration and re-acquires the scroll lock dropped in
   `disconnectedCallback`.
 - The search input is the first focusable element in the panel and receives focus automatically on open.
+- Matching rows mount in batches of 200. Selected matches reserve positions in the current batch,
+  and a localized `[part="limit"]` notice plus `[part="load-more"]` button mounts the next 200;
+  searching always considers the complete first-wins tool catalog.
 
 ---
 
@@ -543,6 +579,7 @@ slot is entirely free-form (a consumer-composed `<lr-streaming-text>`, `<lr-mark
 plain text) — this component has no dependency on either.
 
 **Properties:**
+
 - `label: string = 'Thinking'`
 - `compact: boolean = false` (reflected) — tightens the header/body padding and the header's
   internal gap for dense transcript rows. This is only a density control: its card border and
@@ -564,8 +601,10 @@ plain text) — this component has no dependency on either.
 (no smooth-scroll animation). Safe to call directly, e.g. from a host that wants to force a
 jump-to-latest action of its own.
 
-**Events:** `lr-toggle` (`detail: { expanded: boolean }`, same event name and shape as
-`<lr-source-list>`'s own `lr-toggle`) — fired whenever the header button is activated.
+**Events:** cancelable `lr-toggle-request` (`detail: { expanded: boolean }`) fires before a header
+activation changes state. Prevent it to retain the current `expanded` value. An accepted request
+then updates `expanded` and emits the non-cancelable committed `lr-toggle` with the same detail;
+vetoed requests never emit the committed event.
 
 **Slots:** default (the reasoning/thinking content; entirely free-form)
 
@@ -599,7 +638,10 @@ padding while `compact`. Plus shared
 
 ```html
 <lr-thinking-panel label="Reasoning" mode="live" expanded>
-  <lr-streaming-text content="Considering the user's constraints…" streaming></lr-streaming-text>
+  <lr-streaming-text
+    content="Considering the user's constraints…"
+    streaming
+  ></lr-streaming-text>
 </lr-thinking-panel>
 
 <lr-thinking-panel label="Reasoning" mode="post-hoc" duration-ms="4200">
@@ -632,13 +674,14 @@ token; scroll-to-bottom calls are coalesced to at most one per animation frame u
 stream.
 
 **Known gotchas:**
+
 - The `MutationObserver` only watches this element's own light-DOM subtree — it cannot see a
   mutation that happens entirely inside a slotted custom element's own shadow root (e.g. a
   `<lr-markdown>` re-rendering its shadow tree after a `content` change). A slotted element whose
   own internal updates should drive auto-scroll needs to append/mutate visible light-DOM text
   itself (as `<lr-streaming-text>` does), or the host can call `scrollToBottom()` directly.
 - Either half of the pair can trigger the jump-to-bottom/reset-stickiness behavior, as long as the
-  *other* half already holds: an `expanded` transition to `true` while `mode` is already `'live'`,
+  _other_ half already holds: an `expanded` transition to `true` while `mode` is already `'live'`,
   **or** a `mode` transition to `'live'` while the panel is already `expanded`, both jump to the
   bottom and reset stickiness. Only a change that leaves the panel in some other combination
   (collapsed, or `mode !== 'live'`) skips it.
@@ -657,6 +700,7 @@ non-activatable text. Falls back to verbatim raw text when nothing parses. First
 (no Web Awesome equivalent).
 
 **Properties:**
+
 - `trace: string = ''` — the raw stack trace text to parse and render.
 - `collapseInternal: boolean = true` (attribute: `collapse-internal`) — folds runs of internal
   frames behind a toggle.
@@ -680,12 +724,16 @@ non-activatable text. Falls back to verbatim raw text when nothing parses. First
   background stay, so reach for `frame="plain"` to drop the chrome. Added in 9.0.0.
 
 **Events:**
+
 - `lr-frame-select` (`detail: { file: string; line: number; column?: number; raw: string }`) — a
   frame with a safe parsed location was activated. `column` is always undefined for Python frames,
   which carry no column information. Malformed or unsafe locations render as raw text and never
   emit this event.
-- `lr-copy` (`detail: { text: string }`) — the raw, unparsed trace text, fired on copy-button
-  activation regardless of whether the clipboard write actually succeeded.
+- `lr-copy` (`detail: { ok: true; text: string }`) — the raw, unparsed trace text, fired only after the
+  clipboard write resolves successfully.
+- `lr-error` (no detail) and `lr-copy-error` (`detail: { ok: false; text: string; reason:
+'unsupported'|'denied'|'failed'; error: unknown }`) — compatibility and detailed failure signals. A rejected or
+  unavailable clipboard never enters the success state or emits `lr-copy`.
 
 **Slots:** none.
 
@@ -717,9 +765,11 @@ the shared quiet/brand tokens used by surrounding UI. Plus shared tokens
 ```html
 <lr-stack-trace></lr-stack-trace>
 <script type="module">
-  const stackTrace = document.querySelector('lr-stack-trace');
-  stackTrace.trace = 'TypeError: boom\n    at doThing (/app/src/util.js:10:5)';
-  stackTrace.addEventListener('lr-frame-select', (e) => console.log(e.detail.file, e.detail.line));
+  const stackTrace = document.querySelector("lr-stack-trace");
+  stackTrace.trace = "TypeError: boom\n    at doThing (/app/src/util.js:10:5)";
+  stackTrace.addEventListener("lr-frame-select", (e) =>
+    console.log(e.detail.file, e.detail.line)
+  );
 </script>
 ```
 
@@ -729,6 +779,7 @@ RegExp)[]): StackGroup[]` helper (plus `DEFAULT_INTERNAL_PATTERNS`, and the `Sta
 standalone so a consumer can parse or unit-test traces without instantiating the element at all.
 
 **Known gotchas:**
+
 - an internal-frame run only collapses behind the `internal-toggle` when it is two or more
   consecutive internal frames; a single isolated internal frame renders as a normal `frame` button
   (there is nothing useful to fold).
@@ -749,22 +800,29 @@ keeps its own panel template rather than nesting `<lr-dialog>`, so it has no dep
 general-purpose dialog component, while its modal behavior participates in the shared overlay stack.
 
 Approve/Deny/Edit are built-in chrome, not a `footer` slot a consumer must assemble — there is exactly
-one correct action set for "approve this call". The `footer` slot is offered only for *supplementary*
+one correct action set for "approve this call". The `footer` slot is offered only for _supplementary_
 content alongside those buttons (e.g. a "remember this choice for this tool" checkbox); its content
 renders at the start of the action row, before Deny/Edit/Approve.
 
 **Exported types:**
+
+- `ApprovalAction = 'approve' | 'deny'` — shared imperative vocabulary for an approval operation
+  that is proposed or awaiting persistence
+- `ApprovalDecision = 'approved' | 'denied'` — shared final-outcome vocabulary, deliberately
+  separate from `ApprovalAction`
 - `ToolApprovalDialogCloseReason = 'escape' | 'backdrop' | 'approve' | 'deny' | 'api' | string` — the
   `lr-close` detail; `'escape'`/`'backdrop'`/`'approve'`/`'deny'` come from the dialog's own built-in
   dismiss triggers, any other string is whatever a caller passes to `close()` directly.
 
 **Properties:**
-- `open: boolean = false` (reflected) — set this (or call `close()`) to dismiss; there is no separate
-  `show()`/`hide()` pair
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — directly names the internal
-  dialog panel; otherwise the tool-name heading supplies `aria-labelledby`. Mirrors
-  `<lr-tool-result-dialog>`'s/`<lr-tool-select-dialog>`'s own host-`aria-label` override pattern; fed
-  only by a host `aria-label`
+
+- `open: boolean = false` (reflected) — set it directly or use the lifecycle methods below
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
+  host; the panel remains labelled by its visible heading rather than cloning the same name. A
+  direct property assignment made without the attribute can name the panel
+- `proposalKey: string = ''` (attribute `proposal-key`) — immutable identity/generation for the
+  open proposal. Change it whenever a source reuses the same visible tool name/arguments for a new
+  proposal; draft, editing, validation-announcement, and pending-decision state reset immediately
 - `toolName: string = ''` (attribute `tool-name`) — the proposed call's name, e.g. `web_search`;
   drives the heading and the dialog's accessible name
 - `args: unknown = {}` (attribute: false) — the proposed call's arguments, rendered via
@@ -786,9 +844,9 @@ renders at the start of the action row, before Deny/Edit/Approve.
   `close('approve'|'deny')`, or clear `.pending` back to `null` to bounce back to the undecided
   state; `pending` also resets to `null` every time the dialog re-opens.
 
-**Methods:** `close(reason: ToolApprovalDialogCloseReason = 'api'): void` — closes the dialog, emits
-`lr-close` with `reason`, and returns focus to whatever had it before the dialog opened; a no-op if
-already closed.
+**Methods:** `show(): void` opens the dialog; `hide(reason: ToolApprovalDialogCloseReason = 'api'):
+void` and `close(reason = 'api'): void` close through the same reasoned lifecycle, emit `lr-close`,
+and return focus to whatever had it before opening; all are no-ops when already in the target state.
 
 **Events:** `lr-approve` (`detail: { args: unknown }` — the current, already-parsed arguments: the
 original `args` prop, or the user's edited-and-validated version if an edit was in progress.
@@ -849,10 +907,10 @@ pre-filled with `JSON.stringify(args, null, 2)`. Every keystroke re-validates wi
 Approve button is `disabled` for as long as the current textarea content fails to parse, so a
 malformed edit can never be silently approved as either the broken text or a stale copy of the
 original args. The same button relabels to "Cancel" while editing; clicking it discards the draft
-entirely and returns to the read-only view of the *original* `args` — there is no separate "save"
+entirely and returns to the read-only view of the _original_ `args` — there is no separate "save"
 step independent of Approve itself. Both `editing` and any in-progress draft reset back to the
-read-only view every time the dialog transitions from closed to open, so a reused instance never
-leaks one proposal's half-finished edit into the next.
+read-only view whenever the dialog opens or `proposalKey`/`toolName`/`args` identifies a replacement
+proposal, so a reused instance never leaks one proposal's half-finished edit into the next.
 
 The raw-JSON editor deliberately fixes native `resize` to `vertical`, so a user can make a long
 draft taller without changing the dialog's constrained inline size. This focused approval flow has
@@ -864,7 +922,7 @@ invalid JSON is additionally appended once to the shared assertive light-DOM ann
 further invalid keystrokes do not repeat it. An invalid draft already present at initial mount or
 reconnect establishes a silent baseline rather than replaying stale context.
 
-Initial focus deliberately does *not* land on Approve: approving a tool call is a consequential,
+Initial focus deliberately does _not_ land on Approve: approving a tool call is a consequential,
 potentially irreversible action, so a user who opens the dialog and reflexively presses Enter/Space
 before reading anything should deny, not approve. Deny gets the initial focus instead — the same
 "focus the safe action" convention a native destructive-confirmation dialog typically follows for its
@@ -873,6 +931,7 @@ own Cancel button. Tab/Shift+Tab are bounded to the panel's own focusable conten
 shared composed-tree focus traversal used by the other modal families.
 
 **Known gotchas:**
+
 - `editable` defaults to `true` and reflects — see the property note above about overriding it with a
   property binding, not a boolean-attribute binding.
 - `lr-deny` has no detail payload: its `event.detail` is `null`, not `undefined`.
@@ -907,32 +966,44 @@ shared composed-tree focus traversal used by the other modal families.
 Renders one form control per top-level property of a JSON Schema object, for ad hoc tool invocation or
 approval-editing UIs (e.g. "the agent wants to call `create_event(title, attendees, allDay)` — let the
 user tweak the arguments before running it"). First-party invention (no Web Awesome equivalent).
-The `base` part is an accessible `role="group"`: a host `aria-label` or native external `<label for>`
-names the whole parameter form without replacing the individual generated fields' names.
+With no host name, the `base` part is the accessible `role="group"`; a native external `<label for>`
+can name the form-associated host. A non-empty host `aria-label` remains on the host as the sole
+aggregate semantic owner, so `base` omits its duplicate role/name. The individual generated fields
+keep their own purpose-specific names in every case.
 
-**Supported schema subset:** a *flat* object whose properties use one primitive `type`
+**Supported schema subset:** a _flat_ object whose properties use one primitive `type`
 (`'string'`, `'number'`, `'integer'`, or `'boolean'`), `required` property presence, string `enum`,
 primitive `const`, and the `title`/`description`/`default` annotations. Nested objects, arrays, type
 unions, `oneOf`/`anyOf`/`allOf`, `$ref`, string/numeric constraints, and schema-valued
 `additionalProperties` are not interpreted. An unsupported property type renders a visible fallback
-and makes the form invalid instead of being silently accepted.
+and makes the form invalid instead of being silently accepted. Schemas are bounded to 100 fields
+and 500 enum choices per field; exceeding either ceiling leaves only the bounded prefix mounted and
+fails the form closed with a localized form-wide error. A null, array, or other malformed property
+definition is a schema-shape error, never misreported as a value-serialization failure.
 
 **Exported types:**
+
 - `ToolParamFormPropertyType = 'string' | 'number' | 'integer' | 'boolean'` — the four leaf property
   types this renderer understands
 - `ToolParamFormPrimitive = string | number | boolean` — values accepted by the supported `const`
 - `ToolParamFormProperty { type: ToolParamFormPropertyType; enum?: string[]; description?: string;
-  title?: string; default?: unknown; const?: ToolParamFormPrimitive }` — one `schema.properties`
+title?: string; default?: unknown; const?: ToolParamFormPrimitive; autocomplete?: string;
+spellcheck?: boolean; autocapitalize?: string; autoCorrect?: string; inputMode?: string;
+enterKeyHint?: string }` — one `schema.properties`
   entry. `enum` is only meaningful when `type` is `'string'` (rendered as a `<lr-select>`); `const`
   enforces one exact primitive value; `title` is the display label; `description` is helper text;
-  `default` pre-fills a field whenever `value` doesn't already have that key.
-- `ToolParamFormSchema { type: 'object'; properties: Record<string, ToolParamFormProperty>; required?:
-  string[] }` — the (intentionally flat) schema shape this component can render.
+  `default` pre-fills a field whenever `value` doesn't already have that key. For a free-form
+  string field, `autocomplete`, `spellcheck`, `autocapitalize`, `autoCorrect`, `inputMode`, and
+  `enterKeyHint` forward the corresponding native editing hints to the rendered text input;
+  `spellcheck` defaults to `true`, and the other hints are omitted unless supplied.
+- `FlatToolParamSchema { type: 'object'; properties: Record<string, ToolParamFormProperty>; required?:
+string[] }` — the (intentionally flat) schema shape this component can render.
 
 **Properties:**
-- `schema: ToolParamFormSchema = { type: 'object', properties: {} }` (attribute: false)
+
+- `schema: FlatToolParamSchema = { type: 'object', properties: {} }` (attribute: false)
 - `value: Record<string, unknown> = {}` (attribute: false) — exactly what the consumer last set it to.
-  A field with no entry in `value` but a schema `default` *displays* (and is *emitted*, via
+  A field with no entry in `value` but a schema `default` _displays_ (and is _emitted_, via
   `lr-input`) as that default, but the `value` property itself is left alone until the user actually
   edits that field. JSON Schema ordinarily treats `default` as an annotation; this renderer
   deliberately materializes it before validation/submission, so a valid default can satisfy
@@ -946,17 +1017,19 @@ and makes the form invalid instead of being silently accepted.
   `willValidate: boolean`, and `effectiveDisabled: boolean` expose the native FACE state
 
 **Getters:**
+
 - `effectiveValue: Record<string, unknown>` — `value` with every property missing from it filled in
   from `schema`'s own `default`; this is what actually renders and what `lr-input`'s detail carries.
   A key the user has explicitly cleared (a real own property set to `undefined`) stays cleared rather
   than snapping back to its default — only a key genuinely absent from `value` falls back.
 - `errors: Record<string, string>` — the current per-field validation errors (`{ [propertyKey]:
-  message }`) for required presence, primitive type, finite number/integer, enum, const, and
+message }`) for required presence, primitive type, finite number/integer, enum, const, and
   unsupported type; independent of which fields have been visited.
 - `formError: string` — a schema-wide/JSON-serialization error that has no honest field key; empty
   when the current effective value is safe to submit.
 
 **Methods:**
+
 - `getForm(): HTMLFormElement | null` — returns the browser-resolved owning form.
 - `checkValidity(): boolean` — synchronously re-snapshots even an in-place-mutated value/schema,
   updates `ElementInternals`, and returns validity without revealing inline errors.
@@ -986,7 +1059,7 @@ object, every property with defaults resolved, not just the field that changed),
 the field-error set changes, including once up front at connect time; serialization-only failures
 set `valid: false` while `formError`, rather than a fabricated field key, carries the root message),
 and no-detail `focus`/`blur` events for generated native text/number inputs. The composed
-`<lr-select>`/`<lr-checkbox>` controls already bubble their own focus/blur bridges through the host.
+`<lr-select>` controls already bubble their own focus/blur bridges through the host.
 Their implementation events (`input`, `change`, `lr-change`, select show/hide, and option mutation)
 are contained at the form boundary; consumers receive the single form-level `lr-input` contract.
 `lr-invalid` (no detail) is the bubbling/composed alias emitted when the complete parameter form
@@ -1003,15 +1076,16 @@ too (see `llms/shared.md` → "The required-field marker"). Requiredness here is
 the host carries no `required` attribute, so the marker keys off a `data-required` attribute the
 component sets on each `[part="field"]` wrapper. That attribute is component-owned bookkeeping —
 never write it, and note that `::part(field)[data-required]` is invalid CSS (an attribute selector
-cannot follow `::part()`), so it is not a selector hook you can use from outside. An enum field
-renders as an `<lr-select>` that receives the same `required`, and marks itself through its own
-label.
+cannot follow `::part()`), so it is not a selector hook you can use from outside. Enum and boolean
+fields render as `<lr-select>` controls with their own labels. The outer schema validator owns
+presence, so the nested control stays `.required=false` while its host receives
+`aria-required="true"` for a required property.
 
 **CSS parts:** `base` (the aggregate `role="group"`), `field`, `label`, `control`, `description`,
 `error`, `unsupported`, `empty`.
 `control` is the native `<input>` for a `'string'` (non-enum) or `'number'`/`'integer'` field — one
-shared part name across both the text and number inputs, and deliberately *not* present on the
-`'boolean'` (`<lr-checkbox>`), enum (`<lr-select>`), or unsupported-type fallback branches, which are
+shared part name across both the text and number inputs, and deliberately _not_ present on the
+`'boolean'`/enum (`<lr-select>`), or unsupported-type fallback branches, which are
 composed components with their own part surfaces rather than raw natives. It is purely an additive
 external theming hook: the internal `.control` class the stylesheet targets is unchanged.
 
@@ -1023,8 +1097,8 @@ form: `--lr-space-l/-xs/-s`, `--lr-color-border`, `--lr-radius`, `--lr-color-sur
 `--lr-color-danger`, `--lr-color-text-quiet`, `--lr-focus-ring-width/-color/-offset`,
 `--lr-opacity-disabled`.
 
-**Optional peer deps:** none — internally renders `<lr-select>`, `<lr-option>`, and
-`<lr-checkbox>`, all bundled dependencies of this package imported directly, not optional peers.
+**Optional peer deps:** none — internally renders `<lr-select>` and `<lr-option>`, both bundled
+dependencies of this package imported directly, not optional peers.
 
 ```html
 <lr-tool-param-form
@@ -1049,17 +1123,13 @@ This component owns no Submit/Cancel/Approve chrome — a consumer composes it i
 (insertion order). A `'string'` property with a non-empty `enum` renders as a `<lr-select>` of
 `<lr-option>`s; a plain `'string'` renders a text `<input>`; `'number'`/`'integer'` render a numeric
 `<input type="number">` (`step="1"` for integer, `step="any"` for number); `'boolean'` renders a
-`<lr-checkbox>` with the field's label projected into its default slot — real slotted content, since
-that's `<lr-checkbox>`'s documented way to give itself an accessible name. Enum descriptions/errors
-flow through `<lr-select>`'s `.hint`/`.errorText` control chrome. Boolean descriptions/errors stay
-adjacent `[part="description"]`/`[part="error"]` nodes whose ids are passed through the checkbox
-host's `aria-describedby`; `<lr-checkbox>` resolves those ids onto its internal `role="checkbox"`
-through `ariaDescribedByElements`. Supporting text therefore keeps description semantics instead of
-being folded into an `aria-label`. The outer component owns JSON Schema validity: `required` means
-an own property is present, so `''`, `0`, and `false` are valid present values. A plain required
-boolean consequently does not set `<lr-checkbox>.required`'s must-check semantics. Use
-`{ type: 'boolean', const: true }` together with `required` for a must-confirm checkbox; that exact
-combination does set the nested checkbox's matching native/ARIA required state.
+tri-state `<lr-select>` with localized Unset/True/False choices. This preserves the semantic
+difference between an absent optional property and an explicit `false`. Enum and boolean
+descriptions/errors flow through `<lr-select>`'s `.hint`/`.errorText` control chrome. The outer
+component owns JSON Schema validity: `required` means an own property is present, so `''`, `0`, and
+`false` are valid present values. Use `{ type: 'boolean', const: true }` together with `required`
+for a must-confirm field; the select still does not impose its own nonempty semantics, while the
+outer validator enforces both presence and the exact `true` value.
 
 Visible field and root validation errors remain ordinary descriptive text. When user interaction or
 `reportValidity()` makes one or more new errors visible, their distinct messages are coalesced into
@@ -1080,9 +1150,10 @@ The same safe serialized object is used as session-history/autofill state. Resto
 a JSON object, falls back to `{}` for malformed/non-object state, and does not emit `lr-input`.
 
 **Known gotchas:**
+
 - a schema property whose `type` isn't `'string'`/`'number'`/`'integer'`/`'boolean'` renders an inline
-  "Unsupported field type" message (a plain `.unsupported`-classed element, not one of the documented
-  CSS parts) and fails closed with custom validity instead of throwing or being silently dropped.
+  "Unsupported field type" message exposed as `[part="unsupported"]` and fails closed with custom
+  validity instead of throwing or being silently dropped.
 - inline per-field errors only render once a field has been visited (`focusout`) at least once, or
   after an explicit `reportValidity()` call — `checkValidity()` alone never reveals them, matching
   every other form control in this library (`<lr-select>`/`<lr-combobox>`/`<lr-model-select>`
@@ -1117,7 +1188,8 @@ small card/field shell is useful.
 A small bordered card shell. Purely visual, with no state of its own beyond slot-presence tracking.
 
 **Properties:**
-- `title: string = ''` — small heading for the card. Leave unset for an untitled card (e.g. a bare
+
+- `heading: string = ''` — small heading for the card. Leave unset for an untitled card (e.g. a bare
   block of `lr-result-field` rows with no natural heading).
 - `compact: boolean = false` (reflected) — tighter header/body padding for dense contexts (a card
   rendered as a row in a transcript or result list), same convention as `<lr-agent-run>`'s own
@@ -1141,11 +1213,11 @@ A small bordered card shell. Purely visual, with no state of its own beyond slot
 
 **Slots:** default (the card body — typically one or more `lr-result-field` rows, though any
 content is accepted), `actions` (small header controls, e.g. a copy button, rendered alongside the
-title).
+heading).
 
 **CSS parts:** `base` (outer bordered container), `header` (present in the DOM at all times so a
-later `slotchange` on `actions` is still observed, but `hidden` whenever there's no `title` and no
-`actions` content), `title` (truncates with an ellipsis when it overflows; carries its own native
+later `slotchange` on `actions` is still observed, but `hidden` whenever there's no `heading` and no
+`actions` content), `heading` (truncates with an ellipsis when it overflows; carries its own native
 `title` attribute — the full string — so hovering the truncated text reveals it via the browser's
 default tooltip, scoped to just this element rather than the whole card), `actions` (`hidden`
 whenever the slot has no assigned content), `body`.
@@ -1153,7 +1225,7 @@ whenever the slot has no assigned content), `body`.
 **Themeable custom properties:** `--lr-result-card-compact-header-padding` (default
 `var(--lr-space-xs)`) — `[part="header"]` block/inline padding while `compact`;
 `--lr-result-card-compact-header-gap` (default `var(--lr-space-xs)`) — gap between
-`[part="header"]`'s title and actions while `compact`, one step tighter than the uncompacted
+`[part="header"]`'s heading and actions while `compact`, one step tighter than the uncompacted
 `--lr-space-s`; `--lr-result-card-compact-body-padding` (default `var(--lr-space-xs)`) —
 `[part="body"]` padding while `compact`; `--lr-result-card-compact-body-gap` (default
 `var(--lr-space-2xs)`) — gap between `[part="body"]`'s children while `compact`, one step tighter
@@ -1168,6 +1240,7 @@ A single label/value row — e.g. "Status: 200 OK" or "Duration: 340ms" — rend
 "label: value" line by default, matching the compact, small-card presentation this pair exists for.
 
 **Properties:**
+
 - `label: string = ''` — the field name, e.g. "Status". Leave unset to render a value with no label.
 - `value: string = ''` — plain-text value, e.g. "200 OK". Ignored once the default slot carries real
   content.
@@ -1176,7 +1249,7 @@ A single label/value row — e.g. "Status: 200 OK" or "Duration: 340ms" — rend
 
 **Slots:** default — rich value content (e.g. a `lr-chip` status badge, or a plain text override),
 taking precedence over `value` whenever it has any assigned content. "Real content" means any
-assigned *element* (even one with no text of its own, like an attribute-driven status badge) or any
+assigned _element_ (even one with no text of its own, like an attribute-driven status badge) or any
 non-whitespace text node — both a rich slotted badge and a plain-text override are caught.
 
 **CSS parts:** `base` (row container), `label` (including its trailing colon), `value` (wrapper
@@ -1188,7 +1261,7 @@ around either the slotted content or the plain `value` text).
 **Optional peer deps:** none (either component).
 
 ```html
-<lr-result-card title="Weather">
+<lr-result-card heading="Weather">
   <lr-result-field label="Status" value="200 OK"></lr-result-field>
   <lr-result-field label="Duration" value="340ms"></lr-result-field>
   <lr-result-field label="Provider">
@@ -1198,6 +1271,7 @@ around either the slotted content or the plain `value` text).
 ```
 
 **Known gotchas:**
+
 - `HTMLElement.textContent` read on a shadow-DOM wrapper containing a `<slot>` does NOT include the
   slot's assigned/projected light-DOM content — only literal fallback children of the `<slot>` tag
   itself (there are none here). Asserting against `[part="value"]`'s own `.textContent` to check
@@ -1214,9 +1288,12 @@ slotted panes, a vote bar, synchronized reading.
 **Properties:** `labelA: string = ''` (attribute `label-a`) and `labelB: string = ''` (attribute
 `label-b`) — pane headings. `vote: 'a' | 'b' | 'tie' | 'both-bad' | null = null` (reflected) — the
 recorded winner, host-writable to reflect a previously-recorded vote back. `itemId: string = ''`
-(attribute `item-id`) — an opaque id round-tripped through `lr-vote`. `hideTie: boolean = false`
-(attribute `hide-tie`) and `hideBothBad: boolean = false` (attribute `hide-both-bad`) hide the
-corresponding vote button. `syncScroll: boolean = false` (attribute `sync-scroll`) links both panes'
+(attribute `item-id`) — an opaque id round-tripped through `lr-vote`. Changing only `itemId` clears
+the prior vote; assigning both `itemId` and a controlled `vote` in one update preserves the explicit
+vote regardless of property assignment order. `allowedVotes: readonly CompareVote[] = ['a', 'b',
+'tie', 'both-bad']` (attribute: false) is the positive list of choices to render, always projected
+in that canonical order; repeated/foreign values do not create controls. `syncScroll: boolean =
+false` (attribute `sync-scroll`) links both panes'
 scroll position. `disabled: boolean = false` (reflected) disables every vote button and suppresses
 `lr-vote`.
 
@@ -1257,7 +1334,10 @@ by the host (e.g. `"$0.0012"`) and rendered verbatim, never parsed or summed. On
 both this component (timeline projection via `startMs`/`endMs`) and `lr-trace-tree` (hierarchy
 projection via `parentId`) — never two shapes. Foreign runtime `kind` and `status` values render
 as `'other'` and `'pending'` rather than throwing, although hosts should continue to use the
-documented literal sets. `activeSpanId: string | null = null`
+documented literal sets. At most 500 unique valid spans mount; when `activeSpanId` resolves beyond
+the ordinary input-order budget, that span and its ancestor path reserve positions so the
+controlled active state remains visible. A localized `[part="limit"]` note exposes truncation.
+`activeSpanId: string | null = null`
 (attribute `active-span-id`), `viewStartMs: number | null = null` (attribute `view-start-ms`) and
 `viewEndMs: number | null = null` (attribute `view-end-ms`) — override the auto-computed time
 window, `hideAxis: boolean = false` (attribute `hide-axis`), and `label: string = ''`.
@@ -1274,7 +1354,7 @@ Space).
 **CSS parts:** `base`, `axis` (the time-ruler row, hidden when `hideAxis`), `tick`, `tick-label`,
 `row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned
 bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
-when `spans` is empty), and `live-region`.
+when `spans` is empty), `limit` (the 500-span projection notice), and `live-region`.
 
 The terminal axis tick is end-aligned so its label remains inside the allocated chart width. Roving
 keyboard focus is computed from the currently rendered/filtered span ids, so a hidden active span
@@ -1297,7 +1377,7 @@ contrasting background, and `--lr-span-waterfall-pending-border-color` (default
 
 That last one follows the convention every **state-scoped** custom property in this family uses, and
 it is worth reading once: it is an inline `var()` fallback at its point of use and is deliberately
-**not** declared on `:host`, so it can be set on the element *or on any ancestor* and still reach the
+**not** declared on `:host`, so it can be set on the element _or on any ancestor_ and still reach the
 rule that consumes it. It exists because Shadow Parts forbids an attribute selector after `::part()`
 — `::part(row)[data-active]` and every selector like it is invalid CSS — so before it, the only way
 to restyle a state-dependent surface was to override a library-wide `--lr-color-*` token, which repaints
@@ -1358,7 +1438,7 @@ icon spin animation duration/timing; `--lr-task-list-compact-header-padding` (de
 `var(--lr-space-2xs) var(--lr-space-s)`) — `[part="header"]` padding while `compact`;
 `--lr-task-list-compact-header-gap` (default `var(--lr-space-2xs)`) — gap between `[part="header"]`'s
 label/summary/toggle while `compact`, one step tighter than the header's uncompacted
-`--lr-space-xs`, so `compact` tightens the header's *interior* spacing and not just its padding;
+`--lr-space-xs`, so `compact` tightens the header's _interior_ spacing and not just its padding;
 `--lr-task-list-compact-header-font-size` (default `var(--lr-font-size-sm)`) — `[part="header"]`
 font size while `compact`, completing the compact header's typography alongside its padding and
 gap;
@@ -1384,7 +1464,10 @@ codes. `maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boo
 (reflected) and `downloadable: boolean = false` (reflected) toggle the toolbar buttons, `filename:
 string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
 `accessibleLabel: string = ''` (attribute `aria-label`), `highlights: LyraHighlight[] = []` (attribute:
-false), and `activeHighlightId: string | null = null` (attribute: false).
+false), and `activeHighlightId: string | null = null` (attribute: false). Later duplicate highlight
+ids are omitted before painting, focus ownership, active lookup, and activation events. A host `aria-label` names
+the host; the nested `role="log"` keeps the localized terminal-purpose name rather than cloning the
+same label, and an explicit empty host label never leaves the actionable log unnamed.
 `compact: boolean = false` (reflected) — tightens `[part="toolbar"]`'s padding and gap and each
 rendered line's inline padding for a terminal embedded in an already-padded transcript row, the same
 convention `<lr-task-list>` and `<lr-thinking-panel>` use; purely a density knob, the card border and
@@ -1407,7 +1490,9 @@ line-granular (a match identifies a whole line, not a character range) and cappe
 stops climbing on a pathologically repetitive buffer. `getPlainText()` returns the SGR-stripped
 plain text of the whole buffer.
 
-**Events:** `lr-copy` (`detail: { text }`), `lr-download` (`detail: { filename }`, cancelable — by
+**Events:** `lr-copy` (`detail: { ok: true, text }`, emitted only after a successful clipboard write),
+`lr-error` (no detail) and `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on clipboard failure,
+`lr-download` (`detail: { filename }`, cancelable — by
 default the component creates a plain-text `Blob`/object URL and activates a synthetic
 `<a download>`; `preventDefault()` suppresses that built-in download so the host can substitute
 server-side or other handling),
@@ -1452,9 +1537,9 @@ beat it without `!important`.
 **The ANSI/SGR palette is two token sets, not one.** SGR gives the sixteen colour names two
 different jobs, and each job is themed separately:
 
-- `--lr-terminal-color-<name>` — **foregrounds**, i.e. `CSI 30`–`37` and `CSI 90`–`97`, drawn *on*
+- `--lr-terminal-color-<name>` — **foregrounds**, i.e. `CSI 30`–`37` and `CSI 90`–`97`, drawn _on_
   the terminal panel.
-- `--lr-terminal-bg-<name>` — **backgrounds**, i.e. `CSI 40`–`47` and `CSI 100`–`107`, drawn *under*
+- `--lr-terminal-bg-<name>` — **backgrounds**, i.e. `CSI 40`–`47` and `CSI 100`–`107`, drawn _under_
   the panel's text.
 
 `<name>` is `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white` and their
@@ -1471,7 +1556,7 @@ cases a program cannot avoid legible:
    **the default foreground is legible on any background**.
 
 A single shared set could not do both: foregrounds solved against a light panel are all dark, so
-`ESC[41m` would paint a near-black red behind near-black text. An *explicit* foreground+background
+`ESC[41m` would paint a near-black red behind near-black text. An _explicit_ foreground+background
 pair (`ESC[30;47m`) is the emitting program's choice and is not guaranteed here, exactly as in a
 native terminal — sixteen against sixteen is 256 combinations, several degenerate by construction.
 
@@ -1513,7 +1598,13 @@ as a root rather than being dropped. `activeSpanId: string | null = null`
 `show-cost`) — surfaces `costText`, and `hideBars: boolean = false` (attribute `hide-bars`).
 Token counts render only when finite and non-negative; invalid metrics are omitted rather than
 reaching `Intl.NumberFormat`. A row's accessible name includes its optional `detail` text as well
-as its name/status/metrics, and updates when the supplied span data changes.
+as its name/status/metrics, and updates when the supplied span data changes. Every trace view uses
+the same bounded runtime projection: provider records are normalized with deterministic first-wins
+identity, then at most 500 mount. The controlled `activeSpanId` and its resolvable ancestor path
+reserve positions before ordinary input-order spans. Non-object records, empty ids, non-finite
+starts/ends, and later duplicate ids are omitted; negative starts clamp to zero, ends clamp to at
+least their start, unknown kinds become `other`, and unknown statuses become `pending`. A localized
+`[part="limit"]` note exposes truncation.
 
 **Methods:** `expandAll()` and `collapseAll()` set every row's expanded state at once.
 
@@ -1523,7 +1614,8 @@ as its name/status/metrics, and updates when the supplied span data changes.
 **CSS parts:** `base` (`role="tree"`), `header` (the column-header row, only when
 `showTokens`/`showCost`), `row` (`role="treeitem"`), `toggle`, `icon`, `name`, `detail`, `status-text`,
 `duration`, `tokens-in`, `tokens-out` (when `showTokens`), `cost` (when `showCost`), `bar-track`,
-`bar`, `empty` (shown when `spans` is empty), and `live-region`.
+`bar`, `empty` (shown when `spans` is empty), `limit` (the 500-span projection notice), and
+`live-region`.
 
 **Themeable custom properties:** `--lr-trace-tree-row-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row — and
@@ -1570,7 +1662,8 @@ entries, the body renders through an internal `<lr-virtual-list>` instead of a p
 **Properties:** `entries: ActivityEntry[] = []` (attribute: false) — `ActivityEntry { id: string;
 text: string; icon?: string; timestamp?: Date | string; variant?: LyraVariant }` (exported here).
 `icon` is a literal glyph hint (e.g. an emoji), the same convention `lr-tool-call-chip.icon` uses; a
-small variant dot renders in its place when omitted. `LyraVariant = 'neutral' | 'brand' | 'success'
+small variant dot renders in its place when omitted. Later duplicate ids are omitted before the
+summary, keyed render, or virtualization path is chosen. `LyraVariant = 'neutral' | 'brand' | 'success'
 | 'warning' | 'danger'` is the library-wide semantic vocabulary, so an entry is toned with the same
 five values as every other `variant` in the library. An invalid `timestamp` string is treated as
 unset. `mode: 'live' | 'post-hoc' =
@@ -1600,7 +1693,8 @@ tall the expanded body grows before it scrolls internally; and
 `status-dot` while `mode="live"`, independently retunable without changing other brand surfaces.
 
 **Known gotchas:**
-- The variant dot's color is selected by its *part name*, not by `[data-variant]`: `::part()` cannot
+
+- The variant dot's color is selected by its _part name_, not by `[data-variant]`: `::part()` cannot
   be followed by an attribute selector, so
   `lr-activity-feed::part(variant-dot)[data-variant='success']` never matches. Target
   `lr-activity-feed::part(variant-dot-success)` instead. `data-variant` remains on both the entry
@@ -1616,7 +1710,9 @@ number` (attribute: false, epoch milliseconds), `files: CommitFileChange[] = []`
 `CommitFileChange { path: string; additions: number; deletions: number; status?: GitStatus }`
 (exported here), where `GitStatus = 'added' | 'modified' | 'deleted' | 'renamed' | 'untracked' |
 'conflicted' | 'ignored'` (shared with `lr-file-tree`); the diffstat is summed from `additions`/
-`deletions` across `files`. `filesCollapsed:
+`deletions` across `files`. Counts are normalized to finite non-negative integers before per-file
+display, total arithmetic, localization, and accessible summaries. `path` is the file identity;
+later duplicates are omitted before both diffstat arithmetic and row events. `filesCollapsed:
 boolean = true` (attribute `files-collapsed`, reflected), and `copyable: boolean = true` (reflected).
 `compact: boolean = false` (reflected) — tighter `[part="base"]` padding for a commit rendered as a
 row in a list or PR timeline, same convention as `<lr-agent-run>`'s own `compact`; the border stays,
@@ -1630,7 +1726,10 @@ alias `CommitCardAppearance` is retained as a name for the same union.
 **Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
 
 **Events:** `lr-file-select` (`detail: { path: string }`), `lr-toggle` (`detail: { collapsed: boolean
-}`), and `lr-copy` (`detail: { text: string }`, the full hash was copied).
+}`), and `lr-copy` (`detail: { ok: true; text: string }`, fired only after the full-hash clipboard write
+resolves successfully). A failed or unavailable write emits the compatibility `lr-error` event
+(no detail) and `lr-copy-error` (`detail: { ok: false; text: string; reason:
+'unsupported'|'denied'|'failed'; error: unknown }`) instead; failure never emits `lr-copy`.
 
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
 `deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-status`,
@@ -1659,7 +1758,14 @@ TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed
 'skipped' | 'running'` (all three exported here). `statusFilter: TestStatus[] =
 []` (attribute: false) — empty shows every status; and `autoExpandFailures: boolean = true`
 (attribute `auto-expand-failures`). A duration renders only when it is finite and non-negative;
-invalid/negative values are omitted rather than reaching `Intl.NumberFormat`.
+invalid/negative values are omitted rather than reaching `Intl.NumberFormat`. Suite ids, then test
+ids within each suite, use deterministic first-wins identity. Foreign runtime statuses normalize
+once to the localized neutral `skipped` state, so every accepted row contributes to one coherent
+summary count and renders a label/glyph.
+
+Summary counts cover the complete normalized input. At most 1,000 rows mount for the active filter;
+manually expanded identities reserve positions first, failed rows next, then ordinary input-order
+rows. A localized `[part="limit"]` note exposes truncation without losing the complete counts.
 
 **Slots:** `detail-{encodedSuiteId}:{encodedTestId}` — collision-free suite-scoped rich detail for
 a test. Derive the complete name with the exported
@@ -1677,11 +1783,9 @@ row's disclosure.
 **Events:** `lr-test-select` (`detail: { suiteId: string; testId: string }`, a test row's name was
 activated), `lr-filter-change` (`detail: { statuses: TestStatus[] }` — the complete next filter set; the
 component updates its own `statusFilter` first, then emits),
-and `lr-toggle` (`detail: { id: string; suiteId?: string; expanded: boolean }`, a row's failure
-detail was expanded/collapsed). To preserve the established exact event shape, `suiteId` is omitted
-for a globally unique test id and included when the id occurs in more than one suite. Manual
-expansion state is always keyed by the suite+test pair, so toggling one duplicate never toggles its
-sibling.
+and `lr-toggle` (`detail: { suiteId: string; testId: string; expanded: boolean }`, a row's failure
+detail was expanded/collapsed). The suite-scoped identity shape is invariant even when `testId` is
+globally unique. Manual expansion state is keyed by that same suite+test pair.
 Each expand/collapse action's localized accessible name includes both suite and test names, so
 repeated row controls remain distinguishable.
 
@@ -1691,7 +1795,7 @@ adjacent localized status word carries the meaning. Running rows use the decorat
 **CSS parts:** `base`, `summary` (the status-count strip), `count` (carries `data-status`), `filter`,
 `filter-toggle` (carries `data-status`/`aria-pressed`), `suite`, `suite-header`, `test` (carries
 `data-status`), `test-status`, `test-name`, `test-duration`, `test-expand-toggle`, `failure`
-(hidden while collapsed), and `failure-message`.
+(hidden while collapsed), `failure-message`, `limit`, and `empty`.
 
 **Themeable custom properties:** `--lr-test-results-filter-active-bg` (default
 `var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border` (default
@@ -1732,7 +1836,7 @@ it, so the two can never drift): a confirmation is either routine or destructive
 (reflected) — collapses the bar from a stacked `display: block` card into a single tightly-padded
 inline row, for a confirmation that has to live inside an existing container: a table cell, a card's
 action row, a toolbar. The host becomes `inline-flex`, and the narrow-allocation `@container`
-treatment is switched off — a compact bar is *expected* to be narrow, so stretching the buttons to
+treatment is switched off — a compact bar is _expected_ to be narrow, so stretching the buttons to
 fill would be exactly wrong. It is a density knob only: the border, corner radius and background
 stay. Retune it through `--lr-confirm-bar-compact-padding`/`-gap`. Everything else is unchanged: the
 event shapes, the focus-to-`[part="status"]`-before-unmount contract, and `role="group"` with its
@@ -1742,8 +1846,8 @@ library's shared container-frame vocabulary and behaving exactly as it does on `
 `'plain'` removes the border, background, padding and corner radius so a bar nested inside a
 container that already draws a border doesn't double it, and wins over `compact` when both are set.
 Before 9.0.0 `compact` alone did both jobs; a bar that relied on that now needs
-`compact frame="plain"`.
-`pending: 'approved' | 'denied' | null = null` (reflected) — which decision is awaiting host
+`compact frame="plain"`. `ConfirmBarDecision = ApprovalDecision | null` names the final-state type.
+`pending: ApprovalAction | null = null` (reflected) — which action is awaiting host
 resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
 now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set `.decision`
 to finalize, or clear `.pending` back to `null` to bounce back to the undecided state.
@@ -1769,7 +1873,7 @@ scoped to `[part="base"]` while `compact`: `--lr-confirm-bar-compact-padding` (d
 `var(--lr-space-s)`, any padding shorthand — overridden entirely by `frame="plain"`) and
 `--lr-confirm-bar-compact-gap` (default `var(--lr-space-s)`, the gap between the row's items). They
 are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either can
-be set on the element *or on any ancestor*, which is what makes "tighten every compact confirm bar
+be set on the element _or on any ancestor_, which is what makes "tighten every compact confirm bar
 in this panel" a one-rule change on the panel. The chrome-removing
 `--lr-confirm-bar-compact-border`, `--lr-confirm-bar-compact-background` and
 `--lr-confirm-bar-compact-radius` properties were removed in 9.0.0 along with `compact`'s chrome
@@ -1785,6 +1889,7 @@ decided state previously meant re-pointing the library-wide `--lr-color-success`
 repainting everything else that reads them.
 
 **Known gotchas:**
+
 - `[part="status"]` is always rendered and must never be given `display: none`. Deciding moves focus
   to it synchronously, before the Deny/Approve buttons unmount, so hiding it would drop focus to
   `<body>`. The shipped `:empty` rule on it has never matched, and that is load-bearing.
@@ -1812,11 +1917,15 @@ An `lr-approve`/`lr-deny` listener that needs to await its own async work before
 `preventDefault()` and sets `.decision` (or clears `.pending`) once it resolves:
 
 ```ts
-bar.addEventListener('lr-approve', (e) => {
+bar.addEventListener("lr-approve", (e) => {
   e.preventDefault();
   runApproval(e.detail.args)
-    .then(() => { bar.decision = 'approved'; })
-    .catch(() => { bar.pending = null; }); // bounce back, retry
+    .then(() => {
+      bar.decision = "approved";
+    })
+    .catch(() => {
+      bar.pending = null;
+    }); // bounce back, retry
 });
 ```
 
@@ -1825,24 +1934,28 @@ bar.addEventListener('lr-approve', (e) => {
 Presentational "agent computer" viewport: a screenshot/frame stream (or slotted live media), a
 read-only URL display, action-ping overlays, and take-over/stop affordances. No automation transport
 (no CDP/WebRTC/WebSocket) and no input relay — take-over is an event; the host swaps in its own
-interactive element (e.g. an iframe). No replay scrubber (compose `lr-playback` driving `frame-src`
-from a screenshot array); no console/network drawers (compose `lr-terminal`/`lr-json-viewer`); no
+interactive element (e.g. an iframe). No replay scrubber (compose `lr-sequence-playback` with
+`itemCount` set to the screenshot count, then drive `frameSrc` from `currentIndex` whenever
+`lr-sequence-step` emits `detail: { currentIndex }`); no console/network drawers (compose
+`lr-terminal`/`lr-json-viewer`); no
 pan/zoom of the frame content (slot the image/video inside a `lr-zoomable-frame` instead, though
 the pings overlay assumes the unzoomed content box in that composition).
 
 **Properties:** `frameSrc: string = ''` (attribute `frame-src`) — image/MJPEG stream URL rendered as
 an `<img>` (safe-URL-gated via `safeMediaSrc`); ignored once the default slot has content. `url:
 string = ''` — address shown read-only in the toolbar (`dir="ltr"`, truncating, full value in
-`title`). `status: 'idle' | 'connecting' | 'streaming' | 'stalled' = 'idle'` (reflected). `controller:
+`title`). `phase: LyraStreamPhase = 'idle'` (reflected; `'idle' | 'connecting' | 'streaming' |
+'stalled'`). `controller:
 'agent' | 'user' = 'agent'` (reflected) — who is driving; switches the take-over button's label.
 `pings: BrowserPing[] = []` (attribute: false, each `{ id, x, y, kind: 'click' | 'type' | 'scroll' |
 'move' }` — `x`/`y` are percent (0–100) of the frame's `object-fit: contain` content box,
-letterboxing-aware). `controls: boolean = true` — render the built-in take-over/stop buttons.
+letterboxing-aware). Later duplicate ping ids are omitted before overlay rendering. `controls:
+boolean = true` — render the built-in take-over/stop buttons.
 
 **Slots:** default — host-owned live element (e.g. `<video>` or an interactive `<iframe>`), replacing
 the `frame-src` image. `actions` — extra toolbar controls.
 
-**Events:** `lr-take-over` — `detail: { controller }`, the *requested* controller (`'user'` when
+**Events:** `lr-take-over` — `detail: { controller }`, the _requested_ controller (`'user'` when
 "Take over" is pressed, `'agent'` when "Hand back" is). `lr-stop` — stop the agent's browser
 session, no detail.
 
@@ -1851,15 +1964,15 @@ session, no detail.
 `frame-src` `<img>`, absent once the default slot is populated), `ping` (one action-ping marker,
 carries `data-kind`).
 
-After mount, each `status` transition is appended to the shared polite light-DOM announcement sink.
-The status already shown on initial mount or reconnect establishes a silent baseline, including a
-status write queued while detached.
+After mount, each `phase` transition is appended to the shared polite light-DOM announcement sink.
+The phase already shown on initial mount or reconnect establishes a silent baseline, including a
+phase write queued while detached.
 
 **Themeable custom properties:** `--lr-browser-frame-aspect-ratio` (default `16 / 9`) — the
 viewport's aspect ratio.
 
 ```html
-<lr-browser-frame status="streaming" url="https://example.com" .pings=${pings}
+<lr-browser-frame phase="streaming" url="https://example.com" .pings=${pings}
   @lr-take-over=${(e) => setController(e.detail.controller)} @lr-stop=${() => stopSession()}
 ></lr-browser-frame>
 ```
@@ -1878,22 +1991,25 @@ viewport's aspect ratio.
 Shell around one agent-generated artifact: a title/kind header, a preview↔code toggle, version
 navigation with restore, a streaming indicator, and built-in copy/download actions. Renders none of
 the artifact itself — content is slotted. No content rendering of its own (slots own it), no
-dialog/dock chrome (compose `lr-dialog`/`lr-dock-panel`/`lr-split`), no version storage or
+dialog/dock chrome (compose `lr-dialog`/`lr-dock-panel`/`lr-multi-split`), no version storage or
 diffing (host state; diffs via `lr-diff-view`), no code editing (`lr-code-editor`).
 
 **Properties:** `label: string = ''` — the artifact's title, shown in the header. `kind: string = ''`
 — a short kind label (e.g. `document`, `code`), shown as a badge next to `label`. `view: 'preview' |
 'code' = 'preview'` (reflected) — which slot is currently visible. `versions: ArtifactVersion[] = []`
 (attribute: false, each `{ id, label? }`) — the artifact's version history, oldest first; the last
-entry is the latest version. `activeVersionId: string | null = null` (attribute
-`active-version-id`) — the currently viewed version's id, or `null` for "the latest version."
+entry is the latest version. Later duplicate ids are omitted before navigation, active lookup,
+position counts, and restore events. The active entry's optional `label` renders beside its localized
+position. `activeVersionId: string | null = null` (attribute `active-version-id`) — the currently
+viewed version's id, or `null` for "the latest version." Removing the named version reconciles the
+property to `null` without a user-action event, so reinserting that id cannot unexpectedly repin it.
 `streaming: boolean = false` (reflected) — whether the artifact is still being generated; sets
 `aria-busy` on the body and shows a text indicator (not animated, so it stays legible under reduced
 motion). `copyText: string = ''` (attribute `copy-text`) — the text copied to the clipboard by the
 copy button; empty hides the button. `downloadSrc: string = ''` (attribute `download-src`) — the
 download URL, sanitized through `safeDownloadHref()` (`http:`/`https:`/`blob:` only — narrower than
 the media/resource allowlist, which also permits `data:`); an empty value hides the button. The
-sanitizer runs at click time, not render time, so a *non-empty but rejected* URL still renders the
+sanitizer runs at click time, not render time, so a _non-empty but rejected_ URL still renders the
 button and simply emits nothing when pressed. The component never navigates on its own: it emits
 `lr-download` with the sanitized `src` and leaves the actual download to the host.
 `downloadName: string = ''` (attribute `download-name`) — the suggested filename reported in the
@@ -1901,22 +2017,25 @@ button and simply emits nothing when pressed. The component never navigates on i
 
 **Slots:** default — preview-view content (markdown/html-viewer/browser-frame/image). `code` —
 code-view content (typically a `lr-code-block`); the preview/code toggle only renders once this
-slot has assigned content. `actions` — extra header controls, rendered between the version
+slot has assigned content. Assigning `view='code'` without assigned code content normalizes back to
+`preview`, including after mount. `actions` — extra header controls, rendered between the version
 navigation and the built-in copy/download buttons.
 
 **Events:** `lr-view-change` (`detail: { view }`), `lr-version-change` (`detail: { versionId }`,
 fired when the previous/next navigation moves to a different version), `lr-restore` (`detail: {
 versionId }`, fired by the restore-this-version button; mutates nothing itself), `lr-copy`
-(`detail: { text }`, after a best-effort clipboard write), `lr-download` (`detail: { filename,
-src? }`, with the sanitized download URL).
+(`detail: { ok: true, text }`, after the clipboard write fulfills), `lr-error` plus
+`lr-copy-error` (`detail: { ok: false, text, reason, error }`) on a localized failure, and
+`lr-download` (`detail: { filename, src }`, with the required sanitized download URL).
 
 **CSS parts:** `base`, `header`, `label`, `kind`, `view-toggle` (rendered only once the `code` slot
 has content), `view-button` (carries `data-view="preview"` or `data-view="code"`), `version-nav`
 (rendered only once `versions` is non-empty), `version-previous`, `version-previous-glyph` (the `‹`
 chevron inside `version-previous`, mirrored via `scaleX(-1)` under `:dir(rtl)`), `version-next`,
 `version-next-glyph` (the `›` chevron inside `version-next`, mirrored the same way), `version-position`
-(the "Version N of M" text), `restore-button` (rendered only while the active version isn't the
-latest), `actions`, `copy-button` (rendered only while `copyText` is non-empty), `download-button`
+(the "Version N of M" text), `version-label` (the active version's optional caller-supplied label),
+`restore-button` (rendered only while the active version isn't the latest), `actions`, `copy-button`
+(rendered only while `copyText` is non-empty), `download-button`
 (rendered only while `downloadSrc` is non-empty), `body`, `streaming-indicator` (rendered only while
 `streaming`).
 
@@ -1951,21 +2070,24 @@ also accepted. Live elapsed time and Cancel are available for `running`, `collec
 cancelable. Retry is available for `error` and `cancelled`.
 
 **Properties:**
+
 - `run: AgentRun | null = null` (attribute: false) — **`AgentRun`, imported from
   `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ id: string; status: AgentStatus; startedAt?:
-  number; endedAt?: number; model?: string; costEstimate?: number; steps: AgentStep[] }`, where
+number; endedAt?: number; model?: string; costEstimate?: number; steps: AgentStep[] }`, where
   `AgentStatus { kind: AgentStatusKind; message?: string }` and `AgentStep { id: string; kind:
-  string; label: string; status: AgentStatus; startedAt?: number; endedAt?: number }`. All timestamps
+string; label: string; status: AgentStatus; startedAt?: number; endedAt?: number }`. All timestamps
   are epoch milliseconds; `AgentStep.kind` is deliberately free-form (an agent's own step taxonomy is
   application-defined) — unlike `LyraSpan['kind']`'s closed union. Controlled and never mutated —
   pass a new object to update it. `null` renders the shared `lr-empty` `noData` state
 - `metrics: AgentRunMetric[] = []` (attribute: false) — `AgentRunMetric { id: string; label: string;
-  value: string | number; variant?: BadgeVariant }` (exported here), e.g. prompt/completion token
-  counts; `variant` tones `[part="metric-value"]` via `data-variant`
+value: string | number; variant?: BadgeVariant }` (exported here), e.g. prompt/completion token
+  counts; `variant` tones `[part="metric-value"]` via `data-variant`, including the full
+  `neutral`/`brand`/`success`/`warning`/`danger` badge vocabulary. Later duplicate ids are omitted
+  before metric rendering
 - `formatCost?: (cost: number) => string` (attribute: false) — overrides the default plain
   `Intl.NumberFormat` rendering of `run.costEstimate` fed to the composed `lr-usage-badge`'s
   `cost-text`; use it to add a currency symbol, which this library never assumes on a host's behalf
-- `statusLabels: Record<string, string> = {}` (attribute: false) — labels for *application-defined*
+- `statusLabels: Record<string, string> = {}` (attribute: false) — labels for _application-defined_
   `AgentStatusKind` values; the nine built-in kinds stay localized by Lyra
 - `statusVariants: Record<string, BadgeVariant> = {}` (attribute: false) — badge variants for
   application-defined kinds; unknown kinds default to `neutral`
@@ -1987,7 +2109,7 @@ cancelable. Retry is available for `error` and `cancelled`.
   name for the same union
 
 **Events:** `lr-cancel` (`detail: CancelEventDetail` = `{ reason?: string }`, from
-`@aceshooting/lyra-ui/ai`; `reason` is `undefined` from the built-in button), `lr-retry`
+`@aceshooting/lyra-ui/ai`; `reason` is `undefined` from the built-in button), `lr-run-retry`
 (`detail: RetryEventDetail` = `{ attempt: number; messageId?: string }`, same module — `attempt` is
 this component's own retry counter, reset when `run.id` changes).
 
@@ -2006,11 +2128,12 @@ current-step icon's rotation duration/timing. `--lr-agent-run-compact-padding` (
 `var(--lr-space-s)`) and `--lr-agent-run-compact-gap` (default `var(--lr-space-s)`) — `[part="base"]`'s
 padding, and the gap between its header and body, while `compact`; both are ignored while `compact`
 is unset. Like the other density/state properties in this family they are inline `var()` fallbacks at
-their point of use rather than `:host` declarations, so either can be set on the element *or on any
-ancestor* — one rule on a run list retunes every compact run inside it.
+their point of use rather than `:host` declarations, so either can be set on the element _or on any
+ancestor_ — one rule on a run list retunes every compact run inside it.
 
 **Additional API surface:**
 
+- `--lr-agent-run-metric-brand-color` — Brand metric value. Default: `var(--lr-color-brand)`.
 - `--lr-agent-run-metric-danger-color` — Danger metric value. Default: `var(--lr-color-danger)`.
 - `--lr-agent-run-metric-success-color` — Success metric value. Default: `var(--lr-color-success)`.
 - `--lr-agent-run-metric-warning-color` — Warning metric value. Default: `var(--lr-color-warning)`.
@@ -2021,6 +2144,7 @@ Provider-neutral agent/LLM trace view combining span-kind filters, handoff quick
 hierarchical trace tree from one shared `spans` array.
 
 **Properties:**
+
 - `spans: LyraSpan[] = []` (attribute: false) — the full, unfiltered array; identical contract to
   `lr-trace-tree.spans` (see `lr-span-waterfall` above for the `LyraSpan` shape). Controlled and
   never mutated
@@ -2031,15 +2155,20 @@ hierarchical trace tree from one shared `spans` array.
 - `hiddenKinds: LyraSpan['kind'][] = []` (attribute: false) — span kinds hidden from the tree
   (`'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other'`). Empty shows every kind;
   pre-settable (e.g. to hide `retriever`/`embedding` by default) and readable back after
-  `lr-visibility-change`
+  `lr-span-visibility-change`
 - `label: string = ''` — forwarded to the composed `lr-trace-tree`
 - `showTokens: boolean = false` (attribute `show-tokens`), `showCost: boolean = false` (attribute
   `show-cost`), `hideBars: boolean = false` (attribute `hide-bars`) — all forwarded verbatim
 
 **Events:** `lr-span-select` (`detail: { id: string }`), `lr-span-toggle` (`detail: { id: string;
-expanded: boolean }`), `lr-visibility-change` (`detail: { hiddenTypes: LyraSpan['kind'][] }` — bubbles composed from the
-internal `lr-graph-legend`, so the detail key is `hiddenTypes` despite holding span *kinds*, not
-graph node-type ids).
+expanded: boolean }`), and `lr-span-visibility-change` (`detail: { hiddenKinds:
+LyraSpan['kind'][] }`). The internal graph legend's generic `lr-visibility-change` event is
+contained; consumers receive this trace-domain event instead.
+
+`spans` is normalized through the same at-most-500-record projection as `<lr-trace-tree>` before
+filtering, handoff lookup, and tree rendering. The controlled active span and its ancestor path
+reserve positions, and malformed records plus later duplicate ids are omitted, so the composed
+surfaces cannot disagree.
 
 **CSS parts:** `base`, `filter` (the composed `lr-graph-legend` filter row, only rendered while
 `spans` is non-empty), `handoffs` (the quick-jump list wrapper, only rendered while at least one
@@ -2063,9 +2192,10 @@ Inspection view of model-call context segments, with token estimates, source cit
 markers, and copy/export controls.
 
 **Properties:**
+
 - `segments: ContextInspectorSegment[] = []` (attribute: false) — `ContextInspectorSegment { id:
-  string; label: string; text: string; tokens: number; tone?: ContextMeterTone; citation?: Citation;
-  truncated?: boolean; omittedTokens?: number; redactions?: ContextInspectorRedaction[] }` (exported
+string; label: string; text: string; tokens: number; tone?: ContextMeterTone; citation?: Citation;
+truncated?: boolean; omittedTokens?: number; redactions?: ContextInspectorRedaction[] }` (exported
   here). One entry per piece of the assembled final prompt (system prompt, retrieved chunk, one
   history turn, …). `text` is the segment's **final** text, exactly as sent to the model
   (post-redaction/post-truncation). `tokens` is the estimated count, fed straight to
@@ -2073,24 +2203,26 @@ markers, and copy/export controls.
   segment label. `citation` is **`Citation` from `@aceshooting/lyra-ui/ai`** and renders an
   `lr-citation-badge` carrying its `sourceId`/`label`. `omittedTokens` is shown in the
   truncation-boundary marker when `truncated` is set. `ContextInspectorRedaction { start: number;
-  end: number; reason?: string }` marks character ranges within `text` that are redaction
+end: number; reason?: string }` marks character ranges within `text` that are redaction
   placeholders; `reason` becomes the marker's `title`/accessible reason, falling back to a localized
-  "Redacted"
+  "Redacted". Segment `id` is the stable public identity; later duplicates are omitted before
+  meter values, rendering, copy/export serialization, and citation events are derived.
 - `total: number = 0` — the full token budget `segments` are measured against; passed straight to
   `lr-context-meter.total`
 - `label: string = ''` — accessible group name, and the embedded meter's visible caption (e.g.
   "128K context window")
-- `formats: ExportFormatOption[] = ['json']` (attribute: false) — forwarded to the embedded
+- `exportFormats: LyraExportFormatOption[] = ['json']` (attribute: false) — forwarded to the embedded
   `lr-export-button`; one id renders a plain button, more than one a format-choice menu
-- `filename: string = 'context'` — download filename (no extension) passed to `lr-export-button`
+- `exportFilename: string = 'context'` (attribute `export-filename`) — download filename (no
+  extension) passed to `lr-export-button`
 
 **Events:** `lr-citation-activate` (`detail: { sourceId: string; index: number }`, surfaced by a
 segment's embedded `lr-citation-badge`), `lr-citation-open` (`detail: { sourceId: string; index:
-number; href?: string }`, the "full preview" signal), `lr-copy` (`detail: { text: string }`, from the
+number; href?: string }`, the "full preview" signal), `lr-copy` (`detail: { ok: true; text: string }`, from the
 embedded `lr-copy-button`), `lr-export` (`detail: { format: string }`, from the embedded
 `lr-export-button`), `lr-export-complete` (`detail: { format: string }`, after a non-cancelled export
-finishes), `lr-error` (the embedded clipboard write failed), `lr-copy-error` (`detail: { text:
-string; reason: string }`, the detailed compatibility event for that clipboard failure),
+finishes), `lr-error` (the embedded clipboard write failed), `lr-copy-error` (`detail: { ok: false;
+text: string; reason: string; error: unknown }`, the detailed clipboard failure),
 `lr-export-error` (`detail: { format: ExportFormat; error: unknown }`, the embedded export could not
 complete), and the cancelable `lr-show` / `lr-hide` lifecycle events from the embedded export-format
 menu. These composed child events surface unchanged; the inspector does not emit duplicate copies.
@@ -2105,12 +2237,16 @@ marker), `truncation-boundary`, `copy-button`, `export-button`, `empty`.
 Filterable and taggable evaluation-example list with add, remove, import, and export affordances.
 
 **Properties:**
+
 - `examples: EvalExample[] = []` (attribute: false) — `EvalExample { id: string; input: string;
-  expectedOutput?: string; tags?: string[]; metadata?: Record<string, unknown> }` (exported here).
+expectedOutput?: string; tags?: string[]; metadata?: Record<string, unknown> }` (exported here).
   Deliberately its own small shape rather than reusing anything from `src/ai/types.ts` — none of that
   module's interfaces models "one row of a labeled eval dataset". `input`/`expectedOutput` are plain
   strings (not structured payloads), rendered as plain text by every column's `cell()`. Fully
-  controlled: add/remove/import/export are all *requests*; the host mutates and passes the array back
+  controlled: add/remove/import/export are all _requests_; the host mutates and passes the array
+  back. Later duplicate ids are omitted before selection, filtering, mutation requests, and the
+  nested grid are derived. Distinct tag chips are ordered with the component's effective-locale
+  collation
 - `searchable: boolean = false` (reflected) — built-in free-text search over `input`,
   `expectedOutput`, and `tags` (case-insensitive substring)
 - `autocomplete: string = ''`, `spellcheck: boolean = true`, `autocapitalize: string = ''`,
@@ -2124,12 +2260,15 @@ Filterable and taggable evaluation-example list with add, remove, import, and ex
   internal `lr-export-button`
 - `disabled: boolean = false` (reflected) — disables every add/remove/import/export affordance, e.g.
   while a host-side mutation is still in flight
-- `label: string = ''` — accessible name for the grid region; defaults to the localized
-  `evalDatasetLabel`
+- `label: string = ''` — purpose-specific accessible name for the nested grid; defaults to the
+  localized `evalDatasetLabel`. A host `aria-label` remains on the custom-element host as its
+  overall name and is not cloned onto the independently interactive grid
 
-**Events:** `lr-example-select` (`detail: { id: string | null }`), `lr-example-add-request`
-(`detail: undefined`), `lr-example-remove-request` (`detail: { id: string }`), `lr-import-request`
-(`detail: { files: File[] }`), `lr-export-request` (`detail: { format: string }`). `focus`/`blur` —
+**Events:** `lr-example-select` (`detail: { exampleId: string | null }`),
+`lr-example-add-request` (`detail: undefined`), `lr-example-remove-request` (`detail: { exampleId:
+string }`), `lr-import-request` (`detail: { files: File[] }`), `lr-export-request` (`detail: {
+format: string }`), and the deliberate nested-table pass-through `lr-sort` (`detail: { key:
+string }`). `focus`/`blur` —
 re-dispatched (no detail) when the internal search field (only rendered while `searchable`) gains or
 loses focus, since native focus neither bubbles nor crosses the shadow boundary.
 
@@ -2137,11 +2276,13 @@ loses focus, since native focus neither bubbles nor crosses the shadow boundary.
 `add-button`, `remove-button`, `import`, `export`.
 
 **Known gotchas:**
+
 - Shrinking `examples` out from under live UI state is handled: a `selectedId` that no longer matches
   any row resets to `null`, and an active tag filter that no longer matches any row's `tags` is
   dropped rather than silently matching zero rows forever.
 - A search or tag filter that hides the selected row also clears that selection and emits
-  `lr-example-select` with `{ id: null }`, so the Remove control never acts on an invisible row.
+  `lr-example-select` with `{ exampleId: null }`, so the Remove control never acts on an invisible
+  row.
 
 ## `lr-eval-result`
 
@@ -2149,29 +2290,33 @@ Rubric scoring and human-review surface for comparing the runs of one evaluation
 
 Composes `lr-table` (the comparison table), `lr-rubric-form` (the review surface), and
 `lr-diff-view` (baseline↔selected output diff) rather than re-deriving any of their behavior.
-The table's accessible name is the localized evaluation-runs label by default; a host
-`aria-label` on `<lr-eval-result>` overrides it.
+The table keeps the localized purpose-specific evaluation-runs name. A host `aria-label` on
+`<lr-eval-result>` remains the overall host name and is not cloned onto the independently
+interactive table.
 
 **Properties:**
+
 - `runs: EvalRunResult[] = []` (attribute: false) — `EvalRunResult { id: string; label: string;
-  model?: string; promptVersion?: string; output: string; scores?: RubricValue; review?: RubricValue }`
+model?: string; promptVersion?: string; output: string; scores?: RubricValue; review?: RubricValue }`
   (exported here). One entry per model or prompt version being compared for a single evaluation
   example. `scores`/`review` use the same `RubricValue` shape `lr-rubric-form` itself reads and
   writes, so a `TableColumn`'s `cell()` accessor and the rubric form's own `value` binding read a
-  run's fields with no conversion
+  run's fields with no conversion. Later duplicate run ids are omitted before selection, diff,
+  grid, and review-event lookup
 - `columns: TableColumn<EvalRunResult>[] = []` (attribute: false) — plain pass-through to
-  `lr-table.columns`, not re-derived here
-- `rubricKeys: RubricKey[] = []` (attribute: false) — plain pass-through to `lr-rubric-form.keys`
-- `selectedRunId: string = ''` (attribute `selected-run-id`) — the run open for review and the diff's
+  `lr-table.columns`, not re-derived here; later duplicate column keys are omitted
+- `rubricKeys: RubricKey[] = []` (attribute: false) — plain pass-through to `lr-rubric-form.keys`;
+  later duplicate rubric keys are omitted
+- `selectedRunId: string | null = null` (attribute `selected-run-id`) — the run open for review and the diff's
   **new** side; falls back to `runs[0]?.id` when empty
-- `baselineRunId: string = ''` (attribute `baseline-run-id`) — the run compared against and the
+- `baselineRunId: string | null = null` (attribute `baseline-run-id`) — the run compared against and the
   diff's **old** side; falls back to `runs[0]?.id` when empty
 - `reviewSkippable: boolean = false` (attribute `review-skippable`) — shows a Skip control on the
   review form (forwarded to `lr-rubric-form.skippable`)
 - `disabled: boolean = false` (reflected) — disables the review form's controls only; the comparison
   grid stays interactive (selecting a run to inspect is not a mutation)
 
-**Events:** `lr-run-select` (`detail: { runId: string }`), `lr-review-input` (`detail: { runId:
+**Events:** `lr-run-activate` (`detail: { runId: string; run: EvalRunResult }`), `lr-review-input` (`detail: { runId:
 string; value: RubricValue }`), `lr-review-validity-change` (`detail: { runId: string; valid:
 boolean; errors: Record<string, string> }`), `lr-review-submit` (`detail: { runId: string; value:
 RubricValue }`), `lr-review-skip` (`detail: { runId: string }`).
@@ -2185,20 +2330,28 @@ Evaluation-batch progress view with overall progress and one disclosure per exam
 outputs may render as Markdown or code, with optional grounding and tool-trace sections.
 
 **Properties:**
+
 - `examples: EvaluationExampleResult[] = []` (attribute: false) — `EvaluationExampleResult { id:
-  string; label?: string; status: AgentStatus; input: string; inputFormat?: EvaluationContentFormat;
-  inputLanguage?: string; output: string; outputFormat?: EvaluationContentFormat; outputLanguage?:
-  string; grounding?: GroundingAssessment; citations?: Citation[]; toolTrace?: ToolTimelineEntry[] }`
-  (exported here). `status` reuses **`AgentStatus` from `@aceshooting/lyra-ui/ai`** (`{ kind:
-  AgentStatusKind; message? }`) — the same run-lifecycle vocabulary an agent step uses — rather than a
-  parallel pass/fail enum; rubric scoring is `lr-eval-result`'s job, not this one's.
-  `EvaluationContentFormat = 'markdown' | 'code'` — `'markdown'` (the default when unset) renders via
-  `lr-markdown`, `'code'` via `lr-code-block` consulting the matching `*Language` field for shiki.
+string; label?: string; status: AgentStatusPresentation; input: EvaluationContent; output:
+EvaluationContent; grounding?: GroundingAssessment; citations?: Citation[]; toolTrace?:
+ToolTimelineEntry[] }`
+  (exported here). `AgentStatusPresentation` extends the shared **`AgentStatus` from
+  `@aceshooting/lyra-ui/ai`** with optional caller presentation `{ label?, variant?, terminal?,
+active? }`. `label` and `variant` customize application-defined lifecycle display, `message`
+  renders as status detail, and `terminal` controls completion counting (falling back to the built-in
+  `done`/`error`/`cancelled` map). This preserves the shared run-lifecycle vocabulary rather than
+  inventing a parallel pass/fail enum; rubric scoring is `lr-eval-result`'s job, not this one's.
+  `EvaluationContent { text: string; format?: EvaluationContentFormat; language?: string }` keeps
+  each payload's rendering metadata together. `EvaluationContentFormat = 'markdown' | 'code'` —
+  `'markdown'` (the default when unset) renders via `lr-markdown`; `'code'` uses `lr-code-block`
+  and consults that payload's `language` for shiki.
   `grounding`/`citations` (both from `@aceshooting/lyra-ui/ai`) compose directly into
   `lr-grounding-summary`'s `assessment`/`citations`, and `toolTrace` directly into
   `lr-tool-timeline.entries` — no adapters. `citations` is consulted only while `grounding` is also
   set; an omitted `grounding` or empty `toolTrace` renders no such section for that example. `label`
-  falls back to a localized "Example {index}" (1-based, array order). Controlled and never mutated
+  falls back to a localized "Example {index}" (1-based, array order). Controlled and never mutated;
+  later duplicate example ids are omitted before progress, disclosure state, and correlated child
+  events are derived
 - `total: number | null = null` — the batch's expected total example count. `null` derives it from
   `examples.length`; set it explicitly while a batch is still streaming and the eventual total is
   already known. An explicit total below the current observed count is raised to `examples.length`,
@@ -2206,19 +2359,23 @@ outputs may render as Markdown or code, with optional grounding and tool-trace s
 - `label: string = ''` — header label and accessible-name source; falls back to a localized
   "Evaluation run"
 
-**Events:** `lr-example-toggle` (`detail: EvaluationExampleToggleDetail` = `{ id: string; expanded:
+**Events:** `lr-example-toggle` (`detail: EvaluationExampleToggleDetail` = `{ exampleId: string; expanded:
 boolean }`), `lr-example-citation-select` (`detail: EvaluationCitationSelectDetail` = `{ exampleId:
 string; citation: Citation }` — the nested `lr-grounding-summary`'s own `{ citation }` correlated
 with the example it came from, so a host needn't walk the DOM), `lr-example-tool-approval-decide`
 (`detail: EvaluationToolApprovalDetail` = `ToolTimelineApprovalDetail & { exampleId: string }` =
-`{ invocationId: string; approved: boolean; args?: unknown; exampleId: string }`). The approval
+`{ invocationId: string; approved: boolean; args?: unknown; sourceKey?: string; exampleId: string
+}`). The approval
 event is cancelable: calling `preventDefault()` propagates the veto to the nested
 `lr-tool-approval-decide`, preserving its pending dialog and current edited arguments while the
-host resolves asynchronous validation.
+host resolves asynchronous validation. The component also contains and correlates other composed
+child events as `lr-example-claim-select` (`{ exampleId, claim }`),
+`lr-example-tool-activate` (`{ exampleId, invocationId, sourceKey? }`), and
+`lr-example-tool-render-error` (`{ exampleId, invocationId, sourceKey?, toolName, error }`).
 
 **CSS parts:** `base`, `header`,
 `header-label`, `progress`, `summary`, `counts`, `count`, `examples`, `example`, `example-summary`,
-`example-label`, `example-status`, `input-section`, `input`, `output-section`, `output`,
+`example-label`, `example-status`, `example-status-message`, `input-section`, `input`, `output-section`, `output`,
 `grounding-section`, `grounding-summary`, `tool-trace-section`, `tool-trace`, `section-heading`,
 `live-region`, `empty`.
 
@@ -2237,6 +2394,8 @@ color alone; it tones the badge as `allow` → success, `deny` → danger, `need
 while the always-visible explanation remains plain text. `detail` is optional richer evidence
 (matched rule text, policy id) revealed through
 progressive disclosure. Controlled and never mutated — pass a new array to update it.
+`id` is the stable decision identity; later duplicates are omitted before counts, disclosure state,
+and rows are derived.
 
 **Events:** none. Read-only and display-only: this component never mutates a decision and offers no
 resolve/acknowledge action — see `lr-tool-approval-dialog`/`lr-confirm-bar` for a real approve/deny
@@ -2261,12 +2420,19 @@ Chronological list of agent tool/function calls composed from tool-call, result,
 primitives, with retry counts and sensitive-field redaction.
 
 **Properties:**
+
 - `entries: ToolTimelineEntry[] = []` (attribute: false) — `ToolTimelineEntry` **extends
   `ToolInvocation` from `@aceshooting/lyra-ui/ai`** (`{ id: string; name: string; args:
-  Record<string, unknown>; status: ToolCallStatus; result?: unknown; error?: string }`, where
+Record<string, unknown>; status: ToolCallStatus; result?: unknown; error?: string }`, where
   `ToolCallStatus = 'pending' | 'running' | 'success' | 'error' | 'denied'`) with `{ startedAt?:
-  number; endedAt?: number; retryCount?: number; redactedFields?: string[]; needsApproval?: boolean;
-  approved?: boolean }`. Timestamps are epoch milliseconds; entries sort ascending by `startedAt`,
+number; endedAt?: number; retryCount?: number; redactedFields?: string[]; needsApproval?: boolean;
+approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies the owning run or
+  source generation when invocation ids can be reused; every expansion, activation, renderer error,
+  and approval draft is correlated by `(sourceKey, id)`. Duplicate occurrences of the same pair are
+  normalized before any lookup with a deterministic first-occurrence-wins policy. `icon` is a
+  literal hint forwarded to the composed tool-call chip. A foreign runtime `status` normalizes once
+  to `pending` before both the timeline row and its composed chip render.
+  Timestamps are epoch milliseconds; entries sort ascending by `startedAt`,
   and an entry with none sorts after every timed entry (keeping its relative position among other
   untimed ones) and renders no visible timestamp. `startedAt`+`endedAt` derive the `durationMs`
   handed to the per-entry `lr-tool-call-chip`. `retryCount: 2` means the call reached its current
@@ -2292,9 +2458,21 @@ applied its controlled `entries` update (it never mutates `entries` itself). `re
 void` releases a held dialog after persistence fails, retaining the reviewer’s current argument edit
 so they can retry. Both are no-ops when no decision is held.
 
-**Events:** `lr-tool-approval-decide` (`detail: ToolTimelineApprovalDetail` =
-`ToolApprovalEventDetail & { args?: unknown }` = `{ invocationId: string; approved: boolean; args?:
-unknown }`, extending the shared detail from `@aceshooting/lyra-ui/ai`). `args` is present only when
+At most 500 unique entries mount. Open disclosures and the entry under approval review reserve
+positions before later ordinary history is omitted; a localized `[part="limit"]` note exposes the
+bounded projection. Redaction is deferred until a disclosure opens and memoized while the entry's
+payload and path list are unchanged. It is bounded to 100 paths, 64 levels, 10,000 visited nodes,
+and 4,096 characters per path; crossing a ceiling masks the affected branch instead of exposing
+data or exhausting the page.
+
+**Events:** `lr-tool-activate` (`detail: { invocationId: string; sourceKey?: string }`) for a
+non-approval entry activation and `lr-tool-render-error` (`detail: { invocationId: string;
+sourceKey?: string; toolName: string; error: unknown }`) for a contained nested renderer failure.
+The raw child chip-selection, renderer-error, details, and dialog events do not leak across the
+timeline boundary. `lr-tool-approval-decide` (`detail: ToolTimelineApprovalDetail` =
+`ToolApprovalEventDetail & { args?: unknown; sourceKey?: string }` = `{ invocationId: string;
+approved: boolean; args?: unknown; sourceKey?: string }`, extending the shared detail from
+`@aceshooting/lyra-ui/ai`). `args` is present only when
 `approved` is `true`, and may differ from what the entry originally proposed — the dialog's inline
 edit step can hand back different arguments. A listener that only needs `{ invocationId, approved }`
 can ignore it; one actually executing the tool needs it. This is a cancelable veto point:
@@ -2303,7 +2481,7 @@ instead of closing/resetting them, sets `pendingApproval`, and requires the host
 `finalizePendingApproval()` after persistence succeeds or `revertPendingApproval()` after it fails.
 
 ```ts
-timeline.addEventListener('lr-tool-approval-decide', async (event) => {
+timeline.addEventListener("lr-tool-approval-decide", async (event) => {
   event.preventDefault();
   try {
     await persistDecision(event.detail);
@@ -2318,7 +2496,7 @@ timeline.addEventListener('lr-tool-approval-decide', async (event) => {
 **CSS parts:** `base`,
 `entry`, `entry-marker`, `entry-header`, `entry-timestamp`, `entry-body`, `entry-details`,
 `entry-result`, `entry-error`, `entry-retries`, `entry-retries-count`, `entry-retries-label`,
-`entry-redacted-indicator`, `entry-approval-status`, `approval-dialog`.
+`entry-redacted-indicator`, `entry-approval-status`, `approval-dialog`, `empty`, `limit`.
 Each entry's `lr-details` disclosure has a localized contextual summary naming that tool call, not a
 repeated bare "Details" label.
 
@@ -2353,15 +2531,21 @@ history. It never launches or scores evaluations.
 `{ id, label, value, format?: 'number' | 'percent' | 'milliseconds' | 'currency' }`; `currency:
 string = 'USD'` is the ISO 4217 code used by currency-formatted metrics (invalid codes safely fall
 back to USD). `runs:
-AgentEvaluationDashboardRun[] = []` (attribute: false), where each run is `{ id, label, status,
-metrics?: Record<string, number> }`; `metricId: string = ''`; `label: string = ''`; `showChart:
-boolean = true`; `chartHeight: string = '220px'`.
+AgentEvaluationDashboardRun[] = []` (attribute: false), where each run is `{ id, label, status:
+AgentStatusValue, metrics?: Record<string, number> }`. `AgentStatusValue` accepts either a compact
+`AgentStatusKind` string or an `AgentStatusPresentation` object (`{ kind, message?, label?,
+variant?, terminal?, active? }`), preserving explicit caller labels/messages and badge variants.
+`metricId: string | null = null`; `label: string = ''`; `showChart: boolean = true`; `chartHeight: string =
+'220px'`; `maxRenderedRuns: number = 100` (attribute `max-rendered-runs`, clamped to 1–500) bounds
+both the run list and the chart projection.
+Metric ids and run ids each use deterministic first-occurrence-wins normalization before cards,
+selectors, chart series, row lookup, and emitted events are derived.
 
 **Events:** `lr-metric-change` (`{ metricId }`, emitted when a metric selector is activated) and
-`lr-run-select` (`{ runId }`).
+`lr-run-activate` (`{ runId, run }`).
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
-`run-label`, `run-meta`, `run-status`, `empty`.
+`run-label`, `run-meta`, `run-status`, `run-status-message`, `empty`.
 
 **Additional API surface:**
 
@@ -2374,13 +2558,19 @@ Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-
 It never executes tools or persists decisions.
 
 **Properties:** `requests: ToolApprovalRequest[] = []` (attribute: false), where each request is
-`{ id, toolName, args, status?: 'pending' | 'approved' | 'denied' }`; `selectedId: string = ''`;
-`open: boolean = false`; `editable: boolean = true`; `label: string = ''`.
+`{ id, toolName, args, status?: 'pending' | 'approved' | 'denied' }`; `selectedId: string | null = null`;
+`open: boolean = false`; `editable: boolean = true`; `label: string = ''`. Later duplicate request
+ids are omitted before count, selection, dialog lookup, or decision events are derived.
 
 **Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision` (`{ invocationId,
 approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
 `lr-approval-decision` is cancelable; calling `preventDefault()` vetoes the nested approve/deny
 request and keeps the decision dialog pending.
+
+Resolved rows (`approved`/`denied`) are never actionable. Replacing `requests` reconciles stale
+selection and dialog state before another activation can use it; a request that disappears or is
+resolved while open closes the dialog, and reentrant host updates during selection cannot reopen a
+stale request.
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`. The `[part='request']` row matching `selectedId`
@@ -2396,28 +2586,35 @@ state), so the selection is announced, not merely painted. Other request rows ex
 
 Sandbox host for executable MCP App-style resources. Inline documents run in a unique-origin iframe
 with a trusted CSP meta placed before every caller-controlled HTML token; comment and script-text
-head decoys therefore cannot bypass the policy. Remote documents are URL-validated. The frame can only request tool calls,
-messages, navigation, logs, and clamped resizing through typed events. Capabilities are denied
-unless explicitly enabled in `resource.permissions`.
+head decoys therefore cannot bypass the policy. Remote documents accept only relative or HTTP(S)
+URLs and use a fixed `no-referrer` policy; active-document `data:` and `blob:` URLs are rejected.
+The frame can only request tool calls, messages, navigation, logs, and clamped resizing through
+typed events. Capabilities are denied unless explicitly enabled in `resource.permissions`.
 
 **Properties:**
 
-- `resource: McpAppResource | null = null` (attribute: false) — either inline `html` or a safe
-  remote `src`, plus the required logical `uri`. `McpAppResource = { uri: string; title?: string;
-  html?: string; src?: string; csp?: McpAppCsp; permissions?: McpAppPermissions; metadata?:
-  Record<string, unknown> }`. CSP domain arrays accept HTTP(S) origins only. Permissions are
-  optional booleans for camera, microphone, geolocation, clipboard read, and clipboard write.
+- `resource: McpAppResource | null = null` (attribute: false) — a non-empty logical `uri` plus
+  exactly one executable source: `{ uri, html, src?: never, ... }` for inline content or
+  `{ uri, src, html?: never, ... }` for a relative/HTTP(S) document URL. Shared optional fields are
+  `title`, `csp`, `permissions`, and `metadata`. Runtime validation enforces the non-empty identity,
+  exact-one-source invariant, and remote URL scheme even for untyped JavaScript callers. CSP domain
+  arrays accept HTTP(S) origins only. Permissions are optional booleans for camera, microphone,
+  geolocation, clipboard read, and clipboard write.
 - `height: number = 320`, `maxHeight: number = 800` (attribute `max-height`) — requested and maximum
   frame heights in pixels; runtime values and resize requests clamp to 120–10,000.
-- `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`) — frame
-  title precedence is host `aria-label`, `label`, resource title, then the localized fallback.
+- `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`). A present
+  host `aria-label` stays on the custom-element host as its overall name instead of being cloned
+  inward. The iframe title uses `label`, then resource title, then the localized fallback; an
+  explicitly empty host label is preserved as an empty iframe title for this primary frame owner,
+  while a direct `accessibleLabel` property value can name it when no host attribute is present.
 
 **Methods:** `postHostContext(context: unknown): void` posts host state into the active frame;
-`postToolResult(requestId: string, result?: unknown, error?: string, frameGeneration?: number): void`
-resolves a prior tool request. Both are no-ops before a frame exists.
+`postToolResult(requestId: string, options: McpAppToolResultOptions): void` resolves a prior tool
+request with exactly one of `{ frameGeneration, result }` or `{ frameGeneration, error }`. Missing,
+stale, or ambiguous correlation fails closed. Both methods are no-ops before a frame exists.
 
 **Exported types:** `McpAppResource`, `McpAppCsp`, `McpAppPermissions`,
-`McpAppToolCallDetail`, and `LyraMcpAppEventMap`.
+`McpAppToolCallDetail`, `McpAppToolResultOptions`, and `LyraMcpAppEventMap`.
 
 **Events:** `lr-mcp-ready` (`{ uri }`), `lr-mcp-tool-call`
 (`{ requestId?, name, args, frameGeneration }`), `lr-mcp-send-message` (`{ message }`),
@@ -2425,26 +2622,26 @@ resolves a prior tool request. Both are no-ops before a frame exists.
 (`{ level, value }`), and `lr-mcp-resize` (`{ height }`). These are host-authorized requests; the
 component does not execute tools, send messages, or navigate itself.
 
-Changing `resource` mounts a fresh iframe/window generation; messages from the prior
-`contentWindow` are ignored even when two opaque-origin inline documents otherwise look alike.
+Changing `resource`, adopting the host into another document, or reconnecting it mounts a fresh
+iframe/window generation; messages from the prior `contentWindow` are ignored even when two
+opaque-origin inline documents otherwise look alike.
 
 The host-to-frame direction is correlated the same way. `lr-mcp-tool-call`'s
 `detail.frameGeneration` is an opaque id for the frame generation that raised the request; passing
-it back as `postToolResult()`'s fourth argument makes the component drop a reply whose generation no
+it in `postToolResult()`'s required options makes the component drop a reply whose generation no
 longer matches the mounted frame. That matters because a tool call is inherently asynchronous — the
-host does real work (an API call, a filesystem read) before replying, and a conversation UI can swap
-`resource` on the same element meanwhile, so an uncorrelated reply would otherwise be delivered into
-a completely unrelated app. The argument is optional and additive: omitting it means "no correlation
-available" and posts to whichever frame is currently mounted, exactly as before.
+host does real work before replying, and a conversation UI can replace or reconnect `resource` on
+the same element meanwhile. An uncorrelated reply would otherwise reach a completely unrelated app.
 
 ```ts
-element.addEventListener('lr-mcp-tool-call', async (event) => {
+element.addEventListener("lr-mcp-tool-call", async (event) => {
   const { requestId, name, args, frameGeneration } = event.detail;
   if (!requestId) return;
   const result = await runTool(name, args);
-  element.postToolResult(requestId, result, undefined, frameGeneration);
+  element.postToolResult(requestId, { frameGeneration, result });
 });
 ```
+
 Changing only `height`/`maxHeight` updates frame geometry without returning an already-ready frame
 to its loading state. The initial host context reports `effectiveLocale`, so inherited/document
 locale and per-element locale overrides follow the same precedence as the rest of Lyra UI.
@@ -2459,7 +2656,7 @@ the shared assertive sink. Initial and reconnect renders stay silent.
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.js';
+import "@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.js";
 ```
 
 ## `lr-prompt-studio`
@@ -2483,7 +2680,8 @@ textarea and variable input through `spellcheck: boolean = true`, `autocapitaliz
 and `autoCorrect: string = ''` (attribute `autocorrect`); `wrap: PromptStudioWrap = 'soft'` applies
 to message textareas only.
 
-**Exported types:** `PromptStudioRole = 'system' | 'user' | 'assistant' | 'tool'`;
+**Exported types:** `PromptStudioRole = ChatMessageRole | 'tool'`, where the shared
+`ChatMessageRole` is `'system' | 'user' | 'assistant'`;
 `PromptStudioMessage = { id, role, content, name? }`; `PromptStudioVariable = { name, value,
 description? }`; `PromptStudioVersion = { id: string; label: string; messages:
 PromptStudioMessage[]; variables?: PromptStudioVariable[]; createdAt?: string }`; and
@@ -2519,7 +2717,7 @@ not collapse to indistinguishable generic names.
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.js';
+import "@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.js";
 ```
 
 **Additional API surface:**
@@ -2572,7 +2770,7 @@ path once before recursive rendering instead of rescanning the full input for ev
 at the repeated node rather than recursing. **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js';
+import "@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js";
 ```
 
 **Additional API surface:**
@@ -2592,12 +2790,13 @@ selection, cancel, and retry intents. `SubagentRun.parentId` creates nesting; cy
 parents remain renderable instead of recursing forever.
 
 **Properties:** `runs: SubagentRun[] = []` (attribute: false);
-`selectedRunId: string = ''` (attribute `selected-run-id`); `label: string = ''`.
+`selectedRunId: string | null = null` (attribute `selected-run-id`); `label: string = ''`.
 `SubagentRun = { id: string; parentId?: string; label: string; status: AgentStatusKind; task?:
 string; model?: string; progress?: number; startedAt?: number; endedAt?: number; metadata?:
 Record<string, unknown> }`.
 
-**Events:** `lr-run-select` (`{ run }`), `lr-cancel`/`lr-retry` (`{ runId }`).
+**Events:** `lr-run-activate` (`{ runId, run }`), `lr-cancel` (`{ runId }`), and
+`lr-run-retry` (`{ runId }`).
 
 **CSS parts:** `base`, `list`, `run`, `run-selected`, `run-row`, `run-trigger`, `label`, `status`,
 `task`, `model`, `progress`, `actions`, `cancel`, `retry`, `limit`, `empty`.
@@ -2606,13 +2805,13 @@ At most 500 runs render, and visual indentation is capped at 12 levels while ARI
 the logical depth. The visible `limit` text is ordinary and non-live; newly reaching or changing the
 run ceiling after the initial baseline appends the localized message to the shared polite light-DOM
 announcement sink, while initial and reconnect renders stay silent. The roving treeitem accepts
-Enter/Space as well as pointer activation for `lr-run-select`; cancel/retry action names include the
+Enter/Space as well as pointer activation for `lr-run-activate`; cancel/retry action names include the
 run label so repeated row actions remain distinguishable to assistive technology. Progress is finite
 and clamped. **Slots:** none.
 **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js';
+import "@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js";
 ```
 
 **Additional API surface:**

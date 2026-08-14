@@ -1,4 +1,4 @@
-import { getScratchCtx } from '../../../internal/canvas.js';
+import { getScratchCtx } from "../../../internal/canvas.js";
 
 function parseRgbTriplet(value: string): [number, number, number] | null {
   const match = value.match(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/);
@@ -9,7 +9,13 @@ function parseHexTriplet(value: string): [number, number, number] | null {
   const match = value.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
   if (!match) return null;
   const hex = match[1]!;
-  const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex;
+  const full =
+    hex.length === 3
+      ? hex
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : hex;
   const num = Number.parseInt(full, 16);
   return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
 }
@@ -25,19 +31,30 @@ function parseHexTriplet(value: string): [number, number, number] | null {
  *  syntax -- `ctx.fillStyle`'s own getter re-serializes right back to hex for an opaque color (per
  *  the CSS Color serialization algorithm canvas 2D uses), so both forms are tried on either side of
  *  the round-trip. Returns `null` when `value` doesn't parse as a color at all. */
-function toRgb(value: string, ownerDocument: Document): [number, number, number] | null {
+function toRgb(
+  value: string,
+  ownerDocument: Document
+): [number, number, number] | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
   const direct = parseRgbTriplet(trimmed) ?? parseHexTriplet(trimmed);
   if (direct) return direct;
   const ctx = getScratchCtx(ownerDocument);
   if (!ctx) return null;
-  const sentinel = 'rgb(1, 2, 3)';
-  ctx.fillStyle = sentinel;
-  const sentinelNormalized = ctx.fillStyle;
+  // Two distinct sentinels distinguish an invalid assignment from a valid color whose own
+  // serialization happens to equal either sentinel. Reading an actual pixel then lets the browser
+  // convert modern color spaces (oklch/lab/color(display-p3 ...)) to the canvas' sRGB backing store
+  // instead of assuming the fillStyle getter will serialize them as rgb().
+  ctx.fillStyle = "rgb(1, 2, 3)";
   ctx.fillStyle = trimmed;
-  if (ctx.fillStyle === sentinelNormalized && trimmed !== sentinel) return null;
-  return parseRgbTriplet(ctx.fillStyle) ?? parseHexTriplet(ctx.fillStyle);
+  const first = ctx.fillStyle;
+  ctx.fillStyle = "rgb(4, 5, 6)";
+  ctx.fillStyle = trimmed;
+  if (ctx.fillStyle !== first) return null;
+  ctx.clearRect(0, 0, 1, 1);
+  ctx.fillRect(0, 0, 1, 1);
+  const [red, green, blue, alpha] = ctx.getImageData(0, 0, 1, 1).data;
+  return alpha === 0 ? null : [red!, green!, blue!];
 }
 
 function relativeLuminance([r, g, b]: [number, number, number]): number {
@@ -55,17 +72,38 @@ function relativeLuminance([r, g, b]: [number, number, number]): number {
  *  `--lr-color-text`/`--lr-color-surface` custom properties every other themed surface reads. */
 export function resolveIsDarkTheme(host: Element): boolean {
   const view = host.ownerDocument.defaultView;
-  if (!view || typeof view.getComputedStyle !== 'function') return false;
-  let style: CSSStyleDeclaration;
+  if (!view || typeof view.getComputedStyle !== "function") return false;
+  const probe = host.ownerDocument.createElement("span");
+  probe.setAttribute("aria-hidden", "true");
+  // Set the detached probe's declaration as markup rather than mutating CSSStyleDeclaration.
+  // ThemeWatcher instruments live CSSOM setters as invalidation signals; using one from inside
+  // the resolver would recursively invalidate the very watcher that called us.
+  probe.setAttribute(
+    "style",
+    [
+      "position:fixed",
+      "inline-size:0",
+      "block-size:0",
+      "overflow:hidden",
+      "pointer-events:none",
+      "color:var(--lr-color-text)",
+      "background-color:var(--lr-color-surface)",
+    ].join(";")
+  );
   try {
-    style = view.getComputedStyle(host);
+    const root = host.shadowRoot ?? host;
+    root.append(probe);
+    const style = view.getComputedStyle(probe);
+    const text = toRgb(style.color, host.ownerDocument);
+    const surface = toRgb(style.backgroundColor, host.ownerDocument);
+    return Boolean(
+      text && surface && relativeLuminance(text) > relativeLuminance(surface)
+    );
   } catch {
     return false;
+  } finally {
+    probe.remove();
   }
-  const text = toRgb(style.getPropertyValue('--lr-color-text'), host.ownerDocument);
-  const surface = toRgb(style.getPropertyValue('--lr-color-surface'), host.ownerDocument);
-  if (!text || !surface) return false;
-  return relativeLuminance(text) > relativeLuminance(surface);
 }
 
 /** Re-invokes `onChange` whenever the resolved theme might have changed: an OS-level
@@ -74,25 +112,29 @@ export function resolveIsDarkTheme(host: Element): boolean {
  *  fires no DOM event on its own -- this mirrors qr-code.class.ts's/heatmap.class.ts's/
  *  chart.class.ts's own theme-reactive canvases, the established pattern in this codebase for a
  *  component that can't just let CSS repaint itself. Returns a cleanup function. */
-export function watchDarkTheme(host: HTMLElement, onChange: () => void): () => void {
+export function watchDarkTheme(
+  host: HTMLElement,
+  onChange: () => void
+): () => void {
   const view = host.ownerDocument.defaultView;
   if (!view || !host.isConnected) return () => {};
   let active = true;
   const update = (): void => {
-    if (!active || !host.isConnected || host.ownerDocument.defaultView !== view) return;
+    if (!active || !host.isConnected || host.ownerDocument.defaultView !== view)
+      return;
     onChange();
   };
   let colorSchemeQuery: MediaQueryList | undefined;
   try {
-    colorSchemeQuery = view.matchMedia?.('(prefers-color-scheme: dark)');
-    colorSchemeQuery?.addEventListener('change', update);
+    colorSchemeQuery = view.matchMedia?.("(prefers-color-scheme: dark)");
+    colorSchemeQuery?.addEventListener("change", update);
   } catch {
     colorSchemeQuery = undefined;
   }
 
   let observer: MutationObserver | undefined;
   const Observer = view.MutationObserver;
-  if (typeof Observer === 'function') {
+  if (typeof Observer === "function") {
     const targets: Element[] = [host];
     let parent = host.parentElement;
     while (parent) {
@@ -102,7 +144,15 @@ export function watchDarkTheme(host: HTMLElement, onChange: () => void): () => v
     try {
       observer = new Observer(update);
       for (const target of targets) {
-        observer.observe(target, { attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-color-scheme'] });
+        observer.observe(target, {
+          attributes: true,
+          attributeFilter: [
+            "class",
+            "style",
+            "data-theme",
+            "data-color-scheme",
+          ],
+        });
       }
     } catch {
       observer?.disconnect();
@@ -113,7 +163,7 @@ export function watchDarkTheme(host: HTMLElement, onChange: () => void): () => v
   return () => {
     if (!active) return;
     active = false;
-    colorSchemeQuery?.removeEventListener('change', update);
+    colorSchemeQuery?.removeEventListener("change", update);
     observer?.disconnect();
   };
 }

@@ -303,11 +303,23 @@ describe('lr-trace-tree', () => {
     }));
     deep.push({ ...deep[0]!, name: 'duplicate' });
     deep.push({ ...deep[0]!, id: 'invalid', startMs: Number.NaN });
-    const el = (await fixture(html`<lr-trace-tree .spans=${deep}></lr-trace-tree>`)) as LyraTraceTree;
+    const container = document.createElement('div');
+    container.style.inlineSize = '320px';
+    const el = (await fixture(html`
+      <lr-trace-tree
+        style="--lr-trace-tree-max-indent: 37px"
+        .spans=${deep}
+        .strings=${{ spanProjectionLimit: 'Showing at most {count} spans' }}
+      ></lr-trace-tree>
+    `, { parentNode: container })) as LyraTraceTree;
     const rows = el.shadowRoot!.querySelectorAll('[part="row"]');
     expect(rows.length).to.be.at.most(500);
     expect(el.shadowRoot!.querySelectorAll('[data-id="deep-0"]')).to.have.lengthOf(1);
     expect((el.shadowRoot!.querySelector('[data-id="invalid"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('Showing at most 500 spans');
+    const deepestName = rows[rows.length - 1]!.querySelector<HTMLElement>('[part="name"]')!;
+    expect(getComputedStyle(deepestName).paddingInlineStart).to.equal('37px');
+    expect(el.getBoundingClientRect().width).to.be.at.most(320);
 
     el.spans = [
       { id: 'a', parentId: 'b', name: 'A', kind: 'agent', status: 'success', startMs: 0 },
@@ -315,6 +327,43 @@ describe('lr-trace-tree', () => {
     ];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="row"]')).to.have.lengthOf(2);
+  });
+
+  it('reserves an active span and its ancestor path beyond the 500-row projection boundary', async () => {
+    const fillers: LyraSpan[] = Array.from({ length: 500 }, (_, index) => ({
+      id: `filler-${index}`,
+      name: `Filler ${index}`,
+      kind: 'tool',
+      status: 'success',
+      startMs: index,
+      endMs: index + 1,
+    }));
+    const el = await fixture<LyraTraceTree>(html`
+      <lr-trace-tree
+        .spans=${[
+          ...fillers,
+          { id: 'reserved-parent', name: 'Reserved parent', kind: 'agent', status: 'success', startMs: 501 },
+          {
+            id: 'reserved-active',
+            parentId: 'reserved-parent',
+            name: 'Reserved active',
+            kind: 'tool',
+            status: 'running',
+            startMs: 502,
+          },
+        ]}
+        .activeSpanId=${'reserved-active'}
+      ></lr-trace-tree>
+    `);
+
+    const rows = el.shadowRoot!.querySelectorAll('[part="row"]');
+    const parent = el.shadowRoot!.querySelector<HTMLElement>('[data-id="reserved-parent"]');
+    const active = el.shadowRoot!.querySelector<HTMLElement>('[data-id="reserved-active"]');
+    expect(rows.length).to.equal(500);
+    expect(parent !== null).to.equal(true);
+    expect(active?.getAttribute('aria-current')).to.equal('true');
+    expect(active?.getAttribute('aria-level')).to.equal('2');
+    expect(parent?.getAttribute('aria-expanded')).to.equal('true');
   });
 
   it('normalizes foreign runtime enum values before rendering or announcing a span update', async () => {

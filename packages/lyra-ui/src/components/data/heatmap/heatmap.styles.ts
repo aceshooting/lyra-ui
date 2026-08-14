@@ -72,9 +72,6 @@ export const styles = css`
        never shows a pointer over a canvas the mouse can't actually interact with. */
     cursor: pointer;
   }
-  [part='canvas'][aria-hidden] {
-    pointer-events: none;
-  }
   [part='canvas']:hover {
     outline: var(--lr-size-1px) solid var(--lr-heatmap-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -92,6 +89,9 @@ export const styles = css`
     inset: 0;
     direction: ltr;
     pointer-events: none;
+  }
+  .cell-row {
+    display: contents;
   }
   [part='cell'] {
     position: absolute;

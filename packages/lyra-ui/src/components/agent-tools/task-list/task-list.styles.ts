@@ -57,17 +57,14 @@ export const styles = [
     button[part='header'] {
       cursor: pointer;
     }
-    /* :where() keeps this rule's specificity low ((0,1,0)) so a consumer's own
-       ::part(header):hover override ((0,1,1)) wins without needing !important --
-       see lr-attachment-trigger/lr-copy-button's identical fix for the same reasoning. */
+    /* Pointer hover and press remain separate from the resting header treatment. */
     :where(button[part='header']):hover {
       background: var(--lr-color-brand-quiet);
       color: var(--lr-color-brand);
     }
     /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
        --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper
-       step than hover in both light and dark themes rather than repeating it. Same :where()
-       wrapping as the hover above, for the same reason. */
+       step than hover in both light and dark themes rather than repeating it. */
     :where(button[part='header']):active {
       background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     }

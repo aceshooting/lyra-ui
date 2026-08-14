@@ -32,7 +32,6 @@ describe("Web Awesome carousel surface", () => {
     `);
     expect(upstream.getAttribute("currentslide")).to.equal("2");
     expect(upstream.currentSlide).to.equal(2);
-    expect(upstream.index).to.equal(2);
 
     upstream.setAttribute("currentslide", "1");
     await upstream.updateComplete;
@@ -52,10 +51,9 @@ describe("Web Awesome carousel surface", () => {
       </lr-carousel>
     `);
     expect(both.currentSlide).to.equal(1);
-    expect(both.index).to.equal(1);
   });
 
-  it("uses the mapped defaults and keeps the Lyra aliases on the same state", async () => {
+  it("uses the mapped defaults and omits the removed Lyra-only aliases", async () => {
     const el = await carousel(html`
       <lr-carousel>
         <div>One</div>
@@ -65,10 +63,8 @@ describe("Web Awesome carousel surface", () => {
     `);
 
     expect(el.currentSlide).to.equal(0);
-    expect(el.index).to.equal(0);
     expect(el.navigation).to.be.false;
     expect(el.pagination).to.be.false;
-    expect(el.showIndicators).to.be.false;
     expect(el.autoplayInterval).to.equal(3000);
     expect(el.slidesPerPage).to.equal(1);
     expect(el.slidesPerMove).to.equal(1);
@@ -76,22 +72,21 @@ describe("Web Awesome carousel surface", () => {
     expect(el.mouseDragging).to.be.false;
     expect(el.slides).to.equal(3);
     expect(el.getAttribute("current-slide")).to.equal("0");
-    expect(el.getAttribute("index")).to.equal("0");
-    expect(el.getAttribute("slides")).to.equal("3");
+    expect(el.hasAttribute("index")).to.equal(false);
+    expect(el.hasAttribute("show-indicators")).to.equal(false);
+    expect(el.hasAttribute("slides")).to.equal(false);
+    expect('index' in el).to.equal(false);
+    expect('showIndicators' in el).to.equal(false);
+    expect('goTo' in el).to.equal(false);
     expect((el.shadowRoot!.querySelector('[part~="navigation"]')) === null).to.be.true;
     expect((el.shadowRoot!.querySelector('[part~="pagination"]')) === null).to.be.true;
 
-    el.index = 1;
-    await el.updateComplete;
-    expect(el.currentSlide).to.equal(1);
-    expect(el.getAttribute("current-slide")).to.equal("1");
-
     el.currentSlide = 2;
     await el.updateComplete;
-    expect(el.index).to.equal(2);
-    expect(el.getAttribute("index")).to.equal("2");
+    expect(el.currentSlide).to.equal(2);
+    expect(el.getAttribute("current-slide")).to.equal("2");
 
-    el.showIndicators = true;
+    el.pagination = true;
     await el.updateComplete;
     expect(el.pagination).to.be.true;
     expect(el.shadowRoot!.querySelector('[part~="pagination"]')).to.exist;
@@ -109,7 +104,7 @@ describe("Web Awesome carousel surface", () => {
     el.next('instant');
     await el.updateComplete;
 
-    expect(el.shadowRoot!.activeElement?.getAttribute('part')?.includes('viewport')).to.equal(true);
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')?.includes('scroll-container')).to.equal(true);
   });
 
   it("repairs focused-slide exclusion from controlled page-size and current-slide writes", async () => {
@@ -123,14 +118,14 @@ describe("Web Awesome carousel surface", () => {
     el.querySelector<HTMLElement>('#second-slide-action')!.focus();
     el.slidesPerPage = 1;
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement?.getAttribute('part')?.includes('viewport')).to.equal(true);
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')?.includes('scroll-container')).to.equal(true);
 
     el.currentSlide = 1;
     await el.updateComplete;
     el.querySelector<HTMLElement>('#second-slide-action')!.focus();
     el.currentSlide = 2;
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement?.getAttribute('part')?.includes('viewport')).to.equal(true);
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')?.includes('scroll-container')).to.equal(true);
   });
 
   it("repairs focus when the focused slide is removed without stealing foreign focus", async () => {
@@ -149,7 +144,7 @@ describe("Web Awesome carousel surface", () => {
     wrapper.querySelector<HTMLElement>('#focused-slide')!.remove();
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement?.getAttribute('part')?.includes('viewport')).to.equal(true);
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')?.includes('scroll-container')).to.equal(true);
 
     wrapper.querySelector<HTMLElement>('#outside')!.focus();
     el.currentSlide = 0;
@@ -435,10 +430,10 @@ describe("Web Awesome carousel surface", () => {
       </lr-carousel>
     `);
     const next = el.shadowRoot!.querySelector<HTMLButtonElement>(
-      '[part~="next-button"]'
+      '[part~="navigation-button-next"]'
     )!;
     next.focus();
-    expect(el.shadowRoot!.activeElement?.getAttribute("part")?.includes("next-button")).to.equal(
+    expect(el.shadowRoot!.activeElement?.getAttribute("part")?.includes("navigation-button-next")).to.equal(
       true
     );
 
@@ -556,6 +551,7 @@ describe("Web Awesome carousel surface", () => {
       new PointerEvent("pointerdown", {
         pointerId: 4,
         pointerType: "mouse",
+        isPrimary: true,
         button: 0,
         clientX: 200,
         bubbles: true,
@@ -636,7 +632,7 @@ it('inherits independent navigation and pagination hover/pressed paint from an a
   `);
   const el = wrapper.querySelector('lr-carousel') as LyraCarousel;
   await el.updateComplete;
-  const navigation = el.shadowRoot!.querySelector<HTMLElement>('[part~="next-button"]')!;
+  const navigation = el.shadowRoot!.querySelector<HTMLElement>('[part~="navigation-button-next"]')!;
   let rect = navigation.getBoundingClientRect();
   try {
     await sendMouse({ type: 'move', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
@@ -695,23 +691,23 @@ it("exposes one active slide and localized navigation controls", async () => {
   expect(slides[1].getAttribute("aria-hidden")).to.equal("true");
   expect(slides[0].hasAttribute("role")).to.be.false;
   expect(slides[0].hasAttribute("aria-roledescription")).to.be.false;
-  expect(el.shadowRoot!.querySelectorAll('[part~="indicator"]').length).to.equal(
+  expect(el.shadowRoot!.querySelectorAll('[part~="pagination-item"]').length).to.equal(
     3
   );
   // The indicators are a plain labelled button group, not a tablist -- there is no tabpanel for
   // them to control, so role="tab"/aria-selected would announce a broken relationship to AT.
   expect(
-    el.shadowRoot!.querySelector('[part~="indicators"]')!.getAttribute("role")
+    el.shadowRoot!.querySelector('[part~="pagination"]')!.getAttribute("role")
   ).to.equal("group");
   expect(
-    el.shadowRoot!.querySelector('[part~="indicator"]')!.getAttribute("role")
+    el.shadowRoot!.querySelector('[part~="pagination-item"]')!.getAttribute("role")
   ).to.be.null;
 });
 
 it("gives each indicator the shared minimum hit area without inflating the visible dot", async () => {
   const el = await carousel();
   const indicator = el.shadowRoot!.querySelector(
-    '[part~="indicator"]'
+    '[part~="pagination-item"]'
   ) as HTMLElement;
   const dot = indicator.querySelector('[part="indicator-dot"]') as HTMLElement;
   expect(getComputedStyle(indicator).minInlineSize).to.equal("40px");
@@ -722,48 +718,34 @@ it("gives each indicator the shared minimum hit area without inflating the visib
   expect(getComputedStyle(dot).blockSize).to.equal("8px");
 });
 
-it("omits the indicator group entirely when showIndicators is false", async () => {
+it("omits the indicator group entirely when pagination is false", async () => {
   const el = await carousel(html`
-    <lr-carousel .showIndicators=${false}>
+    <lr-carousel .pagination=${false}>
       <lr-carousel-item>One</lr-carousel-item>
       <lr-carousel-item>Two</lr-carousel-item>
     </lr-carousel>
   `);
-  expect((el.shadowRoot!.querySelector('[part~="indicators"]')) === null).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part~="pagination"]')) === null).to.be.true;
 });
 
-it('honors a plain show-indicators="false" markup attribute, not just a JS property binding', async () => {
+it("removing the pagination attribute restores the mapped false default", async () => {
   const el = await carousel(html`
-    <lr-carousel show-indicators="false">
-      <lr-carousel-item>One</lr-carousel-item>
-      <lr-carousel-item>Two</lr-carousel-item>
-    </lr-carousel>
-  `);
-  expect(
-    el.showIndicators,
-    "the true-default converter must parse the literal string"
-  ).to.be.false;
-  expect((el.shadowRoot!.querySelector('[part~="indicators"]')) === null).to.be.true;
-});
-
-it("removing the show-indicators attribute restores the mapped false default", async () => {
-  const el = await carousel(html`
-    <lr-carousel show-indicators="false">
+    <lr-carousel pagination>
       <div>One</div>
       <div>Two</div>
     </lr-carousel>
   `);
-  expect(el.showIndicators).to.be.false;
-  el.removeAttribute("show-indicators");
+  expect(el.pagination).to.be.true;
+  el.removeAttribute("pagination");
   await el.updateComplete;
-  expect(el.showIndicators).to.be.false;
-  expect((el.shadowRoot!.querySelector('[part~="indicators"]')) === null).to.be.true;
+  expect(el.pagination).to.be.false;
+  expect((el.shadowRoot!.querySelector('[part~="pagination"]')) === null).to.be.true;
 });
 
 it("emits slide changes and supports keyboard navigation", async () => {
   const el = await carousel();
   const next = el.shadowRoot!.querySelector(
-    '[part~="next-button"]'
+    '[part~="navigation-button-next"]'
   ) as HTMLButtonElement;
   const eventPromise = oneEvent(el, "lr-slide-change");
   next.click();
@@ -771,16 +753,16 @@ it("emits slide changes and supports keyboard navigation", async () => {
 
   expect(event.detail.index).to.equal(1);
   expect(event.detail.slide === el.children[1]).to.equal(true);
-  expect(el.index).to.equal(1);
+  expect(el.currentSlide).to.equal(1);
 
   const viewport = el.shadowRoot!.querySelector(
-    '[part~="viewport"]'
+    '[part~="scroll-container"]'
   ) as HTMLElement;
   viewport.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
   );
   await el.updateComplete;
-  expect(el.index).to.equal(0);
+  expect(el.currentSlide).to.equal(0);
 });
 
 it("swaps ArrowLeft/ArrowRight under RTL so a key still moves toward the visually adjacent slide", async () => {
@@ -792,7 +774,7 @@ it("swaps ArrowLeft/ArrowRight under RTL so a key still moves toward the visuall
     </lr-carousel>
   `);
   const viewport = el.shadowRoot!.querySelector(
-    '[part~="viewport"]'
+    '[part~="scroll-container"]'
   ) as HTMLElement;
 
   // Under RTL, ArrowLeft is "forward" (matches the physically-mirrored next-button position).
@@ -800,7 +782,7 @@ it("swaps ArrowLeft/ArrowRight under RTL so a key still moves toward the visuall
     new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
   );
   await el.updateComplete;
-  expect(el.index).to.equal(1);
+  expect(el.currentSlide).to.equal(1);
 
   // ArrowRight is "backward" under RTL -- must NOT also advance (the bug this regresses had both
   // arrows calling next(), leaving no keyboard way to go back).
@@ -808,50 +790,50 @@ it("swaps ArrowLeft/ArrowRight under RTL so a key still moves toward the visuall
     new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
   );
   await el.updateComplete;
-  expect(el.index).to.equal(0);
+  expect(el.currentSlide).to.equal(0);
 });
 
 it("clamps a non-finite, negative, or oversized index to a valid slide instead of NaN/out-of-range", async () => {
   const el = await carousel();
 
-  el.index = NaN;
+  el.currentSlide = NaN;
   await el.updateComplete;
-  expect(el.index).to.equal(0);
+  expect(el.currentSlide).to.equal(0);
   expect(([...el.children] as HTMLElement[])[0].inert).to.be.false;
 
-  el.index = Number.POSITIVE_INFINITY;
+  el.currentSlide = Number.POSITIVE_INFINITY;
   await el.updateComplete;
-  expect(el.index).to.equal(0);
+  expect(el.currentSlide).to.equal(0);
 
-  el.index = -5;
+  el.currentSlide = -5;
   await el.updateComplete;
-  expect(el.index).to.equal(0);
+  expect(el.currentSlide).to.equal(0);
   expect(
     (
-      el.shadowRoot!.querySelectorAll('[part~="indicator"]')[0] as HTMLElement
+      el.shadowRoot!.querySelectorAll('[part~="pagination-item"]')[0] as HTMLElement
     ).getAttribute("aria-current")
   ).to.equal("true");
 
-  el.index = 999;
+  el.currentSlide = 999;
   await el.updateComplete;
-  expect(el.index).to.equal(2);
-  const indicators = el.shadowRoot!.querySelectorAll('[part~="indicator"]');
+  expect(el.currentSlide).to.equal(2);
+  const indicators = el.shadowRoot!.querySelectorAll('[part~="pagination-item"]');
   expect(
     indicators[indicators.length - 1].getAttribute("aria-current")
   ).to.equal("true");
 });
 
-it("ignores non-finite goTo() requests without emitting or corrupting the active index", async () => {
+it("ignores non-finite goToSlide() requests without emitting or corrupting the active slide", async () => {
   const el = await carousel();
   let changes = 0;
   el.addEventListener("lr-slide-change", () => (changes += 1));
 
-  el.goTo(Number.NaN);
-  el.goTo(Number.POSITIVE_INFINITY);
-  el.goTo(Number.NEGATIVE_INFINITY);
+  el.goToSlide(Number.NaN);
+  el.goToSlide(Number.POSITIVE_INFINITY);
+  el.goToSlide(Number.NEGATIVE_INFINITY);
   await el.updateComplete;
 
-  expect(el.index).to.equal(0);
+  expect(el.currentSlide).to.equal(0);
   expect(changes).to.equal(0);
   expect(([...el.children] as HTMLElement[])[0]!.inert).to.be.false;
 });
@@ -868,9 +850,9 @@ it("clamps invalid indices in the current update without scheduling a follow-up 
   try {
     const el = await carousel();
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    el.index = NaN;
+    el.currentSlide = NaN;
     expect(await el.updateComplete).to.be.true;
-    el.index = 999;
+    el.currentSlide = 999;
     expect(await el.updateComplete).to.be.true;
   } finally {
     console.warn = originalWarn;
@@ -944,7 +926,7 @@ it("disables autoplay under prefers-reduced-motion", async () => {
     ).to.be.true;
     expect(sink!.childElementCount).to.equal(0);
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(el.index).to.equal(0);
+    expect(el.currentSlide).to.equal(0);
   } finally {
     window.matchMedia = originalMatchMedia;
   }
@@ -1457,22 +1439,22 @@ it("localizes every default string via .strings, proving the call sites are actu
   expect(base.getAttribute("aria-label")).to.equal("Carrousel");
   expect(
     el
-      .shadowRoot!.querySelector('[part~="previous-button"]')!
+      .shadowRoot!.querySelector('[part~="navigation-button-previous"]')!
       .getAttribute("aria-label")
   ).to.equal("Précédent");
   expect(
     el
-      .shadowRoot!.querySelector('[part~="next-button"]')!
+      .shadowRoot!.querySelector('[part~="navigation-button-next"]')!
       .getAttribute("aria-label")
   ).to.equal("Suivant");
   expect(
     el
-      .shadowRoot!.querySelector('[part~="indicators"]')!
+      .shadowRoot!.querySelector('[part~="pagination"]')!
       .getAttribute("aria-label")
   ).to.equal("Diapositives du carrousel");
   expect(
     el
-      .shadowRoot!.querySelector('[part~="indicator"]')!
+      .shadowRoot!.querySelector('[part~="pagination-item"]')!
       .getAttribute("aria-label")
   ).to.equal("Aller à la diapositive 1");
   const slide = el.children[0] as HTMLElement;
@@ -1715,7 +1697,7 @@ it("formats generated slide indices with the effective locale", async () => {
   );
   expect(
     el
-      .shadowRoot!.querySelector('[part~="indicator"]')!
+      .shadowRoot!.querySelector('[part~="pagination-item"]')!
       .getAttribute("aria-label")
   ).to.include(formattedOne);
 });
@@ -1748,7 +1730,7 @@ it("preserves an explicitly empty host aria-label on both carousel landmarks", a
   `);
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   const viewport = el.shadowRoot!.querySelector(
-    '[part~="viewport"]'
+    '[part~="scroll-container"]'
   ) as HTMLElement;
   expect(base.getAttribute("aria-label")).to.equal("");
   expect(viewport.getAttribute("aria-label")).to.equal("");
@@ -1762,7 +1744,7 @@ it('names the focusable viewport with role="group", following the same label arb
     </lr-carousel>
   `);
   const viewport = el.shadowRoot!.querySelector(
-    '[part~="viewport"]'
+    '[part~="scroll-container"]'
   ) as HTMLElement;
   expect(viewport.getAttribute("tabindex")).to.equal("0");
   expect(viewport.getAttribute("role")).to.equal("group");
@@ -1822,7 +1804,7 @@ describe("indicator current-state cssprops", () => {
 
   function currentDot(el: LyraCarousel): HTMLElement {
     return el.shadowRoot!.querySelector(
-      '[part~="indicator"][aria-current="true"] [part="indicator-dot"]'
+      '[part~="pagination-item"][aria-current="true"] [part="indicator-dot"]'
     ) as HTMLElement;
   }
 
@@ -1835,7 +1817,7 @@ describe("indicator current-state cssprops", () => {
     // A non-current dot keeps its resting surface/border tokens -- the props are scoped to
     // [aria-current='true'] only.
     const other = el.shadowRoot!.querySelector(
-      '[part~="indicator"][aria-current="false"] [part="indicator-dot"]'
+      '[part~="pagination-item"][aria-current="false"] [part="indicator-dot"]'
     ) as HTMLElement;
     expect(getComputedStyle(other).backgroundColor).to.equal(
       resolvedInShadow(
@@ -1918,7 +1900,7 @@ describe("touch scrolling and scroll-snap", () => {
   const SETTLE_WAIT = 400;
 
   function viewportOf(el: LyraCarousel): HTMLElement {
-    return el.shadowRoot!.querySelector('[part~="viewport"]') as HTMLElement;
+    return el.shadowRoot!.querySelector('[part~="scroll-container"]') as HTMLElement;
   }
 
   function slidesOf(el: LyraCarousel): HTMLElement[] {
@@ -1942,7 +1924,7 @@ describe("touch scrolling and scroll-snap", () => {
     let alignedSamples = 0;
     await waitUntil(
       () => {
-        const activeSlide = slidesOf(el)[el.index];
+        const activeSlide = slidesOf(el)[el.currentSlide];
         alignedSamples =
           activeSlide !== undefined && Math.abs(inlineDelta(el, activeSlide)) <= 2
             ? alignedSamples + 1
@@ -2015,7 +1997,7 @@ describe("touch scrolling and scroll-snap", () => {
 
     expect(event.detail.index).to.equal(1);
     expect(event.detail.slide === slidesOf(el)[1]).to.equal(true);
-    expect(el.index).to.equal(1);
+    expect(el.currentSlide).to.equal(1);
     expect(changes, "one settled gesture emits exactly one change").to.equal(1);
     expect(slidesOf(el)[1].inert).to.be.false;
     expect(slidesOf(el)[0].inert).to.be.true;
@@ -2033,7 +2015,7 @@ describe("touch scrolling and scroll-snap", () => {
     }
     await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_WAIT));
 
-    expect(el.index).to.equal(2);
+    expect(el.currentSlide).to.equal(2);
     expect(changes).to.equal(1);
   });
 
@@ -2051,7 +2033,7 @@ describe("touch scrolling and scroll-snap", () => {
 
     expect(event.detail.index).to.equal(1);
     expect(event.detail.slide === slidesOf(el)[1]).to.equal(true);
-    expect(el.index).to.equal(1);
+    expect(el.currentSlide).to.equal(1);
   });
 
   it("does not scroll the track back when the index came from the user's own scroll", async () => {
@@ -2079,13 +2061,13 @@ describe("touch scrolling and scroll-snap", () => {
   it("scrolls the track when a button, key, or the index property changes the slide", async () => {
     const el = await sized();
     const viewport = viewportOf(el);
-    const next = el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement;
+    const next = el.shadowRoot!.querySelector('[part~="navigation-button-next"]') as HTMLButtonElement;
 
     next.click();
     await el.updateComplete;
     await scrollAtRest(el);
 
-    expect(el.index).to.equal(1);
+    expect(el.currentSlide).to.equal(1);
     expect(
       Math.abs(inlineDelta(el, slidesOf(el)[1])),
       "slide two is flush with the viewport",
@@ -2114,7 +2096,7 @@ describe("touch scrolling and scroll-snap", () => {
         return (original as (o: ScrollToOptions) => void)(options);
       }) as typeof viewport.scrollBy;
 
-      el.goTo(2);
+      el.goToSlide(2);
       await el.updateComplete;
       expect(behaviors).to.deep.equal(["instant"]);
     } finally {
@@ -2132,7 +2114,7 @@ describe("touch scrolling and scroll-snap", () => {
       return (original as (o: ScrollToOptions) => void)(options);
     }) as typeof viewport.scrollBy;
 
-    el.goTo(2);
+    el.goToSlide(2);
     await el.updateComplete;
     expect(behaviors).to.deep.equal(["smooth"]);
   });
@@ -2149,7 +2131,7 @@ describe("touch scrolling and scroll-snap", () => {
     await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_WAIT));
 
     expect(changes).to.equal(0);
-    expect(el.index).to.equal(0);
+    expect(el.currentSlide).to.equal(0);
     parent.append(el);
   });
 
@@ -2162,7 +2144,7 @@ describe("touch scrolling and scroll-snap", () => {
     await el.updateComplete;
     await scrollAtRest(el);
 
-    expect(el.index).to.equal(2);
+    expect(el.currentSlide).to.equal(2);
     // scroll-snap-stop: always would strand this a whole slide short.
     expect(Math.abs(inlineDelta(el, slidesOf(el)[2]))).to.be.at.most(2);
   });
@@ -2399,6 +2381,7 @@ describe("carousel drag completion", () => {
       new PointerEvent("pointerdown", {
         pointerId,
         pointerType: "mouse",
+        isPrimary: true,
         button: 0,
         clientX: 200,
         bubbles: true,
@@ -2534,6 +2517,7 @@ describe("carousel drag completion", () => {
       new PointerEvent("pointerdown", {
         pointerId: 100,
         pointerType: "mouse",
+        isPrimary: true,
         button: 0,
         clientX: 200,
         bubbles: true,
@@ -2558,6 +2542,7 @@ describe("carousel drag completion", () => {
       new PointerEvent("pointerdown", {
         pointerId: 102,
         pointerType: "mouse",
+        isPrimary: true,
         button: 2,
         clientX: 200,
         bubbles: true,
@@ -2584,6 +2569,7 @@ describe("carousel drag completion", () => {
       new PointerEvent("pointerdown", {
         pointerId: 110,
         pointerType: "mouse",
+        isPrimary: true,
         button: 0,
         clientX: 200,
         bubbles: true,
@@ -2633,6 +2619,7 @@ describe("carousel drag completion", () => {
       new PointerEvent("pointerdown", {
         pointerId: 120,
         pointerType: "mouse",
+        isPrimary: true,
         button: 0,
         clientY: 200,
         bubbles: true,
@@ -2674,6 +2661,7 @@ describe("carousel drag completion", () => {
         new PointerEvent("pointerdown", {
           pointerId: 130,
           pointerType: "mouse",
+          isPrimary: true,
           button: 0,
           clientX: 200,
           bubbles: true,
@@ -2721,6 +2709,7 @@ describe("carousel drag completion", () => {
         new PointerEvent("pointerdown", {
           pointerId,
           pointerType: "mouse",
+          isPrimary: true,
           button: 0,
           clientX: 200,
           bubbles: true,
@@ -2759,6 +2748,7 @@ describe("carousel drag completion", () => {
       new PointerEvent("pointerdown", {
         pointerId: 150,
         pointerType: "mouse",
+        isPrimary: true,
         button: 0,
         clientX: 200,
         bubbles: true,
@@ -2796,6 +2786,7 @@ describe("carousel drag completion", () => {
       new PointerEvent("pointerdown", {
         pointerId: 160,
         pointerType: "mouse",
+        isPrimary: true,
         button: 0,
         clientX: 200,
         bubbles: true,
@@ -2825,26 +2816,24 @@ describe("carousel drag completion", () => {
   });
 });
 
-it("treats re-assigning the same slides count as a no-op", async () => {
+it("exposes slides as a readonly live composition count", async () => {
   const el = await carousel();
-  const calls: unknown[] = [];
-  const original = el.requestUpdate.bind(el);
-  el.requestUpdate = ((name?: PropertyKey, oldValue?: unknown) => {
-    if (name === "slides") calls.push(oldValue);
-    return original(name as never, oldValue);
-  }) as typeof el.requestUpdate;
-  try {
-    el.slides = el.slides;
-    const afterSameValue = calls.length;
-    el.slides = el.slides + 1;
-    const afterDifferentValue = calls.length;
-    expect(
-      afterDifferentValue - afterSameValue,
-      "a genuinely different value schedules strictly more work than re-asserting the same one"
-    ).to.be.greaterThan(0);
-  } finally {
-    el.requestUpdate = original;
-  }
+  const descriptor = Object.getOwnPropertyDescriptor(
+    Object.getPrototypeOf(el),
+    'slides',
+  );
+  expect(typeof descriptor?.get).to.equal('function');
+  expect(descriptor?.set === undefined).to.equal(true);
+  expect(el.slides).to.equal(3);
+
+  el.append(document.createElement('div'));
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  expect(el.slides).to.equal(4);
+  el.lastElementChild!.remove();
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  expect(el.slides).to.equal(3);
 });
 
 it("drops a reconnect's pending slide refresh if the carousel disconnects again first", async () => {
@@ -3038,6 +3027,7 @@ it("falls back to no reduced-motion query and an inline timer-less scheduler in 
       new PointerEvent("pointerdown", {
         pointerId: 170,
         pointerType: "mouse",
+        isPrimary: true,
         button: 0,
         clientX: 200,
         bubbles: true,
@@ -3061,6 +3051,165 @@ it("falls back to no reduced-motion query and an inline timer-less scheduler in 
   } finally {
     el.remove();
     parent.append(el);
+  }
+});
+
+it('renders one exact pagination target for every valid loop start', async () => {
+  const el = await carousel(html`
+    <lr-carousel loop pagination slides-per-page="2" slides-per-move="2">
+      <div>One</div><div>Two</div><div>Three</div><div>Four</div><div>Five</div>
+    </lr-carousel>
+  `);
+  el.currentSlide = 4;
+  await el.updateComplete;
+  const targets = [
+    ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="pagination-item"]'),
+  ];
+  expect(targets.length).to.equal(5);
+  expect(targets.map((target) => target.getAttribute('aria-label'))).to.deep.equal([
+    'Go to slide 1',
+    'Go to slide 2',
+    'Go to slide 3',
+    'Go to slide 4',
+    'Go to slide 5',
+  ]);
+  expect(targets.map((target) => target.getAttribute('aria-current'))).to.deep.equal([
+    'false', 'false', 'false', 'false', 'true',
+  ]);
+});
+
+it('conserves the allocated page basis across every multi-slide gap in LTR and RTL', async () => {
+  for (const direction of ['ltr', 'rtl'] as const) {
+    for (const perPage of [2, 3, 4]) {
+      const el = await carousel(html`
+        <lr-carousel
+          dir=${direction}
+          slides-per-page=${perPage}
+          style="inline-size: 320px; --slide-gap: 12px;"
+        >
+          ${Array.from({ length: perPage }, (_unused, index) => html`<div>${index}</div>`)}
+        </lr-carousel>
+      `);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part~="scroll-container"]')!;
+      const slides = [...el.children] as HTMLElement[];
+      const total = slides.reduce((sum, slide) => sum + slide.getBoundingClientRect().width, 0) +
+        (perPage - 1) * 12;
+      expect(Math.abs(total - viewport.clientWidth), `${direction}, ${perPage} slides`).to.be.at.most(1);
+      expect(el.scrollWidth).to.be.at.most(el.clientWidth + 1);
+    }
+  }
+});
+
+it('reasserts non-loop off-page exclusion after live author removal and restores the baseline', async () => {
+  const el = await carousel(html`
+    <lr-carousel>
+      <div>One</div><div>Two</div><div id="managed-offpage">Three</div>
+    </lr-carousel>
+  `);
+  const offpage = el.querySelector<HTMLElement>('#managed-offpage')!;
+  expect(offpage.inert).to.equal(true);
+  expect(offpage.getAttribute('aria-hidden')).to.equal('true');
+
+  offpage.inert = false;
+  offpage.removeAttribute('aria-hidden');
+  await waitUntil(
+    () => offpage.inert && offpage.getAttribute('aria-hidden') === 'true',
+    'managed exclusion was not reasserted',
+  );
+
+  el.goToSlide(2, 'instant');
+  await el.updateComplete;
+  expect(offpage.inert).to.equal(false);
+  expect(offpage.hasAttribute('aria-hidden')).to.equal(false);
+});
+
+it('keeps opt-in mouse dragging away from nested controls and non-primary pointers', async () => {
+  const el = await carousel(html`
+    <lr-carousel mouse-dragging style="inline-size: 320px;">
+      <div>
+        <input aria-label="Range" />
+        <button type="button">Action</button>
+        <label>Label <span>text</span></label>
+        <span contenteditable="true">Editable</span>
+        <x-carousel-control></x-carousel-control>
+        <span id="drag-background">Background</span>
+      </div>
+      <div>Two</div>
+    </lr-carousel>
+  `);
+  const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part~="scroll-container"]')!;
+  viewport.setPointerCapture = () => {};
+  viewport.releasePointerCapture = () => {};
+  viewport.hasPointerCapture = () => true;
+  const targets = [
+    el.querySelector('input')!,
+    el.querySelector('button')!,
+    el.querySelector('label span')!,
+    el.querySelector('[contenteditable]')!,
+    el.querySelector('x-carousel-control')!,
+  ];
+  let pointerId = 300;
+  for (const target of targets) {
+    target.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: pointerId++,
+      pointerType: 'mouse',
+      isPrimary: true,
+      button: 0,
+      bubbles: true,
+      composed: true,
+    }));
+    expect(viewport.hasAttribute('data-dragging')).to.equal(false);
+  }
+  el.querySelector('#drag-background')!.dispatchEvent(new PointerEvent('pointerdown', {
+    pointerId: pointerId++,
+    pointerType: 'mouse',
+    isPrimary: false,
+    button: 0,
+    bubbles: true,
+    composed: true,
+  }));
+  expect(viewport.hasAttribute('data-dragging')).to.equal(false);
+
+  el.querySelector('#drag-background')!.dispatchEvent(new PointerEvent('pointerdown', {
+    pointerId,
+    pointerType: 'mouse',
+    isPrimary: true,
+    button: 0,
+    bubbles: true,
+    composed: true,
+  }));
+  expect(viewport.hasAttribute('data-dragging')).to.equal(true);
+  viewport.dispatchEvent(new PointerEvent('pointercancel', {
+    pointerId,
+    pointerType: 'mouse',
+    bubbles: true,
+  }));
+});
+
+it('keeps a disabled navigation action visually flat on hover and press', async () => {
+  const el = await carousel(html`
+    <lr-carousel navigation>
+      <div>One</div><div>Two</div>
+    </lr-carousel>
+  `);
+  const previous = el.shadowRoot!.querySelector<HTMLButtonElement>(
+    '[part~="navigation-button-previous"]',
+  )!;
+  const restBackground = getComputedStyle(previous).backgroundColor;
+  const restBorder = getComputedStyle(previous).borderColor;
+  const rect = previous.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await sendMouse({ type: 'down' });
+    expect(previous.disabled).to.equal(true);
+    expect(getComputedStyle(previous).backgroundColor).to.equal(restBackground);
+    expect(getComputedStyle(previous).borderColor).to.equal(restBorder);
+  } finally {
+    await resetMouse();
   }
 });
 
@@ -3169,7 +3318,7 @@ it("moves to the very last slide index (not just the last full page) on End when
     </lr-carousel>
   `);
   const viewport = el.shadowRoot!.querySelector(
-    '[part~="viewport"]'
+    '[part~="scroll-container"]'
   ) as HTMLElement;
   viewport.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
   await el.updateComplete;

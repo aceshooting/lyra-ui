@@ -16,6 +16,8 @@ function isKatexApi(value: unknown): value is KatexApi {
 }
 
 let cached: Promise<KatexApi | null> | undefined;
+let cacheGeneration: unknown;
+const KATEX_CACHE_GENERATION = Symbol.for('@aceshooting/lyra-ui/markdown-katex-cache-generation');
 
 /**
  * Loads the optional peer dependency `katex`, used by `<lr-markdown>`'s `math` property to
@@ -24,9 +26,7 @@ let cached: Promise<KatexApi | null> | undefined;
  * a fully supported default rather than a degraded mode. Mirrors `dompurify-loader.ts`'s single-
  * optional-peer shape.
  */
-export async function loadKatex(
-  importKatex: () => Promise<unknown> = () => import('katex'),
-): Promise<KatexApi | null> {
+export async function loadKatex(importKatex: () => Promise<unknown> = () => import('katex')): Promise<KatexApi | null> {
   try {
     return resolveOptionalPeerCapability(await importKatex(), isKatexApi);
   } catch (error) {
@@ -44,11 +44,11 @@ export async function loadKatex(
  * `getMarkdownDepsIfLoaded()` cached-promise shape for a single optional peer.
  */
 export function getKatex(importKatex?: () => Promise<unknown>): Promise<KatexApi | null> {
+  const generation = Reflect.get(globalThis, KATEX_CACHE_GENERATION);
+  if (generation !== cacheGeneration) {
+    cached = undefined;
+    cacheGeneration = generation;
+  }
   if (!cached) cached = loadKatex(importKatex);
   return cached;
-}
-
-/** @internal Test-only cache reset. */
-export function clearKatexCache(): void {
-  cached = undefined;
 }

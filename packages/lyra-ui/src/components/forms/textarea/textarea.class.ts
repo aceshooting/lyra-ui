@@ -20,6 +20,7 @@ import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_textareaCharacterCount, LYRA_DEFAULT_textareaCharactersRemaining, LYRA_DEFAULT_textareaLabel, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
@@ -158,6 +159,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  /** Public WA-compatible intrinsic validator catalog. */
+  static get validators(): LyraFormValidator<LyraTextarea>[] {
+    return [currentValidityValidator('required', 'disabled', 'readonly', 'value', 'minlength', 'maxlength')];
+  }
   // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own sheet
   // so the padding/font-size/radius knobs point at the active tier's value -- and so both spellings
   // of every tier (`s` and `small`, ...) work with no per-component rule.
@@ -448,10 +453,13 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    * unparseable — an attribute goes through `Number()`, so `maxlength="oops"` reaches this
    * property as `NaN`, and subtracting from that would render a literal `NaN` in the count.
    */
+  private effectiveLengthLimit(declared: number | undefined): number | undefined {
+    if (declared === undefined || !Number.isFinite(declared) || declared < 0) return undefined;
+    return finiteCount(Math.trunc(declared), 0);
+  }
+
   private countMaxlength(): number | undefined {
-    const declared = this.maxlength;
-    if (declared === undefined || !Number.isFinite(declared)) return undefined;
-    return finiteCount(declared, 0);
+    return this.effectiveLengthLimit(this.maxlength);
   }
 
   /**
@@ -534,7 +542,9 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     }
     const native = this.textareaEl;
     if (native && native.value !== this.value) native.value = this.value;
-    const own = lengthViolations(this.value, this.minlength, this.maxlength);
+    const effectiveMinlength = this.effectiveLengthLimit(this.minlength);
+    const effectiveMaxlength = this.effectiveLengthLimit(this.maxlength);
+    const own = lengthViolations(this.value, effectiveMinlength, effectiveMaxlength);
     const tooShort = Boolean(native?.validity.tooShort) || own.tooShort;
     const tooLong = Boolean(native?.validity.tooLong) || own.tooLong;
     if (!tooShort && !tooLong) {
@@ -729,8 +739,8 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
             autocomplete=${this.autocomplete || nothing}
             inputmode=${this.inputMode || nothing}
             enterkeyhint=${this.enterKeyHint || nothing}
-            minlength=${this.minlength ?? nothing}
-            maxlength=${this.maxlength ?? nothing}
+            minlength=${this.effectiveLengthLimit(this.minlength) ?? nothing}
+            maxlength=${this.effectiveLengthLimit(this.maxlength) ?? nothing}
             wrap=${this.wrap}
             .value=${this.value}
             ?required=${this.required}

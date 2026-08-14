@@ -88,6 +88,19 @@ describe("lr-code-block-core", () => {
     ).to.have.lengthOf(2);
   });
 
+  it("preserves ordinary multiline source, including blank and trailing lines", async () => {
+    const source = "first\n\nthird\n";
+    const el = (await fixture(
+      html`<lr-code-block-core
+        .copyable=${false}
+        .code=${source}
+      ></lr-code-block-core>`
+    )) as LyraCodeBlockCore;
+    const code = el.shadowRoot!.querySelector('[part="code"]')!;
+    expect(code.textContent).to.equal(source);
+    expect(code.querySelectorAll(".line-source")).to.have.lengthOf(4);
+  });
+
   it("extends the plain-code background paint box across a long line's full horizontal scroll width", async () => {
     const longLine = `wget https://example.test/${"unbroken-path-segment-".repeat(
       30
@@ -110,8 +123,12 @@ describe("lr-code-block-core", () => {
   });
 
   it("keeps a populated header inside a 320px allocation while code scrolls in its own body", async () => {
-    const filename = `src/generated/${"very-long-directory-name/".repeat(12)}conversation-handler.ts`;
-    const code = `const endpoint = "https://example.test/${"unbroken-segment-".repeat(30)}";`;
+    const filename = `src/generated/${"very-long-directory-name/".repeat(
+      12
+    )}conversation-handler.ts`;
+    const code = `const endpoint = "https://example.test/${"unbroken-segment-".repeat(
+      30
+    )}";`;
     const container = (await fixture(html`
       <div style="inline-size: 320px; max-inline-size: 100%;">
         <lr-code-block-core
@@ -122,15 +139,21 @@ describe("lr-code-block-core", () => {
         ></lr-code-block-core>
       </div>
     `)) as HTMLElement;
-    const el = container.querySelector("lr-code-block-core") as LyraCodeBlockCore;
+    const el = container.querySelector(
+      "lr-code-block-core"
+    ) as LyraCodeBlockCore;
     await el2Ready(el);
 
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    const filenamePart = el.shadowRoot!.querySelector('[part="filename"]') as HTMLElement;
+    const filenamePart = el.shadowRoot!.querySelector(
+      '[part="filename"]'
+    ) as HTMLElement;
     const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
     expect(el.getBoundingClientRect().width).to.be.at.most(320);
     expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
-    expect(filenamePart.scrollWidth).to.be.greaterThan(filenamePart.clientWidth);
+    expect(filenamePart.scrollWidth).to.be.greaterThan(
+      filenamePart.clientWidth
+    );
     expect(body.scrollWidth).to.be.greaterThan(body.clientWidth);
   });
 
@@ -227,6 +250,39 @@ describe("lr-code-block-core", () => {
       internals.shikiReady,
       "must not become true on a disconnected instance"
     ).to.be.false;
+  });
+
+  it("re-arms the current highlighter generation after disconnect and reconnect", async () => {
+    let resolveCore!: (
+      value: import("./shiki-types.js").ShikiHighlighterCore | null
+    ) => void;
+    const pending = new Promise<
+      import("./shiki-types.js").ShikiHighlighterCore | null
+    >((resolve) => {
+      resolveCore = resolve;
+    });
+    __setShikiHighlighterCoreLoaderForTesting(() => pending);
+    const el = document.createElement(
+      "lr-code-block-core"
+    ) as LyraCodeBlockCore;
+    el.language = "json";
+    el.languages = { json: jsonGrammar };
+    el.code = '{"generation":"reconnected"}';
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      el.remove();
+      document.body.append(el);
+      resolveCore({
+        codeToHtml: (code: string) =>
+          `<pre class="shiki"><code>${code}</code></pre>`,
+      } as unknown as import("./shiki-types.js").ShikiHighlighterCore);
+      await waitUntil(() => el.shadowRoot!.querySelector(".shiki") !== null);
+      expect(el.shadowRoot!.textContent).to.contain("reconnected");
+    } finally {
+      el.remove();
+      __setShikiHighlighterCoreLoaderForTesting(undefined);
+    }
   });
 
   it("keeps the current language map busy when an obsolete eager highlighter settles first", async () => {
@@ -348,7 +404,7 @@ describe("lr-code-block-core", () => {
     );
     el.language = "";
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector(".shiki")) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector(".shiki") == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.equal(
       '{"a":1}'
     );
@@ -370,7 +426,7 @@ describe("lr-code-block-core", () => {
     el.language = "python";
     el.code = "print(1)";
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector(".shiki")) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector(".shiki") == null).to.be.true;
     expect(
       el.shadowRoot!.querySelector('[part="code"]')!.textContent
     ).to.include("print(1)");
@@ -402,7 +458,7 @@ describe("lr-code-block-core", () => {
     type Internals = { highlightedHtml: string | null };
     const internals = el as unknown as Internals;
     expect(internals.highlightedHtml).to.equal(null);
-    expect((el.shadowRoot!.querySelector(".shiki")) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector(".shiki") == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.equal(
       '{"a":2}'
     );
@@ -443,7 +499,7 @@ describe("highlight-lines", () => {
     expect(plainHighlighted).to.equal(1);
   });
 
-  it("back-compat: default render is byte-identical with highlight-lines/highlights/interactive-lines unset", async () => {
+  it("back-compat: default render is byte-identical with highlight-lines/highlights/activatable-lines unset", async () => {
     const before = (await fixture(
       html`<lr-code-block-core code=${"a\nb"}></lr-code-block-core>`
     )) as LyraCodeBlockCore;
@@ -455,7 +511,7 @@ describe("highlight-lines", () => {
         code=${"a\nb"}
         .highlightLines=${""}
         .highlights=${[]}
-        .interactiveLines=${false}
+        .activatableLines=${false}
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
     await after.updateComplete;
@@ -583,7 +639,7 @@ describe("text selection (lr-text-select)", () => {
     // so the real Text node is not reliably `firstChild` -- find it directly instead of assuming a
     // fixed sibling position (same precedent as terminal.test.ts's identical selection test).
     const textNodeOf = (line: Element): Node =>
-      [...line.childNodes].find((n) => n.nodeType === Node.TEXT_NODE)!;
+      line.querySelector(".line-source")!.firstChild!;
     const range = document.createRange();
     range.setStart(textNodeOf(line1), 0);
     range.setEnd(textNodeOf(line2), 2);
@@ -678,7 +734,7 @@ describe("text selection (lr-text-select)", () => {
     await el.updateComplete;
     const line1 = el.shadowRoot!.querySelector('[data-line="1"]')!;
     const textNodeOf = (line: Element): Node =>
-      [...line.childNodes].find((n) => n.nodeType === Node.TEXT_NODE)!;
+      line.querySelector(".line-source")!.firstChild!;
     const range = document.createRange();
     range.setStart(textNodeOf(line1), 1);
     range.setEnd(textNodeOf(line1), 3); // just the trailing spaces
@@ -701,13 +757,13 @@ describe("text selection (lr-text-select)", () => {
   });
 });
 
-describe("interactive-lines", () => {
-  it("renders gutter numbers as buttons with roving tabindex when line-numbers and interactive-lines are both set", async () => {
+describe("activatable-lines", () => {
+  it("renders gutter numbers as buttons with roving tabindex when line-numbers and activatable-lines are both set", async () => {
     const el = (await fixture(
       html`<lr-code-block-core
         code=${"a\nb\nc"}
         line-numbers
-        interactive-lines
+        activatable-lines
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
     await el.updateComplete;
@@ -718,18 +774,43 @@ describe("interactive-lines", () => {
     expect(buttons.map((b) => b.tabIndex)).to.deep.equal([0, -1, -1]);
   });
 
-  it("emits lr-line-click on Enter and on click", async () => {
+  it("gives every blank localized gutter a named minimum-size control", async () => {
+    const wrapper = (await fixture(html`
+      <div lang="ar-EG">
+        <lr-code-block-core
+          code=${"alpha\n\nomega"}
+          line-numbers
+          activatable-lines
+        ></lr-code-block-core>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector("lr-code-block-core") as LyraCodeBlockCore;
+    await el.updateComplete;
+    const blankLine = el.shadowRoot!.querySelector('.line[data-line="2"]')!;
+    const source = blankLine.querySelector(".line-source")!;
+    const gutter = blankLine.querySelector(
+      '[part~="line-button"]'
+    ) as HTMLButtonElement;
+    const rect = gutter.getBoundingClientRect();
+    expect(source.textContent).to.equal("");
+    expect(gutter.textContent?.trim()).to.equal("٢");
+    expect(gutter.getAttribute("aria-label")).to.equal("Line ٢");
+    expect(rect.width).to.be.at.least(24);
+    expect(rect.height).to.be.at.least(24);
+  });
+
+  it("emits lr-line-activate on Enter and on click", async () => {
     const el = (await fixture(
       html`<lr-code-block-core
         code=${"a\nb"}
         line-numbers
-        interactive-lines
+        activatable-lines
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
     await el.updateComplete;
-    const listener = oneEvent(el, "lr-line-click");
+    const listener = oneEvent(el, "lr-line-activate");
     const first = el.shadowRoot!.querySelector(
-      '[data-line="1"]'
+      '[part~="line-button"][data-line="1"]'
     ) as HTMLButtonElement;
     first.click();
     const event = (await listener) as CustomEvent<{ line: number }>;
@@ -741,12 +822,12 @@ describe("interactive-lines", () => {
       html`<lr-code-block-core
         code=${"a\nb\nc"}
         line-numbers
-        interactive-lines
+        activatable-lines
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
     await el.updateComplete;
     const first = el.shadowRoot!.querySelector(
-      '[data-line="1"]'
+      '[part~="line-button"][data-line="1"]'
     ) as HTMLButtonElement;
     first.focus();
     first.dispatchEvent(
@@ -754,7 +835,9 @@ describe("interactive-lines", () => {
     );
     await el.updateComplete;
     expect(
-      el.shadowRoot!.querySelector('[data-line="2"]')!.getAttribute("tabindex")
+      el
+        .shadowRoot!.querySelector('[part~="line-button"][data-line="2"]')!
+        .getAttribute("tabindex")
     ).to.equal("0");
   });
 
@@ -763,11 +846,12 @@ describe("interactive-lines", () => {
       html`<lr-code-block-core
         code=${"a\nb\nc\nd"}
         line-numbers
-        interactive-lines
+        activatable-lines
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
-    const line4 =
-      el.shadowRoot!.querySelector<HTMLButtonElement>('[data-line="4"]')!;
+    const line4 = el.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part~="line-button"][data-line="4"]'
+    )!;
     line4.focus();
     expect(el.shadowRoot!.activeElement?.getAttribute("data-line")).to.equal(
       "4"
@@ -795,13 +879,15 @@ describe("interactive-lines", () => {
         <lr-code-block-core
           code=${"a\nb\nc\nd"}
           line-numbers
-          interactive-lines
+          activatable-lines
         ></lr-code-block-core>
         <button id="outside-code-block-core">Outside</button>
       </div>
     `);
     const el = wrapper.querySelector("lr-code-block-core") as LyraCodeBlockCore;
-    el.shadowRoot!.querySelector<HTMLButtonElement>('[data-line="4"]')!.focus();
+    el.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part~="line-button"][data-line="4"]'
+    )!.focus();
     el.code = "a\nb";
     wrapper
       .querySelector<HTMLButtonElement>("#outside-code-block-core")!
@@ -810,7 +896,7 @@ describe("interactive-lines", () => {
     expect(document.activeElement?.id).to.equal("outside-code-block-core");
   });
 
-  it("does not emit lr-line-click while interactive-lines is off", async () => {
+  it("does not emit lr-line-activate while activatable-lines is off", async () => {
     const el = (await fixture(
       html`<lr-code-block-core
         code=${"a\nb"}
@@ -828,13 +914,13 @@ describe("interactive-lines", () => {
       html`<lr-code-block-core
         code=${"a\nb\nc\nd"}
         line-numbers
-        interactive-lines
+        activatable-lines
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
     await el.updateComplete;
 
     const line3 = el.shadowRoot!.querySelector(
-      '[data-line="3"]'
+      '[part~="line-button"][data-line="3"]'
     ) as HTMLButtonElement;
     line3.dispatchEvent(
       new KeyboardEvent("keydown", {
@@ -845,11 +931,13 @@ describe("interactive-lines", () => {
     );
     await el.updateComplete;
     expect(
-      el.shadowRoot!.querySelector('[data-line="2"]')!.getAttribute("tabindex")
+      el
+        .shadowRoot!.querySelector('[part~="line-button"][data-line="2"]')!
+        .getAttribute("tabindex")
     ).to.equal("0");
 
     const line2 = el.shadowRoot!.querySelector(
-      '[data-line="2"]'
+      '[part~="line-button"][data-line="2"]'
     ) as HTMLButtonElement;
     line2.dispatchEvent(
       new KeyboardEvent("keydown", {
@@ -860,11 +948,13 @@ describe("interactive-lines", () => {
     );
     await el.updateComplete;
     expect(
-      el.shadowRoot!.querySelector('[data-line="4"]')!.getAttribute("tabindex")
+      el
+        .shadowRoot!.querySelector('[part~="line-button"][data-line="4"]')!
+        .getAttribute("tabindex")
     ).to.equal("0");
 
     const line4 = el.shadowRoot!.querySelector(
-      '[data-line="4"]'
+      '[part~="line-button"][data-line="4"]'
     ) as HTMLButtonElement;
     line4.dispatchEvent(
       new KeyboardEvent("keydown", {
@@ -875,13 +965,15 @@ describe("interactive-lines", () => {
     );
     await el.updateComplete;
     expect(
-      el.shadowRoot!.querySelector('[data-line="1"]')!.getAttribute("tabindex")
+      el
+        .shadowRoot!.querySelector('[part~="line-button"][data-line="1"]')!
+        .getAttribute("tabindex")
     ).to.equal("0");
 
     const line1 = el.shadowRoot!.querySelector(
-      '[data-line="1"]'
+      '[part~="line-button"][data-line="1"]'
     ) as HTMLButtonElement;
-    let listener = oneEvent(el, "lr-line-click");
+    let listener = oneEvent(el, "lr-line-activate");
     line1.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: "Enter",
@@ -892,7 +984,7 @@ describe("interactive-lines", () => {
     let event = (await listener) as CustomEvent<{ line: number }>;
     expect(event.detail).to.deep.equal({ line: 1 });
 
-    listener = oneEvent(el, "lr-line-click");
+    listener = oneEvent(el, "lr-line-activate");
     line1.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: " ",
@@ -913,22 +1005,25 @@ describe("interactive-lines", () => {
     );
     await el.updateComplete;
     expect(
-      el.shadowRoot!.querySelector('[data-line="1"]')!.getAttribute("tabindex")
+      el
+        .shadowRoot!.querySelector('[part~="line-button"][data-line="1"]')!
+        .getAttribute("tabindex")
     ).to.equal("0");
   });
 
-  it("marks a highlighted line as both line-button and line-highlight when interactive-lines and highlight-lines are combined", async () => {
+  it("marks a highlighted line as both line-button and line-highlight when activatable-lines and highlight-lines are combined", async () => {
     const el = (await fixture(
       html`<lr-code-block-core
         code=${"a\nb\nc"}
         line-numbers
-        interactive-lines
+        activatable-lines
         highlight-lines="2"
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
     await el.updateComplete;
-    const line2 = el.shadowRoot!.querySelector('[data-line="2"]')!;
-    expect(line2.getAttribute("part")).to.equal("line-button line-highlight");
+    const line2 = el.shadowRoot!.querySelector('.line[data-line="2"]')!;
+    expect(line2.getAttribute("part")).to.equal("line-highlight");
+    expect(line2.querySelector('[part~="line-button"]')).to.exist;
   });
 });
 
@@ -956,7 +1051,8 @@ describe("copy button", () => {
       const listener = oneEvent(el, "lr-copy");
       button.click();
       const { detail } = await listener;
-      expect(detail).to.deep.equal({ text: "const x = 1;" });
+      expect(detail).to.deep.equal({ ok: true, text: "const x = 1;" });
+      expect(Object.isFrozen(detail)).to.be.true;
       expect(writes).to.deep.equal(["const x = 1;"]);
       await el.updateComplete;
       expect(button.textContent!.trim()).to.equal("Copied!");
@@ -1030,7 +1126,9 @@ describe("copy button", () => {
     try {
       frameDocument.body.append(frameDocument.adoptNode(el));
       await el.updateComplete;
+      const copied = oneEvent(el, "lr-copy");
       button.click();
+      await copied;
       await el.updateComplete;
       expect(mainWrites).to.equal(0);
       expect(frameWrites).to.deep.equal(["const owner = true;"]);
@@ -1070,7 +1168,7 @@ describe("copy button", () => {
     }
   });
 
-  it("fires lr-copy even when navigator.clipboard is unavailable", async () => {
+  it("fires lr-copy-error, not lr-copy, when navigator.clipboard is unavailable", async () => {
     const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
     Object.defineProperty(navigator, "clipboard", {
       value: undefined,
@@ -1085,17 +1183,32 @@ describe("copy button", () => {
         '[part="copy-button"]'
       ) as HTMLButtonElement;
 
-      const listener = oneEvent(el, "lr-copy");
+      let copied = false;
+      el.addEventListener("lr-copy", () => {
+        copied = true;
+      });
+      const genericError = oneEvent(el, "lr-error");
+      const listener = oneEvent(el, "lr-copy-error");
       button.click();
       const { detail } = await listener;
-      expect(detail).to.deep.equal({ text: "const x = 1;" });
+      await genericError;
+      expect(detail).to.include({
+        ok: false,
+        text: "const x = 1;",
+        reason: "unsupported",
+      });
+      expect((detail as { error: unknown }).error).to.be.instanceOf(Error);
+      expect(Object.isFrozen(detail)).to.be.true;
+      expect(copied).to.be.false;
+      await el.updateComplete;
+      expect(button.textContent!.trim()).to.equal("Copy failed");
     } finally {
       if (original) Object.defineProperty(navigator, "clipboard", original);
       else Reflect.deleteProperty(navigator, "clipboard");
     }
   });
 
-  it("still fires lr-copy when navigator.clipboard throws synchronously", async () => {
+  it("fires lr-copy-error when navigator.clipboard throws synchronously", async () => {
     const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
     Object.defineProperty(navigator, "clipboard", {
       get() {
@@ -1112,10 +1225,22 @@ describe("copy button", () => {
         '[part="copy-button"]'
       ) as HTMLButtonElement;
 
-      const listener = oneEvent(el, "lr-copy");
+      let copied = false;
+      el.addEventListener("lr-copy", () => {
+        copied = true;
+      });
+      const listener = oneEvent(el, "lr-copy-error");
       button.click();
       const { detail } = await listener;
-      expect(detail).to.deep.equal({ text: "const x = 1;" });
+      expect(detail).to.include({
+        ok: false,
+        text: "const x = 1;",
+        reason: "failed",
+      });
+      expect((detail as { error: Error }).error.message).to.equal(
+        "blocked by permissions policy"
+      );
+      expect(copied).to.be.false;
     } finally {
       if (original) Object.defineProperty(navigator, "clipboard", original);
       else Reflect.deleteProperty(navigator, "clipboard");
@@ -1130,7 +1255,8 @@ describe("copy button", () => {
         filename="x.ts"
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
-    expect((el.shadowRoot!.querySelector('[part="copy-button"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="copy-button"]') == null).to.be
+      .true;
   });
 });
 
@@ -1139,7 +1265,7 @@ describe("collapsible / collapsed", () => {
     const el = (await fixture(
       html`<lr-code-block-core .code=${"x"}></lr-code-block-core>`
     )) as LyraCodeBlockCore;
-    expect((el.shadowRoot!.querySelector('[part="toggle"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="toggle"]') == null).to.be.true;
     expect(
       (el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).hidden
     ).to.be.false;
@@ -1178,6 +1304,24 @@ describe("collapsible / collapsed", () => {
     expect(body.hidden).to.be.true;
     expect((event as CustomEvent).detail).to.deep.equal({ collapsed: true });
   });
+
+  it("allows a cancelable request to veto mutation and the committed event", async () => {
+    const el = (await fixture(
+      html`<lr-code-block-core collapsible code="x"></lr-code-block-core>`
+    )) as LyraCodeBlockCore;
+    let commits = 0;
+    el.addEventListener("lr-toggle", () => commits++);
+    el.addEventListener("lr-toggle-request", (event) => event.preventDefault());
+    const requested = oneEvent(el, "lr-toggle-request");
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
+    const event = (await requested) as CustomEvent<{ collapsed: boolean }>;
+    await el.updateComplete;
+    expect(event.cancelable).to.be.true;
+    expect(event.defaultPrevented).to.be.true;
+    expect(event.detail).to.deep.equal({ collapsed: true });
+    expect(el.collapsed).to.be.false;
+    expect(commits).to.equal(0);
+  });
 });
 
 describe("header content", () => {
@@ -1200,7 +1344,7 @@ describe("header content", () => {
         .code=${"x"}
       ></lr-code-block-core>`
     )) as LyraCodeBlockCore;
-    expect((el.shadowRoot!.querySelector('[part="header"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="header"]') == null).to.be.true;
   });
 
   it("applies max-height as a CSS custom property on the body", async () => {
@@ -1214,6 +1358,19 @@ describe("header content", () => {
     expect(
       body.style.getPropertyValue("--lr-code-block-max-height").trim()
     ).to.equal("10rem");
+  });
+
+  it("applies a direct-host max-height hook independently of the attribute", async () => {
+    const el = (await fixture(
+      html`<lr-code-block-core
+        style="--lr-code-block-max-height: 43px"
+        .copyable=${false}
+        .code=${"a\nb\nc\nd"}
+      ></lr-code-block-core>`
+    )) as LyraCodeBlockCore;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    expect(el.hasAttribute("max-height")).to.be.false;
+    expect(getComputedStyle(body).maxBlockSize).to.equal("43px");
   });
 });
 
@@ -1239,6 +1396,22 @@ describe("shiki dark-theme signal", () => {
     await el2Ready(el);
     const body = el.shadowRoot!.querySelector('[part="body"]')!;
     expect(body.hasAttribute("data-dark-theme")).to.be.false;
+  });
+
+  it("refreshes after a live CSSOM token mutation", async () => {
+    const wrapper = (await fixture(html`
+      <div
+        style="--lr-theme-color-text-normal:#202020; --lr-theme-color-surface-default:#f8f8f8;"
+      >
+        <lr-code-block-core></lr-code-block-core>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector("lr-code-block-core") as LyraCodeBlockCore;
+    const body = el.shadowRoot!.querySelector('[part="body"]')!;
+    expect(body.hasAttribute("data-dark-theme")).to.be.false;
+    wrapper.style.setProperty("--lr-theme-color-text-normal", "#f2f2f2");
+    wrapper.style.setProperty("--lr-theme-color-surface-default", "#1a1a1a");
+    await waitUntil(() => body.getAttribute("data-dark-theme") === "true");
   });
 
   it("resolves highlighted token paint from the light and component-resolved dark Shiki palettes", async function () {

@@ -45,11 +45,21 @@ export function binValues(
   // dataset reads as "N items, one bucket populated" starting from the data's
   // own value, not its synthetic +1 upper edge.
   const constant = hi === lo;
-  const labelHi = constant ? lo + 1 : hi;
   const numberFormat = getNumberFormat(locale, {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });
+  if (constant) {
+    // A constant domain contains one truthful bucket. In particular, `MAX_VALUE + 1` is still
+    // `MAX_VALUE`, so fabricating `binCount` ranges from that synthetic upper edge produces
+    // repeated zero-width labels. Returning the single value also avoids implying a spread that
+    // does not exist for ordinary constant input.
+    return [{
+      label: `${LEFT_TO_RIGHT_ISOLATE}${numberFormat.format(lo)}${POP_DIRECTIONAL_ISOLATE}`,
+      count: finite.length,
+    }];
+  }
+  const labelHi = hi;
   const formatRange = (
     numberFormat as Intl.NumberFormat & {
       formatRange?: (start: number, end: number) => string;
@@ -70,7 +80,7 @@ export function binValues(
   });
 
   for (const v of finite) {
-    const index = constant ? 0 : Math.floor(finiteRatio(v, lo, hi) * bins);
+    const index = Math.floor(finiteRatio(v, lo, hi) * bins);
     buckets[Math.min(bins - 1, Math.max(0, index))]!.count++; // safe: index clamped to [0, bins-1], buckets has length bins
   }
   return buckets;

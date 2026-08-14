@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Starter prompts and follow-up suggestions as a chip row. Never writes into a composer or sends anything — the host listens for lr-suggestion-select.',
+          'Starter prompts and follow-up suggestions as a chip row. Each item has a unique nonempty suggestionId; invalid and later duplicate identifiers are omitted. Never writes into a composer or sends anything — the host listens for lr-suggestion-select with { suggestionId, label }.',
       },
     },
   },
@@ -19,9 +19,9 @@ export default meta;
 type Story = StoryObj;
 
 const followUps = [
-  { id: 'a', label: 'What caused the spike?', icon: '🔎', detail: 'Based on the error rate chart above' },
-  { id: 'b', label: 'Show the affected services', icon: '📊' },
-  { id: 'c', label: 'Draft a status update', icon: '✍️' },
+  { suggestionId: 'a', label: 'What caused the spike?', icon: '🔎', detail: 'Based on the error rate chart above' },
+  { suggestionId: 'b', label: 'Show the affected services', icon: '📊' },
+  { suggestionId: 'c', label: 'Draft a status update', icon: '✍️' },
 ];
 
 export const ScrollableRow: Story = {
@@ -33,10 +33,10 @@ export const WrappedStarterGrid: Story = {
     <lr-suggestion-chips
       wrap
       .suggestions=${[
-        { id: '1', label: 'Summarize this document' },
-        { id: '2', label: 'Find action items' },
-        { id: '3', label: 'Translate to French' },
-        { id: '4', label: 'Explain like I am five' },
+        { suggestionId: '1', label: 'Summarize this document' },
+        { suggestionId: '2', label: 'Find action items' },
+        { suggestionId: '3', label: 'Translate to French' },
+        { suggestionId: '4', label: 'Explain like I am five' },
       ]}
     ></lr-suggestion-chips>
   `,
@@ -59,11 +59,11 @@ export const CenteredUnderEmptyState: Story = {
         wrap
         style="--lr-suggestion-chips-justify: center;"
         .suggestions=${[
-          { id: '1', label: 'Summarize this document' },
-          { id: '2', label: 'Find action items' },
-          { id: '3', label: 'Translate to French' },
-          { id: '4', label: 'Explain like I am five' },
-          { id: '5', label: 'Draft a reply' },
+          { suggestionId: '1', label: 'Summarize this document' },
+          { suggestionId: '2', label: 'Find action items' },
+          { suggestionId: '3', label: 'Translate to French' },
+          { suggestionId: '4', label: 'Explain like I am five' },
+          { suggestionId: '5', label: 'Draft a reply' },
         ]}
       ></lr-suggestion-chips>
     </div>

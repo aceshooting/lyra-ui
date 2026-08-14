@@ -47,10 +47,11 @@ export function parseSimpleUnion(typeText) {
 }
 
 /**
- * Reads exported type aliases and the literal-valued properties of exported interfaces. Resolution
- * below deliberately understands only unions, Extract/Exclude, and indexed access; every other
- * expression remains opaque. Duplicate names with different bodies are marked ambiguous and can
- * never be expanded.
+ * Reads exported type aliases plus the public property shape of property-only exported interfaces.
+ * Closed-value resolution below deliberately understands only unions, Extract/Exclude, and indexed
+ * access; every other expression remains opaque. Structural consumers can use the separately
+ * recorded object/interface shapes. Duplicate names with different bodies are marked ambiguous and
+ * can never be expanded.
  */
 export function readTypeAliases(root) {
   const sources = [];
@@ -68,6 +69,17 @@ export function readTypeAliases(root) {
   const ambiguous = new Set();
   const declarations = new Map();
   const indexedProperties = new Map();
+  const structuralAliases = new Map();
+  const structuralAmbiguous = new Set();
+  const recordStructuralAlias = (name, body) => {
+    if (structuralAmbiguous.has(name)) return;
+    if (structuralAliases.has(name) && structuralAliases.get(name) !== body) {
+      structuralAliases.delete(name);
+      structuralAmbiguous.add(name);
+      return;
+    }
+    structuralAliases.set(name, body);
+  };
   const declaration = /export\s+type\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*/g;
   for (const file of sources) {
     const source = readFileSync(file, 'utf8');
@@ -109,6 +121,9 @@ export function readTypeAliases(root) {
       }
       declarations.set(name, body);
       aliases.set(name, body);
+      if (/^\{[\s\S]*\}$/u.test(body)) {
+        recordStructuralAlias(name, body);
+      }
     }
 
     const interfaceStart = /export\s+interface\s+([A-Za-z_$][A-Za-z0-9_$]*)[^\{]*\{/g;
@@ -137,13 +152,36 @@ export function readTypeAliases(root) {
       }
       if (bodyEnd < 0) continue;
       const body = source.slice(bodyStart, bodyEnd);
-      const property = /(?:^|[;\n])\s*(?:readonly\s+)?([A-Za-z_$][A-Za-z0-9_$]*)\??\s*:\s*([^;\n]+)\s*;/g;
+      const property =
+        /(?:^|[;\n])\s*(readonly\s+)?([A-Za-z_$][A-Za-z0-9_$]*)(\?)?\s*:\s*([^;\n]+)\s*;/g;
+      const structuralMembers = [];
       for (const propertyMatch of body.matchAll(property)) {
-        indexedProperties.set(`${name}.${propertyMatch[1]}`, propertyMatch[2].trim());
+        const [, readonly, propertyName, optional, propertyType] = propertyMatch;
+        indexedProperties.set(`${name}.${propertyName}`, propertyType.trim());
+        structuralMembers.push(
+          `${readonly ? 'readonly ' : ''}${propertyName}${optional ?? ''}: ${propertyType.trim()}`,
+        );
+      }
+      const nonPropertyBody = body
+        .replace(property, '')
+        .replace(/\/\*[\s\S]*?\*\//gu, '')
+        .replace(/\/\/[^\n]*/gu, '')
+        .trim();
+      if (structuralMembers.length > 0 && nonPropertyBody === '') {
+        recordStructuralAlias(
+          name,
+          `{ ${structuralMembers.join('; ')} }`,
+        );
       }
     }
   }
-  return { aliases, ambiguous, indexedProperties };
+  return {
+    aliases,
+    ambiguous,
+    indexedProperties,
+    structuralAliases,
+    structuralAmbiguous,
+  };
 }
 
 function stripOuterParens(value) {

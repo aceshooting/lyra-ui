@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html, render } from 'lit';
-import type { TableColumn } from '../../../lyra.js';
+import type { TableColumn } from './table.class.js';
 import { narrowStoryFrames } from '../../../../../../.storybook/narrow-story.js';
 
 interface DemoRow {
@@ -24,6 +24,14 @@ const meta: Meta = {
   title: 'Table',
   component: 'lr-table',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'A bounded sort/select-aware grid. A bare table projects at most 100 rows per page; sortable headers emit a cancelable lr-sort-request followed by lr-sort only when accepted.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;
@@ -147,7 +155,7 @@ export const SelectedRowColor: Story = {
       .columns=${columns}
       .rows=${rows}
       .rowKey=${(r: DemoRow) => r.id}
-      .selectedKey=${'b'}
+      .selectedKeys=${new Set(['b'])}
     ></lr-table>
   `,
 };
@@ -156,8 +164,44 @@ export const ActiveSort: Story = {
   render: () => html`<lr-table .columns=${columns} .rows=${rows} sort-key="score" sort-dir="desc"></lr-table>`,
 };
 
+export const SortTransaction: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Activate a sortable header to see the canonical frozen request/commit vocabulary. Preventing lr-sort-request would leave sort state unchanged and suppress the commit.',
+      },
+    },
+  },
+  render: () => {
+    const report = (event: CustomEvent): void => {
+      const output = (event.currentTarget as HTMLElement).parentElement?.querySelector('output');
+      if (output) output.textContent = `${event.type}: ${JSON.stringify(event.detail)}`;
+    };
+    return html`
+      <div style="display:grid;gap:var(--lr-space-s)">
+        <lr-table
+          accessible-label="Transactional sorting"
+          .columns=${columns}
+          .rows=${rows}
+          @lr-sort-request=${report}
+          @lr-sort=${report}
+        ></lr-table>
+        <output aria-live="polite">Activate a sortable header</output>
+      </div>
+    `;
+  },
+};
+
 export const SelectedRow: Story = {
-  render: () => html`<lr-table .columns=${columns} .rows=${rows} .selectedKey=${'b'}></lr-table>`,
+  render: () => html`
+    <lr-table
+      selection-mode="single"
+      .columns=${columns}
+      .rows=${rows}
+      .selectedKeys=${new Set(['b'])}
+    ></lr-table>
+  `,
 };
 
 export const ControlledCollectionFocus: Story = {
@@ -178,7 +222,7 @@ export const ControlledCollectionFocus: Story = {
             const table = (event.currentTarget as HTMLElement)
               .closest('div')
               ?.parentElement?.querySelector('lr-table') as HTMLElement & {
-              rows: DemoRow[];
+              rows: readonly DemoRow[];
               shadowRoot: ShadowRoot;
             };
             const renderedRows = table?.shadowRoot.querySelectorAll<HTMLElement>('[part="row"]');
@@ -193,7 +237,7 @@ export const ControlledCollectionFocus: Story = {
           @click=${(event: Event) => {
             const table = (event.currentTarget as HTMLElement)
               .closest('div')
-              ?.parentElement?.querySelector('lr-table') as (HTMLElement & { rows: DemoRow[] }) | null;
+              ?.parentElement?.querySelector('lr-table') as (HTMLElement & { rows: readonly DemoRow[] }) | null;
             if (table) table.rows = rows;
           }}
         >
@@ -215,6 +259,14 @@ export const LoadMore: Story = {
 };
 
 export const Filterable: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Typing publishes only the table-level `lr-filter-change` contract; the internal native `input` and `change` events stay contained.',
+      },
+    },
+  },
   render: () =>
     html`<lr-table filterable .columns=${columns} .rows=${rows} .rowKey=${(r: DemoRow) => r.id}></lr-table>`,
 };
@@ -231,6 +283,18 @@ export const Paginated: Story = {
 
 export const Loading: Story = {
   render: () => html`<lr-table loading .columns=${columns} .rows=${rows}></lr-table>`,
+};
+
+export const LoadingBeforeSchema: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Loading takes precedence while the column schema is unresolved. Even when skeleton appearance is requested, the table shows its spinner until columns arrive instead of flashing the no-columns empty state; once columns are supplied, the same loading state can render the schema-shaped skeleton.',
+      },
+    },
+  },
+  render: () => html`<lr-table loading loading-appearance="skeleton" .columns=${[]}></lr-table>`,
 };
 
 export const LoadingSkeleton: Story = {
@@ -252,11 +316,32 @@ export const LoadingSkeleton: Story = {
 };
 
 const editableStoryColumns: TableColumn<DemoRow>[] = [
-  { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
-  { key: 'score', label: 'Score', editable: true, editType: 'number', editValue: (r) => r.score, cell: (r) => r.score },
+  {
+    key: 'name',
+    label: 'Name',
+    editTrigger: 'double-click',
+    editValue: (r) => r.name,
+    cell: (r) => r.name,
+  },
+  {
+    key: 'score',
+    label: 'Score',
+    editTrigger: 'double-click',
+    editType: 'number',
+    editValue: (r) => r.score,
+    cell: (r) => r.score,
+  },
 ];
 
 export const EditableCells: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Double-click a cell to edit it. Draft native `input`/`change` events stay internal; a commit publishes the documented `lr-cell-edit` transaction.',
+      },
+    },
+  },
   render: () =>
     html`<lr-table
       .columns=${editableStoryColumns}
@@ -275,7 +360,7 @@ interface RateRow {
 
 // Consumer-owned rows, mutated only in response to `lr-cell-edit` -- the table
 // itself never writes back into `rows`. A settings/rate grid is exactly the
-// case `editable: 'always'` exists for: every row in the column is meant to be
+// case `editTrigger: 'always'` exists for: every row in the column is meant to be
 // typed into, so requiring a double-click per cell first is pure friction.
 let rateRows: RateRow[] = [
   { id: 'a', tier: 'Standard', rate: 0.12, note: 'per request' },
@@ -289,7 +374,7 @@ const rateColumns: TableColumn<RateRow>[] = [
     key: 'rate',
     label: 'Rate (USD)',
     align: 'end',
-    editable: 'always',
+    editTrigger: 'always',
     editType: 'number',
     editValue: (r) => r.rate,
     cell: (r) => r.rate,
@@ -318,7 +403,7 @@ export const AlwaysOnEditors: Story = {
     docs: {
       description: {
         story:
-          "`editable: 'always'` renders a persistent editor in every body cell of that column, from first paint. Each editor is a plain tab stop outside the header/row roving-tabindex model, so Tab walks the column while arrow keys still navigate the grid from a row's own tab stop (and move the caret once you are inside a field). Enter commits and keeps focus; blurring after a change commits too; Escape has nothing to cancel back to, so it is left for an ancestor dialog/popover. The value binds as a content attribute, so an out-of-band `rows` update never overwrites a draft the user is still typing.",
+          "`editTrigger: 'always'` renders a persistent editor in every body cell of that column, from first paint. Each editor is a plain tab stop outside the header/row roving-tabindex model, so Tab walks the column while arrow keys still navigate the grid from a row's own tab stop (and move the caret once you are inside a field). Enter commits and keeps focus; blurring after a change commits too; Escape has nothing to cancel back to, so it is left for an ancestor dialog/popover. The value binds as a content attribute, so an out-of-band `rows` update never overwrites a draft the user is still typing.",
       },
     },
   },
@@ -331,7 +416,7 @@ export const GroupedRows: Story = {
       .columns=${columns}
       .rows=${rows}
       .groupBy=${(r: DemoRow) => (r.score > 80 ? 'Passing' : 'Needs review')}
-      .groupLabel=${(key: string | number, grouped: DemoRow[]) => html`<strong>${key}</strong> (${grouped.length})`}
+      .groupLabel=${(key: string | number, grouped: readonly DemoRow[]) => html`<strong>${key}</strong> (${grouped.length})`}
     ></lr-table>`,
 };
 
@@ -349,7 +434,7 @@ const detailRows: DetailRow[] = [
 // Narrow the story's own container, so the `priority`-hidden columns below
 // actually hide without needing to shrink the whole Storybook viewport.
 const priorityColumns: TableColumn<DetailRow>[] = [
-  { key: 'name', label: 'Name', sortable: true, sticky: true, cell: (r) => r.name },
+  { key: 'name', label: 'Name', sortable: true, sticky: 'start', cell: (r) => r.name },
   { key: 'score', label: 'Score', sortable: true, align: 'end', cell: (r) => r.score },
   { key: 'region', label: 'Region', priority: 'medium', cell: (r) => r.region },
   { key: 'updated', label: 'Updated', priority: 'low', cell: (r) => r.updated },
@@ -373,21 +458,25 @@ export const PriorityWideContainerNoButton: Story = {
     </div>`,
 };
 
-// `show-all-columns` restores a previously-persisted reveal preference up
+// `priority-columns-visible` restores a previously-persisted reveal preference up
 // front, instead of always starting collapsed.
 export const PriorityColumnsRevealed: Story = {
   render: () =>
     html`<div style="max-width: 420px;">
-      <lr-table .columns=${priorityColumns} .rows=${detailRows} show-all-columns></lr-table>
+      <lr-table .columns=${priorityColumns} .rows=${detailRows} priority-columns-visible></lr-table>
     </div>`,
 };
 
-// A <button> inside cell() must own its own click/Enter activation — the
-// table's row-click delegation must not intercept it (see table.ts's
-// INTERACTIVE_SELECTOR guard).
+// A real control inside cell() owns its click/Enter activation, while a passive custom element
+// remains part of the row activation surface.
 const actionColumns: TableColumn<DemoRow>[] = [
   { key: 'name', label: 'Name', cell: (r) => r.name },
-  { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
+  {
+    key: 'score',
+    label: 'Score',
+    align: 'end',
+    cell: (r) => html`<lr-format-number value=${r.score}></lr-format-number>`,
+  },
   {
     key: 'actions',
     label: 'Actions',
@@ -396,6 +485,14 @@ const actionColumns: TableColumn<DemoRow>[] = [
 ];
 
 export const RowActions: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The native Edit button owns its action, but the passive `<lr-format-number>` remains part of the row click surface. Open-shadow custom controls are recognized through the event composed path; an opaque closed-shadow control can opt out of row activation by marking its host `data-table-interactive`.',
+      },
+    },
+  },
   render: () => html`<lr-table .columns=${actionColumns} .rows=${rows}></lr-table>`,
 };
 
@@ -403,7 +500,7 @@ const narrowPriorityActionColumns: TableColumn<DetailRow>[] = [
   {
     key: 'name',
     label: 'Very long localized resource name',
-    sticky: true,
+    sticky: 'start',
     cell: (row) => row.name,
   },
   { key: 'score', label: 'Quality score', align: 'end', cell: (row) => row.score },
@@ -446,7 +543,7 @@ export const NarrowPriorityActions: Story = {
     ),
 };
 
-// expandedKeys is consumer-owned (mirrors selectedKey/sortKey) -- this story
+// expandedKeys is consumer-owned, unlike self-managed selection/client sorting. This story
 // uses a plain module-level Set + a manual re-render to demonstrate the
 // wiring a real consumer would do with their own framework's state.
 const expandableExpandedKeys = new Set<string | number>();
@@ -548,7 +645,7 @@ export const PivotWithTotalsAndHeatTint: Story = {
       .rows=${pivotRows}
       .rowKey=${(r: PivotRow) => r.id}
       .rowTotal=${(r: PivotRow) => r.mon + r.tue + r.wed}
-      .grandTotal=${(rs: PivotRow[]) => rs.reduce((sum, r) => sum + r.mon + r.tue + r.wed, 0)}
+      .grandTotal=${(rs: readonly PivotRow[]) => rs.reduce((sum, r) => sum + r.mon + r.tue + r.wed, 0)}
     ></lr-table>`,
 };
 

@@ -108,6 +108,14 @@ export const FixedPrimaryWithConstraints: Story = {
 };
 
 export const SnappingAndCustomDivider: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'String snapping parses one cached numeric projection per `snap` value: at most the first 16,384 UTF-16 code units and 256 finite valid pixel, percentage, or `repeat()` tokens participate.',
+      },
+    },
+  },
   render: () => html`
     <lr-split-panel
       snap="25% 50% 75%"

@@ -37,11 +37,11 @@ import { styles } from "./app-rail-item.styles.js";
  * @csspart tooltip - The hover/focus label flyout, only rendered while `tooltip` is set, the item
  *   is `icon-only`, and it is hovered or focused.
  * @cssprop [--lr-app-rail-item-current-bg=var(--lr-color-brand-quiet)] - Background of the
- *   `active`/`aria-current="page"` item. Scoped to `[aria-current='page']` only and declared as an
+ *   `current`/`aria-current="page"` item. Scoped to `[aria-current='page']` only and declared as an
  *   inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors
  *   only the current item without hijacking the library-wide `--lr-color-brand-quiet` token.
  * @cssprop [--lr-app-rail-item-current-color=var(--lr-color-brand)] - Text/icon color of the
- *   `active`/`aria-current="page"` item.
+ *   `current`/`aria-current="page"` item.
  * @cssprop [--lr-app-rail-item-hover-bg=var(--lr-color-brand-quiet)] - Hover background.
  * @cssprop [--lr-app-rail-item-hover-color=var(--lr-color-brand)] - Hover text/icon color.
  * @cssprop --lr-app-rail-item-active-bg - Pressed background; defaults to the former brand-quiet
@@ -69,7 +69,7 @@ export class LyraAppRailItem extends LyraElement {
    *  `aria-current="page"` on `[part="base"]` and drives the active visual
    *  treatment -- the rail has no built-in routing, so the consumer sets
    *  this per item (e.g. by comparing `href` against the current location). */
-  @property({ type: Boolean, reflect: true }) active = false;
+  @property({ type: Boolean, reflect: true }) current = false;
 
   /** Opt-in hover/focus flyout showing this item's label text while `icon-only` (set externally by
    *  the parent `<lr-app-rail>` as the viewport narrows) hides it from view -- an explicit,
@@ -80,8 +80,24 @@ export class LyraAppRailItem extends LyraElement {
 
   @state() private showTooltip = false;
   private stopPositioning?: () => void;
+  private labelObserver?: MutationObserver;
   private semanticFocusRepair?: ComposedFocusRepairSnapshot;
   private focusReturnTarget?: HTMLElement;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.armLabelObserver();
+  }
+
+  private armLabelObserver(): void {
+    this.labelObserver?.disconnect();
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    this.labelObserver = new MutationObserverCtor(() => {
+      if (this.showTooltip) this.requestUpdate();
+    });
+    this.labelObserver.observe(this, { childList: true, characterData: true, subtree: true });
+  }
 
   // Only the default slot's own content counts toward the tooltip text --
   // text incidentally living inside the (decorative) `icon` slot shouldn't
@@ -181,6 +197,8 @@ export class LyraAppRailItem extends LyraElement {
     super.disconnectedCallback();
     this.semanticFocusRepair = undefined;
     this.focusReturnTarget = undefined;
+    this.labelObserver?.disconnect();
+    this.labelObserver = undefined;
     this.stopPositioning?.();
     this.stopPositioning = undefined;
     this.showTooltip = false;
@@ -209,40 +227,43 @@ export class LyraAppRailItem extends LyraElement {
     const content = html`
       ${renderInertPresentation(html`<slot name="icon"></slot>`, { part: "icon" })}
       <span part="label"><slot></slot></span>
-      ${this.showTooltip && this.tooltip && this.hasAttribute("icon-only")
-        ? html`<span part="tooltip" role="tooltip">${this.tooltipText}</span>`
-        : nothing}
     `;
+    const tooltip = this.showTooltip && this.tooltip && this.hasAttribute("icon-only")
+      ? html`<span part="tooltip" role="tooltip" aria-hidden="true">${this.tooltipText}</span>`
+      : nothing;
     if (href && !this.disabled) {
-      return html`<a
+      return html`
+        <a
+          part="base"
+          href=${href}
+          target=${this.target || nothing}
+          rel=${this.target ? "noopener noreferrer" : nothing}
+          aria-label=${label ?? nothing}
+          aria-disabled="false"
+          aria-current=${this.current ? "page" : nothing}
+          @mouseenter=${this.onFocusShow}
+          @mouseleave=${this.onBlurHide}
+          @focus=${this.onFocusShow}
+          @blur=${this.onBlurHide}
+        >${content}</a>
+        ${tooltip}
+      `;
+    }
+    return html`
+      <button
         part="base"
-        href=${href}
-        target=${this.target || nothing}
-        rel=${this.target ? "noopener noreferrer" : nothing}
+        type="button"
+        ?disabled=${this.disabled}
+        aria-disabled=${this.disabled ? "true" : "false"}
         aria-label=${label ?? nothing}
-        aria-disabled="false"
-        aria-current=${this.active ? "page" : nothing}
+        aria-current=${this.current ? "page" : nothing}
         @mouseenter=${this.onFocusShow}
         @mouseleave=${this.onBlurHide}
         @focus=${this.onFocusShow}
         @blur=${this.onBlurHide}
-        >${content}</a
-      >`;
-    }
-    return html`<button
-      part="base"
-      type="button"
-      ?disabled=${this.disabled}
-      aria-disabled=${this.disabled ? "true" : "false"}
-      aria-label=${label ?? nothing}
-      aria-current=${this.active ? "page" : nothing}
-      @mouseenter=${this.onFocusShow}
-      @mouseleave=${this.onBlurHide}
-      @focus=${this.onFocusShow}
-      @blur=${this.onBlurHide}
-    >
-      ${content}
-    </button>`;
+      >${content}</button>
+      ${tooltip}
+    `;
   }
 }
 

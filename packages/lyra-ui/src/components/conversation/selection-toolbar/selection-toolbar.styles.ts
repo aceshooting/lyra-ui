@@ -3,18 +3,23 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: contents;
-    --lr-selection-toolbar-placement-gap: var(--lr-space-s);
+    --_lr-selection-toolbar-placement-gap-default: var(--lr-space-s);
   }
 
   [part='toolbar'] {
     position: fixed;
     z-index: var(--lr-overlay-stack-index, 1000);
-    inset-inline-start: var(--lr-selection-toolbar-inline-start);
-    inset-block-start: var(--lr-selection-toolbar-block-start);
+    inset-inline-start: var(--_lr-selection-toolbar-inline-start);
+    inset-block-start: var(--_lr-selection-toolbar-block-start);
     display: flex;
     flex-wrap: wrap;
     inline-size: max-content;
-    max-inline-size: calc(100vw - var(--lr-space-m));
+    max-inline-size: min(
+      calc(100vw - var(--lr-space-m)),
+      var(--_lr-selection-toolbar-max-inline-size, calc(100vw - var(--lr-space-m)))
+    );
+    max-block-size: var(--_lr-selection-toolbar-max-block-size, calc(100vh - var(--lr-space-m)));
+    overflow: auto;
     box-sizing: border-box;
     gap: var(--lr-space-2xs);
     padding: var(--lr-space-2xs);
@@ -23,24 +28,30 @@ export const styles = css`
     background: var(--lr-color-surface);
     /* Anchored overlay: a floating toolbar pinned to the current selection, not a modal layer. */
     box-shadow: var(--lr-shadow-m);
-    transform: translate(-50%, calc(-100% - var(--lr-selection-toolbar-placement-gap)));
+    transform: translate(
+      -50%,
+      calc(-100% - var(--lr-selection-toolbar-placement-gap, var(--_lr-selection-toolbar-placement-gap-default)))
+    );
   }
 
   :host(:dir(rtl)) [part='toolbar'] {
-    transform: translate(50%, calc(-100% - var(--lr-selection-toolbar-placement-gap)));
+    transform: translate(
+      50%,
+      calc(-100% - var(--lr-selection-toolbar-placement-gap, var(--_lr-selection-toolbar-placement-gap-default)))
+    );
   }
 
   [part='toolbar'][data-positioned] {
     transform: translate(
-      calc(-50% + var(--lr-selection-toolbar-inline-shift)),
-      calc(-100% + var(--lr-selection-toolbar-block-shift))
+      calc(-50% + var(--_lr-selection-toolbar-inline-shift)),
+      calc(-100% + var(--_lr-selection-toolbar-block-shift))
     );
   }
 
   :host(:dir(rtl)) [part='toolbar'][data-positioned] {
     transform: translate(
-      calc(50% + var(--lr-selection-toolbar-inline-shift)),
-      calc(-100% + var(--lr-selection-toolbar-block-shift))
+      calc(50% + var(--_lr-selection-toolbar-inline-shift)),
+      calc(-100% + var(--_lr-selection-toolbar-block-shift))
     );
   }
 

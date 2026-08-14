@@ -3,24 +3,24 @@ import { setReducedMotion } from '../../../../test/wtr-media.js';
 import './typing-indicator.js';
 import type { LyraTypingIndicator } from './typing-indicator.js';
 
-it('defaults to the dots variant, m size, and a "Thinking…" label', async () => {
+it('defaults to the dots shape, m size, and an empty localized-label override', async () => {
   const el = (await fixture(html`<lr-typing-indicator></lr-typing-indicator>`)) as LyraTypingIndicator;
-  expect(el.variant).to.equal('dots');
+  expect(el.shape).to.equal('dots');
   expect(el.size).to.equal('m');
-  expect(el.label).to.equal('Thinking…');
+  expect(el.label).to.equal('');
 });
 
-it('reflects variant and size onto the host attributes', async () => {
+it('reflects shape and size onto the host attributes', async () => {
   const el = (await fixture(
-    html`<lr-typing-indicator variant="pulse" size="s"></lr-typing-indicator>`,
+    html`<lr-typing-indicator shape="pulse" size="s"></lr-typing-indicator>`,
   )) as LyraTypingIndicator;
-  expect(el.getAttribute('variant')).to.equal('pulse');
+  expect(el.getAttribute('shape')).to.equal('pulse');
   expect(el.getAttribute('size')).to.equal('s');
 
-  el.variant = 'cursor';
+  el.shape = 'cursor';
   el.size = 'm';
   await el.updateComplete;
-  expect(el.getAttribute('variant')).to.equal('cursor');
+  expect(el.getAttribute('shape')).to.equal('cursor');
   expect(el.getAttribute('size')).to.equal('m');
 });
 
@@ -90,6 +90,14 @@ it('preserves an explicit host aria-label instead of clobbering it with the labe
   expect(el.getAttribute('aria-label')).to.equal('Generating response');
 });
 
+it('preserves an explicitly empty host aria-label by attribute presence', async () => {
+  const el = (await fixture(
+    html`<lr-typing-indicator aria-label="" label="Visible caller label"></lr-typing-indicator>`,
+  )) as LyraTypingIndicator;
+  expect(el.getAttribute('aria-label')).to.equal('');
+  expect(el.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('');
+});
+
 it('falls back to the default accessible name when label is empty or whitespace-only', async () => {
   const empty = (await fixture(html`<lr-typing-indicator label=""></lr-typing-indicator>`)) as LyraTypingIndicator;
   expect(empty.getAttribute('aria-label')).to.equal('Thinking…');
@@ -102,16 +110,20 @@ it('falls back to the default accessible name when label is empty or whitespace-
   expect(whitespace.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Thinking…');
 });
 
-it('resolves the accessible name through a .strings override for thinking when label is left at its default', async () => {
-  // label stays at its untouched 'Thinking…' default, so localize() must fall
-  // through to the .strings/registry path rather than the prop-derived
-  // fallback -- both name surfaces (host aria-label and sr-only text) carry
-  // the translation.
+it('resolves the accessible name through a .strings override for thinking when label is empty', async () => {
   const el = (await fixture(
     html`<lr-typing-indicator .strings=${{ thinking: 'Réflexion…' }}></lr-typing-indicator>`,
   )) as LyraTypingIndicator;
   expect(el.getAttribute('aria-label')).to.equal('Réflexion…');
   expect(el.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Réflexion…');
+});
+
+it('treats every non-empty label, including the English fallback text, as caller-owned', async () => {
+  const el = (await fixture(html`
+    <lr-typing-indicator label="Thinking…" .strings=${{ thinking: 'Réflexion…' }}></lr-typing-indicator>
+  `)) as LyraTypingIndicator;
+  expect(el.getAttribute('aria-label')).to.equal('Thinking…');
+  expect(el.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Thinking…');
 });
 
 it('renders a visually-hidden text node carrying the label, independent of aria-label', async () => {
@@ -133,37 +145,49 @@ it('marks the decorative shape aria-hidden and renders three dots for the dots v
   expect((el.shadowRoot!.querySelector('[part="cursor"]')) == null).to.be.true;
 });
 
-it('renders a single pulse element for the pulse variant', async () => {
+it('renders a single pulse element for the pulse shape', async () => {
   const el = (await fixture(
-    html`<lr-typing-indicator variant="pulse"></lr-typing-indicator>`,
+    html`<lr-typing-indicator shape="pulse"></lr-typing-indicator>`,
   )) as LyraTypingIndicator;
   expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="pulse"]')).to.exist;
   expect((el.shadowRoot!.querySelector('[part="cursor"]')) == null).to.be.true;
 });
 
-it('renders a single cursor element for the cursor variant', async () => {
+it('renders a single cursor element for the cursor shape', async () => {
   const el = (await fixture(
-    html`<lr-typing-indicator variant="cursor"></lr-typing-indicator>`,
+    html`<lr-typing-indicator shape="cursor"></lr-typing-indicator>`,
   )) as LyraTypingIndicator;
   expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(0);
   expect((el.shadowRoot!.querySelector('[part="pulse"]')) == null).to.be.true;
   expect(el.shadowRoot!.querySelector('[part="cursor"]')).to.exist;
 });
 
-it('swaps the rendered shape when variant changes on an already-mounted instance', async () => {
+it('inherits shared inline-cursor geometry from an ancestor', async () => {
+  const wrapper = await fixture(html`
+    <div style="--lr-inline-cursor-width: 6px; --lr-inline-cursor-height: 18px;">
+      <lr-typing-indicator shape="cursor"></lr-typing-indicator>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-typing-indicator') as LyraTypingIndicator;
+  const cursor = el.shadowRoot!.querySelector('[part="cursor"]') as HTMLElement;
+  expect(getComputedStyle(cursor).inlineSize).to.equal('6px');
+  expect(getComputedStyle(cursor).blockSize).to.equal('18px');
+});
+
+it('swaps the rendered shape when shape changes on an already-mounted instance', async () => {
   const el = (await fixture(html`<lr-typing-indicator></lr-typing-indicator>`)) as LyraTypingIndicator;
   expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(3);
   expect((el.shadowRoot!.querySelector('[part="pulse"]')) == null).to.be.true;
   expect((el.shadowRoot!.querySelector('[part="cursor"]')) == null).to.be.true;
 
-  el.variant = 'pulse';
+  el.shape = 'pulse';
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="pulse"]')).to.exist;
   expect((el.shadowRoot!.querySelector('[part="cursor"]')) == null).to.be.true;
 
-  el.variant = 'cursor';
+  el.shape = 'cursor';
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(0);
   expect((el.shadowRoot!.querySelector('[part="pulse"]')) == null).to.be.true;
@@ -181,7 +205,7 @@ it('gives every variant a looping animation that is disabled under reduced motio
     const shapes: HTMLElement[] = [];
     for (const [variant, part, animationName] of variants) {
       const el = (await fixture(
-        html`<lr-typing-indicator variant=${variant}></lr-typing-indicator>`,
+        html`<lr-typing-indicator shape=${variant}></lr-typing-indicator>`,
       )) as LyraTypingIndicator;
       const shape = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
       shapes.push(shape);
@@ -207,7 +231,7 @@ it('does not dispatch any lr-* events (purely presentational)', async () => {
   const el = (await fixture(html`<lr-typing-indicator></lr-typing-indicator>`)) as LyraTypingIndicator;
   let sawEvent = false;
   el.addEventListener('lr-typing-indicator-change', () => (sawEvent = true));
-  el.variant = 'pulse';
+  el.shape = 'pulse';
   await el.updateComplete;
   el.size = 's';
   await el.updateComplete;
@@ -221,19 +245,19 @@ it('is accessible in the default (dots) state', async () => {
 
 it('is accessible in the pulse and cursor states', async () => {
   const pulse = (await fixture(
-    html`<lr-typing-indicator variant="pulse" label="Generating response…"></lr-typing-indicator>`,
+    html`<lr-typing-indicator shape="pulse" label="Generating response…"></lr-typing-indicator>`,
   )) as LyraTypingIndicator;
   await expect(pulse).to.be.accessible();
 
   const cursor = (await fixture(
-    html`<lr-typing-indicator variant="cursor" size="s"></lr-typing-indicator>`,
+    html`<lr-typing-indicator shape="cursor" size="s"></lr-typing-indicator>`,
   )) as LyraTypingIndicator;
   await expect(cursor).to.be.accessible();
 });
 
 describe('ambient transition token', () => {
   it('dots variant bounce animation uses the ambient token, with staggered delays scaled to it', async () => {
-    const el = (await fixture(html`<lr-typing-indicator variant="dots"></lr-typing-indicator>`)) as LyraTypingIndicator;
+    const el = (await fixture(html`<lr-typing-indicator shape="dots"></lr-typing-indicator>`)) as LyraTypingIndicator;
     const dots = el.shadowRoot!.querySelectorAll('[part="dot"]');
     expect(getComputedStyle(dots[0]).animationDuration).to.equal('1.8s');
     expect(getComputedStyle(dots[1]).animationDelay).to.equal('0.6s');
@@ -241,13 +265,13 @@ describe('ambient transition token', () => {
   });
 
   it('pulse variant uses the ambient token', async () => {
-    const el = (await fixture(html`<lr-typing-indicator variant="pulse"></lr-typing-indicator>`)) as LyraTypingIndicator;
+    const el = (await fixture(html`<lr-typing-indicator shape="pulse"></lr-typing-indicator>`)) as LyraTypingIndicator;
     const pulse = el.shadowRoot!.querySelector('[part="pulse"]') as HTMLElement;
     expect(getComputedStyle(pulse).animationDuration).to.equal('1.8s');
   });
 
   it('cursor variant uses the ambient token', async () => {
-    const el = (await fixture(html`<lr-typing-indicator variant="cursor"></lr-typing-indicator>`)) as LyraTypingIndicator;
+    const el = (await fixture(html`<lr-typing-indicator shape="cursor"></lr-typing-indicator>`)) as LyraTypingIndicator;
     const cursor = el.shadowRoot!.querySelector('[part="cursor"]') as HTMLElement;
     expect(getComputedStyle(cursor).animationDuration).to.equal('1.8s');
   });
@@ -255,31 +279,31 @@ describe('ambient transition token', () => {
 
 describe('dedicated duration token', () => {
   it('defaults --lr-typing-duration through the --lr-transition-ambient alias to 1.8s (unset regression)', async () => {
-    const el = (await fixture(html`<lr-typing-indicator variant="dots"></lr-typing-indicator>`)) as LyraTypingIndicator;
+    const el = (await fixture(html`<lr-typing-indicator shape="dots"></lr-typing-indicator>`)) as LyraTypingIndicator;
     const dots = el.shadowRoot!.querySelectorAll('[part="dot"]');
     expect(getComputedStyle(dots[0]).animationDuration).to.equal('1.8s');
   });
 
   it('honors a --lr-typing-duration override on the host for every variant', async () => {
     const dots = (await fixture(
-      html`<lr-typing-indicator variant="dots" style="--lr-typing-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
+      html`<lr-typing-indicator shape="dots" style="--lr-typing-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
     )) as LyraTypingIndicator;
     expect(getComputedStyle(dots.shadowRoot!.querySelector('[part="dot"]')!).animationDuration).to.equal('0.9s');
 
     const pulse = (await fixture(
-      html`<lr-typing-indicator variant="pulse" style="--lr-typing-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
+      html`<lr-typing-indicator shape="pulse" style="--lr-typing-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
     )) as LyraTypingIndicator;
     expect(getComputedStyle(pulse.shadowRoot!.querySelector('[part="pulse"]')!).animationDuration).to.equal('0.9s');
 
     const cursor = (await fixture(
-      html`<lr-typing-indicator variant="cursor" style="--lr-typing-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
+      html`<lr-typing-indicator shape="cursor" style="--lr-typing-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
     )) as LyraTypingIndicator;
     expect(getComputedStyle(cursor.shadowRoot!.querySelector('[part="cursor"]')!).animationDuration).to.equal('0.9s');
   });
 
   it('still honors a --lr-transition-ambient override on the host (the alias source, not severed)', async () => {
     const el = (await fixture(
-      html`<lr-typing-indicator variant="dots" style="--lr-transition-ambient: 3s ease-in-out;"></lr-typing-indicator>`,
+      html`<lr-typing-indicator shape="dots" style="--lr-transition-ambient: 3s ease-in-out;"></lr-typing-indicator>`,
     )) as LyraTypingIndicator;
     const dot = el.shadowRoot!.querySelector('[part="dot"]') as HTMLElement;
     expect(getComputedStyle(dot).animationDuration).to.equal('3s');
@@ -290,7 +314,7 @@ describe('dedicated duration token', () => {
     try {
       const el = (await fixture(
         html`<lr-typing-indicator
-          variant="dots"
+          shape="dots"
           style="--lr-typing-duration: 0.9s ease-in-out;"
         ></lr-typing-indicator>`,
       )) as LyraTypingIndicator;
@@ -309,7 +333,7 @@ describe('dedicated duration token', () => {
 
 describe('themeable stagger delays', () => {
   it('defaults dot stagger delays to 600ms/1200ms', async () => {
-    const el = (await fixture(html`<lr-typing-indicator variant="dots"></lr-typing-indicator>`)) as LyraTypingIndicator;
+    const el = (await fixture(html`<lr-typing-indicator shape="dots"></lr-typing-indicator>`)) as LyraTypingIndicator;
     const dots = el.shadowRoot!.querySelectorAll('[part="dot"]');
     expect(getComputedStyle(dots[1]).animationDelay).to.equal('0.6s');
     expect(getComputedStyle(dots[2]).animationDelay).to.equal('1.2s');
@@ -318,7 +342,7 @@ describe('themeable stagger delays', () => {
   it('honors --lr-typing-dot-stagger-1/-2 overrides', async () => {
     const el = (await fixture(
       html`<lr-typing-indicator
-        variant="dots"
+        shape="dots"
         style="--lr-typing-dot-stagger-1: 300ms; --lr-typing-dot-stagger-2: 600ms;"
       ></lr-typing-indicator>`,
     )) as LyraTypingIndicator;

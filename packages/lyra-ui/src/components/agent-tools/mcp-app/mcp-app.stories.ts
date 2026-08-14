@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './mcp-app.js';
+import type { LyraMcpApp, McpAppToolCallDetail } from './mcp-app.class.js';
 
 const meta: Meta = {
   title: 'MCP App',
@@ -52,5 +53,49 @@ export const Narrow320: Story = {
         }}
       ></lr-mcp-app>
     </div>
+  `,
+};
+
+export const CorrelatedToolReply: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Replies include the requesting frame generation, so replacing or reconnecting the app cannot deliver stale tool output into a different document.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-mcp-app
+      style="display: block; max-width: 48rem;"
+      @lr-mcp-tool-call=${(event: CustomEvent<McpAppToolCallDetail>) => {
+        const host = event.currentTarget as LyraMcpApp;
+        if (!event.detail.requestId) return;
+        host.postToolResult(event.detail.requestId, {
+          frameGeneration: event.detail.frameGeneration,
+          result: { temperature: 21, unit: 'celsius' },
+        });
+      }}
+      .resource=${{
+        uri: 'ui://weather/correlated-tool-reply',
+        html: `<!doctype html><html><body>
+          <p id="status">Requesting the current weather…</p>
+          <script>
+            addEventListener('message', (event) => {
+              if (event.data?.type !== 'tool-result') return;
+              document.querySelector('#status').textContent =
+                'Weather result received for this frame generation.';
+            });
+            parent.postMessage({
+              channel: 'lyra-mcp-app',
+              version: 1,
+              type: 'tool-call',
+              requestId: 'weather-story',
+              name: 'get_weather',
+              args: { city: 'Luxembourg' }
+            }, '*');
+          </script>
+        </body></html>`,
+      }}
+    ></lr-mcp-app>
   `,
 };

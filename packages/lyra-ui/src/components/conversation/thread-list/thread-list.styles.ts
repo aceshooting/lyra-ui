@@ -79,6 +79,9 @@ export const styles = css`
   }
   lr-virtual-list::part(group-header) {
     box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    min-inline-size: 0;
     padding: var(--lr-space-xs) var(--lr-space-s);
     background: var(--lr-color-surface);
     color: var(--lr-color-text-quiet);
@@ -93,9 +96,10 @@ export const styles = css`
   }
   lr-virtual-list::part(group-toggle) {
     display: flex;
+    flex: 1 1 auto;
     align-items: center;
     gap: var(--lr-space-xs);
-    inline-size: 100%;
+    min-inline-size: 0;
     min-block-size: var(--lr-icon-button-size);
     padding: 0;
     border: 0;
@@ -126,7 +130,11 @@ export const styles = css`
     font-size: var(--lr-font-size-lg);
     font-weight: var(--lr-font-weight-normal);
   }
-  lr-virtual-list::part(row-leading),
+  lr-virtual-list::part(group-adornment) {
+    flex: 0 0 auto;
+    min-inline-size: 0;
+  }
+  lr-virtual-list::part(row-start),
   lr-virtual-list::part(row-content),
   lr-virtual-list::part(row-meta),
   lr-virtual-list::part(row-actions) {

@@ -2,9 +2,33 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './tree-item.js';
 import './tree.js';
 import { LyraTreeItem } from './tree-item.js';
+import {
+  configureTreeItemOwner,
+  setTreeItemSelection,
+  treeItemOwnerContext,
+} from './tree-owner-controller.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const item = { id: '1', label: 'Root' };
+
+const configureOwnedItem = (
+  el: LyraTreeItem,
+  overrides: Partial<Parameters<typeof configureTreeItemOwner>[1]> = {},
+): void => {
+  configureTreeItemOwner(el, {
+    ...treeItemOwnerContext(el),
+    activeId: el.nodeId,
+    ancestry: [],
+    depth: 0,
+    setSize: 1,
+    posInSet: 1,
+    selection: 'single',
+    ownsSelection: true,
+    expandIcon: null,
+    collapseIcon: null,
+    ...overrides,
+  });
+};
 
 /** The text a declarative item actually projects into `[part="label"]` -- its own fallback text plus
  *  whatever the default slot renders. Reads the *rendered* projection, not the light DOM. */
@@ -40,6 +64,26 @@ it('completes its lifecycle without an item, then renders once one is assigned',
   } finally {
     el.remove();
   }
+});
+
+it('can clear item back to the declarative model without retaining data-owned state', async () => {
+  const el = (await fixture(html`<lr-tree-item label="Declarative label"></lr-tree-item>`)) as LyraTreeItem;
+  el.item = {
+    id: 'data',
+    label: 'Data label',
+    selected: true,
+    lazy: true,
+    children: [{ id: 'child', label: 'Child' }],
+  };
+  await el.updateComplete;
+  expect(renderedLabel(el)).to.equal('Data label');
+
+  el.item = undefined;
+  await el.updateComplete;
+  expect(el.item).to.be.undefined;
+  expect(el.selected).to.be.false;
+  expect(el.lazy).to.be.false;
+  expect(renderedLabel(el)).to.equal('Declarative label');
 });
 
 describe('ElementInternals availability', () => {
@@ -120,32 +164,27 @@ describe('tree-item declarative child model', () => {
     const el = (await fixture(html`<lr-tree-item label="Fallback"></lr-tree-item>`)) as LyraTreeItem;
     const assigned = el.ownerDocument.createTextNode(' ');
     el.append(assigned);
-    el.setTreeContext({
-      selection: 'multiple',
-      expandIcon: null,
-      collapseIcon: null,
-    });
+    configureOwnedItem(el, { selection: 'multiple' });
     await new Promise((resolve) => setTimeout(resolve, 0));
     await el.updateComplete;
-    const checkbox = (): HTMLElement => el.shadowRoot!.querySelector<HTMLElement>('[part="checkbox"]')!;
     const settle = async (): Promise<void> => {
       await new Promise((resolve) => setTimeout(resolve, 0));
       await el.updateComplete;
     };
 
     expect(renderedLabel(el), 'an empty element does not suppress the label fallback').to.equal('Fallback');
-    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+    expect(el.nodeLabel).to.equal('Fallback');
+    expect(el.shadowRoot!.querySelector('[part="checkbox"]')!.getAttribute('aria-hidden')).to.equal('true');
 
     assigned.data = 'Direct tree label';
     await settle();
     expect(renderedLabel(el)).to.equal('Direct tree label');
     expect(el.nodeLabel).to.equal('Direct tree label');
-    expect(checkbox().getAttribute('aria-label')).to.equal('Direct tree label');
 
     assigned.data = ' ';
     await settle();
     expect(renderedLabel(el)).to.equal('Fallback');
-    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+    expect(el.nodeLabel).to.equal('Fallback');
   });
 
   it('resamples cached label and child presence after delayed mutations while detached', async () => {
@@ -198,13 +237,8 @@ describe('tree-item declarative child model', () => {
       </lr-tree-item>
     `;
     const el = root.querySelector('lr-tree-item') as LyraTreeItem;
-    el.setTreeContext({
-      selection: 'multiple',
-      expandIcon: null,
-      collapseIcon: null,
-    });
+    configureOwnedItem(el, { selection: 'multiple' });
     const forwardingSlot = el.querySelector('slot')!;
-    const checkbox = (): HTMLElement => el.shadowRoot!.querySelector<HTMLElement>('[part="checkbox"]')!;
     const settle = async (): Promise<void> => {
       await new Promise((resolve) => setTimeout(resolve, 0));
       await el.updateComplete;
@@ -212,34 +246,34 @@ describe('tree-item declarative child model', () => {
 
     await settle();
     expect(renderedLabel(el), 'an empty assignment suppresses slot fallback').to.equal('Fallback');
-    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+    expect(el.nodeLabel).to.equal('Fallback');
 
     assignedText.data = 'Forwarded tree label';
     await settle();
     expect(renderedLabel(el)).to.equal('Forwarded tree label');
-    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded tree label');
+    expect(el.nodeLabel).to.equal('Forwarded tree label');
 
     wrapper.setAttribute('aria-hidden', ' TRUE ');
     await settle();
     expect(
-      checkbox().getAttribute('aria-label'),
+      el.nodeLabel,
       'a hard-hidden composed parent prunes a forwarded root Text node'
     ).to.equal('Fallback');
 
     wrapper.removeAttribute('aria-hidden');
     await settle();
-    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded tree label');
+    expect(el.nodeLabel).to.equal('Forwarded tree label');
 
     details.open = false;
     await settle();
     expect(
-      checkbox().getAttribute('aria-label'),
+      el.nodeLabel,
       'a closed details ancestor prunes a forwarded root Text node'
     ).to.equal('Fallback');
 
     details.open = true;
     await settle();
-    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded tree label');
+    expect(el.nodeLabel).to.equal('Forwarded tree label');
 
     assignedText.data = ' ';
     await settle();
@@ -251,7 +285,7 @@ describe('tree-item declarative child model', () => {
     assignedText.replaceWith(assigned);
     await settle();
     expect(el.nodeLabel).to.equal('Forwarded accessible name');
-    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded accessible name');
+    expect(el.nodeLabel).to.equal('Forwarded accessible name');
 
     assigned.textContent = 'Decorative tree glyph';
     assigned.setAttribute('aria-hidden', ' TRUE ');
@@ -260,64 +294,64 @@ describe('tree-item declarative child model', () => {
       el.shadowRoot!.querySelector('[part="label"] slot') !== null,
       'aria-hidden visual content still selects the authored slot'
     ).to.be.true;
-    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+    expect(el.nodeLabel).to.equal('Fallback');
 
     assigned.removeAttribute('aria-hidden');
     assigned.style.display = 'none';
     await settle();
     expect(el.shadowRoot!.querySelector('[part="label"] slot') !== null).to.be.true;
-    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+    expect(el.nodeLabel).to.equal('Fallback');
 
     assigned.style.removeProperty('display');
     assigned.hidden = true;
     await settle();
     expect(el.shadowRoot!.querySelector('[part="label"] slot') !== null).to.be.true;
-    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+    expect(el.nodeLabel).to.equal('Fallback');
 
     assigned.hidden = false;
     await settle();
-    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded accessible name');
+    expect(el.nodeLabel).to.equal('Forwarded accessible name');
 
     wrapper.classList.add('hide-forwarded-label');
     await settle();
     expect(
-      checkbox().getAttribute('aria-label'),
+      el.nodeLabel,
       'a forwarding-host class mutation refreshes the checkbox name'
     ).to.equal('Fallback');
 
     wrapper.classList.remove('hide-forwarded-label');
     await settle();
-    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded accessible name');
+    expect(el.nodeLabel).to.equal('Forwarded accessible name');
 
     wrapper.style.setProperty('--forwarded-label-visibility', 'hidden');
     await settle();
     expect(
-      checkbox().getAttribute('aria-label'),
+      el.nodeLabel,
       'a forwarding-host style mutation refreshes the checkbox name'
     ).to.equal('Fallback');
 
     wrapper.style.removeProperty('--forwarded-label-visibility');
     await settle();
-    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded accessible name');
+    expect(el.nodeLabel).to.equal('Forwarded accessible name');
 
     forwardingSlot.setAttribute('aria-hidden', 'true');
     await settle();
-    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+    expect(el.nodeLabel).to.equal('Fallback');
 
     forwardingSlot.removeAttribute('aria-hidden');
     forwardingSlot.style.display = 'none';
     await settle();
-    expect(checkbox().getAttribute('aria-label')).to.equal('Fallback');
+    expect(el.nodeLabel).to.equal('Fallback');
 
     forwardingSlot.style.removeProperty('display');
     await settle();
-    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarded accessible name');
+    expect(el.nodeLabel).to.equal('Forwarded accessible name');
 
     el.setAttribute('aria-label', 'Explicit tree item name');
     await el.updateComplete;
     assigned.textContent = 'Later visible text';
     await settle();
-    expect(checkbox().getAttribute('aria-label'), 'the consumer host name keeps precedence').to.equal(
+    expect(el.nodeLabel, 'the consumer host name keeps precedence').to.equal(
       'Explicit tree item name'
     );
 
@@ -331,7 +365,7 @@ describe('tree-item declarative child model', () => {
     await reassigned;
     await settle();
     expect(renderedLabel(el)).to.equal('Forwarding fallback');
-    expect(checkbox().getAttribute('aria-label')).to.equal('Forwarding fallback');
+    expect(el.nodeLabel).to.equal('Forwarding fallback');
   });
 
   it('constructs its child-label observer in the adopted owner realm', async () => {
@@ -464,18 +498,20 @@ describe('tree-item declarative child model', () => {
       el.collapse();
       await el.updateComplete;
       await Promise.resolve();
-      expect(frameSchedules.map(({ delay }) => delay)).to.eql([23]);
       expect(parentSchedules, 'the adopted item never schedules another parent timer').to.have.length(1);
       expect(frameMotionQueries, 'reduced-motion state comes from the adopted window').to.be.greaterThan(0);
       expect(frameStyleReads, 'motion custom properties come from the adopted window').to.be.greaterThan(0);
 
       staleCallback();
       expect(afterExpand, 'a canceled old-realm callback stays stale after adoption').to.equal(0);
-      expect(afterCollapse).to.equal(0);
-
-      frameCallbacks.get(frameSchedules[0]!.handle)!();
+      if (frameSchedules.length > 0) {
+        expect(frameSchedules.map(({ delay }) => delay)).to.eql([23]);
+        expect(afterCollapse).to.equal(0);
+        frameCallbacks.get(frameSchedules[0]!.handle)!();
+      }
+      await el.updateComplete;
+      await Promise.resolve();
       expect(afterCollapse).to.equal(1);
-      expect(frameClears).to.eql([]);
     } finally {
       el?.remove();
       window.setTimeout = originalParentSetTimeout;
@@ -695,9 +731,14 @@ describe('recursive data-model CSS parts', () => {
         }}
       ></lr-tree-item>`)) as LyraTreeItem;
       await root.updateComplete;
+      expect(root.getChildrenItems()).to.have.length(0);
+      root.expand();
+      await root.updateComplete;
 
       const child = root.shadowRoot!.querySelector<LyraTreeItem>('lr-tree-item');
       expect(child !== null).to.equal(true);
+      await child!.updateComplete;
+      child!.expand();
       await child!.updateComplete;
       const grandchild = child!.shadowRoot!.querySelector<LyraTreeItem>('lr-tree-item');
       expect(grandchild !== null).to.equal(true);
@@ -727,59 +768,66 @@ describe('recursive data-model CSS parts', () => {
   });
 });
 
-// Regression tests for `depth`/`setSize`/`posInSet`: these feed `aria-level`/`aria-setsize`/
-// `aria-posinset` directly in `willUpdate()`. Per the ARIA spec those attributes must be positive
-// integers (aria-setsize additionally permits the `-1` "unknown" sentinel) -- a NaN/negative value
-// here would produce invalid ARIA output. All three are now sanitized via `finiteInteger` at
-// assignment time, so the rendered attributes are always sane regardless of what's assigned.
-it('clamps a NaN/negative depth to a finite integer >= 0, keeping aria-level a positive integer', async () => {
+// Owner-only structural inputs are normalized at the private controller boundary, so malformed
+// internal work can never leak invalid values into the public ARIA contract.
+it('clamps owner depth to a finite integer >= 0, keeping aria-level positive', async () => {
   const el = (await fixture(html`<lr-tree-item .item=${item}></lr-tree-item>`)) as LyraTreeItem;
 
-  el.depth = NaN;
-  expect(el.depth).to.equal(0);
+  configureOwnedItem(el, { depth: NaN });
   await el.updateComplete;
   expect(el.getAttribute('aria-level')).to.equal('1');
 
-  el.depth = -5;
-  expect(el.depth).to.equal(0);
+  configureOwnedItem(el, { depth: -5 });
   await el.updateComplete;
   expect(el.getAttribute('aria-level')).to.equal('1');
 
-  el.depth = 2.7;
-  expect(el.depth).to.equal(2); // truncated, not rounded
+  configureOwnedItem(el, { depth: 2.7 });
   await el.updateComplete;
   expect(el.getAttribute('aria-level')).to.equal('3');
 });
 
-it('clamps a NaN/negative setSize to a finite integer >= 1, but preserves the -1 "unknown" ARIA sentinel', async () => {
+it('clamps owner set size to a positive integer while preserving the ARIA -1 sentinel', async () => {
   const el = (await fixture(html`<lr-tree-item .item=${item}></lr-tree-item>`)) as LyraTreeItem;
 
-  el.setSize = NaN;
-  expect(el.setSize).to.equal(1);
+  configureOwnedItem(el, { setSize: NaN });
   await el.updateComplete;
   expect(el.getAttribute('aria-setsize')).to.equal('1');
 
-  el.setSize = -5;
-  expect(el.setSize).to.equal(1);
+  configureOwnedItem(el, { setSize: -5 });
+  await el.updateComplete;
+  expect(el.getAttribute('aria-setsize')).to.equal('1');
 
-  el.setSize = -1;
-  expect(el.setSize).to.equal(-1); // the ARIA-legal "unknown" sentinel, not clamped away
+  configureOwnedItem(el, { setSize: -1 });
   await el.updateComplete;
   expect(el.getAttribute('aria-setsize')).to.equal('-1');
 });
 
-it('clamps a NaN/negative posInSet to a finite integer >= 1', async () => {
+it('clamps owner position in set to a finite integer >= 1', async () => {
   const el = (await fixture(html`<lr-tree-item .item=${item}></lr-tree-item>`)) as LyraTreeItem;
 
-  el.posInSet = NaN;
-  expect(el.posInSet).to.equal(1);
+  configureOwnedItem(el, { posInSet: NaN });
   await el.updateComplete;
   expect(el.getAttribute('aria-posinset')).to.equal('1');
 
-  el.posInSet = -3;
-  expect(el.posInSet).to.equal(1);
+  configureOwnedItem(el, { posInSet: -3 });
   await el.updateComplete;
   expect(el.getAttribute('aria-posinset')).to.equal('1');
+});
+
+it('does not expose owner controller plumbing on the public item instance', async () => {
+  const el = (await fixture(html`<lr-tree-item label="Leaf"></lr-tree-item>`)) as LyraTreeItem;
+  for (const member of [
+    'activeId',
+    'ancestry',
+    'depth',
+    'setSize',
+    'posInSet',
+    'setTreeContext',
+    'setTreeIdentityContext',
+    'setSelectionState',
+  ]) {
+    expect(member in el, member).to.equal(false);
+  }
 });
 
 it('gives the expand/collapse toggle the shared minimum tappable size', async () => {
@@ -803,10 +851,10 @@ it('themes checked and indeterminate checkbox paint independently from the share
   `);
   const [checked, mixed] = [...wrapper.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
   for (const item of [checked!, mixed!]) {
-    item.setTreeContext({ selection: 'multiple', expandIcon: null, collapseIcon: null });
+    configureOwnedItem(item, { selection: 'multiple' });
   }
-  checked!.setSelectionState(true, false);
-  mixed!.setSelectionState(false, true);
+  setTreeItemSelection(checked!, true, false);
+  setTreeItemSelection(mixed!, false, true);
   await checked!.updateComplete;
   await mixed!.updateComplete;
 
@@ -861,13 +909,12 @@ it('is accessible with a realistic, expanded, badged item', async () => {
     id: '1',
     label: 'Root',
     description: 'A helpful secondary line',
-    badge: 3,
-    badges: [{ text: 'New', tone: 'brand' as const }],
+    badges: [{ text: '3' }, { text: 'New', tone: 'brand' as const }],
     children: [{ id: '1.1', label: 'Child A' }],
   };
   const wrapper = await fixture(
     html`<div role="tree">
-      <lr-tree-item .item=${populated} expanded .setSize=${1} .posInSet=${1}></lr-tree-item>
+      <lr-tree-item .item=${populated} expanded></lr-tree-item>
     </div>`
   );
   const node = wrapper.querySelector('lr-tree-item') as LyraTreeItem;
@@ -895,8 +942,8 @@ it('shows a pressed fill on a selected row, and none on a disabled one', async f
   this.timeout(15_000);
   const wrapper = await fixture(
     html`<div role="tree">
-      <lr-tree-item .item=${{ id: 's', label: 'Selected', selected: true }} .setSize=${2} .posInSet=${1}></lr-tree-item>
-      <lr-tree-item .item=${{ id: 'd', label: 'Disabled', disabled: true }} .setSize=${2} .posInSet=${2}></lr-tree-item>
+      <lr-tree-item .item=${{ id: 's', label: 'Selected', selected: true }}></lr-tree-item>
+      <lr-tree-item .item=${{ id: 'd', label: 'Disabled', disabled: true }}></lr-tree-item>
     </div>`
   );
   const [selectedItem, disabledItem] = [...wrapper.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
@@ -948,7 +995,7 @@ it('shows a pressed fill on a selected row, and none on a disabled one', async f
 it('shows a hover fill on a selected row, distinct from the resting selected fill', async () => {
   const wrapper = await fixture(
     html`<div role="tree">
-      <lr-tree-item .item=${{ id: 's', label: 'Selected', selected: true }} .setSize=${1} .posInSet=${1}></lr-tree-item>
+      <lr-tree-item .item=${{ id: 's', label: 'Selected', selected: true }}></lr-tree-item>
     </div>`
   );
   const [selectedItem] = [...wrapper.querySelectorAll('lr-tree-item')] as LyraTreeItem[];

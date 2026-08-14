@@ -23,6 +23,12 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import {
+  isAccessibilitySubtreeExcluded,
+  isAriaTrue,
+} from '../../../internal/accessibility-visibility.js';
+import { composedParentElement } from '../../../internal/active-element.js';
+import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings.generated.js';
@@ -101,6 +107,10 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  /** Public WA-compatible intrinsic validator catalog. */
+  static get validators(): LyraFormValidator<LyraRadioGroup>[] {
+    return [currentValidityValidator('required', 'disabled', 'value')];
+  }
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, groupStyles];
   static override properties = {
@@ -123,7 +133,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
    * tier — `2xs`/`xs`/`s`/`m`/`l`/`xl` and Web Awesome's `small`/`medium`/`large` — so migrating
    * either way is a tag rename. Scales the group's label type size and the gaps around and between
    * its options off the same `--lr-form-control-*` values the controls themselves use, and
-   * propagates the selected tier to all owned plain/button options.
+   * projects the effective tier to owned options without rewriting their authored `size` state.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
   /** Arrow-key axis and option layout. Left/right are mirrored under RTL in horizontal mode. */
@@ -149,11 +159,12 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   private readonly hintId = nextId('radio-group-hint');
   private readonly errorId = nextId('radio-group-error');
   private managedRadios = new Set<LyraRadio>();
-  private authorNames = new Map<LyraRadio, string>();
   private syncingRadios = false;
   private membershipObserver?: MutationObserver;
   private membershipObserverDocument?: Document;
   private membershipObserverGeneration = 0;
+  private runResizeObserver?: ResizeObserver;
+  private runProjectionFrame?: number;
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
   private _name = '';
@@ -291,6 +302,70 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     this.syncSupportSlots();
     this.syncRadios();
     this.armMembershipObserver();
+    this.armRunResizeObserver();
+    this.scheduleRunProjection();
+  }
+
+  private armRunResizeObserver(): void {
+    this.runResizeObserver?.disconnect();
+    const ResizeObserverCtor = this.ownerDocument.defaultView?.ResizeObserver;
+    if (!ResizeObserverCtor || !this.isConnected) return;
+    this.runResizeObserver = new ResizeObserverCtor(() => this.scheduleRunProjection());
+    this.runResizeObserver.observe(this);
+    for (const radio of this.radios()) this.runResizeObserver.observe(radio);
+  }
+
+  private scheduleRunProjection(): void {
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (!ownerWindow || !this.isConnected || this.runProjectionFrame !== undefined) return;
+    this.runProjectionFrame = ownerWindow.requestAnimationFrame(() => {
+      this.runProjectionFrame = undefined;
+      if (this.isConnected) this.projectButtonRuns();
+    });
+  }
+
+  private isButtonRadio(radio: LyraRadio): boolean {
+    return radio.localName === tag('radio-button') || radio.appearance === 'button';
+  }
+
+  private areActuallyAdjacent(first: LyraRadio, second: LyraRadio): boolean {
+    const firstRect = first.getBoundingClientRect();
+    const secondRect = second.getBoundingClientRect();
+    if (firstRect.width <= 0 || firstRect.height <= 0 || secondRect.width <= 0 || secondRect.height <= 0) {
+      return false;
+    }
+    // A new flex line is not a continuation even if its inline edges happen to align. Allow a
+    // sub-pixel tolerance for zoom and engine rounding, and the one collapsed border already
+    // projected on a subsequent ResizeObserver pass.
+    const sameRow = Math.abs(firstRect.top - secondRect.top) <= 1 &&
+      Math.abs(firstRect.bottom - secondRect.bottom) <= 1;
+    if (!sameRow) return false;
+    const direction = getComputedStyle(this).direction;
+    const gap = direction === 'rtl'
+      ? firstRect.left - secondRect.right
+      : secondRect.left - firstRect.right;
+    return gap >= -2 && gap <= 1;
+  }
+
+  private projectButtonRuns(): void {
+    const radios = this.radios();
+    const joinsPrevious = radios.map(() => false);
+    if (this.orientation === 'horizontal') {
+      for (let index = 1; index < radios.length; index += 1) {
+        const previous = radios[index - 1]!;
+        const current = radios[index]!;
+        joinsPrevious[index] = this.isButtonRadio(previous) && this.isButtonRadio(current) &&
+          this.areActuallyAdjacent(previous, current);
+      }
+    }
+    for (let index = 0; index < radios.length; index += 1) {
+      const joinsBefore = joinsPrevious[index] ?? false;
+      const joinsAfter = joinsPrevious[index + 1] ?? false;
+      const position = joinsBefore
+        ? joinsAfter ? 'middle' : 'end'
+        : joinsAfter ? 'start' : 'standalone';
+      radios[index]!.setButtonRunPosition(position);
+    }
   }
 
   private armMembershipObserver(): void {
@@ -331,17 +406,38 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
       attributes: true,
       childList: true,
       subtree: true,
-      attributeFilter: ['slot', 'checked', 'disabled', 'value', 'size'],
+      attributeFilter: [
+        'slot',
+        'checked',
+        'disabled',
+        'value',
+        'size',
+        'appearance',
+        'hidden',
+        'inert',
+        'aria-hidden',
+        'aria-disabled',
+        'class',
+        'style',
+      ],
     });
   }
   override disconnectedCallback(): void {
     this.resetMembershipObserver();
+    this.runResizeObserver?.disconnect();
+    this.runResizeObserver = undefined;
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (ownerWindow && this.runProjectionFrame !== undefined) {
+      ownerWindow.cancelAnimationFrame(this.runProjectionFrame);
+    }
+    this.runProjectionFrame = undefined;
     this.releaseRadios(this.managedRadios);
     this.managedRadios.clear();
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.resetMembershipObserver();
   }
 
@@ -367,12 +463,12 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   }
 
   private syncSupportSlots(): void {
-    this.hasLabelSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'label');
-    this.hasHintSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'hint');
-    this.hasHelpTextSlot = Array.from(this.children).some(
+    this.hasLabelSlot = Array.from(this.children ?? []).some((element) => element.getAttribute('slot') === 'label');
+    this.hasHintSlot = Array.from(this.children ?? []).some((element) => element.getAttribute('slot') === 'hint');
+    this.hasHelpTextSlot = Array.from(this.children ?? []).some(
       (element) => element.getAttribute('slot') === 'help-text',
     );
-    this.hasErrorSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'error');
+    this.hasErrorSlot = Array.from(this.children ?? []).some((element) => element.getAttribute('slot') === 'error');
   }
 
   private radioGroupOwner(element: Element): Element | null {
@@ -403,6 +499,20 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     return [...querySelectorAll.call(this, RADIO_TAGS().join(','))].filter(
       (radio) => this.ownsRadio(radio) && typeof (radio as Partial<LyraRadio>).setGroupOwner === 'function',
     ) as LyraRadio[];
+  }
+
+  private isRadioAvailable(radio: LyraRadio): boolean {
+    if (radio.effectiveDisabled || radio.matches(':disabled')) return false;
+    for (let current: Element | null = radio; current; current = composedParentElement(current)) {
+      if (
+        isAccessibilitySubtreeExcluded(current) ||
+        isAriaTrue(current.getAttribute('aria-disabled'))
+      ) {
+        return false;
+      }
+      if (current === this) break;
+    }
+    return true;
   }
 
   private selectValue(next: string): void {
@@ -437,13 +547,11 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
       this.releaseRadios([...this.managedRadios].filter((radio) => !current.has(radio)));
       for (const radio of radios) {
         radio.setGroupOwner(this);
-        if (!this.managedRadios.has(radio)) {
-          this.authorNames.set(radio, radio.name);
-        }
       }
       this.managedRadios = current;
+      this.armRunResizeObserver();
       for (const radio of radios) radio.setGroupDisabled(this.effectiveDisabled);
-      const enabled = radios.filter((radio) => !radio.effectiveDisabled);
+      const enabled = radios.filter((radio) => this.isRadioAvailable(radio));
       let checked = radios.filter((radio) => radio.checked);
       let checkedRadio: LyraRadio | undefined;
       if (this.pendingSelection !== undefined && radios.length > 0) {
@@ -459,12 +567,11 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
       for (const radio of checked) {
         if (radio !== checkedRadio) radio.checked = false;
       }
-      const tabbableRadio = checkedRadio && !checkedRadio.effectiveDisabled
+      const tabbableRadio = checkedRadio && this.isRadioAvailable(checkedRadio)
         ? checkedRadio
         : enabled[0];
       for (const radio of radios) {
-        radio.name = this.name || this.authorNames.get(radio) || '';
-        radio.size = this.size;
+        radio.setGroupSize(this.size);
         radio.setGroupRequired(this.required && !this.effectiveDisabled);
         radio.setGroupTabbable(radio === tabbableRadio);
       }
@@ -473,15 +580,15 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
       this.syncFormState();
       this.updateValidity();
       if (oldValue !== this._value) this.requestUpdate('value', oldValue);
+      this.scheduleRunProjection();
     } finally {
       this.syncingRadios = false;
     }
   }
   private releaseRadios(radios: Iterable<LyraRadio>): void {
     for (const radio of radios) {
-      const authorName = this.authorNames.get(radio) ?? radio.name;
-      this.authorNames.delete(radio);
-      radio.releaseGroupOwner(this, authorName);
+      radio.releaseGroupOwner(this);
+      radio.setButtonRunPosition('standalone');
     }
   }
   /** @internal Reconciles one radio's synchronous DOM reparenting before observer delivery. */
@@ -492,7 +599,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   }
   /** @internal Releases one radio before a previous group's observer sees its removal. */
   releaseRadio(radio: LyraRadio): void {
-    if (!this.managedRadios.has(radio) && !this.authorNames.has(radio)) return;
+    if (!this.managedRadios.has(radio)) return;
     this.releaseRadios([radio]);
     this.managedRadios.delete(radio);
     this.syncRadios();
@@ -505,7 +612,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   }
   /** @internal */
   selectRadio(radio: LyraRadio): boolean {
-    if (this.effectiveDisabled || radio.effectiveDisabled || !this.ownsRadio(radio)) return false;
+    if (this.effectiveDisabled || !this.ownsRadio(radio) || !this.isRadioAvailable(radio)) return false;
     this._valueDirty = true;
     this.hasInteracted = true;
     this.syncingRadios = true;
@@ -527,9 +634,9 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
       : ['ArrowDown', 'ArrowUp'];
     if (![...arrows, 'Home', 'End'].includes(event.key)) return;
     if (this.effectiveDisabled) return;
-    const radios = this.radios().filter((radio) => !radio.effectiveDisabled);
+    const radios = this.radios().filter((radio) => this.isRadioAvailable(radio));
     const current = event.target as LyraRadio;
-    if (current.effectiveDisabled) return;
+    if (!this.isRadioAvailable(current)) return;
     const index = radios.indexOf(current);
     if (index < 0 || radios.length === 0) return;
     event.preventDefault();
@@ -580,7 +687,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   /** Moves focus to the selected enabled option, or the first enabled option when empty. */
   override focus(options?: FocusOptions): void {
     if (this.effectiveDisabled || this.matches(':disabled')) return;
-    const enabled = this.radios().filter((radio) => !radio.effectiveDisabled);
+    const enabled = this.radios().filter((radio) => this.isRadioAvailable(radio));
     (enabled.find((radio) => radio.checked) ?? enabled[0])?.focus(options);
   }
 
@@ -593,7 +700,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
    *  radio collection rather than leaving `<lr-radio-group>` a no-op. */
   override click(): void {
     if (this.effectiveDisabled || this.matches(':disabled')) return;
-    const enabled = this.radios().filter((radio) => !radio.effectiveDisabled);
+    const enabled = this.radios().filter((radio) => this.isRadioAvailable(radio));
     (enabled.find((radio) => radio.checked) ?? enabled[0])?.click();
   }
 

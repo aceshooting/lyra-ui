@@ -38,9 +38,40 @@ export const Default: Story = {
   render: () => html`
     <button @click=${(event: Event) => {
       const lightbox = (event.currentTarget as HTMLElement).nextElementSibling as LyraLightbox;
-      lightbox.open = true;
+      void lightbox.show();
     }}>Open lightbox</button>
     <lr-lightbox .images=${images}></lr-lightbox>
+  `,
+};
+
+/** The promise-based `show()`/`hide()`/`close()` lifecycle matches the shared Lyra overlay
+ * phases. Cancel `lr-show`, `lr-hide`, or `lr-lightbox-close` to veto the corresponding request. */
+export const LifecycleMethods: Story = {
+  render: () => html`
+    <button @click=${(event: Event) => {
+      const lightbox = (event.currentTarget as HTMLElement).nextElementSibling as LyraLightbox;
+      void lightbox.show();
+    }}>Open through show()</button>
+    <lr-lightbox .images=${images}></lr-lightbox>
+  `,
+};
+
+/** The embedded pan/zoom surface forwards collision-resistant frame-part aliases while its
+ * focused viewport keeps Arrow/Home/End scroll ownership instead of changing gallery items. */
+export const ForwardedFrameParts: Story = {
+  render: (_args, context) => html`
+    <style>
+      lr-lightbox.forwarded-frame-parts::part(frame-viewport) {
+        outline: var(--lr-border-width-thick) dashed var(--lr-color-brand);
+        outline-offset: calc(var(--lr-border-width-thick) * -1);
+      }
+    </style>
+    <lr-lightbox
+      class="forwarded-frame-parts"
+      .images=${images}
+      .open=${context.viewMode !== 'docs'}
+      style="position: static; inset: auto; display: flex; inline-size: 32rem; block-size: 24rem;"
+    ></lr-lightbox>
   `,
 };
 

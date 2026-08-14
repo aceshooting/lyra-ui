@@ -188,7 +188,20 @@ export const styles = css`
     position: fixed;
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
-    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-24rem));
+    min-inline-size: 0;
+    max-inline-size: min(
+      var(--lr-popover-viewport-clamp),
+      var(--lr-size-24rem),
+      var(--lr-positioner-available-inline-size, var(--lr-popover-viewport-clamp))
+    );
+    max-block-size: min(
+      var(--lr-size-20rem),
+      var(--lr-positioner-available-block-size, var(--lr-size-20rem))
+    );
+    overflow: auto;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
     padding: var(--lr-space-s) var(--lr-space-m);
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

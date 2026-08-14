@@ -99,9 +99,13 @@ export const styles = css`
   }
   [part='icon'] {
     display: inline-flex;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    max-inline-size: var(--lr-icon-button-size);
+    overflow: hidden;
     color: var(--lr-toast-accent-color);
   }
+  [part='icon'] ::slotted(*) { max-inline-size: 100%; }
   [part='content'] {
     flex: 1 1 auto;
     min-inline-size: 0;

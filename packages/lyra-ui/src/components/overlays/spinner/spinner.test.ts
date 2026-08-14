@@ -303,6 +303,28 @@ it('constructs its label observer in the adopted owner realm', async () => {
   }
 });
 
+it('arms accessible-text observation only while a visible label can name the spinner', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+  const NativeMutationObserver = window.MutationObserver;
+  let labelObservations = 0;
+  class TrackingMutationObserver extends NativeMutationObserver {
+    override observe(target: Node, options?: MutationObserverInit): void {
+      if ((target as Element).localName === 'lr-spinner' && options?.characterData) labelObservations += 1;
+      super.observe(target, options);
+    }
+  }
+  Object.defineProperty(window, 'MutationObserver', { configurable: true, value: TrackingMutationObserver });
+  try {
+    const el = (await fixture(html`<lr-spinner>Passive label</lr-spinner>`)) as LyraSpinner;
+    expect(labelObservations).to.equal(0);
+    el.labelPlacement = 'after';
+    await el.updateComplete;
+    expect(labelObservations).to.be.greaterThan(0);
+  } finally {
+    if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
+  }
+});
+
 it('refreshes the cached visible label after it changes while disconnected', async () => {
   const el = (await fixture(html`
     <lr-spinner label-placement="after">Loading files</lr-spinner>

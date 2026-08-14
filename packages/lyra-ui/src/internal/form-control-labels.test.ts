@@ -302,6 +302,58 @@ describe('external FACE label contract', () => {
     }
   });
 
+  it('targets root association refreshes by control id instead of broadcasting unrelated ids', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(ElementInternals.prototype, 'labels');
+    const nativeGet = descriptor?.get;
+    expect(typeof nativeGet).to.equal('function');
+    let labelReads = 0;
+    Object.defineProperty(ElementInternals.prototype, 'labels', {
+      ...descriptor,
+      configurable: true,
+      get(this: ElementInternals) {
+        labelReads++;
+        return nativeGet!.call(this) as NodeList;
+      },
+    });
+
+    const container = document.createElement('div');
+    const controls: TestControl[] = [];
+    for (let index = 0; index < 100; index++) {
+      const control = document.createElement(tag('input')) as TestControl;
+      control.id = `indexed-label-control-${index}`;
+      controls.push(control);
+      container.append(control);
+    }
+    document.body.append(container);
+    try {
+      await Promise.all(controls.map((control) => settle(control)));
+      labelReads = 0;
+
+      const unrelated = document.createElement('div');
+      unrelated.id = 'unrelated-association-id';
+      container.prepend(unrelated);
+      await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+      expect(labelReads, 'an unrelated id must refresh no form-associated control').to.equal(0);
+
+      const label = document.createElement('label');
+      label.htmlFor = controls[37]!.id;
+      label.textContent = 'Indexed target label';
+      labelReads = 0;
+      container.prepend(label);
+      await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+      await settle(controls[37]!);
+
+      expect(labelReads, 'one explicit target must not fan out to sibling controls').to.equal(1);
+      const semantic = composedElements(controls[37]!).find(
+        (element) => element !== controls[37] && element.tagName === 'INPUT',
+      );
+      expect(semantic?.getAttribute('aria-label') ?? null).to.equal(label.textContent);
+    } finally {
+      container.remove();
+      if (descriptor) Object.defineProperty(ElementInternals.prototype, 'labels', descriptor);
+    }
+  });
+
   it('withdraws a removed label and discovers its replacement without a control render', async () => {
     const testCase = FACE_CASES.find(({ name }) => name === 'input')!;
     const { container, control, label } = mountFace(testCase);

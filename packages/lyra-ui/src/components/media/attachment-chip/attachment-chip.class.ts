@@ -1,5 +1,5 @@
 import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
@@ -12,19 +12,19 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_attachmentPreviewFile, LYRA_DEFAULT_attachmentPreviewName, LYRA_DEFAULT_attachmentRetryWithContext, LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_attachmentUploadFailed, LYRA_DEFAULT_attachmentUploadingIndeterminate, LYRA_DEFAULT_attachmentUploadingProgress, LYRA_DEFAULT_attachmentUploadingWithContext, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_attachmentPreviewFile, LYRA_DEFAULT_attachmentPreviewName, LYRA_DEFAULT_attachmentRetryWithContext, LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_attachmentUploadFailed, LYRA_DEFAULT_attachmentUploadingIndeterminate, LYRA_DEFAULT_attachmentUploadingProgress, LYRA_DEFAULT_attachmentUploadingWithContext, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 export { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
 
-export type AttachmentChipStatus = 'pending' | 'uploading' | 'error' | 'done';
+export type LyraAttachmentUploadStatus = 'pending' | 'uploading' | 'error' | 'success';
 
-export interface AttachmentChipIdDetail {
-  id: string;
+export interface LyraAttachmentIdDetail {
+  attachmentId: string;
 }
 
-export interface AttachmentChipPreviewDetail extends AttachmentChipIdDetail {
+export interface LyraAttachmentPreviewRequestDetail extends LyraAttachmentIdDetail {
   name: string;
   mimeType: string;
   src: string;
@@ -55,11 +55,11 @@ function retryIcon(): SVGTemplateResult {
 }
 
 /** Visible (not just color-coded) text for every non-resting status --
- *  `'pending'`/`'done'` render nothing here, they're resting states.
+ *  `'pending'`/`'success'` render nothing here, they're resting states.
  *  The caller supplies already-localized complete messages so translated
  *  word order and punctuation are preserved here. */
 function statusText(
-  status: AttachmentChipStatus,
+  status: LyraAttachmentUploadStatus,
   uploadingText: string,
   uploadFailedLabel: string,
 ): string {
@@ -69,9 +69,9 @@ function statusText(
 }
 
 export interface LyraAttachmentChipEventMap {
-  'lr-remove': CustomEvent<AttachmentChipIdDetail>;
-  'lr-retry': CustomEvent<AttachmentChipIdDetail>;
-  'lr-preview': CustomEvent<AttachmentChipPreviewDetail>;
+  'lr-remove': CustomEvent<LyraAttachmentIdDetail>;
+  'lr-retry': CustomEvent<LyraAttachmentIdDetail>;
+  'lr-preview-request': CustomEvent<LyraAttachmentPreviewRequestDetail>;
 }
 /**
  * `<lr-attachment-chip>` — a compact chip representing one file queued for
@@ -93,13 +93,10 @@ export interface LyraAttachmentChipEventMap {
  * changes away from the object it was created for, and on disconnect — this
  * component never leaks a blob URL.
  *
- * Identifying *which* attachment a `lr-remove`/`lr-retry` event is about:
- * this deliberately reuses the platform's own `id`/`id` attribute (every
- * element already has one; there's no need to shadow it with a second,
- * differently-named Lit property, unlike e.g. `<lr-tool-call-chip>`'s
- * `call-id` which identifies a *call*, a concept distinct from the chip
- * element itself). Set `id="..."` when you have a stable server-side
- * attachment id. When `id` is left unset and `file` is set, a stable id is
+ * Identifying *which* attachment a `lr-remove`/`lr-retry`/`lr-preview-request` event is about:
+ * set `attachment-id="..."` when you have a stable server-side attachment identity. The platform
+ * `id` remains available exclusively for DOM identity and idrefs. When `attachmentId` is unset and
+ * `file` is set, a stable attachment identity is
  * derived from `` `${file.name}:${file.size}:${file.lastModified}` `` — stable
  * across re-renders of the *same* `File` object without requiring the
  * consumer to invent one. When neither is available, a generated internal id
@@ -114,16 +111,16 @@ export interface LyraAttachmentChipEventMap {
  * exposes no slots.
  *
  * @customElement lr-attachment-chip
- * @event lr-remove - The user activated the remove (×) button. `detail: { id }`. Only rendered while `removable`.
- * @event lr-retry - The user activated the retry button. `detail: { id }`. Only rendered while `status="error"`.
- * @event lr-preview - The user activated the preview button. `detail: { id, name, mimeType, src }`.
+ * @event lr-remove - The user activated the remove (×) button. `detail: { attachmentId }`. Only rendered while `removable`.
+ * @event lr-retry - The user activated the retry button. `detail: { attachmentId }`. Only rendered while `status="error"`.
+ * @event lr-preview-request - Cancelable request to preview the attachment. `detail: { attachmentId, name, mimeType, src }`. The chip never registers or owns a viewer/overlay; consumers compose the desired preview surface.
  * @csspart base - The chip's root container.
  * @csspart thumbnail - The leading image thumbnail / generic file glyph.
  * @csspart meta - Wrapper around the filename and the formatted file size.
  * @csspart name - The filename (ellipsis-truncated via CSS; the untruncated name is always available via the native `title` tooltip).
  * @csspart size - The human-readable formatted file size, from `bytes` (or the `file`'s own byte
  * count). Hidden when no size is known.
- * @csspart status-text - The visible text twin of the status accent color — carries the state in text, not just color. Empty/hidden for `pending`/`done`. Plain visible text, so it reads normally once a user reaches the chip; the interrupting announcement that a transition *into* `status="error"` makes (so a screen-reader user not already focused on the chip still hears an upload failure) goes through the shared light-DOM assertive region (`acquireAnnouncementSink()` in `internal/announcer.ts`) rather than a shadow `role="alert"`, which is not reliably announced. The ticking `'uploading'` readout deliberately announces nothing at all, the same way `<lr-generation-status>`'s per-second elapsed/token readout does — a live region re-announcing every progress tick would be noise, not information, while a one-shot failure is exactly the kind of infrequent, actionable transition a live region exists for.
+ * @csspart status-text - The visible text twin of the status accent color — carries uploading/error state in text. Empty/hidden for `pending`/`success`; forced-colors mode retains distinct border patterns for every state. Plain visible text, so it reads normally once a user reaches the chip; the interrupting announcement that a transition *into* `status="error"` makes goes through the shared light-DOM assertive region.
  * @csspart progress - The numeric upload progress bar (`role="progressbar"`), shown only while `status="uploading"` and `progress` is a meaningful (>0) number.
  * @csspart progress-fill - The filled portion of `progress`.
  * @csspart spinner - Decorative (`aria-hidden`) indeterminate upload spinner, shown instead of
@@ -136,7 +133,7 @@ export interface LyraAttachmentChipEventMap {
  * upload-spinner rotation. The ambient loop stops under reduced motion.
  * @cssprop [--lr-attachment-chip-accent=var(--lr-color-text-quiet)] - Accent color used for the
  * status text, spinner, and progress fill. Auto-swapped per `status`
- * (`uploading`/`error`/`done`); the default is the neutral `pending` tone.
+ * (`uploading`/`error`/`success`); the default is the neutral `pending` tone.
  * @cssprop [--lr-attachment-chip-bg=var(--lr-color-surface)] - Chip background, auto-swapped per
  * `status` to that status's `-quiet` tint.
  * @cssprop [--lr-attachment-chip-border=var(--lr-color-border)] - Chip border color. Every
@@ -171,8 +168,12 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
     fileSizeUnitMb: LYRA_DEFAULT_fileSizeUnitMb,
     fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -188,9 +189,24 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
   /** File size as a raw byte count, used only while `file` is unset. Named for what it holds
    *  rather than `size`, which everywhere else in this library names a size *tier*
-   *  (`small`/`medium`/`large`, `xs`...`xl`). NaN/negative normalize to `0` (renders as "unknown
-   *  size", same as an unset byte count) via `effectiveSize` -- see that getter. */
-  @property({ type: Number }) bytes = 0;
+   *  (`small`/`medium`/`large`, `xs`...`xl`). `0` is a known empty file and renders `0 B`; only
+   *  omission means unknown. Non-finite/negative inputs are treated as unknown. */
+  private _bytes?: number;
+
+  @property({ type: Number })
+  get bytes(): number | undefined {
+    return this._bytes;
+  }
+  set bytes(value: number | undefined) {
+    const old = this._bytes;
+    this._bytes = typeof value === 'number' && Number.isFinite(value) && value >= 0
+      ? finiteRange(value, 0, 0)
+      : undefined;
+    this.requestUpdate('bytes', old);
+  }
+
+  /** Stable domain identity carried by attachment action events. */
+  @property({ attribute: 'attachment-id' }) attachmentId = '';
 
   /** MIME type, used only while `file` is unset. */
   @property({ attribute: 'mime-type' }) mimeType = '';
@@ -210,7 +226,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) previewable = true;
 
   /** Lifecycle state — drives the accent tint and which of `progress`/`spinner`/`retry-button` renders. */
-  @property({ reflect: true }) status: AttachmentChipStatus = 'pending';
+  @property({ reflect: true }) status: LyraAttachmentUploadStatus = 'pending';
 
   /** Upload completion, 0-100. Only meaningful while `status="uploading"`;
    *  a value of 0 (the default), `NaN`, or negative falls back to the indeterminate spinner
@@ -235,26 +251,26 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
   /** Verb used in the remove button's accessible name. For complete control over translated
    *  word order and punctuation, override the `removeWithContext` message instead. */
-  @property({ attribute: 'remove-label' }) removeLabel = 'Remove';
+  @property({ attribute: 'remove-label' }) removeLabel?: string;
 
   /** Verb used in the retry button's accessible name. For complete control over translated word
    *  order and punctuation, override the `attachmentRetryWithContext` message instead. */
-  @property({ attribute: 'retry-label' }) retryLabel = 'Retry';
+  @property({ attribute: 'retry-label' }) retryLabel?: string;
 
   /** Verb used in uploading messages. For complete control over translated word order and
    *  punctuation, override the `attachmentUploadingWithContext`,
    *  `attachmentUploadingProgress`, and `attachmentUploadingIndeterminate` messages instead. */
-  @property({ attribute: 'uploading-label' }) uploadingLabel = 'Uploading';
+  @property({ attribute: 'uploading-label' }) uploadingLabel?: string;
 
   /** Visible status text shown for `status="error"`. Override for
    *  i18n/locale. Defaults to `'Upload failed'`, reproducing today's exact
    *  text byte-for-byte. */
-  @property({ attribute: 'upload-failed-label' }) uploadFailedLabel = 'Upload failed';
+  @property({ attribute: 'upload-failed-label' }) uploadFailedLabel?: string;
 
   /** Override for the empty-name fallback shown (and used as the `title` tooltip) when neither
    *  `file` nor `name` supply a filename -- for i18n/locale. Defaults to `'Untitled file'`,
    *  reproducing today's exact hardcoded text byte-for-byte. */
-  @property({ attribute: 'untitled-label' }) untitledLabel = 'Untitled file';
+  @property({ attribute: 'untitled-label' }) untitledLabel?: string;
 
   // The object URL created for `file`'s image thumbnail, plus the exact
   // `File` it was created for (so a later `file` re-assignment to a
@@ -264,7 +280,6 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   private objectUrl?: string;
   private objectUrlFile?: File;
 
-  @state() private previewOpen = false;
   /** Handle on the shared light-DOM assertive region an upload failure announces through -- a
    *  region rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores
    *  one outright), so `[part="status-text"]` is plain visible text and carries no live role. */
@@ -278,10 +293,13 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     return this.file ? this.file.name : this.name;
   }
 
-  private get effectiveSize(): number {
-    // `File.size` is always a genuine finite non-negative number; only the independent `bytes`
-    // prop (a plain reactive property, so a caller could pass NaN/negative) needs guarding.
-    return this.file ? this.file.size : finiteRange(this.bytes, 0, 0);
+  private get effectiveSize(): number | undefined {
+    if (this.file) {
+      return Number.isFinite(this.file.size) && this.file.size >= 0
+        ? finiteRange(this.file.size, 0, 0)
+        : undefined;
+    }
+    return this.bytes;
   }
 
   private get effectiveMimeType(): string {
@@ -293,7 +311,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   }
 
   private get resolvedId(): string {
-    if (this.id) return this.id;
+    if (this.attachmentId) return this.attachmentId;
     if (this.file) return `${this.file.name}:${this.file.size}:${this.file.lastModified}`;
     return this.fallbackId;
   }
@@ -304,6 +322,12 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
   private get clampedProgress(): number {
     return finiteRange(this.progress, 0, 0, 100);
+  }
+
+  private get effectiveStatus(): LyraAttachmentUploadStatus {
+    return this.status === 'uploading' || this.status === 'error' || this.status === 'success'
+      ? this.status
+      : 'pending';
   }
 
   /** Returns (creating or reusing as needed) the object URL for `file`'s
@@ -331,7 +355,8 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     if (this.hasUpdated) this.requestUpdate();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.releaseAnnouncementSink();
     this.syncAnnouncementSink();
   }
@@ -353,12 +378,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (
-      this.hasUpdated &&
-      (changed.has('file') || changed.has('previewSrc') || changed.has('mimeType') || changed.has('name'))
-    ) {
-      this.previewOpen = false;
-    }
+    if (changed.has('status') && this.status !== this.effectiveStatus) this.status = this.effectiveStatus;
     // Only a *transition* into `error` announces: a chip that mounts already failed is history a
     // user can read at their own pace, and re-announcing every render would be spam. Announced
     // from the transition rather than from rendered text, so a retry that fails the same way twice
@@ -370,13 +390,12 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     // allocation out of the render phase and also handles a file changing to
     // a non-image or to undefined, where no thumbnail render would otherwise
     // revisit the old cache entry.
-    if (this.file && (this.file.type.startsWith('image/') || this.previewable)) this.ensureObjectUrl(this.file);
+    if (this.isConnected && this.file && (this.file.type.startsWith('image/') || this.previewable)) this.ensureObjectUrl(this.file);
     else if (this.objectUrlFile) this.revokeObjectUrl();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.previewOpen = false;
     this.revokeObjectUrl();
     this.releaseAnnouncementSink();
   }
@@ -384,38 +403,25 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   /** The localized upload-failure message. Same override-wins-verbatim rule as `untitledLabel`;
    *  read both by `render()` and by the failure announcement in `willUpdate()`. */
   private get localizedUploadFailedLabel(): string {
-    return this.localize(
-      'attachmentUploadFailed',
-      this.uploadFailedLabel === 'Upload failed' ? undefined : this.uploadFailedLabel,
-    );
+    return this.uploadFailedLabel ?? this.localize('attachmentUploadFailed');
   }
 
   private onRemoveClick = (): void => {
-    this.emit('lr-remove', { id: this.resolvedId });
+    this.emit('lr-remove', { attachmentId: this.resolvedId });
   };
 
   private onRetryClick = (): void => {
-    this.emit('lr-retry', { id: this.resolvedId });
+    this.emit('lr-retry', { attachmentId: this.resolvedId });
   };
 
   private onPreviewClick = (): void => {
     if (!this.effectivePreviewSrc) return;
-    this.previewOpen = true;
-    this.emit('lr-preview', {
-      id: this.resolvedId,
+    this.emit('lr-preview-request', {
+      attachmentId: this.resolvedId,
       name: this.effectiveName,
       mimeType: this.effectiveMimeType,
       src: this.effectivePreviewSrc,
-    });
-  };
-
-  private onViewerClose = (event: Event): void => {
-    // <lr-document-viewer>'s own `lr-close` is a plain `this.emit()` (bubbles + composed) --
-    // consumed here to close the transient preview, but never re-emitted under any name of this
-    // component's own, so left unstopped it would keep bubbling past the chip and reach an
-    // ancestor under an event name this component documents nothing about.
-    event.stopPropagation();
-    this.previewOpen = false;
+    }, { cancelable: true });
   };
 
   private renderThumbnail(): TemplateResult {
@@ -442,16 +448,10 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     // Only routed through `this.localize()` when left at its hardcoded
     // default -- an explicit `untitled-label` override always wins verbatim,
     // matching `removeLabel`/`retryLabel` below.
-    const untitledLabel = this.localize(
-      'attachmentUntitledFile',
-      this.untitledLabel === 'Untitled file' ? undefined : this.untitledLabel,
-    );
+    const untitledLabel = this.untitledLabel ?? this.localize('attachmentUntitledFile');
     const displayName = name || untitledLabel;
-    // A `0`-byte size reads the same as "unknown" here (there's no prop to
-    // distinguish a genuinely empty file from a size that was simply never
-    // supplied) -- hide the part entirely rather than show a literal "0 B".
     const sizeText =
-      this.effectiveSize > 0
+      this.effectiveSize !== undefined
         ? formatFileSize(
             this.effectiveSize,
             (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
@@ -467,33 +467,22 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     const progressPercent = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 0 }).format(
       Math.round(this.clampedProgress),
     );
-    const uploadingText = this.hasNumericProgress
-      ? this.localize(
+    const uploadingText = this.uploadingLabel !== undefined
+      ? this.uploadingLabel
+      : this.hasNumericProgress
+        ? this.localize(
           'attachmentUploadingProgress',
-          this.uploadingLabel === 'Uploading' ? undefined : `${this.uploadingLabel} {percent}%`,
+          undefined,
           { percent: progressPercent },
         )
-      : this.localize(
-          'attachmentUploadingIndeterminate',
-          this.uploadingLabel === 'Uploading' ? undefined : `${this.uploadingLabel}…`,
-        );
-    const uploadingWithContext = this.localize(
-      'attachmentUploadingWithContext',
-      this.uploadingLabel === 'Uploading' ? undefined : `${this.uploadingLabel} {label}`,
-      { label: displayName },
-    );
-    const retryWithContext = this.localize(
-      'attachmentRetryWithContext',
-      this.retryLabel === 'Retry' ? undefined : `${this.retryLabel} {label}`,
-      { label: displayName },
-    );
-    const removeWithContext = this.localize(
-      'removeWithContext',
-      this.removeLabel === 'Remove' ? undefined : `${this.removeLabel} {label}`,
-      { label: displayName },
-    );
-    const text = statusText(this.status, uploadingText, uploadFailedLabel);
-    const uploading = this.status === 'uploading';
+        : this.localize('attachmentUploadingIndeterminate');
+    const uploadingWithContext =
+      this.uploadingLabel ?? this.localize('attachmentUploadingWithContext', undefined, { label: displayName });
+    const retryWithContext = this.retryLabel ?? this.localize('attachmentRetryWithContext', undefined, { label: displayName });
+    const removeWithContext = this.removeLabel ?? this.localize('removeWithContext', undefined, { label: displayName });
+    const status = this.effectiveStatus;
+    const text = statusText(status, uploadingText, uploadFailedLabel);
+    const uploading = status === 'uploading';
 
     return html`
       <div part="base">
@@ -522,7 +511,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
               `
             : html`<span part="spinner" aria-hidden="true"></span>`
           : nothing}
-        ${this.status === 'error'
+        ${status === 'error'
           ? html`<button part="retry-button" type="button" aria-label=${retryWithContext} @click=${this.onRetryClick}>
               ${retryIcon()}
             </button>`
@@ -541,15 +530,6 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
             </button>`
           : nothing}
       </div>
-      ${this.previewable && this.effectivePreviewSrc
-        ? html`<lr-document-viewer
-            .open=${this.previewOpen}
-            .name=${displayName}
-            .mimeType=${this.effectiveMimeType}
-            .src=${this.effectivePreviewSrc}
-            @lr-close=${this.onViewerClose}
-          ></lr-document-viewer>`
-        : nothing}
     `;
   }
 }

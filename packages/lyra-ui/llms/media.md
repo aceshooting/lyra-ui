@@ -8,35 +8,35 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 - `language?: string` (BCP-47-ish tag, e.g. `"en"`/`"en-US"`, resolved to a representative country
   via `languageToCountry()`)
 - `src?: string` (a pre-resolved flag image URL — takes precedence over `country`/`language` and
-  skips the peer-package lookup/loading-skeleton round trip entirely; mainly useful to avoid even
+  skips the peer-package lookup; mainly useful to avoid even
   the small per-flag async hop when you already have the URL at build time, e.g. from
   `import frUrl from '@aceshooting/lyra-flags/flags/fr.svg?url'`. `label` is effectively required
   alongside `src` since there's no `country`/`language` to derive a fallback `alt` from.)
 - `label?: string` (accessible name / `alt` text — **defaults to a localized, human-readable region
   name derived from the *resolved country* code via `Intl.DisplayNames` if omitted**, see gotchas)
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — takes precedence over `label`
-  and the derived region name; an explicit empty value marks the image decorative
-- `round: boolean = false` (reflected — circular crop)
-- `variant?: 'compact' | 'standard' | 'detailed'` (attribute `variant`, not reflected — picks a
+- host `aria-label` takes precedence over `label` and the derived region name; an explicit empty
+  value marks the image decorative
+- `shape: LyraFlagShape = 'rect'` (reflected, `'rect' | 'circle'`)
+- `fidelity: LyraFlagFidelity = 'standard'` (reflected — picks a
   fidelity tier for the ~65 codes whose source art embeds a coat of arms/seal/emblem; every other
-  code resolves to the same file regardless of `variant`. `'compact'` = a tiny WebP raster for
-  icon-scale use (menus, language pickers, ~12–28px); `'standard'` (the effective default, when
-  `variant` is unset) = the icon-optimized vector for card/row sizes (~28–96px); `'detailed'` = the
+  code resolves to the same file regardless of `fidelity`. `'compact'` = a tiny WebP raster for
+  icon-scale use (menus, language pickers, ~12–28px); `'standard'` = the icon-optimized vector for
+  card/row sizes (~28–96px); `'detailed'` = the
   pristine full-fidelity vector for hero-scale display. No effect when `src` is set.)
 
-**Removed in 8.0.0:** the boolean `detailed` attribute. `variant="detailed"` selects the same tier.
-A leftover `detailed` is now an unknown attribute — it renders the `standard` tier silently, so
-rewrite it rather than leaving it in place.
+The v9 vocabulary replaces `round` with `shape="circle"` and `variant` with `fidelity`; exported
+authoring types are `LyraFlagShape`, `LyraFlagFidelity`, and `LyraFlagUrlResolver`.
 
 **Events:** none.
 
 **Slots:** none.
 
-**CSS parts:** `image` (the underlying `<img>`, present only once a URL has resolved), `error`
-(ordinary localized visible text rendered instead when the peer resolver is unavailable or rejects)
+**CSS parts:** `image` (the underlying `<img>`, exposed once native loading succeeds), `error`
+(contained localized visible text rendered when URL validation, peer resolution, or native image
+loading fails). The host reflects the terminal error state with `data-error`.
 
 **Themeable custom properties:** `--lr-flag-radius` (default `calc(var(--lr-radius) * 0.33)` —
-non-`round` corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
+rectangular corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
 `--lr-flag-object-fit` (default `cover`); also consumes `--lr-color-border` for the inset ring.
 
 **Optional peer deps:** `@aceshooting/lyra-flags` — required for the component to actually render an
@@ -70,7 +70,7 @@ surface, a different active-state marker, or a layout `<lr-locale-picker>` doesn
 `<lr-popover>` supplies the light-dismiss surface, `<lr-flag>` the country mark,
 `localeNativeName()` the endonym, and `aria-current="true"` marks the active choice. Which locales
 exist is the app's decision, so the app owns the list. Set `lang` on each row so assistive tech
-pronounces the endonym in its own language, and use `variant="compact"` at icon scale.
+pronounces the endonym in its own language, and use `fidelity="compact"` at icon scale.
 
 ```html
 <lr-popover placement="bottom-start">
@@ -96,13 +96,13 @@ const rows = ['en', 'fr', 'de', 'pt-BR', 'ja', 'ar'].map((tag) => ({
 
 ```html
 <lr-flag country="fr" label="France"></lr-flag>
-<lr-flag language="en-US" round></lr-flag>
-<lr-flag country="es" variant="compact"></lr-flag>  <!-- tiny WebP raster, icon-scale -->
-<lr-flag country="es" variant="detailed"></lr-flag> <!-- pristine full-fidelity vector -->
+<lr-flag language="en-US" shape="circle"></lr-flag>
+<lr-flag country="es" fidelity="compact"></lr-flag>  <!-- tiny WebP raster, icon-scale -->
+<lr-flag country="es" fidelity="detailed"></lr-flag> <!-- pristine full-fidelity vector -->
 ```
 
 ```bash
-pnpm add @aceshooting/lyra-flags   # required peer — without it, <lr-flag> renders nothing
+pnpm add @aceshooting/lyra-flags   # required for country/language lookup; failures render error text
 ```
 
 ```js
@@ -114,7 +114,7 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   `@aceshooting/lyra-ui/components/media/flag/flag-peer.js`; `all.js`
   registers the component without importing the optional flag asset graph. Requires the optional
   peer `@aceshooting/lyra-flags` to actually render an image; without it the component still shows a
-  decorative `<lr-skeleton variant="rect" announce="false">` placeholder while resolving. The
+  decorative `<lr-skeleton shape="rect" announce="false">` placeholder while resolving. The
   host exposes `aria-busy="true"`, and ordinary sr-only text preserves the localized `loading`
   label without creating a shadow live region. Resolution failure then **fails closed** into ordinary localized
   `<span part="error">` text (the `flagLoadError` message key, `"Flag unavailable"` by default).
@@ -148,15 +148,16 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   fetches one requested flag at runtime. A bundler may still emit the complete reachable lazy-chunk
   graph because every supported code has a literal loader import; use a literal asset subpath
   import when the deployment artifact must be pruned. If you already have a flag's URL at build
-  time, `src` skips the peer-package round trip (and its loading-skeleton flash) entirely.
+  time, `src` skips the peer-package round trip; native image loading still uses the same bounded
+  loading/error transaction.
 - 65 of `@aceshooting/lyra-flags`' 249 flags (any whose design includes a detailed coat of
-  arms/seal/emblem, e.g. `es`, `pt`, `sv`) ship **three** fidelity tiers, selected via the `variant`
-  property (`flagUrl(code, { variant })` under the hood): `"compact"` — a tiny WebP raster for
+  arms/seal/emblem, e.g. `es`, `pt`, `sv`) ship **three** fidelity tiers, selected via the
+  `fidelity` property (`flagUrl(code, { variant: fidelity })` under the hood): `"compact"` — a tiny WebP raster for
   icon-scale use (menus, language pickers, dense lists); `"standard"` — the default, the
   icon-optimized vector for card/row sizes, ~84% smaller on average than the pristine source for the
   65 affected codes with no visible fidelity loss at that scale; `"detailed"` — the pristine
   full-fidelity vector, for hero-scale display where the extra illustrative detail is actually
-  visible. The other 184 codes resolve to the same file regardless of `variant` — a safe no-op.
+  visible. The other 184 codes resolve to the same file regardless of `fidelity` — a safe no-op.
 
 **Additional API surface:**
 
@@ -165,76 +166,91 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
 
 ---
 
-## `lr-playback`
+## `lr-sequence-playback`
 
-Steps an index through `[0, length)` on a fixed interval — play/pause for time-series scrubbing.
+Steps a current index through `[0, itemCount)` on a fixed interval — explicit discrete-sequence
+playback for time-series scrubbing, without implying native audio/video playback.
 
 **Properties:**
-- `length: number = 0`
-- `index: number = 0`
+- `itemCount: number = 0` (attribute `item-count`)
+- `currentIndex: number = 0` (attribute `current-index`)
 - `intervalMs: number = 900` (attribute `interval-ms`)
 - `playing: boolean = false` (reflected)
 - `loop: boolean = true`
 - `hidden: boolean = false` (reflected; re-declared over the native IDL property so Lit's
   change-tracking sees it and auto-pauses on `hidden = true`)
 
-**Methods:** `play()`, `pause()`, `toggle()`, `next()`, `previous()`, `goTo(index: number)` — all
-idempotent/clamped; `length <= 1` is a no-op degenerate case. `focus(options?)`, `blur()`, and
+**Methods:** `play()`, `pause()`, `toggle()`, `next()`, `previous()`,
+`goTo(currentIndex: number)` — all idempotent/clamped; `itemCount <= 1` is a no-op degenerate case.
+`focus(options?)`, `blur()`, and
 `click()` forward to the play button.
 
-**Events:** `lr-play`, `lr-pause` (no detail), `lr-step` (`detail: { index }`, fired on every
-tick and manual step); internal `focus`/`blur` are relayed exactly once as owner-realm native
-`FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
-`lr-focus`/`lr-blur`.
+**Events:** `lr-play`, `lr-pause` (no detail), `lr-sequence-step`
+(`detail: LyraSequencePlaybackStepDetail { currentIndex }`, fired on every tick and manual step);
+internal `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s (bubbling and
+composed, preserving `relatedTarget`), followed by `lr-focus`/`lr-blur`.
+
+**Class and event types:** `LyraSequencePlayback`, `LyraSequencePlaybackEventMap`, and
+`LyraSequencePlaybackStepDetail`. The former generic `LyraPlayback`, `<lr-playback>`, `length`,
+`index`, and `lr-step` names are removed in v9 rather than retained as ambiguous aliases.
 
 **Slots:** none.
 
 **CSS parts:** `base`, `play-button`, `slider`
 
-The `slider` carries `aria-valuetext` — a localized `Step {index} of {total}` (key
-`playbackStepPosition`, both numbers formatted with the component's effective locale) — so a screen
-reader announces "Step 4 of 10" rather than the bare zero-based index the range input holds.
+The `slider` carries supplemental localized `aria-valuetext` — `Step {index} of {total}` (key
+`playbackStepPosition`, both numbers formatted with the component's effective locale). Browsers may
+ignore that override on a native range, so the interoperable semantic contract is itself one-based
+(`min=1`, `max=itemCount`, `value=currentIndex+1`): assistive technologies receive the correct
+ordinal even when they expose the native numeric value.
 
-**Themeable custom properties:** `--lr-playback-icon-size` (default
+**Themeable custom properties:** `--lr-sequence-playback-icon-size` (default
 `calc(var(--lr-icon-button-size) * 0.35)` — the play/pause glyph's size; applied as the button's
 `font-size`, and the inline SVG renders at `1em`).
-`--lr-playback-play-button-active-bg` (default
+`--lr-sequence-playback-play-button-active-bg` (default
 `color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) —
-the pressed play/pause background; and `--lr-playback-play-button-active-border-color` (default
+the pressed play/pause background; and `--lr-sequence-playback-play-button-active-border-color` (default
 `var(--lr-color-brand)`) — its pressed border. Both are inline `var()` fallbacks, so a value set on
 the element or an ancestor inherits without being shadowed by a host default. Plus shared tokens `--lr-space-s`,
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-text`, `--lr-color-brand`,
 `--lr-icon-button-size` (the play button's box), `--lr-opacity-disabled` (play button/slider
-dimming at `length <= 1`), `--lr-focus-ring-*`.
+dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-playback length="24" interval-ms="500"></lr-playback>
+<lr-sequence-playback item-count="24" interval-ms="500"></lr-sequence-playback>
 <script>
-  const pb = document.querySelector('lr-playback');
-  pb.addEventListener('lr-step', (e) => renderFrame(e.detail.index));
+  const playback = document.querySelector('lr-sequence-playback');
+  playback.addEventListener('lr-sequence-step', (event) => {
+    renderFrame(event.detail.currentIndex);
+  });
 </script>
 ```
 
 **Known gotchas:**
-- `index` is now re-clamped into `[0, length)` as soon as `length` shrinks (in `willUpdate()`, not
-  waiting for the next `tick()`/`goTo()`/`next()`/`previous()` call) — setting `el.length = 2` while
-  `el.index = 7` immediately pulls `index` back to `1`, and playback auto-pauses if `length` drops
+- `currentIndex` is re-clamped into `[0, itemCount)` as soon as `itemCount` shrinks (in
+  `willUpdate()`, not waiting for the next `tick()`/`goTo()`/`next()`/`previous()` call) — setting
+  `el.itemCount = 2` while `el.currentIndex = 7` immediately pulls `currentIndex` back to `1`, and
+  playback auto-pauses if `itemCount` drops
   to `<= 1` while playing (the play button and slider would otherwise both become disabled with no
-  way to stop it — both are `?disabled` whenever `length <= 1`, not just the button).
+  way to stop it — both are `?disabled` whenever `itemCount <= 1`, not just the button).
 - `intervalMs` is live-reactive mid-playback: ticking is a self-rescheduling `setTimeout` (not one
   long-lived `setInterval`), so `intervalMs` is re-read fresh before every tick — changing
   `interval-ms` while `playing` takes effect on the very next step instead of only after a
   pause/play cycle.
-- `length` and `index` are normalized to finite non-negative integer counts, with `index` clamped
-  into `[0, length)`; fractional, negative, `NaN`, infinite, and oversized values cannot poison
-  end conditions or the slider.
+- `itemCount` and `currentIndex` are normalized to finite non-negative integer counts, with
+  `currentIndex` clamped into `[0, itemCount)`; fractional, negative, `NaN`, infinite, and oversized
+  values cannot poison end conditions or the slider.
 - `interval-ms` is clamped to the 16ms floor and the browser's finite timer ceiling: a non-finite or
   lower value ticks at 16ms, while an oversized value uses the timer ceiling. Each distinct invalid
   value is warned once (deduplicated per value, not a single once-ever flag).
-- No *visible* "N of M" position label beside the range input (the `aria-valuetext` above covers
-  the screen-reader case only).
+- Initial `playing` and `item-count` attributes are resolved together on the first update, so
+  playback starts consistently regardless of their source order; an invalid final `itemCount <= 1`
+  clears the reflected `playing` state.
+- No *visible* "N of M" position label beside the range input; the native one-based range still
+  exposes the current ordinal and total bounds, with localized `aria-valuetext` as a supplemental
+  enhancement where the platform honors it.
 - Calling `play()`/`pause()` programmatically (not via the button) gives no `aria-live`
   announcement of the Play/Pause state change.
 
@@ -249,36 +265,47 @@ operations. Its runtime value is the underlying MapLibre map.
 **Properties:**
 - `center: [number, number] = [0, 0]`
 - `zoom: number = 2`
-- `mapStyle: LyraMapStyleSpecification | string = DEFAULT_STYLE` (attribute: false) —
-  `LyraMapStyleSpecification` is the peer-neutral structural subset accepted from MapLibre's
-  `StyleSpecification`, including its string or multi-sprite form. The default is a
-  basic OSM raster tile style pointing at **OpenStreetMap's shared demo tile server**. Fine for
-  local development, but its usage policy forbids bulk/production traffic, requires an identifying
-  User-Agent, and rate-limits or IP-blocks non-compliant clients
-  (https://operations.osmfoundation.org/policies/tiles/). **Production apps must pass their own
-  `mapStyle`** — a hosted vector/raster style from a tile provider you have a plan with.
-- `legend: LegendEntry[] = []` (attribute: false) — `LegendEntry { color: string; label: string }`
-  (discrete swatch rows only, no continuous gradient bar)
-- `choropleth?: ChoroplethLayer` (attribute: false) — `ChoroplethLayer { sourceId: string; geojson:
-  GeoJSON.FeatureCollection; field: string; stops: [number, string][] }` (interpolated
+- `mapStyle?: LyraMapStyleSpecification | string` (attribute: false) — required before a map is
+  constructed. `LyraMapStyleSpecification` is the peer-neutral structural subset accepted from
+  MapLibre's `StyleSpecification`, including its string or multi-sprite form. No provider or style
+  is selected implicitly: an unset, empty, or whitespace-only value renders the localized
+  style-required failure and makes no tile/style request. Assign a hosted vector/raster style from
+  a provider whose terms fit your application, or an explicitly network-silent style for local
+  geometry.
+- `legend: readonly LyraMapLegendEntry[] = []` (attribute: false) — immutable defensive snapshots
+  of `LyraMapLegendEntry { readonly color: string; readonly label: string; readonly pattern:
+  LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' | 'dots' |
+  'crosshatch'`. Pattern is required so color is never the sole category cue. At most 100 valid
+  rows, 256 characters per label, and 8,192 aggregate label characters are retained; colors are
+  bounded before validation. The overlay scrolls within the map allocation.
+- readonly `legendProjection: LyraMapLegendProjection` — frozen `{ inputCount, renderedCount,
+  omittedCount, truncatedLabelCount, truncated }` result for the latest assignment. A truncated
+  projection renders a localized visible `1–N of M items` summary rather than silently claiming
+  the bounded rows are complete.
+- `choropleth?: LyraMapChoroplethLayer` (attribute: false) — `LyraMapChoroplethLayer { sourceId:
+  string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, string][] }` (interpolated
   fill-color expression from `field`'s value against `stops`; `stops` must contain at least one
   `[value, color]` pair — an empty array is ignored, leaving whatever fill layer already exists, if
   any, untouched, rather than being applied)
-- `markers: MapMarker[] = []` (attribute: false) — `MapMarker { id?: string; lngLat: [number,
-  number]; color?: string; label?: string; unsafeHtml?: string }`; reconciled by `id` (falling back
+- `markers: LyraMapMarker[] = []` (attribute: false) — `LyraMapMarker { id?: string; lngLat:
+  [number, number]; color?: string; label?: string; unsafeHtml?: string }`; reconciled by `id` (falling back
   to a `lng,lat` key, disambiguated by occurrence order for duplicate-coordinate id-less markers,
   when `id` is omitted) so an unchanged marker isn't torn down and recreated on every `markers`
   reassignment — its `lngLat` **and** its popup content (`unsafeHtml`/`label`, in that precedence)
   are both updated in place, and the popup is removed if a later update sets neither. `unsafeHtml` is
   rendered via `Popup.setHTML()` — **raw markup, inline event handlers included** — only pass trusted
   content, sanitize anything derived from user input first; prefer `label` (`Popup.setText()`,
-  escaped) when the content is plain text. A marker whose `color` changes for a persisting `id`
+  escaped) when the content is plain text. For marker/popup naming, visible text is extracted from
+  trusted markup while `script`, `style`, `template`, `[hidden]`, and `aria-hidden="true"` subtrees
+  are excluded; an explicitly supplied `label` remains the more predictable accessible name. A
+  marker whose `color` changes for a persisting `id`
   can't be recolored in place (no `Marker.setColor()`) and is torn down/reconstructed instead — see
   gotchas. Entries with non-finite coordinates or latitude outside `[-90, 90]` are skipped without
   aborting valid siblings. `color` is used only when the browser accepts it as CSS `color`;
   declaration breaks and `url()` paint servers fall back to MapLibre's default marker color.
-- `dataLayers: GeoJsonDataLayer[] = []` (attribute: false) — `GeoJsonDataLayer { sourceId: string;
-  geojson: GeoJSON.Feature | GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
+- `dataLayers: LyraMapGeoJsonDataLayer[] = []` (attribute: false) —
+  `LyraMapGeoJsonDataLayer { sourceId: string; geojson: GeoJSON.Feature |
+  GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
   'danger' | 'neutral' }`. Each entry adds one GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
   matching `--lr-color-*` token (`tone` defaults to `'accent'` → `--lr-color-brand`). The component
@@ -290,9 +317,15 @@ operations. Its runtime value is the underlying MapLibre map.
   persists across a `dataLayers` reassignment gets its GeoJSON updated in place (`setData()`), one
   that's dropped has its private source/layers removed, and a genuinely new `sourceId` gets new
   resources — nothing leaks on removal, style change, or disconnect.
-- `label: string = ''` — accessible-name fallback for MapLibre's actual focusable canvas. A plain
-  host `aria-label` takes precedence over `label`; with neither set, the canvas uses the localized
-  `'map'` message. The non-semantic `[part="base"]` wrapper is not named instead.
+- `label: string = ''` — purpose-specific accessible name for MapLibre's actual focusable canvas.
+  A nonempty host `aria-label` remains on the host and is not duplicated onto the canvas; the canvas
+  uses `label` or the localized map name. An explicitly empty host `aria-label` is preserved as an
+  empty canvas name. The non-semantic `[part="base"]` wrapper is not named instead.
+
+**Authoring types:** `LyraMapLegendEntry`, `LyraMapLegendPattern`, `LyraMapLegendProjection`, `LyraMapChoroplethLayer`,
+`LyraMapGeoJsonDataLayer`, `LyraMapMarker`, `LyraMapStyleSpecification`, and `LyraMapInstance`.
+The former `LegendEntry`, `ChoroplethLayer`, `GeoJsonDataLayer`, and `MapMarker` names are removed
+in v9 rather than retained as aliases.
 
 **Getters:** `map: LyraMapInstance | undefined` → the underlying runtime `maplibregl.Map`, exposed
 through the peer-neutral `getCanvas()`, `getCenter()`, `getZoom()`, `setCenter()`, `setZoom()`, and
@@ -311,11 +344,18 @@ exists and was hit)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `popup-close-button`, `error`.
-`popup-close-button` is the MapLibre-generated close control on an open marker popup. `error` is
-ordinary localized visible text rendered in place of `container` if the optional `maplibre-gl` peer
-dependency fails to load, e.g. not installed. The post-mount failure is appended to the document's
-pre-mounted `[data-lr-live-region="assertive"]` sink rather than making shadow chrome live.
+**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `legend-limit`, `marker`, `popup`,
+`popup-content`, `popup-close-button`, `attribution`, `attribution-toggle`, `error`.
+`legend` is a localized `role="group"` containing a real list associated to the map canvas with
+`aria-describedby`; each entry is a `listitem`, decorative swatches are inert/accessibility-hidden,
+and the overlay is bounded to the map allocation with scrolling and long-label wrapping.
+`legend-limit` is the localized bounded-projection summary. The five peer-chrome parts project
+stable Lyra names onto MapLibre-generated DOM without erasing peer-supplied part tokens;
+`popup-close-button` is the generated close control on an open marker popup. `error` is ordinary localized visible
+text rendered in place of `container` for four distinct states: explicit style required, optional
+peer unavailable, owner-realm WebGL2 unavailable, or initialization failed. A post-mount failure is
+appended to the document's pre-mounted `[data-lr-live-region="assertive"]` sink rather than making
+shadow chrome live; raw caught errors are never exposed.
 
 **Themeable custom properties:**
 - `--lr-map-choropleth-fill-opacity` (default `0.75`) — fill opacity for the declarative
@@ -346,13 +386,17 @@ Vite with v6:
   setWorkerUrl(workerUrl);
 
   const m = document.querySelector('lr-map');
+  m.mapStyle = { version: 8, sources: {}, layers: [] }; // explicit, network-silent baseline
   m.choropleth = {
     sourceId: 'regions',
     geojson: myGeoJson,
     field: 'value',
     stops: [[0, '#cde2fb'], [100, '#0969da']],
   };
-  m.legend = [{ color: '#cde2fb', label: 'Low' }, { color: '#0969da', label: 'High' }];
+  m.legend = [
+    { color: '#cde2fb', label: 'Low', pattern: 'solid' },
+    { color: '#0969da', label: 'High', pattern: 'diagonal' },
+  ];
   m.markers = [{ lngLat: [2.29, 48.86], label: 'Eiffel Tower' }];
   m.addEventListener('lr-map-click', (e) => console.log(e.detail.feature?.properties));
 </script>
@@ -363,6 +407,12 @@ installation guide for the matching setup:
 https://maplibre.org/maplibre-gl-js/docs/#esm.
 
 **Known gotchas:**
+- Construction is transactional. A constructor/setup/get-canvas failure removes any partially
+  created peer instance, renders only the localized initialization failure, and can retry after a
+  new style or reconnect without an unhandled promise rejection. Capability probes and error
+  constructors come from the current owner document, including after same-origin adoption.
+- A marker with a popup handles Space at its focus boundary: one activation toggles the peer popup
+  and suppresses the page-scroll default. Markers without a popup do not consume Space.
 - clearing or swapping the choropleth no longer leaks the old layer: setting `choropleth =
   undefined`, or changing `choropleth.sourceId` to a different value, now calls `removeLayer`/
   `removeSource` on whatever was previously applied before adding the new one (or nothing, if
@@ -374,8 +424,9 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
 - Point markers now have a declarative API (`markers`, above) with popup support — narrowing the
   runtime `.map` value and manually constructing `new maplibregl.Marker()` are no longer the only
   way to place pins.
-- A marker uses `label` as its accessible name, falling back to the localized map label. Popup
-  ownership is exposed through `aria-controls`/`aria-expanded`; an open popup is a named
+- A marker uses `label` as its accessible name, then visible text extracted from trusted
+  `unsafeHtml`, and only then the localized map label. Popup ownership is exposed through
+  `aria-controls`/`aria-expanded`; an open popup is a named
   `role="dialog"` and its localized close button exposes `part="popup-close-button"`. The map
   canvas, markers, popups, and MapLibre's own control strings all follow the component's effective
   locale.
@@ -390,12 +441,13 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
   only fires the event, no built-in visual feedback. Popups are still only reachable declaratively
   through `markers`' `unsafeHtml`/`label` — a choropleth-feature click still has no built-in popup,
   only the raw `lr-map-click` event.
-- `LegendEntry.color` is validated against a strict CSS-color-syntax allowlist before being applied
-  to the legend swatch's `background`, rejecting anything that isn't recognizable color syntax
+- `LyraMapLegendEntry.color` is validated against a strict CSS-color-syntax allowlist before being applied
+  to the legend swatch's `background-color`, rejecting anything that isn't recognizable color syntax
   (notably `url(...)`, which `background` also accepts and would otherwise fetch as soon as the
-  swatch renders).
+  swatch renders). The required `pattern` remains distinct in forced colors through solid, dashed,
+  dotted, and double border/shape encodings.
 - while the `maplibre-gl` peer is resolving, the host/base expose `aria-busy="true"` and show a
-  decorative `<lr-skeleton variant="rect" announce="false">` in place of the map container.
+  decorative `<lr-skeleton shape="rect" announce="false">` in place of the map container.
   Ordinary sr-only text preserves the localized `loading` label without creating a shadow live
   region.
 - construction of the real `maplibregl.Map` (and its WebGL context) is additionally gated on this
@@ -418,9 +470,9 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
 - `disabled: boolean = false` (reflected)
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
-- `fileCount: number = 0` and `dragging: boolean = false` — writable public state. Assigning
-  `files` resynchronizes `fileCount` to the selected-file count; the next real drag event resumes
-  ownership of `dragging` and its accept/reject state.
+- `readonly fileCount: number` and `readonly dragging: boolean` — derived state. Assigning `files`
+  updates the selected-file count; real drag events alone own the drag session and its
+  accept/reject state.
 - `name: string | null = null`, `required: boolean = false`, `form`, `labels`, `validity`,
   `validationMessage`, and `willValidate` — standard form-associated surface. One file submits as a
   `File`; `multiple` submits repeated entries under `name`
@@ -431,9 +483,11 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
   comma-separated mix); now enforced on **both** the native picker dialog and the drag-drop path, see
   gotchas
 - `capture: '' | 'user' | 'environment' = ''` — forwarded to the native file picker
-- `allowedMimeTypes: string[] = []` (attribute: false) — exact MIME-string allowlist
-- `forbiddenMimeTypes: string[] = []` (attribute: false) — exact MIME-string denylist, checked
-  **before** (and takes precedence over) `allowedMimeTypes`
+- `allowedMimeTypes: readonly string[] = []` (attribute: false) — exact MIME-string allowlist
+- `forbiddenMimeTypes: readonly string[] = []` (attribute: false) — exact MIME-string denylist,
+  checked **before** (and taking precedence over) `allowedMimeTypes`. Both properties take frozen
+  snapshots, retain valid string entries, and inspect at most 10,000 candidates per assignment;
+  update them by assigning a new collection.
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check)
 - `directory: boolean = false` (reflected) — enables native directory selection where supported
 - `paste: boolean = true` (reflected) — accepts files pasted into the dropzone
@@ -467,10 +521,15 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
     result's own `message` to the validator's static or function `message`, then to the localized
     default. Attributes listed in `observedAttributes` are watched on the host and revalidate live.
   Validators run in order and the first failure wins. A validator that throws fails closed with the
-  localized generic message rather than escaping into the caller. `checkValidity()` and
-  `reportValidity()` recompute at call time, so a validator that starts failing without any host
-  property changing is still seen. Own or fieldset-cascaded `disabled` bars configured validators
-  exactly as it bars the intrinsic constraint. Exported types:
+  localized generic message rather than escaping into the caller. Unreadable proxy-backed
+  validator collections/results are contained too: a collection or result trap fails closed,
+  returned validity flags are copied through the native flag vocabulary, and an unreadable
+  `observedAttributes` list is skipped without rejecting the component's update. The public array
+  remains the live mutable mirrored contract; each validation/observer pass takes only a transient
+  iteration snapshot. `checkValidity()` and `reportValidity()` recompute at call time, so a
+  validator that starts failing without any host property changing is still seen. Own or
+  fieldset-cascaded `disabled` bars configured validators exactly as it bars the intrinsic
+  constraint. Exported types:
   `LyraFileInputValidator`, `LyraFileInputValidatorResult`, `LyraFileInputObjectValidator`,
   `LyraFileInputObjectValidatorResult`.
 - `validationTarget: HTMLElement | undefined` — the focusable base of the dropzone control after
@@ -478,10 +537,14 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
   is anchored; assign `undefined` to restore the default focusable base
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides `label` as the internal
   dropzone/button accessible name without changing visible copy
-- `acceptedMessage: string = '{count} file(s) added.'` (attribute `accepted-message`) — live-region
-  message after an accepted selection; `{count}` is replaced with the accepted count
-- `rejectedMessage: string = '{count} file(s) rejected.'` (attribute `rejected-message`) — live-region
-  message after rejected files; `{count}` is replaced with the rejected count
+- `acceptedMessage?: string` (attribute `accepted-message`) — live-region message after an
+  accepted selection; `{count}` is replaced with the accepted count. Absence uses the localized
+  singular/plural `fileInputAcceptedOne`/`fileInputAcceptedMany` default. Every explicit string,
+  including empty and the former `'{count} file(s) added.'` English default, wins verbatim.
+- `rejectedMessage?: string` (attribute `rejected-message`) — live-region message after rejected
+  files; `{count}` is replaced with the rejected count. Absence uses the localized singular/plural
+  `fileInputRejectedOne`/`fileInputRejectedMany` default. Every explicit string, including empty
+  and the former `'{count} file(s) rejected.'` English default, wins verbatim.
 
 **Methods:** `openPicker()` programmatically opens the native file dialog; `focus(options?)`,
 `blur()`, and `click()` forward to the interactive dropzone. Standard FACE methods are
@@ -490,23 +553,31 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
 `required` validity.
 
 **Events:** a user selection or removal emits native bubbling/composed `input`, then `change`;
-programmatic `files` writes are silent. `lr-files` (`detail: { files: File[], rejected: RejectedFile[] }`, fired on both drop
-and manual file-picker selection) — `RejectedFile = { file: File; reason: 'type' | 'count' | 'size' | 'directory'
+programmatic `files` writes are silent. The hidden native picker's own `change` is contained inside
+the shadow root, so a picker selection exposes exactly one post-commit host `change`, not the
+implementation event plus a duplicate. `lr-files` (`detail: LyraFileInputFilesDetail`, with fresh
+readonly `files` and `rejected` arrays, fired on both drop and manual file-picker selection) —
+`LyraFileInputRejectedFile = { readonly file: File; readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit'
 }`: `'type'` from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file
 input (`multiple` unset) receives more than one file (in which case *all* files are rejected, none
-accepted), `'size'` from `maxFileSize`, or `'directory'` for a dropped folder. `focus`/`blur` fire
-when the semantic dropzone (the actual keyboard-focusable element, not the hidden native `<input>`)
-gains/loses focus.
+accepted), `'size'` from `maxFileSize`, `'directory'` for a dropped folder in single-file mode,
+`'read'` when a file/directory reader fails, or `'limit'` when folder traversal exceeds its bounded
+entry budget. Read/limit failures reject the complete selection atomically; lifecycle cancellation
+and supersession stay silent. `focus`/`blur` fire when the semantic dropzone (the actual
+keyboard-focusable element, not the hidden native `<input>`) gains/loses focus.
 `lr-invalid` is the bubbling/composed alias of native invalidity.
 
 Each rejected file also renders as its own line in the visible `[part="rejection"]` region, naming
-the file and the reason via one of four locale keys: `fileInputRejectedType` (default
+the file and the reason via one of six locale keys: `fileInputRejectedType` (default
 `'{filename}: this file type is not accepted.'`), `fileInputRejectedSize` (default
 `'{filename}: this file is too large.'`), `fileInputRejectedCount` (default `'{filename}: only one
 file can be selected at a time.'`), and — for `'directory'` — the pre-existing
 `fileInputFolderRejected` (default `'Folders are not accepted here.'`, reused verbatim, so it has no
-`{filename}` placeholder). The filename is interpolated as caller-supplied data, never localized
-itself. The region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
+`{filename}` placeholder). Terminal traversal failures use `fileInputRejectedRead` (default
+`'{filename}: the file could not be read.'`) and `fileInputRejectedLimit` (default
+`'{filename}: the folder contains too many entries.'`). The filename is interpolated as
+caller-supplied data, never localized itself. The same per-reason text is announced assertively;
+the region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
 
 **Slots:** `dropzone` (with the default slot retained as its fallback) supplies custom dropzone
 content; `label`, `hint`, and `error` supply form chrome. The semantic button's accessible name comes from
@@ -624,10 +695,12 @@ an extension-only `accept` list.
 - Paste-from-clipboard **is** supported and on by default: a `paste` event on the dropzone reads
   `e.clipboardData.files` and routes it through the same accept/reject classification as a drop.
   Set `paste="false"` (or `.paste = false`) to opt out.
-- Dragged folders are traversed recursively in `multiple` mode with a 10,000-entry budget. An
-  over-budget, cancelled, or superseded traversal rejects the complete drop and emits no partial
-  `lr-files` result. In single-file mode a folder is reported as `rejected[].reason === 'directory'`
-  (paired with a synthetic zero-byte `File` carrying the folder name).
+- Dragged folders are traversed recursively in `multiple` mode with a 10,000-entry budget. A read
+  failure or over-budget traversal rejects the complete drop atomically and emits one `lr-files`
+  result with `rejected[].reason === 'read'` or `'limit'`, plus dedicated visible and assertive
+  localized feedback. Lifecycle cancellation and supersession remain silent and emit no partial
+  result. In single-file mode a folder is reported as `rejected[].reason === 'directory'` (paired
+  with a synthetic zero-byte `File` carrying the folder name).
 - `maxFileSize` fails safe rather than open: `0` (the default) or `Infinity` mean "no limit", but a
   `NaN`/negative value — an unparsable `max-file-size` attribute, or a config that hasn't loaded
   yet — falls back to a 25 MB cap (exported as `DEFAULT_MAX_FILE_SIZE_BYTES`) instead of disabling
@@ -652,10 +725,16 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
   and its range handle
 - `beforeLabel`/`afterLabel` — fallback text for empty named slots
 
-**Events:** one native bubbling/composed `input` (`Event`) plus `lr-position-change` (`detail:
-{ position }`) after every live range update, and one native bubbling/composed `change` (`Event`)
-plus `lr-change` after a gesture commits. `focus`/`blur` are relayed exactly once as owner-realm
-native `FocusEvent`s preserving `relatedTarget`, followed by the `lr-focus`/`lr-blur` aliases.
+**Events:** exactly one owner-realm, bubbling/composed native `input` (`Event`) after every live
+range update, and exactly one owner-realm native `change` (`Event`) after a gesture commits.
+`focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s preserving
+`relatedTarget`; a dirty keyboard edit commits its `change` before `blur`.
+
+Arrow handling is explicit so browser engines cannot disagree: in horizontal orientation,
+Left/Right follows the mirrored inline axis (and Up/Down increases/decreases); in vertical
+orientation, Up/Left decreases toward the physical top and Down/Right increases toward the
+physical bottom, independent of document direction. Home/End select 0/100 and PageUp/PageDown
+move by 10. Only a primary left-button pointer may begin a drag.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal range handle.
 
@@ -698,30 +777,44 @@ allocated inline size with a 16:9 aspect ratio by default (override `aspect-rati
   values are accepted; active `data:`/`javascript:` and non-embeddable schemes are omitted.
 - `srcdoc: string = ''` — inline iframe document. A present `srcdoc` wins over `src`, including an
   explicitly empty `srcdoc` attribute.
-- `allowfullscreen: boolean = false`, `loading: 'eager' | 'lazy' = 'eager'`,
+- `allowfullscreen: boolean = false`, `loading: LyraZoomableFrameLoading = 'eager'`
+  (`'eager' | 'lazy'`),
   `referrerpolicy: string = ''`, and `sandbox: string = 'allow-same-origin'` forward the native
   iframe controls after validation. Invalid loading becomes `eager`; an invalid non-empty referrer
   policy becomes `no-referrer`.
 - `zoom: number = 1` (reflected) — current scale. Finite programmatic values do not have to occur
   in `zoomLevels`; unsafe/non-finite layout values render as a finite positive fallback.
 - `zoomLevels: string = '25% 50% 75% 100% 125% 150% 175% 200%'` (attribute `zoom-levels`) —
-  decimal/percentage stops used by the controls, parsed, deduplicated, and sorted.
+  decimal/percentage stops used by the controls. The cached projection reads at most the first
+  16,384 UTF-16 code units and 256 whitespace-delimited tokens before deduplicating and sorting;
+  a token cut by the source ceiling is ignored, and later source text cannot affect the controls.
 - `withoutControls: boolean = false`, `withoutInteraction: boolean = false`, and
   `withThemeSync: boolean = false` (reflected attributes `without-controls`,
   `without-interaction`, `with-theme-sync`) — respectively remove the toolbar, remove pointer and
-  sequential-keyboard iframe interaction, and opt into best-effort same-origin theme sync.
-- `accessibleLabel: string | null` (attribute `aria-label`) — forwarded to the actual iframe
-  `title`; otherwise the localized zoomable-frame label names it.
+  sequential-keyboard iframe interaction by making the browsing context native `inert`, and opt
+  into best-effort same-origin theme sync. The inert frame also refuses programmatic focus/click
+  and carries no unsupported `aria-disabled` claim.
+- `accessibleLabel: string | null` (attribute `aria-label`) — a declarative attribute remains on
+  the host while the iframe gets its localized purpose title, avoiding a duplicate name on two
+  semantic owners. A property-only value names the iframe. Explicit empty host naming is preserved
+  as an empty iframe title rather than replaced through truthiness.
 - readonly `iframe?: HTMLIFrameElement`, `contentWindow: Window | null`, and
   `contentDocument: Document | null`. Both content accessors return `null` while detached;
   `contentDocument` also returns `null` across an origin boundary.
 
+**Authoring type:** `LyraZoomableFrameLoading`. The former unprefixed
+`ZoomableFrameLoading` name is removed in v9 rather than retained as an alias.
+The former deep-class-module implementation exports `DEFAULT_ZOOM_LEVELS`,
+`DEFAULT_IFRAME_SANDBOX`, `safeZoomableFrameSrc()`, and `safeZoomableFrameSandbox()` are also
+removed in v9. They were never part of the registration, root, or documented component surface;
+configure the corresponding public properties instead of depending on sink-policy internals.
+
 **Methods:** `zoomIn()` selects the nearest configured level above the current value;
 `zoomOut()` selects the nearest below it. The toolbar also accepts `+`/`=` and `-`/`_` while one
 of its controls has focus. `focus(options?)`, `blur()`, and `click()` forward to the internal
-iframe — the component's primary interactive surface, still programmatically focusable under
-`without-interaction` — rather than to the two-button zoom toolbar, which has no single primary
-action.
+iframe — the component's primary interactive surface — only while the component is connected and
+interaction is enabled. Under `without-interaction` they are deliberate no-ops rather than an
+escape around native `inert`; the two-button zoom toolbar has no single primary action.
 
 **Slots:** `zoom-in-icon` and `zoom-out-icon` replace the decorative control glyphs. Their
 flattened subtrees are always inert and hidden from assistive technology, so use an SVG or glyph
@@ -735,7 +828,10 @@ generation as non-bubbling, non-composed `Event` instances. Navigation/source-po
 replace the iframe, so a late event from an earlier document is ignored; detached frames do not
 notify.
 
-**CSS parts:** `iframe`, `controls`, `zoom-in-button`, and `zoom-out-button`.
+**CSS parts:** `iframe`, `controls`, `zoom-in-button`, and `zoom-out-button`. Real focus entry into
+the browsing context (Tab, pointer, or `focus()`) exposes `data-frame-focused` on the host and paints
+the shared focus ring around the iframe boundary; blur, navigation rekey, disablement, and removal
+clear it.
 
 **CSS custom properties:** read-only `--lr-zoomable-frame-zoom`, resolved from the `zoom`
 property and applied to the internal iframe scale; and `--lr-zoomable-frame-control-hover-background`
@@ -781,10 +877,12 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
 **Properties:**
 - `zoom: number = 1` (reflected), `minZoom: number = 0.5`, `maxZoom: number = 4`, and
   `zoomStep: number = 0.25` — bounded, finite zoom configuration
-- `src: string = ''` and `alt: string = ''` — optional safe image source; otherwise the default
-  slot renders
-- `accessibleLabel: string | null` (attribute `aria-label`) — names the region and its focusable
-  viewport
+- `src: string = ''` and `alt: string = ''` — optional safe image source. A rejected URL is treated
+  as absent and the default slot renders; no empty or unsafe `<img>` replaces that fallback.
+- `accessibleLabel: string | null` (attribute `aria-label`) — a declarative host label remains on
+  the host while the focusable viewport receives the localized inspection-surface purpose name.
+  A property-only value can name the viewport. This avoids cloning one author label onto both the
+  outer component and nested `role="group"`.
 
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change`
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
@@ -801,11 +899,15 @@ relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed,
 
 **CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`. The
 `reset` button's visible text is the live zoom percentage, locale-formatted and recomputed from
-`zoom` on every render (not a fixed "100%").
+`zoom` on every render (not a fixed "100%"). Its accessible name includes both the localized reset
+action and that visible percentage, so the visible label is contained in the computed name.
 
 **Themeable custom properties:** `--lr-pan-zoom-min-block-size` (default `var(--lr-size-10rem)`)
 and the read-only `--lr-pan-zoom-zoom`. The former `--lr-zoomable-frame-min-block-size` and
-`--lr-zoomable-frame-zoom` names remain temporary fallbacks during the tag migration.
+`--lr-zoomable-frame-zoom` compatibility names were removed in v9; migrate them to the two
+`--lr-pan-zoom-*` names. Scaling
+uses layout-participating CSS `zoom`, not a paint-only transform, so the viewport's native scroll
+range reaches the entire painted footprint at both logical edges in LTR and RTL.
 
 ```js
 import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';
@@ -825,14 +927,18 @@ to populate it: set `file` to a real `File` (fresh from a picker/drop), from whi
 `mime-type` and the image thumbnail are all auto-derived; or set the plain `name`/`bytes`/
 `mime-type`/`thumbnail-src` props instead, for reconstructing a chip from server-persisted
 attachment metadata after a page reload, when no real `File` object exists any more. `file` always
-wins when both are present. When a real `File` or `preview-src` is available, the chip also offers
-a localized preview action that opens `<lr-document-viewer>` using the same effective MIME type.
+wins when both are present. When a real `File` or `preview-src` is available, the chip offers a
+localized action that emits a cancelable `lr-preview-request`; it never registers or owns a viewer
+or overlay, so the host composes the desired preview surface.
 
 **Properties:**
 - `file?: File` (attribute `false`, i.e. property-only) — when set, `name`/`bytes`/`mimeType`/the
   image thumbnail are all derived from it, taking precedence over the independent props below
 - `name: string = ''` — filename, used only while `file` is unset
-- `bytes: number = 0` — file size in bytes, used only while `file` is unset
+- `bytes?: number` — file size in bytes, used only while `file` is unset. `0` is a known empty file
+  and renders `0 B`; omission means unknown. Negative/non-finite writes normalize to omission.
+- `attachmentId: string = ''` (attribute `attachment-id`) — stable domain identity carried by
+  attachment action events. The platform `id` remains available for DOM identity/idrefs only.
 - `mimeType: string = ''` (attribute `mime-type`) — used only while `file` is unset
 - `thumbnailSrc: string = ''` (attribute `thumbnail-src`) — thumbnail image URL, used only while
   `file` is unset; rendered whenever present regardless of `mimeType` (no `file`-derived equivalent
@@ -841,8 +947,9 @@ a localized preview action that opens `<lr-document-viewer>` using the same effe
   `file` is unset; a real `File` takes precedence and uses a temporary blob URL
 - `previewable: boolean = true` (reflected) — shows the preview action whenever a `file` or
   `preview-src` is available
-- `status: AttachmentChipStatus = 'pending'` (reflected) — `'pending' | 'uploading' | 'error' |
-  'done'`; drives the accent tint and which of `progress`/`spinner`/`retry-button` renders
+- `status: LyraAttachmentUploadStatus = 'pending'` (reflected) — `'pending' | 'uploading' |
+  'error' | 'success'`; invalid values normalize to `pending`. Drives the accent tint and which of
+  `progress`/`spinner`/`retry-button` renders.
 - `progress: number = 0` — upload completion, 0-100; only meaningful while `status="uploading"`, a
   value of `0` or `NaN` falls back to the indeterminate spinner
 - `removable: boolean = true` (reflected) — shows the remove (×) button
@@ -868,18 +975,19 @@ a localized preview action that opens `<lr-document-viewer>` using the same effe
 **Renamed in 8.0.0 — breaking:** the byte count is `bytes`, not `size` (same rename as
 `lr-file-icon`'s). Everywhere else in this library `size` names a tier on the shared size ladder,
 and a numeric byte count answering to the same property name is a collision a consumer only
-discovers at runtime. A leftover `size="245000"` is an unknown attribute now: `bytes` stays `0` and
-the `size` part renders nothing.
+discovers at runtime. A leftover `size="245000"` is an unknown attribute now: `bytes` stays omitted
+and the `size` part renders nothing.
 
-The component identifies *which* attachment a `lr-remove`/`lr-retry` event is about via the
-platform's own `id` attribute/property rather than a second, differently-named prop. Set `id="..."`
-when you have a stable server-side attachment id; when unset and `file` is set, a stable id is
+The component identifies *which* attachment an action event is about through `attachmentId`. Set
+`attachment-id="..."` when you have a stable server-side identity; when unset and `file` is set, a
+stable attachment id is
 derived from `` `${file.name}:${file.size}:${file.lastModified}` ``; when neither is available, a
 generated internal id is used as a last resort.
 
-**Events:** `lr-remove` (`detail: { id }`, only rendered while `removable`), `lr-retry`
-(`detail: { id }`, only rendered while `status="error"`), `lr-preview` (`detail: { id, name,
-mimeType, src }`, emitted when the preview action opens the document viewer)
+**Events:** `lr-remove` (`detail: { attachmentId }`, only rendered while `removable`), `lr-retry`
+(`detail: { attachmentId }`, only rendered while `status="error"`), and cancelable
+`lr-preview-request` (`detail: { attachmentId, name, mimeType, src }`). Preventing the preview
+request is a host veto point; the chip itself has no preview default action.
 
 **Slots:** none.
 
@@ -887,7 +995,7 @@ mimeType, src }`, emitted when the preview action opens the document viewer)
 keeps its pre-rename name — it is the rendered size *text*, and renaming a part would break shipped
 `::part()` rules for no gain), `status-text` (the visible text twin of
 the status accent color, so the state is carried in words and not only in color; empty and hidden
-for `pending`/`done`), `progress`, `progress-fill`, `spinner` (decorative/`aria-hidden` while the
+for `pending`/`success`), `progress`, `progress-fill`, `spinner` (decorative/`aria-hidden` while the
 adjacent `status-text` supplies the wording), `retry-button`, `preview-button`,
 `remove-button`
 
@@ -911,7 +1019,7 @@ already focused on the chip still hears an upload failure — goes to the librar
 `var(--lr-color-text-quiet)`), `--lr-attachment-chip-bg` (default `var(--lr-color-surface)`),
 `--lr-attachment-chip-border` (default `var(--lr-color-border)`) — this trio is swapped per
 `status` (`uploading` → brand/brand-quiet/transparent, `error` → danger/danger-quiet/transparent,
-`done` → success/success-quiet/transparent); `--lr-attachment-chip-compact-thumbnail-size` (default
+`success` → success/success-quiet/transparent); `--lr-attachment-chip-compact-thumbnail-size` (default
 `1.75rem`), `--lr-attachment-chip-compact-font-size` (default `var(--lr-font-size-xs)`),
 `--lr-attachment-chip-compact-gap` (default `0.25rem`) — govern the chip's thumbnail size, text
 size, and internal gap while `compact` is set; `--lr-attachment-chip-spinner-duration` (default
@@ -922,14 +1030,18 @@ size, and internal gap while `compact` is set; `--lr-attachment-chip-spinner-dur
 
 **Optional peer deps:** none.
 
-Also exported from the package root: `formatFileSize(bytes: number): string` — `512` → `"512 B"`
-(whole bytes never get a decimal), `2415919` → `"2.3 MB"` (every unit past bytes gets exactly one
-decimal place), and a negative or non-finite input (`NaN`, `Infinity`) returns `""` so an unknown
-size renders nothing instead of `"NaN B"`.
+Also exported from the package root:
+`formatFileSize(bytes: number, unitLabel?: (unit: 'B' | 'KB' | 'MB' | 'GB' | 'TB') => string,
+numberLabel?: (value: number, fractionDigits: number) => string): string`. `unitLabel` localizes each
+selected unit abbreviation; `numberLabel` formats the scaled value and receives `fractionDigits`
+as `0` for bytes or `1` for larger units. Their defaults preserve the built-in output: `512` →
+`"512 B"` (whole bytes never get a decimal), `2415919` → `"2.3 MB"` (every unit past bytes gets
+exactly one decimal place), and a negative or non-finite input (`NaN`, `Infinity`) returns `""` so
+an unknown size renders nothing instead of `"NaN B"`.
 
 ```html
-<lr-attachment-chip name="report.pdf" bytes="245000" mime-type="application/pdf" status="done"></lr-attachment-chip>
-<lr-attachment-chip id="att-2" status="uploading" progress="42"></lr-attachment-chip>
+<lr-attachment-chip name="report.pdf" bytes="245000" mime-type="application/pdf" status="success"></lr-attachment-chip>
+<lr-attachment-chip attachment-id="att-2" status="uploading" progress="42"></lr-attachment-chip>
 <script type="module">
   import { formatFileSize } from '@aceshooting/lyra-ui/components/media/attachment-chip/file-size.js';
 
@@ -937,7 +1049,7 @@ size renders nothing instead of `"NaN B"`.
   chip.file = pickedFile; // name/bytes/mime-type/thumbnail all derived from the File
   chip.addEventListener('lr-remove', (e) => removeAttachment(e.detail.id));
   chip.addEventListener('lr-retry', (e) => retryUpload(e.detail.id));
-  chip.addEventListener('lr-preview', (e) => console.log(e.detail));
+  chip.addEventListener('lr-preview-request', (e) => openPreview(e.detail));
   console.log(formatFileSize(pickedFile.size));
 </script>
 ```
@@ -975,27 +1087,34 @@ type wins; filename extension fallback is used only for an empty or `application
 MIME type. Unknown values return a generic file result.
 
 **Properties:** `mimeType` (attribute `mime-type`), `name`, `bytes` (file size **in bytes**, shown
-next to the label in `variant="label"` mode; `0`, the default, renders no size), `label`,
-`decorative`, and `variant: 'icon' | 'label'`. A host `aria-label` wins over the computed localized
-file-type/size name. `decorative` changes the semantic owner to presentation and renders
-`aria-hidden="true"` explicitly.
+next to the label in `mode="label"`; `0`, the default, renders no size), `label`, `decorative`,
+`mode: LyraFileIconMode = 'icon' | 'label'` (invalid values normalize to `icon`), and
+`registry: LyraFileTypeMetadataRegistry` (property-only, defaulting to the immutable built-in
+registry). A host `aria-label` wins over the computed localized file-type/size name. `decorative`
+changes the semantic owner to presentation and renders `aria-hidden="true"` explicitly.
 
 **Renamed in 8.0.0 — breaking:** the byte count is `bytes`, not `size`. Everywhere else in this
 library `size` names a tier on the shared size ladder, and a numeric byte count answering to the
 same property name is a collision a consumer only discovers at runtime. A leftover `size="245000"`
 is an unknown attribute now: `bytes` stays `0` and the badge silently renders without a size.
 
-**CSS parts:** `base`, `icon`, `label`, and `size` (the part keeps its name — it is the rendered
-size *text*, and renaming a part would break shipped `::part()` rules for no gain).
+**CSS parts:** `base`, `icon`, `label`, `description` (consumer-authored registry metadata in label
+mode), and `size` (the part keeps its name — it is the rendered size *text*, and renaming a part
+would break shipped `::part()` rules for no gain).
 
 **Themeable custom properties:** `--lr-file-icon-size` (default `var(--lr-size-2rem)` — the
 format badge's inline and block size).
 
-**Exports:** `LyraFileTypeMetadata`, `LyraFileTypeIcon`, `LyraFileTypeCategory`,
-`getFileTypeMetadata()`, and `registerFileTypeMetadata()` for application-specific mappings.
+**Exports:** `LyraFileTypeMetadata`, `LyraFileTypeMetadataEntry`, `LyraResolvedFileTypeMetadata`,
+`LyraFileTypeMetadataRegistry`, `LyraFileTypeIcon`, `LyraFileTypeCategory`,
+`createFileTypeMetadataRegistry(entries)`, `defaultFileTypeMetadataRegistry`, and the compatibility
+lookup `getFileTypeMetadata()`. Registries validate and deeply snapshot records, use deterministic
+longest registered-suffix matching (including multi-dot/punctuation suffixes), and isolate custom
+mappings per instance instead of mutating module-global state. Consumer labels/descriptions remain
+verbatim; built-in labels route through localization.
 
 ```html
-<lr-file-icon mime-type="application/pdf" variant="label" bytes="245000"></lr-file-icon>
+<lr-file-icon mime-type="application/pdf" mode="label" bytes="245000"></lr-file-icon>
 ```
 
 ## `lr-media-card`
@@ -1009,22 +1128,25 @@ final.
 **Properties:**
 - `src: string = ''` — the media URL. Always re-validated against a safe-scheme allowlist before
   use (see below) — never trust it unsanitized even though it's typed as a plain string.
-- `kind?: 'image' | 'video' | 'file'` (reflected) — explicit format dispatch. Leave unset to
+- `kind?: LyraMediaCardKind` (`'image' | 'video' | 'file'`, reflected) — explicit format dispatch. Leave unset to
   auto-detect from `mimeType`.
 - `mimeType: string = ''` (attribute `mime-type`) — drives auto-detection when `kind` is unset.
 - `filename: string = ''` — shown in the file-chip fallback, used as the download link's suggested
   filename, and folded into the accessible name.
 - `alt: string = ''` — alt text for the image case (and reused as a video label fallback). Falls
   back to `filename`, then a generic per-kind description.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the localized action name on
-  the actual button/link without replacing image alt text or the video control's own label
+- `accessibleLabel: string = ''` (attribute `aria-label`) — a declarative attribute names the host
+  as a whole while its nested button/link keeps a purpose-specific localized action name. A
+  property-only assignment can override the nested action when no host label is present. Image alt
+  text and the native video's own purpose label remain independent; an explicitly empty host still
+  leaves every interactive descendant named.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"16rem"`); once set,
   overrides the `--lr-media-card-max-height` custom property for this instance only (applied
   inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the
   shadow root) — same contract as `<lr-document-preview>`'s identically-named prop. Values that do
   not parse as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
   the stylesheet token in control.
-- `frame: 'card' | 'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'card'` (the default) keeps the bordered, filled box. `'plain'` removes
   `[part="base"]`'s border, background, padding, and corner radius, so a card inside a dense chat
   transcript (or any container already drawing its own separation between attachments) doesn't
@@ -1036,16 +1158,21 @@ this property was always the second. There is no alias — `appearance` on `<lr-
 an unknown attribute now, so a card left on `appearance="plain"` silently renders the full card
 chrome again.
 
-**Events:** `lr-open` (`detail: { src: string; filename: string }`, cancelable) — fired when the
-card (or, for `kind="video"`, its separate `open-button`) is activated. `detail.src` is whichever
-safe-URL sink actually rendered (`safeMediaSrc(src) ?? safeLinkHref(src) ?? src.trim()`), not
-necessarily the raw `src` property verbatim — a whitespace-padded value is trimmed, so `detail.src`
-always matches what the DOM would show if it were safe. This component never navigates on its own
-for `image`/`video` — a host decides what "open" means. The `file`-chip case is the exception: when
-`src` passes the stricter href safety check, the chip is a real `<a href download>` so a bare
-drop-in still does something useful, but `lr-open` fires first — a host calling
-`preventDefault()` on it suppresses that default download/open so it can substitute its own
-handling.
+**Authoring types:** `LyraMediaCardKind` and `LyraMediaCardOpenDetail`; `frame` uses the shared
+`LyraFrame` directly. The former `MediaCardKind`, `MediaCardOpenDetail`, and `MediaCardFrame`
+names are removed in v9 rather than retained as aliases. URL validators are implementation details,
+not exports from the component entry.
+
+**Events:** `lr-media-open` (`detail: LyraMediaCardOpenDetail { src: string; filename: string }`,
+noncancelable) notifies
+after image-card or video open-button activation; those kinds have no component-owned navigation,
+so a host decides what "open" means. `lr-before-media-download` carries the same detail and is
+cancelable only for a safe file anchor immediately before its native download/open default; calling
+`preventDefault()` there suppresses that exact default. `detail.src` is whichever internally
+validated safe-URL sink actually rendered, not necessarily the raw `src` property verbatim — a
+whitespace-padded value is trimmed, so it matches the rendered sink.
+The former generic `lr-open` event is removed in v9: notification and veto phases now have distinct,
+truthful names.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the primary action for the
 current media kind.
@@ -1076,19 +1203,21 @@ sizing), `--lr-focus-ring-*`, `--lr-transition-fast`.
 
 ```html
 <lr-media-card kind="image" src="https://example.com/photo.jpg" alt="Screenshot" filename="photo.jpg"
-  @lr-open=${(e) => openLightbox(e.detail.src)}
+  @lr-media-open=${(e) => openLightbox(e.detail.src)}
 ></lr-media-card>
-<lr-media-card kind="file" src="https://example.com/report.pdf" filename="report.pdf"></lr-media-card>
+<lr-media-card kind="file" src="https://example.com/report.pdf" filename="report.pdf"
+  @lr-before-media-download=${(e) => shouldUseNativeDownload || e.preventDefault()}
+></lr-media-card>
 ```
 
-**Safe-URL checking.** `src` is validated (exported as `safeMediaSrc()`/`safeLinkHref()`) before it's
+**Safe-URL checking.** `src` is validated by internal sink-specific helpers before it's
 ever assigned to an `<img>`/`<video>` `src` or an `<a href>` — only `http:`/`https:`/`blob:` (plus
 `data:` for a *media* `src` only) or a scheme-relative/relative URL with no scheme at all pass;
 anything else (`javascript:`, `vbscript:`, and similarly suspicious schemes) is rejected. `data:` is
-allowed for `safeMediaSrc()` (a browser never executes script from a media element's `src`) but
-rejected by the stricter `safeLinkHref()` (a `data:text/html` URI navigated to via a clicked `<a
+allowed for a media source (a browser never executes script from a media element's `src`) but
+rejected by the stricter link validator (a `data:text/html` URI navigated to via a clicked `<a
 href>` runs as a full document and can execute script) — the same scheme gets a different verdict
-depending on which DOM sink it's headed for. Both functions delegate to the platform's own `new
+depending on which DOM sink it's headed for. Both validators delegate to the platform's own `new
 URL()` parser rather than a hand-rolled scheme regex, specifically because `new URL()` already
 implements the WHATWG URL Standard's input normalization (stripping tab/newline/leading-trailing
 space before looking for a scheme) — a naive regex is vulnerable to exactly the kind of
@@ -1101,7 +1230,7 @@ download affordance.
 `[part="media"]` rather than wrapping the whole card in one `<button>`/`<a>` (the pattern
 `image`/`file` use) — a `<video controls>` element is itself interactive content, and HTML forbids
 nesting interactive content inside a `<button>`/`<a>`; doing so anyway would also make every click on
-the video's own native controls bubble up and spuriously fire `lr-open`.
+the video's own native controls bubble up and spuriously fire `lr-media-open`.
 
 **Known gotchas:**
 - Calling the real `.click()` (or dispatching a `click`/`MouseEvent`) on the file-chip's `<a href>`
@@ -1122,14 +1251,15 @@ A compact attach affordance designed for a chat composer's leading slot (see `lr
 own `leading` slot, which this drops straight into, though it has no code dependency on it). First-
 party invention (no Web Awesome equivalent). Its shape adapts to how many attachment `capabilities`
 are configured: exactly one renders a single plain icon button; more than one renders a small
-anchored menu (composed from the already-landed `lr-menu`/`lr-menu-item`) listing each
+anchored menu (composed from `lr-dropdown`/`lr-menu`/`lr-menu-item`) listing each
 capability as a row.
 
 **Properties:**
-- `capabilities: AttachmentCapability[] = ['files']` (property only, no attribute) — which
-  capabilities to offer, in display order. `AttachmentCapability = 'files' | 'image' | 'camera' |
-  'audio'`; `FileBackedCapability = 'files' | 'image'` (the two that actually open the file
-  picker).
+- `capabilities: readonly LyraAttachmentCapability[] = ['files']` (property only, no attribute) —
+  which capabilities to offer, in display order. `LyraAttachmentCapability = 'files' | 'image' |
+  'camera' | 'audio'`; `LyraFileBackedCapability = 'files' | 'image'` (the two that actually open
+  the file picker). Writes are normalized to a frozen, deduplicated, at-most-four entry snapshot;
+  hostile/invalid collections fail closed to the default.
 - `accept: string = ''` — a native-file-input-style accept string (e.g. `'image/*'` or
   `'.pdf,.docx'`), forwarded to the hidden file input for the `files`/`image` capabilities. `image`
   defaults it to `'image/*'` unless this prop overrides it; `files` always uses it as-is (empty
@@ -1137,18 +1267,15 @@ capability as a row.
 - `multiple: boolean = true` (reflected) — forwarded to the hidden file input's own `multiple`
   attribute.
 - `disabled: boolean = false` (reflected)
-- `triggerLabel?: string` (attribute `trigger-label`) — overrides the single-capability trigger
-  button's accessible-name fallback, which otherwise comes from the localized capability metadata
-  (e.g. `'Attach files'`); only affects the single-capability button (`[part='trigger']`). The
-  multi-capability trigger uses its localized `'Add attachment'` fallback. A host `aria-label`
-  takes precedence on either trigger shape.
+- `accessibleLabel?: string` (attribute `accessible-label`) — overrides either trigger shape's
+  localized accessible-name fallback. A host `aria-label`, including explicit empty, wins.
 - `triggerTitle?: string` (attribute `trigger-title`) — forwards a sighted-user hover tooltip to
   both the single-capability and multi-capability trigger buttons
 
-**Events:** `lr-pick` (`detail: { capability: 'files' | 'image'; files: FileList }`) — fired once a
-file-backed capability's hidden input produces a real selection. The `FileList` is an independent
-snapshot (rehomed into a fresh `DataTransfer`), not a live reference to the input's own `.files` —
-see the gotcha below for why that distinction matters. `lr-camera-request` and `lr-audio-request`
+**Events:** `lr-files` (`detail: { capability: 'files' | 'image'; files: readonly File[] }`) — fired
+once a file-backed capability's hidden input produces a real selection. `files` is a fresh frozen
+owner-realm array snapshot, not a live reference to the input's own `.files`. `lr-camera-request`
+and `lr-audio-request`
 (both no detail — `detail` is `null`, not `undefined`, per the DOM spec's `CustomEventInit`
 default) — fired when the `camera` / `audio` capability is activated; this component implements no
 capture UI of its own, the host owns everything from here (there's no single right answer for
@@ -1161,8 +1288,8 @@ are relayed exactly once as owner-realm native `FocusEvent`s (bubbling and compo
 **Slots:** none — capabilities are configured entirely via the `capabilities` prop.
 
 **CSS parts:** `trigger` (the single-capability button, only rendered when
-`capabilities.length === 1`), `menu` (the `lr-menu` wrapper, only rendered when
-`capabilities.length > 1`), `menu-trigger` (the multi-capability button slotted into `lr-menu`'s own
+`capabilities.length === 1`), `menu` (the `lr-dropdown` shell, only rendered when
+`capabilities.length > 1`), `menu-trigger` (the multi-capability button slotted into `lr-dropdown`'s
 `trigger` slot, only rendered when `capabilities.length > 1`), `expand-icon` (the disclosure chevron
 inside the multi-capability trigger button, only rendered when `capabilities.length > 1`),
 `hidden-input` (the internal native `<input type="file">` that actually opens the OS file picker;
@@ -1177,7 +1304,7 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 
 ```html
 <lr-attachment-trigger .capabilities=${['files', 'image', 'camera']} accept=".pdf,.docx"
-  @lr-pick=${(e) => queueFiles(e.detail.capability, e.detail.files)}
+  @lr-files=${(e) => queueFiles(e.detail.capability, e.detail.files)}
   @lr-camera-request=${openCameraFlow}
 ></lr-attachment-trigger>
 ```
@@ -1186,10 +1313,8 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 - `HTMLInputElement.files` is a *live* view in most browsers — clearing `input.value` after reading
   `.files` (needed so re-picking the exact same file still fires another `change` event next time)
   mutates that exact `FileList` object back to empty in place, not just detaches a stale reference.
-  A consumer reading `lr-pick`'s `detail.files` even one microtask later (an `async` handler, a
-  queued upload) would otherwise observe an empty list — this component avoids that by rehoming the
-  selection into a fresh `DataTransfer` before emitting, but any other file-input-adjacent code
-  emitting `input.files` directly without that rehoming step has the same latent bug.
+  A consumer reading `lr-files` later would otherwise observe an empty list — this component
+  copies into a fresh frozen `File[]` before clearing the native input.
 - The `camera`/`audio` capabilities never touch the hidden `<input type="file">` at all — both are
   scope-limited by design to firing `lr-camera-request`/`lr-audio-request` and nothing else. The
   hidden input is only rendered when `capabilities` contains `files` or `image`.
@@ -1204,10 +1329,9 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 
 ## `lr-avatar`
 
-A small, fixed-size identity marker: default-slotted icon/glyph content, an image, an
-`icon`-slotted fallback glyph, or a fallback of initials text — in that priority order, whichever is
-set takes over from the next. Mirrors `wa-avatar` / `sl-avatar` (`image`, `initials`, `loading`,
-`shape`, the `icon` slot, the image-load error event) and adds this library's shared `size` and
+A small, fixed-size identity marker: an image, an `icon`-slotted fallback glyph, or initials — in
+that priority order. Mirrors `wa-avatar` / `sl-avatar` (`image`, `initials`, `loading`, `shape`, the
+named `icon` slot, label and image-load error event) and adds this library's shared `size` and
 `variant` vocabulary. Purely presentational, with no built-in interactivity; wrap it in a
 `<button>`/`<lr-menu>` trigger for a user-menu affordance.
 
@@ -1215,32 +1339,24 @@ set takes over from the next. Mirrors `wa-avatar` / `sl-avatar` (`image`, `initi
 - `initials: string = ''` — fallback text (typically 1-2 characters), shown whenever no glyph and no
   image is set, or the image fails to load and no `icon` slot content is provided.
 - `image: string = ''` — image URL; takes priority over the `icon` slot and `initials` when set and
-  loads successfully (but never over default-slotted glyph content), falling back to them on a load
+  loads successfully, falling back to them on a load
   error. **Renamed from `src` in 8.0.0** to match `wa-avatar`: a mechanical `wa-` → `lr-` rename
   used to leave the property unset, so a migrated avatar silently dropped its photo and rendered
   initials instead.
-- `label: string = ''` — upstream-compatible accessible description. A host `aria-label` wins,
-  followed by `label`, then the older `alt` compatibility property.
-- `alt: string = ''` — compatibility image alt text; set alongside `image` for accessibility, and also the source
-  of the accessible name for the glyph and initials cases (the glyph is `aria-hidden`, and the
-  initials text is hidden from AT once `alt` supplies a name, so `[part="base"]` carries
-  `role="img"` + that name instead).
-- host `aria-label` — overrides `alt` as the image/fallback accessible name without changing the
+- `label: string = ''` — upstream-compatible accessible description. A host `aria-label` wins.
+  The same resolved name reaches the image `alt` and every fallback tier.
+- host `aria-label` — overrides `label` as the image/fallback accessible name without changing the
   visible initials or image
 - `loading: 'eager' | 'lazy' = 'eager'` (new in 8.0.0) — passthrough to the rendered `<img>`'s
   native `loading` attribute. `'lazy'` defers the request until the avatar approaches the viewport,
   which is worth setting for avatars far down a long list and never for one above the fold. It only
   reaches the DOM while the image tier is the one rendering; the default matches the native default,
   so an avatar that never sets it behaves exactly as it did before the property existed.
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg'
-  = 'medium'` (reflected) — the library's shared six-step ladder, in either the `s`/`m`/`l` or the
-  `small`/`medium`/`large` spelling, plus this component's own older `sm`/`md`/`lg` shorthands.
-  Every one of the six tiers renders a distinct diameter — 1rem (`2xs`), 1.25rem (`xs`), 1.5rem
-  (`s`/`small`/`sm`), 2rem (`m`/`medium`/`md`, the default), 2.5rem (`l`/`large`/`lg`, which matches
-  `--lr-icon-button-size`), 3rem (`xl`) — and the initials font size steps alongside it. The three
-  spellings of a tier render identically, and the attribute reflects back whichever one was set
-  (`size="lg"` stays `"lg"`). **8.0.0 widened this from `sm`/`md`/`lg` to the full shared ladder**
-  and made `medium` the default.
+- `size: LyraSize = 'medium'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' |
+  'small' | 'medium' | 'large'`. Every tier renders a distinct diameter: 1.5rem (`2xs`), 2rem
+  (`xs`), 2.5rem (`s`/`small`), 3rem (`m`/`medium`, the mirrored default), 4rem (`l`/`large`,
+  matching `--lr-icon-button-size`), and 5rem (`xl`). Invalid and removed `sm`/`md`/`lg` writes
+  normalize to `medium`.
 - `shape: 'circle' | 'rounded' | 'square' = 'circle'` (reflected) — three distinct corner radii:
   `circle` (the pill radius), `rounded` (the shared `--lr-radius`), `square` (no radius at all).
   **`rounded` is new in 8.0.0.**
@@ -1255,25 +1371,19 @@ composed, non-cancelable, and purely informational: by the time it fires the ava
 fallen back to the `icon` slot or the initials on its own. It never fires for an avatar with no
 `image` set, and fires once more for each replacement `image` that also fails.
 
-**Slots:** default slot — icon/glyph content (e.g. an inline SVG or non-whitespace text/emoji),
-shown in place of the image and initials, e.g. to mark a chat avatar as "AI" vs. "user" with a role
-glyph. Takes priority over `image`, the `icon` slot, and `initials`. `icon` (new in 8.0.0) — a
-fallback glyph shown only when there is no default-slotted content and no loadable `image`; that is
+**Slots:** `icon` — a
+fallback glyph shown only when there is no loadable `image`; that is
 the role `wa-avatar`'s `icon` slot fills, a stand-in for the `initials` text rather than an override
-of the photo. Content in either slot is treated as decorative (`aria-hidden`) — set `alt` alongside
-it for an accessible name.
+of the photo. Its content is decorative (`aria-hidden`) — set `label` alongside it for an
+accessible name. There is no default slot.
 
-**CSS parts:** `base` (the outer circle/rounded/square container), `icon` (wrapper around whichever
-glyph slot is currently winning the fallback order — both slots stay mounted so their `slotchange`
-handlers keep firing, so this wrapper carries the native `hidden` attribute whenever no glyph is the
-winning tier: with neither slot filled, and equally while a loadable `image` is showing over
-icon-slot content), `image` (the `<img>`, only rendered while `image` is set, hasn't failed to load, and no
-default-slot glyph is provided), `initials` (the initials text, only rendered once every glyph and
-image tier ahead of it in the priority order has been ruled out).
+**CSS parts:** `base` (the outer circle/rounded/square container), `icon` (wrapper around the named
+fallback slot while it is the winning tier), `image` (the `<img>`, only while a safe, non-failed
+`image` is usable), and `initials` (only once the image and icon tiers are unavailable).
 
 **Themeable custom properties:** `--size` is the upstream-compatible diameter and falls back to
-`--lr-avatar-size` (default `var(--lr-size-2rem)`, stepped across
-the ladder from `var(--lr-size-1rem)` at `2xs` to `var(--lr-size-3rem)` at `xl` — every spelling of
+`--lr-avatar-size` (default `var(--lr-size-3rem)`, stepped across
+the ladder from `var(--lr-size-1-5rem)` at `2xs` to `var(--lr-size-5rem)` at `xl` — every spelling of
 a tier selects the same declarations), `--lr-avatar-bg` (default `var(--lr-color-border)`, swapped
 per non-neutral `variant` to that variant's `-quiet` fill; there is no `--lr-color-surface-alt`
 token in this library, despite what older copies of this page claimed), `--lr-avatar-color`
@@ -1293,13 +1403,13 @@ variant's quiet tint.
 
 ```html
 <lr-avatar initials="JS" variant="brand"></lr-avatar>
-<lr-avatar image="/users/42/photo.jpg" alt="Jane Smith" size="large" shape="rounded"></lr-avatar>
-<lr-avatar alt="Assistant"><svg viewBox="0 0 24 24"><!-- role glyph --></svg></lr-avatar>
+<lr-avatar image="/users/42/photo.jpg" label="Jane Smith" size="large" shape="rounded"></lr-avatar>
+<lr-avatar label="Assistant"><svg slot="icon" viewBox="0 0 24 24"><!-- role glyph --></svg></lr-avatar>
 
 <!-- Far down a long list: defer the request, fall back to a glyph, and report a broken URL. -->
 <lr-avatar
   image="/users/7/photo.jpg"
-  alt="Ada Lovelace"
+  label="Ada Lovelace"
   loading="lazy"
   @lr-error=${(e) => reportBrokenAvatar(e.detail.image)}
 >
@@ -1308,17 +1418,15 @@ variant's quiet tint.
 ```
 
 **Known gotchas:**
-- a leftover `src="…"` from a pre-8.0.0 avatar is now inert: nothing errors, the attribute is simply
-  not observed, and the avatar renders the `icon` slot or the initials as though no image were set.
-  Grep migrated markup for `<lr-avatar` carrying `src`, and rename it to `image`. A leftover
-  `tone="…"` fails the same silent way — rename it to `variant`.
+- additive `alt`, default glyph content and `sm`/`md`/`lg` aliases were removed for exact mirrored
+  vocabulary: migrate `alt→label`, default glyph content to `slot="icon"`, and size aliases to
+  `small`/`medium`/`large`. The older `src→image` and `tone→variant` migrations still apply.
 - an image load failure falls back to the `icon` slot when it has content, otherwise to `initials`.
   Changing `image` clears the failure state so the replacement URL gets its own load attempt,
   including when a later transition returns to a URL that failed previously.
-- when `alt` or host `aria-label` supplies a name, the base preserves that name through the glyph
+- when `label` or host `aria-label` supplies a name, the base preserves that name through the glyph
   and initials fallbacks while hiding duplicate initials text from assistive technology.
-- the `icon` slot yields to a loadable `image`; the default slot does not. Put a role glyph that
-  must always win in the default slot, and a stand-in for a missing photo in `slot="icon"`.
+- the `icon` slot yields to a loadable `image` and becomes the fallback if the image fails.
 
 ---
 
@@ -1330,17 +1438,20 @@ automatically under `prefers-reduced-motion: reduce`.
 **Properties:**
 - `src: string = ''` — re-validated through `safeMediaSrc()` (same allowlist as `lr-media-card`)
   before reaching the real `<img src>`.
-- `alt: string = ''` — falls back to the localized `animatedImageDefaultAlt` when empty; an explicit
-  `alt=""` does **not** mark the image decorative.
+- `alt?: string` — forwarded to the live image and frozen canvas. An absent or explicitly empty
+  value keeps both visual owners decorative; a nonempty value names whichever one is exposed. The
+  independent play/pause action still uses localized context when no nonempty `alt` is available.
 - `play: boolean = false` — the caller's *intent* (reflected).
 - `playing: boolean` (readonly getter, reflected as a `playing` host attribute) — the *effective*
   state after reduced-motion arbitration: `play && !(respectReducedMotion && <OS prefers reduce>)`.
-  Assigning to it is a silent no-op; drive playback via `play`.
+  It is a genuine getter-only property, so assigning to it from a strict JavaScript module throws a
+  `TypeError`; drive playback via `play`.
 - `respectReducedMotion: boolean = true` (reflected, attribute `respect-reduced-motion`) — while
   `true` and the OS reports `prefers-reduced-motion: reduce`, playback stays frozen and
   `[part="play-button"]` is `disabled` regardless of `play`.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides `[part="play-button"]`'s
-  computed Play/Pause label verbatim in *both* states (it does not itself vary by state). Never
+- `accessibleLabel: string = ''` (attribute `aria-label`) — when the host attribute is present,
+  including explicitly empty, it overrides `[part="play-button"]`'s computed Play/Pause label
+  verbatim in *both* states (it does not itself vary by state). Never
   touches the image's `alt`/the canvas's `aria-label`. For state-sensitive custom wording, override
   the `playWithContext`/`pauseWithContext`/`animatedImageDefaultAlt` strings instead.
 
@@ -1417,8 +1528,10 @@ Declaratively animates one slotted element through the native Web Animations API
   `IntersectionObserver` once the target intersects. `playOnVisibleRepeat: boolean = false`
   (attribute `play-on-visible-repeat`, reflected) — re-plays on each re-entry and pauses on exit;
   when unset the observer disconnects after the first trigger. `root: Element | null = null` and
-  `threshold: number | number[] = 0` (both attribute: false) plus `rootMargin: string = '0px'`
-  (attribute `root-margin`) configure that observer.
+  `threshold: number | readonly number[] = 0` (both attribute: false) plus
+  `rootMargin: string = '0px'` (attribute `root-margin`) configure that observer. Threshold arrays
+  are frozen snapshots, retain only finite values from 0 through 1, and inspect at most 1,000
+  candidates per assignment; invalid scalar thresholds normalize to `0`.
 - `currentTime: CSSNumberish` — the underlying `Animation.currentTime` (`0` when no animation
   exists); writable and forwarded when one exists. Non-finite numeric assignments are ignored.
 
@@ -1499,15 +1612,15 @@ excess into a localized "+N" badge. Composed over `<lr-avatar>` via plain light-
 - `max?: number` — how many assigned children stay visible before the rest collapse behind the
   badge. Unset (the default) means no limit. Any assigned value is sanitized to a finite,
   non-negative integer. Flattened slot-forwarded children count the same as direct children.
-- `size: AvatarSize = 'medium'` (reflected) — reused verbatim from `<lr-avatar>`'s own union (the
-  shared six-step ladder in either spelling, plus the `sm`/`md`/`lg` shorthands) and defaulting to
-  the same `'medium'` tier, so a group and the avatars inside it read as one vocabulary. Every tier
-  drives the same badge-size/overlap/badge-font-size swap the avatars get.
-- `shape: AvatarShape = 'circle'` (reflected) — `'circle' | 'rounded' | 'square'`, also reused from
-  `<lr-avatar>`; it shapes the overflow badge only.
-- `variant: AvatarVariant = 'neutral'` (reflected) — `'neutral' | 'brand' | 'success' | 'warning' |
-  'danger'`; recolors the overflow badge only. **Renamed from `tone` in 8.0.0** alongside
-  `<lr-avatar>`'s, with no alias.
+- `size: LyraSize = 'medium'` (reflected) — reused from `<lr-avatar>`'s canonical six-step ladder.
+- `shape: LyraAvatarShape = 'circle'` (reflected) — `'circle' | 'rounded' | 'square'`.
+- `variant: LyraVariant = 'neutral'` (reflected) — `'neutral' | 'brand' | 'success' | 'warning' |
+  'danger'`.
+
+`size`/`shape`/`variant` style the overflow badge and provide defaults only to assigned avatars
+that omit the corresponding attribute. Explicit child attributes remain authoritative; owned
+defaults are restored without overwriting later author writes across removal, reparenting,
+disconnect and reconnect.
 - `label: string = ''` — the group's `role="group"` accessible name. A host-level `aria-label` wins
   if both are set; with neither, no `aria-label` is rendered.
 
@@ -1516,11 +1629,13 @@ the badge was activated by click or Enter/Space. Non-cancelable, purely informat
 component keeps rendering the same collapsed stack, and a host typically wires this to its own
 popover/dialog listing the hidden members. There is no `expanded` state and no `aria-expanded`.
 
-**Slots:** default slot — `<lr-avatar>` elements (any content works, but the avatar pairing is the
-intended usage). Children past `max` have their native `hidden` attribute set.
+**Slots:** default slot — direct or forwarded `<lr-avatar>` elements. Other elements are ignored
+and remain untouched. Author-hidden/inert avatars do not consume visible capacity. Excess eligible
+avatars are hidden through reversible component-owned state.
 
 **CSS parts:** `base` (the outer inline-flex container holding the slot and the badge),
-`overflow-badge` (the "+N" `<button>`; only rendered while `max` is actively overflowing).
+`overflow-badge` (the 40px-minimum action surface; only rendered while `max` is actively
+overflowing), and `overflow-badge-visual` (the avatar-tier-sized painted disc inside it).
 
 **Themeable custom properties:** `--lr-avatar-group-avatar-size` (default `var(--lr-size-2rem)`,
 stepped across the same six tiers as `<lr-avatar>`'s `--lr-avatar-size`, from `var(--lr-size-1rem)`
@@ -1536,9 +1651,9 @@ badge label. `size` steps it per tier alongside the badge diameter, matching `<l
 `--lr-avatar-font-size` scale so the badge and the avatars it caps read at the same optical weight;
 override it alongside `--lr-avatar-font-size` on the avatars themselves when tuning a custom tier.
 
-The overflow badge keeps a `--lr-icon-button-size` (2.5rem) minimum activation target at every tier,
-including the ones whose avatar circles are smaller than that; this does not change the visible
-avatar circles themselves.
+The overflow badge keeps a `--lr-icon-button-size` minimum activation target at every tier while
+the nested visual disc stays exactly avatar-sized, so small tiers do not paint as oversized 40px
+circles.
 
 **Optional peer deps:** none.
 
@@ -1552,10 +1667,8 @@ avatar circles themselves.
 ```
 
 **Known gotchas:**
-- `size`/`shape`/`variant` do **not** cascade onto slotted avatars — they only drive this
-  component's own ring, overlap, and badge. Each `<lr-avatar>`'s own `--lr-avatar-size` lives in its
-  own shadow-scoped `:host` block and unconditionally overrides an inherited value, so set a
-  matching `size`/`shape` on both the group and every child.
+- group defaults only fill omitted child attributes; they deliberately do not overwrite explicit
+  heterogeneous child presentation.
 - the row never wraps (`flex-wrap` stays `nowrap`) — wrapping an overlapping stack breaks the
   visual.
 - avatars are non-interactive, so there is no roving tabindex / arrow-key handling; the badge is the
@@ -1569,10 +1682,13 @@ but shares the same overlay infrastructure as `<lr-dialog>`/`<lr-command-palette
 trap, Escape/backdrop dismissal, scroll lock, and focus return.
 
 **Properties:**
-- `open: boolean = false` (reflected) — set this or call `close()`; there is no `show()`/`hide()`.
-- `images: LyraLightboxImage[] = []` (attribute: false) — `LyraLightboxImage { src: string; alt?:
-  string; caption?: string }`. `src` is passed to the embedded frame, which runs it through
-  `safeMediaSrc()`. `alt`/`caption` are caller data, never localized.
+- `open: boolean = false` (reflected) — post-render writes run the same cancelable lifecycle as
+  `show()`/`hide()`/`close()`. Initial `open` markup is state and emits no lifecycle events.
+- `images: readonly LyraLightboxImage[] = []` (attribute: false) —
+  `LyraLightboxImage { readonly src: string; readonly alt?: string; readonly caption?: string }`.
+  Assignment clones/freezes the records and inspects at most 10,000 candidates; malformed records
+  are omitted and updates require a new collection assignment. `src` is passed to the embedded
+  frame, which runs it through `safeMediaSrc()`. `alt`/`caption` are caller data, never localized.
 - `index: number = 0` (reflected) — clamped defensively for rendering and silently re-synced (no
   event) when `images` shrinks.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
@@ -1592,16 +1708,21 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the panel's accessible name,
   overriding the localized `lightboxLabel`.
 
-**Methods:** `next()`, `previous()`, `goTo(index)`, `close(reason?)` — `goTo()` ignores a non-finite
+**Methods:** promise-based `show()`, `hide()`, and `close(reason?)`, plus `next()`, `previous()`, and
+`goTo(index)`. `show()`/`hide()` resolve after the successful rendered transition; a veto resolves
+without changing state. `goTo()` ignores a non-finite
 index without changing state or emitting `lr-index-change`. A finite fractional index is truncated
 toward zero before clamping or loop wrapping, so `lr-index-change.detail.index` is always the
 actual rendered integer index; `reason` defaults to `'api'` and is forwarded as the close event's
 detail.
 
-**Events:** `lr-lightbox-close` (`detail: LyraLightboxCloseReason = 'escape' | 'backdrop' |
+**Events:** cancelable `lr-show`, followed after a successful open render by `lr-after-show`;
+cancelable `lr-hide` (`detail: LyraLightboxHideDetail = { source: Element }`), then
+`lr-lightbox-close` (`detail: LyraLightboxCloseReason = 'escape' | 'backdrop' |
 'close-button' | 'api' | 'unmount' | (string & {})`; **cancelable** — `preventDefault()` blocks
-closing on every path, including a consumer's own `close()` call. Also fires with `'unmount'` when
-the element is removed from the DOM while still open); `lr-index-change` (`detail: { index }`, fired
+closing on every path, including a consumer's own `close()` call), followed after a successful
+closed render by `lr-after-hide`. Removal while open emits the settled non-vetoable
+hide/close/after-hide order with reason `'unmount'`. `lr-index-change` (`detail: { index }`, fired
 only for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
 `goTo()`; **not** when a consumer sets `index`/`images` directly); `lr-zoom-change` (`detail: {
 zoom }`) is not emitted by the lightbox itself — it bubbles up composed from the embedded frame.
@@ -1616,7 +1737,8 @@ including a consumer-driven one, appends the localized position to the document'
 `[data-lr-live-region="polite"]` sink; initial mount and reconnect are silent), `actions` (wrapper,
 `hidden` when nothing is slotted),
 `close-button` (always rendered — unlike `<lr-dialog>`'s opt-in `closable`), `stage`, `frame` (the
-embedded `<lr-pan-zoom>`; its internal parts are not re-exported), `previous-button`,
+embedded `<lr-pan-zoom>`), forwarded aliases `frame-viewport`, `frame-content`, `frame-controls`,
+`previous-button`,
 `previous-glyph`, `next-button`, `next-glyph`, `caption` (only when the current image has one; its
 `id` is the panel's `aria-describedby` target).
 
@@ -1630,46 +1752,59 @@ photo content.
 **Optional peer deps:** none.
 
 **Known gotchas:**
-- keyboard navigation is RTL-aware and bound on `[part="panel"]`, so it also sees keydowns bubbling
-  out of the embedded frame's shadow tree: Arrow forward/back (mirrored under `rtl`), `Home`, `End`.
-  It never collides with the frame's own `+`/`-`/`0` zoom shortcuts.
+- keyboard navigation is RTL-aware on panel/chrome: Arrow forward/back (mirrored under `rtl`),
+  `Home`, `End`. When the embedded pan/zoom viewport owns focus, those keys remain with its native
+  scroll surface and never change gallery item; `+`/`-`/`0` remain its zoom shortcuts.
 - initial focus deliberately goes to `close-button`, not the first tabbable element — a slotted
   `actions` button placed before it does not steal focus.
 - zoom/pan reset on navigation is imperative (`resetView()` from `updated()`), not a binding; the
   frame element is reused across navigations rather than recreated, so a keyboard user who tabbed
   into the viewport keeps focus.
 - scope for v1: no per-image slotted content (data-driven via `images` only), no dot indicators, no
-  open/close transition, no click-image-to-navigate, no touch-swipe.
+  visual open/close animation, no click-image-to-navigate, no touch-swipe. Lifecycle phases are
+  still observable through the before/after events and methods above.
 
 ## `lr-qr-code`
 
 Renders `value` as a QR code using the optional `qrcode` peer dependency. **Properties:** `value`,
 `label`, `size` (clamped to `1`–`2048` CSS px), `radius` (clamped to `0`–`0.5`), and
-`errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`, default `H`); `fill` and `background` are
-mapped color aliases that take precedence over the equivalent CSS custom properties. `image` accepts
+`errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`, default `H`). Standard host `color` and
+`background-color` control paint; optional `--lr-qr-code-fill` and
+`--lr-qr-code-background` aliases override those host styles, while the legacy `fill` and
+`background` properties remain highest-precedence compatibility overrides. `image` accepts
 a safe media URL for a centered overlay, `imageBackground` (`image-background`) paints its coverage
 box, `imageCoverage` (`image-coverage`, default `0.5`) controls that box as a fraction of the canvas
 side, and `imagePadding` (`image-padding`, default `0`) pads the image within it. Image geometry is
 finite-number guarded and clamped; supplying a valid image forces error correction to `H` so the
 covered modules remain recoverable. Unsafe image URLs are ignored and a failed image load leaves the
-base QR symbol intact.
+base QR symbol intact. Peer output is validated and cloned into an owned finite QR matrix before
+paint; malformed or hostile module shapes fail closed to the localized error state.
 
-The canvas owns `role="img"`; its accessible name uses host `aria-label`, then `label`, then `value`.
-Empty values render an empty state. `generate(): Promise<void>` explicitly re-encodes the current
-value. `refreshTheme(): void` redraws cached modules for consumer-owned token changes; ordinary
-ancestor theme and color-scheme changes redraw automatically. Async peer and image results are
+The host is the single image-semantic owner; its accessible name uses host `aria-label`, then
+`label`, then `value`, and it publishes `aria-busy="true"`/`"false"`. The stable public
+`canvas: HTMLCanvasElement` is presentational and remains the same live node through
+empty/loading/ready/error, reconnect, and adoption (hidden outside ready). Empty values render an
+empty state. `generate(): void` synchronously starts re-encoding the current value.
+`refreshTheme(): void` redraws cached modules for consumer-owned token changes; ordinary ancestor
+theme and color-scheme changes redraw automatically. Async peer and image results are
 generation-guarded, including across disconnect/reconnect.
 `LyraQrCode.preload(): Promise<boolean>` is a static optional-peer warm-up that starts the shared
 `qrcode` import without encoding a value; it resolves to `false` when the peer is unavailable.
+
+At ordinary sizes the backing store is a fixed `2×` the CSS size, independent of device pixel
+ratio. It degrades uniformly only to stay within 4,096 pixels per dimension and 8,388,608 total
+pixels. Modules span the full canvas with no injected quiet zone; add host padding when a scanner
+or physical output needs one.
+
 **CSS parts:** `base` and `qr-code` are aliases on the same outer wrapper; `canvas`, `empty`,
 `loading`, and `error`. **CSS custom properties:**
-`--lr-qr-code-fill` and `--lr-qr-code-background`. Ancestor theme-attribute and color-scheme
-changes redraw automatically. The mapped `fill`/`background` properties win when non-empty.
+`--lr-qr-code-fill` and `--lr-qr-code-background`.
 
 `error` is ordinary localized visible text, not a shadow live region. A missing peer or encode
 failure appends the localized message to the document's pre-mounted
 `[data-lr-live-region="assertive"]` sink; identical retries append distinct children, and sink
-ownership is released/reacquired across disconnect or document adoption.
+ownership is released/reacquired across disconnect or document adoption. Meaningful post-mount
+loading transitions use the corresponding polite light-DOM sink; initial mount remains silent.
 
 ## `lr-image-viewer`
 
@@ -1678,14 +1813,17 @@ landing surface for `region`-anchored citations. Distinct from `<lr-svg-viewer>`
 documents) and `<lr-image-comparer>` (before/after slotted surfaces). Adopts `DocumentAnchorTarget`
 with `anchorKinds: ['region']` only — no text selection is bound.
 
-**Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`, `fit: 'contain' | 'width' |
-'actual' = 'contain'` (reflected), `zoom: number = 1` (reflected), `minZoom: number = 0.5` (attribute
+**Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`,
+`fit: LyraImageFit = 'contain' | 'width' | 'actual'` (reflected; invalid writes normalize to
+`contain`), `zoom: number = 1` (reflected), `minZoom: number = 0.5` (attribute
 `min-zoom`), `maxZoom: number = 4` (attribute `max-zoom`), `zoomStep: number = 0.25` (attribute
 `zoom-step`) — `minZoom`/`maxZoom`/`zoomStep` are pure pass-throughs to the embedded
 `<lr-pan-zoom>` as its own `.minZoom`/`.maxZoom`/`.zoomStep`, which does the actual
 clamping/normalizing; same names/defaults as `<lr-lightbox>`'s identical trio, both wrapping the
-same pan/zoom surface — `rotation: 0 | 90 | 180 | 270 = 0`
-(reflected), and `annotatable: boolean = false` (reflected). The inherited anchor-target surface is
+same pan/zoom surface — `rotation: LyraImageRotation = 0 | 90 | 180 | 270` (reflected; finite
+writes round to the nearest right angle and wrap), and `annotatable: boolean = false` (reflected).
+`LyraImageRegionRect` is the public `{ x, y, width, height }` percentage-coordinate shape. The
+inherited anchor-target surface is
 `highlights: LyraHighlight[] = []` (property only; reassign after mutation),
 `activeHighlightId: string | null = null` (attribute `active-highlight-id`),
 `anchor: LyraAnchor | string | null = null` (property only), and readonly
@@ -1693,9 +1831,10 @@ same pan/zoom surface — `rotation: 0 | 90 | 180 | 270 = 0`
 
 **Methods:** `rotate()` advances `rotation` by 90°. `zoomIn()`, `zoomOut()`, and `resetZoom()` adjust
 the embedded pan-zoom surface's zoom. `scrollToAnchor(target: LyraAnchor | string):
-Promise<boolean>` resolves a `region` anchor (or a highlight id) after the image loads, reports
-whether it resolved, and makes an id-addressed match active; the complete image is already inside
-the pan/zoom viewport, so no additional page scroll is needed.
+Promise<boolean>` resolves a canonical finite, positive, in-bounds `region` anchor (or unique
+highlight id) after the image loads, scrolls its rendered target into the pan/zoom viewport, and
+reports true only when the target visibly intersects that viewport. Malformed/out-of-range regions
+report false.
 
 **Events:** `lr-load` (`detail: { naturalWidth, naturalHeight }`), `lr-zoom-change` (`detail: {
 zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detail: { fit }`),
@@ -1707,18 +1846,32 @@ zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detai
 text.
 
 **CSS parts:** `base`, `toolbar`, `fit-control`, `rotate-button`, `annotate-toggle`, `frame` (the
-embedded `lr-pan-zoom`), `image-wrapper`, `image`, `highlight-layer`, `highlight` (carries
-`data-tone`/`data-active`), `highlight-label`, `annotation-box`, and `error`.
+embedded `lr-pan-zoom`), forwarded aliases `frame-viewport`, `frame-content`, `frame-controls`,
+`rotation-frame` (the axis-swapped 90°/270° layout footprint), `image-wrapper`, `image`,
+`highlight-layer`, `highlight` (carries `data-tone`/`data-active`), `highlight-label`,
+`annotation-box`, and `error`.
 
 `error` is ordinary localized visible text, not a shadow live region. A fresh post-mount image
 failure or transition to an unsafe source appends the localized message to the document's
 pre-mounted `[data-lr-live-region="assertive"]` sink. An already-unsafe initial `src` remains
 visible but does not interrupt on mount; identical later failures append distinct children.
 
-While `annotatable`, `image-wrapper` is a named `role="group"` with the localized annotation hint.
-Only `region` highlights whose `rect` contains finite numeric `x`/`y`/`width`/`height` and
-nonnegative dimensions are rendered; malformed rectangles are omitted rather than reaching inline
-styles or anchor hit testing.
+Fit, rotate and annotate controls remain disabled until the current source reaches its own loaded
+terminal. Requested annotation mode resumes after a successful replacement load, but is not
+exposed as pressed/operable during idle, loading, or error state.
+
+While effectively annotatable, `image-wrapper` is a named `role="group"` with the localized
+annotation hint. Only `region` highlights whose rectangle is finite, positive and wholly within
+the 0–100 image coordinate space are rendered. IDs use first-wins uniqueness. At most
+`IMAGE_VIEWER_HIGHLIGHT_LIMIT` (200) region buttons are projected at once; one roving `tabindex=0`
+is maintained, Arrow keys/Home/End move within the projection, and an active item beyond the
+leading window replaces its final entry so identity stays reachable. `data-truncated` and
+`data-total` on `highlight-layer` expose the bounded state. Highlight tones retain distinct border
+styles as well as colors, including forced-colors mode.
+
+At 90°/270°, `rotation-frame` swaps the untransformed wrapper's layout axes and centers the painted
+transform inside that footprint, keeping every fit mode reachable in the scroll geometry in LTR
+and RTL.
 
 **RTL behavior:** the raster and annotation geometry use physical image coordinates. In annotation
 mode, ArrowLeft/ArrowRight decrease/increase a draft's `x` coordinate and their Shift variants
@@ -1760,22 +1913,32 @@ An audio/video player built on a native `<audio>`/`<video>` element, plus a cue 
 `currentTime`, `time-range` anchor/highlight support, an optional dependency-free waveform (peaks
 in, no in-component decoding), and playback-rate control. Owns recorded-media transcript sync —
 distinct from `<lr-transcript-feed>` (live captions for an in-progress voice session) and
-`<lr-playback>` (an index stepper, no media). Adopts `DocumentAnchorTarget` with
+`<lr-sequence-playback>` (a discrete sequence stepper, no native media). Adopts
+`DocumentAnchorTarget` with
 `anchorKinds: ['time-range']` only — no text selection is bound. The transcript virtualizes through
 `<lr-virtual-list>` the same way `lr-pdf-viewer` virtualizes pages.
+
+The default document-viewer renderer advertises `time-range` anchors but not search: the generic
+document payload has no cue/transcript field, so advertising search there would expose a control
+whose result is always empty. Standalone `<lr-av-player>` search remains available whenever the
+consumer supplies `cues` directly.
 
 **Properties:** `src: string = ''`, `name: string = ''`, `kind?: 'audio' | 'video'`
 (attribute-backed auto-detection override), `mimeType: string = ''` (attribute `mime-type`), `poster: string =
 ''`, `loop: boolean = false`, `muted: boolean = false`, `preload: 'none' | 'metadata' | 'auto' =
-'metadata'`, `playbackRate: number = 1` (attribute `playback-rate`, reflected), `rates: number[] =
-[0.75, 1, 1.25, 1.5, 2]` (attribute: false), `cues: LyraAvCue[] = []` (attribute: false), `peaks:
-number[] = []` (attribute: false), and `tracks: LyraAvTrack[] = []` (attribute: false). The inherited
+'metadata'`, `playbackRate: number = 1` (attribute `playback-rate`, reflected),
+`rates: readonly number[] = [0.75, 1, 1.25, 1.5, 2]` (attribute: false),
+`cues: readonly LyraAvCue[] = []` (attribute: false), `peaks: readonly number[] = []`
+(attribute: false), and `tracks: readonly LyraAvTrack[] = []` (attribute: false). Each collection is
+normalized into a bounded, cloned, frozen snapshot; mutate by assigning a new collection. The inherited
 anchor-target surface is `highlights: LyraHighlight[] = []` (property only; reassign after
 mutation), `activeHighlightId: string | null = null` (attribute `active-highlight-id`),
 `anchor: LyraAnchor | string | null = null` (property only), and readonly
 `anchorKinds: readonly LyraAnchorKind[] = ['time-range']`.
-`LyraAvCue = { id, start, end?, text, speaker? }`; `LyraAvTrack = { src, kind: 'subtitles' |
-'captions' | 'descriptions', srclang, label, default? }`.
+`LyraAvCue = { readonly id, readonly start, readonly end?, readonly text, readonly speaker? }`;
+`LyraAvTrack = { readonly src, readonly kind: 'subtitles' | 'captions' | 'descriptions', readonly
+srclang, readonly label, readonly default? }`. Their retained records are frozen as well as the
+outer arrays.
 
 Only exact `kind="audio"` and `kind="video"` values override MIME auto-detection. An unrecognized
 runtime or attribute value falls back to `mimeType` (`audio/*` renders audio; every other value
@@ -1808,8 +1971,9 @@ unsupported or unresolved targets report `false` through the return value and `l
 
 **Events:** `lr-play`, `lr-pause`, `lr-load` (`detail: { duration, kind }`), `lr-time-change`
 (`detail: { currentTime }`, throttled to at most 4/s while playing plus one extra per `seek()`),
-`lr-rate-change` (`detail: { rate }`), `lr-cue-change` (`detail: { id }`, `id` is `null` when no
-cue is active), `lr-highlight-activate` (`detail: { id }`), `lr-anchor-result` (`detail: {
+`lr-rate-change` (`detail: { rate }`), `lr-cue-change`
+(`detail: { readonly cueId, readonly index }`; `cueId` is `null` and `index` is `-1` when no cue is active),
+`lr-highlight-activate` (`detail: { id }`), `lr-anchor-result` (`detail: {
 found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), and
 `lr-render-error` (`detail: { error }`). The native `ended`, `error`, `loadedmetadata`, `pause`,
 `play`, `timeupdate`, and `volumechange`
@@ -1899,21 +2063,29 @@ boolean = false` (live/read-only in normal use), `poster: string = ''`, `preload
 browser controls stay disabled because the selected Lyra preset owns the control surface.
 `autoplayOnVisible` does not start a video merely because it is visible: it pauses a currently
 playing video when it leaves view and resumes only that visibility-owned pause when it returns.
+Turning the property off while such a pause is pending resumes immediately; observer rebuilds,
+temporary disconnects, reconnects, and same-origin adoption preserve the pending ownership. An
+explicit user/API pause or source reload/change revokes it so later visibility changes cannot
+restart user-stopped media.
 
 `controls="standard"` renders play/pause, timeline and elapsed/duration labels, volume/mute,
 available captions, and capability-gated fullscreen. `controls="full"` adds playback rate and
 capability-gated picture in picture. `controls="none"` removes the control bar but leaves the
 poster and active caption overlays available. Fullscreen/PiP/caption affordances are feature-gated
-instead of browser-name-gated.
+instead of browser-name-gated and are probed through the concrete native element's current owner
+realm. While the poster is visible, its button is the only exposed play action; the ordinary
+control-bar play toggle is hidden until the poster is dismissed.
 
 **Methods:** `getState(): VideoState` returns a fresh synchronous
-`{ playing, currentTime, duration, volume, muted, playbackRate }` snapshot;
-`LyraVideoState` remains an equivalent Lyra-prefixed type alias;
+`{ playing, currentTime, duration, volume, muted, playbackRate }` snapshot. `VideoState` is the
+canonical upstream-compatible authoring type; the redundant `LyraVideoState` alias is removed in
+v9;
 `getVideoElement(): HTMLVideoElement | undefined` returns the private native element after mount;
 `play(): Promise<void>` returns the exact native promise and preserves its rejection; `pause()`,
 `togglePlay()`, `toggleMute()`, `seek(time)`, `setPlaybackRate(rate)`, and `setVolume(volume)` proxy
 finite, clamped media state; `requestFullscreen()` and `exitFullscreen()` preserve the platform
-promise/rejection and reject with `NotSupportedError` when the capability is absent. `load()` is a
+promise/rejection and reject with an owner-realm `DOMException` named `NotSupportedError` when the
+capability is absent. `load()` is a
 Lyra extension that re-clones current light-DOM sources/tracks and restarts native resource
 selection under a fresh event generation. `focus(options?)`, `blur()`, and `click()` forward to the
 play/pause control (absent, and therefore a no-op, under `controls="none"`).
@@ -1936,18 +2108,27 @@ flat-tree descendants. An accidentally supplied link, button, or input therefore
 nested action or second keyboard stop. `controls-start` and `controls-after-play` remain ordinary
 composition slots and may intentionally contain interactive controls.
 
+A declarative host `aria-label` or `title` remains the component's overall name and is not copied to
+the private native video; that element receives the localized player-purpose name. An explicitly
+empty host `aria-label` is preserved exactly as an empty native-video name. Caption/subtitle tracks
+selected for Lyra's custom overlay use native `mode="hidden"`, keeping cue activity available
+without asking the browser to paint a duplicate native caption layer.
+
 **CSS parts:** `base` and `video-wrapper` (aliases on the same root node), `caption`,
 `caption-overlay`, `controls`, `controls-overlay`, `poster-overlay`, `poster-play-button`,
 `progress`, `thumbnail`, `timeline`, `timeline-indicator`, `timeline-thumb`, `timeline-track`,
 `video`, and `video-title-overlay`.
 
-The `progress` range input carries `aria-valuetext` as well as `aria-label` — a localized
-`{current} of {duration}` (key `avPlayerPosition`, shared with `lr-av-player`) built from the same
-locale-formatted clock times the visible elapsed/duration labels show, so a screen reader announces
-"1:07 of 5:00" instead of raw seconds.
+The `progress` range carries `aria-label` and points through `aria-describedby` to a localized
+`{current} of {duration}` description (key `avPlayerPosition`, shared with `lr-av-player`) built
+from the same locale-formatted clock times as the visible labels. This deliberately avoids relying
+on `aria-valuetext`, which browsers ignore on native range semantics. Before duration is available,
+the same range remains in the DOM as a disabled `0..0` control with its description intact,
+avoiding a disappearing/reappearing semantic target.
 
 **Themeable custom properties:** `--controls-background` (default
-`var(--lr-color-overlay-strong)`), `--controls-color` (default `var(--lr-color-text)`), and
+`var(--lr-color-overlay-strong)`), `--controls-color` (default
+`var(--lr-color-on-strong-overlay)`), and
 `--poster-play-button-background` (default `var(--lr-color-surface-overlay)`). These exact names are
 kept for mechanical Web Awesome migration. Lyra also supplies
 `--lr-video-poster-play-button-hover-background` (default is the existing hover color mix) and
@@ -1955,7 +2136,9 @@ kept for mechanical Web Awesome migration. Lyra also supplies
 
 Caption and playback-rate selectors remain native `<select>` controls with decorative, pointer-inert
 chevrons; their option foreground and background inherit `--controls-color` and
-`--controls-background`.
+`--controls-background`. Controls, elapsed/title text, caption text, and selectors consistently use
+the semantic strong-overlay foreground. The fallback remains legible in light and dark themes;
+an explicit `--controls-color` still has final precedence, and forced-colors mode remains UA-owned.
 
 **RTL behavior:** surrounding controls follow the inherited direction, while the elapsed-media axis
 stays physical left-to-right. Native ArrowRight advances and ArrowLeft rewinds the timeline in both
@@ -2001,17 +2184,17 @@ make stale seed rows reappear.
 inert-child indexes are no-ops. Calling it for the current index still emits `lr-video-change`, matching
 the mirrored contract. `next()` and `previous()` select the next or previous enabled child when one
 exists. `focus(options?)`, `blur()`, and `click()` forward to the playlist row that currently owns
-the roving tab stop (falling back to the first enabled row), which is otherwise unreachable from
-outside the shadow root.
+the optional-arrow navigation cursor (falling back to the first enabled row). This forwarding is a
+convenience; every enabled row is independently reachable through ordinary sequential Tab order.
 
 **Events:** internal `focus`/`blur` from a playlist row are relayed exactly once as owner-realm
 native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
 `lr-focus`/`lr-blur`. `lr-video-change` is bubbling and composed but non-cancelable, with exact
-detail `{ previousIndex, currentIndex, video }`. `video` is a fresh frozen plain-data snapshot with
+detail `{ previousIndex, currentIndex, video }`. `video` is a fresh detached, mutable plain-data snapshot with
 exact shape `{ title, poster, sources, tracks }`, not the live child element. `sources` contains
-frozen `{ src, type, media }` records for the child's direct `src` and `<source>` declarations; `tracks`
-contains frozen `{ src, kind, srclang, label, default }` records. Consumer mutation cannot alter a
-child or a later event snapshot.
+fresh `{ src, type, media }` records for the child's direct `src` and `<source>` declarations;
+`tracks` contains fresh `{ src, kind, srclang, label, default }` records. A listener may annotate or
+reshape its own event payload, but that mutation cannot alter a child or any later event snapshot.
 
 **Slot:** the default slot accepts direct `<lr-video>` children. Nested videos and other elements
 are not playlist items.
@@ -2027,25 +2210,35 @@ Only the active child is visible and loaded. Before another child is activated, 
 player is synchronously paused, stripped of its private source/track clones, and reloaded into an
 empty selection state. The incoming child then safely re-clones its own light-DOM declarations.
 Valid user volume, mute, playback-rate, and selected-caption preferences carry across that boundary;
-current time does not. Events and rejected play promises from a superseded activation cannot affect
-the current child. Removing or reordering duplicate-metadata children is identity-safe, and
-disconnecting pauses/unloads every child before a later reconnect creates one fresh listener
-generation.
+selected caption tracks use `hidden`, not `showing`, so the active child's custom overlay is the only
+caption paint. Current time does not carry. Events and rejected play promises from a superseded
+activation cannot affect the current child. The playlist snapshots each child's authored
+`controls`, `iconLibrary`, and `hidden` values before projecting effective state, and restores those
+values plus resource selection when that exact child is removed or reparented. Removing or
+reordering duplicate-metadata children is identity-safe; disconnecting pauses/unloads every child
+while preserving ownership for a later reconnect in a new realm.
 
-The playlist buttons use one roving tab stop, skip inert children, support Up/Down, Home/End, and
-mirrored Left/Right navigation, and expose the selected item with `aria-current`. At narrow
+Every enabled playlist button has `tabindex="0"`; disabled rows for inert children use `-1`.
+Up/Down, Home/End, and mirrored Left/Right remain optional shortcuts, and the selected item exposes
+`aria-current`. Each visible known duration is associated with its row using `aria-describedby`;
+missing duration creates no empty description, and metadata updates replace the localized value.
+At narrow
 allocations the sidebar moves below the video through a container query; long titles ellipsize
 without widening the host.
 
 **A child marked `inert` is unavailable:** it never becomes the active video,
 `next()`/`previous()`/`goTo()` and auto-advance step past it, and its playlist row renders `disabled`
-so the roving `tabindex` can never strand focus on it — an inert element refuses focus, which would
-leave `focus()` a silent no-op and kill the next arrow press. `<lr-video>` has no `disabled`
+and `tabindex="-1"` so neither sequential nor optional-arrow focus can land on it — an inert element
+refuses focus, which would leave `focus()` a silent no-op and kill the next arrow press. `<lr-video>`
+has no `disabled`
 property; use the platform `inert` state exclusively. Only the child's **own** `inert` counts: a
 playlist inerted wholesale by an open modal keeps playing. The attribute is watched live, so
 marking the *current* video inert moves the selection to the nearest enabled child (emitting
-`lr-video-change`) and hands the roving focus to the row that replaced it, instead of leaving a
-stale tab stop on a row that can no longer take focus.
+`lr-video-change`) and hands optional-arrow focus to the row that replaced it, instead of leaving a
+stale arrow-navigation cursor on a row that can no longer take focus.
+
+Only the native `ended` notification drives `autoAdvance`/repeat completion. A native `error`
+records the stopped state but never changes selection; recovery and retry remain consumer-owned.
 
 ```html
 <lr-video-playlist controls="full" repeat="all">

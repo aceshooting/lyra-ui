@@ -84,6 +84,35 @@ export const SuiteScopedDetails: Story = {
   },
 };
 
+export const LargeRunWithLateFailure: Story = {
+  name: 'Large run with a reserved late failure',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'All 1,002 normalized results contribute to the summary, while the failed final identity reserves one of the 1,000 mounted rows.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-test-results
+      style="max-width:32rem"
+      .suites=${[{
+        id: 'large',
+        name: 'large-run.test.ts',
+        tests: [
+          ...Array.from({ length: 1_001 }, (_, index) => ({
+            id: `passing-${index}`,
+            name: `passing test ${index + 1}`,
+            status: 'passed' as const,
+          })),
+          { id: 'late-failure', name: 'late failure', status: 'failed' as const, message: 'Expected completion' },
+        ],
+      }]}
+    ></lr-test-results>
+  `,
+};
+
 export const RetintedActiveFilter: Story = {
   name: 'Retinted active filter toggle',
   parameters: {

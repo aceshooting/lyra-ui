@@ -7,7 +7,11 @@ import { tag } from '../../../internal/prefix.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import type { MenuFocusTarget } from '../../layout/menu/menu-shared.js';
 import type { LyraMenu, MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
-import { LyraPopover, type LyraPopoverEventMap } from './popover.class.js';
+import {
+  LyraPopover,
+  type LyraPopoverEventMap,
+  type LyraPopupRole,
+} from './popover.class.js';
 import { styles } from './dropdown.styles.js';
 
 const menuTag = unsafeStatic(tag('menu'));
@@ -16,13 +20,25 @@ export interface LyraDropdownEventMap extends LyraPopoverEventMap {
   'lr-select': CustomEvent<MenuItemSelectDetail>;
 }
 
+interface ConsumerMenuSnapshot {
+  dropdownOwner: LyraMenu['dropdownOwner'];
+  dropdownContained: boolean;
+  dropdownRendersMenuRole: boolean;
+  dropdownStayOpenOnSelect: boolean;
+  dropdownSize: LyraMenu['dropdownSize'];
+  dropdownLabel: LyraMenu['dropdownLabel'];
+  dropdownOpen: boolean;
+}
+
 /**
  * `<lr-dropdown>` — a trigger-owned action menu. The public host remains the Popover-style
- * trigger/popup shell while a contained `<lr-menu>` supplies roving focus, type-ahead, nested
- * submenu intent, selection, and focus return for mapped dropdown items. A consumer-supplied
- * `<lr-menu>` in the default slot becomes that contained engine instead of being wrapped in a
- * second menu. Motion resolves through `dropdown.show`/`dropdown.hide` in the public animation
- * registry without changing the inherited Popover lifecycle.
+ * trigger/positioning shell, but that shell is semantic-neutral: a contained `<lr-menu>` is the
+ * sole role/name owner and supplies roving focus, type-ahead, nested submenu intent, selection,
+ * and focus return for mapped dropdown items. A consumer-supplied `<lr-menu>` in the default slot
+ * becomes that contained engine instead of being wrapped in a second menu, preserving its own
+ * header/list/footer regions and naming precedence. Motion resolves through
+ * `dropdown.show`/`dropdown.hide` in the public animation registry without changing the inherited
+ * Popover lifecycle.
  *
  * @customElement lr-dropdown
  * @slot trigger - The interactive element that toggles the dropdown.
@@ -32,13 +48,14 @@ export interface LyraDropdownEventMap extends LyraPopoverEventMap {
  * @event lr-hide - The dropdown is about to close. Cancelable.
  * @event lr-after-hide - The dropdown is closed and its transition has finished.
  * @event lr-select - A menu item was activated. `detail: { item }`. Cancelable; preventing the
- *   event keeps the dropdown and any selected submenu open. The contained menu's standalone
- *   `lr-menu-select` compatibility alias does not escape this wrapper.
+ *   event keeps the dropdown and any selected submenu open.
  * @method show - `show(): Promise<void>` — opens unless disabled and resolves after
  *   `lr-after-show`.
  * @method hide - `hide(options?): Promise<void>` — closes, returns focus by default, and resolves
  *   after `lr-after-hide`.
  * @method reposition - Immediately recomputes the popup position.
+ * @method focusOnTrigger - Focuses the consumer-supplied trigger.
+ * @method getMenu - Returns the currently contained menu engine.
  * @csspart trigger - The trigger wrapper.
  * @csspart base - Web Awesome compatibility name on the positioned popup.
  * @csspart base__popup - Shoelace compatibility name on the positioned popup.
@@ -103,10 +120,35 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   @property({ attribute: false }) containingElement?: HTMLElement;
 
   @state() private consumerMenu?: LyraMenu;
+  private consumerMenuSnapshot?: ConsumerMenuSnapshot;
 
   constructor() {
     super();
     this.popupRole = 'menu';
+  }
+
+  /** Dropdown semantics are invariant: the trigger announces a menu and the contained menu owns
+   * that role/name. The inherited Popover write surface is narrowed to `menu`; any other runtime
+   * or authored value normalizes back to `menu` instead of changing the outer positioning shell.
+   * @default 'menu' */
+  @property({ attribute: 'popup-role' })
+  override get popupRole(): 'menu' {
+    return 'menu';
+  }
+  override set popupRole(_next: LyraPopupRole) {
+    if (super.popupRole !== 'menu') super.popupRole = 'menu';
+  }
+
+  override attributeChangedCallback(
+    name: string,
+    oldValue: string | null,
+    newValue: string | null,
+  ): void {
+    if (name === 'popup-role' && newValue !== null && newValue !== 'menu') {
+      this.setAttribute('popup-role', 'menu');
+      return;
+    }
+    super.attributeChangedCallback(name, oldValue, newValue);
   }
 
   protected override get defaultDistance(): number {
@@ -123,6 +165,11 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
 
   protected override get animationNamespace(): string {
     return 'dropdown';
+  }
+
+  /** The positioned wrapper is presentation-only; the contained menu owns role and name. */
+  protected override get popupSurfaceRole(): undefined {
+    return undefined;
   }
 
   protected override get canOpen(): boolean {
@@ -145,7 +192,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   protected override onPopupPositioned(): void {
     super.onPopupPositioned();
     const menu = this.menuEngine;
-    if (!menu?.open) return;
+    if (!menu?.dropdownOpen) return;
     // The contained engine establishes the correct roving tabindex synchronously while the outer
     // popup is still waiting for Floating UI. Firefox and WebKit reject focus in that hidden
     // interval, so retry the one item the engine already selected once the popup is focusable.
@@ -164,12 +211,24 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
 
   private configureMenu(menu: LyraMenu | undefined): void {
     if (!menu) return;
+    if (menu === this.consumerMenu && !this.consumerMenuSnapshot) {
+      this.consumerMenuSnapshot = {
+        dropdownOwner: menu.dropdownOwner,
+        dropdownContained: menu.dropdownContained,
+        dropdownRendersMenuRole: menu.dropdownRendersMenuRole,
+        dropdownStayOpenOnSelect: menu.dropdownStayOpenOnSelect,
+        dropdownSize: menu.dropdownSize,
+        dropdownLabel: menu.dropdownLabel,
+        dropdownOpen: menu.dropdownOpen,
+      };
+    }
     menu.dropdownOwner = this;
     menu.dropdownContained = true;
-    menu.dropdownRendersMenuRole = this.popupRole !== 'menu';
+    menu.dropdownRendersMenuRole = true;
     menu.dropdownStayOpenOnSelect = this.stayOpenOnSelect;
     menu.dropdownSize = this.size;
-    menu.open = this.open;
+    menu.dropdownLabel = this.effectivePopupLabel;
+    menu.dropdownOpen = this.open;
   }
 
   override connectedCallback(): void {
@@ -186,12 +245,16 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     if (!menu) return;
     // Close while the engine is still structurally contained. Releasing containment first would
     // reinterpret this owner teardown as a standalone, cancelable menu dismissal.
-    menu.open = false;
-    menu.dropdownOwner = null;
-    menu.dropdownContained = false;
-    menu.dropdownRendersMenuRole = false;
-    menu.dropdownStayOpenOnSelect = false;
-    menu.dropdownSize = undefined;
+    const snapshot = menu === this.consumerMenu ? this.consumerMenuSnapshot : undefined;
+    menu.dropdownOpen = false;
+    menu.dropdownOwner = snapshot?.dropdownOwner ?? null;
+    menu.dropdownContained = snapshot?.dropdownContained ?? false;
+    menu.dropdownRendersMenuRole = snapshot?.dropdownRendersMenuRole ?? false;
+    menu.dropdownStayOpenOnSelect = snapshot?.dropdownStayOpenOnSelect ?? false;
+    menu.dropdownSize = snapshot?.dropdownSize;
+    menu.dropdownLabel = snapshot?.dropdownLabel;
+    if (snapshot) menu.dropdownOpen = snapshot.dropdownOpen;
+    if (menu === this.consumerMenu) this.consumerMenuSnapshot = undefined;
   }
 
   private onContentSlotChange = (event: Event): void => {
@@ -205,13 +268,6 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     this.configureMenu(next ?? this.menuEngine);
   };
 
-  /** `lr-menu-select` remains part of standalone `lr-menu`, but dropdown consumers have one
-   * documented selection event with the complete item and veto contract. Catch the alias before
-   * it crosses this wrapper's shadow boundary for both generated and consumer-supplied menus. */
-  private onMenuSelectAlias = (event: Event): void => {
-    event.stopPropagation();
-  };
-
   protected override onTriggerKeyDown(event: KeyboardEvent): void {
     if (this.disabled || this.open) return;
     let focus: MenuFocusTarget | undefined;
@@ -221,7 +277,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     event.preventDefault();
     const menu = this.menuEngine;
     this.configureMenu(menu);
-    if (menu) menu.show(focus);
+    if (menu) menu.focusContained(focus);
     else this.show();
   }
 
@@ -230,17 +286,24 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     this.positionPopup();
   }
 
+  /** Focus the assigned trigger, when one is present. */
+  focusOnTrigger(options?: FocusOptions): void {
+    const trigger = this.renderRoot
+      .querySelector<HTMLSlotElement>('slot[name="trigger"]')
+      ?.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+    trigger?.focus(options);
+  }
+
+  /** Return the active generated or consumer-supplied menu engine. */
+  getMenu(): LyraMenu | null {
+    return this.menuEngine ?? null;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (
-      changed.has('open') ||
-      changed.has('size') ||
-      changed.has('stayOpenOnSelect') ||
-      changed.has('consumerMenu') ||
-      changed.has('popupRole')
-    ) {
-      this.configureMenu(this.menuEngine);
-    }
+    // Re-resolve every update so inherited locale/.strings and host aria-label changes reach a
+    // consumer-supplied menu even when no dropdown-owned property changed in that cycle.
+    this.configureMenu(this.menuEngine);
     if (this.open && (changed.has('hoist') || changed.has('sync'))) this.reposition();
   }
 
@@ -251,21 +314,18 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
 
   protected override renderPopupContent(): TemplateResult {
     if (this.consumerMenu) {
-      return html`<slot
-        @slotchange=${this.onContentSlotChange}
-        @lr-menu-select=${this.onMenuSelectAlias}
-      ></slot>`;
+      return html`<slot @slotchange=${this.onContentSlotChange}></slot>`;
     }
     return staticHtml`
       <${menuTag}
         part="menu"
         .dropdownOwner=${this}
         .dropdownContained=${true}
-        .dropdownRendersMenuRole=${this.popupRole !== 'menu'}
+        .dropdownRendersMenuRole=${true}
         .dropdownStayOpenOnSelect=${this.stayOpenOnSelect}
         .dropdownSize=${this.size}
-        .open=${this.open}
-        @lr-menu-select=${this.onMenuSelectAlias}
+        .dropdownLabel=${this.effectivePopupLabel}
+        .dropdownOpen=${this.open}
       >
         <slot @slotchange=${this.onContentSlotChange}></slot>
       </${menuTag}>

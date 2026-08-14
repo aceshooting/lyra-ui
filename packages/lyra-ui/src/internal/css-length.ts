@@ -2,9 +2,18 @@
  *  disconnected element has no computed style, so `getComputedStyle()` reports empty strings. */
 const FALLBACK_FONT_SIZE_PX = 16;
 
-/** A signed CSS `<number>` plus, optionally, one of the units meaningful for a breakpoint.
+/** A signed CSS `<number>` plus, optionally, one of the supported resolvable units.
  *  Exponent notation is deliberately excluded: `1e3px` is not a valid CSS length either. */
-const BREAKPOINT_LENGTH_RE = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+))(px|rem|em)?$/i;
+const CSS_LENGTH_RE = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+))(px|rem|em|vw|vh|%)?$/i;
+
+/** Explicit layout context used to resolve relative CSS lengths. */
+export interface ResolveCssLengthOptions {
+  readonly host?: Element;
+  readonly percentBase?: number;
+  readonly viewportBasis?:
+    | Window
+    | Readonly<{ inlineSize: number; blockSize: number }>;
+}
 
 /** The element's computed `font-size` in px, or the CSS initial size if it has no computed style. */
 function fontSizePx(element: Element, view: Window): number {
@@ -13,8 +22,9 @@ function fontSizePx(element: Element, view: Window): number {
 }
 
 /**
- * Resolves a CSS length to pixels against the document root (like a `@container` query), so a
- * breakpoint authored in `rem` tracks the user's root font size.
+ * Resolves a CSS length to pixels against explicit layout context. A `rem` value tracks the
+ * document root font size, `em` tracks the supplied host, `%` uses `percentBase`, and `vw`/`vh`
+ * use `viewportBasis` (or the host document's live viewport when no basis is supplied).
  *
  * Note this is a `@container` query's rule, NOT a `@media` query's: inside a media query, relative
  * units resolve against the browser's *initial* font size and ignore any `html { font-size }`
@@ -29,20 +39,19 @@ function fontSizePx(element: Element, view: Window): number {
  * - `px` (`'900px'`), identical to the bare form;
  * - `rem` (`'56.25rem'`), resolved against `document.documentElement`'s computed font size — *not*
  *   against `host`;
- * - `em` (`'3em'`), resolved against `host`'s own computed font size, falling back to the document
- *   root (i.e. behaving like `rem`) when `host` is omitted or has no computed style.
+ * - `em` (`'3em'`), resolved against `options.host`'s computed font size, falling back to the
+ *   document root (i.e. behaving like `rem`) when the host is omitted or has no computed style;
+ * - `%` (`'50%'`), resolved against `options.percentBase`; it is unavailable without that base;
+ * - `vw`/`vh`, resolved against a supplied `Window` or `{ inlineSize, blockSize }` viewport basis,
+ *   otherwise against the host/ambient document's live viewport.
  *
  * Units are case-insensitive and surrounding whitespace is ignored. The root font size is read on
  * every call and never cached, so browser zoom, a user font-size preference, or an app changing its
  * base size are picked up on the next measurement with no invalidation mechanism.
  *
  * Everything else resolves to `undefined`, meaning "no usable length" — callers treat that the same
- * as an unset value. That deliberately includes viewport (`vw`/`vh`), percentage (`%`) and
- * font-metric (`ch`/`ex`) units, absolute units (`pt`/`cm`/…), and `calc()`/`var()` expressions:
- * this helper resolves a threshold that is compared against an element's *own* allocated size, and
- * a viewport- or container-relative threshold silently mixes two different reference boxes. A
- * consumer that wants a viewport-relative breakpoint should drive the property from its own
- * `matchMedia()` controller instead.
+ * as an unset value. That includes font-metric (`ch`/`ex`) and absolute (`pt`/`cm`/…) units plus
+ * `calc()`/`var()` expressions.
  *
  * Negative and zero lengths are resolved faithfully rather than rejected (`-2rem` at a 16px root is
  * `-32`); this reports what a value means in pixels and leaves range policy to the caller. `NaN`,
@@ -50,21 +59,24 @@ function fontSizePx(element: Element, view: Window): number {
  *
  * @returns pixels, or `undefined` for an unparseable value.
  */
-export function resolveCssLength(value: number | string | undefined, host?: Element): number | undefined {
+export function resolveCssLength(
+  value: number | string | undefined,
+  options?: ResolveCssLengthOptions,
+): number | undefined {
   // `null` is outside the declared type but reachable: Lit writes it back to a property whose
   // attribute was removed.
   if (value == null) return undefined;
   if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
 
-  const match = BREAKPOINT_LENGTH_RE.exec(value.trim());
+  const match = CSS_LENGTH_RE.exec(value.trim());
   if (match === null) return undefined;
 
   // safe: capture group 1 (the numeric part) is non-optional, so it exists on any match.
   const length = Number.parseFloat(match[1]!);
   if (!Number.isFinite(length)) return undefined;
 
-  const ownerDocument =
-    host?.ownerDocument ?? (typeof document === 'undefined' ? undefined : document);
+  const host = options?.host;
+  const ownerDocument = host?.ownerDocument ?? (typeof document === 'undefined' ? undefined : document);
   const ownerWindow = ownerDocument?.defaultView;
 
   switch (match[2]?.toLowerCase()) {
@@ -82,6 +94,26 @@ export function resolveCssLength(value: number | string | undefined, host?: Elem
           ownerWindow,
         )
       );
+    case '%': {
+      const base = options?.percentBase;
+      return typeof base === 'number' && Number.isFinite(base)
+        ? (length / 100) * base
+        : undefined;
+    }
+    case 'vw':
+    case 'vh': {
+      const basis = options?.viewportBasis ?? ownerWindow;
+      if (!basis) return undefined;
+      const dimension =
+        match[2].toLowerCase() === 'vw'
+          ? 'innerWidth' in basis
+            ? basis.innerWidth
+            : basis.inlineSize
+          : 'innerHeight' in basis
+            ? basis.innerHeight
+            : basis.blockSize;
+      return Number.isFinite(dimension) ? (length / 100) * dimension : undefined;
+    }
     default:
       return length;
   }

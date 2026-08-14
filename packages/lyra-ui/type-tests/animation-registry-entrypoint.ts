@@ -2,34 +2,34 @@ import {
   getAnimation,
   setAnimation,
   setDefaultAnimation,
-  type AnimationCleanup,
-  type ElementAnimation,
-  type GetAnimationOptions,
-  type ResolvedElementAnimation,
+  type LyraAnimationCleanup,
+  type LyraElementAnimation,
+  type LyraGetAnimationOptions,
+  type LyraResolvedElementAnimation,
 } from '../src/utilities/animation-registry.js';
 import {
   getAnimation as getRootAnimation,
   setAnimation as setRootAnimation,
   setDefaultAnimation as setRootDefaultAnimation,
-  type ElementAnimation as RootElementAnimation,
+  type LyraElementAnimation as RootLyraElementAnimation,
 } from '../src/lyra.js';
 
 declare const element: HTMLElement;
 
-const animation: ElementAnimation = {
+const animation: LyraElementAnimation = {
   keyframes: [{ transform: 'translateX(-1rem)' }, { transform: 'translateX(0)' }],
   rtlKeyframes: [{ transform: 'translateX(1rem)' }, { transform: 'translateX(0)' }],
   options: { duration: 180, easing: 'ease-out' },
 };
-const options: GetAnimationOptions = { dir: 'rtl', fallback: animation };
-const resolved: ResolvedElementAnimation = getAnimation(element, 'example.show', options);
-const releaseElement: AnimationCleanup = setAnimation(element, 'example.show', animation);
-const releaseDefault: AnimationCleanup = setDefaultAnimation('example.show', null);
+const options: LyraGetAnimationOptions = { dir: 'rtl', fallback: animation };
+const resolved: LyraResolvedElementAnimation = getAnimation(element, 'example.show', options);
+const releaseElement: LyraAnimationCleanup = setAnimation(element, 'example.show', animation);
+const releaseDefault: LyraAnimationCleanup = setDefaultAnimation('example.show', null);
 
-const rootAnimation: RootElementAnimation = animation;
-const rootResolved: ResolvedElementAnimation = getRootAnimation(element, 'example.show', options);
-const releaseRootElement: AnimationCleanup = setRootAnimation(element, 'example.show', rootAnimation);
-const releaseRootDefault: AnimationCleanup = setRootDefaultAnimation('example.show', rootAnimation);
+const rootAnimation: RootLyraElementAnimation = animation;
+const rootResolved: LyraResolvedElementAnimation = getRootAnimation(element, 'example.show', options);
+const releaseRootElement: LyraAnimationCleanup = setRootAnimation(element, 'example.show', rootAnimation);
+const releaseRootDefault: LyraAnimationCleanup = setRootDefaultAnimation('example.show', rootAnimation);
 
 void [resolved, rootResolved];
 releaseElement();

@@ -5,4 +5,4 @@
  * supported entry points, and they are covered by semver. The `internal/` modules they forward to
  * are not — that tree is free to move.
  */
-export * from '../internal/a11y.js';
+export { nextId, srOnly } from '../internal/a11y.js';

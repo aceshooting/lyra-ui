@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './message-feedback.styles.js';
+import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_feedbackCommentLabel, LYRA_DEFAULT_feedbackCommentPlaceholder, LYRA_DEFAULT_feedbackNegative, LYRA_DEFAULT_feedbackPositive, LYRA_DEFAULT_feedbackReasonsLabel, LYRA_DEFAULT_feedbackSubmit, LYRA_DEFAULT_feedbackSubmitted } from '../../../internal/default-strings.generated.js';
@@ -17,11 +18,25 @@ export interface MessageFeedbackReason {
 export type MessageFeedbackRating = 'up' | 'down';
 export type MessageFeedbackValue = MessageFeedbackRating | null;
 
+export type MessageFeedbackDetailFor = 'none' | 'up' | 'down' | 'both';
+
+export interface MessageFeedbackDetailConfiguration {
+  reasons?: readonly MessageFeedbackReason[];
+  commentable?: boolean;
+}
+
+export interface MessageFeedbackSubmitDetail {
+  rating: MessageFeedbackValue;
+  reasonIds: string[];
+  comment: string;
+}
+
 export interface LyraMessageFeedbackEventMap {
-  'lr-change': CustomEvent<{ value: MessageFeedbackValue }>;
-  'lr-submit': CustomEvent<{ value: MessageFeedbackRating; reasonIds: string[]; comment: string }>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  'lr-feedback-change': CustomEvent<{ rating: MessageFeedbackValue }>;
+  'lr-feedback-submit': CustomEvent<MessageFeedbackSubmitDetail>;
+  'lr-toolbar-actions-change': Event;
+  blur: CustomEvent<null>;
+  focus: CustomEvent<null>;
 }
 
 // A one-off thumb glyph, sharing internal/icons.ts's 24x24 viewBox / 1em sizing / stroke-width
@@ -57,21 +72,21 @@ function thumbIcon(direction: MessageFeedbackRating, filled: boolean): SVGTempla
 /**
  * `<lr-message-feedback>` — thumbs up/down for one assistant message, with an optional inline
  * detail step (categorical reason chips + a free-text comment) that opens as a disclosure directly
- * below the thumbs. Emits; never persists — a host reflects a previously-recorded rating back via
- * `value` (+ `disabled` for a read-only display).
+ * below the thumbs. `rating` is the current presentation state; every terminal persistence request
+ * uses the same cancelable `lr-feedback-submit` transaction.
  *
- * Activating the pressed thumb again toggles it off to `null` (mirrors `<lr-rating>`'s
- * re-activate-to-clear contract) *unless* its own detail panel is currently open, in which case that
- * click re-opens the panel instead (showing whatever reason/comment draft survived a prior Escape or
- * submit). A thumbs-only configuration (`reasons` empty and `commentable` false, e.g.
+ * Activating the pressed thumb while its detail panel is open toggles it off to `null` (mirrors
+ * `<lr-rating>`'s re-activate-to-clear contract). If that applicable panel was closed without
+ * changing the rating (for example with Escape), activating the still-pressed thumb reopens it with
+ * the surviving draft. A thumbs-only configuration (no `detail`, e.g.
  * `<lr-message-actions>`'s embedded built-in) never has a panel to reopen, so its thumbs always
  * behave as a plain toggle.
  *
  * @customElement lr-message-feedback
- * @event lr-change - `detail: { value }`. Activating a thumb sets it; re-activating the pressed
- *   thumb (with no panel open) clears it to `null`. The terminal signal when no detail panel is
- *   configured for that thumb.
- * @event lr-submit - `detail: { value, reasonIds, comment }`, fired by the panel's submit button.
+ * @event lr-feedback-change - `detail: { rating }`. Fires whenever thumb interaction changes the
+ *   provisional rating, including clearing it to `null`.
+ * @event lr-feedback-submit - `detail: { rating, reasonIds, comment }`, fired immediately for a
+ *   thumbs-only terminal choice or by the detail panel's submit button.
  *   Cancelable: `preventDefault()` holds the panel in its reflected `pending` state until the host
  *   calls `finalizePendingSubmit()` after persistence succeeds or `revertPendingSubmit()` after it
  *   fails. An uncanceled submit retains the synchronous close/announce/focus behavior.
@@ -85,10 +100,9 @@ function thumbIcon(direction: MessageFeedbackRating, filled: boolean): SVGTempla
  * @csspart thumbs - The wrapper around both thumb buttons.
  * @csspart up-button - The thumbs-up toggle button.
  * @csspart down-button - The thumbs-down toggle button.
- * @csspart panel - The inline detail disclosure. Only rendered when `reasons` is non-empty or
- *   `commentable` is set.
- * @csspart reasons - The reason-chip group. Only rendered when `reasons` is non-empty.
- * @csspart comment - The comment `<textarea>`. Only rendered when `commentable`.
+ * @csspart panel - The inline detail disclosure. Only rendered for a non-empty `detail`.
+ * @csspart reasons - The reason-chip group. Only rendered when `detail.reasons` is non-empty.
+ * @csspart comment - The comment `<textarea>`. Only rendered when `detail.commentable` is true.
  * @csspart submit-button - The panel's submit button.
  *
  * @cssprop [--lr-message-feedback-up-active-color=var(--lr-color-success)] - Glyph color of the
@@ -124,25 +138,20 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
 
   static override styles = [LyraElement.styles, styles];
 
-  /** Current rating. Host-writable (e.g. to reflect a previously-recorded rating back). */
-  @property({ reflect: true }) value: MessageFeedbackValue = null;
+  /** Current provisional or persisted rating. Host-writable for controlled restoration. */
+  @property({ reflect: true }) rating: MessageFeedbackValue = null;
 
-  /** Categorical reasons offered as multi-select chips inside the detail panel. Empty renders no
-   *  reason-chip group at all. */
-  @property({ attribute: false }) reasons: MessageFeedbackReason[] = [];
+  /** One explicit detail configuration. Omit it for a thumbs-only control. */
+  @property({ attribute: false }) detail?: MessageFeedbackDetailConfiguration;
 
-  /** Adds a free-text comment field to the detail panel. */
-  @property({ type: Boolean, reflect: true }) commentable = false;
-
-  /** Which rating opens the detail panel (only when it would have content -- `reasons` non-empty or
-   *  `commentable`). `'down'` (the default) matches the dominant product pattern of elaborating only
-   *  on negative feedback; `'both'` opens it for either thumb. */
-  @property({ attribute: 'detail-for' }) detailFor: 'down' | 'both' = 'down';
+  /** Which rating opens the configured detail panel. `'none'` explicitly makes even a populated
+   *  configuration thumbs-only; `'up'`, `'down'` (default), and `'both'` select ownership. */
+  @property({ attribute: 'detail-for' }) detailFor: MessageFeedbackDetailFor = 'down';
 
   /** Read-only display of a recorded rating -- both thumbs become inert. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
-  /** A canceled `lr-submit` is awaiting host persistence. While true, every feedback control is
+  /** A canceled `lr-feedback-submit` is awaiting host persistence. While true, every feedback control is
    *  disabled and the open panel is busy. Resolve through `finalizePendingSubmit()` or
    *  `revertPendingSubmit()`; the component sets this state automatically. */
   @property({ type: Boolean, reflect: true }) pending = false;
@@ -150,7 +159,13 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   @state() private panelOpen = false;
   @state() private selectedReasonIds: string[] = [];
   @state() private commentDraft = '';
-  private pendingInternalValue: { value: MessageFeedbackValue } | undefined;
+  private pendingInternalRating: { rating: MessageFeedbackValue } | undefined;
+  private submitGeneration = 0;
+  private pendingSubmission?: {
+    token: number;
+    previousRating: MessageFeedbackValue;
+    panelWasOpen: boolean;
+  };
 
   @query('[part="up-button"]') private upButtonEl?: HTMLButtonElement;
   @query('[part="down-button"]') private downButtonEl?: HTMLButtonElement;
@@ -158,12 +173,41 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   private readonly panelId = nextId('message-feedback-panel');
+  private readonly upToolbarAction = this.createToolbarAction('up');
+  private readonly downToolbarAction = this.createToolbarAction('down');
 
-  /** Focuses the thumb matching the current `value` (the up thumb when `value` is `null`) --
+  private createToolbarAction(direction: MessageFeedbackRating): LyraToolbarAction {
+    const host = this;
+    const button = () => direction === 'up' ? host.upButtonEl : host.downButtonEl;
+    return {
+      id: direction,
+      get disabled() {
+        return !button() || button()!.disabled;
+      },
+      focus(options) {
+        button()?.focus(options);
+      },
+      setTabIndex(tabIndex) {
+        const target = button();
+        if (target) target.tabIndex = tabIndex;
+      },
+      matchesEventPath(path) {
+        const target = button();
+        return target !== undefined && path.includes(target);
+      },
+    };
+  }
+
+  /** Ordered logical actions exposed to an enclosing toolbar without exposing shadow nodes. */
+  getToolbarActions(): readonly LyraToolbarAction[] {
+    return [this.upToolbarAction, this.downToolbarAction];
+  }
+
+  /** Focuses the thumb matching the current `rating` (the up thumb when `rating` is `null`) --
    *  lets a toolbar embedding this component (e.g. `<lr-message-actions>`) treat it as one
    *  arrow-key stop. */
   override focus(options?: FocusOptions): void {
-    (this.value === 'down' ? this.downButtonEl : this.upButtonEl)?.focus(options);
+    (this.rating === 'down' ? this.downButtonEl : this.upButtonEl)?.focus(options);
   }
 
   override blur(): void {
@@ -171,38 +215,52 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     this.downButtonEl?.blur();
   }
 
-  /** Activates the thumb matching the current value (the up thumb when unset). */
+  /** Activates the thumb matching the current rating (the up thumb when unset). */
   override click(): void {
     if (this.disabled || this.pending) return;
-    (this.value === 'down' ? this.downButtonEl : this.upButtonEl)?.click();
+    (this.rating === 'down' ? this.downButtonEl : this.upButtonEl)?.click();
+  }
+
+  private get detailReasons(): readonly MessageFeedbackReason[] {
+    const seen = new Set<string>();
+    return (this.detail?.reasons ?? []).filter((reason) => {
+      if (!reason.id || seen.has(reason.id)) return false;
+      seen.add(reason.id);
+      return true;
+    });
+  }
+
+  private get detailCommentable(): boolean {
+    return this.detail?.commentable === true;
   }
 
   private get hasDetailContent(): boolean {
-    return this.reasons.length > 0 || this.commentable;
+    return this.detailReasons.length > 0 || this.detailCommentable;
   }
 
   private detailApplies(direction: MessageFeedbackRating): boolean {
-    return this.detailFor === 'both' || direction === 'down';
+    return this.detailFor === 'both' || this.detailFor === direction;
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (changed.has('value')) {
-      const internal = this.pendingInternalValue?.value === this.value;
-      this.pendingInternalValue = undefined;
+    if (changed.has('rating')) {
+      const internal = this.pendingInternalRating?.rating === this.rating;
+      this.pendingInternalRating = undefined;
       if (!internal) {
+        this.pendingSubmission = undefined;
         this.pending = false;
         this.panelOpen = false;
         this.selectedReasonIds = [];
         this.commentDraft = '';
       }
     }
-    if (changed.has('reasons')) {
-      const validIds = new Set(this.reasons.map((reason) => reason.id));
+    if (changed.has('detail')) {
+      const validIds = new Set(this.detailReasons.map((reason) => reason.id));
       this.selectedReasonIds = this.selectedReasonIds.filter((id) => validIds.has(id));
+      if (!this.detailCommentable) this.commentDraft = '';
     }
-    if (changed.has('commentable') && !this.commentable) this.commentDraft = '';
-    if (this.panelOpen && (!this.value || !this.detailApplies(this.value) || !this.hasDetailContent)) {
+    if (this.panelOpen && (!this.rating || !this.detailApplies(this.rating) || !this.hasDetailContent)) {
       this.pending = false;
       this.panelOpen = false;
       if (changed.has('detailFor')) {
@@ -212,41 +270,54 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     }
   }
 
-  private setValueFromActivation(value: MessageFeedbackValue): void {
-    this.pendingInternalValue = { value };
-    this.value = value;
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    if (changed.has('disabled') || changed.has('pending')) {
+      this.emit('lr-toolbar-actions-change');
+    }
+  }
+
+  private setRatingFromInteraction(rating: MessageFeedbackValue): void {
+    this.pendingInternalRating = { rating };
+    this.rating = rating;
   }
 
   private activateThumb(next: MessageFeedbackRating): void {
     if (this.disabled || this.pending) return;
-    if (this.value === next) {
+    const previousRating = this.rating;
+    if (this.rating === next) {
       if (this.panelOpen) {
-        this.setValueFromActivation(null);
+        this.setRatingFromInteraction(null);
         this.panelOpen = false;
         this.selectedReasonIds = [];
         this.commentDraft = '';
-        this.emit('lr-change', { value: null });
+        this.emit('lr-feedback-change', { rating: null });
+        this.requestSubmission({ rating: null, reasonIds: [], comment: '' }, previousRating, true);
         return;
       }
       if (this.detailApplies(next) && this.hasDetailContent) {
-        // Panel was closed (Escape, or a prior submit) without clearing `value` -- re-open it
-        // showing whatever draft survived. Nothing about `value` changed, so no lr-change.
+        // Panel was closed (Escape, or a prior submit) without clearing `rating` -- re-open it
+        // showing whatever draft survived. Nothing about `rating` changed, so no change event.
         this.panelOpen = true;
         return;
       }
-      this.setValueFromActivation(null);
-      this.emit('lr-change', { value: null });
+      this.setRatingFromInteraction(null);
+      this.emit('lr-feedback-change', { rating: null });
+      this.requestSubmission({ rating: null, reasonIds: [], comment: '' }, previousRating, false);
       return;
     }
     this.selectedReasonIds = [];
     this.commentDraft = '';
-    this.setValueFromActivation(next);
+    this.setRatingFromInteraction(next);
     this.panelOpen = this.detailApplies(next) && this.hasDetailContent;
-    this.emit('lr-change', { value: next });
+    this.emit('lr-feedback-change', { rating: next });
+    if (!this.panelOpen) {
+      this.requestSubmission({ rating: next, reasonIds: [], comment: '' }, previousRating, false);
+    }
   }
 
   private focusActiveThumb(): void {
-    (this.value === 'down' ? this.downButtonEl : this.upButtonEl)?.focus();
+    (this.rating === 'down' ? this.downButtonEl : this.upButtonEl)?.focus();
   }
 
   private closePanel(): void {
@@ -277,22 +348,14 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   // <lr-message-feedback> can observe them, mirroring <lr-model-select>'s identical bridge for
   // its own free-text <input>.
   private onCommentFocus = (): void => {
-    this.emit('focus');
+    this.emit('focus', null);
   };
 
   private onCommentBlur = (): void => {
-    this.emit('blur');
+    this.emit('blur', null);
   };
 
   private completeSubmission(): void {
-    this.panelOpen = false;
-    this.liveRegion?.announce(this.localize('feedbackSubmitted'), { force: true });
-    this.focusActiveThumb();
-  }
-
-  /** Completes a submit held by `preventDefault()`, closing and announcing success. */
-  finalizePendingSubmit(): void {
-    if (!this.pending) return;
     this.pending = false;
     this.panelOpen = false;
     this.liveRegion?.announce(this.localize('feedbackSubmitted'), { force: true });
@@ -301,36 +364,60 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     });
   }
 
-  /** Releases a submit held by `preventDefault()` without announcing success or clearing its draft. */
+  /** Completes a submit held by `preventDefault()`, closing and announcing success. */
+  finalizePendingSubmit(): void {
+    if (!this.pendingSubmission) return;
+    this.pendingSubmission = undefined;
+    this.completeSubmission();
+  }
+
+  /** Releases a submit held by `preventDefault()`, restoring the rating that preceded the request
+   *  without announcing success or clearing a detailed draft. */
   revertPendingSubmit(): void {
-    if (!this.pending) return;
+    const transaction = this.pendingSubmission;
+    if (!transaction) return;
+    this.pendingSubmission = undefined;
     this.pending = false;
+    this.setRatingFromInteraction(transaction.previousRating);
+    this.panelOpen = transaction.panelWasOpen;
     void this.updateComplete.then(() => {
-      if (this.isConnected && !this.pending && this.panelOpen) this.submitButtonEl?.focus();
+      if (!this.isConnected || this.pending) return;
+      if (this.panelOpen) this.submitButtonEl?.focus();
+      else this.focusActiveThumb();
     });
   }
 
+  private requestSubmission(
+    detail: MessageFeedbackSubmitDetail,
+    previousRating: MessageFeedbackValue,
+    panelWasOpen: boolean,
+  ): void {
+    const token = ++this.submitGeneration;
+    // Install the transaction before dispatch: a synchronous listener may finalize or revert it.
+    this.pendingSubmission = { token, previousRating, panelWasOpen };
+    this.pending = true;
+    const event = this.emit('lr-feedback-submit', detail, { cancelable: true });
+    if (this.pendingSubmission?.token !== token) return;
+    if (event.defaultPrevented) return;
+    this.finalizePendingSubmit();
+  }
+
   private onSubmit = (): void => {
-    if (this.disabled || this.pending || !this.value || !this.panelOpen) return;
-    const validReasonIds = new Set(this.reasons.map((reason) => reason.id));
-    const event = this.emit(
-      'lr-submit',
+    if (this.disabled || this.pending || !this.rating || !this.panelOpen) return;
+    const validReasonIds = new Set(this.detailReasons.map((reason) => reason.id));
+    this.requestSubmission(
       {
-        value: this.value,
+        rating: this.rating,
         reasonIds: this.selectedReasonIds.filter((id) => validReasonIds.has(id)),
-        comment: this.commentable ? this.commentDraft.trim() : '',
+        comment: this.detailCommentable ? this.commentDraft.trim() : '',
       },
-      { cancelable: true }
+      this.rating,
+      true,
     );
-    if (event.defaultPrevented) {
-      this.pending = true;
-      return;
-    }
-    this.completeSubmission();
   };
 
   private renderThumb(direction: MessageFeedbackRating): TemplateResult {
-    const pressed = this.value === direction;
+    const pressed = this.rating === direction;
     const canExpand = this.detailApplies(direction) && this.hasDetailContent;
     return html`
       <button
@@ -364,10 +451,10 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                 @keydown=${this.onPanelKeyDown}
               >
                 <div class="panel-inner">
-                  ${this.reasons.length > 0
+                  ${this.detailReasons.length > 0
                     ? html`
                         <div part="reasons" role="group" aria-label=${this.localize('feedbackReasonsLabel')}>
-                          ${this.reasons.map(
+                          ${this.detailReasons.map(
                             (reason) => html`
                               <lr-chip
                                 toggleable
@@ -384,7 +471,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                         </div>
                       `
                     : nothing}
-                  ${this.commentable
+                  ${this.detailCommentable
                     ? html`
                         <textarea
                           part="comment"

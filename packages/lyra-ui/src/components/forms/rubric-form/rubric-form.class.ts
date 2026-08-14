@@ -6,7 +6,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { styles } from './rubric-form.styles.js';
-import type { SegmentedItem } from '../../layout/segmented/segmented.class.js';
+import type { LyraSegmentedItem } from '../../layout/segmented/segmented.class.js';
 import type { LyraSelect } from '../select/select.class.js';
 import '../../layout/segmented/segmented.class.js';
 import '../slider/slider.class.js';
@@ -30,34 +30,181 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_rubricSki
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface RubricKeyOption {
-  value: string;
-  label?: string;
-  description?: string;
+  readonly value: string;
+  readonly label?: string;
+  readonly description?: string;
 }
 
-export interface RubricKey {
-  key: string;
-  type: 'score' | 'category' | 'comment';
-  label?: string;
-  description?: string;
-  required?: boolean;
-  min?: number;
-  max?: number;
-  step?: number;
-  options?: RubricKeyOption[];
-  multiple?: boolean;
-  placeholder?: string;
+interface RubricKeyBase {
+  readonly key: string;
+  readonly label?: string;
+  readonly description?: string;
+  readonly required?: boolean;
 }
 
-export type RubricValue = Record<string, number | string | string[] | undefined>;
+export interface ScoreRubricKey extends RubricKeyBase {
+  readonly type: 'score';
+  readonly min?: number;
+  readonly max?: number;
+  readonly step?: number;
+}
 
-const EMPTY_KEYS: RubricKey[] = [];
+export interface CategoryRubricKey extends RubricKeyBase {
+  readonly type: 'category';
+  readonly options?: readonly RubricKeyOption[];
+  readonly multiple?: boolean;
+}
+
+export interface CommentRubricKey extends RubricKeyBase {
+  readonly type: 'comment';
+  readonly placeholder?: string;
+}
+
+/** Discriminated, immutable field schema; each variant exposes only meaningful configuration. */
+export type RubricKey = ScoreRubricKey | CategoryRubricKey | CommentRubricKey;
+export type RubricValue = Readonly<Record<string, number | string | readonly string[] | undefined>>;
+
+const EMPTY_KEYS: readonly RubricKey[] = [];
 const EMPTY_VALUE: RubricValue = {};
+
+interface RuntimeRubricKeyInput {
+  key?: unknown;
+  type?: unknown;
+  label?: unknown;
+  description?: unknown;
+  required?: unknown;
+  min?: unknown;
+  max?: unknown;
+  step?: unknown;
+  options?: unknown;
+  multiple?: unknown;
+  placeholder?: unknown;
+}
+
+interface RuntimeRubricOptionInput {
+  value?: unknown;
+  label?: unknown;
+  description?: unknown;
+}
 
 function cloneRubricValue(value: RubricValue): RubricValue {
   return Object.fromEntries(
     Object.entries(value).map(([key, entry]) => [key, Array.isArray(entry) ? [...entry] : entry]),
   );
+}
+
+function normalizeRubricKeys(next: readonly RubricKey[]): RubricKey[] {
+  if (!Array.isArray(next)) return [];
+  const seen = new Set<string>();
+  const normalized: RubricKey[] = [];
+  for (const candidate of next as readonly unknown[]) {
+    if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
+    const raw = candidate as RuntimeRubricKeyInput;
+    const key = typeof raw.key === 'string' ? raw.key.trim() : '';
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const common = {
+      key,
+      ...(typeof raw.label === 'string' ? { label: raw.label } : {}),
+      ...(typeof raw.description === 'string' ? { description: raw.description } : {}),
+      ...(typeof raw.required === 'boolean' ? { required: raw.required } : {}),
+    };
+    if (raw.type === 'score') {
+      normalized.push({
+        ...common,
+        type: 'score',
+        ...(typeof raw.min === 'number' ? { min: raw.min } : {}),
+        ...(typeof raw.max === 'number' ? { max: raw.max } : {}),
+        ...(typeof raw.step === 'number' ? { step: raw.step } : {}),
+      });
+    } else if (raw.type === 'category') {
+      const options = Array.isArray(raw.options)
+        ? raw.options.flatMap((option): RubricKeyOption[] => {
+            if (option === null || typeof option !== 'object' || Array.isArray(option)) return [];
+            const entry = option as RuntimeRubricOptionInput;
+            if (typeof entry.value !== 'string') return [];
+            return [{
+              value: entry.value,
+              ...(typeof entry.label === 'string' ? { label: entry.label } : {}),
+              ...(typeof entry.description === 'string' ? { description: entry.description } : {}),
+            }];
+          })
+        : [];
+      normalized.push({
+        ...common,
+        type: 'category',
+        options,
+        ...(typeof raw.multiple === 'boolean' ? { multiple: raw.multiple } : {}),
+      });
+    } else if (raw.type === 'comment') {
+      normalized.push({
+        ...common,
+        type: 'comment',
+        ...(typeof raw.placeholder === 'string' ? { placeholder: raw.placeholder } : {}),
+      });
+    } else {
+      // Runtime callers can still violate the static discriminant. Preserve one defensive row so
+      // the visible unsupported-type fallback and invalid state remain fail-closed.
+      normalized.push({ ...common, type: String(raw.type ?? '') } as unknown as RubricKey);
+    }
+  }
+  return normalized;
+}
+
+function scoreDomain(key: ScoreRubricKey): { min: number; max: number; step: number } {
+  const min = Number.isFinite(key.min) ? key.min! : 0;
+  const rawMax = Number.isFinite(key.max) ? key.max! : 5;
+  const max = Math.max(min, rawMax);
+  const step = Number.isFinite(key.step) && key.step! > 0 ? key.step! : 1;
+  return { min, max, step };
+}
+
+function canonicalScore(value: unknown, key: ScoreRubricKey): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  const { min, max, step } = scoreDomain(key);
+  const clamped = Math.min(max, Math.max(min, value));
+  const snapped = Math.min(max, Math.max(min, min + Math.round((clamped - min) / step) * step));
+  return Number(snapped.toPrecision(15));
+}
+
+function normalizeRubricValue(value: unknown, keys: readonly RubricKey[]): RubricValue {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return {};
+  const source = value as Record<string, unknown>;
+  const normalized: Record<string, number | string | readonly string[] | undefined> = {};
+  for (const key of keys) {
+    let entry: unknown;
+    try {
+      if (!Object.prototype.hasOwnProperty.call(source, key.key)) continue;
+      entry = source[key.key];
+    } catch {
+      continue;
+    }
+    if (key.type === 'score') {
+      const score = canonicalScore(entry, key);
+      if (score !== undefined) normalized[key.key] = score;
+    } else if (key.type === 'category') {
+      const allowed = (key.options ?? []).map((option) => option.value);
+      if (key.multiple) {
+        if (!Array.isArray(entry)) continue;
+        const remaining = new Map<string, number>();
+        for (const option of allowed) remaining.set(option, (remaining.get(option) ?? 0) + 1);
+        const selected: string[] = [];
+        for (const candidate of entry) {
+          if (typeof candidate !== 'string') continue;
+          const count = remaining.get(candidate) ?? 0;
+          if (count <= 0) continue;
+          selected.push(candidate);
+          remaining.set(candidate, count - 1);
+        }
+        normalized[key.key] = selected;
+      } else if (typeof entry === 'string' && entry !== '' && allowed.includes(entry)) {
+        normalized[key.key] = entry;
+      }
+    } else if (key.type === 'comment' && typeof entry === 'string') {
+      normalized[key.key] = entry;
+    }
+  }
+  return normalized;
 }
 
 export interface LyraRubricFormEventMap {
@@ -83,6 +230,11 @@ export interface LyraRubricFormEventMap {
  * a visible "Unsupported field type" note instead of silently dropping it,
  * and marks the form invalid — the same defensive shape as
  * `<lr-tool-param-form>`'s own unsupported-property fallback.
+ * The exported key model is a readonly discriminated union. Live/default/restored values are
+ * canonicalized once against that current schema before render, validity, events, or FormData:
+ * scores clamp/snap to their domain, categories retain only declared option occurrences,
+ * comments require strings, and undeclared fields are discarded. `defaultValue` is the explicit
+ * reset baseline; reads return defensive snapshots.
  *
  * Optional native `<form>` participation is implemented via `ElementInternals`
  * attached directly (this component's value is a whole object, not a plain
@@ -92,7 +244,7 @@ export interface LyraRubricFormEventMap {
  * `lr-input`/`lr-validity-change`/`lr-submit`/`lr-skip`), not a
  * requirement: a consumer that never puts this inside a `<form>` loses
  * nothing.
- * Aggregate `label`, `hint`/`helpText`, and `errorText` properties have matching slots and
+ * Aggregate `label`, `hint`, and `errorText` properties have matching slots and
  * same-shadow ARIA links on the outer `base` role="group". A host `aria-label` wins by attribute
  * presence (including an explicitly empty value), while each rubric field keeps its own
  * field-level name. When `errorText` is empty, a consumer `setCustomValidity()` message is rendered
@@ -101,7 +253,6 @@ export interface LyraRubricFormEventMap {
  * @customElement lr-rubric-form
  * @slot label - Aggregate rubric label rendered before all fields.
  * @slot hint - Aggregate supporting text rendered after all fields.
- * @slot help-text - Shoelace-compatible alias for the aggregate `hint` slot.
  * @slot error - Aggregate validation text; supplements `errorText` or the current custom error.
  * @slot actions - Extra host controls rendered in the footer beside Submit/Skip.
  * @event lr-input - `detail: { value }` — any control changed; the full current value object.
@@ -188,6 +339,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     name: { reflect: true, noAccessor: true },
     keys: { attribute: false, noAccessor: true },
     value: { attribute: false, noAccessor: true },
+    defaultValue: { attribute: false, noAccessor: true },
     itemId: { attribute: 'item-id', reflect: true, noAccessor: true },
     hasNext: { type: Boolean, attribute: 'has-next', noAccessor: true },
     skippable: { type: Boolean, noAccessor: true },
@@ -198,8 +350,6 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   @property() label = '';
   /** Aggregate supporting text. */
   @property() hint = '';
-  /** Shoelace-compatible spelling of {@link hint}; `hint` wins when both are set. */
-  @property({ attribute: 'help-text' }) helpText = '';
   /** Aggregate visible error text. A consumer custom-validity message is shown when this is empty. */
   @property({ attribute: 'error-text' }) errorText = '';
   /** SSR label-presence hint; hydrated instances also discover populated slots. */
@@ -211,7 +361,6 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   @state() private touchedFields = new Set<string>();
   @state() private hasLabelSlot = false;
   @state() private hasHintSlot = false;
-  @state() private hasHelpTextSlot = false;
   @state() private hasErrorSlot = false;
 
   private internals: ElementInternals;
@@ -224,10 +373,10 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private aggregateErrorId = `${this.baseId}-error`;
   private _fieldsetDisabled = false;
   private _name = '';
-  private _keys: RubricKey[] = EMPTY_KEYS;
+  private _keys: readonly RubricKey[] = EMPTY_KEYS;
   private _value: RubricValue = EMPTY_VALUE;
-  private resetValue: RubricValue = EMPTY_VALUE;
-  private resetValueCaptured = false;
+  private _defaultValue: RubricValue = EMPTY_VALUE;
+  private _valueDirty = false;
   private _itemId = '';
   private _hasNext = false;
   private _skippable = false;
@@ -305,35 +454,50 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     return this.internals.willValidate;
   }
 
-  get keys(): RubricKey[] {
+  get keys(): readonly RubricKey[] {
     return this._keys;
   }
-  set keys(next: RubricKey[]) {
+  set keys(next: readonly RubricKey[]) {
     const old = this._keys;
-    this._keys = next ?? EMPTY_KEYS;
+    this._keys = normalizeRubricKeys(next ?? EMPTY_KEYS);
+    const oldDefault = this._defaultValue;
+    const oldValue = this._value;
+    this._defaultValue = normalizeRubricValue(this._defaultValue, this._keys);
+    this._value = this._valueDirty
+      ? normalizeRubricValue(this._value, this._keys)
+      : cloneRubricValue(this._defaultValue);
     this.syncFormState();
     this.requestUpdate('keys', old);
+    this.requestUpdate('defaultValue', oldDefault);
+    this.requestUpdate('value', oldValue);
   }
 
-  /** Live structured rubric value. The value present before the first render is snapshotted as
-   * the native form-reset baseline; later assignments are live-only. Each reset restores a fresh
-   * clone of that baseline, clears interaction state, and preserves consumer custom validity. */
+  /** Canonical live structured value. Reads are defensive snapshots; writes are normalized against
+   * the current discriminated schema before rendering, validity, events, and form submission. */
   get value(): RubricValue {
-    return this._value;
+    return cloneRubricValue(this._value);
   }
   set value(next: RubricValue) {
-    const old = this._value;
-    this._value = next ?? EMPTY_VALUE;
-    this.syncFormState();
-    this.requestUpdate('value', old);
+    this.setLiveValue(next, true);
   }
 
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-    if (!this.resetValueCaptured) {
-      this.resetValue = cloneRubricValue(this._value);
-      this.resetValueCaptured = true;
-    }
+  /** Explicit native form-reset baseline. Changing it updates pristine live state only. */
+  get defaultValue(): RubricValue {
+    return cloneRubricValue(this._defaultValue);
+  }
+  set defaultValue(next: RubricValue) {
+    const old = this._defaultValue;
+    this._defaultValue = normalizeRubricValue(next ?? EMPTY_VALUE, this._keys);
+    if (!this._valueDirty) this.setLiveValue(this._defaultValue, false);
+    this.requestUpdate('defaultValue', old);
+  }
+
+  private setLiveValue(next: unknown, dirty: boolean): void {
+    const old = this._value;
+    this._value = normalizeRubricValue(next ?? EMPTY_VALUE, this._keys);
+    this._valueDirty = dirty;
+    this.syncFormState();
+    this.requestUpdate('value', old);
   }
 
   get itemId(): string {
@@ -344,6 +508,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     this._itemId = next ?? '';
     if (old !== this._itemId) {
       this.touchedFields = new Set();
+      this.syncCustomStates();
       // Only steal focus on a genuine item-to-item transition -- `hasUpdated`
       // (inherited from ReactiveElement, and still reliably `false` here: it
       // only flips to `true` inside the first `performUpdate()`, which can't
@@ -442,20 +607,18 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     return (field?.querySelector('.control') as HTMLElement | null) ?? undefined;
   }
 
-  private isSegmentedScore(k: RubricKey): boolean {
-    const min = k.min ?? 0;
-    const max = k.max ?? 5;
-    const step = k.step ?? 1;
-    if (step <= 0 || !Number.isInteger(min) || !Number.isInteger(max) || !Number.isInteger(step)) return false;
+  private isSegmentedScore(k: ScoreRubricKey): boolean {
+    if (k.step !== undefined && (!Number.isFinite(k.step) || k.step <= 0)) return false;
+    if (Number.isFinite(k.min) && Number.isFinite(k.max) && k.max! < k.min!) return false;
+    const { min, max, step } = scoreDomain(k);
+    if (!Number.isInteger(min) || !Number.isInteger(max) || !Number.isInteger(step)) return false;
     const count = (max - min) / step;
     return Number.isInteger(count) && count >= 0 && count <= 10;
   }
 
-  private scoreValues(k: RubricKey): number[] {
+  private scoreValues(k: ScoreRubricKey): number[] {
     if (!this.isSegmentedScore(k)) return [];
-    const min = k.min ?? 0;
-    const max = k.max ?? 5;
-    const step = k.step ?? 1;
+    const { min, max, step } = scoreDomain(k);
     const count = Math.round((max - min) / step);
     return Array.from({ length: count + 1 }, (_, index) => (index === count ? max : min + index * step));
   }
@@ -465,8 +628,9 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     const flags: ValidityStateFlags = {};
     for (const k of this._keys) {
       if (k.type !== 'score' && k.type !== 'category' && k.type !== 'comment') {
-        errors[k.key] = this.localize('unsupportedFieldType', undefined, {
-          type: String((k as { type: string }).type),
+        const unsupported = k as unknown as { key: string; type: string };
+        errors[unsupported.key] = this.localize('unsupportedFieldType', undefined, {
+          type: unsupported.type,
         });
         flags.customError = true;
         continue;
@@ -579,11 +743,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   }
 
   formResetCallback(): void {
-    if (!this.resetValueCaptured) {
-      this.resetValue = cloneRubricValue(this._value);
-      this.resetValueCaptured = true;
-    }
-    this.value = cloneRubricValue(this.resetValue);
+    this.setLiveValue(this._defaultValue, false);
     // Pristine again, so the `user-*` states stop matching even though a rubric with required keys
     // is immediately invalid once more. Ordered after the `value` write (which runs
     // `syncFormState()`), so the republish below sees the cleared set.
@@ -600,7 +760,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
         // Invalid persisted state restores the safe empty object.
       }
     }
-    this.value = restored;
+    this.setLiveValue(restored, true);
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
@@ -618,7 +778,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private setFieldValue(key: string, val: number | string | string[]): void {
     if (this.effectiveDisabled) return;
     this.value = { ...this._value, [key]: val };
-    this.emit('lr-input', { value: { ...this._value } });
+    this.emit('lr-input', { value: cloneRubricValue(this._value) });
   }
 
   private stopChildEvent = (event: Event): void => {
@@ -632,7 +792,6 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     );
     if (slot.name === 'label') this.hasLabelSlot = populated;
     else if (slot.name === 'hint') this.hasHintSlot = populated;
-    else if (slot.name === 'help-text') this.hasHelpTextSlot = populated;
     else if (slot.name === 'error') this.hasErrorSlot = populated;
   };
 
@@ -647,7 +806,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private submit(): void {
     if (this.effectiveDisabled) return;
     if (!this.reportValidity()) return;
-    this.emit('lr-submit', { value: { ...this._value }, itemId: this.itemId });
+    this.emit('lr-submit', { value: cloneRubricValue(this._value), itemId: this.itemId });
   }
 
   private skip(): void {
@@ -695,10 +854,8 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     }
   }
 
-  private renderScoreControl(k: RubricKey, fieldId: string, current: unknown, hasError: boolean): TemplateResult {
-    const min = k.min ?? 0;
-    const max = k.max ?? 5;
-    const step = k.step ?? 1;
+  private renderScoreControl(k: ScoreRubricKey, fieldId: string, current: unknown, hasError: boolean): TemplateResult {
+    const { min, max, step } = scoreDomain(k);
     const disabled = this.effectiveDisabled;
     // Slider/segmented own their roles inside their own shadow roots, so the
     // rubric's outer sibling description/error cannot describe those roles
@@ -709,7 +866,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       .join('. ');
     if (this.isSegmentedScore(k)) {
       const numberFormat = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 20 });
-      const items: SegmentedItem[] = this.scoreValues(k).map((score) => ({
+      const items: LyraSegmentedItem[] = this.scoreValues(k).map((score) => ({
         value: String(score),
         label: numberFormat.format(score),
         disabled,
@@ -750,14 +907,14 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     ></lr-slider>`;
   }
 
-  private renderCategoryControl(k: RubricKey, fieldId: string, current: unknown, hasError: boolean): TemplateResult {
+  private renderCategoryControl(k: CategoryRubricKey, fieldId: string, current: unknown, hasError: boolean): TemplateResult {
     const options = k.options ?? [];
     const disabled = this.effectiveDisabled;
     const label = k.label ?? k.key;
     const description = k.description ? html`<span slot="hint" part="description">${k.description}</span>` : nothing;
     const error = hasError ? html`<span slot="error" part="error">${this._errors[k.key]}</span>` : nothing;
     if (k.multiple) {
-      const selected = Array.isArray(current) ? current : [];
+      const selected: readonly string[] = Array.isArray(current) ? current as string[] : [];
       return html`<lr-checkbox-group
         id=${fieldId}
         class="control"
@@ -808,7 +965,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     </lr-select>`;
   }
 
-  private renderCommentControl(k: RubricKey, fieldId: string, current: unknown, hasError: boolean): TemplateResult {
+  private renderCommentControl(k: CommentRubricKey, fieldId: string, current: unknown, hasError: boolean): TemplateResult {
     const value = typeof current === 'string' ? current : '';
     const label = k.label ?? k.key;
     return html`<lr-textarea
@@ -873,9 +1030,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     const hasHint =
       this.withHint ||
       this.hasHintSlot ||
-      this.hasHelpTextSlot ||
-      this.hint.length > 0 ||
-      this.helpText.length > 0;
+      this.hint.length > 0;
     const aggregateError = this.errorText || this.customError || '';
     const hasError = this.hasErrorSlot || aggregateError.length > 0;
     const hostLabel = this.getAttribute('aria-label');
@@ -922,8 +1077,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
             part="aggregate-hint form-control-help-text"
             ?hidden=${!hasHint}
           >
-            ${this.hint || this.helpText}<slot name="hint" @slotchange=${this.onAggregateSlotChange}></slot
-            ><slot name="help-text" @slotchange=${this.onAggregateSlotChange}></slot>
+            ${this.hint}<slot name="hint" @slotchange=${this.onAggregateSlotChange}></slot>
           </div>
           <div
             id=${this.aggregateErrorId}

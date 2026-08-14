@@ -33,7 +33,7 @@ it('types and preserves every composed push-to-talk event unchanged', async () =
     'lr-record-cancel',
     'lr-record-error',
     'lr-level',
-    'lr-state-change',
+    'lr-record-state-change',
   ] as const satisfies readonly (keyof LyraRealtimeSessionEventMap)[];
   const details: readonly unknown[] = [
     { stream: 'stream-sentinel' },
@@ -45,7 +45,7 @@ it('types and preserves every composed push-to-talk event unchanged', async () =
     { state: 'recording' },
   ];
   const el = (await fixture(
-    html`<lr-realtime-session state="connected"></lr-realtime-session>`,
+    html`<lr-realtime-session state="connected"></lr-realtime-session>`
   )) as LyraRealtimeSession;
   const capture = el.shadowRoot!.querySelector('lr-push-to-talk')!;
 
@@ -56,7 +56,7 @@ it('types and preserves every composed push-to-talk event unchanged', async () =
         bubbles: true,
         composed: true,
         detail: details[index],
-      }),
+      })
     );
     const received = await pending;
     expect(received.target?.localName).to.equal('lr-realtime-session');
@@ -88,19 +88,57 @@ it('emits controlled connect, disconnect, mute, and interrupt intents', async ()
   await disconnectPending;
 });
 
-it('keeps errorCode informational while rendering a localized generic error', async () => {
-  const el = (await fixture(
-    html`<lr-realtime-session state="error" error-code="network"></lr-realtime-session>`
-  )) as LyraRealtimeSession;
-  expect(el.errorCode).to.equal('network');
-  expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('The realtime connection failed.');
-
-  el.errorCode = 'provider-authentication-expired';
-  await el.updateComplete;
-  expect(el.errorCode).to.equal('provider-authentication-expired');
+it('renders a localized generic error without an inert provider-code surface', async () => {
+  const el = (await fixture(html`<lr-realtime-session state="error"></lr-realtime-session>`)) as LyraRealtimeSession;
+  expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent?.trim()).to.equal(
+    'The realtime connection failed.'
+  );
   expect(el.state).to.equal('error');
-  expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('The realtime connection failed.');
+  expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent?.trim()).to.equal(
+    'The realtime connection failed.'
+  );
   await expect(el).shadowDom.to.be.accessible();
+});
+
+it('normalizes invalid connection and voice states from attributes and direct property writes', async () => {
+  const el = (await fixture(html`
+    <lr-realtime-session state="invalid" voice-state="invalid"></lr-realtime-session>
+  `)) as LyraRealtimeSession;
+  expect(el.state).to.equal('disconnected');
+  expect(el.getAttribute('state')).to.equal('disconnected');
+  expect(el.voiceState).to.equal('idle');
+
+  el.state = 'connected';
+  el.voiceState = 'speaking';
+  await el.updateComplete;
+  (el as unknown as { state: string; voiceState: string }).state = 'also-invalid';
+  (el as unknown as { state: string; voiceState: string }).voiceState = 'also-invalid';
+  await el.updateComplete;
+  expect(el.state).to.equal('disconnected');
+  expect(el.getAttribute('state')).to.equal('disconnected');
+  expect(el.voiceState).to.equal('idle');
+});
+
+it('preserves an explicitly empty host aria-label instead of replacing it with fallback prose', async () => {
+  const el = (await fixture(html`<lr-realtime-session aria-label=""></lr-realtime-session>`)) as LyraRealtimeSession;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+});
+
+it('contains undocumented native input/change events from auxiliary children', async () => {
+  const el = (await fixture(
+    html`<lr-realtime-session state="connected"></lr-realtime-session>`
+  )) as LyraRealtimeSession;
+  const capture = el.shadowRoot!.querySelector('lr-push-to-talk')!;
+  let inputs = 0;
+  let changes = 0;
+  el.addEventListener('input', () => inputs++);
+  el.addEventListener('change', () => changes++);
+
+  capture.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+  capture.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+
+  expect(inputs).to.equal(0);
+  expect(changes).to.equal(0);
 });
 
 it('applies per-instance localized strings', async () => {

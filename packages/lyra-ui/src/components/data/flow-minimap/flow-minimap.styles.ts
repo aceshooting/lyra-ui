@@ -32,44 +32,67 @@ export const styles = css`
   [part='map']:active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
+  [part='base'][data-locked] [part='map'] {
+    cursor: default;
+  }
+  [part='base'][data-locked] [part='map']:hover,
+  [part='base'][data-locked] [part='map']:active {
+    background: transparent;
+  }
   [part='node'] {
-    fill: var(--lr-flow-minimap-node-color, var(--lr-color-border-strong));
+    fill: var(--lr-flow-status-color, var(--lr-color-border-strong));
   }
   [part='node'][data-status='pending'] {
-    fill: var(--lr-flow-minimap-node-pending-color, var(--lr-color-border-strong));
+    fill: var(--lr-flow-status-pending-color, var(--lr-color-border-strong));
   }
   [part='node'][data-status='running'] {
-    fill: var(--lr-flow-minimap-node-running-color, var(--lr-color-brand));
+    fill: var(--lr-flow-status-running-color, var(--lr-color-brand));
   }
   [part='node'][data-status='success'] {
-    fill: var(--lr-flow-minimap-node-success-color, var(--lr-color-success));
+    fill: var(--lr-flow-status-success-color, var(--lr-color-success));
   }
   [part='node'][data-status='error'] {
-    fill: var(--lr-flow-minimap-node-error-color, var(--lr-color-danger));
+    fill: var(--lr-flow-status-error-color, var(--lr-color-danger));
   }
   [part='node'][data-status='denied'] {
-    fill: var(--lr-flow-minimap-node-denied-color, var(--lr-color-warning));
+    fill: var(--lr-flow-status-denied-color, var(--lr-color-warning));
   }
   [part='viewport'] {
     fill: color-mix(in srgb, var(--lr-color-brand) 15%, transparent);
     stroke: var(--lr-color-brand);
     stroke-width: 2;
+    pointer-events: none;
+  }
+  [part='viewport-hit-area'] {
+    fill: transparent;
+    stroke: transparent;
+    pointer-events: all;
     cursor: grab;
   }
-  [part='viewport']:hover {
+  [data-viewport-control]:hover [part='viewport'] {
     fill: color-mix(in srgb, var(--lr-color-brand) 25%, transparent);
     stroke-width: 3;
   }
   /* The rect is a grab handle, so its pressed state is also its dragging state -- it stays applied
      for the whole gesture. Both channels step past the hovered values, and the cursor flips to
      grabbing, matching the [data-panning] treatment lr-flow-canvas gives its own background. */
-  [part='viewport']:active {
+  [data-viewport-control]:has([part='viewport-hit-area']:active) [part='viewport'] {
     fill: color-mix(in srgb, var(--lr-color-brand) 40%, transparent);
     stroke-width: 4;
+  }
+  [part='viewport-hit-area']:active {
     cursor: grabbing;
   }
-  [part='viewport']:focus-visible {
+  [part='viewport-hit-area']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='base'][data-locked] [part='viewport-hit-area'] {
+    cursor: default;
+    pointer-events: none;
+  }
+  [part='base'][data-locked] [data-viewport-control]:hover [part='viewport'] {
+    fill: color-mix(in srgb, var(--lr-color-brand) 15%, transparent);
+    stroke-width: 2;
   }
 `;

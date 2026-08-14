@@ -1,17 +1,23 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state, query } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
-import '../../utility/live-region/live-region.class.js';
-import { finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
-import { styles } from './stream-status.styles.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
+import { property, state, query } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import type { LyraLiveRegion } from "../../utility/live-region/live-region.class.js";
+import "../../utility/live-region/live-region.class.js";
+import { finiteDuration, MAX_TIMEOUT_MS } from "../../../internal/numbers.js";
+import { literalSetConverter } from "../../../internal/converters.js";
+import type { LyraStreamPhase } from "../../../internal/stream-phase.js";
+import { styles } from "./stream-status.styles.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_streamRecoverAnnounce, LYRA_DEFAULT_streamStallAnnounce, LYRA_DEFAULT_streamStallClearedAnnounce, LYRA_DEFAULT_streamStalled } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_audioVisualizerIdle, LYRA_DEFAULT_realtimeSessionConnecting, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_streamRecoverAnnounce, LYRA_DEFAULT_streamStallAnnounce, LYRA_DEFAULT_streamStallClearedAnnounce, LYRA_DEFAULT_streamStalled } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export type StreamConnectionState = Exclude<LyraStreamPhase, "stalled">;
 
-export type StreamStatusPhase = 'idle' | 'connecting' | 'streaming' | 'stalled';
+const STREAM_CONNECTION_STATE = literalSetConverter<StreamConnectionState>(
+  ["idle", "connecting", "streaming"],
+  "idle"
+);
 
 // The default slot's stalled-message content is often plain text with no
 // wrapping element at all (see the CustomStalledMessage story), so an
@@ -24,21 +30,22 @@ export type StreamStatusPhase = 'idle' | 'connecting' | 'streaming' | 'stalled';
 // real message content if it's an element not assigned to some other named
 // slot (e.g. `actions`), or non-whitespace text.
 function isRealMessageNode(n: Node): boolean {
-  return n.nodeType === Node.ELEMENT_NODE
-    ? !(n as Element).hasAttribute('slot')
-    : (n.textContent ?? '').trim().length > 0;
+  if (n.nodeType !== Node.ELEMENT_NODE)
+    return (n.textContent ?? "").trim().length > 0;
+  const slot = (n as Element).getAttribute("slot");
+  return slot === null || slot === "";
 }
 
 export interface LyraStreamStatusEventMap {
-  'lr-stall': CustomEvent<undefined>;
-  'lr-recover': CustomEvent<undefined>;
+  "lr-stall": CustomEvent<null>;
+  "lr-recover": CustomEvent<null>;
 }
 /**
  * `<lr-stream-status>` — a compact status indicator for a single streaming
  * connection (SSE, WebSocket, long-poll, …), with built-in heartbeat-aware
  * stall detection.
  *
- * The host drives `phase` directly for `idle`/`connecting`/`streaming`, and
+ * The host owns `connectionState` for `idle`/`connecting`/`streaming`, and
  * calls `recordActivity()` on every *semantic* frame received while
  * streaming — a real content chunk, never a transport-level keep-alive ping.
  * This component has no payload-inspection logic of its own: "ignore
@@ -47,9 +54,9 @@ export interface LyraStreamStatusEventMap {
  * and a connection that's only sending keep-alives (no real content) for
  * longer than `stall-threshold-ms` correctly reads as stalled.
  *
- * Internally, an inactivity timer runs only while `phase === 'streaming'`.
- * It's (re)armed whenever the phase transitions to `'streaming'` (directly,
- * or via `recordActivity()` recovering from `'stalled'`), on every
+ * Internally, an inactivity timer runs only while the effective readonly `phase` is `streaming`.
+ * It's (re)armed whenever `connectionState` enters `streaming` or
+ * `recordActivity()` recovers from `stalled`, on every
  * subsequent `recordActivity()` call while already streaming, whenever
  * `stall-threshold-ms` itself changes while already streaming (the new
  * value takes effect immediately, the same way `<lr-toast-item>`'s
@@ -60,17 +67,15 @@ export interface LyraStreamStatusEventMap {
  * reconnect with `phase` unchanged — must resume detection rather than
  * silently disabling it for the rest of the streaming session). It's
  * disarmed the instant `phase` becomes anything else, including a
- * host-driven reassignment away from `'streaming'` — so a stale timer can
+ * host-driven `connectionState` reassignment away from `streaming` — so a stale timer can
  * never fire a stall transition after the host has already moved on. If it
  * ever fires, `phase` becomes `'stalled'` and `lr-stall` is dispatched.
  *
- * `phase` remains a fully public, directly settable property at all times —
- * a host can assign `'stalled'` (or any other phase) itself as a manual
- * override, and this component never fights that assignment. `lr-stall`/
- * `lr-recover` fire on *any* transition into/out of `'stalled'`
- * respectively, whether timer-driven or host-driven, and never for a
- * reassignment to the same value (Lit's default `hasChanged` already skips a
- * no-op set, same as every other reflected `@property` in this library).
+ * `phase` is a readonly effective value: it mirrors `connectionState` unless inactivity has
+ * stalled a streaming connection. A host that detects a semantic stall through another signal
+ * calls `markStalled()` instead of writing component-owned state. `recordActivity()` clears that
+ * override and resumes the timer. `lr-stall`/`lr-recover` fire exactly once for actual effective
+ * transitions into/out of `stalled`.
  * Like `<lr-chat-message>`'s `status`, whatever phase this element happens
  * to *mount* with is never itself treated as an eventful transition — only a
  * later change fires an event or an announcement.
@@ -98,32 +103,32 @@ export interface LyraStreamStatusEventMap {
  * usually recoverable (the stream may resume on its own, or the host's own
  * retry logic may kick in), so treating it as an actionable warning rather
  * than a hard failure keeps the tone proportionate. A host that wants to
- * escalate to danger styling after N stalls can scope its own CSS off
- * `[phase="stalled"]`, or simply stop rendering this component and show its
- * own danger-styled error state instead.
+ * escalate after N stalls can listen for `lr-stall` and show its own danger-styled error state.
  *
  * @customElement lr-stream-status
- * @slot - Custom copy shown only while `phase="stalled"` (e.g. "Taking longer than usual…"). A sensible built-in default is used when nothing is slotted.
- * @slot actions - A stop/retry button row. Always present in the template regardless of `phase` — visibility is driven purely by whether anything is slotted, not by `phase`; what to put here, and when, is entirely the host's call.
- * @event lr-stall - Fired whenever `phase` transitions into `'stalled'` from anything else (timer-driven, or a direct host assignment).
- * @event lr-recover - Fired whenever `phase` transitions out of `'stalled'` to anything else (via `recordActivity()`, or a direct host assignment) — fired unconditionally regardless of destination phase, even though the accompanying announcement's wording varies (see the class doc's "Accessibility" section).
+ * @slot - Custom copy shown only while `phase === 'stalled'` (e.g. "Taking longer than usual…"). A sensible built-in default is used when nothing is slotted.
+ * @slot actions - A stop/retry button row. Always present in the template regardless of phase; visibility is driven by whether anything is slotted.
+ * @event lr-stall - Fired whenever the effective phase transitions into `stalled`.
+ * @event lr-recover - Fired whenever the effective phase transitions out of `stalled`.
  * @csspart base - The root layout container.
  * @csspart indicator - The decorative (`aria-hidden`) status dot.
- * @csspart message - Wrapper around the default slot; only rendered while `phase="stalled"`.
+ * @csspart phase - Persistent localized phase text.
+ * @csspart message - Wrapper around the default slot; only rendered while readonly `phase` is `stalled`.
  * @csspart actions - Wrapper around the `actions` slot.
  * @cssprop [--lr-stream-status-dot-color=var(--lr-color-text-quiet)] - `indicator` dot color.
- *   Its unset default is swapped by the reflected `phase`: `var(--lr-color-brand)` for
+ *   Its unset default is swapped by reflected `connection-state` and the component-owned
+ *   `data-stalled` state: `var(--lr-color-brand)` for
  *   `connecting`/`streaming`, `var(--lr-color-warning)` for `stalled`. Set it on the element or
  *   any ancestor; an element value wins.
  * @cssprop [--lr-stream-status-dot-opacity=0.35] - `indicator` dot opacity. Its unset default is
- *   swapped by the reflected `phase`: `0.6` for `connecting`, `1` for `streaming` and `stalled`.
+ *   swapped by those same host states: `0.6` for `connecting`, `1` for `streaming` and `stalled`.
  *   Set it on the element or any ancestor; an element value wins.
  * @cssprop [--lr-stream-status-stalled-bg=var(--lr-color-warning-quiet)] - `base` row background
- *   while `phase="stalled"`.
+ *   while `data-stalled` is present.
  * @cssprop [--lr-stream-status-stalled-border-color=var(--lr-color-warning)] - `base` row border
- *   color while `phase="stalled"`.
+ *   color while `data-stalled` is present.
  * @cssprop [--lr-stream-status-message-color=var(--lr-color-warning)] - `message` text color
- *   while `phase="stalled"`. Decoupled from `--lr-stream-status-stalled-border-color` even though
+ *   while `data-stalled` is present. Decoupled from `--lr-stream-status-stalled-border-color` even though
  *   both fall back to the same shared token today.
  * @status stable
  * @since 4.0.0
@@ -133,6 +138,9 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    audioVisualizerIdle: LYRA_DEFAULT_audioVisualizerIdle,
+    realtimeSessionConnecting: LYRA_DEFAULT_realtimeSessionConnecting,
+    statusRunning: LYRA_DEFAULT_statusRunning,
     streamRecoverAnnounce: LYRA_DEFAULT_streamRecoverAnnounce,
     streamStallAnnounce: LYRA_DEFAULT_streamStallAnnounce,
     streamStallClearedAnnounce: LYRA_DEFAULT_streamStallClearedAnnounce,
@@ -142,13 +150,42 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** Current connection phase. Settable directly by the host at any time —
-   *  see the class doc for how that interacts with the internal stall timer. */
-  @property({ reflect: true }) phase: StreamStatusPhase = 'idle';
+  private _connectionState: StreamConnectionState = "idle";
+
+  /** Host-owned transport state. Invalid attribute and JavaScript writes normalize to `idle`. */
+  @property({
+    attribute: "connection-state",
+    reflect: true,
+    converter: STREAM_CONNECTION_STATE,
+  })
+  get connectionState(): StreamConnectionState {
+    return this._connectionState;
+  }
+  set connectionState(next: StreamConnectionState) {
+    const normalized = STREAM_CONNECTION_STATE.normalize(next);
+    const old = this._connectionState;
+    if (old === normalized) return;
+    // A host-owned transport transition starts a fresh effective phase. Clear any prior
+    // component-owned stall before storing the new transport state; a later same-turn
+    // markStalled() call can then deliberately install a new override.
+    this._stalled = false;
+    this._connectionState = normalized;
+    this.requestUpdate("connectionState", old);
+  }
+
+  /** Readonly effective status, including the component-owned stalled override. */
+  get phase(): LyraStreamPhase {
+    return this._stalled && this.connectionState === "streaming"
+      ? "stalled"
+      : this.connectionState;
+  }
 
   /** How long `phase` may stay `'streaming'` with no `recordActivity()` call
    *  before this component declares it stalled. */
-  @property({ type: Number, attribute: 'stall-threshold-ms' }) stallThresholdMs = 10000;
+  @property({ type: Number, attribute: "stall-threshold-ms" })
+  stallThresholdMs = 10000;
+
+  @state() private _stalled = false;
 
   // Only ever set while `phase === 'streaming'` — see armStallTimer()/disarmStallTimer().
   private stallTimer?: number;
@@ -164,46 +201,59 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   // can't be relied on for the default stalled-message text.
   @state() private hasMessageContent = false;
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query("lr-live-region") private liveRegion?: LyraLiveRegion;
+
+  private lastRenderedPhase?: LyraStreamPhase;
+  private phaseAtDisconnect?: LyraStreamPhase;
+
+  constructor() {
+    super();
+    this.requestUpdate("connectionState", undefined);
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
-      this.hasActionsSlot = this.hasSlotted('actions');
-      this.hasMessageContent = Array.from(this.childNodes).some(isRealMessageNode);
+      this.hasActionsSlot = this.hasSlotted("actions");
+      this.hasMessageContent = Array.from(this.childNodes).some(
+        isRealMessageNode
+      );
     }
   }
 
-  // `changed.get('phase')` is `undefined` on the very first update, for the
-  // same reason documented on lr-chat-message's identical `updated()`
-  // guard: Lit only records the *first* old value seen since the last
-  // completed update, and the constructor's field-initializer assignment is
-  // that first change, from the truly-unset internal slot. That naturally
-  // skips firing an event/announcement for whatever phase this element
-  // happens to mount with, while still arming the stall timer below if it
-  // mounts already `'streaming'`.
-  //
-  // The `else if` below only matters while `phase` itself didn't also change
-  // in this same update -- if it did, onPhaseChanged() above already
-  // (re)armed the timer with the current `stallThresholdMs`, so re-arming it
-  // again here would just be redundant, not wrong, but the `else` skips that
-  // double work.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('phase')) {
-      this.onPhaseChanged(changed.get('phase') as StreamStatusPhase | undefined);
-    } else if (changed.has('stallThresholdMs') && this.phase === 'streaming') {
+    const previous = this.lastRenderedPhase;
+    const current = this.phase;
+    this.lastRenderedPhase = current;
+    this.toggleAttribute("data-stalled", current === "stalled");
+
+    if (
+      current === "streaming" &&
+      (previous !== current || changed.has("stallThresholdMs"))
+    ) {
       // Unlike `phase` itself, `stallThresholdMs` has no dedicated handler --
       // the already-armed timer was scheduled against the *old* value and
       // keeps counting down against it otherwise, so a shortened (or
       // lengthened) threshold would silently have no effect until the next
       // recordActivity() call or phase transition happened to re-arm it.
       this.armStallTimer();
+    } else if (current !== "streaming") {
+      this.disarmStallTimer();
     }
+
+    this.onPhaseChanged(previous, current);
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.phaseAtDisconnect !== undefined) {
+      // A state change queued while detached becomes the reconnect baseline. A plain reparent
+      // with no state change retains the last rendered phase so the next real stall still emits.
+      if (this.phase !== this.phaseAtDisconnect)
+        this.lastRenderedPhase = this.phase;
+      this.phaseAtDisconnect = undefined;
+    }
     // A disconnect always disarms the timer (see disconnectedCallback()
     // below), but reparenting this element elsewhere in the page while still
     // `'streaming'` fires disconnectedCallback then connectedCallback with
@@ -211,17 +261,19 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     // else would ever re-arm it. Without this, a reparent mid-stream would
     // permanently disable stall detection for the rest of that streaming
     // session.
-    if (this.phase === 'streaming') this.armStallTimer();
+    if (this.phase === "streaming") this.armStallTimer();
   }
 
   override disconnectedCallback(): void {
+    this.phaseAtDisconnect = this.phase;
     this.disarmStallTimer();
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.disarmStallTimer();
-    if (this.isConnected && this.phase === 'streaming') this.armStallTimer();
+    if (this.isConnected && this.phase === "streaming") this.armStallTimer();
   }
 
   /**
@@ -230,51 +282,58 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
    *   stall deadline `stall-threshold-ms` further out.
    * - While `phase === 'stalled'`: recovers — `phase` becomes `'streaming'`
    *   again, `lr-recover` fires, and the stall timer is armed fresh (same
-   *   as the bullet above), all via the same `updated()` transition handling
-   *   a direct host assignment would also go through.
+   *   as the bullet above), all via the same effective transition handler.
    * - While `phase` is `'idle'` or `'connecting'`: a no-op. A host may call
    *   this defensively before formally flipping to `'streaming'`; it must
    *   never throw or start a timer early.
    */
   recordActivity(): void {
-    if (this.phase === 'streaming') {
+    if (this.phase === "streaming") {
       this.armStallTimer();
-    } else if (this.phase === 'stalled') {
-      this.phase = 'streaming';
+    } else if (this.phase === "stalled") {
+      this._stalled = false;
     }
   }
 
-  private onPhaseChanged(previous: StreamStatusPhase | undefined): void {
-    if (this.phase === 'streaming') {
-      this.armStallTimer();
-    } else {
-      this.disarmStallTimer();
-    }
+  /** Installs the component-owned stalled override for an active stream. No-op unless the
+   *  host-owned `connectionState` is `streaming`, or when already stalled. */
+  markStalled(): void {
+    if (this.connectionState !== "streaming" || this._stalled) return;
+    this.disarmStallTimer();
+    this._stalled = true;
+  }
 
-    if (previous === undefined) return;
+  private onPhaseChanged(
+    previous: LyraStreamPhase | undefined,
+    current: LyraStreamPhase
+  ): void {
+    if (previous === undefined || previous === current) return;
 
-    if (this.phase === 'stalled' && previous !== 'stalled') {
-      this.emit('lr-stall');
-      this.announceTransition('assertive', this.localize('streamStallAnnounce'));
-    } else if (previous === 'stalled' && this.phase !== 'stalled') {
+    if (current === "stalled" && previous !== "stalled") {
+      this.emit("lr-stall", null);
+      this.announceTransition(
+        "assertive",
+        this.localize("streamStallAnnounce")
+      );
+    } else if (previous === "stalled" && current !== "stalled") {
       // `lr-recover` fires unconditionally -- a host may still want the
       // event for any exit from 'stalled' -- but the *announced text* must
       // not claim the connection was "restored" when the destination is
       // 'idle'/'connecting': that's the host abandoning the stream, not it
       // recovering, and telling a screen-reader user otherwise would be the
       // opposite of what a sighted user sees on screen.
-      this.emit('lr-recover');
+      this.emit("lr-recover", null);
       const text =
-        this.phase === 'streaming'
-          ? this.localize('streamRecoverAnnounce')
-          : this.localize('streamStallClearedAnnounce');
-      this.announceTransition('polite', text);
+        current === "streaming"
+          ? this.localize("streamRecoverAnnounce")
+          : this.localize("streamStallClearedAnnounce");
+      this.announceTransition("polite", text);
     }
   }
 
   private armStallTimer(): void {
     this.disarmStallTimer();
-    if (!this.isConnected || this.phase !== 'streaming') return;
+    if (!this.isConnected || this.phase !== "streaming") return;
     // A non-finite or non-positive stallThresholdMs deliberately disables stall detection
     // entirely (never arms a timer) -- see the "never arms a timer for a non-positive
     // stall-threshold-ms" test. Once past that check, the value is otherwise finite and
@@ -295,7 +354,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
         this.stallTimerDocument !== ownerDocument ||
         this.stallTimerGeneration !== generation ||
         !this.isConnected ||
-        this.phase !== 'streaming' ||
+        this.phase !== "streaming" ||
         this.ownerDocument !== ownerDocument
       ) {
         return;
@@ -303,7 +362,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
       this.stallTimer = undefined;
       this.stallTimerOwner = undefined;
       this.stallTimerDocument = undefined;
-      this.phase = 'stalled';
+      this.markStalled();
     }, delay);
     this.stallTimer = handle;
     this.stallTimerOwner = ownerWindow;
@@ -320,7 +379,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     this.stallTimerDocument = undefined;
   }
 
-  private announceTransition(mode: 'assertive' | 'polite', text: string): void {
+  private announceTransition(mode: "assertive" | "polite", text: string): void {
     const region = this.liveRegion;
     if (!region) return;
     region.mode = mode;
@@ -328,26 +387,47 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   }
 
   private hasSlotted(name: string): boolean {
-    return Array.from(this.children).some((el) => el.getAttribute('slot') === name);
+    return Array.from(this.children).some(
+      (el) => el.getAttribute("slot") === name
+    );
   }
 
   private onActionsSlotChange = (e: Event): void => {
-    this.hasActionsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasActionsSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
 
   private onMessageSlotChange = (e: Event): void => {
-    this.hasMessageContent = (e.target as HTMLSlotElement).assignedNodes({ flatten: true }).some(isRealMessageNode);
+    this.hasMessageContent = (e.target as HTMLSlotElement)
+      .assignedNodes({ flatten: true })
+      .some(isRealMessageNode);
   };
+
+  private get phaseText(): string {
+    switch (this.phase) {
+      case "connecting":
+        return this.localize("realtimeSessionConnecting");
+      case "streaming":
+        return this.localize("statusRunning");
+      case "stalled":
+        return this.localize("streamStallAnnounce");
+      default:
+        return this.localize("audioVisualizerIdle");
+    }
+  }
 
   override render(): TemplateResult {
     return html`
       <div part="base">
         <span part="indicator" aria-hidden="true"></span>
-        ${this.phase === 'stalled'
+        <span part="phase">${this.phaseText}</span>
+        ${this.phase === "stalled"
           ? html`<div part="message">
-              <slot @slotchange=${this.onMessageSlotChange}></slot>${this.hasMessageContent
+              <slot @slotchange=${this.onMessageSlotChange}></slot>${this
+                .hasMessageContent
                 ? nothing
-                : this.localize('streamStalled')}
+                : this.localize("streamStalled")}
             </div>`
           : nothing}
         <div part="actions" ?hidden=${!this.hasActionsSlot}>
@@ -359,9 +439,8 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   }
 }
 
-
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-stream-status': LyraStreamStatus;
+    "lr-stream-status": LyraStreamStatus;
   }
 }

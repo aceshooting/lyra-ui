@@ -21,8 +21,8 @@ it('themes the track-to-label gap through a component-scoped hook', async () => 
   const el = (await fixture(html`
     <lr-switch style="--lr-switch-gap: 13px">Label</lr-switch>
   `)) as LyraSwitch;
-  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
-  expect(getComputedStyle(base).columnGap).to.equal('13px');
+  const layout = el.shadowRoot!.querySelector<HTMLElement>('.switch-layout')!;
+  expect(getComputedStyle(layout).columnGap).to.equal('13px');
 });
 
 it('emits one cancelable lr-invalid alias when a validity check fails', async () => {
@@ -456,7 +456,7 @@ it('exports wrapper/control and help-text aliases without replacing Lyra part na
   await expect(el).to.be.accessible();
 });
 
-it('accepts a Shoelace help-text slot and default-checked attribute', async () => {
+it('accepts a Shoelace help-text slot but ignores fictional default-checked', async () => {
   const form = (await fixture(html`
     <form>
       <lr-switch default-checked>
@@ -467,12 +467,13 @@ it('accepts a Shoelace help-text slot and default-checked attribute', async () =
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-switch') as LyraSwitch;
   await el.updateComplete;
-  expect(el.checked).to.be.true;
+  expect(el.checked).to.be.false;
+  expect(el.defaultChecked).to.be.false;
   const helpSlot = el.shadowRoot!.querySelector('slot[name="help-text"]') as HTMLSlotElement;
   expect(helpSlot.assignedNodes({ flatten: true }).map((node) => node.textContent).join('')).to.contain('Slotted help');
-  el.checked = false;
+  el.checked = true;
   form.reset();
-  expect(el.checked).to.be.true;
+  expect(el.checked).to.be.false;
 });
 
 it('accepts the WA with-hint SSR presence hint before slot assignment is observable', async () => {
@@ -1165,6 +1166,31 @@ it('is accessible in a checked, labeled, required state', async () => {
     html`<lr-switch checked required>Enable notifications</lr-switch>`,
   )) as LyraSwitch;
   await expect(el).to.be.accessible();
+});
+
+it('keeps interactive label content outside the switch and does not toggle through it', async () => {
+  const el = (await fixture(html`
+    <lr-switch>Enable notifications <button type="button">Configure</button></lr-switch>
+  `)) as LyraSwitch;
+  const button = el.querySelector('button')!;
+  let buttonClicks = 0;
+  button.addEventListener('click', () => { buttonClicks += 1; });
+
+  await expect(el).to.be.accessible();
+  button.click();
+  expect(buttonClicks).to.equal(1);
+  expect(el.checked).to.be.false;
+
+  (el.shadowRoot!.querySelector('[part="label"]') as HTMLElement).click();
+  expect(el.checked).to.be.true;
+});
+
+it('ignores repeated Space keydowns after the initial keyboard activation', async () => {
+  const el = (await fixture(html`<lr-switch>Notifications</lr-switch>`)) as LyraSwitch;
+  const owner = el.shadowRoot!.querySelector('[role="switch"]') as HTMLElement;
+  owner.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+  owner.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, repeat: true }));
+  expect(el.checked).to.be.true;
 });
 
 it('is accessible with a populated hint/errorText (the parts never rendered by the cases above)', async () => {

@@ -17,7 +17,7 @@ import {
 } from '../../../internal/aria-controls.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
-import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
+import { finiteNumber } from '../../../internal/numbers.js';
 import { place } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import {
@@ -41,14 +41,16 @@ import {
   localeTimePattern,
   normalizeTimeValue,
   parseTimeValue,
+  timeStepBaseMilliseconds,
   to24Hour,
   type TimeHourFormat,
   type TimePatternPart,
 } from './time-input-shared.js';
 import { styles } from './time-input.styles.js';
+import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_timeInputDayPeriod, LYRA_DEFAULT_timeInputEmptySegment, LYRA_DEFAULT_timeInputHour, LYRA_DEFAULT_timeInputInvalid, LYRA_DEFAULT_timeInputLabel, LYRA_DEFAULT_timeInputMaxMessage, LYRA_DEFAULT_timeInputMinMessage, LYRA_DEFAULT_timeInputMinute, LYRA_DEFAULT_timeInputNow, LYRA_DEFAULT_timeInputOpen, LYRA_DEFAULT_timeInputPopup, LYRA_DEFAULT_timeInputRangeMessage, LYRA_DEFAULT_timeInputSecond, LYRA_DEFAULT_timeInputStepMessage } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_timeInputDayPeriod, LYRA_DEFAULT_timeInputEmptySegment, LYRA_DEFAULT_timeInputHour, LYRA_DEFAULT_timeInputInvalid, LYRA_DEFAULT_timeInputLabel, LYRA_DEFAULT_timeInputMaxMessage, LYRA_DEFAULT_timeInputMinMessage, LYRA_DEFAULT_timeInputMinute, LYRA_DEFAULT_timeInputNow, LYRA_DEFAULT_timeInputOpen, LYRA_DEFAULT_timeInputPopup, LYRA_DEFAULT_timeInputRangeMessage, LYRA_DEFAULT_timeInputSecond, LYRA_DEFAULT_timeInputStepMessage } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -175,6 +177,12 @@ function containsElement(container: Element | null, value: unknown): value is El
  * The outer row follows the shared control-height ladder without adding padding around its action
  * hit targets: compact tiers grow only enough for the clear/expand buttons, while `l` and `xl`
  * retain their larger shared heights.
+ * Locale digits and ASCII digits are accepted symmetrically. Constraint bounds are formatted
+ * through the same locale presentation, while the wire value remains ASCII. Numeric step
+ * validation and picker options use the native time step base (valid `min`, then the reset
+ * default, then midnight) and the picker projects only complete times on that grid.
+ * Each picker column is a one-stop listbox: ArrowUp/ArrowDown/Home/End rove its enabled options,
+ * and the native option button supplies Enter/Space activation.
  * When a controlled locale, hour format, or step change removes the segment that currently owns
  * focus, focus moves to the first surviving segment after the new pattern renders. Changes never
  * reclaim focus from another control.
@@ -289,9 +297,12 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     date: LYRA_DEFAULT_date,
     details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     restore: LYRA_DEFAULT_restore,
     search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     timeInputDayPeriod: LYRA_DEFAULT_timeInputDayPeriod,
     timeInputEmptySegment: LYRA_DEFAULT_timeInputEmptySegment,
     timeInputHour: LYRA_DEFAULT_timeInputHour,
@@ -309,6 +320,10 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  /** Public WA-compatible intrinsic validator catalog. */
+  static get validators(): LyraFormValidator<LyraTimeInput>[] {
+    return [currentValidityValidator('required', 'disabled', 'readonly', 'value', 'min', 'max', 'step')];
+  }
   static override styles = [LyraElement.styles, sizes, srOnly, styles];
 
   static override properties = {
@@ -360,6 +375,8 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private transitionToken = 0;
   private visibilityPromise: Promise<void> = Promise.resolve();
   private segmentOrderKey = '';
+  private pickerGridKey = '';
+  private pickerGridMilliseconds: number[] = [];
   private inputId = nextId('time-input');
   private labelId = nextId('time-input-label');
   private hintId = nextId('time-input-hint');
@@ -407,7 +424,8 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.requestUpdate('readonly', old);
   }
 
-  /** Allowed value step in seconds, or `any` to disable step validation.
+  /** Allowed value step in seconds, or `any` to disable step validation. Numeric grids use valid
+   * `min`, then `defaultValue`, then midnight as their base; picker columns project that full grid.
    * @default 60 */
   get step(): LyraTimeInputStep {
     return this._step;
@@ -421,7 +439,9 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       const numeric = finiteNumber(Number(next), 60);
       this._step = numeric > 0 ? numeric : 60;
     }
-    if (this.numericStep < 60) this.secondsVisible = true;
+    const parsedValue = parseTimeValue(this.value);
+    this.secondsVisible = this.numericStep < 60 ||
+      (parsedValue !== undefined && parsedValue.precision !== 'minute');
     this.updateValidity();
     this.requestUpdate('step', old);
   }
@@ -550,6 +570,42 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     } catch {
       return String(value).padStart(minimumIntegerDigits, '0');
     }
+  }
+
+  /** Accepts both ASCII digits and the active numbering system's single-key digit glyphs. */
+  private inputDigit(key: string): string | undefined {
+    if (/^[0-9]$/.test(key)) return key;
+    try {
+      const formatter = getNumberFormat(this.effectiveLocale, { useGrouping: false });
+      for (let value = 0; value <= 9; value++) {
+        const integer = formatter.formatToParts(value)
+          .find((part) => part.type === 'integer')?.value;
+        if (integer === key) return String(value);
+      }
+    } catch {
+      // ASCII remains accepted when an Intl implementation rejects the requested locale.
+    }
+    return undefined;
+  }
+
+  /** Formats a canonical constraint value through the same locale pattern as the segment UI. */
+  private displayTime(value: string): string {
+    const parsed = parseTimeValue(value);
+    if (!parsed) return value;
+    const includeSeconds = parsed.precision !== 'minute';
+    const labels = dayPeriodLabels(this.effectiveLocale);
+    return localeTimePattern(this.effectiveLocale, this.hourFormat, includeSeconds)
+      .map((part) => {
+        if (part.type === 'literal') return part.value;
+        if (part.type === 'hour') {
+          const hour = this.usesTwelveHour ? parsed.hour % 12 || 12 : parsed.hour;
+          return this.formattedNumber(hour, this.usesTwelveHour ? 1 : 2);
+        }
+        if (part.type === 'minute') return this.formattedNumber(parsed.minute, 2);
+        if (part.type === 'second') return this.formattedNumber(parsed.second, 2);
+        return parsed.hour >= 12 ? labels.pm : labels.am;
+      })
+      .join('');
   }
 
   private segmentNumericValue(name: SegmentName): number | null {
@@ -703,9 +759,10 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       void this.show();
       return;
     }
-    if (/^\d$/.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey && !this.readonly) {
+    const digit = this.inputDigit(event.key);
+    if (digit !== undefined && !event.ctrlKey && !event.metaKey && !event.altKey && !this.readonly) {
       event.preventDefault();
-      this.acceptDigit(name, event.key);
+      this.acceptDigit(name, digit);
       return;
     }
     if (name === 'dayPeriod' && !this.readonly && (event.key.toLowerCase() === 'a' || event.key.toLowerCase() === 'p')) {
@@ -929,6 +986,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   };
 
   private onExpand = (): void => {
+    if (this.liveDisabled) return;
     if (this.open) void this.hide();
     else void this.show();
   };
@@ -965,7 +1023,16 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     event.stopPropagation();
     const input = event.currentTarget as HTMLInputElement;
     const normalized = normalizeTimeValue(input.value);
-    if (!normalized || this.readonly || this.liveDisabled) return;
+    const intentionalClear = input.value === '' && (
+      event.isTrusted ||
+      event.inputType.startsWith('delete') ||
+      event.inputType === 'insertReplacementText'
+    );
+    if (input.value === '' && this.value !== '' && !intentionalClear) {
+      input.value = this.value;
+      return;
+    }
+    if ((input.value !== '' && !normalized) || this.readonly || this.liveDisabled) return;
     this.value = normalized;
     dispatchNativeInputEvent(this, {
       data: event.data,
@@ -978,7 +1045,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     event.stopPropagation();
     const input = event.currentTarget as HTMLInputElement;
     const normalized = normalizeTimeValue(input.value);
-    if (!normalized || this.readonly || this.liveDisabled) return;
+    if ((input.value !== '' && !normalized) || this.readonly || this.liveDisabled) return;
     this.value = normalized;
     dispatchNativeEvent(this, 'change');
     this.emit('lr-change', { value: this.value });
@@ -1018,16 +1085,19 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       const parsedMax = parseTimeValue(this.max);
       if (parsedMin && parsedMax && parsedMin.milliseconds > parsedMax.milliseconds) {
         flags.rangeUnderflow = true;
-        message = this.localize('timeInputRangeMessage', undefined, { min: this.min, max: this.max });
+        message = this.localize('timeInputRangeMessage', undefined, {
+          min: this.displayTime(this.min),
+          max: this.displayTime(this.max),
+        });
       } else if (parsedMin && parsed.milliseconds < parsedMin.milliseconds) {
         flags.rangeUnderflow = true;
-        message = this.localize('timeInputMinMessage', undefined, { min: this.min });
+        message = this.localize('timeInputMinMessage', undefined, { min: this.displayTime(this.min) });
       } else {
         flags.rangeOverflow = true;
-        message = this.localize('timeInputMaxMessage', undefined, { max: this.max });
+        message = this.localize('timeInputMaxMessage', undefined, { max: this.displayTime(this.max) });
       }
     }
-    if (parsed && hasTimeStepMismatch(this.value, this.step, this.min)) {
+    if (parsed && hasTimeStepMismatch(this.value, this.step, this.min, this.defaultValue)) {
       flags.stepMismatch = true;
       message ||= this.localize('timeInputStepMessage');
     }
@@ -1069,7 +1139,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
-      const slots = Array.from(this.children).map((element) => element.getAttribute('slot'));
+      const slots = Array.from(this.children ?? []).map((element) => element.getAttribute('slot'));
       this.hasLabelSlot = slots.includes('label');
       this.hasHintSlot = slots.includes('hint');
       this.hasErrorSlot = slots.includes('error');
@@ -1132,12 +1202,10 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   override disconnectedCallback(): void {
     this.releaseRequiredDescription();
     this.transitionToken++;
+    this.forceClose(false);
     this.teardownPopup();
-    this._open = false;
     this.syncOpenAttribute();
     this.pendingSegmentFocus = undefined;
-    this.partial = false;
-    this.resetDigitBuffer();
     super.disconnectedCallback();
   }
 
@@ -1199,22 +1267,114 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   private columnValues(name: SegmentName): Array<number | DayPeriod> {
-    if (name === 'dayPeriod') return ['am', 'pm'];
-    if (name === 'hour') {
-      const length = this.usesTwelveHour ? 12 : 24;
-      return Array.from({ length }, (_, index) => this.usesTwelveHour ? index + 1 : index);
+    const numericStep = finiteNumber(Number(this.step), 60);
+    const stepMilliseconds = numericStep > 0 ? numericStep * 1000 : 60_000;
+    const stepBase = timeStepBaseMilliseconds(this.min, this.defaultValue);
+    const baseRemainder = ((stepBase % stepMilliseconds) + stepMilliseconds) % stepMilliseconds;
+    const everyWholeSecondIsOnGrid = stepMilliseconds <= 1000 &&
+      Math.abs(1000 % stepMilliseconds) <= 0.000_001 &&
+      (baseRemainder <= 0.000_001 || stepMilliseconds - baseRemainder <= 0.000_001);
+    if (this.step === 'any' || (!parseTimeValue(this.min) && !parseTimeValue(this.max) && everyWholeSecondIsOnGrid)) {
+      if (name === 'dayPeriod') return ['am', 'pm'];
+      if (name === 'hour') {
+        const length = this.usesTwelveHour ? 12 : 24;
+        return Array.from({ length }, (_, index) => this.usesTwelveHour ? index + 1 : index);
+      }
+      return Array.from({ length: 60 }, (_, value) => value);
     }
-    let interval = 1;
-    if (name === 'minute' && this.step !== 'any' && this.numericStep >= 60 && this.numericStep % 60 === 0) {
-      interval = finiteInteger(this.numericStep / 60, 1, 1, 59);
+
+    const candidates = this.validPickerGridMilliseconds();
+    const candidateValue = (segment: SegmentName, milliseconds: number): number | DayPeriod => {
+      const hour = Math.floor(milliseconds / 3_600_000);
+      if (segment === 'hour') return this.usesTwelveHour ? hour % 12 || 12 : hour;
+      if (segment === 'minute') return Math.floor(milliseconds / 60_000) % 60;
+      if (segment === 'second') return Math.floor(milliseconds / 1000) % 60;
+      return hour >= 12 ? 'pm' : 'am';
+    };
+    const matching = candidates.filter((milliseconds) => {
+      for (const companion of this.segmentOrder) {
+        if (companion === name) continue;
+        const current = companion === 'dayPeriod'
+          ? this.draft.dayPeriod
+          : this.segmentNumericValue(companion);
+        if (current !== null && candidateValue(companion, milliseconds) !== current) return false;
+      }
+      return true;
+    });
+    const source = matching.length > 0 ? matching : candidates;
+    const values = new Set<number | DayPeriod>();
+    for (const milliseconds of source) {
+      values.add(candidateValue(name, milliseconds));
     }
-    if (name === 'second' && this.step !== 'any' && this.numericStep < 60 && Number.isInteger(this.numericStep)) {
-      interval = finiteInteger(this.numericStep, 1, 1, 59);
-    }
+
+    const selected = name === 'dayPeriod' ? this.draft.dayPeriod : this.segmentNumericValue(name);
+    if (
+      selected !== null &&
+      parseTimeValue(this.value) &&
+      isTimeInRange(this.value, this.min, this.max) &&
+      !hasTimeStepMismatch(this.value, this.step, this.min, this.defaultValue)
+    ) values.add(selected);
+    if (name === 'dayPeriod') return ['am', 'pm'].filter((period) => values.has(period as DayPeriod)) as DayPeriod[];
+    return [...values].filter((value): value is number => typeof value === 'number')
+      .sort((left, right) => left - right);
+  }
+
+  /** Bounded projection of every whole-second point on the effective native time step grid. */
+  private validPickerGridMilliseconds(): number[] {
+    const key = `${this.step}|${this.min}|${this.max}|${this.defaultValue}`;
+    if (key === this.pickerGridKey) return this.pickerGridMilliseconds;
+    this.pickerGridKey = key;
+    const numericStep = finiteNumber(Number(this.step), 60);
+    const stepMilliseconds = (numericStep > 0 ? numericStep : 60) * 1000;
+    const base = timeStepBaseMilliseconds(this.min, this.defaultValue);
+    const parsedMin = parseTimeValue(this.min);
+    const parsedMax = parseTimeValue(this.max);
+    const inRange = (milliseconds: number): boolean => {
+      if (parsedMin && parsedMax && parsedMin.milliseconds > parsedMax.milliseconds) {
+        return milliseconds >= parsedMin.milliseconds || milliseconds <= parsedMax.milliseconds;
+      }
+      return (!parsedMin || milliseconds >= parsedMin.milliseconds) &&
+        (!parsedMax || milliseconds <= parsedMax.milliseconds);
+    };
     const values: number[] = [];
-    for (let value = 0; value < 60; value += interval) values.push(value);
+    const normalizedBase = ((base % stepMilliseconds) + stepMilliseconds) % stepMilliseconds;
+    if (stepMilliseconds >= 1000) {
+      for (let milliseconds = normalizedBase; milliseconds < 86_400_000; milliseconds += stepMilliseconds) {
+        const wholeSecond = Math.abs(milliseconds % 1000) <= 0.000_001 ||
+          Math.abs(1000 - milliseconds % 1000) <= 0.000_001;
+        if (wholeSecond && inRange(milliseconds)) values.push(Math.round(milliseconds));
+      }
+    } else {
+      for (let second = 0; second < 86_400; second++) {
+        const milliseconds = second * 1000;
+        const remainder = ((milliseconds - base) % stepMilliseconds + stepMilliseconds) % stepMilliseconds;
+        const onGrid = remainder <= 0.000_001 || stepMilliseconds - remainder <= 0.000_001;
+        if (onGrid && inRange(milliseconds)) values.push(milliseconds);
+      }
+    }
+    this.pickerGridMilliseconds = values;
     return values;
   }
+
+  private onColumnKeyDown = (event: KeyboardEvent): void => {
+    if (this.liveDisabled) return;
+    if (!['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+    const current = event.currentTarget as HTMLButtonElement;
+    const column = current.closest('[role="listbox"]');
+    const options = Array.from(column?.querySelectorAll<HTMLButtonElement>('[role="option"]') ?? [])
+      .filter((option) => !option.disabled);
+    if (options.length === 0) return;
+    event.preventDefault();
+    const index = Math.max(0, options.indexOf(current));
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? options.length - 1
+        : (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+    for (const option of options) option.tabIndex = option === options[nextIndex] ? 0 : -1;
+    options[nextIndex]!.focus();
+    options[nextIndex]!.scrollIntoView({ block: 'nearest' });
+  };
 
   private isColumnValueSelected(name: SegmentName, value: number | DayPeriod): boolean {
     if (name === 'dayPeriod') return this.draft.dayPeriod === value;
@@ -1241,8 +1401,10 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
               data-column=${name}
               data-value=${value}
               aria-selected=${String(selected)}
-              tabindex=${selected || (!hasSelection && index === 0) ? '0' : '-1'}
+              tabindex=${!this.effectiveDisabled && (selected || (!hasSelection && index === 0)) ? '0' : '-1'}
+              ?disabled=${this.effectiveDisabled}
               @pointerdown=${this.onPopupPointerDown}
+              @keydown=${this.onColumnKeyDown}
               @click=${() => this.onColumnSelect(name, value)}
             >${this.columnText(name, value)}</button>
           `;
@@ -1292,7 +1454,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
                   aria-label=${this.localize('clear')}
                   ?disabled=${this.effectiveDisabled || this.readonly}
                   @click=${this.onClear}
-                ><slot name="clear-icon">${closeIcon()}</slot></button>
+                ><span aria-hidden="true" inert><slot name="clear-icon">${closeIcon()}</slot></span></button>
               `
             : nothing}
           <span part="end" ?hidden=${!this.hasEndSlot}>
@@ -1306,7 +1468,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
             aria-expanded=${String(this.open)}
             ?disabled=${this.effectiveDisabled}
             @click=${this.onExpand}
-          ><span part="expand-icon"><slot name="expand-icon">${chevronIcon()}</slot></span></button>
+          ><span part="expand-icon" aria-hidden="true" inert><slot name="expand-icon">${chevronIcon()}</slot></span></button>
         </div>
         <div
           id=${this.popupId}

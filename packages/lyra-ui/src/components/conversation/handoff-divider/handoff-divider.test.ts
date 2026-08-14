@@ -8,9 +8,9 @@ async function getLiveRegionText(el: LyraHandoffDivider): Promise<string> {
     .textContent!;
 }
 
-it('defaults to agent="", fromAgent="", label=""', async () => {
+it('defaults to toAgent="", fromAgent="", label=""', async () => {
   const el = (await fixture(html`<lr-handoff-divider></lr-handoff-divider>`)) as LyraHandoffDivider;
-  expect(el.agent).to.equal('');
+  expect(el.toAgent).to.equal('');
   expect(el.fromAgent).to.equal('');
   expect(el.label).to.equal('');
 });
@@ -22,15 +22,15 @@ it('falls back to the generic "Agent handoff" label when nothing is set', async 
   expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Agent handoff');
 });
 
-it('renders "Transferred to {agent}" when only agent is set', async () => {
-  const el = (await fixture(html`<lr-handoff-divider agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
+it('renders "Transferred to {agent}" when only to-agent is set', async () => {
+  const el = (await fixture(html`<lr-handoff-divider to-agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.getAttribute('aria-label')).to.equal('Transferred to Research Agent');
 });
 
-it('renders "Transferred from {from} to {to}" when both from-agent and agent are set', async () => {
+it('renders "Transferred from {from} to {to}" when both from-agent and to-agent are set', async () => {
   const el = (await fixture(
-    html`<lr-handoff-divider from-agent="Planner" agent="Research Agent"></lr-handoff-divider>`,
+    html`<lr-handoff-divider from-agent="Planner" to-agent="Research Agent"></lr-handoff-divider>`,
   )) as LyraHandoffDivider;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.getAttribute('aria-label')).to.equal('Transferred from Planner to Research Agent');
@@ -38,14 +38,14 @@ it('renders "Transferred from {from} to {to}" when both from-agent and agent are
 
 it('lets an explicit label override win over the computed agent-based text', async () => {
   const el = (await fixture(
-    html`<lr-handoff-divider agent="Research Agent" label="Custom handoff text"></lr-handoff-divider>`,
+    html`<lr-handoff-divider to-agent="Research Agent" label="Custom handoff text"></lr-handoff-divider>`,
   )) as LyraHandoffDivider;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.getAttribute('aria-label')).to.equal('Custom handoff text');
 });
 
 it('is role="separator" with aria-orientation="horizontal", and the visual chip is aria-hidden', async () => {
-  const el = (await fixture(html`<lr-handoff-divider agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
+  const el = (await fixture(html`<lr-handoff-divider to-agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.getAttribute('role')).to.equal('separator');
   expect(base.getAttribute('aria-orientation')).to.equal('horizontal');
@@ -53,19 +53,19 @@ it('is role="separator" with aria-orientation="horizontal", and the visual chip 
 });
 
 it('carries the full label on the chip title attribute for a truncated-text tooltip', async () => {
-  const el = (await fixture(html`<lr-handoff-divider agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
+  const el = (await fixture(html`<lr-handoff-divider to-agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
   expect(el.shadowRoot!.querySelector('[part="chip"]')!.getAttribute('title')).to.equal('Transferred to Research Agent');
 });
 
 describe('avatar slot', () => {
   it('hides the avatar wrapper until something is slotted', async () => {
-    const el = (await fixture(html`<lr-handoff-divider agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
+    const el = (await fixture(html`<lr-handoff-divider to-agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
     expect((el.shadowRoot!.querySelector('[part="avatar"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
   });
 
   it('shows the avatar wrapper once content is slotted', async () => {
     const el = (await fixture(
-      html`<lr-handoff-divider agent="Research Agent"><span slot="avatar">RA</span></lr-handoff-divider>`,
+      html`<lr-handoff-divider to-agent="Research Agent"><span slot="avatar">RA</span></lr-handoff-divider>`,
     )) as LyraHandoffDivider;
     expect((el.shadowRoot!.querySelector('[part="avatar"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
   });
@@ -73,14 +73,14 @@ describe('avatar slot', () => {
 
 describe('mount-time announcement', () => {
   it('announces the computed label once on first connect', async () => {
-    const el = (await fixture(html`<lr-handoff-divider agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
+    const el = (await fixture(html`<lr-handoff-divider to-agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
     expect(await getLiveRegionText(el)).to.equal('Transferred to Research Agent');
   });
 
   it('never re-announces on a later property change', async () => {
-    const el = (await fixture(html`<lr-handoff-divider agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
+    const el = (await fixture(html`<lr-handoff-divider to-agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
     await getLiveRegionText(el);
-    el.agent = 'Planner Agent';
+    el.toAgent = 'Planner Agent';
     await el.updateComplete;
     // The live region's own text should still reflect the FIRST (mount-time) announcement, not
     // the later property change.
@@ -91,7 +91,7 @@ describe('mount-time announcement', () => {
     const el = (await fixture(html`
       <lr-handoff-divider
         aria-label="Control passed to the escalation team"
-        agent="Research Agent"
+        to-agent="Research Agent"
       ></lr-handoff-divider>
     `)) as LyraHandoffDivider;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
@@ -99,12 +99,20 @@ describe('mount-time announcement', () => {
     );
     expect(await getLiveRegionText(el)).to.equal('Control passed to the escalation team');
   });
+
+  it('preserves an explicitly empty host aria-label by presence', async () => {
+    const el = (await fixture(html`
+      <lr-handoff-divider aria-label="" to-agent="Research Agent"></lr-handoff-divider>
+    `)) as LyraHandoffDivider;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+    expect(await getLiveRegionText(el)).to.equal('');
+  });
 });
 
 describe('localization', () => {
   it('localizes the agent-only computed label (handoffToAgent) via .strings, reaching both the rendered label and the mount-time announcement', async () => {
     const el = (await fixture(html`
-      <lr-handoff-divider agent="Research Agent" .strings=${{ handoffToAgent: 'Transféré à {agent}' }}></lr-handoff-divider>
+      <lr-handoff-divider to-agent="Research Agent" .strings=${{ handoffToAgent: 'Transféré à {agent}' }}></lr-handoff-divider>
     `)) as LyraHandoffDivider;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-label')).to.equal('Transféré à Research Agent');
@@ -116,7 +124,7 @@ describe('localization', () => {
     const el = (await fixture(html`
       <lr-handoff-divider
         from-agent="Planner"
-        agent="Research Agent"
+        to-agent="Research Agent"
         .strings=${{ handoffFromToAgent: 'Transféré de {from} à {to}' }}
       ></lr-handoff-divider>
     `)) as LyraHandoffDivider;
@@ -142,7 +150,7 @@ it('is accessible with no agent set', async () => {
 
 it('is accessible with a full from/to handoff and a slotted avatar', async () => {
   const el = (await fixture(html`
-    <lr-handoff-divider from-agent="Planner" agent="Research Agent">
+    <lr-handoff-divider from-agent="Planner" to-agent="Research Agent">
       <span slot="avatar" aria-hidden="true">RA</span>
     </lr-handoff-divider>
   `)) as LyraHandoffDivider;

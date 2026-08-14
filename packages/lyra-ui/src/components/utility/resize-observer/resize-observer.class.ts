@@ -59,7 +59,8 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.disconnect();
   }
 

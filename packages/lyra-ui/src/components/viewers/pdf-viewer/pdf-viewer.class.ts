@@ -25,7 +25,13 @@ import {
 } from '../../../internal/text-quote.js';
 import type { LyraHighlightLayer, HighlightLayerItem, LyraHighlightLayerEventMap } from '../highlight-layer/highlight-layer.class.js';
 import type { LyraAnchor } from '../document-viewer/anchors.js';
+import type {
+  LyraPageViewerSnapshot,
+  LyraPageViewerStateChangeDetail,
+} from '../page-rail/page-rail.class.js';
+import type { VirtualListIndexedSource } from '../../layout/virtual-list/virtual-list.class.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import {
   loadPdfJs,
   type PdfDocumentApi,
@@ -218,6 +224,7 @@ export interface LyraPdfViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-zoom-change': CustomEvent<{ zoom: number }>;
   'lr-load': CustomEvent<{ pageCount: number }>;
   'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-page-viewer-state-change': CustomEvent<LyraPageViewerStateChangeDetail>;
 }
 
 class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
@@ -248,6 +255,8 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
+ * @event lr-page-viewer-state-change - Correlated page lifecycle state. `detail.snapshot` is the
+ *   same readonly value exposed by `pageViewerSnapshot`; its `identity` changes for every load.
  * @csspart base - The named root viewer container with explicit `aria-busy`.
  * @csspart toolbar - Pagination and zoom controls.
  * @csspart previous-button - The previous-page button.
@@ -259,6 +268,10 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @csspart pages - The virtualized page list.
  * @csspart page - One rendered page wrapper.
  * @csspart page-canvas - The canvas a page's content is painted onto.
+ * @csspart page-error - A visible, page-local fallback when one page fails without invalidating
+ *   the rest of the document.
+ * @csspart page-error-visible - A currently visible page-local fallback (also carries
+ *   `page-error`).
  * @csspart text-layer - Selectable text positioned over a page canvas.
  * @csspart text-span - One generated text run inside a page's text layer.
  * @csspart search-match - A painted in-document search match.
@@ -327,6 +340,13 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   override readonly anchorKinds = ['page', 'text-quote', 'region'] as const;
 
   @state() private loadState: PdfLoadState = { kind: 'idle' };
+  private pageViewerIdentity = 0;
+  private pageViewerSnapshotValue: LyraPageViewerSnapshot = Object.freeze({
+    identity: 0,
+    status: 'idle',
+    page: 1,
+    pageCount: 0,
+  });
   /** True while `page` was last set by the user scrolling the page list rather than by
    *  `nextPage()`/`previousPage()`/an explicit `page` assignment. `renderBody()` withholds
    *  `activeId` in that case so `<lr-virtual-list>` doesn't `scrollActiveIntoView()` back to a
@@ -350,6 +370,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private readonly highlightLayerRefs = new Map<number, (element: Element | undefined) => void>();
   private textSelectionCleanup?: () => void;
   private readonly pendingPageMountWaitCancels = new Set<() => void>();
+  private pdfPageSourceCount = -1;
+  private pdfPageSource: VirtualListIndexedSource<number> = this.createPageSource(0);
 
   @state() private searchMatches: PdfSearchMatch[] = [];
   @state() private searchActiveIndex = -1;
@@ -357,6 +379,15 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private searchGeneration = 0;
   private anchorOperationGeneration = 0;
   private readonly announcements = new ViewerAnnouncementController(this);
+
+  /**
+   * Atomic readonly state for page-rail and other page-addressed integrations. Unlike the legacy
+   * `lr-load`/`lr-page-change` pair, a late subscriber can read this immediately, and `identity`
+   * distinguishes same-count document replacements.
+   */
+  get pageViewerSnapshot(): LyraPageViewerSnapshot {
+    return this.pageViewerSnapshotValue;
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
@@ -399,6 +430,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     }
     if (changed.has('page') && this.loadState.kind === 'ready') {
       this.emit('lr-page-change', { page: this.page, pageCount: this.loadState.pageCount });
+      this.publishPageViewerSnapshot('ready', this.loadState.pageCount);
     }
     if (changed.has('zoom') && changed.get('zoom') !== undefined) this.emit('lr-zoom-change', { zoom: this.zoom });
     if (changed.has('highlights')) {
@@ -447,11 +479,19 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     this.thumbnailRenderVersions.clear();
     this.destroyLoadedDoc();
     this.loadState = { kind: 'idle' };
+    this.pageViewerIdentity++;
+    this.pageViewerSnapshotValue = Object.freeze({
+      identity: this.pageViewerIdentity,
+      status: 'idle',
+      page: 1,
+      pageCount: 0,
+    });
     this.announcements.disconnect();
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.cancelPendingPageMountWaits();
     this.announcements.adopted();
   }
@@ -476,22 +516,64 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     return finiteRange(rounded, 1, 1, pageCount);
   }
 
+  private publishPageViewerSnapshot(
+    status: LyraPageViewerSnapshot['status'],
+    pageCount: number,
+  ): void {
+    const snapshot = Object.freeze({
+      identity: this.pageViewerIdentity,
+      status,
+      page: status === 'ready' ? this.clampPage(this.page) : 1,
+      pageCount: status === 'ready' ? finiteCount(pageCount, 0, MAX_PAGE_COUNT) : 0,
+    });
+    const previous = this.pageViewerSnapshotValue;
+    if (
+      previous.identity === snapshot.identity
+      && previous.status === snapshot.status
+      && previous.page === snapshot.page
+      && previous.pageCount === snapshot.pageCount
+    ) return;
+    this.pageViewerSnapshotValue = snapshot;
+    if (this.isConnected) this.emit('lr-page-viewer-state-change', { snapshot });
+  }
+
+  private createPageSource(count: number): VirtualListIndexedSource<number> {
+    return Object.freeze({
+      count,
+      itemAt: (index: number) => index + 1,
+      keyAt: (index: number) => index + 1,
+      indexOfKey: (key: string | number) => typeof key === 'number' ? key - 1 : -1,
+    });
+  }
+
+  private indexedPages(count: number): VirtualListIndexedSource<number> {
+    if (count !== this.pdfPageSourceCount) {
+      this.pdfPageSourceCount = count;
+      this.pdfPageSource = this.createPageSource(count);
+    }
+    return this.pdfPageSource;
+  }
+
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    this.pageViewerIdentity++;
     const signal = this.beginAbortableLoad();
     this.destroyLoadedDoc();
     if (!this.src) {
       this.loadState = { kind: 'idle' };
+      this.publishPageViewerSnapshot('idle', 0);
       return;
     }
     const fetchTarget = resolveOwnerFetchTarget(this, this.src);
     if (!fetchTarget) {
       const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
       this.loadState = { kind: 'error', message: error.message };
+      this.publishPageViewerSnapshot('error', 0);
       this.emit('lr-render-error', { error });
       return;
     }
     this.loadState = { kind: 'loading' };
+    this.publishPageViewerSnapshot('loading', 0);
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!this.isConnected || generation !== this.generation) return;
@@ -503,6 +585,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       if (!pdfjsLib) {
         const error = new LyraUserFacingError(this.localize('pdfViewerMissingLibrary'));
         this.loadState = { kind: 'error', message: error.message };
+        this.publishPageViewerSnapshot('error', 0);
         this.emit('lr-render-error', { error });
         return;
       }
@@ -518,6 +601,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       }
       this.page = 1;
       this.loadState = { kind: 'ready', doc, pageCount };
+      this.publishPageViewerSnapshot('ready', pageCount);
       this.emit('lr-load', { pageCount });
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
@@ -527,6 +611,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
           ? error.message
           : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad'),
       };
+      this.publishPageViewerSnapshot('error', 0);
       this.emit('lr-render-error', { error });
     }
   }
@@ -629,15 +714,17 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     );
   }
 
-  private pageSearchOrder(hint: number | undefined, pageCount: number): number[] {
-    if (hint == null) return Array.from({ length: pageCount }, (_unused, i) => i + 1);
-    const clampedHint = Math.min(pageCount, Math.max(1, Math.round(hint)));
-    const order = [clampedHint];
-    for (let delta = 1; delta < pageCount; delta++) {
-      if (clampedHint - delta >= 1) order.push(clampedHint - delta);
-      if (clampedHint + delta <= pageCount) order.push(clampedHint + delta);
+  private *pageSearchOrder(hint: number | undefined, pageCount: number): Generator<number> {
+    if (hint == null) {
+      for (let page = 1; page <= pageCount; page++) yield page;
+      return;
     }
-    return order;
+    const clampedHint = Math.min(pageCount, Math.max(1, Math.round(hint)));
+    yield clampedHint;
+    for (let delta = 1; delta < pageCount; delta++) {
+      if (clampedHint - delta >= 1) yield clampedHint - delta;
+      if (clampedHint + delta <= pageCount) yield clampedHint + delta;
+    }
   }
 
   private async applyTextQuoteAnchor(
@@ -1340,47 +1427,70 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     this.pageRenderVersions.set(pageNumber, version);
     const doc = this.loadState.doc;
     const zoom = this.zoom;
+    let renderTask: { promise: Promise<void>; cancel(): void } | undefined;
+    this.setPageError(canvas, false);
     this.pageRenderTasks.get(pageNumber)?.cancel();
     this.pageRenderTasks.delete(pageNumber);
     this.textLayers.get(pageNumber)?.cancel();
     this.textLayers.delete(pageNumber);
-    const page = await doc.getPage(pageNumber);
-    if (
-      this.loadState.kind !== 'ready' ||
-      this.loadState.doc !== doc ||
-      this.pageRenderVersions.get(pageNumber) !== version ||
-      this.pageCanvases.get(pageNumber) !== canvas
-    ) return;
-    const viewport = page.getViewport({ scale: zoom });
-    const dpr = canvas.ownerDocument.defaultView?.devicePixelRatio || 1;
-    canvas.width = Math.floor(viewport.width * dpr);
-    canvas.height = Math.floor(viewport.height * dpr);
-    canvas.style.width = `${viewport.width}px`;
-    canvas.style.height = `${viewport.height}px`;
-    const container = this.textLayerContainers.get(pageNumber);
-    if (container) {
-      container.style.width = `${viewport.width}px`;
-      container.style.height = `${viewport.height}px`;
-      container.style.setProperty('--total-scale-factor', String(zoom));
-    }
-    const highlightLayerEl = this.pageHighlightLayerElements.get(pageNumber);
-    if (highlightLayerEl) {
-      highlightLayerEl.style.width = `${viewport.width}px`;
-      highlightLayerEl.style.height = `${viewport.height}px`;
-    }
-    const canvasContext = canvas.getContext('2d');
-    if (!canvasContext) return;
-    canvasContext.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const renderTask = page.render({ canvasContext, viewport });
-    this.pageRenderTasks.set(pageNumber, renderTask);
-    void this.renderTextLayer(pageNumber, page, viewport, version);
     try {
+      const page = await doc.getPage(pageNumber);
+      if (
+        this.loadState.kind !== 'ready' ||
+        this.loadState.doc !== doc ||
+        this.pageRenderVersions.get(pageNumber) !== version ||
+        this.pageCanvases.get(pageNumber) !== canvas
+      ) return;
+      const viewport = page.getViewport({ scale: zoom });
+      const dpr = canvas.ownerDocument.defaultView?.devicePixelRatio || 1;
+      canvas.width = Math.floor(viewport.width * dpr);
+      canvas.height = Math.floor(viewport.height * dpr);
+      canvas.style.width = `${viewport.width}px`;
+      canvas.style.height = `${viewport.height}px`;
+      const container = this.textLayerContainers.get(pageNumber);
+      if (container) {
+        container.style.width = `${viewport.width}px`;
+        container.style.height = `${viewport.height}px`;
+        container.style.setProperty('--total-scale-factor', String(zoom));
+      }
+      const highlightLayerEl = this.pageHighlightLayerElements.get(pageNumber);
+      if (highlightLayerEl) {
+        highlightLayerEl.style.width = `${viewport.width}px`;
+        highlightLayerEl.style.height = `${viewport.height}px`;
+      }
+      const canvasContext = canvas.getContext('2d');
+      if (!canvasContext) throw new Error('Canvas 2D context is unavailable.');
+      canvasContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+      renderTask = page.render({ canvasContext, viewport });
+      this.pageRenderTasks.set(pageNumber, renderTask);
+      void this.renderTextLayer(pageNumber, page, viewport, version);
       await renderTask.promise;
+      this.setPageError(canvas, false);
     } catch (error) {
-      if (!isAbortError(error) && this.isConnected && this.pageRenderTasks.get(pageNumber) === renderTask) this.emit('lr-render-error', { error });
+      if (
+        !isAbortError(error)
+        && this.isConnected
+        && this.loadState.kind === 'ready'
+        && this.loadState.doc === doc
+        && this.pageRenderVersions.get(pageNumber) === version
+        && this.pageCanvases.get(pageNumber) === canvas
+      ) {
+        this.setPageError(canvas, true);
+        this.emit('lr-render-error', { error });
+      }
     } finally {
-      if (this.pageRenderTasks.get(pageNumber) === renderTask) this.pageRenderTasks.delete(pageNumber);
+      if (renderTask && this.pageRenderTasks.get(pageNumber) === renderTask) {
+        this.pageRenderTasks.delete(pageNumber);
+      }
     }
+  }
+
+  private setPageError(canvas: HTMLCanvasElement, failed: boolean): void {
+    const fallback = canvas.parentElement?.querySelector<HTMLElement>('[part~="page-error"]');
+    if (!fallback) return;
+    fallback.setAttribute('part', failed ? 'page-error page-error-visible' : 'page-error');
+    fallback.hidden = !failed;
+    fallback.textContent = failed ? this.localize('documentPreviewFailedToLoad') : '';
   }
 
   private async renderTextLayer(
@@ -1471,6 +1581,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const highlightTransform = this.effectiveDirection === 'rtl' ? '50%' : '-50%';
     return html`<div part="page" @click=${(e: MouseEvent) => this.onPageClick(number, e)}>
       <canvas part="page-canvas" ${ref(this.pageCanvasRef(number))}></canvas>
+      <div part="page-error" hidden></div>
       <lr-highlight-layer
         ${ref(this.highlightLayerRef(number))}
         style="position:absolute; inset-block-start:var(--lr-space-m); inset-inline-start:50%; transform:translateX(${highlightTransform});"
@@ -1492,11 +1603,10 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private renderBody(): TemplateResult {
     switch (this.loadState.kind) {
       case 'ready': {
-        const items = Array.from({ length: this.loadState.pageCount }, (_unused, index) => index + 1);
-        return html`${this.renderToolbar()}<lr-virtual-list part="pages" exportparts="page:page, page-canvas:page-canvas, text-layer:text-layer, text-span:text-span, search-match:search-match, search-match-active:search-match-active" .items=${items} .renderItem=${this.renderPageItem} .keyFunction=${(item: unknown) => item as number} .activeId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-changed=${this.onVisibleRangeChanged}></lr-virtual-list>`;
+        return html`${this.renderToolbar()}<lr-virtual-list part="pages" exportparts="page:page, page-canvas:page-canvas, page-error:page-error, text-layer:text-layer, text-span:text-span, search-match:search-match, search-match-active:search-match-active" .source=${this.indexedPages(this.loadState.pageCount)} .renderItem=${this.renderPageItem} .activeId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-changed=${this.onVisibleRangeChanged}></lr-virtual-list>`;
       }
       case 'loading': return html`<div part="spinner">
-        <lr-skeleton variant="rect" .announce=${false}></lr-skeleton>
+        <lr-skeleton shape="rect" .announce=${false}></lr-skeleton>
         <span class="sr-only">${this.localize('loadingDocument')}</span>
       </div>`;
       case 'error': return html`<div part="error">${this.loadState.message}</div>`;
@@ -1507,12 +1617,12 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   override render(): TemplateResult {
     return html`<div
       part="base"
-      role="region"
+      role=${viewerSemanticRole(this, 'region') ?? nothing}
       aria-busy=${this.loadState.kind === 'loading' ? 'true' : 'false'}
       style=${sanitizeCssLength(this.maxHeight)
         ? styleMap({ '--lr-pdf-viewer-height': sanitizeCssLength(this.maxHeight)! })
         : nothing}
-      aria-label=${this.getAttribute('aria-label') || this.name || this.localize('pdfViewerLabel')}
+      aria-label=${viewerSemanticLabel(this, this.name || this.localize('pdfViewerLabel')) ?? nothing}
     >${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
   }
 }

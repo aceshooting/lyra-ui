@@ -12,8 +12,10 @@ function liveRegionText(el: LyraPollStatus): string {
 
 describe('lr-poll-status', () => {
   it('ticks down the countdown display and reaches the due phase, firing lr-poll-due', async () => {
+    const started = performance.now();
     const el = (await fixture(html`<lr-poll-status next-in-ms="40"></lr-poll-status>`)) as LyraPollStatus;
     await oneEvent(el, 'lr-poll-due');
+    expect(performance.now() - started).to.be.lessThan(300);
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.include('Refreshing');
   });
@@ -47,7 +49,9 @@ describe('lr-poll-status', () => {
     await el.updateComplete;
     const pauseButton = el.shadowRoot!.querySelector('[part="pause-button"]') as HTMLButtonElement;
     setTimeout(() => pauseButton.click());
-    await oneEvent(el, 'lr-pause-change');
+    const event = await oneEvent(el, 'lr-pause-change');
+    expect(event.detail).to.deep.equal({ paused: true });
+    expect(Object.isFrozen(event.detail)).to.equal(true);
     expect(el.paused).to.be.true;
     await aTimeout(50);
     expect(liveRegionText(el)).to.include('Paused');
@@ -59,6 +63,49 @@ describe('lr-poll-status', () => {
     el.addEventListener('lr-poll-due', () => (fired = true));
     await aTimeout(150);
     expect(fired).to.be.false;
+  });
+
+  it('freezes remaining time across repeated programmatic pause/resume transitions', async () => {
+    const el = (await fixture(html`<lr-poll-status next-in-ms="120"></lr-poll-status>`)) as LyraPollStatus;
+    let dueCount = 0;
+    el.addEventListener('lr-poll-due', () => {
+      dueCount += 1;
+    });
+    await aTimeout(30);
+    el.paused = true;
+    await el.updateComplete;
+    await aTimeout(160);
+    expect(dueCount).to.equal(0);
+
+    el.paused = false;
+    await el.updateComplete;
+    await aTimeout(25);
+    el.paused = true;
+    await el.updateComplete;
+    await aTimeout(120);
+    expect(dueCount).to.equal(0);
+
+    const due = oneEvent(el, 'lr-poll-due');
+    const resumedAt = performance.now();
+    el.paused = false;
+    await el.updateComplete;
+    await due;
+    const elapsed = performance.now() - resumedAt;
+    expect(elapsed).to.be.greaterThan(15);
+    expect(elapsed).to.be.lessThan(250);
+    expect(dueCount).to.equal(1);
+  });
+
+  it('restart while paused replaces the frozen remainder with the configured full delay', async () => {
+    const el = (await fixture(html`<lr-poll-status next-in-ms="90" paused></lr-poll-status>`)) as LyraPollStatus;
+    await aTimeout(120);
+    el.restart();
+    const due = oneEvent(el, 'lr-poll-due');
+    const resumedAt = performance.now();
+    el.paused = false;
+    await el.updateComplete;
+    await due;
+    expect(performance.now() - resumedAt).to.be.greaterThan(40);
   });
 
   it('never announces "Resumed." on a bare mount, even though paused defaults to false', async () => {
@@ -154,15 +201,10 @@ describe('lr-poll-status', () => {
 
   it('renders the localized inactive state even when no next countdown is scheduled', async () => {
     const el = (await fixture(
-      html`<lr-poll-status
-        active="false"
-        .strings=${{ pollInactive: 'Inactive without deadline' }}
-      ></lr-poll-status>`,
+      html`<lr-poll-status active="false" .strings=${{ pollInactive: 'Inactive without deadline' }}></lr-poll-status>`,
     )) as LyraPollStatus;
     expect(el.nextInMs).to.equal(undefined);
-    expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal(
-      'Inactive without deadline',
-    );
+    expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal('Inactive without deadline');
   });
 
   it('uses the effective locale for every digit in the countdown', async () => {
@@ -176,7 +218,9 @@ describe('lr-poll-status', () => {
     // Regression test: `active`'s default Boolean converter can never distinguish a plain
     // active="false" attribute from the attribute being absent altogether, so the countdown kept
     // ticking and lr-poll-due kept firing for any consumer using markup instead of `el.active = false`.
-    const el = (await fixture(html`<lr-poll-status next-in-ms="40" active="false"></lr-poll-status>`)) as LyraPollStatus;
+    const el = (await fixture(
+      html`<lr-poll-status next-in-ms="40" active="false"></lr-poll-status>`,
+    )) as LyraPollStatus;
     expect(el.active).to.be.false;
     await el.updateComplete;
 
@@ -199,7 +243,7 @@ describe('lr-poll-status', () => {
     expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.include('Refreshing');
   });
 
-  it('clears the running interval on disconnect, so a removed element never fires a late lr-poll-due', async () => {
+  it('clears the running deadline timer on disconnect, so a removed element never fires a late lr-poll-due', async () => {
     const el = (await fixture(html`<lr-poll-status next-in-ms="40"></lr-poll-status>`)) as LyraPollStatus;
     await el.updateComplete;
     let fired = false;
@@ -209,44 +253,44 @@ describe('lr-poll-status', () => {
     expect(fired, 'disarmTicker() should have run in disconnectedCallback').to.be.false;
   });
 
-  it('owns countdown intervals in the adopted window and rejects stale ticks', async () => {
+  it('owns countdown deadline timers in the adopted window and rejects stale ticks', async () => {
     const el = (await fixture(html`<lr-poll-status></lr-poll-status>`)) as LyraPollStatus;
     await el.updateComplete;
     el.remove();
     const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
     const frameDocument = iframe.contentDocument!;
     const frameWindow = iframe.contentWindow!;
-    const originalMainSet = window.setInterval;
-    const originalMainClear = window.clearInterval;
-    const originalFrameSet = frameWindow.setInterval;
-    const originalFrameClear = frameWindow.clearInterval;
+    const originalMainSet = window.setTimeout;
+    const originalMainClear = window.clearTimeout;
+    const originalFrameSet = frameWindow.setTimeout;
+    const originalFrameClear = frameWindow.clearTimeout;
     const mainCallbacks = new Map<number, VoidFunction>();
     const frameCallbacks = new Map<number, VoidFunction>();
     const frameCancellations: number[] = [];
     let mainHandle = 6500;
     let frameHandle = 7500;
 
-    window.setInterval = ((handler: TimerHandler) => {
-      if (typeof handler !== 'function') throw new TypeError('Expected an interval callback.');
+    window.setTimeout = ((handler: TimerHandler) => {
+      if (typeof handler !== 'function') throw new TypeError('Expected a timer callback.');
       const handle = ++mainHandle;
       mainCallbacks.set(handle, handler as VoidFunction);
       return handle;
-    }) as typeof window.setInterval;
-    window.clearInterval = ((handle?: number) => {
+    }) as typeof window.setTimeout;
+    window.clearTimeout = ((handle?: number) => {
       if (handle !== undefined) mainCallbacks.delete(handle);
-    }) as typeof window.clearInterval;
-    frameWindow.setInterval = ((handler: TimerHandler) => {
-      if (typeof handler !== 'function') throw new TypeError('Expected an interval callback.');
+    }) as typeof window.clearTimeout;
+    frameWindow.setTimeout = ((handler: TimerHandler) => {
+      if (typeof handler !== 'function') throw new TypeError('Expected a timer callback.');
       const handle = ++frameHandle;
       frameCallbacks.set(handle, handler as VoidFunction);
       return handle;
-    }) as typeof frameWindow.setInterval;
-    frameWindow.clearInterval = ((handle?: number) => {
+    }) as typeof frameWindow.setTimeout;
+    frameWindow.clearTimeout = ((handle?: number) => {
       if (handle !== undefined) {
         frameCancellations.push(handle);
         frameCallbacks.delete(handle);
       }
-    }) as typeof frameWindow.clearInterval;
+    }) as typeof frameWindow.clearTimeout;
 
     try {
       let dueCount = 0;
@@ -273,10 +317,10 @@ describe('lr-poll-status', () => {
       expect(dueCount).to.equal(1);
     } finally {
       el.remove();
-      window.setInterval = originalMainSet;
-      window.clearInterval = originalMainClear;
-      frameWindow.setInterval = originalFrameSet;
-      frameWindow.clearInterval = originalFrameClear;
+      window.setTimeout = originalMainSet;
+      window.clearTimeout = originalMainClear;
+      frameWindow.setTimeout = originalFrameSet;
+      frameWindow.clearTimeout = originalFrameClear;
       iframe.remove();
     }
   });
@@ -324,7 +368,10 @@ describe('lr-poll-status', () => {
     const el = (await fixture(
       html`<lr-poll-status
         next-in-ms="10000"
-        .strings=${{ pollPausedAnnounce: 'Interrompu.', pollResumedAnnounce: 'Repris.' }}
+        .strings=${{
+          pollPausedAnnounce: 'Interrompu.',
+          pollResumedAnnounce: 'Repris.',
+        }}
       ></lr-poll-status>`,
     )) as LyraPollStatus;
     await el.updateComplete;
@@ -372,7 +419,7 @@ describe('lr-poll-status', () => {
     expect(getComputedStyle(indicator).animationDuration).to.equal('1.8s');
   });
 
-  it('gives the pause button a :hover treatment, matching lr-widget\'s collapse/fullscreen buttons', () => {
+  it("gives the pause button a :hover treatment, matching lr-widget's collapse/fullscreen buttons", () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='pause-button'\]:hover:not\(:disabled\)\s*\{[^}]+\}/);
   });

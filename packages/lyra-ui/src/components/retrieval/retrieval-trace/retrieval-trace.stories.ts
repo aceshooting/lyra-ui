@@ -67,7 +67,12 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lr-retrieval-trace style="max-width: 40rem" .stages=${stages}></lr-retrieval-trace>`,
+  render: () => html`<lr-retrieval-trace
+    style="max-width: 40rem"
+    .stages=${stages}
+    @lr-stage-chunk-action=${(event: CustomEvent) =>
+      console.log('lr-stage-chunk-action', event.detail)}
+  ></lr-retrieval-trace>`,
 };
 
 export const InProgress: Story = {

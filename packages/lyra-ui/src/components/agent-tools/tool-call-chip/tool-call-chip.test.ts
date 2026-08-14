@@ -236,6 +236,19 @@ it('forwards host focus() and blur() to the current internal base button', async
   expect(el.shadowRoot!.activeElement === null).to.be.true;
 });
 
+it('keeps arbitrary icon-slot controls inert inside the decorative wrapper', async () => {
+  const el = await fixture<LyraToolCallChip>(html`
+    <lr-tool-call-chip name="search">
+      <button slot="icon">Unexpected action</button>
+    </lr-tool-call-chip>
+  `);
+  const wrapper = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+  const assigned = el.querySelector('button')!;
+  expect(wrapper.inert).to.be.true;
+  assigned.focus();
+  expect(document.activeElement === assigned).to.be.false;
+});
+
 it('emits only lr-tool-call-chip-select — the removed lr-tool-chip-select alias never fires', async () => {
   const el = (await fixture(
     html`<lr-tool-call-chip name="web_search" call-id="call-42"></lr-tool-call-chip>`,
@@ -280,12 +293,17 @@ it('localizes the status labels and the unnamed-tool fallback via .strings', asy
   );
 });
 
-it('lets an explicit host aria-label override the computed one', async () => {
+it('keeps its button purpose-named instead of cloning non-empty or empty host labels', async () => {
   const el = (await fixture(
     html`<lr-tool-call-chip name="web_search" aria-label="Custom label"></lr-tool-call-chip>`,
   )) as LyraToolCallChip;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(base.getAttribute('aria-label')).to.equal('Custom label');
+  expect(el.getAttribute('aria-label')).to.equal('Custom label');
+  expect(base.getAttribute('aria-label')).to.equal('web_search — Pending');
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('web_search — Pending');
 });
 
 describe('icon override precedence', () => {
@@ -320,6 +338,42 @@ describe('icon override precedence', () => {
 });
 
 describe('detail tooltip', () => {
+  it('accepts bare noninteractive text as preview content without requiring a wrapper element', async () => {
+    const el = (await fixture(
+      html`<lr-tool-call-chip name="web_search">Query: solar panel efficiency</lr-tool-call-chip>`,
+    )) as LyraToolCallChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+
+    base.focus();
+    await el.updateComplete;
+
+    expect(tooltip.hidden).to.be.false;
+    const previewText = (tooltip.querySelector('slot') as HTMLSlotElement)
+      .assignedNodes({ flatten: true })
+      .map((node) => node.textContent ?? '')
+      .join('')
+      .trim();
+    expect(previewText).to.equal('Query: solar panel efficiency');
+  });
+
+  it('enforces the documented tooltip preview as noninteractive when a consumer slots a control', async () => {
+    const el = (await fixture(html`
+      <lr-tool-call-chip name="web_search"><button id="unsupported-action">Open result</button></lr-tool-call-chip>
+    `)) as LyraToolCallChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    const unsupportedAction = el.querySelector<HTMLButtonElement>('#unsupported-action')!;
+
+    base.focus();
+    await el.updateComplete;
+    unsupportedAction.focus();
+
+    expect(tooltip.inert).to.be.true;
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+    expect(document.activeElement?.localName).to.equal('lr-tool-call-chip');
+  });
+
   it('does not open the tooltip on hover/focus when the default slot is empty', async () => {
     const el = (await fixture(html`<lr-tool-call-chip name="web_search"></lr-tool-call-chip>`)) as LyraToolCallChip;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -487,6 +541,27 @@ describe('detail tooltip', () => {
     await el.updateComplete;
     expect(base.hasAttribute('aria-describedby')).to.be.false;
   });
+
+  it('contains unbroken and tall preview content within positioner-published available space', async () => {
+    const unbroken = 'PreviewValue'.repeat(500);
+    const el = (await fixture(html`
+      <lr-tool-call-chip name="web_search">
+        <div style="block-size:400px">${unbroken}</div>
+      </lr-tool-call-chip>
+    `)) as LyraToolCallChip;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+
+    tooltip.hidden = false;
+    tooltip.style.setProperty('--lr-positioner-available-inline-size', '120px');
+    tooltip.style.setProperty('--lr-positioner-available-block-size', '90px');
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    expect(Math.ceil(tooltip.getBoundingClientRect().width)).to.be.at.most(120);
+    expect(Math.ceil(tooltip.getBoundingClientRect().height)).to.be.at.most(90);
+    expect(tooltip.scrollWidth).to.be.at.most(tooltip.clientWidth + 1);
+    expect(tooltip.scrollHeight).to.be.greaterThan(tooltip.clientHeight);
+    expect(getComputedStyle(tooltip).overflowY).to.equal('auto');
+  });
 });
 
 it('is accessible in the default (empty, no detail) state', async () => {
@@ -533,38 +608,4 @@ it('keeps long labels and localized metadata visible inside a 256px allocation',
   expect(base.scrollWidth).to.be.at.most(Math.ceil(base.getBoundingClientRect().width) + 1);
   expect(label.getBoundingClientRect().width).to.be.greaterThan(0);
   expect(meta.getBoundingClientRect().width).to.be.at.most(base.getBoundingClientRect().width);
-});
-
-/** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)
- *  into the component's shadow scope with the viewport-clamp token pinned to a tiny value, returning
- *  its resolved computed value. Wired to --lr-popover-viewport-clamp the min() collapses to that
- *  pinned value; a leftover 92vw/90vw literal would resolve to something else. */
-function renderedClamp(el: HTMLElement, selector: string): string {
-  const normalize = (text: string) => text.replace(/"/g, "'");
-  let declared = '';
-  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
-    for (const rule of sheet.cssRules) {
-      if (
-        rule instanceof CSSStyleRule &&
-        normalize(rule.selectorText) === normalize(selector) &&
-        rule.style.maxInlineSize
-      ) {
-        declared = rule.style.maxInlineSize;
-      }
-    }
-  }
-  const probe = document.createElement('span');
-  probe.style.display = 'block';
-  probe.style.setProperty('--lr-popover-viewport-clamp', '10px');
-  probe.style.maxInlineSize = declared;
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).maxInlineSize;
-  probe.remove();
-  return value;
-}
-
-it('clamps its floating surface width through the shared popover-viewport-clamp token', async () => {
-  const el = (await fixture(html`<lr-tool-call-chip></lr-tool-call-chip>`)) as HTMLElement;
-  await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
-  expect(renderedClamp(el, "[part='tooltip']")).to.equal('10px');
 });

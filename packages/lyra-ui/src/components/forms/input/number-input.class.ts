@@ -12,6 +12,7 @@ import { dispatchNativeEvent, dispatchNativeInputEvent } from '../../../internal
 import { styles as inputStyles } from './input.styles.js';
 import { styles as numberInputStyles } from './number-input.styles.js';
 import type { LyraAppearance } from '../../../internal/variants.js';
+import type { LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_numberInputDecrease, LYRA_DEFAULT_numberInputIncrease } from '../../../internal/default-strings.generated.js';
@@ -76,6 +77,10 @@ export class LyraNumberInput extends LyraInput {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  /** Public WA-compatible catalog, inherited without narrowing its accepted base-input type. */
+  static override get validators(): LyraFormValidator<LyraInput>[] {
+    return super.validators;
+  }
   static override styles = [LyraElement.styles, sizes, inputStyles, numberInputStyles];
 
   protected override get inputWrapperParts(): string {
@@ -168,7 +173,7 @@ export class LyraNumberInput extends LyraInput {
         aria-label=${this.localize('numberInputDecrease')}
         @click=${this.onStepDown}
       >
-        <slot name="decrement-icon">${chevronIcon()}</slot>
+        <span aria-hidden="true" inert><slot name="decrement-icon">${chevronIcon()}</slot></span>
       </button>
       <button
         part="stepper stepper-increment stepper-up"
@@ -178,7 +183,7 @@ export class LyraNumberInput extends LyraInput {
         aria-label=${this.localize('numberInputIncrease')}
         @click=${this.onStepUp}
       >
-        <slot name="increment-icon">${chevronIcon()}</slot>
+        <span aria-hidden="true" inert><slot name="increment-icon">${chevronIcon()}</slot></span>
       </button>
     `;
   }

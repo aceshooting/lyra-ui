@@ -59,6 +59,12 @@ export const styles = css`
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
+  [part='example-status-message'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
   [part='input-section'],
   [part='output-section'],
   [part='grounding-section'],

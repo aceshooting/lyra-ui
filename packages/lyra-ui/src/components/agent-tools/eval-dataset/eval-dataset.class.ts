@@ -1,12 +1,14 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { getCollator } from '../../../internal/intl-cache.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
-import type { TableColumn } from '../../data/table/table.class.js';
+import type { LyraTableEventMap, TableColumn } from '../../data/table/table.class.js';
 import type { ChipSelectDetail } from '../../overlays/chip/chip.class.js';
 import type { LyraFileInputEventMap } from '../../media/file-input/file-input.class.js';
-import type { ExportFormatOption, LyraExportButtonEventMap } from '../../utility/export-button/export-button.class.js';
+import type { LyraExportFormatOption, LyraExportButtonEventMap } from '../../utility/export-button/export-button.class.js';
 import { styles } from './eval-dataset.styles.js';
+import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_evalDatasetAddExample, LYRA_DEFAULT_evalDatasetColumnExpectedOutput, LYRA_DEFAULT_evalDatasetColumnInput, LYRA_DEFAULT_evalDatasetColumnTags, LYRA_DEFAULT_evalDatasetEmpty, LYRA_DEFAULT_evalDatasetImportLabel, LYRA_DEFAULT_evalDatasetLabel, LYRA_DEFAULT_evalDatasetNoMatches, LYRA_DEFAULT_evalDatasetRemoveExample, LYRA_DEFAULT_evalDatasetSearchLabel, LYRA_DEFAULT_evalDatasetTagFilterLabel } from '../../../internal/default-strings.generated.js';
@@ -33,11 +35,13 @@ export interface EvalExample {
 }
 
 export interface LyraEvalDatasetEventMap {
-  'lr-example-select': CustomEvent<{ id: string | null }>;
+  'lr-example-select': CustomEvent<{ exampleId: string | null }>;
   'lr-example-add-request': CustomEvent<undefined>;
-  'lr-example-remove-request': CustomEvent<{ id: string }>;
+  'lr-example-remove-request': CustomEvent<{ exampleId: string }>;
   'lr-import-request': CustomEvent<{ files: File[] }>;
   'lr-export-request': CustomEvent<{ format: string }>;
+  /** Deliberate pass-through from the controlled comparison table. */
+  'lr-sort': LyraTableEventMap<EvalExample>['lr-sort'];
   focus: CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
 }
@@ -51,7 +55,8 @@ export interface LyraEvalDatasetEventMap {
  * `lr-thread-pin`/`-archive`/`-delete`): `examples` is the host's own data, and this component
  * never mutates it or performs any I/O itself. Every action a user takes -- adding a row,
  * removing the selected row, importing files, exporting to a format -- fires a `*-request` event
- * carrying just enough information to act on; the host decides how (a local mutation, a network
+ * carrying just enough information to act on. Duplicate example ids normalize before filtering,
+ * selection, row keys, exports, and actions; the first occurrence wins. The host decides how (a local mutation, a network
  * round-trip, opening its own creation dialog, parsing an imported file's actual contents, writing
  * an exported file to disk or a server) and passes an updated `examples` array back in.
  *
@@ -74,19 +79,20 @@ export interface LyraEvalDatasetEventMap {
  * as every other mutation this component surfaces.
  *
  * @customElement lr-eval-dataset
- * @event lr-example-select - A row was activated. `detail: { id }` -- `id` is `null` once the
+ * @event lr-example-select - A row was activated. `detail: { exampleId }` -- `exampleId` is `null` once the
  *   previously-selected row no longer exists in `examples` or falls outside the active filters
  *   (see `examples`' own doc).
  * @event lr-example-add-request - The "Add example" control was activated. No detail payload --
  *   this component has no opinion on what a new example's fields should be; the host implements
  *   its own creation flow (a dialog, a generated draft, etc.) and appends the result to `examples`.
  * @event lr-example-remove-request - The "Remove" control was activated for the selected row.
- *   `detail: { id }`.
+ *   `detail: { exampleId }`.
  * @event lr-import-request - Files were selected/dropped on the internal `<lr-file-input>` and at
  *   least one was accepted by its own type/size rules. `detail: { files }` — raw `File[]`; parsing
  *   (CSV/JSON/etc. into `EvalExample` rows) is left to the host, mirroring `<lr-file-input>`'s own
  *   "parsing is a host concern" scope.
  * @event lr-export-request - An export format was chosen. `detail: { format }`.
+ * @event lr-sort - Deliberate pass-through from the internal table. `detail: { key }`.
  * @event focus - Re-dispatched when the internal search field (only rendered while `searchable`)
  *   receives focus, since native focus neither bubbles nor crosses the shadow boundary.
  * @event blur - Re-dispatched when the internal search field loses focus.
@@ -132,7 +138,8 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
    *  gracefully: a `selectedId` that no longer matches any row or falls outside the filtered
    *  result set resets to `null` (so Remove cannot act on a hidden row), and an active tag filter
    *  that no longer matches any row's `tags` is dropped rather than silently matching zero rows
-   *  forever. */
+   *  forever. Duplicate ids normalize first-wins before filtering, selection, the nested grid, and
+   *  mutation events. */
   @property({ attribute: false }) examples: EvalExample[] = [];
 
   /** Shows the built-in free-text search field, filtering by a case-insensitive substring match
@@ -169,19 +176,24 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   @property() accept = '';
 
   /** Forwarded to the internal `<lr-export-button>`'s own `formats`. */
-  @property({ attribute: false }) exportFormats: ExportFormatOption[] = ['csv', 'json'];
+  @property({ attribute: false }) exportFormats: LyraExportFormatOption[] = ['csv', 'json'];
 
   /** Disables every add/remove/import/export affordance -- e.g. while a host-side mutation from a
    *  previous request is still in flight. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
-  /** Accessible name for the example grid region. A host-level `aria-label` attribute wins over
-   *  this, which in turn wins over the localized `evalDatasetLabel` default. */
+  /** Accessible name for the nested example grid. This wins over the localized
+   *  `evalDatasetLabel` default; a host `aria-label` names the host itself and is not cloned onto
+   *  the independently interactive grid. */
   @property() label = '';
 
   @state() private searchText = '';
   @state() private activeTags = new Set<string>();
   @state() private selectedId: string | null = null;
+
+  private get normalizedExamples(): EvalExample[] {
+    return firstByIdentity(Array.isArray(this.examples) ? this.examples : [], (example) => example.id);
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -195,7 +207,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
       // state pointing at nothing: an unclamped `selectedId` would leave the Remove button enabled
       // for an id that can't be removed again, and an unclamped tag filter would keep matching zero
       // rows forever with no visible way back to "no filter".
-      if (this.selectedId !== null && !this.examples.some((example) => example.id === this.selectedId)) {
+      if (this.selectedId !== null && !this.normalizedExamples.some((example) => example.id === this.selectedId)) {
         this.clearSelection();
       }
       const available = this.allTags();
@@ -220,22 +232,22 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
 
   private clearSelection(): void {
     this.selectedId = null;
-    this.emit('lr-example-select', { id: null });
+    this.emit('lr-example-select', { exampleId: null });
   }
 
   private allTags(): string[] {
     const tags = new Set<string>();
-    for (const example of this.examples) {
+    for (const example of this.normalizedExamples) {
       for (const tag of example.tags ?? []) tags.add(tag);
     }
-    return [...tags].sort();
+    return [...tags].sort(getCollator(this.effectiveLocale).compare);
   }
 
   /** `examples` narrowed by the active tag filter (OR across `activeTags`) and the search text
    *  (AND with the tag filter -- both narrow the same list further). */
   private get visibleExamples(): EvalExample[] {
     const query = this.searchText.trim().toLocaleLowerCase(this.effectiveLocale);
-    return this.examples.filter((example) => {
+    return this.normalizedExamples.filter((example) => {
       if (this.activeTags.size > 0 && !(example.tags ?? []).some((tag) => this.activeTags.has(tag))) return false;
       if (query === '') return true;
       const haystack = [example.input, example.expectedOutput ?? '', ...(example.tags ?? [])]
@@ -264,7 +276,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
 
   private onRemoveClick = (): void => {
     if (this.disabled || this.selectedId === null) return;
-    this.emit('lr-example-remove-request', { id: this.selectedId });
+    this.emit('lr-example-remove-request', { exampleId: this.selectedId });
   };
 
   private onGridRowClick = (e: CustomEvent<{ row: EvalExample }>): void => {
@@ -272,13 +284,13 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     if (this.disabled) return;
     const id = e.detail.row.id;
     this.selectedId = id;
-    this.emit('lr-example-select', { id });
+    this.emit('lr-example-select', { exampleId: id });
   };
 
   private onFiles = (e: LyraFileInputEventMap['lr-files']): void => {
     e.stopPropagation();
     if (this.disabled || e.detail.files.length === 0) return;
-    this.emit('lr-import-request', { files: e.detail.files });
+    this.emit('lr-import-request', { files: [...e.detail.files] });
   };
 
   private onExportButtonExport = (e: LyraExportButtonEventMap['lr-export']): void => {
@@ -302,6 +314,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   }
 
   private onSearchInput = (e: Event): void => {
+    e.stopPropagation();
     if (this.disabled) return;
     this.searchText = (e.target as HTMLInputElement).value;
   };
@@ -309,13 +322,19 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   // Native focus/blur neither bubble nor cross the shadow boundary, so a host listening for
   // focus/blur directly on <lr-eval-dataset> (e.g. to commit a pending search on blur) would
   // never hear about the internal search field without this bridge.
-  private onSearchFocus = (): void => {
+  private onSearchFocus = (event: Event): void => {
+    event.stopPropagation();
     this.emit('focus');
   };
 
-  private onSearchBlur = (): void => {
+  private onSearchBlur = (event: Event): void => {
+    event.stopPropagation();
     this.emit('blur');
   };
+
+  private stopOwnedEvent(event: Event): void {
+    event.stopPropagation();
+  }
 
   private renderToolbar(): TemplateResult {
     return html`
@@ -336,12 +355,21 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           accept=${this.accept}
           label=${this.localize('evalDatasetImportLabel')}
           ?disabled=${this.disabled}
+          @input=${this.stopOwnedEvent}
+          @change=${this.stopOwnedEvent}
+          @focus=${this.stopOwnedEvent}
+          @blur=${this.stopOwnedEvent}
+          @lr-invalid=${this.stopOwnedEvent}
           @lr-files=${this.onFiles}
         ></lr-file-input>
         <lr-export-button
           part="export"
           .formats=${this.exportFormats}
           ?disabled=${this.disabled}
+          @lr-export-complete=${this.stopOwnedEvent}
+          @lr-export-error=${this.stopOwnedEvent}
+          @lr-show=${this.stopOwnedEvent}
+          @lr-hide=${this.stopOwnedEvent}
           @lr-export=${this.onExportButtonExport}
         ></lr-export-button>
       </div>
@@ -393,12 +421,13 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   }
 
   override render(): TemplateResult {
-    const label = this.getAttribute('aria-label') || this.label || this.localize('evalDatasetLabel');
+    const label = this.label || this.localize('evalDatasetLabel');
     const tags = this.allTags();
     const visible = this.visibleExamples;
-    const filtered = visible.length !== this.examples.length;
+    const examples = this.normalizedExamples;
+    const filtered = visible.length !== examples.length;
     const emptyText =
-      this.examples.length === 0
+      examples.length === 0
         ? this.localize('evalDatasetEmpty')
         : filtered && visible.length === 0
           ? this.localize('evalDatasetNoMatches')
@@ -415,10 +444,22 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           .selectionMode=${this.disabled ? 'none' : 'single'}
           .columns=${this.buildColumns()}
           .rows=${visible}
-          .pageSize=${visible.length > MAX_RENDERED_EXAMPLES ? MAX_RENDERED_EXAMPLES : 0}
+          .pageSize=${MAX_RENDERED_EXAMPLES}
           .rowKey=${(row: EvalExample) => row.id}
-          .selectedKey=${this.selectedId}
+          .selectedKeys=${this.selectedId === null ? new Set() : new Set([this.selectedId])}
           .emptyHeading=${emptyText}
+          @input=${this.stopOwnedEvent}
+          @change=${this.stopOwnedEvent}
+          @focus=${this.stopOwnedEvent}
+          @blur=${this.stopOwnedEvent}
+          @lr-priority-columns-visibility-change=${this.stopOwnedEvent}
+          @lr-row-expand-toggle=${this.stopOwnedEvent}
+          @lr-load-more=${this.stopOwnedEvent}
+          @lr-selection-change=${this.stopOwnedEvent}
+          @lr-filter-change=${this.stopOwnedEvent}
+          @lr-page-change=${this.stopOwnedEvent}
+          @lr-cell-edit=${this.stopOwnedEvent}
+          @lr-column-resize=${this.stopOwnedEvent}
           @lr-row-click=${this.onGridRowClick}
         ></lr-table>
       </div>

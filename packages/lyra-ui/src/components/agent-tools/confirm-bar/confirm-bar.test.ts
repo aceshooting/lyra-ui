@@ -559,7 +559,7 @@ describe('async pending decisions', () => {
     (approveEl.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await approveEl.updateComplete;
     expect(approveEl.decision).to.equal(null);
-    expect(approveEl.pending).to.equal('approved');
+    expect(approveEl.pending).to.equal('approve');
     expect(approveEl.hasAttribute('pending')).to.be.true;
     expect(approveEl.shadowRoot!.querySelector('[part="approve-button"]')).to.exist;
     expect(approveEl.shadowRoot!.querySelector('[part="deny-button"]')).to.exist;
@@ -569,7 +569,7 @@ describe('async pending decisions', () => {
     (denyEl.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
     await denyEl.updateComplete;
     expect(denyEl.decision).to.equal(null);
-    expect(denyEl.pending).to.equal('denied');
+    expect(denyEl.pending).to.equal('deny');
   });
 
   it('shows loading on the pending button and disables the other one', async () => {
@@ -590,7 +590,7 @@ describe('async pending decisions', () => {
     el.addEventListener('lr-approve', (e) => e.preventDefault());
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
-    expect(el.pending).to.equal('approved');
+    expect(el.pending).to.equal('approve');
 
     el.decision = 'approved';
     await el.updateComplete;
@@ -604,7 +604,7 @@ describe('async pending decisions', () => {
     el.addEventListener('lr-deny', (e) => e.preventDefault());
     (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
     await el.updateComplete;
-    expect(el.pending).to.equal('denied');
+    expect(el.pending).to.equal('deny');
 
     el.pending = null;
     await el.updateComplete;
@@ -635,7 +635,7 @@ describe('async pending decisions', () => {
     await el.updateComplete;
     // Prove the pending state actually landed before checking accessibility -- otherwise this
     // would pass vacuously against the ordinary undecided render.
-    expect(el.pending).to.equal('approved');
+    expect(el.pending).to.equal('approve');
     expect((el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).loading).to.be.true;
     await expect(el).to.be.accessible();
   });
@@ -656,7 +656,7 @@ describe('async pending decisions', () => {
       await el.updateComplete;
 
       expect(el.pending, `${which} entered the pending state`).to.equal(
-        which === 'approve' ? 'approved' : 'denied',
+        which,
       );
       const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
       expect(

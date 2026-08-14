@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
+import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './timeline.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -10,7 +11,8 @@ import { LYRA_DEFAULT_timeline } from '../../../internal/default-strings.generat
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type TimelineOrientation = 'vertical' | 'horizontal';
+const normalizeTimelineOrientation = (value: unknown): LyraOrientation =>
+  value === 'horizontal' ? 'horizontal' : 'vertical';
 
 /**
  * `<lr-timeline>` — an ordered, connected sequence of past-event rows (an audit trail, an agent
@@ -41,6 +43,9 @@ export type TimelineOrientation = 'vertical' | 'horizontal';
  *   timeline's main axis; also the length each item's own rail visually bridges to reach the next
  *   item's marker. Declared here but actually consumed inside each `<lr-timeline-item>`'s own
  *   stylesheet, via ordinary CSS custom-property inheritance across the slot boundary.
+ * @cssprop [--lr-scroll-fade-size=2rem] - Inline size of each edge fade while a
+ *   horizontal timeline overflows. Forced-colors mode disables the masks while retaining native
+ *   scrolling.
  * @status stable
  * @since 4.0.0
  */
@@ -59,7 +64,21 @@ export class LyraTimeline extends LyraElement {
    *  audit trail or agent history reads top-to-bottom. `'horizontal'` lays them out in a row.
    *  Deliberately differs from `<lr-stepper>`'s `'horizontal'` default — don't copy that default by
    *  habit. */
-  @property({ reflect: true }) orientation: TimelineOrientation = 'vertical';
+  private _orientation: LyraOrientation = 'vertical';
+  @property({ reflect: true })
+  get orientation(): LyraOrientation {
+    return this._orientation;
+  }
+  set orientation(value: LyraOrientation) {
+    const normalized = normalizeTimelineOrientation(value);
+    const previous = this._orientation;
+    if (previous === normalized) {
+      if (value !== normalized) this.requestUpdate('orientation', previous);
+      return;
+    }
+    this._orientation = normalized;
+    this.requestUpdate('orientation', previous);
+  }
 
   /** Host-level `aria-label` override for the list's accessible name — wins over the localized
    *  default `"Timeline"`. Needed because the `role="list"` element lives in the shadow root and
@@ -91,6 +110,13 @@ export class LyraTimeline extends LyraElement {
       this.slottedCount = Array.from(this.children).filter(
         (element) => !element.getAttribute('slot') && element.localName === tag('timeline-item'),
       ).length;
+    }
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (changed.has('orientation') && this.getAttribute('orientation') !== this.orientation) {
+      this.setAttribute('orientation', this.orientation);
     }
   }
 

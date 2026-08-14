@@ -22,6 +22,7 @@ permissions:
 # artifact upload/download round trip would cost, and it keeps every job independently
 # reproducible from a clean checkout.
 jobs:
+  # release-qualification: required
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -43,6 +44,7 @@ jobs:
   # browser. They read already-committed files (custom-elements.json, llms/, plugin manifests,
   # README), except for the content-addressed read-only npm fetch that proves the pinned upstream
   # public manifests, and either validate or regenerate-and-diff them.
+  # release-qualification: required
   static-checks:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -54,6 +56,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm check:workflows
+      - run: pnpm check:release-qualification
       - run: node scripts/release-integrity.test.mjs
       - run: pnpm --filter @aceshooting/lyra-ui test:public-api
       - run: pnpm --filter @aceshooting/lyra-ui test:pinned-upstream-manifests
@@ -276,6 +280,7 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+  # release-qualification: required
   build-and-coverage:
     if: always()
     runs-on: ubuntu-latest
@@ -317,6 +322,7 @@ jobs:
 
   # Needs dist/ (the tarball's `files` list includes it) but not the Chromium test suite or the
   # docs build -- independent of build-and-coverage other than both running `pnpm build`.
+  # release-qualification: required
   packed-consumer:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -388,6 +394,7 @@ jobs:
           path: storybook-static
           retention-days: 1
 
+  # release-qualification: required
   docs-and-storybook:
     runs-on: ubuntu-latest
     needs: docs_build
@@ -446,7 +453,7 @@ jobs:
     timeout-minutes: 15
     env:
       VISUAL_SHARD_INDEX: ${{ matrix.shard }}
-      VISUAL_SHARD_TOTAL: '3'
+      VISUAL_SHARD_TOTAL: "3"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -485,6 +492,7 @@ jobs:
   # Keep one stable required-check name for branch protection and release qualification while the
   # expensive work fans out above. `always()` makes a failed/cancelled matrix leg an explicit red
   # aggregate instead of skipping this job.
+  # release-qualification: required
   visual-regression-gate:
     name: visual-regression
     if: ${{ always() }}
@@ -501,6 +509,7 @@ jobs:
             exit 1
           fi
 
+  # release-qualification: matrix
   platform-contracts:
     name: ${{ matrix.browser }} / Node ${{ matrix.node-version }} / shard ${{ matrix.shard_index }}/${{ matrix.shard_total }}
     strategy:
@@ -590,7 +599,7 @@ jobs:
       # and crash regardless of this setting. Kept as defense in depth
       # (harmless on the Node 22 leg); the step below removes the mismatch
       # itself, which is what actually protects those commands.
-      npm_config_manage_package_manager_versions: 'false'
+      npm_config_manage_package_manager_versions: "false"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -629,7 +638,7 @@ jobs:
           WTR_TEST_SUITE: platform
           WTR_SHARD_INDEX: ${{ matrix.shard_index }}
           WTR_SHARD_TOTAL: ${{ matrix.shard_total }}
-          WTR_STRICT_CONSOLE: '1'
+          WTR_STRICT_CONSOLE: "1"
         run: pnpm --filter @aceshooting/lyra-ui test:platform-shard
       # The package supports Node 20. Exercise the real tarball/install/import/type/style bundle
       # matrix once at that floor; the dedicated packed-consumer job covers Node 22.

@@ -7,51 +7,49 @@ import type { LyraVariant } from '../../../internal/variants.js';
 /** Maximum rendered data-tree depth, shared with owner-side identity analysis. @internal */
 export const TREE_MAX_RENDER_DEPTH = 64;
 
+/** Maximum normalized/projected nodes owned by one tree instance. @internal */
+export const TREE_MAX_RENDER_NODES = 1_000;
+
 /** Selection behavior shared by the declarative and data-driven tree models. */
 export type TreeSelection = 'single' | 'multiple' | 'leaf' | 'leaf-multiple';
 
-/** Tone for a `TreeBadge` chip — the shared semantic tone. Kept as a local name so existing
- *  imports keep resolving. */
-export type TreeBadgeTone = LyraVariant;
-
 export interface TreeBadge {
-  text: string;
-  tone?: TreeBadgeTone;
+  readonly text: string;
+  readonly tone?: LyraVariant;
   /** Accessible name override; falls back to `text` when omitted. */
-  label?: string;
+  readonly label?: string;
 }
 
-export interface TreeItem {
+export interface LyraTreeNodeData {
   /** Stable public identity, unique across every reachable item in one data tree. If invalid input
    * repeats an id, its first depth-first occurrence owns it and later occurrences fail closed as
    * disabled rows until the host supplies unique data. */
-  id: string;
-  label: string;
+  readonly id: string;
+  readonly label: string;
   /** Whether this item is the current selection. When set, the treeitem exposes
    * `aria-selected` and renders the matching selected state. */
-  selected?: boolean;
+  readonly selected?: boolean;
   /** Removes this item from roving focus and prevents select/toggle activation. */
-  disabled?: boolean;
+  readonly disabled?: boolean;
   /** Marks children as asynchronously loadable. Assign a refreshed item with children (or
    * `lazy: false`) in response to `lr-lazy-load` to finish the pending expansion. */
-  lazy?: boolean;
-  children?: TreeItem[];
-  badge?: string | number;
-  /** Additive, token-colored chips rendered after the legacy `badge`. Omit for byte-identical
-   *  output to today. */
-  badges?: TreeBadge[];
+  readonly lazy?: boolean;
+  readonly children?: readonly LyraTreeNodeData[];
+  /** Token-colored chips rendered after the row label. */
+  readonly badges?: readonly TreeBadge[];
   /** Optional decorative leading content, such as an icon TemplateResult. */
-  icon?: unknown;
+  readonly icon?: unknown;
   /** Secondary visible row text. */
-  description?: string;
+  readonly description?: string;
   /** Spoken treeitem name when it needs more context than the visible row. */
-  accessibleLabel?: string;
+  readonly accessibleLabel?: string;
 }
 
 /** Internal identity analysis shared by the owner tree and its recursively rendered items.
  * @internal */
 export interface TreeIdentityContext {
-  path: string;
-  ownerPaths: ReadonlyMap<string, string>;
-  collisionIds: ReadonlySet<string>;
+  readonly path: string;
+  readonly ownerPaths: ReadonlyMap<string, string>;
+  readonly collisionIds: ReadonlySet<string>;
+  readonly declaredChildrenAtPath: ReadonlyMap<string, number>;
 }

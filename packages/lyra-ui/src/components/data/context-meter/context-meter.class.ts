@@ -4,7 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { resolveIntlLocale } from '../../../internal/intl-cache.js';
-import { sanitizeSwatchColor } from '../../../internal/safe-css.js';
+import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { srOnly } from '../../../internal/a11y.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import { styles } from './context-meter.styles.js';
@@ -16,9 +16,8 @@ import { LYRA_DEFAULT_contextMeterLabeledSummary, LYRA_DEFAULT_contextMeterSegme
 
 /** The shared semantic tone. Kept as a local name so existing imports keep resolving. */
 export type ContextMeterTone = LyraVariant;
-/** Deliberately NOT the shared vocabulary: this is the meter's rendered SHAPE, not a semantic
- *  tone, and it shares no members with `LyraVariant`. */
-export type ContextMeterVariant = 'ring' | 'bar';
+/** The meter geometry. This is deliberately separate from the semantic `variant` vocabulary. */
+export type ContextMeterShape = 'ring' | 'bar';
 
 export interface ContextMeterSegment {
   label: string;
@@ -30,7 +29,9 @@ export interface ContextMeterSegment {
 }
 
 interface RatioSegment {
-  segment: ContextMeterSegment;
+  segment: Readonly<ContextMeterSegment>;
+  /** The normalized value used by every visual and semantic projection. */
+  value: number;
   /** This segment's share of `total`, already clamped so the running sum
    *  across all segments never exceeds 1. */
   ratio: number;
@@ -101,7 +102,23 @@ export class LyraContextMeter extends LyraElement {
   /** The full capacity segments are measured against (e.g. a model's context window size). */
   @property({ type: Number }) total = 0;
 
-  @property({ reflect: true }) variant: ContextMeterVariant = 'bar';
+  private _shape: ContextMeterShape = 'bar';
+
+  /** Meter geometry. Foreign attribute values normalize to the default bar shape. */
+  @property({ reflect: true })
+  get shape(): ContextMeterShape { return this._shape; }
+  set shape(value: ContextMeterShape) {
+    const normalized: ContextMeterShape = value === 'ring' ? 'ring' : 'bar';
+    const previous = this._shape;
+    if (previous === normalized) {
+      // An invalid attribute can normalize to the current value. Still schedule reflection so
+      // the DOM never advertises a closed-token state the renderer did not accept.
+      if (value !== normalized) this.requestUpdate('shape', previous);
+      return;
+    }
+    this._shape = normalized;
+    this.requestUpdate('shape', previous);
+  }
 
   /** Overall accessible label/caption, e.g. `"128K context window"`. */
   @property() label = '';
@@ -117,10 +134,14 @@ export class LyraContextMeter extends LyraElement {
    *  `<lr-graph-legend>`. */
   @property({ type: Boolean, reflect: true, attribute: 'show-legend' }) showLegend = false;
 
+  private normalizedSegmentValue(segment: Readonly<ContextMeterSegment>): number {
+    return Math.max(0, finiteNumber(segment.value, 0));
+  }
+
   /** Sum of segment values, clamped so a negative/NaN entry can't produce a negative total. */
   private get usedTotal(): number {
     return this.segments.reduce((sum, segment) => {
-      const next = sum + Math.max(0, finiteNumber(segment.value, 0));
+      const next = sum + this.normalizedSegmentValue(segment);
       return finiteNumber(next, Number.MAX_VALUE);
     }, 0);
   }
@@ -134,11 +155,11 @@ export class LyraContextMeter extends LyraElement {
     const out: RatioSegment[] = [];
     let cumulative = 0;
     for (const segment of this.segments) {
-      const raw = Math.max(0, finiteNumber(segment.value, 0));
+      const raw = this.normalizedSegmentValue(segment);
       const available = Math.max(0, 1 - cumulative);
       const ratio = Math.min(raw / total, available);
       cumulative += ratio;
-      out.push({ segment, ratio });
+      out.push({ segment, value: raw, ratio });
     }
     return out;
   }
@@ -172,20 +193,22 @@ export class LyraContextMeter extends LyraElement {
 
   /** Hover/`<title>` text for one segment. Templated so a locale controls
    *  where the count sits relative to the label, not just the words. */
-  private segmentTitle(segment: ContextMeterSegment): string {
+  private segmentTitle(segment: Readonly<ContextMeterSegment>, value = this.normalizedSegmentValue(segment)): string {
     return this.localize('contextMeterSegmentLabel', undefined, {
       label: segment.label,
-      count: formatCount(segment.value, this.effectiveLocale),
+      count: formatCount(value, this.effectiveLocale),
     });
   }
 
   private segmentColor(segment: ContextMeterSegment): string | undefined {
-    return segment.color ? sanitizeSwatchColor(segment.color) : undefined;
+    return segment.color ? sanitizeCssColor(segment.color) : undefined;
   }
 
   private renderSemantics(): TemplateResult {
     const { used, total } = this.clampedUsedTotal;
-    const accessibleName = this.getAttribute('aria-label')?.trim() || this.summary;
+    // A host aria-label names the custom element itself. Reusing it here would expose the same
+    // name on two semantic owners; the meter retains its purpose-specific generated summary.
+    const accessibleName = this.summary;
     return html`
       <div
         part="semantic"
@@ -211,11 +234,11 @@ export class LyraContextMeter extends LyraElement {
         ${this.label ? html`<div part="label" aria-hidden="true">${this.label}</div>` : nothing}
         <div part="track" aria-hidden="true">
           ${ratios.map(
-            ({ segment, ratio }) => html`
+            ({ segment, value, ratio }) => html`
               <span
                 part="segment"
                 data-tone=${segment.tone ?? 'neutral'}
-                title=${this.segmentTitle(segment)}
+                title=${this.segmentTitle(segment, value)}
                 style=${styleMap({
                   flexBasis: `${(ratio * 100).toFixed(4)}%`,
                   ...(this.segmentColor(segment)
@@ -233,7 +256,7 @@ export class LyraContextMeter extends LyraElement {
   private renderRing(): TemplateResult {
     const ratios = this.ratios();
     let cumulative = 0;
-    const arcs: SVGTemplateResult[] = ratios.map(({ segment, ratio }) => {
+    const arcs: SVGTemplateResult[] = ratios.map(({ segment, value, ratio }) => {
       const segLen = ratio * CIRCUMFERENCE;
       const dashoffset = -cumulative * CIRCUMFERENCE;
       cumulative += ratio;
@@ -253,14 +276,18 @@ export class LyraContextMeter extends LyraElement {
           stroke-dasharray=${`${segLen} ${CIRCUMFERENCE - segLen}`}
           stroke-dashoffset=${dashoffset}
           transform="rotate(-90 ${CENTER} ${CENTER})"
-        ><title>${this.segmentTitle(segment)}</title></circle>
+        ><title>${this.segmentTitle(segment, value)}</title></circle>
       `;
     });
     return html`
       <svg part="base" viewBox="0 0 100 100" aria-hidden="true">
         <circle part="track" cx=${CENTER} cy=${CENTER} r=${RADIUS} stroke-width=${STROKE}></circle>
         ${arcs}
-        ${this.label ? svg`<text part="label" x=${CENTER} y=${CENTER + 4} aria-hidden="true">${this.label}</text>` : nothing}
+        ${this.label ? svg`
+          <foreignObject part="label" x="20" y="25" width="60" height="50" aria-hidden="true">
+            <div class="ring-label" title=${this.label}>${this.label}</div>
+          </foreignObject>
+        ` : nothing}
       </svg>
     `;
   }
@@ -290,7 +317,7 @@ export class LyraContextMeter extends LyraElement {
 
   override render(): TemplateResult {
     return html`
-      ${this.variant === 'ring' ? this.renderRing() : this.renderBar()}
+      ${this.shape === 'ring' ? this.renderRing() : this.renderBar()}
       ${this.showLegend ? this.renderLegend() : nothing}
       ${this.renderSemantics()}
     `;

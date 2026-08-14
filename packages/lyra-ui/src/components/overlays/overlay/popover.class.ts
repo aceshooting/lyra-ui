@@ -51,7 +51,7 @@ const DEFAULT_DISTANCE = 8;
  * server-rendered popovers release their hydration guards in different tasks. */
 let popoverConnectionSequence = 0;
 
-/** Semantic role vocabulary for the popup surface. Dropdown subclasses set this to `menu`. */
+/** Semantic role vocabulary for a popover surface or mapped trigger contract. */
 export type LyraPopupRole = 'dialog' | 'menu';
 
 export type { LyraArrowPlacement, OverlayVirtualRect };
@@ -199,8 +199,18 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   /** Accessible name for the semantic popup. An authored host `aria-label` wins by presence,
    *  including an explicitly empty value, before this property or the localized role fallback. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
-  /** Semantic role used by the popup. Dropdown subclasses set this to `menu`. */
-  @property({ attribute: 'popup-role' }) popupRole: LyraPopupRole = 'dialog';
+  private _popupRole: LyraPopupRole = 'dialog';
+  /** Semantic role used by the popup. */
+  @property({ attribute: 'popup-role' })
+  get popupRole(): LyraPopupRole {
+    return this._popupRole;
+  }
+  set popupRole(next: LyraPopupRole) {
+    if (next === this._popupRole) return;
+    const old = this._popupRole;
+    this._popupRole = next;
+    this.requestUpdate('popupRole', old);
+  }
   private trigger?: HTMLElement;
   private slottedTrigger?: HTMLElement;
   @state() private resolvedSide: 'top' | 'bottom' | 'left' | 'right' = 'bottom';
@@ -265,6 +275,26 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   protected get contentPartNames(): string {
     const parts = ['content', 'body'];
     return parts.join(' ');
+  }
+
+  /** The role announced by the interaction trigger. Mapped subclasses can keep this semantic
+   * invariant even when their positioned wrapper is deliberately presentation-only. */
+  protected get triggerPopupRole(): LyraPopupRole {
+    return this.popupRole;
+  }
+
+  /** Semantic role owned by the positioned surface. Dropdown overrides this because its contained
+   * menu is the real role/name owner and the outer element contributes positioning chrome only. */
+  protected get popupSurfaceRole(): LyraPopupRole | undefined {
+    return this.popupRole;
+  }
+
+  /** Resolved popup name, also available to a mapped subclass that delegates role ownership to a
+   * contained semantic component. Presence-based host naming preserves an authored empty label. */
+  protected get effectivePopupLabel(): string {
+    return hostAriaLabel(this) ?? (
+      this.accessibleLabel || this.localize(this.triggerPopupRole === 'menu' ? 'menuLabel' : 'popover')
+    );
   }
 
   /** Subclasses can retain a different arrow default without forking rendering/positioning. */
@@ -401,7 +431,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.stopAnchorIdentityObservation?.();
     this.stopAnchorIdentityObservation = undefined;
     this.resetHostIdObserver();
@@ -610,7 +641,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     const popup = renderRoot?.querySelector<HTMLElement>('[part~="popup"]') ?? null;
     const contribution = {
       attributes: {
-        'aria-haspopup': this.popupRole,
+        'aria-haspopup': this.triggerPopupRole,
         'aria-expanded': this.open ? 'true' : 'false',
       },
       controls: popup ? [popup] : [],
@@ -914,18 +945,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   }
 
   override render(): TemplateResult {
-    // The accessible-name fallback follows the popup's actual semantic role --
-    // a `popupRole="menu"` popup (e.g. <lr-dropdown>) is announced as a menu,
-    // not as a generic "Popover", so its translation is looked up under the
-    // same key <lr-menu> uses for its own default name.
-    const label = hostAriaLabel(this) ?? (
-      this.accessibleLabel || this.localize(this.popupRole === 'menu' ? 'menuLabel' : 'popover')
-    );
+    const popupRole = this.popupSurfaceRole;
     return html`
       <span part="trigger" @click=${this.onTriggerClick} @keydown=${this.onTriggerKeyDown}>
         <slot name="trigger" @slotchange=${this.onTriggerSlotChange}></slot>
       </span>
-      <div id=${this.popupId} part=${this.popupPartNames} role=${this.popupRole} aria-label=${label}
+      <div id=${this.popupId} part=${this.popupPartNames} role=${popupRole ?? nothing}
+        aria-label=${popupRole ? this.effectivePopupLabel : nothing}
         ?data-hidden=${!this.open || !this.anchorPositioned} ?data-has-arrow=${this.rendersArrow}
         @click=${this.onPopupClick}>
         <div part=${this.contentPartNames}>${this.renderPopupContent()}</div>

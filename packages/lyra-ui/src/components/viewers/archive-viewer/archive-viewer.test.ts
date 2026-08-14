@@ -3,7 +3,7 @@ import { LYRA_DEFAULT_STRINGS } from '../../../internal/localization.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 import './archive-viewer.js';
 import type { LyraArchiveViewer } from './archive-viewer.js';
-import type { ArchiveLibraryApi } from './archive-loader.js';
+import type JSZipType from 'jszip';
 
 function deferred<T>(): {
   promise: Promise<T>;
@@ -19,10 +19,10 @@ function deferred<T>(): {
   return { promise, resolve, reject };
 }
 
-async function buildZip(files: Record<string, string>): Promise<ArrayBuffer> {
-  const module = (await import('jszip')) as unknown as { default: new () => ArchiveLibraryApi };
+async function buildZip(files: Record<string, string>, createFolders = true): Promise<ArrayBuffer> {
+  const module = (await import('jszip')) as unknown as { default: new () => JSZipType };
   const zip = new module.default();
-  for (const [name, content] of Object.entries(files)) zip.file(name, content);
+  for (const [name, content] of Object.entries(files)) zip.file(name, content, { createFolders });
   const bytes = await zip.generateAsync({ type: 'uint8array' });
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
@@ -40,40 +40,22 @@ function withDeclaredZipEntryCount(source: ArrayBuffer, count: number): ArrayBuf
 }
 
 function stubFetch(buffer: ArrayBuffer, ok = true): () => void { const original = window.fetch; window.fetch = (() => Promise.resolve({ ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', arrayBuffer: () => Promise.resolve(buffer) } as Response)) as typeof window.fetch; return () => { window.fetch = original; }; }
-function useLibrary(el: LyraArchiveViewer, library: ArchiveLibraryApi | null): void { (el as unknown as { loadLibrary: () => Promise<ArchiveLibraryApi | null> }).loadLibrary = () => Promise.resolve(library); }
-function libraryWithEntries(names: string[]): ArchiveLibraryApi {
-  return {
-    loadAsync: async () => ({
-      forEach(callback: (path: string, file: {
-        name: string;
-        dir: boolean;
-        _data: { uncompressedSize: number };
-      }) => void) {
-        for (const name of names) {
-          callback(name, {
-            name,
-            dir: name.endsWith('/'),
-            _data: { uncompressedSize: name.endsWith('/') ? 0 : 1 },
-          });
-        }
-      },
-    }),
-  } as unknown as ArchiveLibraryApi;
-}
 
 async function listingWithEntries(names: string[]): Promise<{
   el: LyraArchiveViewer;
   list: HTMLElement & {
     items: { name: string }[];
-    rowHeight: string;
+    rowHeight: number | 'auto';
     scrollToIndex(index: number, options?: { behavior?: ScrollBehavior }): void;
     updateComplete: Promise<boolean>;
   };
   restore: () => void;
 }> {
   const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
-  useLibrary(el, libraryWithEntries(names));
-  const restore = stubFetch(new ArrayBuffer(0));
+  const restore = stubFetch(await buildZip(
+    Object.fromEntries(names.map((name) => [name, name.endsWith('/') ? '' : 'x'])),
+    false,
+  ));
   el.src = 'https://example.test/archive.zip';
   await waitUntil(() => {
     const list = el.shadowRoot!.querySelector('lr-virtual-list') as
@@ -86,7 +68,7 @@ async function listingWithEntries(names: string[]): Promise<{
     el,
     list: el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
       items: { name: string }[];
-      rowHeight: string;
+      rowHeight: number | 'auto';
       scrollToIndex(index: number, options?: { behavior?: ScrollBehavior }): void;
       updateComplete: Promise<boolean>;
     },
@@ -133,7 +115,7 @@ window.addEventListener(
   true,
 );
 
-describe('archive localization', () => { it('defines archive messages', () => { expect(LYRA_DEFAULT_STRINGS.archiveViewerUnavailable).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerEmpty).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerFolder).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerFile).to.be.a('string'); }); });
+describe('archive localization', () => { it('defines archive messages', () => { expect(LYRA_DEFAULT_STRINGS.archiveViewerEmpty).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerFolder).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerFile).to.be.a('string'); }); });
 
 describe('lr-archive-viewer', () => {
   it('renders the empty state by default', async () => { const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`); expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No document to display.'); });
@@ -228,15 +210,8 @@ describe('lr-archive-viewer', () => {
   });
   it('renders the empty archive message', async () => { const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`); const restore = stubFetch(await buildZip({})); try { el.src = 'https://example.test/empty.zip'; await waitUntil(() => el.shadowRoot!.querySelector('.empty-note')?.textContent === 'This archive is empty.'); } finally { restore(); } });
 
-  it('rejects an excessive central-directory entry count before the ZIP peer materializes entries', async () => {
+  it('rejects an excessive central-directory entry count before listing entries', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
-    let loadCalls = 0;
-    useLibrary(el, {
-      loadAsync: async () => {
-        loadCalls++;
-        return { forEach: () => {} };
-      },
-    } as unknown as ArchiveLibraryApi);
     const buffer = withDeclaredZipEntryCount(await buildZip({ 'one.txt': 'one' }), 10_001);
     const restore = stubFetch(buffer);
     try {
@@ -244,7 +219,6 @@ describe('lr-archive-viewer', () => {
       el.src = 'https://example.test/too-many-entries.zip';
       const event = await errorPromise as CustomEvent<{ error: unknown }>;
       await el.updateComplete;
-      expect(loadCalls).to.equal(0);
       expect(event.detail.error).to.be.instanceOf(LyraResourceLimitError);
       expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(1);
       expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(
@@ -254,8 +228,50 @@ describe('lr-archive-viewer', () => {
       restore();
     }
   });
-  it('renders a missing-peer error and rejects unsafe URLs', async () => { const missing = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`); useLibrary(missing, null); const restore = stubFetch(new ArrayBuffer(0)); try { missing.src = 'https://example.test/archive.zip'; await waitUntil(() => missing.shadowRoot!.querySelector('[part="error"]') !== null); expect(missing.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Archive preview is unavailable.'); } finally { restore(); }
-    let called = false; const original = window.fetch; window.fetch = (() => { called = true; return Promise.reject(new Error('unexpected')); }) as typeof window.fetch; try { const unsafe = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer .src=${'java\tscript:alert(1)'}></lr-archive-viewer>`); await unsafe.updateComplete; expect(called).to.be.false; expect(unsafe.shadowRoot!.querySelector('[part="error"]')).to.exist; } finally { window.fetch = original; }
+  it('rejects an arbitrary prefix before a valid ZIP', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const zip = new Uint8Array(await buildZip({ 'one.txt': 'one' }));
+    const prefixed = new Uint8Array(zip.length + 4);
+    prefixed.set([0x4d, 0x5a, 0x00, 0x00]);
+    prefixed.set(zip, 4);
+    const restore = stubFetch(prefixed.buffer);
+    try {
+      const errorPromise = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/prefixed.zip';
+      await errorPromise;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(
+        'This document is too large to preview.',
+      );
+    } finally {
+      restore();
+    }
+  });
+  it('rejects malformed archives and unsafe URLs without an optional parser dependency', async () => {
+    const malformed = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const restore = stubFetch(new ArrayBuffer(0));
+    try {
+      malformed.src = 'https://example.test/archive.zip';
+      await waitUntil(() => malformed.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(malformed.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
+        'This document is too large to preview.',
+      );
+    } finally {
+      restore();
+    }
+    let called = false;
+    const original = window.fetch;
+    window.fetch = (() => { called = true; return Promise.reject(new Error('unexpected')); }) as typeof window.fetch;
+    try {
+      const unsafe = await fixture<LyraArchiveViewer>(
+        html`<lr-archive-viewer .src=${'java\tscript:alert(1)'}></lr-archive-viewer>`,
+      );
+      await unsafe.updateComplete;
+      expect(called).to.be.false;
+      expect(unsafe.shadowRoot!.querySelector('[part="error"]')).to.exist;
+    } finally {
+      window.fetch = original;
+    }
   });
   it('emits one lr-render-error for an unsafe source without fetching it', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
@@ -287,269 +303,32 @@ describe('lr-archive-viewer', () => {
   });
   it('applies localized empty strings and is accessible', async () => { const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer .strings=${{ documentPreviewEmpty: 'Aucun {type} à afficher.' }}></lr-archive-viewer>`); expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('Aucun document à afficher.'); await expect(el).to.be.accessible(); });
 
-  it('uses declared entry sizes without decompressing each entry', async () => {
+  it('lists from owned central-directory metadata without consulting a parser hook', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
-    let decompressCalls = 0;
-    const fakeLibrary = {
-      loadAsync: () => Promise.resolve({
-        forEach(cb: (path: string, file: { name: string; dir: boolean; async: (type: string) => Promise<Uint8Array>; _data?: { uncompressedSize?: number } }) => void) {
-          cb('README.txt', { name: 'README.txt', dir: false, _data: { uncompressedSize: 11 }, async: () => { decompressCalls++; return Promise.resolve(new Uint8Array(11)); } });
-        },
-      }),
+    let parserCalls = 0;
+    (el as unknown as { loadLibrary?: () => never }).loadLibrary = () => {
+      parserCalls++;
+      throw new Error('a runtime ZIP parser must not be consulted');
     };
-    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
-    const restore = stubFetch(new ArrayBuffer(0));
+    const restore = stubFetch(await buildZip({ 'README.txt': 'hello world' }));
     try {
       el.src = 'https://example.test/archive.zip';
       await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
-      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: { name: string; size: number }[] };
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+        items: { name: string; size: number }[];
+      };
       await waitUntil(() => list.items?.length === 1);
-      expect(list.items[0].size).to.equal(11);
-      expect(decompressCalls).to.equal(0);
-    } finally { restore(); }
-  });
-
-  it('falls back to decompressing an entry whose header omits the declared size', async () => {
-    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
-    const fakeLibrary = {
-      loadAsync: () => Promise.resolve({
-        forEach(cb: (path: string, file: { name: string; dir: boolean; async: (type: string) => Promise<Uint8Array>; _data?: { uncompressedSize?: number } }) => void) {
-          const handlers = new Map<string, (...args: unknown[]) => void>();
-          cb('README.txt', {
-            name: 'README.txt',
-            dir: false,
-            async: () => Promise.reject(new Error('must use the bounded stream path')),
-            internalStream: () => ({
-              on(type: string, handler: (...args: unknown[]) => void) {
-                handlers.set(type, handler);
-                return this;
-              },
-              resume() {
-                handlers.get('data')?.(new Uint8Array(11));
-                handlers.get('end')?.();
-              },
-            }),
-          } as never);
-        },
-      }),
-    };
-    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
-    const restore = stubFetch(new ArrayBuffer(0));
-    try {
-      el.src = 'https://example.test/archive.zip';
-      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
-      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: { name: string; size: number }[] };
-      await waitUntil(() => list.items?.length === 1 && list.items[0].size === 11);
-      expect(list.items[0].size).to.equal(11);
-    } finally { restore(); }
-  });
-
-  it('enforces the aggregate uncompressed ceiling when entry headers omit their sizes', async () => {
-    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
-    const oversizedLength = 60 * 1024 * 1024;
-    let eagerAllocations = 0;
-    const streamingFile = (name: string) => ({
-      name,
-      dir: false,
-      async: async () => {
-        eagerAllocations++;
-        throw new Error('the missing-metadata path must not eagerly allocate the complete entry');
-      },
-      internalStream: () => {
-        const handlers = new Map<string, (...args: unknown[]) => void>();
-        return {
-          on(type: string, handler: (...args: unknown[]) => void) {
-            handlers.set(type, handler);
-            return this;
-          },
-          resume() {
-            handlers.get('data')?.({ length: oversizedLength } as Uint8Array);
-            handlers.get('end')?.();
-          },
-        };
-      },
-    });
-    const fakeLibrary = {
-      loadAsync: () => Promise.resolve({
-        forEach(cb: (path: string, file: { name: string; dir: boolean; async: (type: string) => Promise<Uint8Array> }) => void) {
-          cb('one.bin', streamingFile('one.bin'));
-          cb('two.bin', streamingFile('two.bin'));
-        },
-      }),
-    };
-    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
-    const restore = stubFetch(new ArrayBuffer(0));
-    try {
-      let errors = 0;
-      el.addEventListener('lr-render-error', () => errors++);
-      el.src = 'https://example.test/archive.zip';
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('[part="error"]') !== null || el.shadowRoot!.querySelector('lr-virtual-list') !== null,
-      );
-      expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(1);
-      expect(errors).to.equal(1);
-      expect(eagerAllocations).to.equal(0);
+      expect(list.items[0]).to.deep.include({ name: 'README.txt', size: 11 });
+      expect(parserCalls).to.equal(0);
     } finally {
       restore();
     }
   });
 
-  it('fails closed when an entry with no declared size also has no measurable stream', async () => {
-    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
-    const fakeLibrary = {
-      loadAsync: () => Promise.resolve({
-        forEach(cb: (path: string, file: { name: string; dir: boolean; async: () => Promise<Uint8Array> }) => void) {
-          cb('mystery.bin', {
-            name: 'mystery.bin',
-            dir: false,
-            async: () => Promise.reject(new Error('the missing-metadata path must not eagerly decompress')),
-            // deliberately no `internalStream`: the size cannot be measured at all.
-          } as never);
-        },
-      }),
-    };
-    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
-    const restore = stubFetch(new ArrayBuffer(0));
-    try {
-      let errors = 0;
-      el.addEventListener('lr-render-error', () => errors++);
-      el.src = 'https://example.test/archive.zip';
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document is too large to preview.');
-      expect(errors).to.equal(1);
-    } finally {
-      restore();
-    }
-  });
-
-  it('aborts a fallback size measurement when the element disconnects before the stream’s first "data" event', async () => {
-    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
-    const handlers = new Map<string, (...args: unknown[]) => void>();
-    const fakeLibrary = {
-      loadAsync: () => Promise.resolve({
-        forEach(cb: (path: string, file: { name: string; dir: boolean; async: () => Promise<Uint8Array> }) => void) {
-          cb('big.bin', {
-            name: 'big.bin',
-            dir: false,
-            async: () => Promise.reject(new Error('must use the bounded stream path')),
-            internalStream: () => ({
-              on(type: string, handler: (...args: unknown[]) => void) {
-                handlers.set(type, handler);
-                return this;
-              },
-              resume() {
-                el.remove();
-                handlers.get('data')?.(new Uint8Array(5));
-                handlers.get('end')?.();
-              },
-            }),
-          } as never);
-        },
-      }),
-    };
-    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
-    const restore = stubFetch(new ArrayBuffer(0));
-    let errors = 0;
-    el.addEventListener('lr-render-error', () => errors++);
-    try {
-      el.src = 'https://example.test/archive.zip';
-      await aTimeout(30);
-      expect((el as unknown as { fetchState: { kind: string } }).fetchState.kind).to.equal('loading');
-      expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
-      expect(errors).to.equal(0);
-    } finally {
-      restore();
-    }
-  });
-
-  it('aborts a fallback size measurement when the element disconnects between "data" and "end"', async () => {
-    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
-    const handlers = new Map<string, (...args: unknown[]) => void>();
-    const fakeLibrary = {
-      loadAsync: () => Promise.resolve({
-        forEach(cb: (path: string, file: { name: string; dir: boolean; async: () => Promise<Uint8Array> }) => void) {
-          cb('big.bin', {
-            name: 'big.bin',
-            dir: false,
-            async: () => Promise.reject(new Error('must use the bounded stream path')),
-            internalStream: () => ({
-              on(type: string, handler: (...args: unknown[]) => void) {
-                handlers.set(type, handler);
-                return this;
-              },
-              resume() {
-                handlers.get('data')?.(new Uint8Array(5));
-                el.remove();
-                handlers.get('end')?.();
-              },
-            }),
-          } as never);
-        },
-      }),
-    };
-    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
-    const restore = stubFetch(new ArrayBuffer(0));
-    let errors = 0;
-    el.addEventListener('lr-render-error', () => errors++);
-    try {
-      el.src = 'https://example.test/archive.zip';
-      await aTimeout(30);
-      expect((el as unknown as { fetchState: { kind: string } }).fetchState.kind).to.equal('loading');
-      expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
-      expect(errors).to.equal(0);
-    } finally {
-      restore();
-    }
-  });
-
-  it('ignores a redundant stream error once the size ceiling has already failed the measurement', async () => {
-    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
-    const oversizedLength = 101 * 1024 * 1024;
-    let pauseCalls = 0;
-    const fakeLibrary = {
-      loadAsync: () => Promise.resolve({
-        forEach(cb: (path: string, file: { name: string; dir: boolean; async: () => Promise<Uint8Array> }) => void) {
-          const handlers = new Map<string, (...args: unknown[]) => void>();
-          cb('one.bin', {
-            name: 'one.bin',
-            dir: false,
-            async: () => Promise.reject(new Error('must not decompress eagerly')),
-            internalStream: () => ({
-              on(type: string, handler: (...args: unknown[]) => void) {
-                handlers.set(type, handler);
-                return this;
-              },
-              pause() { pauseCalls++; },
-              resume() {
-                handlers.get('data')?.({ length: oversizedLength } as Uint8Array);
-                handlers.get('error')?.(new Error('a redundant stream error'));
-                handlers.get('end')?.();
-              },
-            }),
-          } as never);
-        },
-      }),
-    };
-    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
-    const restore = stubFetch(new ArrayBuffer(0));
-    try {
-      let errors = 0;
-      el.addEventListener('lr-render-error', () => errors++);
-      el.src = 'https://example.test/archive.zip';
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document is too large to preview.');
-      expect(errors).to.equal(1);
-      expect(pauseCalls).to.equal(1);
-    } finally {
-      restore();
-    }
-  });
 
   it('reloads its source after reconnecting the same element instance', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
-    useLibrary(el, {
-      loadAsync: async () => ({ forEach: () => {} }),
-    } as unknown as ArchiveLibraryApi);
+    const buffer = await buildZip({});
     const original = window.fetch;
     let fetchCount = 0;
     window.fetch = (() => {
@@ -557,7 +336,7 @@ describe('lr-archive-viewer', () => {
       return Promise.resolve({
         ok: true,
         headers: { get: () => null },
-        arrayBuffer: async () => new ArrayBuffer(0),
+        arrayBuffer: async () => buffer.slice(0),
       } as unknown as Response);
     }) as typeof window.fetch;
     try {
@@ -566,135 +345,86 @@ describe('lr-archive-viewer', () => {
       const container = document.createElement('div');
       document.body.append(container);
       container.append(el);
-      await new Promise((resolve) => setTimeout(resolve, 30));
-      expect(fetchCount).to.equal(2);
+      await waitUntil(() => fetchCount === 2);
       container.remove();
     } finally {
       window.fetch = original;
     }
   });
 
-  it('invalidates a stale archive rejection before a synchronous reconnect', async () => {
+  it('invalidates a stale fetch rejection before a synchronous reconnect', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
-    const firstLoad = deferred<never>();
-    let loadCalls = 0;
-    useLibrary(el, {
-      loadAsync: () => {
-        loadCalls++;
-        return loadCalls === 1 ? firstLoad.promise : new Promise<never>(() => {});
-      },
-    } as unknown as ArchiveLibraryApi);
-    const restore = stubFetch(new ArrayBuffer(0));
+    const firstFetch = deferred<Response>();
+    const emptyZip = await buildZip({});
+    const original = window.fetch;
+    let fetchCalls = 0;
+    window.fetch = (() => {
+      fetchCalls++;
+      if (fetchCalls === 1) return firstFetch.promise;
+      return Promise.resolve({
+        ok: true,
+        headers: { get: () => null },
+        arrayBuffer: async () => emptyZip.slice(0),
+      } as unknown as Response);
+    }) as typeof window.fetch;
     const reconnectHost = document.createElement('div');
     document.body.append(reconnectHost);
     let errors = 0;
     el.addEventListener('lr-render-error', () => errors++);
     try {
       el.src = 'https://example.test/archive.zip';
-      await waitUntil(() => loadCalls === 1);
+      await waitUntil(() => fetchCalls === 1);
       el.remove();
-      firstLoad.reject(new Error('stale archive failure'));
+      firstFetch.reject(new Error('stale archive failure'));
       reconnectHost.append(el);
-      await aTimeout(30);
+      await waitUntil(() => fetchCalls === 2);
+      await waitUntil(() => el.shadowRoot!.querySelector('.empty-note')?.textContent === 'This archive is empty.');
       expect(errors).to.equal(0);
-      expect(loadCalls).to.equal(2);
     } finally {
       reconnectHost.remove();
-      restore();
+      window.fetch = original;
     }
   });
 
-  it('never accepts stale archive entries resolved before a synchronous reconnect', async () => {
+  it('never accepts stale archive bytes resolved before a synchronous reconnect', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
-    const assignedStates: string[] = [];
-    let prototype: object | null = el;
-    let stateDescriptor: PropertyDescriptor | undefined;
-    while (prototype && !stateDescriptor) {
-      stateDescriptor = Object.getOwnPropertyDescriptor(prototype, 'fetchState');
-      prototype = Object.getPrototypeOf(prototype) as object | null;
-    }
-    if (!stateDescriptor?.get || !stateDescriptor.set) {
-      throw new Error('fetchState reactive accessor not found');
-    }
-    Object.defineProperty(el, 'fetchState', {
-      configurable: true,
-      get: () => stateDescriptor!.get!.call(el),
-      set: (value: { kind: string }) => {
-        assignedStates.push(value.kind);
-        stateDescriptor!.set!.call(el, value);
-      },
-    });
-    const firstLoad = deferred<{
-      forEach(callback: (path: string, file: {
-        name: string;
-        dir: boolean;
-        _data: { uncompressedSize: number };
-      }) => void): void;
-    }>();
-    let loadCalls = 0;
-    useLibrary(el, {
-      loadAsync: () => {
-        loadCalls++;
-        return loadCalls === 1 ? firstLoad.promise : new Promise<never>(() => {});
-      },
-    } as unknown as ArchiveLibraryApi);
-    const restore = stubFetch(new ArrayBuffer(0));
+    const firstBytes = deferred<ArrayBuffer>();
+    const staleZip = await buildZip({ 'stale/old.txt': 'old' });
+    const freshZip = await buildZip({ 'fresh/new.txt': 'new' });
+    const original = window.fetch;
+    let fetchCalls = 0;
+    window.fetch = (() => {
+      fetchCalls++;
+      return Promise.resolve({
+        ok: true,
+        headers: { get: () => null },
+        arrayBuffer: () => fetchCalls === 1 ? firstBytes.promise : Promise.resolve(freshZip.slice(0)),
+      } as unknown as Response);
+    }) as typeof window.fetch;
     const reconnectHost = document.createElement('div');
     document.body.append(reconnectHost);
     try {
       el.src = 'https://example.test/archive.zip';
-      await waitUntil(() => loadCalls === 1);
+      await waitUntil(() => fetchCalls === 1);
       el.remove();
-      firstLoad.resolve({
-        forEach(callback) {
-          callback('stale/old.txt', {
-            name: 'stale/old.txt',
-            dir: false,
-            _data: { uncompressedSize: 1 },
-          });
-        },
-      });
+      firstBytes.resolve(staleZip);
       reconnectHost.append(el);
-      await aTimeout(30);
-      expect(assignedStates.includes('loaded')).to.equal(false);
-      expect(loadCalls).to.equal(2);
+      await waitUntil(() => fetchCalls === 2);
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+        items: { name: string }[];
+      };
+      await waitUntil(() => list.items?.some((entry) => entry.name === 'fresh/new.txt'));
+      expect(list.items.some((entry) => entry.name === 'stale/old.txt')).to.equal(false);
     } finally {
       reconnectHost.remove();
-      restore();
-    }
-  });
-
-  it('emits lr-render-error when the optional archive peer is unavailable', async () => {
-    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
-    useLibrary(el, null);
-    const restore = stubFetch(new ArrayBuffer(0));
-    try {
-      let errors = 0;
-      el.addEventListener('lr-render-error', () => errors++);
-      el.src = 'https://example.test/archive.zip';
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
-      expect(errors).to.equal(1);
-    } finally {
-      restore();
+      window.fetch = original;
     }
   });
 
   it('formats entry sizes with the effective locale', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer locale="ar-EG"></lr-archive-viewer>`);
-    const fakeLibrary = {
-      loadAsync: () => Promise.resolve({
-        forEach(cb: (path: string, file: { name: string; dir: boolean; async: (type: string) => Promise<Uint8Array>; _data?: { uncompressedSize?: number } }) => void) {
-          cb('README.txt', {
-            name: 'README.txt',
-            dir: false,
-            _data: { uncompressedSize: 11 },
-            async: async () => new Uint8Array(11),
-          });
-        },
-      }),
-    };
-    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
-    const restore = stubFetch(new ArrayBuffer(0));
+    const restore = stubFetch(await buildZip({ 'README.txt': 'hello world' }));
     try {
       el.src = 'https://example.test/archive.zip';
       await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part~="entry-size"]') != null);
@@ -705,7 +435,7 @@ describe('lr-archive-viewer', () => {
     }
   });
 
-  it('names the listing region from `name`, forwards a host aria-label, and omits the role when neither is set', async () => {
+  it('names one listing owner from `name` or explicit empty while leaving a non-empty host name on the host', async () => {
     const unnamed = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
     const base = unnamed.shadowRoot!.querySelector('[part="base"]')!;
     expect(base.getAttribute('role')).to.be.null;
@@ -718,8 +448,9 @@ describe('lr-archive-viewer', () => {
 
     const hostLabeled = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer aria-label="Backup contents"></lr-archive-viewer>`);
     const hostLabeledBase = hostLabeled.shadowRoot!.querySelector('[part="base"]')!;
-    expect(hostLabeledBase.getAttribute('role')).to.equal('region');
-    expect(hostLabeledBase.getAttribute('aria-label')).to.equal('Backup contents');
+    expect(hostLabeledBase.getAttribute('role')).to.be.null;
+    expect(hostLabeledBase.getAttribute('aria-label')).to.be.null;
+    expect(hostLabeled.getAttribute('aria-label')).to.equal('Backup contents');
 
     const emptyHostLabel = await fixture<LyraArchiveViewer>(
       html`<lr-archive-viewer name="backup.zip" aria-label=""></lr-archive-viewer>`,
@@ -748,7 +479,7 @@ describe('lr-archive-viewer anchor contract across virtualization', () => {
     (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
     (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
     try {
-      list.rowHeight = '40';
+      list.rowHeight = 40;
       await list.updateComplete;
       expect(list.shadowRoot!.textContent).to.not.include(names[targetIndex]);
       expect(await el.scrollToAnchor({ kind: 'fragment', id: names[targetIndex]! })).to.be.true;
@@ -769,7 +500,7 @@ describe('lr-archive-viewer anchor contract across virtualization', () => {
     (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
     (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
     try {
-      list.rowHeight = '40';
+      list.rowHeight = 40;
       await list.updateComplete;
       expect(list.shadowRoot!.textContent).to.not.include(names[targetIndex]);
       expect(await el.scrollToAnchor({
@@ -795,7 +526,7 @@ describe('lr-archive-viewer anchor contract across virtualization', () => {
     const dangerousNames = ['baseURI', 'body', 'title', 'documentElement'];
     const { list, restore } = await listingWithEntries(dangerousNames);
     try {
-      list.rowHeight = '40';
+      list.rowHeight = 40;
       await list.updateComplete;
       const nameEls = Array.from(list.shadowRoot!.querySelectorAll<HTMLElement>('[part~="entry-name"]'));
       expect(nameEls).to.have.length.greaterThan(0);
@@ -814,7 +545,7 @@ describe('lr-archive-viewer anchor contract across virtualization', () => {
     (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 0;
     (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 0;
     try {
-      list.rowHeight = '40';
+      list.rowHeight = 40;
       await list.updateComplete;
 
       // applyAnchor() suspends on `this.updateComplete` after the row is confirmed mounted and
@@ -862,7 +593,7 @@ describe('lr-archive-viewer anchor contract across virtualization', () => {
     (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
     (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
     try {
-      list.rowHeight = '40';
+      list.rowHeight = 40;
       await list.updateComplete;
       expect(list.shadowRoot!.textContent).to.not.include(names[targetIndex]);
       // Simulates an element adopted into a document with no browsing context (e.g.
@@ -897,19 +628,9 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
     return value;
   }
 
-  const listingLibrary = {
-    loadAsync: () => Promise.resolve({
-      forEach(cb: (path: string, file: { name: string; dir: boolean; async: (type: string) => Promise<Uint8Array>; _data?: { uncompressedSize?: number } }) => void) {
-        cb('src/', { name: 'src/', dir: true, _data: { uncompressedSize: 0 }, async: () => Promise.resolve(new Uint8Array(0)) });
-        cb('README.txt', { name: 'README.txt', dir: false, _data: { uncompressedSize: 11 }, async: () => Promise.resolve(new Uint8Array(11)) });
-      },
-    }),
-  };
-
   async function listing(className = ''): Promise<{ el: LyraArchiveViewer; vlistRoot: ShadowRoot; restore: () => void }> {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer class=${className} name="backup.zip"></lr-archive-viewer>`);
-    useLibrary(el, listingLibrary as unknown as ArchiveLibraryApi);
-    const restore = stubFetch(new ArrayBuffer(0));
+    const restore = stubFetch(await buildZip({ 'src/': '', 'README.txt': 'hello world' }, false));
     el.src = 'https://example.test/archive.zip';
     await waitUntil(
       () => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part~="entry"]') != null,
@@ -1193,13 +914,14 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
       cleanupCalls++;
       originalCleanup!();
     };
-    useLibrary(el, { loadAsync: () => Promise.resolve({ forEach: () => {} }) } as unknown as ArchiveLibraryApi);
+    restore();
+    const restoreEmpty = stubFetch(await buildZip({}));
     try {
       el.src = 'https://example.test/empty.zip';
       await waitUntil(() => el.shadowRoot!.querySelector('.empty-note') !== null);
       expect(cleanupCalls).to.equal(1);
     } finally {
-      restore();
+      restoreEmpty();
     }
   });
 

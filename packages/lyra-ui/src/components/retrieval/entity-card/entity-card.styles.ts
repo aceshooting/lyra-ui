@@ -64,4 +64,14 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
   }
+  @media (forced-colors: active) {
+    /* Caller category colors remain an accent in ordinary themes. In forced colors the system
+       palette is the authority for every text/background/border channel, including values that
+       arrived as inline custom properties on the nested badge. */
+    [part='type-badge'] {
+      --lr-badge-color: var(--lr-color-text) !important;
+      --lr-badge-background: var(--lr-color-surface) !important;
+      --lr-badge-border: var(--lr-color-border-strong) !important;
+    }
+  }
 `;

@@ -91,12 +91,6 @@ export const styles = css`
     text-align: center;
   }
 
-  [part='spinner'] {
-    display: flex;
-    justify-content: center;
-    padding: var(--lr-space-l);
-  }
-
   [part='highlight-actions'] {
     display: flex;
     flex-wrap: wrap;

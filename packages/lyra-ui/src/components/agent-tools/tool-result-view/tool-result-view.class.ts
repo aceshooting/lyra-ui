@@ -6,6 +6,7 @@ import {
   findToolRenderer,
   getDefaultToolRendererRegistry,
   loadToolRenderer,
+  type DirectToolRendererDefinition,
   type ToolRendererDefinition,
   type ToolRendererRegistry,
   type ToolRenderContext,
@@ -28,6 +29,9 @@ type RenderState =
   | { kind: 'fallback' };
 
 const FALLBACK_STATE: RenderState = { kind: 'fallback' };
+
+/** The two supported built-in fallback presentations. Invalid runtime values normalize to `json`. */
+export type ToolResultFallback = 'json' | 'text';
 
 export interface LyraToolResultViewEventMap {
   'lr-render-error': CustomEvent<{ toolName: string; error: unknown }>;
@@ -85,6 +89,10 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
+  static override properties = {
+    fallback: { reflect: true, noAccessor: true },
+  };
+
   /** Custom registry to dispatch against instead of the module-level default one (see `registry.ts`). */
   @property({ attribute: false }) registry?: ToolRendererRegistry;
 
@@ -97,8 +105,17 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   /** The tool call's original arguments, if available — handed to the matched renderer's `render()` alongside `result`. */
   @property({ attribute: false }) args: unknown;
 
+  private _fallback: ToolResultFallback = 'json';
+
   /** Fallback-kind selector — see the class doc's `fallback` paragraph for the full "json" vs "text" behavior. */
-  @property({ reflect: true }) fallback = 'json';
+  get fallback(): ToolResultFallback {
+    return this._fallback;
+  }
+  set fallback(next: ToolResultFallback) {
+    const old = this._fallback;
+    this._fallback = next === 'text' ? 'text' : 'json';
+    this.requestUpdate('fallback', old);
+  }
 
   /** Shows a copy-to-clipboard affordance alongside the fallback view (both `"json"` and `"text"` kinds) — forwarded to `<lr-json-viewer>`'s own `copyable`, or renders a `<lr-copy-button>` next to the text fallback. */
   @property({ type: Boolean, reflect: true }) copyable = false;
@@ -126,7 +143,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   // mutating without dispatch actually landing on a different definition)
   // can reuse the already-loaded module instead of flashing the loading
   // skeleton again for a load() that's already resolved and cached.
-  private resolvedLazy?: { def: ToolRendererDefinition; resolved: ToolRendererDefinition };
+  private resolvedLazy?: { def: ToolRendererDefinition; resolved: DirectToolRendererDefinition };
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -165,7 +182,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
       }
 
       this.renderState = { kind: 'loading' };
-      let resolved: ToolRendererDefinition;
+      let resolved: DirectToolRendererDefinition;
       try {
         resolved = await loadToolRenderer(def);
       } catch (error) {
@@ -182,11 +199,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
     this.renderWith(def);
   }
 
-  private renderWith(def: ToolRendererDefinition): void {
-    if (!def.render) {
-      this.fail(new Error(`<lr-tool-result-view>: renderer for tool "${this.toolName}" has no render()`));
-      return;
-    }
+  private renderWith(def: DirectToolRendererDefinition): void {
     // Captured up front so a `reportStatus()` call arriving asynchronously (e.g. from a promise
     // the renderer's own render() kicked off) after a *newer* resolve() has already started can
     // detect it's stale and skip writing over a more recent status -- mirrors the same
@@ -219,7 +232,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
         ${state.kind === 'loading'
           ? html`
               <span class="sr-only">${this.localize('loading')}</span>
-              <lr-skeleton variant="rect" height="4rem" .announce=${false}></lr-skeleton>
+              <lr-skeleton shape="rect" height="4rem" .announce=${false}></lr-skeleton>
             `
           : state.kind === 'rendered'
             ? state.template

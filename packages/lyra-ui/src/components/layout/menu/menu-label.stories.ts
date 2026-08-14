@@ -4,7 +4,11 @@ import './menu-label.js';
 import './menu.js';
 import './menu-item.js';
 
-const meta: Meta = { title: 'Layout/Menu label', component: 'lr-menu-label', tags: ['autodocs'] };
+const meta: Meta = {
+  title: 'Layout/Menu label',
+  component: 'lr-menu-label',
+  tags: ['autodocs'],
+};
 export default meta;
 
 export const Default: StoryObj = {

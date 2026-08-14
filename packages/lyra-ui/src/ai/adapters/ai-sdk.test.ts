@@ -85,13 +85,13 @@ it('maps dynamic and named tool parts across pending, running, success, and erro
   });
   expect(message.parts?.[1]).to.deep.nested.include({
     type: 'tool-call',
-    state: 'error',
+    state: 'complete',
     'invocation.status': 'error',
     'invocation.error': 'Search failed',
   });
   expect(message.parts?.[2]).to.deep.include({
     type: 'tool-result',
-    state: 'error',
+    state: 'complete',
     invocationId: 'call-error',
     name: 'search',
     error: 'Search failed',
@@ -196,8 +196,8 @@ it('drops unknown parts and applies safe fallbacks without disturbing valid neig
   });
 
   expect(message.role).to.equal('user');
-  expect(message.parts).to.have.lengthOf(3);
-  expect(message.parts?.map((part) => part.type)).to.deep.equal(['tool-call', 'attachment', 'text']);
+  expect(message.parts).to.have.lengthOf(4);
+  expect(message.parts?.map((part) => part.type)).to.deep.equal(['tool-call', 'attachment', 'text', 'error']);
   expect(message.parts?.[0]).to.deep.nested.include({
     'invocation.id': 'message-mixed:tool:3',
     'invocation.name': 'tool',
@@ -209,6 +209,73 @@ it('drops unknown parts and applies safe fallbacks without disturbing valid neig
   expect(message.parts?.[2]).to.deep.include({
     id: 'valid-text',
     text: 'Kept',
-    state: 'error',
+    state: 'complete',
   });
+  expect(message.parts?.[3]).to.deep.include({
+    id: 'valid-text:error',
+    type: 'error',
+    code: 'provider_part_error',
+  });
+});
+
+it('fails closed for malformed provider messages without throwing', () => {
+  for (const value of [null, undefined, [], 'message', { id: 42, role: 'assistant' }, { id: 'x', role: 'user', parts: {} }]) {
+    expect(() => adaptAiSdkMessage(value as never)).not.to.throw();
+    expect(adaptAiSdkMessage(value as never)).to.equal(null);
+  }
+});
+
+it('recursively snapshots metadata, tool inputs, outputs, citations, and data', () => {
+  const metadata = { nested: { model: 'original' } };
+  const input = { nested: { query: 'original' } };
+  const output = { nested: { hits: 1 } };
+  const data = { nested: { value: 1 } };
+  const source = { nested: { rank: 1 } };
+  const message = adaptAiSdkMessage({
+    id: 'immutable',
+    role: 'assistant',
+    metadata,
+    parts: [
+      { type: 'tool-search', toolCallId: 'call', state: 'output-available', input, output },
+      { type: 'source-document', id: 'source', title: 'Source', metadata: source },
+      { type: 'data-chart', data },
+    ],
+  });
+  metadata.nested.model = 'mutated';
+  input.nested.query = 'mutated';
+  output.nested.hits = 2;
+  data.nested.value = 2;
+  source.nested.rank = 2;
+
+  expect(message?.metadata).to.deep.equal({ nested: { model: 'original' } });
+  expect(message?.parts?.[0]).to.deep.nested.include({ 'invocation.args.nested.query': 'original' });
+  expect(message?.parts?.[1]).to.deep.nested.include({ 'result.nested.hits': 1 });
+  expect(message?.parts?.[2]).to.deep.nested.include({ 'citation.metadata.metadata.nested.rank': 1 });
+  expect(message?.parts?.[3]).to.deep.nested.include({ 'data.nested.value': 1 });
+});
+
+it('rejects non-serializable nested provider values rather than retaining aliases', () => {
+  const cyclic: Record<string, unknown> = {};
+  cyclic['self'] = cyclic;
+  const values = [
+    { id: 'function', role: 'assistant', metadata: { callback: () => undefined } },
+    { id: 'cycle', role: 'assistant', metadata: cyclic },
+  ];
+  for (const value of values) expect(adaptAiSdkMessage(value as never)).to.equal(null);
+});
+
+it('represents tool failures through domain error fields without a generic error stream state', () => {
+  const message = adaptAiSdkMessage({
+    id: 'tool-error',
+    role: 'assistant',
+    parts: [{
+      type: 'tool-search',
+      toolCallId: 'call-error',
+      state: 'output-error',
+      input: {},
+      errorText: 'failed',
+    }],
+  });
+  expect(message?.parts?.map((part) => part.state)).to.deep.equal(['complete', 'complete']);
+  expect(message?.parts?.[1]).to.deep.include({ type: 'tool-result', error: 'failed' });
 });

@@ -418,6 +418,105 @@ it('keeps a rendered bar tabbable when activeSpanId names a raw span filtered ou
   expect(el.shadowRoot!.querySelector('[part="bar"][tabindex="0"]')!.getAttribute('data-id')).to.equal('valid');
 });
 
+it('deduplicates provider ids first-wins and bounds the shared projection with a visible notice', async () => {
+  const duplicate = await fixture<LyraSpanWaterfall>(html`
+    <lr-span-waterfall
+      .spans=${[
+        { id: 'same', name: 'first', kind: 'tool', status: 'success', startMs: 0, endMs: 1 },
+        { id: 'same', name: 'second', kind: 'tool', status: 'error', startMs: 1, endMs: 2 },
+      ]}
+    ></lr-span-waterfall>
+  `);
+  expect(duplicate.shadowRoot!.querySelectorAll('[data-id="same"]')).to.have.length(1);
+  expect(duplicate.shadowRoot!.querySelector('[part="name"]')!.textContent).to.equal('first');
+  expect(duplicate.shadowRoot!.querySelectorAll('[part="bar"][tabindex="0"]')).to.have.length(1);
+
+  const spans = Array.from({ length: 501 }, (_, index) => ({
+    id: `span-${index}`,
+    name: `Span ${index}`,
+    kind: 'tool' as const,
+    status: 'success' as const,
+    startMs: index,
+    endMs: index + 1,
+  }));
+  const bounded = await fixture<LyraSpanWaterfall>(html`
+    <lr-span-waterfall
+      .spans=${spans}
+      .strings=${{ spanProjectionLimit: 'Showing at most {count} spans' }}
+    ></lr-span-waterfall>
+  `);
+  expect(bounded.shadowRoot!.querySelectorAll('[part="row"]')).to.have.length(500);
+  expect(bounded.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('Showing at most 500 spans');
+});
+
+it('reserves an active span beyond the shared 500-row projection boundary', async () => {
+  const spans: LyraSpan[] = Array.from({ length: 501 }, (_, index) => ({
+    id: `span-${index}`,
+    name: `Span ${index}`,
+    kind: 'tool',
+    status: 'success',
+    startMs: index,
+    endMs: index + 1,
+  }));
+  const el = await fixture<LyraSpanWaterfall>(html`
+    <lr-span-waterfall .spans=${spans} .activeSpanId=${'span-500'}></lr-span-waterfall>
+  `);
+
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]')).to.have.length(500);
+  expect(el.shadowRoot!.querySelector('[data-id="span-500"]')?.getAttribute('aria-current')).to.equal('true');
+});
+
+it('keeps wholly out-of-window bars hidden and moves the roving stop to a visible bar', async () => {
+  const el = await fixture<LyraSpanWaterfall>(html`
+    <lr-span-waterfall
+      view-start-ms="0"
+      view-end-ms="50"
+      .spans=${[
+        { id: 'outside', name: 'Outside', kind: 'tool', status: 'success', startMs: 100, endMs: 110 },
+        { id: 'inside', name: 'Inside', kind: 'tool', status: 'success', startMs: 10, endMs: 20 },
+      ]}
+    ></lr-span-waterfall>
+  `);
+  const outside = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-id="outside"]')!;
+  const inside = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-id="inside"]')!;
+  expect(outside.hidden).to.be.true;
+  expect(outside.tabIndex).to.equal(-1);
+  expect(getComputedStyle(outside).display).to.equal('none');
+  expect(inside.hidden).to.be.false;
+  expect(inside.tabIndex).to.equal(0);
+});
+
+it('renders a bounded finite axis at extreme finite public bounds', async () => {
+  const el = await fixture<LyraSpanWaterfall>(html`
+    <lr-span-waterfall
+      .viewStartMs=${Number.MAX_VALUE}
+      .viewEndMs=${Number.MAX_VALUE}
+      .spans=${[{ id: 'edge', name: 'Edge', kind: 'tool', status: 'success', startMs: Number.MAX_VALUE }]}
+    ></lr-span-waterfall>
+  `);
+  const ticks = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="tick"]')];
+  expect(ticks.length).to.be.at.most(8);
+  expect(ticks.every((tick) => !tick.getAttribute('style')!.includes('Infinity'))).to.be.true;
+});
+
+it('aligns the ruler and bar track in wide, narrow, LTR, and RTL allocations', async () => {
+  for (const [width, dir] of [[640, 'ltr'], [320, 'ltr'], [640, 'rtl'], [320, 'rtl']] as const) {
+    const container = document.createElement('div');
+    container.style.inlineSize = `${width}px`;
+    container.dir = dir;
+    const el = await fixture<LyraSpanWaterfall>(html`
+      <lr-span-waterfall
+        .spans=${[{ id: `${width}-${dir}`, name: 'Span', kind: 'tool', status: 'success', startMs: 0, endMs: 10 }]}
+      ></lr-span-waterfall>
+    `, { parentNode: container });
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const axis = el.shadowRoot!.querySelector<HTMLElement>('[part="axis"]')!.getBoundingClientRect();
+    const track = el.shadowRoot!.querySelector<HTMLElement>('[part="bar-track"]')!.getBoundingClientRect();
+    const delta = dir === 'rtl' ? Math.abs(axis.right - track.right) : Math.abs(axis.left - track.left);
+    expect(delta, `${width}px ${dir}`).to.be.lessThan(1);
+  }
+});
+
 it('formats durations with the effective locale', async () => {
   const el = (await fixture(html`
     <lr-span-waterfall

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './known-date.js';
+import { LyraKnownDate } from './known-date.js';
 
 const meta: Meta = {
   title: 'Forms/KnownDate',
@@ -31,6 +31,34 @@ export const AppearancesAndPill: Story = {
 
 export const RequiredWithValidation: Story = {
   render: () => html` <lr-known-date label="Birth date" hint="For example, 27 3 2007" required></lr-known-date> `,
+};
+
+export const StaticValidators: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The mirrored constructor exposes a fresh callable `validators` catalog for tooling that projects the control\'s live intrinsic and custom validity.',
+      },
+    },
+  },
+  render: () => {
+    const validate = (event: Event) => {
+      const wrapper = (event.currentTarget as HTMLElement).parentElement!;
+      const control = wrapper.querySelector<LyraKnownDate>('lr-known-date')!;
+      const result = LyraKnownDate.validators[0]!.checkValidity(control);
+      wrapper.querySelector('output')!.textContent = result.isValid
+        ? 'Valid date'
+        : `${result.invalidKeys.join(', ')}: ${result.message}`;
+    };
+    return html`
+      <div style="display: grid; gap: var(--lr-space-s); justify-items: start;">
+        <lr-known-date required label="Birth date"></lr-known-date>
+        <button type="button" @click=${validate}>Run static validator</button>
+        <output aria-live="polite"></output>
+      </div>
+    `;
+  },
 };
 
 export const PassportDateRange: Story = {

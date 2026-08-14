@@ -239,6 +239,43 @@ describe('lr-radio-button hover and press feedback', () => {
     });
   }
 
+  it('keeps group-disabled plain and button radios visually inert at rest, hover, and press', async () => {
+    const group = await fixture(html`
+      <lr-radio-group disabled orientation="horizontal">
+        <lr-radio value="plain" style="--lr-transition-fast: 0s">Plain</lr-radio>
+        <lr-radio-button value="button" style="--lr-transition-fast: 0s">Button</lr-radio-button>
+        <lr-radio appearance="button" value="appearance" style="--lr-transition-fast: 0s">
+          Appearance
+        </lr-radio>
+      </lr-radio-group>
+    `);
+    const radios = [...group.querySelectorAll('lr-radio, lr-radio-button')];
+    await Promise.all(radios.map((radio) => (radio as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete));
+
+    for (const radio of radios) {
+      const base = radio.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+      const painted = radio.localName === 'lr-radio' && !(radio as HTMLElement).hasAttribute('appearance')
+        ? radio.shadowRoot!.querySelector<HTMLElement>('[part~="circle"]')!
+        : base;
+      const restingBackground = getComputedStyle(painted).backgroundColor;
+      const restingBorder = getComputedStyle(painted).borderTopColor;
+      expect(base.getAttribute('part')!.split(/\s+/), `${radio.localName} effective part state`).to.include('disabled');
+      expect(getComputedStyle(base).cursor, `${radio.localName} cursor`).to.equal('not-allowed');
+      expect(getComputedStyle(base).opacity, `${radio.localName} opacity`).to.equal('0.5');
+      try {
+        await sendMouse({ type: 'move', position: centerOf(base) });
+        expect(getComputedStyle(painted).backgroundColor, `${radio.localName} hover background`).to.equal(restingBackground);
+        expect(getComputedStyle(painted).borderTopColor, `${radio.localName} hover border`).to.equal(restingBorder);
+        await sendMouse({ type: 'down' });
+        expect(getComputedStyle(painted).backgroundColor, `${radio.localName} active background`).to.equal(restingBackground);
+        expect(getComputedStyle(painted).borderTopColor, `${radio.localName} active border`).to.equal(restingBorder);
+      } finally {
+        await sendMouse({ type: 'up' });
+        await resetMouse();
+      }
+    }
+  });
+
   // A disabled segment renders through a plain <span role="radio"> that can never match
   // :disabled, so the hover/active tint rules need an explicit :host(:not(:disabled)) guard --
   // without it a disabled segment still visibly tints under the pointer even though it can't
@@ -317,6 +354,90 @@ describe('lr-radio-button hover and press feedback', () => {
     } finally {
       await sendMouse({ type: 'up' });
       await resetMouse();
+    }
+  });
+});
+
+describe('lr-radio-button contiguous run geometry', () => {
+  const settle = async (group: Element): Promise<void> => {
+    await (group as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    await Promise.all(
+      [...group.querySelectorAll('lr-radio, lr-radio-button')].map(
+        (radio) => (radio as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete,
+      ),
+    );
+  };
+  const base = (radio: Element): HTMLElement => radio.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  const radii = (radio: Element): number[] => {
+    const style = getComputedStyle(base(radio));
+    return [
+      style.borderStartStartRadius,
+      style.borderStartEndRadius,
+      style.borderEndStartRadius,
+      style.borderEndEndRadius,
+    ].map(Number.parseFloat);
+  };
+
+  it('keeps separated, mixed, vertical, and wrapped buttons fully rounded', async () => {
+    for (const markup of [
+      html`<lr-radio-group orientation="horizontal">
+        <lr-radio-button>A</lr-radio-button><lr-radio-button>B</lr-radio-button>
+      </lr-radio-group>`,
+      html`<lr-radio-group orientation="horizontal" style="--lr-radio-group-row-gap: 0">
+        <lr-radio-button>A</lr-radio-button><lr-radio>Plain</lr-radio><lr-radio-button>B</lr-radio-button>
+      </lr-radio-group>`,
+      html`<lr-radio-group style="--lr-radio-group-row-gap: 0">
+        <lr-radio-button>A</lr-radio-button><lr-radio-button>B</lr-radio-button>
+      </lr-radio-group>`,
+      html`<lr-radio-group orientation="horizontal" style="--lr-radio-group-row-gap: 0; inline-size: 4rem">
+        <lr-radio-button>Alpha</lr-radio-button><lr-radio-button>Beta</lr-radio-button>
+      </lr-radio-group>`,
+    ]) {
+      const group = await fixture(markup);
+      await settle(group);
+      for (const radio of group.querySelectorAll('lr-radio-button')) {
+        expect(radii(radio).every((radius) => radius > 0), group.outerHTML).to.equal(true);
+        expect(Number.parseFloat(getComputedStyle(base(radio)).marginInlineStart) || 0).to.equal(0);
+      }
+    }
+  });
+
+  it('collapses only an actually adjacent horizontal run and reconciles live order in LTR and RTL', async () => {
+    for (const direction of ['ltr', 'rtl'] as const) {
+      const group = await fixture(html`
+        <lr-radio-group dir=${direction} orientation="horizontal" style="--lr-radio-group-row-gap: 0">
+          <lr-radio-button id="a">A</lr-radio-button>
+          <lr-radio-button id="b">B</lr-radio-button>
+          <lr-radio-button id="c">C</lr-radio-button>
+        </lr-radio-group>
+      `);
+      await settle(group);
+      const [a, b, c] = [...group.querySelectorAll('lr-radio-button')];
+      const aRadii = radii(a!);
+      expect(aRadii[0]).to.be.greaterThan(0);
+      expect(aRadii[1]).to.equal(0);
+      expect(aRadii[2]).to.be.greaterThan(0);
+      expect(aRadii[3]).to.equal(0);
+      expect(radii(b!)).to.deep.equal([0, 0, 0, 0]);
+      const cRadii = radii(c!);
+      expect(cRadii[0]).to.equal(0);
+      expect(cRadii[1]).to.be.greaterThan(0);
+      expect(cRadii[2]).to.equal(0);
+      expect(cRadii[3]).to.be.greaterThan(0);
+      expect(Number.parseFloat(getComputedStyle(base(b!)).marginInlineStart)).to.be.below(0);
+
+      b!.remove();
+      group.append(b!);
+      await settle(group);
+      expect(radii(c!)).to.deep.equal([0, 0, 0, 0]);
+      expect(radii(b!)[1]).to.be.greaterThan(0);
+      c!.remove();
+      await settle(group);
+      expect(radii(a!)[0]).to.be.greaterThan(0);
+      expect(radii(a!)[1]).to.equal(0);
+      expect(radii(b!)[0]).to.equal(0);
+      expect(radii(b!)[1]).to.be.greaterThan(0);
     }
   });
 });

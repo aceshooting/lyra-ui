@@ -23,7 +23,7 @@ import {
 } from '../../../internal/focus-navigation.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chatViewportLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_newMessageCount, LYRA_DEFAULT_newMessages, LYRA_DEFAULT_newMessagesCount, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chatViewportLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_newMessageCount, LYRA_DEFAULT_newMessages, LYRA_DEFAULT_newMessagesCount, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -105,10 +105,14 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
     jumpToLatest: LYRA_DEFAULT_jumpToLatest,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     newMessageCount: LYRA_DEFAULT_newMessageCount,
     newMessages: LYRA_DEFAULT_newMessages,
     newMessagesCount: LYRA_DEFAULT_newMessagesCount,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -143,6 +147,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   @query('[part="scroll"]') private scrollEl?: HTMLElement;
   @query('[part="content"]') private contentEl?: HTMLElement;
+  @query('[part="content"] > slot') private contentSlot?: HTMLSlotElement;
 
   private pendingUserIntent = false;
   /** Owner-bound in-flight proactive expiry scheduled by `markUserIntent()` -- see that method and
@@ -166,9 +171,29 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
    *  still-pending deferred initial-measurement microtask from a now-stale arm. */
   private armGeneration = 0;
   private followFocusRepair: ComposedFocusRepairSnapshot | null = null;
+  private readonly knownProjectedNodes = new WeakSet<Node>();
+  private unreadBoundaryEl?: HTMLElement;
+
+  private get messageElements(): HTMLElement[] {
+    let elements = this.contentSlot?.assignedElements({ flatten: true }) ?? Array.from(this.children);
+    // A composing shadow host can forward its own named slot as this
+    // viewport's default content (agent-workspace does this). Native
+    // `flatten:true` does not expand a slot that is itself an assigned node,
+    // so expand those forwarding slots explicitly with a small depth cap.
+    for (let depth = 0; depth < 4 && elements.some((element) => element.localName === 'slot'); depth++) {
+      elements = elements.flatMap((element) =>
+        element.localName === 'slot'
+          ? (element as HTMLSlotElement).assignedElements({ flatten: true })
+          : [element],
+      );
+    }
+    return elements.filter(
+      (element) => !element.hasAttribute('data-lr-chat-viewport-unread-boundary'),
+    ) as HTMLElement[];
+  }
 
   private get virtualListEl(): LyraVirtualList | null {
-    const children = Array.from(this.children);
+    const children = this.messageElements;
     return children.length === 1 && children[0] instanceof LyraVirtualList
       ? (children[0] as LyraVirtualList)
       : null;
@@ -206,6 +231,8 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.clearUserIntent();
     this.scrollbarDragActive = false;
     this.followFocusRepair = null;
+    this.unreadBoundaryEl?.remove();
+    this.unreadBoundaryEl = undefined;
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -318,7 +345,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   private get totalCount(): number {
     const list = this.virtualListEl;
-    return list ? list.items.length : this.children.length;
+    return list ? list.items.length : this.messageElements.length;
   }
 
   private get unreadCount(): number {
@@ -339,15 +366,18 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     const unreadStartIndex = this.effectiveUnreadStartIndex;
     if (this.virtualListEl || unreadStartIndex == null) {
       this.unreadDividerTop = null;
+      this.syncSemanticUnreadBoundary();
       return;
     }
     const content = this.contentEl;
-    const children = Array.from(this.children) as HTMLElement[];
+    const children = this.messageElements;
     const target = children[unreadStartIndex];
     if (!target || !content) {
       this.unreadDividerTop = null;
+      this.syncSemanticUnreadBoundary();
       return;
     }
+    this.syncSemanticUnreadBoundary(target);
     // `offsetTop`/`offsetParent` don't cross the shadow boundary the way this needs: a slotted
     // (light-DOM) row's offsetParent search only walks its light-DOM ancestors, which stops at
     // this host element itself -- it never reaches the shadow-side [part="content"] this divider
@@ -356,6 +386,26 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     // rects move together by the same amount when the scroll container scrolls, is unaffected by
     // the current scroll position.
     this.unreadDividerTop = target.getBoundingClientRect().top - content.getBoundingClientRect().top;
+  }
+
+  private syncSemanticUnreadBoundary(target?: HTMLElement): void {
+    if (!target || this.virtualListEl) {
+      this.unreadBoundaryEl?.remove();
+      this.unreadBoundaryEl = undefined;
+      return;
+    }
+    const parent = target.parentNode;
+    if (!parent) return;
+    const boundary = this.unreadBoundaryEl ?? this.ownerDocument.createElement('div');
+    boundary.setAttribute('data-lr-chat-viewport-unread-boundary', '');
+    boundary.setAttribute('role', 'separator');
+    boundary.setAttribute('aria-label', this.localize('newMessages'));
+    const targetSlot = target.getAttribute('slot');
+    if (targetSlot === null) boundary.removeAttribute('slot');
+    else boundary.setAttribute('slot', targetSlot);
+    if (boundary.parentNode !== parent || boundary.nextSibling !== target) parent.insertBefore(boundary, target);
+    this.unreadBoundaryEl = boundary;
+    this.knownProjectedNodes.add(boundary);
   }
 
   private markUserIntent = (): void => {
@@ -417,7 +467,20 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     return wasPending;
   }
 
-  private onPointerDown = (): void => {
+  private onPointerDown = (event: PointerEvent): void => {
+    const scroll = this.scrollEl;
+    if (!scroll || event.button !== 0 || event.target !== scroll) return;
+    const computed = getComputedStyle(scroll);
+    const borderLeft = Number.parseFloat(computed.borderLeftWidth) || 0;
+    const borderRight = Number.parseFloat(computed.borderRightWidth) || 0;
+    const gutter = scroll.offsetWidth - scroll.clientWidth - borderLeft - borderRight;
+    if (gutter <= 0) return;
+    const rect = scroll.getBoundingClientRect();
+    const inGutter =
+      computed.direction === 'rtl'
+        ? event.clientX <= rect.left + borderLeft + gutter
+        : event.clientX >= rect.right - borderRight - gutter;
+    if (!inGutter) return;
     this.scrollbarDragActive = true;
     // Dragging a native scrollbar thumb (or just holding the mouse button) can end with the
     // pointer well outside `[part="scroll"]` -- the release target is wherever the cursor
@@ -472,7 +535,17 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   private onVirtualRangeChanged = (e: Event): void => {
     const list = this.virtualListEl;
     if (!list) return;
+    if (e.composedPath()[0] !== list) return;
     const detail = (e as CustomEvent<VirtualListRange>).detail;
+    if (
+      !detail ||
+      !Number.isFinite(detail.start) ||
+      !Number.isFinite(detail.end) ||
+      detail.start < 0 ||
+      detail.end < detail.start
+    ) {
+      return;
+    }
     const atBottom = list.items.length > 0 && detail.end >= list.items.length - 1;
     if (atBottom) {
       this.clearUserIntent();
@@ -490,6 +563,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   };
 
   private onSlotChange = (): void => {
+    this.announceNewProjectedNodes();
     const wasVirtual = this.armedMode === 'virtual';
     this.armObservers();
     // `[part="base"]`'s `data-virtual` marker is computed in render() from the light-DOM children,
@@ -543,16 +617,35 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     if (!sink) return;
     for (const record of records) {
       for (const node of record.addedNodes) {
+        if (
+          this.knownProjectedNodes.has(node) ||
+          (node instanceof Element && node.hasAttribute('data-lr-chat-viewport-unread-boundary'))
+        ) {
+          continue;
+        }
+        this.knownProjectedNodes.add(node);
         const text = composedAccessibilityText(node).replace(/\s+/g, ' ').trim();
         if (text) sink.announce(text);
       }
     }
   };
 
+  private announceNewProjectedNodes(): void {
+    const sink = this.announcementSink;
+    for (const node of this.messageElements) {
+      if (this.knownProjectedNodes.has(node)) continue;
+      this.knownProjectedNodes.add(node);
+      if (!sink || !this.hasUpdated) continue;
+      const text = composedAccessibilityText(node).replace(/\s+/g, ' ').trim();
+      if (text) sink.announce(text);
+    }
+  }
+
   private armObservers(): void {
     const owner = this.ownerDocument.defaultView;
     const list = this.virtualListEl;
     const mode: 'virtual' | 'slotted' = list ? 'virtual' : 'slotted';
+    for (const node of this.messageElements) this.knownProjectedNodes.add(node);
     // `onSlotChange` calls this on *every* `slotchange`, including the very first one, which
     // always fires once during initial mount even though `firstUpdated()` already armed things a
     // moment earlier. A naive unconditional rebuild here would tear down and recreate the
@@ -697,7 +790,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   override render(): TemplateResult {
-    const label = this.accessibleLabel || this.label || this.localize('chatViewportLabel');
+    const label = this.accessibleLabel ?? (this.label || this.localize('chatViewportLabel'));
     // Virtual mode's own layout rules key off this marker rather than `:host(:has(> lr-virtual-list))`:
     // `:has()` is not supported inside `:host()` (Chromium reports
     // `CSS.supports('selector(:host(:has(> em)))')` as false and drops the whole rule), so every
@@ -723,7 +816,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
             ${this.unreadDividerTop != null
               ? html`<div
                   part="unread-divider"
-                  role="separator"
+                  aria-hidden="true"
                   style=${styleMap({ top: `${this.unreadDividerTop}px` })}
                 >
                   ${this.localize('newMessages')}

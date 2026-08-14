@@ -5,11 +5,6 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
-    /* Contained here (rather than left as a bare font-family literal) so a
-       host page can retheme it -- same rationale as lr-json-viewer's
-       identical --lr-json-viewer-font, no shared --lr-*
-       monospace token exists to resolve through. */
-    --lr-markdown-font-mono: var(--lr-font-mono);
     line-height: var(--lr-line-height-loose);
   }
   [part='content'] {
@@ -58,7 +53,7 @@ export const styles = css`
     margin-block: 0 var(--lr-space-s);
   }
   [part='content'] code {
-    font-family: var(--lr-markdown-font-mono);
+    font-family: var(--lr-markdown-font-mono, var(--lr-font-mono));
     font-size: var(--lr-size-0-875em);
     background: var(--lr-color-brand-quiet);
     border-radius: calc(var(--lr-radius) * 0.5);
@@ -98,8 +93,8 @@ export const styles = css`
    * stylesheet at any selector specificity short of it. These values come from shiki's theme data
    * rather than this library's design tokens -- the one deliberate exception in this file.
    *
-   * Gated on [data-dark-theme='true'] (kept live by shiki-dark-theme.ts's watchDarkTheme(), off the
-   * component's own resolved --lr-color-text/--lr-color-surface) rather than the OS-level
+   * Gated on [data-dark-theme='true'] (kept live by the shared ThemeWatcher, off the component's
+   * own resolved --lr-color-text/--lr-color-surface) rather than the OS-level
    * prefers-color-scheme media query, so a consumer who sets --lr-theme-color-* explicitly still
    * gets the dark shiki palette.
    */
@@ -193,8 +188,7 @@ export const styles = css`
     background: var(--lr-markdown-highlight-neutral-bg, var(--lr-color-surface));
   }
   [part='content'] mark[data-lr-highlight-name='lr-highlight-active'] {
-    outline: var(--lr-border-width-thin) solid
-      var(--lr-markdown-highlight-active-outline-color, var(--lr-color-brand));
+    outline: var(--lr-border-width-thin) solid var(--lr-markdown-highlight-active-outline-color, var(--lr-color-brand));
     outline-offset: var(--lr-focus-ring-offset);
   }
 `;

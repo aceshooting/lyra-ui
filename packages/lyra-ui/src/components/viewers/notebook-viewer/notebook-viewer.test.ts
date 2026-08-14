@@ -40,7 +40,18 @@ describe('defaults', () => {
     const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
     expect(el.src).to.equal('');
     expect(el.notebook).to.be.undefined;
+    expect(el.source).to.equal(null);
     expect(el.outputCollapseLines).to.equal(40);
+  });
+
+  it('exposes a readonly discriminated effective-source snapshot', () => {
+    const el = document.createElement('lr-notebook-viewer') as LyraNotebookViewer;
+    el.src = 'https://example.test/fallback.ipynb';
+    expect(el.source).to.deep.equal({ kind: 'url', url: 'https://example.test/fallback.ipynb' });
+    el.notebook = '';
+    expect(el.source).to.deep.equal({ kind: 'inline', value: '' });
+    el.notebook = undefined;
+    expect(el.source).to.deep.equal({ kind: 'url', url: 'https://example.test/fallback.ipynb' });
   });
 });
 
@@ -384,6 +395,131 @@ describe('parsing and rendering', () => {
 });
 
 describe('loading a notebook from src', () => {
+  it('paints a visible busy treatment while pending and removes it on failure', async () => {
+    const original = window.fetch;
+    let rejectFetch!: (error: unknown) => void;
+    window.fetch = (() => new Promise<Response>((_resolve, reject) => { rejectFetch = reject; })) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer></lr-notebook-viewer>`);
+      el.src = 'https://example.test/pending.ipynb';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="spinner"]') !== null);
+      const base = el.shadowRoot!.querySelector('[part="base"]')!;
+      const label = el.shadowRoot!.querySelector<HTMLElement>('.viewer-loading-label')!;
+      expect(base.getAttribute('aria-busy')).to.equal('true');
+      expect(label.textContent).to.equal('Loading document…');
+      expect(label.getBoundingClientRect().height).to.be.greaterThan(0);
+      rejectFetch(new Error('offline'));
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(base.getAttribute('aria-busy')).to.equal('false');
+      expect(el.shadowRoot!.querySelector('[part="spinner"]') === null).to.equal(true);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('treats an empty inline string as present authority instead of fetching src', async () => {
+    const original = window.fetch;
+    let fetches = 0;
+    window.fetch = (() => {
+      fetches++;
+      return Promise.reject(new Error('inline authority must suppress src'));
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraNotebookViewer>(html`
+        <lr-notebook-viewer
+          src="https://example.test/fallback.ipynb"
+          .notebook=${''}
+        ></lr-notebook-viewer>
+      `);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent)
+        .to.equal('This file is not a valid Jupyter notebook.');
+      expect(fetches).to.equal(0);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('clears inline authority and immediately resumes the unchanged fallback src', async () => {
+    const original = window.fetch;
+    const fallback = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: [{ cell_type: 'raw', id: 'from-url', source: 'Fallback URL document' }],
+    };
+    let fetches = 0;
+    window.fetch = (() => {
+      fetches++;
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: () => Promise.resolve(JSON.stringify(fallback)),
+      } as Response);
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraNotebookViewer>(html`
+        <lr-notebook-viewer
+          src="https://example.test/fallback.ipynb"
+          .notebook=${NOTEBOOK}
+        ></lr-notebook-viewer>
+      `);
+      await waitUntil(() => rowRoot(el).textContent?.includes('plain text') ?? false);
+      expect(fetches).to.equal(0);
+
+      const loaded = oneEvent(el, 'lr-load');
+      el.notebook = undefined;
+      await loaded;
+      await waitUntil(() => rowRoot(el).textContent?.includes('Fallback URL document') ?? false);
+      expect(fetches).to.equal(1);
+      expect(el.source).to.deep.equal({ kind: 'url', url: 'https://example.test/fallback.ipynb' });
+      expect(rowRoot(el).textContent).to.not.include('plain text');
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('clearing inline authority without src exposes idle instead of retaining stale cells', async () => {
+    const el = await fixture<LyraNotebookViewer>(html`
+      <lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer>
+    `);
+    await waitUntil(() => rowRoot(el).querySelectorAll('[part~="cell"]').length > 0);
+    el.notebook = undefined;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') === null);
+    expect(el.source).to.equal(null);
+    expect(el.shadowRoot!.textContent).to.contain('No document to display.');
+  });
+
+  it('assigning inline authority aborts and cannot be overwritten by an in-flight src', async () => {
+    const original = window.fetch;
+    let signal: AbortSignal | null | undefined;
+    window.fetch = ((_url: string, init?: RequestInit) => {
+      signal = init?.signal;
+      return new Promise<Response>((_resolve, reject) => {
+        signal?.addEventListener('abort', () => {
+          const error = new Error('aborted');
+          error.name = 'AbortError';
+          reject(error);
+        });
+      });
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraNotebookViewer>(html`
+        <lr-notebook-viewer src="https://example.test/slow.ipynb"></lr-notebook-viewer>
+      `);
+      await waitUntil(() => signal !== undefined);
+      el.notebook = NOTEBOOK;
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot != null);
+      await waitUntil(() => rowRoot(el).textContent?.includes('plain text') ?? false);
+      expect(signal?.aborted).to.equal(true);
+      expect(el.source?.kind).to.equal('inline');
+      expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('blocks a disallowed src scheme without calling fetch, surfacing the url-not-allowed error', async () => {
     let called = false;
     const original = window.fetch;
@@ -563,13 +699,18 @@ describe('rendering non-text outputs', () => {
       nbformat: 4, nbformat_minor: 5,
       cells: [{
         cell_type: 'code', id: 'c1', source: 'x', execution_count: 1,
-        outputs: [{ output_type: 'execute_result', data: { 'text/html': '<h1>Safe</h1><script>alert(1)</script>' } }],
+        outputs: [{ output_type: 'execute_result', data: { 'text/html': '<style>@import url(https://example.test/a.css)</style><h1 style="background:url(https://example.test/bg.png)">Safe</h1><img src="https://example.test/pixel.png"><a href="https://example.test/nav">link</a><form><button>send</button></form><script>alert(1)</script>' } }],
       }],
     };
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     await waitUntil(() => rowRoot(el).querySelector('[part~="output"] h1') !== null);
     const output = rowRoot(el).querySelector('[part~="output"]')!;
     expect((output.querySelector('script')) == null).to.equal(true);
+    expect(output.querySelectorAll('style,a,form,button').length).to.equal(0);
+    expect(output.querySelector('h1')!.hasAttribute('style')).to.equal(false);
+    expect(output.querySelector('img')!.hasAttribute('src')).to.equal(false);
+    expect(output.textContent).to.include('link');
+    expect(output.textContent).to.include('send');
     expect(output.textContent).to.include('Safe');
   });
 
@@ -669,9 +810,9 @@ describe('event boundaries', () => {
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
     let leaked = 0;
-    el.addEventListener('lr-scroll', () => leaked++);
+    el.addEventListener('lr-virtual-scroll', () => leaked++);
     el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent(
-      'lr-scroll',
+      'lr-virtual-scroll',
       { detail: { scrollTop: 0, viewportHeight: 100 }, bubbles: true, composed: true },
     ));
     expect(leaked).to.equal(0);
@@ -922,6 +1063,23 @@ describe('i18n', () => {
 });
 
 describe('accessibility', () => {
+  it('keeps a non-empty host name on the host and preserves an explicit-empty shadow owner', async () => {
+    const labeled = await fixture<LyraNotebookViewer>(
+      html`<lr-notebook-viewer name="demo.ipynb" aria-label="Analysis notebook"></lr-notebook-viewer>`,
+    );
+    const labeledBase = labeled.shadowRoot!.querySelector('[part="base"]')!;
+    expect(labeledBase.getAttribute('role')).to.be.null;
+    expect(labeledBase.getAttribute('aria-label')).to.be.null;
+
+    const decorative = await fixture<LyraNotebookViewer>(
+      html`<lr-notebook-viewer name="demo.ipynb" aria-label=""></lr-notebook-viewer>`,
+    );
+    const decorativeBase = decorative.shadowRoot!.querySelector('[part="base"]')!;
+    expect(decorativeBase.getAttribute('role')).to.equal('region');
+    expect(decorativeBase.hasAttribute('aria-label')).to.be.true;
+    expect(decorativeBase.getAttribute('aria-label')).to.equal('');
+  });
+
   it('is accessible with a rendered notebook', async () => {
     const el = await fixture(html`<lr-notebook-viewer name="demo.ipynb" .notebook=${NOTEBOOK}></lr-notebook-viewer>`);
     await expect(el).to.be.accessible();

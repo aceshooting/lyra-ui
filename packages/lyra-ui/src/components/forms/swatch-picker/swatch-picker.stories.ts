@@ -101,7 +101,7 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lr-swatch-picker label="Accent color" .options=${accents()} value="purple"></lr-swatch-picker>
+    <lr-swatch-picker aria-label="Accent color" .items=${accents()} value="purple"></lr-swatch-picker>
   `,
 };
 

@@ -22,7 +22,12 @@ const resolvedHighlights: LyraHighlight[] = [{
 }];
 
 export const Default: Story = {
-  render: () => html`<lr-docx-viewer style="max-inline-size: 32rem;" src=${source} name="fixture.docx"></lr-docx-viewer>`,
+  render: () => html`<lr-docx-viewer
+    style="max-inline-size: 32rem;"
+    src=${source}
+    name="fixture.docx"
+    @lr-viewer-diagnostic=${(event: CustomEvent) => console.warn('DOCX diagnostic', event.detail)}
+  ></lr-docx-viewer>`,
 };
 
 export const ResolvedHighlightAction: Story = {

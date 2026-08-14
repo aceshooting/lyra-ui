@@ -3,21 +3,11 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-flex;
-    /* Dark/foreground modules. Canvas can't consume var() directly, so
-       qr-code.class.ts resolves this via getComputedStyle at draw time --
-       same resolve-via-getComputedStyle pattern as lr-heatmap's ramp
-       endpoints. NOTE: --lr-color-text flips under a dark theme (like
-       every semantic token in tokens.styles.ts), so the *default* rendering
-       under a dark theme is a polarity-inverted QR code (light modules on a
-       dark background), not the conventional dark-on-light -- see the class
-       doc comment. Human legibility is unaffected, but a consumer needing
-       guaranteed cross-scanner compatibility regardless of page theme
-       should pin --lr-qr-code-fill/-background explicitly. */
-    --lr-qr-code-fill: var(--lr-color-text);
-    /* Light/background modules, including the quiet zone -- same pattern. */
-    --lr-qr-code-background: var(--lr-color-surface);
-    color: var(--lr-qr-code-fill);
-    background-color: var(--lr-qr-code-background);
+    /* Canvas paint resolves these computed host styles live. The optional
+       aliases deliberately have no token defaults: inherited color and a
+       transparent host background are the mirrored renderer defaults. */
+    color: var(--lr-qr-code-fill, inherit);
+    background-color: var(--lr-qr-code-background, initial);
   }
   [part~='base'] {
     display: inline-flex;
@@ -27,6 +17,9 @@ export const styles = css`
   }
   canvas {
     display: block;
+  }
+  canvas[hidden] {
+    display: none;
   }
   [part='empty'],
   [part='loading'],

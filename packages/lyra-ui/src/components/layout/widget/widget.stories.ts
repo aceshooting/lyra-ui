@@ -91,12 +91,13 @@ export const FullscreenWithSidebarInset: Story = {
         expandable
         .fullscreen=${context.viewMode !== 'docs'}
         fullscreen-inset="0 0 0 240px"
+        backdrop-inset="0 0 0 240px"
         style="max-width: 28rem;"
       >
         <div style="padding: 1rem;">
           <p style="margin: 0;">
-            Fullscreen with <code>fullscreen-inset="0 0 0 240px"</code> — the panel and backdrop leave
-            room for the 240px sidebar instead of covering it.
+            Explicit panel and backdrop insets leave room for the 240px sidebar. Without
+            <code>backdrop-inset</code>, the modal scrim covers the complete viewport.
           </p>
         </div>
       </lr-widget>

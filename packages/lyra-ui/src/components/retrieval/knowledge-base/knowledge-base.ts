@@ -4,6 +4,6 @@ import { defineElement } from '../../../internal/prefix.js';
 import '../../data/table/table.js';
 import '../../overlays/badge/badge.js';
 import '../../data/stat/stat.js';
-import '../../layout/menu/menu.js';
+import '../../overlays/overlay/dropdown.js';
 import '../../forms/button/button.js';
 defineElement('knowledge-base', LyraKnowledgeBase);

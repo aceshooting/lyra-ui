@@ -4,14 +4,14 @@ import {
   html,
   elementUpdated,
   oneEvent,
+  waitUntil,
 } from "@open-wc/testing";
 import "./dock-panel.js";
 import type {
   LyraDockPanel,
-  DockPanelResizeDetail,
-  DockPanelCollapseChangeDetail,
+  LyraDockPanelResizeDetail,
+  LyraDockPanelCollapseChangeDetail,
 } from "./dock-panel.js";
-import { parseLengthPx } from "./dock-panel.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 async function dockedFixture(attrs = "", edge = "end"): Promise<LyraDockPanel> {
@@ -24,70 +24,19 @@ async function dockedFixture(attrs = "", edge = "end"): Promise<LyraDockPanel> {
   return wrapper.querySelector("lr-dock-panel") as LyraDockPanel;
 }
 
-describe("parseLengthPx", () => {
-  it("parses px, bare numbers, and percentages", () => {
-    expect(parseLengthPx("320px", 1000)).to.equal(320);
-    expect(parseLengthPx("320", 1000)).to.equal(320);
-    expect(parseLengthPx("25%", 1000)).to.equal(250);
-  });
-
-  it("returns undefined for empty or unparseable input", () => {
-    expect(parseLengthPx("", 1000)).to.equal(undefined);
-    expect(parseLengthPx("auto", 1000)).to.equal(undefined);
-    for (const malformed of [
-      ".",
-      ".px",
-      "1..2px",
-      "12pxjunk",
-      "1e",
-      "1e999px",
-    ]) {
-      expect(parseLengthPx(malformed, 1000), malformed).to.equal(undefined);
-    }
-    expect(parseLengthPx(".5rem", 1000)).to.be.a("number");
-    expect(parseLengthPx("1e2px", 1000)).to.equal(100);
-  });
-
-  it("resolves vw/vh against the viewport", () => {
-    expect(parseLengthPx("10vw", 1000)).to.equal(window.innerWidth * 0.1);
-    expect(parseLengthPx("10vh", 1000)).to.equal(window.innerHeight * 0.1);
-  });
-
-  it("resolves rem against the document root font size", () => {
-    const rootPx = parseFloat(
-      getComputedStyle(document.documentElement).fontSize
-    );
-    expect(parseLengthPx("2rem", 1000)).to.equal(2 * rootPx);
-  });
-
-  it("resolves viewport and root-font units through the supplied element's owner realm", async () => {
-    const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
-    const frameDocument = frame.contentDocument;
-    const frameWindow = frame.contentWindow;
-    if (!frameDocument || !frameWindow) throw new Error("The iframe realm was unavailable.");
-    const widthDescriptor = Object.getOwnPropertyDescriptor(frameWindow, "innerWidth");
-    const heightDescriptor = Object.getOwnPropertyDescriptor(frameWindow, "innerHeight");
-    const probe = frameDocument.createElement("div");
-    frameDocument.body.append(probe);
-    frameDocument.documentElement.style.fontSize = "10px";
-    probe.style.fontSize = "12px";
-
-    try {
-      Object.defineProperty(frameWindow, "innerWidth", { configurable: true, value: 321 });
-      Object.defineProperty(frameWindow, "innerHeight", { configurable: true, value: 654 });
-      expect(parseLengthPx("10vw", 1000, probe)).to.equal(32.1);
-      expect(parseLengthPx("10vh", 1000, probe)).to.equal(65.4);
-      expect(parseLengthPx("2rem", 1000, probe)).to.equal(20);
-      expect(parseLengthPx("2em", 1000, probe)).to.equal(24);
-    } finally {
-      if (widthDescriptor) Object.defineProperty(frameWindow, "innerWidth", widthDescriptor);
-      else delete (frameWindow as unknown as { innerWidth?: number }).innerWidth;
-      if (heightDescriptor) Object.defineProperty(frameWindow, "innerHeight", heightDescriptor);
-      else delete (frameWindow as unknown as { innerHeight?: number }).innerHeight;
-      frame.remove();
-    }
-  });
-});
+function primaryPointer(
+  pointerId: number,
+  init: PointerEventInit = {}
+): PointerEventInit {
+  return {
+    bubbles: true,
+    pointerId,
+    pointerType: "mouse",
+    isPrimary: true,
+    button: 0,
+    ...init,
+  };
+}
 
 it("renders with defaults: docked to the end edge, a resizable handle, no collapse toggle", async () => {
   const el = await dockedFixture();
@@ -213,10 +162,11 @@ it("applies the extent property as the host inline-size for a start/end edge", a
   expect(el.getBoundingClientRect().width).to.be.closeTo(300, 1);
 });
 
-it("applies the extent property as the host block-size for a top/bottom edge", async () => {
+it("applies and clamps block-size extent for a top/bottom edge", async () => {
   const el = await dockedFixture('extent="150px"', "top");
   await elementUpdated(el);
-  expect(el.getBoundingClientRect().height).to.be.closeTo(150, 1);
+  expect(el.extent).to.equal("160px");
+  expect(el.getBoundingClientRect().height).to.be.closeTo(160, 1);
 });
 
 it("lets an explicit min-extent below the collapsed-rail token width render while expanded", async () => {
@@ -231,18 +181,29 @@ it("lets an explicit min-extent below the collapsed-rail token width render whil
   expect(el.getBoundingClientRect().width).to.be.closeTo(24, 1);
 });
 
-it("resizes via keyboard and emits lr-resize with a px extent in the detail", async () => {
+it("treats each genuine keyboard step as a frozen input/change transaction", async () => {
   const el = await dockedFixture(
     'extent="300px" min-extent="100px" max-extent="500px"'
   );
   await elementUpdated(el);
   const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
 
-  let detail: DockPanelResizeDetail | undefined;
-  el.addEventListener(
-    "lr-resize",
-    (e) => (detail = (e as CustomEvent<DockPanelResizeDetail>).detail)
-  );
+  const order: string[] = [];
+  const details: LyraDockPanelResizeDetail[] = [];
+  el.addEventListener("lr-resize-input", (event) => {
+    order.push(event.type);
+    details.push(
+      (event as CustomEvent<LyraDockPanelResizeDetail>).detail
+    );
+  });
+  el.addEventListener("lr-resize-change", (event) => {
+    order.push(event.type);
+    details.push(
+      (event as CustomEvent<LyraDockPanelResizeDetail>).detail
+    );
+  });
+  let legacyEvents = 0;
+  el.addEventListener("lr-resize", () => (legacyEvents += 1));
   // edge="end" in LTR: the panel's right edge is pinned, so ArrowLeft (moving
   // the draggable left edge further left) grows it.
   handle.dispatchEvent(
@@ -250,13 +211,26 @@ it("resizes via keyboard and emits lr-resize with a px extent in the detail", as
   );
   await elementUpdated(el);
   expect(el.extent).to.equal("316px");
-  expect(detail!.extent).to.equal("316px");
+  expect(order).to.deep.equal(["lr-resize-input", "lr-resize-change"]);
+  expect(details.map((detail) => detail.extent)).to.deep.equal([
+    "316px",
+    "316px",
+  ]);
+  expect(details[0]).to.not.equal(details[1]);
+  expect(details.every((detail) => Object.isFrozen(detail))).to.equal(true);
+  expect(legacyEvents).to.equal(0);
 
   handle.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
   );
   await elementUpdated(el);
   expect(el.extent).to.equal("300px");
+  expect(order).to.deep.equal([
+    "lr-resize-input",
+    "lr-resize-change",
+    "lr-resize-input",
+    "lr-resize-change",
+  ]);
 });
 
 it('swaps ArrowLeft/ArrowRight for edge="end" under dir="rtl"', async () => {
@@ -292,7 +266,7 @@ it('does not swap ArrowUp/ArrowDown for a top/bottom edge under dir="rtl"', asyn
   const el = await fixture(
     html`<div
       dir="rtl"
-      style="position: relative; height: 10rem; display: flex; flex-direction: column;"
+      style="position: relative; height: 20rem; display: flex; flex-direction: column;"
     >
       <lr-dock-panel
         edge="top"
@@ -338,7 +312,7 @@ it("clamps keyboard resizing to min-extent and max-extent", async () => {
   expect(el.extent).to.equal("200px");
 });
 
-it('resizes via pointer drag and mirrors direction under dir="rtl"', async () => {
+it("emits live input on a pointer transition and one terminal change on genuine pointerup", async () => {
   const el = await dockedFixture(
     'extent="300px" min-extent="100px" max-extent="500px"'
   );
@@ -346,22 +320,246 @@ it('resizes via pointer drag and mirrors direction under dir="rtl"', async () =>
   const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
   handle.setPointerCapture = () => {};
 
-  const resized = oneEvent(el, "lr-resize");
+  const input = oneEvent(el, "lr-resize-input");
+  let changes = 0;
+  el.addEventListener("lr-resize-change", () => (changes += 1));
   handle.dispatchEvent(
-    new PointerEvent("pointerdown", {
-      bubbles: true,
-      pointerId: 1,
-      clientX: 200,
-    })
+    new PointerEvent("pointerdown", primaryPointer(1, { clientX: 200 }))
   );
   // edge="end" LTR: dragging left (toward more-negative clientX) grows it.
   window.dispatchEvent(
     new PointerEvent("pointermove", { pointerId: 1, clientX: 150 })
   );
-  const { detail } = (await resized) as CustomEvent<DockPanelResizeDetail>;
+  const { detail } = (await input) as CustomEvent<LyraDockPanelResizeDetail>;
   expect(detail.extent).to.equal("350px");
+  expect(Object.isFrozen(detail)).to.equal(true);
   expect(el.extent).to.equal("350px");
-  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
+  expect(changes).to.equal(0);
+
+  const secondInput = oneEvent(el, "lr-resize-input");
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 1, clientX: 140 })
+  );
+  expect(
+    ((await secondInput) as CustomEvent<LyraDockPanelResizeDetail>).detail
+      .extent
+  ).to.equal("360px");
+  expect(changes).to.equal(0);
+
+  const change = oneEvent(el, "lr-resize-change");
+  window.dispatchEvent(
+    new PointerEvent("pointerup", primaryPointer(1))
+  );
+  const changeDetail = (await change as CustomEvent<LyraDockPanelResizeDetail>).detail;
+  expect(changeDetail).to.deep.equal({ extent: "360px" });
+  expect(Object.isFrozen(changeDetail)).to.equal(true);
+  expect(changes).to.equal(1);
+});
+
+it('mirrors the physical pointer growth direction for edge="end" under RTL', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div dir="rtl" style="display:flex;inline-size:600px;block-size:200px">
+      <main style="flex:1 1 0;min-inline-size:0">main</main>
+      <lr-dock-panel
+        edge="end"
+        extent="300px"
+        min-extent="100px"
+        max-extent="500px"
+      ></lr-dock-panel>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-dock-panel") as LyraDockPanel;
+  await elementUpdated(el);
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  const input = oneEvent(el, "lr-resize-input");
+
+  handle.dispatchEvent(
+    new PointerEvent("pointerdown", primaryPointer(9, { clientX: 200 }))
+  );
+  // RTL logical end is physically left, so moving its inner/right edge right grows it.
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 9, clientX: 250 })
+  );
+
+  expect(
+    ((await input) as CustomEvent<LyraDockPanelResizeDetail>).detail.extent
+  ).to.equal("350px");
+  expect(el.extent).to.equal("350px");
+  window.dispatchEvent(new PointerEvent("pointercancel", { pointerId: 9 }));
+});
+
+it("admits only a primary pointer's primary button before capture or drag state", async () => {
+  const el = await dockedFixture(
+    'extent="300px" min-extent="100px" max-extent="500px"'
+  );
+  await elementUpdated(el);
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  const captured: number[] = [];
+  handle.setPointerCapture = (pointerId) => captured.push(pointerId);
+  let inputs = 0;
+  let changes = 0;
+  el.addEventListener("lr-resize-input", () => (inputs += 1));
+  el.addEventListener("lr-resize-change", () => (changes += 1));
+
+  for (const [pointerId, init] of [
+    [11, { pointerType: "mouse", isPrimary: true, button: 2 }],
+    [12, { pointerType: "mouse", isPrimary: true, button: 1 }],
+    [13, { pointerType: "pen", isPrimary: true, button: 2 }],
+    [14, { pointerType: "pen", isPrimary: true, button: 5 }],
+    [15, { pointerType: "touch", isPrimary: false, button: 0 }],
+  ] as const) {
+    handle.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        pointerId,
+        ...init,
+        clientX: 200,
+      })
+    );
+    window.dispatchEvent(
+      new PointerEvent("pointermove", { pointerId, clientX: 150 })
+    );
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId }));
+  }
+
+  expect(captured).to.deep.equal([]);
+  expect(el.extent).to.equal("300px");
+  expect(inputs).to.equal(0);
+  expect(changes).to.equal(0);
+
+  for (const [index, pointerType] of ["mouse", "pen", "touch"].entries()) {
+    const pointerId = 20 + index;
+    handle.dispatchEvent(
+      new PointerEvent(
+        "pointerdown",
+        primaryPointer(pointerId, { pointerType, clientX: 200 })
+      )
+    );
+    window.dispatchEvent(
+      new PointerEvent("pointermove", { pointerId, clientX: 190 })
+    );
+    window.dispatchEvent(new PointerEvent("pointercancel", { pointerId }));
+  }
+
+  expect(captured).to.deep.equal([20, 21, 22]);
+  expect(inputs).to.equal(3);
+  expect(changes).to.equal(0);
+});
+
+it("emits nothing for no-movement and fully clamped pointer or keyboard attempts", async () => {
+  const el = await dockedFixture(
+    'extent="100px" min-extent="100px" max-extent="200px"'
+  );
+  await elementUpdated(el);
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  const events: string[] = [];
+  el.addEventListener("lr-resize-input", (event) => events.push(event.type));
+  el.addEventListener("lr-resize-change", (event) => events.push(event.type));
+
+  handle.dispatchEvent(
+    new PointerEvent("pointerdown", primaryPointer(40, { clientX: 200 }))
+  );
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 40 }));
+
+  handle.dispatchEvent(
+    new PointerEvent("pointerdown", primaryPointer(41, { clientX: 200 }))
+  );
+  // edge=end/LTR: moving right asks to shrink below the already-active minimum.
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 41, clientX: 250 })
+  );
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 41 }));
+
+  handle.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+  );
+  await elementUpdated(el);
+
+  expect(el.extent).to.equal("100px");
+  expect(events).to.deep.equal([]);
+});
+
+it("keeps live input but excludes cancel and lost capture from terminal change", async () => {
+  for (const [index, endType] of [
+    "pointercancel",
+    "lostpointercapture",
+  ].entries()) {
+    const el = await dockedFixture(
+      'extent="300px" min-extent="100px" max-extent="500px"'
+    );
+    await elementUpdated(el);
+    const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+    handle.setPointerCapture = () => {};
+    let inputs = 0;
+    let changes = 0;
+    el.addEventListener("lr-resize-input", () => (inputs += 1));
+    el.addEventListener("lr-resize-change", () => (changes += 1));
+    const pointerId = 50 + index;
+
+    handle.dispatchEvent(
+      new PointerEvent("pointerdown", primaryPointer(pointerId, { clientX: 200 }))
+    );
+    window.dispatchEvent(
+      new PointerEvent("pointermove", { pointerId, clientX: 150 })
+    );
+    window.dispatchEvent(new PointerEvent(endType, { pointerId }));
+
+    expect(el.extent, endType).to.equal("350px");
+    expect(inputs, endType).to.equal(1);
+    expect(changes, endType).to.equal(0);
+  }
+});
+
+it("cancels a terminal resize when live edge, extent, direction, or bounds invalidate its snapshot", async () => {
+  const cases = [
+    {
+      label: "edge",
+      mutate: (el: LyraDockPanel) => (el.edge = "start"),
+    },
+    {
+      label: "extent",
+      mutate: (el: LyraDockPanel) => (el.extent = "275px"),
+    },
+    {
+      label: "direction",
+      mutate: (el: LyraDockPanel) => {
+        el.parentElement!.dir = "rtl";
+        void getComputedStyle(el).direction;
+      },
+    },
+    {
+      label: "bounds",
+      mutate: (el: LyraDockPanel) => (el.maxExtent = "450px"),
+    },
+  ];
+
+  for (const [index, scenario] of cases.entries()) {
+    const el = await dockedFixture(
+      'extent="300px" min-extent="100px" max-extent="500px"'
+    );
+    await elementUpdated(el);
+    const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+    handle.setPointerCapture = () => {};
+    let inputs = 0;
+    let changes = 0;
+    el.addEventListener("lr-resize-input", () => (inputs += 1));
+    el.addEventListener("lr-resize-change", () => (changes += 1));
+    const pointerId = 60 + index;
+
+    handle.dispatchEvent(
+      new PointerEvent("pointerdown", primaryPointer(pointerId, { clientX: 200 }))
+    );
+    window.dispatchEvent(
+      new PointerEvent("pointermove", { pointerId, clientX: 150 })
+    );
+    expect(inputs, scenario.label).to.equal(1);
+    scenario.mutate(el);
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId }));
+
+    expect(changes, scenario.label).to.equal(0);
+  }
 });
 
 it("routes an adopted drag through its owner window and removes that realm's listeners on adoption", async () => {
@@ -398,8 +596,7 @@ it("routes an adopted drag through its owner window and removes that realm's lis
     )}px`;
     handle.dispatchEvent(
       new frameWindow.PointerEvent("pointerdown", {
-        bubbles: true,
-        pointerId: 72,
+        ...primaryPointer(72),
         clientX: 200,
       })
     );
@@ -507,18 +704,14 @@ it("ignores a pointermove/pointerup from an unrelated pointerId mid-drag", async
   handle.setPointerCapture = () => {};
 
   handle.dispatchEvent(
-    new PointerEvent("pointerdown", {
-      bubbles: true,
-      pointerId: 1,
-      clientX: 200,
-    })
+    new PointerEvent("pointerdown", primaryPointer(1, { clientX: 200 }))
   );
   window.dispatchEvent(
     new PointerEvent("pointermove", { pointerId: 2, clientX: 100 })
   );
   await elementUpdated(el);
   expect(el.extent).to.equal("300px");
-  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
+  window.dispatchEvent(new PointerEvent("pointerup", primaryPointer(1)));
 });
 
 it("aborts an active pointer resize when collapsed is enabled mid-gesture", async () => {
@@ -529,13 +722,10 @@ it("aborts an active pointer resize when collapsed is enabled mid-gesture", asyn
   const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
   handle.setPointerCapture = () => {};
   let events = 0;
-  el.addEventListener("lr-resize", () => (events += 1));
+  el.addEventListener("lr-resize-input", () => (events += 1));
+  el.addEventListener("lr-resize-change", () => (events += 1));
   handle.dispatchEvent(
-    new PointerEvent("pointerdown", {
-      bubbles: true,
-      pointerId: 31,
-      clientX: 200,
-    })
+    new PointerEvent("pointerdown", primaryPointer(31, { clientX: 200 }))
   );
 
   el.collapsed = true;
@@ -555,11 +745,7 @@ it("aborts an active pointer resize when resizable is revoked mid-gesture", asyn
   const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
   handle.setPointerCapture = () => {};
   handle.dispatchEvent(
-    new PointerEvent("pointerdown", {
-      bubbles: true,
-      pointerId: 32,
-      clientX: 200,
-    })
+    new PointerEvent("pointerdown", primaryPointer(32, { clientX: 200 }))
   );
 
   el.resizable = false;
@@ -576,11 +762,7 @@ it("does not throw on a stray pointermove/pointerup after disconnect mid-drag", 
   const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
   handle.setPointerCapture = () => {};
   handle.dispatchEvent(
-    new PointerEvent("pointerdown", {
-      bubbles: true,
-      pointerId: 1,
-      clientX: 200,
-    })
+    new PointerEvent("pointerdown", primaryPointer(1, { clientX: 200 }))
   );
 
   el.remove();
@@ -603,16 +785,31 @@ it("toggles collapsed via the collapse-toggle button and emits lr-collapse-chang
   expect((toggle) !== (null)).to.equal(true);
   expect(toggle.getAttribute("aria-expanded")).to.equal("true");
 
-  let detail: DockPanelCollapseChangeDetail | undefined;
+  let requestDetail: LyraDockPanelCollapseChangeDetail | undefined;
+  let detail: LyraDockPanelCollapseChangeDetail | undefined;
+  el.addEventListener(
+    "lr-collapse-request",
+    (e) =>
+      (requestDetail = (
+        e as CustomEvent<LyraDockPanelCollapseChangeDetail>
+      ).detail)
+  );
   el.addEventListener(
     "lr-collapse-change",
-    (e) => (detail = (e as CustomEvent<DockPanelCollapseChangeDetail>).detail)
+    (e) =>
+      (detail = (
+        e as CustomEvent<LyraDockPanelCollapseChangeDetail>
+      ).detail)
   );
   toggle.click();
   await elementUpdated(el);
 
   expect(el.collapsed).to.equal(true);
+  expect(requestDetail).to.deep.equal({ collapsed: true });
   expect(detail).to.deep.equal({ collapsed: true });
+  expect(requestDetail).to.not.equal(detail);
+  expect(Object.isFrozen(requestDetail)).to.equal(true);
+  expect(Object.isFrozen(detail)).to.equal(true);
   expect(toggle.getAttribute("aria-expanded")).to.equal("false");
   const content = el.shadowRoot!.querySelector(
     '[part="content"]'
@@ -744,34 +941,150 @@ it('flips the top/bottom collapse-toggle centering translate under dir="rtl"', a
   expect(await toggleTranslateX("rtl")).to.be.greaterThan(0);
 });
 
-it("keeps aria-valuemax/aria-valuenow live against a passive container resize", async () => {
+it("atomically clamps an absolute panel on shrink without restoring or emitting on grow", async () => {
   const wrapper = (await fixture(
-    `<div style="position: relative; width: 400px; height: 20rem; display: flex;">
-      <div style="flex: 1;">main</div>
-      <lr-dock-panel edge="end" extent="100px" min-extent="50px"></lr-dock-panel>
+    `<div style="position: relative; width: 400px; height: 20rem;">
+      <lr-dock-panel
+        style="position:absolute;inset-block:0;inset-inline-end:0"
+        edge="end"
+        extent="350px"
+        min-extent="50px"
+      ></lr-dock-panel>
     </div>`
   )) as HTMLDivElement;
   const el = wrapper.querySelector("lr-dock-panel") as LyraDockPanel;
   await elementUpdated(el);
   const handle = () =>
     el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
-  const initialMax = handle().getAttribute("aria-valuemax");
-  expect(initialMax).to.equal("400");
+  const events: string[] = [];
+  el.addEventListener("lr-resize-input", (event) => events.push(event.type));
+  el.addEventListener("lr-resize-change", (event) => events.push(event.type));
 
-  // Grow the container without touching any property on the panel itself --
-  // nothing here schedules a Lit re-render on its own, so this only reaches
-  // aria-valuemax/aria-valuenow via the panel's own ResizeObserver on its
-  // parent.
-  wrapper.style.width = "800px";
-  await new Promise<void>((resolve) => {
-    const ro = new ResizeObserver(() => {
-      ro.disconnect();
-      resolve();
-    });
-    ro.observe(wrapper);
-  });
+  const expectRange = (expected: {
+    min: number;
+    now: number;
+    max: number;
+  }): void => {
+    const values = {
+      min: Number(handle().getAttribute("aria-valuemin")),
+      now: Number(handle().getAttribute("aria-valuenow")),
+      max: Number(handle().getAttribute("aria-valuemax")),
+    };
+    expect(values).to.deep.equal(expected);
+    expect(values.min).to.be.at.most(values.now);
+    expect(values.now).to.be.at.most(values.max);
+  };
+
+  expect(el.getBoundingClientRect().width).to.be.closeTo(350, 1);
+  expectRange({ min: 50, now: 350, max: 400 });
+
+  wrapper.style.width = "200px";
+  await waitUntil(
+    () =>
+      el.extent === "200px" &&
+      handle().getAttribute("aria-valuemax") === "200",
+    "the panel did not reconcile to the smaller containing block"
+  );
+  expect(el.getBoundingClientRect().width).to.be.closeTo(200, 1);
+  expectRange({ min: 50, now: 200, max: 200 });
+
+  wrapper.style.width = "400px";
+  await waitUntil(
+    () => handle().getAttribute("aria-valuemax") === "400",
+    "the separator range did not follow the grown containing block"
+  );
+  expect(el.extent).to.equal("200px");
+  expect(el.getBoundingClientRect().width).to.be.closeTo(200, 1);
+  expectRange({ min: 50, now: 200, max: 400 });
+  expect(events).to.deep.equal([]);
+});
+
+it("reconciles direct flex-layout writes, percentage/rem bounds, and inverted ranges silently", async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="display:flex;inline-size:400px;block-size:200px">
+      <main style="flex:1 1 0;min-inline-size:0">main</main>
+      <lr-dock-panel
+        edge="end"
+        extent="50%"
+        min-extent="2rem"
+        max-extent="90%"
+      ></lr-dock-panel>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-dock-panel") as LyraDockPanel;
   await elementUpdated(el);
-  expect(handle().getAttribute("aria-valuemax")).to.equal("800");
+  const handle = () =>
+    el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  const rootFontPx = Number.parseFloat(
+    getComputedStyle(document.documentElement).fontSize
+  );
+  let events = 0;
+  el.addEventListener("lr-resize-input", () => (events += 1));
+  el.addEventListener("lr-resize-change", () => (events += 1));
+
+  expect(el.extent).to.equal("50%");
+  expect(el.getBoundingClientRect().width).to.be.closeTo(200, 1);
+  expect(Number(handle().getAttribute("aria-valuemin"))).to.equal(
+    Math.round(2 * rootFontPx)
+  );
+  expect(handle().getAttribute("aria-valuenow")).to.equal("200");
+  expect(handle().getAttribute("aria-valuemax")).to.equal("360");
+
+  el.extent = "999px";
+  await elementUpdated(el);
+  expect(el.extent).to.equal("360px");
+  expect(el.getBoundingClientRect().width).to.be.closeTo(360, 1);
+
+  el.extent = "1px";
+  await elementUpdated(el);
+  expect(el.extent).to.equal(`${Math.round(2 * rootFontPx)}px`);
+
+  el.minExtent = "500px";
+  el.maxExtent = "200px";
+  el.extent = "300px";
+  await elementUpdated(el);
+  expect(el.extent).to.equal("200px");
+  expect(handle().getAttribute("aria-valuemin")).to.equal("200");
+  expect(handle().getAttribute("aria-valuenow")).to.equal("200");
+  expect(handle().getAttribute("aria-valuemax")).to.equal("200");
+  expect(events).to.equal(0);
+});
+
+it("reconciles block-axis percentage, em, and viewport-unit bounds", async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="display:flex;flex-direction:column;inline-size:300px;block-size:300px">
+      <main style="flex:1 1 0;min-block-size:0">main</main>
+      <lr-dock-panel
+        style="font-size:10px"
+        edge="bottom"
+        extent="50%"
+        min-extent="2em"
+        max-extent="80%"
+      ></lr-dock-panel>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-dock-panel") as LyraDockPanel;
+  await elementUpdated(el);
+  const handle = () =>
+    el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+
+  expect(el.getBoundingClientRect().height).to.be.closeTo(150, 1);
+  expect(handle().getAttribute("aria-valuemin")).to.equal("20");
+  expect(handle().getAttribute("aria-valuenow")).to.equal("150");
+  expect(handle().getAttribute("aria-valuemax")).to.equal("240");
+
+  el.maxExtent = "10vh";
+  el.extent = "999px";
+  await elementUpdated(el);
+  const expectedMax = Math.round(
+    Math.min(wrapper.getBoundingClientRect().height, window.innerHeight * 0.1)
+  );
+  expect(el.extent).to.equal(`${expectedMax}px`);
+  expect(handle().getAttribute("aria-valuemin")).to.equal(
+    String(Math.min(20, expectedMax))
+  );
+  expect(handle().getAttribute("aria-valuenow")).to.equal(String(expectedMax));
+  expect(handle().getAttribute("aria-valuemax")).to.equal(String(expectedMax));
 });
 
 it("is accessible in its default state (no collapsible, resizable handle only)", async () => {

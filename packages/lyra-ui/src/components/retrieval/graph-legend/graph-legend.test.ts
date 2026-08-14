@@ -156,18 +156,28 @@ it('names the group from label, falling back to the localized default', async ()
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Entity types');
 });
 
-it('preserves an explicitly empty host aria-label on the group and restores label after removal', async () => {
+it('keeps exactly one owner across explicit-empty and dynamic host naming', async () => {
   const el = (await fixture(
     html`<lr-graph-legend label="Entity types" aria-label=""></lr-graph-legend>`,
   )) as LyraGraphLegend;
   const group = () => el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
 
-  expect(group().hasAttribute('aria-label')).to.equal(true);
+  expect(el.hasAttribute('aria-label')).to.equal(true);
+  expect(el.getAttribute('aria-label')).to.equal('');
   expect(group().getAttribute('aria-label')).to.equal('');
+  expect(group().getAttribute('role')).to.equal('group');
+
+  el.setAttribute('aria-label', 'Author legend');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Author legend');
+  expect(group().getAttribute('aria-label')).to.equal(null);
+  expect(group().getAttribute('role')).to.equal(null);
 
   el.removeAttribute('aria-label');
   await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal(null);
   expect(group().getAttribute('aria-label')).to.equal('Entity types');
+  expect(group().getAttribute('role')).to.equal('group');
 });
 
 it('is accessible with types, counts, and a hidden type', async () => {

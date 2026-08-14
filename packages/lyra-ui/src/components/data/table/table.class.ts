@@ -37,6 +37,29 @@ const DEFAULT_SKELETON_ROWS = 3;
  *  unbounded count would emit thousands of nodes for a transient loading state. */
 const MAX_SKELETON_ROWS = 20;
 
+/** Bounded client projection used by a bare table. Pagination keeps every row reachable while
+ * avoiding an unbounded row-by-column DOM allocation. */
+const DEFAULT_PAGE_SIZE = 100;
+
+/** Upper bound accepted from the public `pageSize` input. */
+const MAX_PAGE_SIZE = 500;
+
+/** Matches the fixed allocation thresholds in table.styles.ts. */
+const LOW_PRIORITY_MAX_INLINE_SIZE = 899.98;
+const MEDIUM_PRIORITY_MAX_INLINE_SIZE = 639.98;
+
+/** An omitted ARIA maximum defaults to 100 for `role="separator"`. Represent an author-unbounded
+ * CSS maximum with the largest exact finite integer so wider pixel values stay truthful. */
+const UNBOUNDED_RESIZE_ARIA_MAX = Number.MAX_SAFE_INTEGER;
+
+function frozenArray<Value>(values: Iterable<Value>): readonly Value[] {
+  return Object.freeze([...values]);
+}
+
+function keySet(values: Iterable<string | number>): Set<string | number> {
+  return new Set(values);
+}
+
 const UNSAFE_CSS_STRUCTURE = /[;{}]/;
 const URL_FUNCTION = /url\s*\(/i;
 const SAFE_STYLE_PROPERTY = /^-?[_a-zA-Z][\w-]*$|^--[a-zA-Z0-9_-]+$/;
@@ -106,25 +129,41 @@ function isDevelopmentRuntime(): boolean {
   return viteEnv?.MODE === 'development';
 }
 
-/** Which inline-start/inline-end edge a column aligns or sticks to. Shared by
- *  `TableColumn.align`, `TableColumn.sticky`'s non-boolean member, and
- *  `stickyDirection()`'s return type. */
+/** Which inline-start/inline-end edge a column aligns or sticks to. */
 export type TableEdgeAlign = 'start' | 'end';
 
-/** `TableColumn.editable`'s value shape: `true`/`false` for the legacy
- *  double-click-to-edit toggle, `'always'` for a persistent editor in every
- *  body cell of that column. Shared by `editTrigger()`'s parameter type. */
-export type TableColumnEditable = boolean | 'always';
+/** Explicit interaction that opens a column's editor. */
+export type TableColumnEditTrigger = 'double-click' | 'always';
 
 /** `<lr-table>`'s `selectionMode` property: `'none'` disables row selection,
  *  `'single'` allows one selected row at a time, `'multiple'` allows any
- *  number via checkboxes. */
+ *  number through row activation. */
 export type TableSelectionMode = 'none' | 'single' | 'multiple';
 
 /** `<lr-table>`'s `sortMode` property: `'client'` orders `rows` in the browser from
  *  `sortKey`/`sortDir`, `'server'` renders `rows` in the order given. Mirrors the
  *  `paginationMode` split of the same two names. */
 export type TableSortMode = 'client' | 'server';
+
+/** Canonical table sort direction. */
+export type TableSortDirection = 'asc' | 'desc';
+
+/** Cancelable sort proposal detail. */
+export interface TableSortRequestDetail {
+  readonly phase: 'request';
+  readonly sortKey: string;
+  readonly sortDir: TableSortDirection;
+}
+
+/** Accepted sort transaction detail. */
+export interface TableSortCommitDetail {
+  readonly phase: 'commit';
+  readonly sortKey: string;
+  readonly sortDir: TableSortDirection;
+}
+
+/** One discriminated detail vocabulary shared across the sort request and commit phases. */
+export type TableSortDetail = TableSortRequestDetail | TableSortCommitDetail;
 
 export interface TableColumn<T> {
   key: string;
@@ -167,16 +206,14 @@ export interface TableColumn<T> {
    *  `[part='base']`'s container-query width shrinks; both can be forced back
    *  on via `[part='reveal-columns-button']`. */
   priority?: 'medium' | 'low';
-  /** Pins this column's header/cell to one edge with `position: sticky` so
-   *  it stays visible while the table scrolls horizontally. `true` (legacy)
-   *  and `'start'` both pin to the inline-start edge; `'end'` pins to the
-   *  inline-end edge (e.g. a trailing actions column in a narrow viewport).
-   *  Both directions use CSS logical properties, so RTL flips automatically. */
-  sticky?: boolean | TableEdgeAlign;
+  /** Pins this column's header/cell to one edge with `position: sticky` so it stays visible while
+   *  the table scrolls horizontally. Both directions use CSS logical properties, so RTL flips
+   *  automatically. */
+  sticky?: TableEdgeAlign;
   /** Renders a sticky-bottom footer cell for this column, computed from every currently-rendered
    *  row (post-sort, pre-pagination) -- e.g. a column total. Omit for a column with no footer
    *  value; a `<tfoot>` renders at all only when at least one column defines this. */
-  footer?(rows: T[]): unknown;
+  footer?(rows: readonly T[]): unknown;
   /** Applied directly to the generated `<td>` via `styleMap` -- e.g. a computed heat-tint
    *  background that a `cell()`-returned inner element can't paint into the cell's own padding.
    *  Omit for no per-cell style override (the default; unchanged output).
@@ -206,7 +243,7 @@ export interface TableColumn<T> {
    *  that returns `background`/`backgroundColor` silently wins over this tint -- see `cellStyle`'s
    *  own doc for why. */
   heatValue?(row: T): number | null | undefined;
-  /** Enables inline editing for this cell. `true` (legacy) opens an editor on
+  /** Enables inline editing for this cell. `'double-click'` opens an editor on
    *  double-click, one cell at a time. `'always'` instead renders a persistent
    *  editor in every body cell of this column from first paint -- a
    *  settings/rate-style column the user is expected to type straight into.
@@ -220,11 +257,11 @@ export interface TableColumn<T> {
    *  one, an out-of-band `rows` update to that same cell no longer replaces
    *  what they are still editing. An untouched editor picks up a new `rows`
    *  value normally. */
-  editable?: TableColumnEditable;
+  editTrigger?: TableColumnEditTrigger;
   /** Reads the value shown in the inline editor. When omitted, `row[key]` is
    *  used for record-like rows. */
   editValue?: (row: T) => string | number;
-  /** Native editor type used when `editable` is enabled. */
+  /** Native editor type used when `editTrigger` is set. */
   editType?: 'text' | 'number';
   cell: (row: T) => unknown;
 }
@@ -236,11 +273,8 @@ export interface TableColumn<T> {
 const INTERACTIVE_SELECTOR =
   'button, a[href], input, select, textarea, summary, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"]), [role="button"], [role="checkbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="menuitem"], [role="option"], [role="radio"], [role="separator"], [role="slider"], [role="spinbutton"], [role="switch"], [role="tab"], [role="textbox"]';
 
-/** Normalizes TableColumn.sticky's legacy boolean form (`true` == `'start'`,
- *  today's only supported direction) alongside the `'start'`/`'end'` union --
- *  `false`/`undefined` both resolve to "not sticky". */
-function stickyDirection(sticky: boolean | TableEdgeAlign | undefined): TableEdgeAlign | undefined {
-  if (sticky === true) return 'start';
+/** Fails closed for untyped values outside the explicit sticky-axis vocabulary. */
+function stickyDirection(sticky: TableEdgeAlign | undefined): TableEdgeAlign | undefined {
   if (sticky === 'start' || sticky === 'end') return sticky;
   return undefined;
 }
@@ -285,15 +319,9 @@ function cssSupports(property: string, value: string): boolean {
   return CSS.supports(property, value);
 }
 
-/** Normalizes TableColumn.editable's legacy boolean form (`true` == open an
- *  editor on double-click) alongside the `'always'` union member (a persistent
- *  editor in every body cell of that column) -- `false`/`undefined` both
- *  resolve to "not editable". Sibling of `stickyDirection()` above, and the
- *  single place the widened union is interpreted, so no call site has to
- *  re-derive which of the two triggers a column is asking for. */
-function editTrigger(editable: TableColumnEditable | undefined): 'double-click' | 'always' | undefined {
-  if (editable === 'always') return 'always';
-  if (editable === true) return 'double-click';
+/** Fails closed for untyped values outside the explicit editor-trigger vocabulary. */
+function normalizedEditTrigger(editTrigger: TableColumnEditTrigger | undefined): TableColumnEditTrigger | undefined {
+  if (editTrigger === 'always' || editTrigger === 'double-click') return editTrigger;
   return undefined;
 }
 
@@ -329,22 +357,28 @@ function safeStringifyForFilter(row: unknown): string {
   }
 }
 
-/** Whether `target` (or an ancestor up to the delegated listener's own
- *  `<table>`, exclusive) is a custom element — i.e. any tag containing a
- *  hyphen, the one universal rule every custom element name must follow —
- *  which is never itself matched by INTERACTIVE_SELECTOR's plain-HTML
- *  selector list but should still own its own clicks/keydowns (e.g. a
- *  `<lr-select>`/`<lr-combobox>` rendered by a `cell()` template)
- *  instead of being re-interpreted as row/column activation. */
-function closestInteractive(target: HTMLElement, boundary: HTMLElement): Element | null {
-  let el: Element | null = target;
-  while (el && el !== boundary) {
-    if (
-      (el.matches(INTERACTIVE_SELECTOR) && !el.matches('[data-row-key], th[data-col-key]')) ||
-      el.tagName.includes('-')
-    )
-      return el;
-    el = el.parentElement;
+/** Returns an Element across owner-document realms without relying on the current global's
+ * `Element` constructor. */
+function asElement(value: EventTarget): Element | null {
+  if (typeof value !== 'object' || !('nodeType' in value) || value.nodeType !== 1 || !('matches' in value)) {
+    return null;
+  }
+  return value as Element;
+}
+
+/** The first genuinely interactive entry in a delegated event's composed path. Open-shadow
+ * custom controls expose their native/role/tabindex owner through this path, while a passive
+ * custom element remains part of the row's activation surface. An opaque closed-shadow control
+ * can declare `data-table-interactive` on its visible host as an explicit escape hatch. */
+function eventInteractiveTarget(event: Event, boundary: HTMLElement): Element | null {
+  for (const value of event.composedPath()) {
+    if (value === boundary) break;
+    const element = asElement(value);
+    if (element === null) continue;
+    if (element.matches('[data-table-interactive]')) return element;
+    if (element.matches(INTERACTIVE_SELECTOR) && !element.matches('[data-row-key], th[data-col-key]')) {
+      return element;
+    }
   }
   return null;
 }
@@ -352,36 +386,36 @@ function closestInteractive(target: HTMLElement, boundary: HTMLElement): Element
 export interface LyraTableEventMap<T = unknown> {
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
-  'lr-columns-hidden-change': CustomEvent<{ hidden: boolean }>;
-  'lr-columns-revealed': CustomEvent<{ revealed: boolean }>;
-  'lr-sort': CustomEvent<{ key: string }>;
-  'lr-row-click': CustomEvent<{ row: T }>;
-  'lr-row-expand-toggle': CustomEvent<{ row: T; key: string | number }>;
+  'lr-priority-columns-visibility-change': CustomEvent<Readonly<{ visible: boolean }>>;
+  'lr-sort-request': CustomEvent<TableSortRequestDetail>;
+  'lr-sort': CustomEvent<TableSortCommitDetail>;
+  'lr-row-click': CustomEvent<Readonly<{ row: T }>>;
+  'lr-row-expand-toggle': CustomEvent<Readonly<{ row: T; key: string | number }>>;
   'lr-load-more': CustomEvent<undefined>;
-  'lr-selection-change': CustomEvent<{ keys: Array<string | number> }>;
-  'lr-filter-change': CustomEvent<{ text: string }>;
-  'lr-page-change': CustomEvent<{ page: number }>;
-  'lr-cell-edit': CustomEvent<{ row: T; key: string; value: string | number }>;
-  'lr-column-resize': CustomEvent<{ key: string; width: number }>;
+  'lr-selection-change': CustomEvent<Readonly<{ keys: readonly (string | number)[] }>>;
+  'lr-filter-change': CustomEvent<Readonly<{ text: string }>>;
+  'lr-page-change': CustomEvent<Readonly<{ page: number }>>;
+  'lr-cell-edit': CustomEvent<Readonly<{ row: T; key: string; value: string | number }>>;
+  'lr-column-resize': CustomEvent<Readonly<{ key: string; width: number }>>;
 }
 /**
  * `<lr-table>` — a sort/select-aware data table.
  *
- * Sorting is the one area the table owns outright: under the default
- * `sortMode: 'client'` a sortable-header activation writes `sortKey`/`sortDir`
- * itself and reorders the rendered rows (see `sortMode`, `defaultSortDir` and
- * `columns[].sortValue`). Everything else here stays presentational —
- * selection state beyond `selectionMode` and expansion state are read, never
- * written. Set `sortMode="server"` to keep `lr-sort` a pure notification and
- * drive `sortKey`/`sortDir` plus the row order entirely from your own state.
+ * A sortable-header activation first proposes a cancelable `lr-sort-request`. If accepted, client
+ * mode writes `sortKey`/`sortDir` and reorders the rendered rows before emitting `lr-sort`; server
+ * mode leaves those properties controlled and emits the same committed transaction so the caller
+ * can fetch and supply the corresponding row order. Single/multiple selection is self-managed in
+ * one `selectedKeys` store; expansion remains controlled through `expandedKeys`.
  *
  * Header/row activation is delegated: one `click` and one `keydown`
  * listener on `<table>` resolve the target via `closest('[data-col-key]'
  * | '[data-row-key]')` and a key→object lookup map, instead of allocating
- * fresh per-column/per-row closures on every render. Both listeners guard
- * against nested interactive `cell()` content first (see
- * `INTERACTIVE_SELECTOR`) so a button/link/input inside a cell owns its own
- * activation instead of triggering `lr-row-click`.
+ * fresh per-column/per-row closures on every render. Both listeners inspect
+ * the delegated event's composed path for actual native, role, or tabindex
+ * semantics (see `INTERACTIVE_SELECTOR`) so a button/link/input inside a cell
+ * owns its own activation instead of triggering `lr-row-click`. A passive
+ * custom element remains part of the row activation surface; an opaque
+ * closed-shadow control marks its host with `data-table-interactive`.
  *
  * Keyboard focus follows a roving-tabindex pattern (one `tabindex="0"` stop
  * among the header cells, one among the body rows — see `focusedColKey()` /
@@ -400,19 +434,19 @@ export interface LyraTableEventMap<T = unknown> {
  *
  * `columns[].priority` ('medium' | 'low') hides that column under
  * `[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`
- * forces them all back into view. Rather than a *static* check of whether any
- * column merely declares a `priority`, the button (and the public
- * `columnsHidden` property, see below) reflects whether a `priority` column
- * is *actually* hidden right now — measured via `ResizeObserver` on
- * `[part='base']` plus a post-render DOM check — or the public `showAllColumns`
- * force-visible mode is currently active (so there's still a way to toggle
- * it back off). `showAllColumns` defaults to `false` and toggles itself on
+ * forces them all back into view. The public `hasHiddenPriorityColumns`
+ * property reports only whether a priority column is actually hidden right
+ * now, measured via `ResizeObserver` on `[part='base']` plus a post-render DOM
+ * check. The toggle separately measures whether priority columns would hide
+ * at the current allocation, so it stays available while force-visible mode
+ * is active without making `hasHiddenPriorityColumns` contradict the rendered
+ * state. `priorityColumnsVisible` defaults to `false` and toggles itself on
  * `[part='reveal-columns-button']` activation with no external wiring
  * required, but is also settable up front (property or the reflected
- * `show-all-columns` attribute) to restore a previously-persisted
- * preference, and readable back — directly or via the `lr-columns-revealed`
+ * `priority-columns-visible` attribute) to restore a previously-persisted
+ * preference, and readable back — directly or via the `lr-priority-columns-visibility-change`
  * event — to persist the current one. `columns[].sticky` pins a column's
- * header/cells to the inline-start (default/`true`) or inline-end (`'end'`)
+ * header/cells to the inline-start (`'start'`) or inline-end (`'end'`)
  * edge while the table scrolls horizontally.
  *
  * `expandedContent` (a table-level `(row: T) => unknown`, not a per-column
@@ -423,33 +457,38 @@ export interface LyraTableEventMap<T = unknown> {
  * alignment. Which rows are currently open is fully consumer-owned via
  * `expandedKeys` (a `Set<string | number>` of row keys, per `rowKey`/
  * `keyOf()`) — the table only reads it and emits `lr-row-expand-toggle`
- * on activation, mirroring `selectedKey`'s existing presentational-only
- * convention. (`sortKey`/`sortDir` are *not* a parallel case any more: under
+ * on activation. (`selectedKeys` is self-managed for selection, and
+ * `sortKey`/`sortDir` are *not* a parallel case either: under
  * the default `sortMode: 'client'` the table writes them on header
  * activation.)
  *
  * Selection is opt-in through the `selectionMode` property. Use `single` or
  * `multiple` to self-manage row selection; the default `none` remains
- * presentational. `selectedKeys` contains the raw keys selected in multiple
- * mode.
+ * presentational. `selectedKeys` contains the raw keys in every mode; single mode enforces one.
  *
  * `filterable` adds a compact search field above the grid. `filterText` is
  * controlled and emits `lr-filter-change`; `filter` can provide a typed
  * predicate, otherwise the row is matched against its JSON representation.
- * `pageSize` enables controlled pagination through the existing
- * `<lr-pagination>` primitive. Client mode slices `rows`; server mode
- * renders the supplied page unchanged while using `totalItems` for the
+ * The internal filter and cell-editor native value events are contained at
+ * their translation boundaries; hosts receive `lr-filter-change` and
+ * `lr-cell-edit` instead.
+ * `pageSize` bounds pagination through the existing `<lr-pagination>` primitive (100 rows by
+ * default, normalized to 1..500). Client mode owns the accepted page and slices `rows`; server mode
+ * leaves `page` controlled, bounds the supplied page to `pageSize`, and uses `totalItems` for the
  * navigation summary. `loading` keeps the table shell busy; `loadingAppearance`
  * chooses how — the default `'spinner'` replaces the grid with an indeterminate
  * spinner, while `'skeleton'` keeps the real `<colgroup>`/`<thead>` (and the
  * filter/pagination chrome) and fills the body with `skeletonRows` placeholder
  * rows, so column geometry survives the load instead of collapsing and
- * reflowing. Initial declarative loading stays silent; every post-mount transition into either
+ * reflowing. Loading takes precedence over both empty branches. Because a skeleton needs a
+ * column schema, a skeleton request received before `columns` arrives temporarily falls back to
+ * the spinner rather than showing the no-columns empty state. Initial declarative loading stays
+ * silent; every post-mount transition into either
  * loading appearance appends to the shared light-DOM polite sink — including repeated cycles —
  * while every placeholder opts out of `<lr-skeleton>`'s own announcement.
- * Columns with `editable: true` open a native text/number editor on
+ * Columns with `editTrigger: 'double-click'` open a native text/number editor on
  * double-click and emit `lr-cell-edit`; row mutation remains consumer-owned.
- * `editable: 'always'` instead renders that editor in every body cell of the
+ * `editTrigger: 'always'` instead renders that editor in every body cell of the
  * column from first paint — a settings/rate-style column meant to be typed
  * straight into. Persistent editors are plain tab stops (no `tabindex` of their
  * own, exactly like the row-expand toggle) outside the header/row roving model,
@@ -493,27 +532,24 @@ export interface LyraTableEventMap<T = unknown> {
  * or a drag-resize is in flight (column resizing does not work under `table-layout: auto`).
  *
  * @customElement lr-table
- * @event lr-sort - A sortable header was activated. `detail: { key }`. The
- *   activation additionally updates `sortKey`/`sortDir` on the table itself
- *   (switching column seeds `defaultSortDir`, re-activating the current one
- *   toggles), and under the default `sortMode: 'client'` reorders the
- *   rendered rows. Use `sortMode="server"` for notification-only behavior
- *   with the row order left exactly as supplied.
+ * @event lr-sort-request - Cancelable sort proposal. Frozen readonly
+ *   `detail: { phase: 'request', sortKey, sortDir }`. Vetoing it leaves sort state and rows
+ *   unchanged and suppresses `lr-sort`.
+ * @event lr-sort - Accepted sort transaction. Frozen readonly
+ *   `detail: { phase: 'commit', sortKey, sortDir }`. Client mode also updates `sortKey`/`sortDir`;
+ *   server mode leaves them controlled while reporting the accepted proposal.
  * @event lr-row-click - A row was activated. `detail: { row }`.
  * @event lr-load-more - The "load more" control was activated.
- * @event lr-columns-hidden-change - `columnsHidden` actually changed value
- *   (a `priority` column just became hidden/un-hidden by the `@container`
- *   rules, or `showAllColumns` force-visible mode was toggled while a
- *   `priority` column was hidden). `detail: { hidden: boolean }`.
- * @event lr-columns-revealed - `showAllColumns` was toggled by
- *   `[part='reveal-columns-button']`. `detail: { revealed: boolean }`.
+ * @event lr-priority-columns-visibility-change - `priorityColumnsVisible` was toggled by
+ *   `[part='reveal-columns-button']`. Frozen readonly `detail: { visible: boolean }`.
  * @event lr-row-expand-toggle - The row-expand chevron was activated.
- *   `detail: { row, key }`. Fired only when `expandedContent` is set and
+ *   Frozen readonly `detail: { row, key }`. Fired only when `expandedContent` is set and
  *   the row passes `canExpand`; does not itself mutate `expandedKeys` — the
  *   consumer updates it and passes the new value back in.
- * @event lr-selection-change - Opt-in row selection changed. `detail: { keys }`.
- * @event lr-filter-change - The filter field changed. `detail: { text }`.
- * @event lr-page-change - A pagination control requested a page. `detail: { page }`.
+ * @event lr-selection-change - Opt-in row selection changed. Frozen readonly
+ *   `detail: { keys: readonly (string | number)[] }`.
+ * @event lr-filter-change - The filter field changed. Frozen readonly `detail: { text }`.
+ * @event lr-page-change - A pagination control requested a page. Frozen readonly `detail: { page }`.
  * @event lr-cell-edit - An inline editor committed a value. `detail: { row, key, value }`.
  * @event lr-column-resize - A resizable column changed width by pointer or keyboard. `detail:
  *   { key, width }`, where `width` is in CSS pixels. A pointer drag fires this once per pixel of
@@ -540,7 +576,8 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart footer-row - The single footer row.
  * @csspart footer-cell - A single footer cell.
  * @csspart cell-editor - The native inline cell editor: shown after a double-click on an
- *   `editable: true` cell, and rendered persistently in every body cell of an `editable: 'always'`
+ *   `editTrigger: 'double-click'` cell, and rendered persistently in every body cell of an
+ *   `editTrigger: 'always'`
  *   column.
  * @csspart more-button - The "load more" control, shown when `hasMore` is true.
  * @csspart sort-icon - The chevron shown in the active sortable column's header cell.
@@ -635,8 +672,30 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
-  @property({ attribute: false }) columns: TableColumn<T>[] = [];
-  @property({ attribute: false }) rows: T[] = [];
+  private _columns: readonly TableColumn<T>[] = Object.freeze([]);
+  /** Clone-owned readonly column-definition sequence. Column objects and callbacks retain their
+   * identities; reassign the collection to update. */
+  @property({ attribute: false })
+  get columns(): readonly TableColumn<T>[] {
+    return this._columns;
+  }
+  set columns(value: readonly TableColumn<T>[]) {
+    const previous = this._columns;
+    this._columns = frozenArray(Array.isArray(value) ? value : []);
+    this.requestUpdate('columns', previous);
+  }
+
+  private _rows: readonly T[] = Object.freeze([]);
+  /** Clone-owned readonly row sequence. Row identities are preserved; reassign to update. */
+  @property({ attribute: false })
+  get rows(): readonly T[] {
+    return this._rows;
+  }
+  set rows(value: readonly T[]) {
+    const previous = this._rows;
+    this._rows = frozenArray(Array.isArray(value) ? value : []);
+    this.requestUpdate('rows', previous);
+  }
   /** Floor for the `<table>`'s `table-layout`. `'fixed'` forces the fixed algorithm even when no
    *  column declares a `width`, so every column shares the available width evenly and long cell
    *  content is clipped/wrapped instead of stretching its column. The default `'auto'` is only a
@@ -651,11 +710,12 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  (declare `width` instead when you need a specific column sized). */
   @property({ reflect: true }) layout: 'auto' | 'fixed' = 'auto';
   @property({ attribute: 'sort-key' }) sortKey = '';
-  @property({ attribute: 'sort-dir' }) sortDir: 'asc' | 'desc' = 'asc';
+  @property({ attribute: 'sort-dir' }) sortDir: TableSortDirection = 'asc';
   /** `'client'` (the default) orders `rows` itself, in the browser, from `sortKey`/`sortDir` and
    *  the active column's `sortValue`. `'server'` renders `rows` in exactly the order given,
    *  assuming the caller has already sorted them — mirroring `paginationMode`'s identical
-   *  client/server split. `lr-sort` is emitted on header activation either way.
+   *  client/server split. Header activation first emits cancelable `lr-sort-request`; an accepted
+   *  activation emits `lr-sort` either way, but only client mode mutates these properties.
    *
    *  With no `sortKey` set (the default) `'client'` is a no-op: the input order is preserved
    *  verbatim, so an existing consumer that only listens for `lr-sort` sees unchanged rendering
@@ -666,7 +726,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  toggles between `'asc'` and `'desc'` instead, so this never overrides a direction the user
    *  just chose for the column they are still on. Defaults to `'asc'`; set `'desc'` for a
    *  most-recent-first or highest-first table. */
-  @property({ attribute: 'default-sort-dir' }) defaultSortDir: 'asc' | 'desc' = 'asc';
+  @property({ attribute: 'default-sort-dir' }) defaultSortDir: TableSortDirection = 'asc';
   /** Accessible name for the `role="grid"` — a typed alternative to setting `aria-label` on the
    *  host. When set it becomes the grid's `aria-label`; a host `aria-label` is used as a fallback
    *  when this is unset. Consumer-supplied text, so it is NOT run through `this.localize()`. */
@@ -686,9 +746,20 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  re-ordered across renders, or row identity (selection, focus, click
    *  targets) can silently attach to the wrong row. */
   @property({ attribute: false }) rowKey?: (row: T) => string | number;
-  @property({ attribute: false }) selectedKey: string | number | null = null;
   @property({ reflect: true, attribute: 'selection-mode' }) selectionMode: TableSelectionMode = 'none';
-  @property({ attribute: false }) selectedKeys: Set<string | number> = new Set();
+  private _selectedKeys = new Set<string | number>();
+  /** Selected raw row keys in every selection mode. Single mode replaces this set with exactly
+   * one key per row activation; multiple mode toggles membership. Reads return detached snapshots;
+   * reassign a new set to update. */
+  @property({ attribute: false })
+  get selectedKeys(): ReadonlySet<string | number> {
+    return keySet(this._selectedKeys);
+  }
+  set selectedKeys(value: ReadonlySet<string | number>) {
+    const previous = this._selectedKeys;
+    this._selectedKeys = keySet(value ?? []);
+    this.requestUpdate('selectedKeys', previous);
+  }
   @property({ type: Boolean, reflect: true }) filterable = false;
   @property({ attribute: 'filter-text' }) filterText = '';
   @property({ attribute: false }) filter?: (row: T, text: string) => boolean;
@@ -715,6 +786,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  sketches the grid's shape rather than collapsing to a spinner and reflowing when the rows
    *  land. Kept separate from `loading` rather than widening it to a string union, so
    *  `?loading=${…}` bindings and `el.loading === true` checks keep working.
+   *  When `columns` is empty, a skeleton request temporarily renders the spinner: loading still
+   *  takes precedence over the no-columns empty state, but there is no schema to sketch yet.
    *
    *  Column *widths* only stay pixel-identical across the load if the browser isn't sizing them
    *  from cell content: declare `columns[].width`, or set `layout="fixed"`. Under the default
@@ -722,9 +795,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  when real content arrives — exactly as they do between any two different data sets. */
   @property({ reflect: true, attribute: 'loading-appearance' }) loadingAppearance: TableLoadingAppearance = 'spinner';
   /** Number of placeholder rows rendered by `loadingAppearance="skeleton"`. `0` (the default)
-   *  derives the count instead: the normalized `pageSize` when pagination is on (capped at 20, so
-   *  a large page size can't emit thousands of placeholder cells), otherwise 3. Positive explicit
-   *  values are also capped at 20. Ignored entirely under the default spinner appearance. */
+   *  renders 3 placeholders for the ordinary bounded default, or derives a non-default explicit
+   *  `pageSize` (capped at 20). Positive explicit values are also capped at 20. Ignored entirely
+   *  under the default spinner appearance. */
   @property({ type: Number, attribute: 'skeleton-rows' }) skeletonRows = 0;
   /** Inserts a non-focusable group header row wherever this key changes between consecutive
    *  rendered rows. Supply `rows` with each group already contiguous — the table does not
@@ -736,10 +809,12 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  — reorders the *groups* by that value instead, since there is nothing to reorder within
    *  them. */
   @property({ attribute: false }) groupBy?: (row: T) => string | number;
-  @property({ attribute: false }) groupLabel?: (key: string | number, rows: T[]) => unknown;
-  /** Set to a positive value to enable the controlled pagination footer. */
-  @property({ type: Number, attribute: 'page-size' }) pageSize = 0;
-  /** Controlled current page used when `pageSize` is positive. */
+  @property({ attribute: false }) groupLabel?: (key: string | number, rows: readonly T[]) => unknown;
+  /** Maximum rows mounted per page. Defaults to 100 and normalizes into 1..500 so a bare table
+   * never creates an unbounded row-by-column DOM projection. */
+  @property({ type: Number, attribute: 'page-size' }) pageSize = DEFAULT_PAGE_SIZE;
+  /** Current page. Client pagination updates it on accepted navigation; server pagination leaves it
+   * controlled and only emits `lr-page-change`. */
   @property({ type: Number, reflect: true }) page = 1;
   /** Total item count for server pagination; `-1` derives it from filtered rows. */
   @property({ type: Number, attribute: 'total-items' }) totalItems = -1;
@@ -757,13 +832,20 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  click handler. */
   @property({ attribute: false }) canExpand?: (row: T) => boolean;
   /** Consumer-owned open/closed state, keyed the same way as `rowKey`/
-   *  `selectedKey`. The table never mutates this itself — it only reads it
+   *  `selectedKeys`. The table never mutates this itself — it only reads it
    *  to decide which rows currently render `expandedContent`; toggle it in
-   *  response to `lr-row-expand-toggle`, mirroring how `selectedKey` already
-   *  works. Note that `sortKey`/`sortDir` are no longer analogous: under the
-   *  default `sortMode: 'client'` the table owns them and writes them on
-   *  header activation. */
-  @property({ attribute: false }) expandedKeys: Set<string | number> = new Set();
+   *  response to `lr-row-expand-toggle`. Unlike this controlled expansion axis,
+   *  selection and client sorting are self-managed. */
+  private _expandedKeys = new Set<string | number>();
+  @property({ attribute: false })
+  get expandedKeys(): ReadonlySet<string | number> {
+    return keySet(this._expandedKeys);
+  }
+  set expandedKeys(value: ReadonlySet<string | number>) {
+    const previous = this._expandedKeys;
+    this._expandedKeys = keySet(value ?? []);
+    this.requestUpdate('expandedKeys', previous);
+  }
   /** Overrides the auto-derived heat-tint domain (min/max of every `heatValue` result across every
    *  currently-rendered row — post-sort, pre-pagination, the same rows `footer(rows)` already sees).
    *  Unset computes the domain automatically from the data, spanning every `heatValue`-defining
@@ -777,7 +859,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   /** Renders the bottom-right cell (row-total column × footer row). Only rendered when both
    *  `rowTotal` is set **and** at least one column defines `footer` — otherwise there is no footer
    *  row for it to occupy, and this renders nothing. */
-  @property({ attribute: false }) grandTotal?: (rows: T[]) => unknown;
+  @property({ attribute: false }) grandTotal?: (rows: readonly T[]) => unknown;
   @property({ type: Boolean, attribute: 'has-more', reflect: true }) hasMore = false;
   @property({ attribute: 'more-label' }) moreLabel = '';
   @property({ attribute: 'empty-heading' }) emptyHeading = '';
@@ -793,28 +875,25 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @property({ attribute: 'reveal-columns-label' }) revealColumnsLabel = '';
   @property({ attribute: 'hide-columns-label' }) hideColumnsLabel = '';
 
-  /** Whether a `priority` column is *actually* hidden right now by
-   *  table.styles.ts's `@container` rules, or `showAllColumns` force-visible
-   *  mode is currently active — the same computed value that gates whether
-   *  `[part='reveal-columns-button']` renders at all (see `render()`), kept
-   *  in sync by `recomputeColumnsHidden()`. Computed/read-only by
-   *  convention: consumers may read it (and listen for
-   *  `lr-columns-hidden-change`), but setting it directly has no lasting
-   *  effect, since it's recomputed on the very next render or
-   *  `[part='base']` resize. */
-  @property({ type: Boolean, attribute: 'columns-hidden', reflect: true }) columnsHidden = false;
+  /** Whether the current rendered allocation actually hides at least one `priority` column. This
+   * read-only state becomes false once `priorityColumnsVisible` reveals them; the toggle remains
+   * available at narrow allocations through an internal capability measurement. */
+  @property({ type: Boolean, attribute: 'has-hidden-priority-columns', reflect: true })
+  hasHiddenPriorityColumns = false;
+
+  @state() private priorityColumnsToggleAvailable = false;
 
   /** Forces `priority`-hidden columns back into view, overriding the
    *  `@container` hide rules in table.styles.ts. Toggles itself on
    *  `[part='reveal-columns-button']` activation by default — no external
    *  wiring is required for the button to work. Also settable from outside
-   *  (property or the reflected `show-all-columns` attribute) to restore a
-   *  previously-persisted preference, and readable back at any time — or via
-   *  the `lr-columns-revealed` event, fired whenever the button toggles it
-   *  — to persist the current one. */
-  @property({ type: Boolean, attribute: 'show-all-columns', reflect: true }) showAllColumns = false;
+   *  (property or the reflected `priority-columns-visible` attribute) to restore a
+   *  previously-persisted preference. The single
+   *  `lr-priority-columns-visibility-change` event reports button-driven changes. */
+  @property({ type: Boolean, attribute: 'priority-columns-visible', reflect: true })
+  priorityColumnsVisible = false;
 
-  /** Persists `showAllColumns` to `localStorage` across reloads when set. Namespaced as
+  /** Persists `priorityColumnsVisible` to `localStorage` across reloads when set. Namespaced as
    *  `lr-table:${storageKey}` -- mirrors `lr-app-rail`'s identical `storage-key` pattern. */
   @property({ attribute: 'storage-key' }) storageKey?: string;
 
@@ -823,7 +902,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   }
 
   /** Skips the very first `updated()` pass so mounting never writes to storage -- `willUpdate()`
-   *  restored `showAllColumns` on that first pass, and Lit has already flipped `hasUpdated` to true
+   *  restored `priorityColumnsVisible` on that first pass, and Lit has already flipped `hasUpdated` to true
    *  by the time `updated()` runs, so a dedicated flag is needed. Mirrors `lr-app-rail`'s
    *  `persistReady`. */
   private persistReady = false;
@@ -836,10 +915,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @state() private activeColKey: string | null = null;
   /** Roving-tabindex position among body rows; `null` until a row is
    *  clicked/navigated to, at which point `focusedRowKey()` falls back to
-   *  `selectedKey` (if it matches a row) or the first row. */
+   *  the first surviving `selectedKeys` member (if it matches a row) or the first row. */
   @state() private activeRowKey: string | null = null;
   @state() private editingCell: { rowKey: string; columnKey: string } | null = null;
-  /** The persistent (`editable: 'always'`) editor cell that most recently took focus, recorded by
+  /** The persistent (`editTrigger: 'always'`) editor cell that most recently took focus, recorded by
    *  the delegated `focusin` handler. `repeat()` is keyed by row key, so a re-sort *moves* the
    *  `<input>` node (its typed value rides along) rather than recreating it -- but a DOM move drops
    *  focus, so `updated()` puts it back. Deliberately non-reactive: it tracks focus, and writing it
@@ -944,7 +1023,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // Unlike a pointer drag's per-pixel `onResizePointerMove` stream, every keyboard step here is
     // already a single, final, deliberately-committed width change -- exactly the kind of
     // "committed width" this event is scoped to be vetoable for.
-    const event = this.emit('lr-column-resize', { key: column.key, width }, { cancelable: true });
+    const event = this.emit('lr-column-resize', Object.freeze({ key: column.key, width }), { cancelable: true });
     if (!event.defaultPrevented) return;
     const reverted = new Map(this.resizedColumnWidths);
     if (previousWidth === undefined) reverted.delete(column.key);
@@ -996,7 +1075,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const width = Math.min(state.maxWidth, Math.max(state.minWidth, state.startWidth + delta));
     if (this.resizedColumnWidths.get(state.key) === width) return;
     this.resizedColumnWidths = new Map(this.resizedColumnWidths).set(state.key, width);
-    this.emit('lr-column-resize', { key: state.key, width });
+    this.emit('lr-column-resize', Object.freeze({ key: state.key, width }));
   };
 
   private onResizeKeyDown = (event: KeyboardEvent): void => {
@@ -1034,7 +1113,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       aria-label=${this.localize('resizeColumn', undefined, { label: column.label })}
       aria-valuemin=${Math.round(minWidth)}
       aria-valuenow=${Math.round(this.currentResizeWidth(column))}
-      aria-valuemax=${Number.isFinite(maxWidth) ? Math.round(maxWidth) : nothing}
+      aria-valuemax=${Number.isFinite(maxWidth) ? Math.round(maxWidth) : UNBOUNDED_RESIZE_ARIA_MAX}
       @pointerdown=${this.onResizePointerDown}
       @keydown=${this.onResizeKeyDown}
     ></span>`;
@@ -1080,7 +1159,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // frame by frame.
     const committedWidth = this.resizedColumnWidths.get(state.key);
     if (committedWidth === undefined || committedWidth === state.previousWidth) return;
-    const commitEvent = this.emit('lr-column-resize', { key: state.key, width: committedWidth }, { cancelable: true });
+    const commitEvent = this.emit(
+      'lr-column-resize',
+      Object.freeze({ key: state.key, width: committedWidth }),
+      { cancelable: true }
+    );
     if (!commitEvent.defaultPrevented) return;
     const reverted = new Map(this.resizedColumnWidths);
     if (state.previousWidth === undefined) reverted.delete(state.key);
@@ -1120,7 +1203,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   /** Coalesces however many `resizeObserver` callback ticks land in one animation frame (an
    *  animated/dragged ancestor resize can fire the observer once per frame) into a single
-   *  read+write pass, instead of re-running `recomputeColumnsHidden()` / `applyStickyOffsets()` /
+   *  read+write pass, instead of re-running `recomputeHiddenPriorityColumns()` / `applyStickyOffsets()` /
    *  `syncResizeHandleValues()` -- each its own DOM query plus per-element measurement -- on every
    *  tick. A second tick that lands while a frame is already pending is a no-op; the id resets once
    *  the scheduled frame runs, so the very next tick after that schedules a fresh one. */
@@ -1133,7 +1216,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       if (this.layoutFrame !== frame) return;
       this.layoutFrame = null;
       if (!this.isConnected || this.ownerDocument.defaultView !== owner) return;
-      this.recomputeColumnsHidden();
+      this.recomputeHiddenPriorityColumns();
       this.applyStickyOffsets();
       this.syncResizeHandleValues();
     });
@@ -1247,23 +1330,35 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     }
   }
 
-  /** Recomputes `columnsHidden` from the live DOM (mirrors `visibleHeaders()`'s
-   *  own `offsetParent !== null` technique for detecting `@container`-hidden
-   *  cells) and dispatches `lr-columns-hidden-change` only on a real
-   *  transition. Called from `updated()` (covers a change driven by
-   *  `columns`/`rows`/`showAllColumns` rather than a container resize) and
+  /** Recomputes actual hidden state from the live DOM and separately tracks
+   *  whether the priority-column toggle remains useful while force-visible.
+   *  Called from `updated()` (covers a change driven by
+   *  `columns`/`rows`/`priorityColumnsVisible` rather than a container resize) and
    *  from the `ResizeObserver` callback (covers a container resize with no
    *  Lit-tracked property change at all). */
-  private recomputeColumnsHidden(): void {
+  private recomputeHiddenPriorityColumns(): void {
     const hasPriorityColumns = this.columns.some((col) => col.priority);
     const anyPriorityHidden =
       hasPriorityColumns &&
       [...this.renderRoot.querySelectorAll<HTMLElement>('th[data-priority]')].some((el) => el.offsetParent === null);
-    const next = anyPriorityHidden || (hasPriorityColumns && this.showAllColumns);
+    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    const inlineSize = base?.clientWidth ?? 0;
+    const wouldHideAtAllocation =
+      hasPriorityColumns &&
+      inlineSize > 0 &&
+      this.columns.some(
+        (column) =>
+          (column.priority === 'low' && inlineSize <= LOW_PRIORITY_MAX_INLINE_SIZE) ||
+          (column.priority === 'medium' && inlineSize <= MEDIUM_PRIORITY_MAX_INLINE_SIZE)
+      );
+    const toggleAvailable = anyPriorityHidden || (this.priorityColumnsVisible && wouldHideAtAllocation);
     this.rehomeFocusedColumn();
-    if (this.columnsHidden === next) return;
-    this.columnsHidden = next;
-    this.emit('lr-columns-hidden-change', { hidden: next });
+    if (this.priorityColumnsToggleAvailable !== toggleAvailable) {
+      this.priorityColumnsToggleAvailable = toggleAvailable;
+    }
+    if (this.hasHiddenPriorityColumns !== anyPriorityHidden) {
+      this.hasHiddenPriorityColumns = anyPriorityHidden;
+    }
   }
 
   private rehomeFocusedColumn(): void {
@@ -1291,7 +1386,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  next update, `setLyraLocale()`'s keyless `requestUpdate()`) still recomputes. */
   private cachedMatchingEntries: Array<{ row: T; index: number }> | null = null;
   private matchingEntriesInputs: {
-    rows: T[];
+    rows: readonly T[];
     filter: ((row: T, text: string) => boolean) | undefined;
     text: string;
     locale: string;
@@ -1331,24 +1426,22 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return entries;
   }
 
-  /** Read-time-safe view of `pageSize` -- non-negative, finite, truncated to a whole item count.
+  /** Read-time-safe view of `pageSize` -- finite, truncated and bounded to 1..500.
    *  Mirrors `<lr-pagination>`'s own identically-named getter (this component composes that
    *  primitive for the actual pagination UI in `render()`, but slices `rows` itself for client-mode
    *  pagination, so it needs the same safe count independently). */
   private get normalizedPageSize(): number {
-    return finiteCount(this.pageSize);
+    return finiteInteger(this.pageSize, DEFAULT_PAGE_SIZE, 1, MAX_PAGE_SIZE);
   }
 
   /** Placeholder row count actually rendered by `loadingAppearance="skeleton"`. An explicit,
    *  positive `skeletonRows` wins after applying the shared bound; otherwise the count is derived
-   *  from the normalized `pageSize` under the same bound, and falls back to DEFAULT_SKELETON_ROWS
-   *  when pagination is off -- `pageSize` defaults to 0, so "one placeholder per page row" has no
-   *  count of its own for the (common) unpaginated table. */
+   *  from the normalized `pageSize` under the same bound. */
   private get effectiveSkeletonRows(): number {
     const explicit = finiteCount(this.skeletonRows, 0, MAX_SKELETON_ROWS);
     if (explicit > 0) return explicit;
     const pageSize = this.normalizedPageSize;
-    return pageSize > 0 ? Math.min(pageSize, MAX_SKELETON_ROWS) : DEFAULT_SKELETON_ROWS;
+    return pageSize === DEFAULT_PAGE_SIZE ? DEFAULT_SKELETON_ROWS : Math.min(pageSize, MAX_SKELETON_ROWS);
   }
 
   /** `totalItems: -1` (the default) is a sentinel meaning "derive from filtered rows" -- normalize
@@ -1364,7 +1457,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return pageSize > 0 ? Math.ceil(this.matchingTotalItems / pageSize) : 0;
   }
 
-  /** Read-time-safe view of the controlled `page` property, clamped to `[1, pageCount]` -- mirrors
+  /** Read-time-safe view of `page`, clamped to `[1, pageCount]` -- mirrors
    *  `<lr-pagination>`'s own `currentPage` getter and, like `<lr-av-player>`'s `currentTime`
    *  setter, clamps against a dynamic, just-computed upper bound rather than a fixed one. */
   private get appliedPage(): number {
@@ -1382,10 +1475,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private cachedSortedEntries: Array<{ row: T; index: number }> | null = null;
   private sortedEntriesInputs: {
     entries: Array<{ row: T; index: number }>;
-    columns: TableColumn<T>[];
+    columns: readonly TableColumn<T>[];
     mode: TableSortMode;
     key: string;
-    dir: 'asc' | 'desc';
+    dir: TableSortDirection;
     locale: string;
     groupBy: ((row: T) => string | number) | undefined;
   } | null = null;
@@ -1503,15 +1596,19 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   private renderedEntries(): Array<{ row: T; index: number }> {
     const entries = this.sortedEntries();
-    if (this.normalizedPageSize === 0 || this.paginationMode === 'server') return entries;
+    if (this.paginationMode === 'server') return entries.slice(0, this.normalizedPageSize);
     const start = (this.appliedPage - 1) * this.normalizedPageSize;
     return entries.slice(start, start + this.normalizedPageSize);
   }
 
   private onFilterInput = (event: Event): void => {
+    event.stopPropagation();
     const input = event.currentTarget as HTMLInputElement;
     this.filterText = input.value;
-    this.emit('lr-filter-change', { text: this.filterText });
+    this.emit('lr-filter-change', Object.freeze({ text: this.filterText }));
+  };
+  private stopOwnedEvent = (event: Event): void => {
+    event.stopPropagation();
   };
   private onNativeFocus = (event: FocusEvent): void => {
     event.stopPropagation();
@@ -1525,10 +1622,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private onPaginationChange = (event: Event): void => {
     event.stopPropagation();
     const { page } = (event as CustomEvent<{ page: number; pageSize?: number }>).detail;
-    // Table's established controlled-pagination contract carries only the requested page. The
+    // Table's pagination contract carries only the requested page. The
     // nested pagination component has a wider `{ page, pageSize }` payload in v8; do not leak that
     // implementation detail into Table's independently documented event surface.
-    this.emit('lr-page-change', { page });
+    if (this.paginationMode === 'client') this.page = page;
+    this.emit('lr-page-change', Object.freeze({ page }));
   };
 
   /** The header cell that currently owns `tabindex="0"`. */
@@ -1556,8 +1654,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (this.activeRowKey !== null && this.rowsByKey.has(this.activeRowKey)) {
       return this.activeRowKey;
     }
-    if (this.selectedKey !== null) {
-      const selected = encodeKey(this.selectedKey);
+    const selectedKey = this._selectedKeys.values().next().value as string | number | undefined;
+    if (selectedKey !== undefined) {
+      const selected = encodeKey(selectedKey);
       if (this.rowsByKey.has(selected)) return selected;
     }
     const first = this.renderedEntries()[0];
@@ -1627,7 +1726,15 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.captureRovingFocus(changed);
-    // Restore a persisted `showAllColumns` preference once, before the first render, so the restored
+    if (
+      this.selectionMode === 'single' &&
+      this._selectedKeys.size > 1 &&
+      (changed.has('selectionMode') || changed.has('selectedKeys'))
+    ) {
+      const first = this._selectedKeys.values().next().value as string | number | undefined;
+      this.selectedKeys = first === undefined ? new Set() : new Set([first]);
+    }
+    // Restore a persisted `priorityColumnsVisible` preference once, before the first render, so the restored
     // value folds into the first paint with no follow-up update -- doing this in firstUpdated()
     // (after the first render) would schedule a second update and trip Lit's dev warning. Mirrors
     // lr-app-rail's loadPersisted() call in its own willUpdate(). The `persistReady` gate in
@@ -1635,9 +1742,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (!this.hasUpdated) {
       const parsed = readPersistedState(
         this.storageFullKey,
-        (v): v is { showAllColumns?: unknown } => typeof v === 'object' && v !== null
+        (v): v is { priorityColumnsVisible?: unknown } => typeof v === 'object' && v !== null
       );
-      if (parsed && typeof parsed.showAllColumns === 'boolean') this.showAllColumns = parsed.showAllColumns;
+      if (parsed && typeof parsed.priorityColumnsVisible === 'boolean') {
+        this.priorityColumnsVisible = parsed.priorityColumnsVisible;
+      }
     }
     // Ordered before the rowsByKey rebuild below, not after: client-mode sorting resolves the
     // active column through `columnsByKey`, so rebuilding it second would have the very first
@@ -1673,7 +1782,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     this.resolveRovingFocusTarget();
     if (this.editingCell !== null) {
       const column = this.columnsByKey.get(this.editingCell.columnKey);
-      if (!this.rowsByKey.has(this.editingCell.rowKey) || editTrigger(column?.editable) !== 'double-click') {
+      if (!this.rowsByKey.has(this.editingCell.rowKey) || normalizedEditTrigger(column?.editTrigger) !== 'double-click') {
         this.editingCell = null;
       }
     }
@@ -1779,7 +1888,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  intentionally kept as a separate pass from the rowsByKey/columnsByKey
    *  rebuild above: those two must stay in `willUpdate()` so `render()`'s
    *  own `focusedRowKey()` call sees the current update's identity maps
-   *  (e.g. a freshly-assigned `selectedKey` resolving to the correct
+   *  (e.g. freshly-assigned `selectedKeys` resolving to the correct
    *  roving-tabindex row on the very first paint), whereas the sticky-offset
    *  measurement can only run after that same paint has happened. Only runs
    *  when `hasSticky` is true (opt-in) and simply recomputes on every
@@ -1787,15 +1896,15 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  reflects the rendered columns. */
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.loadingAnnouncementsReady && changed.has('loading') && this.loading && this.columns.length > 0) {
+    if (this.loadingAnnouncementsReady && changed.has('loading') && this.loading) {
       this.announcementSink?.announce(this.loadingText());
     }
     this.loadingAnnouncementsReady = true;
-    // Persist `showAllColumns` whenever it changes, but never on the initial update -- willUpdate()
+    // Persist `priorityColumnsVisible` whenever it changes, but never on the initial update -- willUpdate()
     // restored it on that pass, so writing it back would be redundant, and with no `storage-key` set
     // `writePersistedState(undefined, ...)` is a silent no-op regardless.
-    if (this.persistReady && changed.has('showAllColumns')) {
-      writePersistedState(this.storageFullKey, { showAllColumns: this.showAllColumns });
+    if (this.persistReady && changed.has('priorityColumnsVisible')) {
+      writePersistedState(this.storageFullKey, { priorityColumnsVisible: this.priorityColumnsVisible });
     }
     this.persistReady = true;
     if (changed.has('columns') || changed.has('rows') || changed.has('rowKey')) this.applyStickyOffsets();
@@ -1817,14 +1926,14 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       queueMicrotask(() => this.editorElementFor(rowKey, columnKey)?.focus());
     }
     // Deferred to a microtask rather than called synchronously here: a real
-    // priority-hidden transition mutates the reactive `columnsHidden`
+    // priority-hidden transition mutates the reactive `hasHiddenPriorityColumns`
     // property, and doing that from inside this same updated() call stack
     // schedules a second update from within the first update's own lifecycle
     // callback -- Lit's dev-mode "scheduled an update ... after an update
     // completed" warning. Pushing the write out to a microtask lets this
     // update finish first, so the follow-up update is a normal externally
     // triggered one instead.
-    queueMicrotask(() => this.recomputeColumnsHidden());
+    queueMicrotask(() => this.recomputeHiddenPriorityColumns());
   }
 
   /** Restores only focus that the current render displaced. If another internal control or an
@@ -1855,22 +1964,20 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     else this.focusRow(target);
   }
 
-  /** Header activation (click, Enter, Space). Owns `sortKey`/`sortDir` end-to-end now that
-   *  `sortMode: 'client'` makes the table responsible for the order it renders: switching to a
-   *  different column seeds the direction from `defaultSortDir`, re-activating the current one
-   *  toggles it. `lr-sort` still fires exactly as before, so a `sortMode: 'server'` consumer that
-   *  re-sorts on the event and pushes fresh `rows` back in keeps working unchanged. */
+  /** Header activation (click, Enter, Space) proposes one canonical sort transaction. Client mode
+   * owns the accepted state; server mode leaves state controlled while reporting the same commit. */
   private activateColumn(key: string): void {
     this.activeColKey = key;
     const col = this.columnsByKey.get(key);
     if (!col?.sortable) return;
-    if (this.sortKey === key) {
-      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
-    } else {
-      this.sortKey = key;
-      this.sortDir = this.defaultSortDir;
+    const sortDir = this.sortKey === key ? (this.sortDir === 'asc' ? 'desc' : 'asc') : this.defaultSortDir;
+    const request = Object.freeze({ phase: 'request', sortKey: col.key, sortDir } as const);
+    if (this.emit('lr-sort-request', request, { cancelable: true }).defaultPrevented) return;
+    if (this.sortMode === 'client') {
+      this.sortKey = col.key;
+      this.sortDir = sortDir;
     }
-    this.emit('lr-sort', { key: col.key });
+    this.emit('lr-sort', Object.freeze({ phase: 'commit', sortKey: col.key, sortDir } as const));
   }
 
   private activateRow(key: string): void {
@@ -1878,25 +1985,28 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const entry = this.rowsByKey.get(key);
     if (entry === undefined) return;
     const { row, index } = entry;
-    this.emit('lr-row-click', { row });
+    this.emit('lr-row-click', Object.freeze({ row }));
     if (this.selectionMode === 'single') {
-      this.selectedKey = this.keyOf(row, index);
-      this.emit('lr-selection-change', { keys: this.selectedKey === null ? [] : [this.selectedKey] });
+      const selectedKey = this.keyOf(row, index);
+      this.selectedKeys = new Set([selectedKey]);
+      const keys = Object.freeze([selectedKey] as const);
+      this.emit('lr-selection-change', Object.freeze({ keys }));
     } else if (this.selectionMode === 'multiple') {
       const rawKey = this.keyOf(row, index);
-      const next = new Set(this.selectedKeys);
+      const next = new Set(this._selectedKeys);
       if (next.has(rawKey)) next.delete(rawKey);
       else next.add(rawKey);
       this.selectedKeys = next;
-      this.emit('lr-selection-change', { keys: [...next] });
+      const keys = Object.freeze([...next]);
+      this.emit('lr-selection-change', Object.freeze({ keys }));
     }
   }
 
-  /** Whether any column opts into persistent (`editable: 'always'`) editors --
+  /** Whether any column opts into persistent (`editTrigger: 'always'`) editors --
    *  the table-level flag inferred from the columns themselves, mirroring how
    *  `heatValue`/`width` opt their own modes in with no separate boolean. */
   private get hasAlwaysOnEditors(): boolean {
-    return this.columns.some((col) => editTrigger(col.editable) === 'always');
+    return this.columns.some((col) => normalizedEditTrigger(col.editTrigger) === 'always');
   }
 
   private editorValue(row: T, column: TableColumn<T>): string {
@@ -1910,21 +2020,22 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  cell. */
   private startEditing(rowKey: string, columnKey: string): void {
     const column = this.columnsByKey.get(columnKey);
-    if (editTrigger(column?.editable) !== 'double-click' || !this.rowsByKey.has(rowKey)) return;
+    if (normalizedEditTrigger(column?.editTrigger) !== 'double-click' || !this.rowsByKey.has(rowKey)) return;
     this.editingCell = { rowKey, columnKey };
   }
 
   private commitEdit(event: Event, rowKey: string, columnKey: string): void {
+    event.stopPropagation();
     const input = event.currentTarget as HTMLInputElement;
     const entry = this.rowsByKey.get(rowKey);
     const column = this.columnsByKey.get(columnKey);
     const isTransient = this.editingCell?.rowKey === rowKey && this.editingCell.columnKey === columnKey;
-    if (!entry || !column || editTrigger(column.editable) === undefined) {
+    if (!entry || !column || normalizedEditTrigger(column.editTrigger) === undefined) {
       if (isTransient) this.editingCell = null;
       return;
     }
     const value = column.editType === 'number' && input.value !== '' ? Number(input.value) : input.value;
-    this.emit('lr-cell-edit', { row: entry.row, key: columnKey, value });
+    this.emit('lr-cell-edit', Object.freeze({ row: entry.row, key: columnKey, value }));
     if (isTransient) this.editingCell = null;
   }
 
@@ -1956,7 +2067,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       target?.getAttribute('part') === 'cell-editor' &&
       columnKey !== undefined &&
       rowKey !== undefined &&
-      editTrigger(this.columnsByKey.get(columnKey)?.editable) === 'always'
+      normalizedEditTrigger(this.columnsByKey.get(columnKey)?.editTrigger) === 'always'
         ? { rowKey, columnKey }
         : null;
   };
@@ -1989,7 +2100,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  left uncancelled and an ancestor dialog/popover still closes on it. */
   private onEditorKeyDown = (event: KeyboardEvent, rowKey: string, columnKey: string): void => {
     event.stopPropagation();
-    const alwaysOn = editTrigger(this.columnsByKey.get(columnKey)?.editable) === 'always';
+    const alwaysOn = normalizedEditTrigger(this.columnsByKey.get(columnKey)?.editTrigger) === 'always';
     if (event.key === 'Enter') {
       event.preventDefault();
       this.commitEdit(event, rowKey, columnKey);
@@ -2002,7 +2113,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private onTableDoubleClick = (event: MouseEvent): void => {
     const target = event.target as HTMLElement;
     const table = event.currentTarget as HTMLElement;
-    if (closestInteractive(target, table)) return;
+    if (eventInteractiveTarget(event, table)) return;
     const cell = target.closest('[part="cell"][data-col-key]') as HTMLElement | null;
     const row = target.closest('[data-row-key]') as HTMLElement | null;
     if (cell && row?.dataset['rowKey'] && cell.dataset['colKey']) {
@@ -2012,7 +2123,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   private activateExpandToggle(key: string | number): void {
     const entry = this.rowsByKey.get(encodeKey(key));
-    if (entry !== undefined) this.emit('lr-row-expand-toggle', { row: entry.row, key });
+    if (entry !== undefined) this.emit('lr-row-expand-toggle', Object.freeze({ row: entry.row, key }));
   }
 
   /** Header cells currently in the tab sequence — excludes columns hidden by
@@ -2040,17 +2151,19 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   }
 
   private toggleColumns = (): void => {
-    this.showAllColumns = !this.showAllColumns;
-    this.emit('lr-columns-revealed', { revealed: this.showAllColumns });
+    this.priorityColumnsVisible = !this.priorityColumnsVisible;
+    this.emit(
+      'lr-priority-columns-visibility-change',
+      Object.freeze({ visible: this.priorityColumnsVisible })
+    );
   };
 
   private onTableClick = (e: MouseEvent): void => {
     const target = e.target as HTMLElement;
     const table = e.currentTarget as HTMLElement;
-    // A cell()-rendered button/link/input/custom-element etc. owns its own
-    // click — don't let the delegated row/column resolution below
-    // re-interpret it as row or header activation.
-    if (closestInteractive(target, table)) return;
+    // A cell()-rendered native/semantic control owns its own click. Passive custom content does
+    // not match the guard and deliberately remains part of the row activation surface.
+    if (eventInteractiveTarget(e, table)) return;
     // Scoped to `th` — body `<td>`s also carry `data-col-key` now (for the
     // sticky-offset measurement pass), so an unscoped `[data-col-key]` would
     // match the clicked cell itself and misroute a plain cell click to
@@ -2068,7 +2181,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // Same guard as onTableClick — also skips the table's own
     // preventDefault(), so a focused nested control keeps its native/own
     // Enter or Space activation instead of having it swallowed.
-    if (closestInteractive(target, table)) return;
+    if (eventInteractiveTarget(e, table)) return;
     // Same th-scoping rationale as onTableClick above.
     const th = target.closest('th[data-col-key]') as HTMLElement | null;
     if (th) return this.onHeaderKeyDown(e, th);
@@ -2159,7 +2272,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   /** One body cell's inline editor.
    *
-   *  The persistent (`editable: 'always'`) and double-click flavors differ in exactly one binding:
+   *  The persistent (`editTrigger: 'always'`) and double-click flavors differ in exactly one binding:
    *  the persistent editor binds `value` as a **content attribute**, the double-click one keeps the
    *  `.value` **property**. Native HTML sets an input's dirty-value flag on the user's first edit,
    *  after which content-attribute updates no longer overwrite what is displayed -- so an
@@ -2191,6 +2304,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
           spellcheck=${spellcheck}
           autocapitalize=${autocapitalize}
           autocorrect=${autocorrect}
+          @input=${this.stopOwnedEvent}
           @change=${onChange}
           @focus=${this.onNativeFocus}
           @blur=${this.onNativeBlur}
@@ -2204,6 +2318,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
           spellcheck=${spellcheck}
           autocapitalize=${autocapitalize}
           autocorrect=${autocorrect}
+          @input=${this.stopOwnedEvent}
           @change=${onChange}
           @focus=${this.onNativeFocus}
           @blur=${this.onNativeBlur}
@@ -2211,14 +2326,15 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
         />`;
   }
 
-  /** One placeholder. `announce` is switched off on every one of them: `<lr-skeleton>` defaults it
+  /** One rectangular placeholder, using `<lr-skeleton>`'s canonical `shape` axis. `announce` is
+   *  switched off on every one of them: `<lr-skeleton>` defaults it
    *  to `true`, which would make each of the N x M cells its own `role="status"` live region and
    *  turn a single "Loading rows" announcement into a storm of them. The table's shared light-DOM
    *  announcement sink carries the post-mount state transition for the whole grid instead.
    *  A property binding (not `?announce=`) is required to assign `false` to a `true`-defaulting
    *  boolean property. */
   private renderSkeletonPlaceholder(): TemplateResult {
-    return html`<lr-skeleton part="skeleton" variant="rect" effect="sheen" .announce=${false}></lr-skeleton>`;
+    return html`<lr-skeleton part="skeleton" shape="rect" effect="sheen" .announce=${false}></lr-skeleton>`;
   }
 
   /** `loadingAppearance="skeleton"`'s body rows. Deliberately built from the same per-column
@@ -2251,6 +2367,18 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   }
 
   override render(): TemplateResult {
+    // A skeleton needs a schema to sketch. Until columns arrive, both loading appearances use the
+    // spinner rather than misreporting the unresolved schema as a configuration error.
+    const skeletonLoading = this.loading && this.loadingAppearance === 'skeleton' && this.columns.length > 0;
+    if (this.loading && !skeletonLoading) {
+      return html`<div part="base" aria-busy="true">
+        <div part="loading" aria-hidden="true">
+          <lr-spinner label-placement="after" aria-label=${this.loadingText()}>
+            ${this.loadingText()}
+          </lr-spinner>
+        </div>
+      </div>`;
+    }
     if (this.columns.length === 0) {
       // Deliberately not wrapped in the `empty` slot: this branch reports a *configuration*
       // problem, with its own `noColumnsHeading` copy, rather than "this data set is empty" --
@@ -2266,17 +2394,6 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // Skeleton mode deliberately falls through to the full grid render below instead of returning
     // its own shell here: its whole point is that the <colgroup>/<thead>/filter/pagination chrome
     // stays put, which is only achievable by rendering the real table.
-    const skeletonLoading = this.loading && this.loadingAppearance === 'skeleton';
-    if (this.loading && !skeletonLoading) {
-      return html`<div part="base" aria-busy="true">
-        <div part="loading" aria-hidden="true">
-          <lr-spinner label-placement="after" aria-label=${this.loadingText()}>
-            ${this.loadingText()}
-          </lr-spinner>
-        </div>
-      </div>`;
-    }
-
     const hasHostAriaLabel = this.hasAttribute('aria-label');
     const gridAriaLabel =
       this.accessibleLabel || (hasHostAriaLabel ? this.getAttribute('aria-label')! : nothing);
@@ -2288,7 +2405,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const matchingEntries = this.sortedEntries();
     // A cold load is exactly the case where `rows` is still empty, so skeleton mode must not take
     // either empty-state branch -- "no data" is a *result*, and the load has not produced one yet.
-    if (!skeletonLoading && this.rows.length === 0 && !this.filterable && this.normalizedPageSize === 0) {
+    if (!skeletonLoading && this.rows.length === 0 && !this.filterable) {
       return html`<slot name="empty"
         ><lr-empty
           part="empty"
@@ -2332,7 +2449,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
         else renderedGroupRows.set(groupKey, [entry.row]);
       });
     }
-    const hasPagination = this.normalizedPageSize > 0;
+    const hasPagination = skeletonLoading || this.pageCount > 1;
     const filterLabel = this.localize('tableFilterLabel', this.filterLabel || undefined);
     const filterPlaceholder = this.localize('tableFilterPlaceholder', this.filterPlaceholder || undefined);
     const tableContent =
@@ -2415,10 +2532,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                     (entry, entryIndex) => {
                       const { row, index } = entry;
                       const key = this.keyOf(row, index);
-                      const selected =
-                        (this.selectedKey !== null && this.selectedKey === key) || this.selectedKeys.has(key);
+                      const selected = this._selectedKeys.has(key);
                       const canExpandRow = hasExpand && (this.canExpand ? this.canExpand(row) : true);
-                      const rowExpanded = canExpandRow && this.expandedKeys.has(key);
+                      const rowExpanded = canExpandRow && this._expandedKeys.has(key);
                       const groupKey = renderedGroupKeys[entryIndex];
                       const previousGroupKey = entryIndex > 0 ? renderedGroupKeys[entryIndex - 1] : undefined;
                       const isNewGroup =
@@ -2465,10 +2581,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                             // An `'always'` column renders its editor unconditionally, from first
                             // paint and with no interaction; `editingCell` (a single nullable object,
                             // one open editor at a time) only ever drives the double-click flavor.
-                            const alwaysOn = editTrigger(col.editable) === 'always';
+                            const alwaysOn = normalizedEditTrigger(col.editTrigger) === 'always';
                             const editing =
                               alwaysOn ||
-                              (editTrigger(col.editable) === 'double-click' &&
+                              (normalizedEditTrigger(col.editTrigger) === 'double-click' &&
                                 this.editingCell?.rowKey === encodeKey(key) &&
                                 this.editingCell.columnKey === col.key);
                             // `|| nothing`, not `?? nothing`: an empty `title=""` is not "no tooltip",
@@ -2524,7 +2640,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
           </table>`;
 
     return html`
-      <div part="base" ?data-force-visible=${this.showAllColumns} aria-busy=${skeletonLoading ? 'true' : 'false'}>
+      <div part="base" ?data-force-visible=${this.priorityColumnsVisible} aria-busy=${skeletonLoading ? 'true' : 'false'}>
         ${skeletonLoading
           ? html`<div part="loading" class="sr-only" aria-hidden="true">${this.loadingText()}</div>`
           : nothing}
@@ -2541,20 +2657,21 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                 autocapitalize=${this.autocapitalize || nothing}
                 autocorrect=${this.autoCorrect || nothing}
                 @input=${this.onFilterInput}
+                @change=${this.stopOwnedEvent}
                 @focus=${this.onNativeFocus}
                 @blur=${this.onNativeBlur}
               />
             </label>`
           : nothing}
         ${tableContent}
-        ${this.columnsHidden
+        ${this.priorityColumnsToggleAvailable
           ? html`<button
               part="reveal-columns-button"
               type="button"
-              aria-pressed=${this.showAllColumns ? 'true' : 'false'}
+              aria-pressed=${this.priorityColumnsVisible ? 'true' : 'false'}
               @click=${this.toggleColumns}
             >
-              ${this.showAllColumns
+              ${this.priorityColumnsVisible
                 ? this.localize('showFewerColumns', this.hideColumnsLabel || undefined)
                 : this.localize('showAllColumns', this.revealColumnsLabel || undefined)}
             </button>`

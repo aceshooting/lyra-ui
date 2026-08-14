@@ -109,6 +109,10 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
 
   static override styles = [LyraElement.styles, variants, styles];
 
+  /** Light-DOM semantic role for the projected message. Reflected so server renderers can
+   * serialize the default before browser connection; an authored role continues to win. */
+  @property({ reflect: true }) override role: string | null = 'alert';
+
   private _open = false;
 
   /**
@@ -217,9 +221,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.toastConnectionGeneration += 1;
-    // Keep assertive semantics on the light-DOM owner of the slotted message. A role inside the
-    // shadow root would not reliably expose consumer-authored content to every accessibility tree.
-    this.setAttribute('role', 'alert');
+    if (!this.hasAttribute('role')) this.setAttribute('role', 'alert');
     if (this.toastPromise) {
       const currentController = toastRegionControllerFor(this);
       if (currentController && currentController !== this.toastRegionOwner) {

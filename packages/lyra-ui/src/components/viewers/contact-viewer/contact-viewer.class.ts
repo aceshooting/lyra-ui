@@ -4,17 +4,19 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
-import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { parseVCards, type VCardAddress, type VCardContact } from './vcard.js';
 import { styles } from './contact-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_contactViewerAddressFormat, LYRA_DEFAULT_contactViewerAddressLabel, LYRA_DEFAULT_contactViewerEmailLabel, LYRA_DEFAULT_contactViewerLabel, LYRA_DEFAULT_contactViewerNoContacts, LYRA_DEFAULT_contactViewerOrganization, LYRA_DEFAULT_contactViewerPhoneLabel, LYRA_DEFAULT_contactViewerTypeCell, LYRA_DEFAULT_contactViewerTypeFax, LYRA_DEFAULT_contactViewerTypeHome, LYRA_DEFAULT_contactViewerTypeInternet, LYRA_DEFAULT_contactViewerTypePreferred, LYRA_DEFAULT_contactViewerTypeVoice, LYRA_DEFAULT_contactViewerTypeWork, LYRA_DEFAULT_contactViewerTypedValue, LYRA_DEFAULT_contactViewerUnnamedContact, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeContact, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_contactViewerAddressFormat, LYRA_DEFAULT_contactViewerAddressLabel, LYRA_DEFAULT_contactViewerEmailLabel, LYRA_DEFAULT_contactViewerLabel, LYRA_DEFAULT_contactViewerNoContacts, LYRA_DEFAULT_contactViewerOrganization, LYRA_DEFAULT_contactViewerPhoneLabel, LYRA_DEFAULT_contactViewerTypeCell, LYRA_DEFAULT_contactViewerTypeFax, LYRA_DEFAULT_contactViewerTypeHome, LYRA_DEFAULT_contactViewerTypeInternet, LYRA_DEFAULT_contactViewerTypePreferred, LYRA_DEFAULT_contactViewerTypeVoice, LYRA_DEFAULT_contactViewerTypeWork, LYRA_DEFAULT_contactViewerTypedValue, LYRA_DEFAULT_contactViewerUnnamedContact, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeContact, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -31,7 +33,9 @@ class LyraContactViewerBase extends LyraElement<LyraContactViewerEventMap> {}
 /**
  * Fetches a vCard document and renders one accessible card per contact. Contact names retain
  * level-three heading semantics by default; set `heading-level` from `1`–`6` to fit the surrounding
- * outline, or `none` for visual-only names.
+ * outline, or `none` for visual-only names. At most 250 contacts and 2 MiB of rendered contact text
+ * are accepted so eager DOM remains bounded while search, selection and anchors cover every
+ * accepted contact.
  *
  * @customElement lr-contact-viewer
  * @event lr-render-error - Fired when fetching or parsing the document fails.
@@ -44,7 +48,7 @@ class LyraContactViewerBase extends LyraElement<LyraContactViewerEventMap> {}
  * @event {CustomEvent<TextSelectDetail>} lr-text-select - Fired after a selection ends inside the
  *   rendered contacts. `detail: { text: string; anchor: LyraAnchor | null; rects: DOMRect[] }`.
  *   Bubbling, composed, and non-cancelable.
- * @csspart base - The root container.
+ * @csspart base - The root container with explicit `aria-busy` loading state.
  * @csspart body - The wrapper around the fetched-state content.
  * @csspart contact - One rendered contact card.
  * @csspart contact-name - A contact's name heading at the configured semantic level.
@@ -52,7 +56,7 @@ class LyraContactViewerBase extends LyraElement<LyraContactViewerEventMap> {}
  * @csspart contact-tel - A contact's phone number list, when present.
  * @csspart contact-email - A contact's email list, when present.
  * @csspart contact-adr - A contact's address list, when present.
- * @csspart spinner - The loading region.
+ * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
  * @csspart error - The error region.
  * @cssprop [--lr-contact-viewer-max-height=none] - Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.
  * @status stable
@@ -91,17 +95,20 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
     loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
   /** URL to fetch and parse as vCard text. */
   @property() src = '';
-  /** Optional display name for the source document. Used as the accessible name of
-   *  `[part='base']` when the host has no `aria-label`, and before the localized
-   *  `contactViewerLabel` default. Host `aria-label` wins by attribute presence, including an
-   *  empty value. */
+  /** Optional display name for the source document. It names `[part='base']` when host
+   *  `aria-label` is absent, before the localized fallback. A non-empty host label remains on the
+   *  host; an explicitly empty one is preserved on the shadow owner. */
   @property() name = '';
   /** Semantic level of each rendered contact name. Use `none` for visual-only names; invalid
    *  untyped values use level 3. */
@@ -135,7 +142,8 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.announcements.adopted();
   }
 
@@ -236,7 +244,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
       case 'loaded': return html`${this.fetchState.contacts.map((contact) => this.renderContact(contact))}`;
-      case 'loading': return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+      case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       // A well-formed vCard document with zero VCARD records is a distinct, non-error state --
       // it must not be funneled into the same error chrome/assertive announcement as a genuine fetch/parse
       // failure (matching <lr-calendar-viewer>'s identical zero-events handling).
@@ -249,7 +257,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
 
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-contact-viewer-max-height': maxHeight }) : nothing} aria-label=${hostAriaLabel(this) ?? (this.name || this.localize('contactViewerLabel'))}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div part="base" role=${viewerSemanticRole(this, 'region') ?? nothing} style=${maxHeight ? styleMap({ '--lr-contact-viewer-max-height': maxHeight }) : nothing} aria-label=${viewerSemanticLabel(this, this.name || this.localize('contactViewerLabel')) ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

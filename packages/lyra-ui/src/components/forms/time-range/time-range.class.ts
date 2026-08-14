@@ -19,10 +19,12 @@ import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-
 import { activeElementIn } from '../../../internal/active-element.js';
 import {
   getFormOwner,
+  installCustomErrorProperty,
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeStart } from '../../../internal/default-strings.generated.js';
@@ -65,9 +67,9 @@ export type LyraTimeRangeSize = LyraSizeStep;
 
 /** A single discrete-preset option for the `presets` property. */
 export interface TimeRangePreset {
-  label: string;
-  start: number;
-  end: number;
+  readonly label: string;
+  readonly start: number;
+  readonly end: number;
 }
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
@@ -117,6 +119,7 @@ export interface LyraTimeRangeEventMap {
   blur: FocusEvent;
   'lr-focus': CustomEvent<undefined>;
   'lr-blur': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<undefined>;
 }
 /**
  * `<lr-time-range>` — a two-handle brush/scrubber over a numeric domain.
@@ -172,6 +175,7 @@ export interface LyraTimeRangeEventMap {
  * @event blur - Native blur relayed once from either handle.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
+ * @event lr-invalid - Cancelable prefixed alias fired when native validity checking fails.
  * @csspart base - The time-range wrapper.
  * @csspart track - The complete range track.
  * @csspart range - The selected range.
@@ -259,6 +263,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // invoke that callback *before* any Lit update even starts, so it never
     // interleaves with one.
     disabled: { type: Boolean, reflect: true, noAccessor: true },
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
   };
 
   @property({ type: Number }) min = 0;
@@ -272,14 +277,12 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    *  `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a tag rename with no
    *  attribute rewrite. */
   @property({ reflect: true }) size: LyraSize = 'm';
-  /** Accessible name for the start handle, used as its `aria-label`.
-   *  Overridable for i18n/custom copy; defaults to the same literal text
-   *  this component always rendered before the property existed. */
-  @property({ attribute: 'start-label' }) startLabel = 'Range start';
-  /** Accessible name for the end handle, used as its `aria-label`.
-   *  Overridable for i18n/custom copy; defaults to the same literal text
-   *  this component always rendered before the property existed. */
-  @property({ attribute: 'end-label' }) endLabel = 'Range end';
+  /** Accessible-name override for the start handle. `undefined` uses the localized default;
+   * every supplied string, including empty and `"Range start"`, is caller-owned verbatim. */
+  @property({ attribute: 'start-label' }) startLabel?: string;
+  /** Accessible-name override for the end handle. `undefined` uses the localized default;
+   * every supplied string, including empty and `"Range end"`, is caller-owned verbatim. */
+  @property({ attribute: 'end-label' }) endLabel?: string;
   /** Optional human-readable formatter for each handle's `aria-valuetext`. Receives the same
    *  finite, clamped number exposed through `aria-valuenow` plus `'start'`/`'end'`; leaving it
    *  unset preserves the numeric-only slider contract. Return `null`/`undefined` to omit
@@ -290,7 +293,29 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    * above the track. Purely additive: leaving this empty (the default)
    * renders nothing extra and leaves the continuous brush untouched.
    */
-  @property({ attribute: false }) presets: TimeRangePreset[] = [];
+  private _presets: readonly TimeRangePreset[] = Object.freeze([]);
+  @property({ attribute: false })
+  get presets(): readonly TimeRangePreset[] { return this._presets; }
+  set presets(next: readonly TimeRangePreset[]) {
+    const previous = this._presets;
+    const snapshots: TimeRangePreset[] = [];
+    if (Array.isArray(next)) {
+      for (let index = 0; index < Math.min(next.length, 256); index += 1) {
+        try {
+          const raw = next[index];
+          if (
+            raw === null || typeof raw !== 'object' || typeof raw.label !== 'string' ||
+            typeof raw.start !== 'number' || typeof raw.end !== 'number'
+          ) continue;
+          snapshots.push(Object.freeze({ label: raw.label, start: raw.start, end: raw.end }));
+        } catch {
+          // A hostile getter invalidates only its own preset; later valid rows remain reachable.
+        }
+      }
+    }
+    this._presets = Object.freeze(snapshots);
+    this.requestUpdate('presets', previous);
+  }
 
   private _disabled = false;
   // Tracked separately from the consumer's own `disabled` -- a fieldset
@@ -310,6 +335,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  /** Reflected consumer validity message; only `setCustomValidity('')` clears it. */
+  declare customError: string | null;
   /** Whether the user has acted on this control yet, which is what gates the `user-valid`/
    *  `user-invalid` custom states: a committed handle move, a preset pick, a blur, or a
    *  `reportValidity()` call. A range a consumer has already rejected is genuinely invalid, but
@@ -323,6 +350,9 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     this.validityController = new AnchoredValidityController(this, this.internals, () =>
       this[VALIDITY_ANCHOR](),
     );
+    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', undefined, init));
     // Blur counts as interaction exactly as it does in the `FormAssociated` mixin. `focusout` is
     // the observable signal: native `blur` neither bubbles nor crosses the shadow boundary, so a
     // host-level `blur` listener would never fire for the internal handles. Registered in the
@@ -332,10 +362,16 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   }
 
   private markInteracted = (): void => {
+    if (this.liveDisabled) return;
     if (this.hasInteracted) return;
     this.hasInteracted = true;
     this.reflectValidityStates();
   };
+
+  /** Includes the UA's synchronous fieldset cascade before its callback updates cached state. */
+  private get liveDisabled(): boolean {
+    return this.effectiveDisabled || (typeof this.matches === 'function' && this.matches(':disabled'));
+  }
 
   private emitInput(): void {
     dispatchNativeEvent(this, 'input');
@@ -528,7 +564,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    // Mirror lr-split's cleanup: if the element is removed mid-drag (or a
+    // Mirror lr-multi-split's cleanup: if the element is removed mid-drag (or a
     // pointercancel/alt-tab means `pointerup` never reaches `window`), these
     // window-level listeners — and the closure keeping this instance alive —
     // would otherwise leak indefinitely.
@@ -537,7 +573,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     this.teardownDragWindow();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     // Adoption can happen while already disconnected, so defensively retire any previous-realm
     // drag state even when no new disconnected callback will run.
     this.drags.clear();
@@ -551,14 +588,14 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    *  controls. Targets the start handle specifically, matching `focus()` below; `blur()` instead
    *  follows whichever handle currently owns focus. */
   override click(): void {
-    if (!this.effectiveDisabled) {
+    if (!this.liveDisabled) {
       (this.renderRoot?.querySelector('[part="handle-start"]') as HTMLElement | null)?.click();
     }
   }
 
   /** Moves focus to the start handle. */
   override focus(options?: FocusOptions): void {
-    if (!this.effectiveDisabled) {
+    if (!this.liveDisabled) {
       (this.renderRoot?.querySelector('[part="handle-start"]') as HTMLElement | null)?.focus(options);
     }
   }
@@ -681,12 +718,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    * pre-preset value for whichever handle hadn't been assigned yet.
    */
   private applyPreset(preset: TimeRangePreset): void {
-    if (this.effectiveDisabled) return;
-    const { lo, hi } = this.domain();
-    const start = finiteRange(preset.start, lo, lo, hi);
-    const end = finiteRange(preset.end, hi, lo, hi);
-    const nextStart = Math.min(start, end);
-    const nextEnd = Math.max(start, end);
+    if (this.liveDisabled) return;
+    const { start: nextStart, end: nextEnd } = this.normalizePreset(preset);
     if (nextStart === this.start && nextEnd === this.end) return;
     this.start = nextStart;
     this.end = nextEnd;
@@ -695,13 +728,21 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     this.emitChange();
   }
 
+  /** Project a caller preset into the same legal domain/rendered order used when it is applied. */
+  private normalizePreset(preset: TimeRangePreset): { start: number; end: number } {
+    const { lo, hi } = this.domain();
+    const start = finiteRange(preset.start, lo, lo, hi);
+    const end = finiteRange(preset.end, hi, lo, hi);
+    return { start: Math.min(start, end), end: Math.max(start, end) };
+  }
+
   private onKeyDown = (handle: TimeRangeHandle, e: KeyboardEvent): void => {
     // A handle that already has focus when the component becomes disabled
     // must not still respond to arrow keys (new pointerdowns are already
-    // blocked by the `if (this.effectiveDisabled) return;` guard in
+    // blocked by the live disabled guard in
     // onPointerDown, and disabled handles carry `tabindex="-1"`, but a
     // pre-existing focus can bypass both of those).
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     const current =
       handle === 'start'
         ? finiteRange(this.start, this.domain().lo)
@@ -747,7 +788,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   private finishKeyboardGesture(): void {
     if (!this.keyboardChanged) return;
     this.keyboardChanged = false;
-    if (!this.effectiveDisabled) this.emitChange();
+    if (!this.liveDisabled) this.emitChange();
   }
 
   private onKeyUp = (e: KeyboardEvent): void => {
@@ -772,7 +813,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     e: PointerEvent,
     captureTarget: HTMLElement,
   ): DragState | undefined {
-    if (this.effectiveDisabled) return undefined;
+    if (this.liveDisabled) return undefined;
     const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
     const dragWindow = base?.ownerDocument.defaultView;
     if (!base || !this.isConnected || !dragWindow) return undefined;
@@ -798,7 +839,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // fires `lostpointercapture` — both need the same teardown as pointerup
     // or `this.drags` keeps a permanently-stale entry and these window
     // listeners (and the closure keeping this instance alive) never get
-    // removed. Mirrors lr-split's identical fix.
+    // removed. Mirrors lr-multi-split's identical fix.
     return drag;
   }
 
@@ -831,7 +872,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    *  started on a handle bubbles into this listener too; it is already fully handled by
    *  `onPointerDown` above, so it is ignored here. */
   private onBasePointerDown = (e: PointerEvent): void => {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     const handles = Array.from(
       this.renderRoot.querySelectorAll('[part="handle-start"],[part="handle-end"]'),
     ) as HTMLElement[];
@@ -857,7 +898,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   private onPointerMove = (e: PointerEvent): void => {
     const drag = this.drags.get(e.pointerId);
     if (drag === undefined) return;
-    if (this.effectiveDisabled) {
+    if (this.liveDisabled) {
       // These are window-level listeners driven by setPointerCapture, so
       // they keep firing for this pointerId regardless of any CSS on the
       // host (this was already true even back when the host used
@@ -878,7 +919,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   };
 
   private onPointerUp = (e: PointerEvent): void => {
-    this.endDrag(e.pointerId, e.type === 'pointerup' && !this.effectiveDisabled);
+    this.endDrag(e.pointerId, e.type === 'pointerup' && !this.liveDisabled);
   };
 
   /** Retire every pending input generation without turning its current value into a commit. */
@@ -928,8 +969,20 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
       // Guard against a caller passing min > max so the bounds themselves
       // stay well-formed.
       const { lo, hi } = this.domain();
-      if (Number.isFinite(this.start)) this.start = finiteRange(this.start, lo, lo, hi);
-      if (Number.isFinite(this.end)) this.end = finiteRange(this.end, hi, lo, hi);
+      const start = Number.isFinite(this.start)
+        ? finiteRange(this.start, lo, lo, hi)
+        : this.start;
+      const end = Number.isFinite(this.end) ? finiteRange(this.end, hi, lo, hi) : this.end;
+      // A controlled caller commonly writes both endpoints before the one Lit update. Preserve
+      // that pair as one transaction: sequentially storing start first would make the subsequent
+      // end normalization observe the already-collapsed value (90/10 -> 10/10) and lose 90.
+      if (changed.has('start') && changed.has('end') && Number.isFinite(start) && Number.isFinite(end)) {
+        this.start = Math.min(start, end);
+        this.end = Math.max(start, end);
+        return;
+      }
+      if (Number.isFinite(start)) this.start = start;
+      if (Number.isFinite(end)) this.end = end;
     }
     // Keep start <= end regardless of which side changed (a controlled
     // caller may set only `end`, e.g. two-way-binding an external store).
@@ -971,7 +1024,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
       ${this.presets.length > 0
         ? html`<div part="presets">
             ${this.presets.map((preset) => {
-              const active = preset.start === this.start && preset.end === this.end;
+              const normalized = this.normalizePreset(preset);
+              const active = normalized.start === this.start && normalized.end === this.end;
               return html`<button
                 part="preset-button"
                 type="button"
@@ -1000,10 +1054,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
           part="handle-start"
           role="slider"
           tabindex=${this.effectiveDisabled ? '-1' : '0'}
-          aria-label=${this.localize(
-            'rangeStart',
-            this.startLabel === 'Range start' ? undefined : this.startLabel,
-          )}
+          aria-label=${this.startLabel ?? this.localize('rangeStart')}
           aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
           aria-valuemin=${startBounds.min}
           aria-valuemax=${startBounds.max}
@@ -1022,10 +1073,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
           part="handle-end"
           role="slider"
           tabindex=${this.effectiveDisabled ? '-1' : '0'}
-          aria-label=${this.localize(
-            'rangeEnd',
-            this.endLabel === 'Range end' ? undefined : this.endLabel,
-          )}
+          aria-label=${this.endLabel ?? this.localize('rangeEnd')}
           aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
           aria-valuemin=${endBounds.min}
           aria-valuemax=${endBounds.max}

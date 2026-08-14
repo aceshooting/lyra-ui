@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import {
   loadChartJs,
   loadChartModule,
+  loadAndRegisterChartModule,
   loadChartAndZoom,
   loadChartJsWithZoomResult,
   loadChartJsWithZoom,
@@ -95,6 +96,21 @@ describe('loadChartModule (independent Chart.js core loading)', () => {
     expect(result).to.equal(null);
     expect(warnings.flat()).to.contain(chartError);
     expect(warnings.flat().join(' ')).to.contain('pnpm add chart.js');
+  });
+
+  it('fails closed when core registration throws instead of memoizing a rejected promise', async () => {
+    const registrationError = new Error('core registration boom');
+    const chart = fakeChartModule();
+    const { result, warnings } = await captureWarnings(() =>
+      loadAndRegisterChartModule(
+        () => Promise.resolve(chart),
+        () => { throw registrationError; },
+      ),
+    );
+
+    expect(result).to.equal(null);
+    expect(warnings.flat()).to.contain(registrationError);
+    expect(warnings.flat().join(' ')).to.contain('could not register');
   });
 });
 

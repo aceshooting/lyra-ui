@@ -1,4 +1,4 @@
-import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './av-player.js';
 import '../../layout/virtual-list/virtual-list.js';
 import type { LyraAvPlayer, LyraAvCue } from './av-player.js';
@@ -6,6 +6,7 @@ import { styles } from './av-player.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 
 const MP3_SRC = 'https://example.test/podcast.mp3';
 const MP4_SRC = 'https://example.test/clip.mp4';
@@ -396,6 +397,47 @@ describe('kind detection', () => {
   });
 });
 
+it('canonicalizes invalid closed kind and preload values without rejecting updateComplete', async () => {
+  const el = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
+  el.kind = 'movie' as typeof el.kind;
+  el.preload = 'eager' as typeof el.preload;
+  await el.updateComplete;
+  expect(el.kind).to.be.undefined;
+  expect(el.preload).to.equal('metadata');
+  expect(mediaEl(el).preload).to.equal('metadata');
+});
+
+it('clone-owns bounded AV collections and retains valid entries around hostile records', async () => {
+  const el = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
+  const hostileCue = new Proxy({}, {
+    get() {
+      throw new Error('hostile cue getter');
+    },
+  });
+  const cues = [
+    { id: 'valid', start: 1, text: 'Valid' },
+    hostileCue,
+    { id: '', start: 2, text: 'Missing identity' },
+  ];
+  el.cues = cues as unknown as readonly LyraAvCue[];
+  el.rates = [1, 1, Number.NaN, 2];
+  el.peaks = [0.25, Number.NaN, 2];
+  el.tracks = [
+    { src: 'captions.vtt', kind: 'captions', srclang: 'en', label: 'English' },
+    { src: 'bad.vtt', kind: 'bogus', srclang: 'en', label: 'Bad' },
+  ] as unknown as typeof el.tracks;
+  await el.updateComplete;
+
+  expect(el.cues.map((cue) => cue.id)).to.deep.equal(['valid']);
+  expect(el.rates).to.deep.equal([1, 2]);
+  expect(el.peaks).to.deep.equal([0.25, 0, 1]);
+  expect(el.tracks).to.have.length(1);
+  for (const value of [el.cues, el.rates, el.peaks, el.tracks]) {
+    expect(Object.isFrozen(value)).to.be.true;
+  }
+  expect(el.cues).not.to.equal(cues);
+});
+
 describe('playback controls', () => {
   it('play()/pause()/toggle() proxy the native media element and emit lr-play/lr-pause', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
@@ -471,7 +513,7 @@ describe('playback controls', () => {
     const change = oneEvent(el, 'lr-cue-change');
     media.dispatchEvent(new Event('timeupdate'));
 
-    expect((await change).detail).to.deep.equal({ id: 'open-ended' });
+    expect((await change).detail).to.deep.equal({ cueId: 'open-ended', index: 0 });
     await el.updateComplete;
     expect(cueRows(el)[0]?.getAttribute('aria-current')).to.equal('true');
   });
@@ -564,8 +606,11 @@ describe('playback controls', () => {
     const suppressUnhandled = (event: PromiseRejectionEvent): void => event.preventDefault();
     window.addEventListener('unhandledrejection', suppressUnhandled);
     try {
-      const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
-      timeline.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    Object.defineProperty(media, 'duration', { value: 60, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    timeline.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
       await aTimeout(0);
       await el.updateComplete;
       expect(reported).to.equal(failure);
@@ -575,6 +620,93 @@ describe('playback controls', () => {
     } finally {
       window.removeEventListener('unhandledrejection', suppressUnhandled);
     }
+  });
+
+  it('ignores a late internal play rejection after its source generation is replaced', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    let rejectPlay!: (error: unknown) => void;
+    const pendingPlay = new Promise<void>((_resolve, reject) => {
+      rejectPlay = reject;
+    });
+    Object.defineProperty(media, 'play', { value: () => pendingPlay, configurable: true });
+    Object.defineProperty(media, 'duration', { value: 60, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+
+    let failures = 0;
+    el.addEventListener('lr-render-error', () => failures++);
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    timeline.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    el.src = MP4_SRC;
+    await el.updateComplete;
+    rejectPlay(new DOMException('Stale playback rejection', 'NotAllowedError'));
+    await aTimeout(0);
+    await el.updateComplete;
+
+    expect(failures).to.equal(0);
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+    expect(assertiveAnnouncements()).to.deep.equal([]);
+  });
+
+  it('clears a transient playback rejection after native playback succeeds', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    const failure = new DOMException('Playback blocked', 'NotAllowedError');
+    Object.defineProperty(media, 'duration', { value: 60, configurable: true });
+    Object.defineProperty(media, 'play', { value: () => Promise.reject(failure), configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    timeline.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    await aTimeout(0);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+
+    media.dispatchEvent(new Event('play'));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.be.true;
+  });
+
+  it('synchronizes native and authored volume, mute, and rate state without drift', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    media.volume = 0.35;
+    media.muted = true;
+    media.playbackRate = 1.75;
+    media.dispatchEvent(new Event('volumechange'));
+    media.dispatchEvent(new Event('ratechange'));
+    await el.updateComplete;
+    expect(el.volume).to.equal(0.35);
+    expect(el.muted).to.be.true;
+    expect(el.playbackRate).to.equal(1.75);
+
+    el.volume = 0.6;
+    el.muted = false;
+    el.playbackRate = 1.25;
+    await el.updateComplete;
+    expect(media.volume).to.equal(0.6);
+    expect(media.muted).to.be.false;
+    expect(media.playbackRate).to.equal(1.25);
+  });
+
+  it('emits one committed time for an unchanged seek completion and a correction when clamped', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    Object.defineProperty(media, 'currentTime', { value: 0, writable: true, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    const times: number[] = [];
+    el.addEventListener('lr-time-change', (event) => times.push(event.detail.currentTime));
+
+    el.seek(25);
+    media.dispatchEvent(new Event('seeked'));
+    expect(times).to.deep.equal([25]);
+
+    el.seek(40);
+    media.currentTime = 39.5;
+    media.dispatchEvent(new Event('seeked'));
+    expect(times).to.deep.equal([25, 40, 39.5]);
   });
 
   it('localizes and reorders playback-rate option text through avPlayerRateOption', async () => {
@@ -608,7 +740,9 @@ describe('cues and transcript', () => {
     Object.defineProperty(media, 'currentTime', { value: 12, writable: true, configurable: true });
     const eventPromise = oneEvent(el, 'lr-cue-change');
     media.dispatchEvent(new Event('timeupdate'));
-    expect((await eventPromise).detail).to.deep.equal({ id: 'c2' });
+    const detail = (await eventPromise).detail;
+    expect(detail).to.deep.equal({ cueId: 'c2', index: 1 });
+    expect(Object.isFrozen(detail)).to.equal(true);
     await el.updateComplete;
     const rows = cueRows(el);
     expect(rows[1].getAttribute('aria-current')).to.equal('true');
@@ -647,7 +781,7 @@ describe('cues and transcript', () => {
     expect(labels).to.include('١٫٥×');
   });
 
-  it('marks only one occurrence current when public cue ids are duplicated', async () => {
+  it('retains the first valid cue for each unique nonempty cue id', async () => {
     const cues: LyraAvCue[] = [
       { id: 'duplicate', start: 0, end: 10, text: 'First' },
       { id: 'duplicate', start: 2, end: 10, text: 'Second' },
@@ -655,20 +789,59 @@ describe('cues and transcript', () => {
     const el = (await fixture(html`
       <lr-av-player src=${MP3_SRC} .cues=${cues}></lr-av-player>
     `)) as LyraAvPlayer;
-    const media = mediaEl(el);
-    Object.defineProperty(media, 'currentTime', { value: 5, writable: true, configurable: true });
-    media.dispatchEvent(new Event('timeupdate'));
     await el.updateComplete;
     const list = transcriptList(el);
     await list.updateComplete;
     const rows = cueRows(el);
-    expect(rows.length).to.equal(2);
-    expect(rows.filter((row) => row.getAttribute('aria-current') === 'true').length).to.equal(1);
-    expect(rows[1].getAttribute('aria-current')).to.equal('true');
-    const activeRows = list.renderedRows.filter((row) => row.getAttribute('aria-current') === 'true');
-    expect(activeRows.length).to.equal(1);
-    expect(activeRows[0]?.dataset.rowIndex).to.equal('1');
-    expect(list.activeId).to.equal(list.keyFunction?.(cues[1]!, 1));
+    expect(el.cues).to.have.length(1);
+    expect(el.cues[0]!.text).to.equal('First');
+    expect(rows).to.have.length(1);
+    expect(Object.isFrozen(el.cues)).to.be.true;
+    expect(el.cues).not.to.equal(cues);
+  });
+
+  it('ends an omitted cue at the next chronological start without mutating caller order', async () => {
+    const cues: LyraAvCue[] = [
+      { id: 'later', start: 10, end: 20, text: 'Later finite cue' },
+      { id: 'open', start: 0, text: 'Open until later' },
+    ];
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${cues}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    Object.defineProperty(media, 'currentTime', { value: 5, writable: true, configurable: true });
+    const initial = oneEvent(el, 'lr-cue-change');
+    media.dispatchEvent(new Event('loadedmetadata'));
+    expect((await initial).detail).to.deep.equal({ cueId: 'open', index: 1 });
+
+    const atLater = oneEvent(el, 'lr-cue-change');
+    media.currentTime = 12;
+    media.dispatchEvent(new Event('timeupdate'));
+    expect((await atLater).detail).to.deep.equal({ cueId: 'later', index: 0 });
+
+    const afterLater = oneEvent(el, 'lr-cue-change');
+    media.currentTime = 25;
+    media.dispatchEvent(new Event('timeupdate'));
+    expect((await afterLater).detail).to.deep.equal({ cueId: null, index: -1 });
+    expect(cues.map((cue) => cue.id)).to.deep.equal(['later', 'open']);
+  });
+
+  it('reconciles cue identity immediately on a paused seek and cue replacement', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    Object.defineProperty(media, 'currentTime', { value: 0, writable: true, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+
+    const seekChange = oneEvent(el, 'lr-cue-change');
+    el.seek(12);
+    expect((await seekChange).detail).to.deep.equal({ cueId: 'c2', index: 1 });
+
+    const replacementChange = oneEvent(el, 'lr-cue-change');
+    el.cues = [{ id: 'replacement', start: 0, end: 20, text: 'Replacement' }];
+    await el.updateComplete;
+    expect((await replacementChange).detail).to.deep.equal({ cueId: 'replacement', index: 0 });
+    expect(cueRows(el)[0]?.getAttribute('aria-current')).to.equal('true');
   });
 });
 
@@ -703,9 +876,9 @@ describe('transcript virtualization', () => {
     expect(retainedRow === originalRow).to.be.true;
   });
 
-  it('keeps same-id cue identities stable across duplicate insertion, removal, and reordering', async () => {
+  it('uses the unique cue id as stable row identity and ignores a duplicate replacement', async () => {
     const first: LyraAvCue = { id: 'duplicate', start: 0, text: 'First duplicate' };
-    const second: LyraAvCue = { id: 'duplicate', start: 5, text: 'Second duplicate' };
+    const duplicate: LyraAvCue = { id: 'duplicate', start: 5, text: 'Ignored duplicate' };
     const el = (await fixture(html`
       <lr-av-player src=${MP3_SRC} .cues=${[first]}></lr-av-player>
     `)) as LyraAvPlayer;
@@ -717,25 +890,18 @@ describe('transcript virtualization', () => {
     const firstRow = renderedTranscriptRow(list, 0);
     expect(firstRow !== undefined).to.be.true;
 
-    el.cues = [first, second];
+    el.cues = [first, duplicate];
     await el.updateComplete;
     await list.updateComplete;
-    const secondKey = keyFunction(second, 1);
     expect(keyFunction(first, 0)).to.equal(firstKey);
-    expect(secondKey).to.not.equal(firstKey);
+    expect(el.cues).to.have.length(1);
     expect(renderedTranscriptRow(list, 0) === firstRow).to.be.true;
 
-    el.cues = [second, first];
+    const replacement: LyraAvCue = { id: 'duplicate', start: 8, text: 'Replacement' };
+    el.cues = [replacement];
     await el.updateComplete;
     await list.updateComplete;
-    expect(keyFunction(second, 0)).to.equal(secondKey);
-    expect(keyFunction(first, 1)).to.equal(firstKey);
-    expect(renderedTranscriptRow(list, 1) === firstRow).to.be.true;
-
-    el.cues = [first];
-    await el.updateComplete;
-    await list.updateComplete;
-    expect(keyFunction(first, 0)).to.equal(firstKey);
+    expect(keyFunction(replacement, 0)).to.equal(firstKey);
     expect(renderedTranscriptRow(list, 0) === firstRow).to.be.true;
   });
 
@@ -966,6 +1132,25 @@ describe('timeline marker activation', () => {
   });
 });
 
+it('renders marker actions as siblings of the slider and passes populated accessibility checks', async () => {
+  const el = (await fixture(html`
+    <lr-av-player
+      src=${MP3_SRC}
+      .highlights=${[{ id: 'marker', label: 'Chapter', anchor: { kind: 'time-range', start: 5 } }]}
+    ></lr-av-player>
+  `)) as LyraAvPlayer;
+  const media = mediaEl(el);
+  Object.defineProperty(media, 'duration', { value: 60, configurable: true });
+  media.dispatchEvent(new Event('loadedmetadata'));
+  await el.updateComplete;
+  const slider = el.shadowRoot!.querySelector('[part="timeline"]')!;
+  const marker = el.shadowRoot!.querySelector('[part="timeline-marker"]')!;
+  expect(slider.contains(marker)).to.be.false;
+  expect(marker.closest('[role="slider"]') === null).to.be.true;
+  expect(slider.parentElement!.contains(marker)).to.be.true;
+  await expect(el).to.be.accessible();
+});
+
 describe('hover feedback for click-to-seek/clickable parts', () => {
   it('gives the timeline strip a :hover treatment, so a mouse user gets feedback before clicking', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
@@ -1011,6 +1196,23 @@ describe('timeline click-to-seek', () => {
     timeline.dispatchEvent(new MouseEvent('click', { clientX: 10, bubbles: true }));
     expect(media.currentTime).to.equal(0);
   });
+});
+
+it('removes an inactive zero-duration timeline from sequential focus and ignores shortcuts', async () => {
+  const el = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
+  const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+  expect(timeline.getAttribute('aria-disabled')).to.equal('true');
+  expect(timeline.tabIndex).to.equal(-1);
+  const key = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+  timeline.dispatchEvent(key);
+  expect(key.defaultPrevented).to.be.false;
+
+  const media = mediaEl(el);
+  Object.defineProperty(media, 'duration', { value: 30, configurable: true });
+  media.dispatchEvent(new Event('loadedmetadata'));
+  await el.updateComplete;
+  expect(timeline.getAttribute('aria-disabled')).to.equal('false');
+  expect(timeline.tabIndex).to.equal(0);
 });
 
 describe('timeline keyboard seeking', () => {
@@ -1069,6 +1271,9 @@ describe('timeline keyboard seeking', () => {
     const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
     let played = false;
     Object.defineProperty(media, 'play', { value: () => { played = true; return Promise.resolve(); }, configurable: true });
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
 
     timeline.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', cancelable: true, bubbles: true }));
     expect(played).to.be.true;
@@ -1231,6 +1436,36 @@ it('contains unbroken transcript text inside a 320px allocation', async () => {
   expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
 });
 
+for (const dir of ['ltr', 'rtl'] as const) {
+  it(`contains AV chrome and actions in a 320px ${dir} allocation`, async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${dir} style="inline-size:320px; max-inline-size:320px; overflow:auto">
+        <lr-av-player
+          style="max-inline-size:100%"
+          src=${MP3_SRC}
+          .strings=${{ avPlayerRateOption: `Extremely long localized playback rate {rate}` }}
+          .highlights=${[
+            { id: 'first', anchor: { kind: 'time-range', start: 5 } },
+            { id: 'second', anchor: { kind: 'time-range', start: 20 } },
+          ]}
+        ></lr-av-player>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-av-player') as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 60, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+    const bounds = wrapper.getBoundingClientRect();
+    for (const control of el.shadowRoot!.querySelectorAll<HTMLElement>('select, [part="timeline"], [part="timeline-marker"]')) {
+      const rect = control.getBoundingClientRect();
+      expect(rect.left).to.be.at.least(bounds.left - 0.5);
+      expect(rect.right).to.be.at.most(bounds.right + 0.5);
+    }
+  });
+}
+
 describe('seeking before the media element mounts', () => {
   it('queues a currentTime set before mount as a pending seek and applies it once metadata loads', async () => {
     const el = document.createElement('lr-av-player') as LyraAvPlayer;
@@ -1299,6 +1534,41 @@ describe('waveform', () => {
     };
     window.dispatchEvent(new Event('resize'));
     expect(redraws, 'the resize listener should be re-attached on reconnect').to.equal(1);
+  });
+
+  it('resizes the waveform backing store when sibling allocation changes without a window resize', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="display:flex; inline-size:640px">
+        <div id="sibling" style="flex:0 0 0"></div>
+        <lr-av-player style="flex:1 1 auto; min-inline-size:0" .peaks=${[0.2, 0.8]}></lr-av-player>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-av-player') as LyraAvPlayer;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    await waitUntil(() => canvas.width > 100);
+    const initialWidth = canvas.width;
+
+    (wrapper.querySelector('#sibling') as HTMLElement).style.flexBasis = '480px';
+    await waitUntil(() => canvas.width < initialWidth / 2);
+    expect(canvas.width).to.be.greaterThan(0);
+  });
+
+  it('caps huge CSS-size and DPR signals before allocating the waveform backing store', async () => {
+    const el = (await fixture(html`<lr-av-player .peaks=${[0.25, 0.75]}></lr-av-player>`)) as LyraAvPlayer;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const originalDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+    Object.defineProperty(window, 'devicePixelRatio', { value: 1000, configurable: true });
+    Object.defineProperty(canvas, 'clientWidth', { value: 10_000, configurable: true });
+    Object.defineProperty(canvas, 'clientHeight', { value: 10_000, configurable: true });
+    try {
+      window.dispatchEvent(new Event('resize'));
+      expect(canvas.width).to.be.at.most(4096);
+      expect(canvas.height).to.be.at.most(4096);
+      expect(canvas.width * canvas.height).to.be.at.most(8_388_608);
+    } finally {
+      if (originalDpr) Object.defineProperty(window, 'devicePixelRatio', originalDpr);
+      else delete (window as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+    }
   });
 
   it('moves resize, DPR, and computed-style work to the adopted owner window', async () => {
@@ -1406,8 +1676,9 @@ describe('waveform', () => {
 
       expect(canvas.width).to.equal(8);
       expect(calls.length).to.equal(8);
-      expect(el.peaks).to.equal(peaks);
+      expect(el.peaks).not.to.equal(peaks);
       expect(el.peaks).to.deep.equal(source);
+      expect(Object.isFrozen(el.peaks)).to.be.true;
       expect(calls.some(([, , , barHeight]) => barHeight === 10)).to.equal(true);
       expect(calls[calls.length - 1]![3]).to.equal(3);
       expect(calls.every((args) => args.every(Number.isFinite))).to.equal(true);
@@ -1518,9 +1789,10 @@ describe('accessibility', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('names the native media element (the keyboard tab stop), not just [part="base"]', async () => {
+  it('uses distinct aggregate and native-media names', async () => {
     const named = (await fixture(html`<lr-av-player src=${MP3_SRC} name="Episode 1"></lr-av-player>`)) as LyraAvPlayer;
-    expect(mediaEl(named).getAttribute('aria-label')).to.equal('Episode 1');
+    expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Episode 1');
+    expect(mediaEl(named).getAttribute('aria-label')).to.equal('Audio/video player');
 
     // With no name/aria-label, the localized default still applies to the media element.
     const unnamed = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
@@ -1528,13 +1800,19 @@ describe('accessibility', () => {
     expect(label).to.be.a('string').and.to.not.equal('');
   });
 
-  it('puts the advertised accessible name on a region rather than a generic container', async () => {
+  it('keeps an authored host name on the host and avoids a duplicate named shadow region', async () => {
     const el = (await fixture(html`
       <lr-av-player src=${MP3_SRC} aria-label="Episode controls"></lr-av-player>
     `)) as LyraAvPlayer;
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
-    expect(base.getAttribute('role')).to.equal('region');
-    expect(base.getAttribute('aria-label')).to.equal('Episode controls');
+    expect(el.getAttribute('aria-label')).to.equal('Episode controls');
+    expect(
+      (el as unknown as { semanticInternals: ElementInternals }).semanticInternals.role,
+      'the authored host name belongs to a real aggregate region',
+    ).to.equal('region');
+    expect(base.hasAttribute('role')).to.be.false;
+    expect(base.hasAttribute('aria-label')).to.be.false;
+    expect(mediaEl(el).getAttribute('aria-label')).to.equal('Audio/video player');
   });
 });
 
@@ -1671,21 +1949,34 @@ describe('i18n', () => {
 });
 
 describe('render error', () => {
-  it('fires lr-render-error and appends each localized failure to the light-DOM sink', async () => {
+  it('fires one lr-render-error and announcement for duplicate native failures in one generation', async () => {
     const el = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
     const media = mediaEl(el);
-    for (const count of [1, 2]) {
-      const eventPromise = oneEvent(el, 'lr-render-error');
-      media.dispatchEvent(new Event('error'));
-      await eventPromise;
-      await el.updateComplete;
-      expect(assertiveAnnouncements()).to.deep.equal(
-        Array.from({ length: count }, () => 'The media failed to load.'),
-      );
-    }
+    let count = 0;
+    el.addEventListener('lr-render-error', () => count++);
+    media.dispatchEvent(new Event('error'));
+    media.dispatchEvent(new Event('error'));
+    await el.updateComplete;
+    expect(count).to.equal(1);
+    expect(assertiveAnnouncements()).to.deep.equal(['The media failed to load.']);
     const error = el.shadowRoot!.querySelector('[part="error"]')!;
     expect(error.getAttribute('role')).to.equal(null);
     expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length).to.equal(0);
+  });
+
+  it('preserves native MediaError identity and emits again only for a replacement error', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    const first = { code: 3, message: 'Decode failed' } as MediaError;
+    const second = { code: 4, message: 'Unsupported source' } as MediaError;
+    const reported: unknown[] = [];
+    el.addEventListener('lr-render-error', (event) => reported.push(event.detail.error));
+    Object.defineProperty(media, 'error', { value: first, configurable: true });
+    media.dispatchEvent(new Event('error'));
+    media.dispatchEvent(new Event('error'));
+    Object.defineProperty(media, 'error', { value: second, configurable: true });
+    media.dispatchEvent(new Event('error'));
+    expect(reported).to.deep.equal([first, second]);
   });
 });
 
@@ -1697,8 +1988,9 @@ describe('render branches', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
     expect(el.shadowRoot!.querySelectorAll('audio, video').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(1);
-    expect(base.getAttribute('role')).to.equal('region');
-    expect(base.getAttribute('aria-label')).to.equal('Episode controls');
+    expect(base.hasAttribute('role')).to.be.false;
+    expect(base.hasAttribute('aria-label')).to.be.false;
+    expect(el.getAttribute('aria-label')).to.equal('Episode controls');
     expect(el.shadowRoot!.querySelector('[part="error"]')!.getAttribute('role')).to.equal(null);
     expect(assertiveAnnouncements(), 'an already-invalid mount is not a live transition').to.deep.equal([]);
     await expect(el).to.be.accessible();
@@ -1733,12 +2025,49 @@ describe('render branches', () => {
 
   it('announces a post-mount transition to an unsafe source without losing the named region', async () => {
     const el = (await fixture(html`<lr-av-player aria-label="Episode controls"></lr-av-player>`)) as LyraAvPlayer;
+    const rejection = oneEvent(el, 'lr-render-error');
     el.src = 'javascript:alert(1)';
     await el.updateComplete;
+    expect((await rejection).detail.error).to.be.instanceOf(TypeError);
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
-    expect(base.getAttribute('role')).to.equal('region');
-    expect(base.getAttribute('aria-label')).to.equal('Episode controls');
+    expect(base.hasAttribute('role')).to.be.false;
+    expect(base.hasAttribute('aria-label')).to.be.false;
+    expect(el.getAttribute('aria-label')).to.equal('Episode controls');
     expect(assertiveAnnouncements()).to.deep.equal(['The media failed to load.']);
+  });
+
+  it('treats detached and first-reconnect unsafe source writes as state, not observable transitions', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const parent = el.parentElement!;
+    let failures = 0;
+    el.addEventListener('lr-render-error', () => failures++);
+
+    el.remove();
+    el.src = 'javascript:detached()';
+    await el.updateComplete;
+    expect(failures).to.equal(0);
+    parent.append(el);
+    await el.updateComplete;
+    expect(failures).to.equal(0);
+    expect(assertiveAnnouncements()).to.deep.equal([]);
+
+    el.src = MP3_SRC;
+    await el.updateComplete;
+    el.remove();
+    el.src = 'javascript:queued-before-reconnect()';
+    parent.append(el);
+    await el.updateComplete;
+    expect(failures).to.equal(0);
+    expect(assertiveAnnouncements()).to.deep.equal([]);
+  });
+
+  it('does not report source absence as an unsafe-source failure', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    let failures = 0;
+    el.addEventListener('lr-render-error', () => failures++);
+    el.src = '';
+    await el.updateComplete;
+    expect(failures).to.equal(0);
   });
 
   it('omits the src attribute entirely when kind is forced to audio with no src set', async () => {
@@ -1820,7 +2149,7 @@ describe('active-state cssprop escape hatches', () => {
   it('styles a cue time and speaker label', async () => {
     const el = await withCues();
     const time = cueRoot(el).querySelector('[part="cue-time"]') as HTMLElement;
-    expect(getComputedStyle(time).color).to.equal(resolvedIn(cueRoot(el), 'color: var(--lr-color-text-quiet)', 'color'));
+    expect(getComputedStyle(time).color).to.equal(resolvedIn(cueRoot(el), 'color: var(--lr-color-text)', 'color'));
     const speaker = cueRoot(el).querySelector('[part="cue-speaker"]') as HTMLElement;
     expect(getComputedStyle(speaker).fontWeight).to.equal(
       getComputedStyle(speaker).getPropertyValue('--lr-font-weight-semibold').trim(),
@@ -1886,8 +2215,8 @@ describe('active-state cssprop escape hatches', () => {
     const markers = [...el.shadowRoot!.querySelectorAll('[part="timeline-marker"]')] as HTMLElement[];
     expect(markers.length).to.equal(2);
 
-    const plainFill = getComputedStyle(markers[0]).getPropertyValue('--lr-av-player-marker-fill').trim();
-    const dangerFill = getComputedStyle(markers[1]).getPropertyValue('--lr-av-player-marker-fill').trim();
+    const plainFill = getComputedStyle(markers[0]).backgroundColor;
+    const dangerFill = getComputedStyle(markers[1]).backgroundColor;
     expect(plainFill, 'the untoned fill is not empty').to.not.equal('');
     expect(dangerFill, 'the danger tone supplies its own fill for the mixes to read').to.not.equal(plainFill);
 
@@ -1981,10 +2310,87 @@ describe('active-state cssprop escape hatches', () => {
   });
 });
 
+it('honors inherited and direct-host AV theme hooks', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-transition-fast:0ms linear; --lr-av-player-marker-bg:rgb(1, 2, 3); --lr-av-player-transcript-height:123px">
+      <lr-av-player
+        src=${MP3_SRC}
+        .cues=${CUES}
+        .highlights=${[{ id: 'h1', anchor: { kind: 'time-range', start: 5 } }]}
+      ></lr-av-player>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-av-player') as LyraAvPlayer;
+  const media = mediaEl(el);
+  Object.defineProperty(media, 'duration', { value: 60, configurable: true });
+  media.dispatchEvent(new Event('loadedmetadata'));
+  await el.updateComplete;
+  const marker = el.shadowRoot!.querySelector('[part="timeline-marker"]') as HTMLElement;
+  const transcript = el.shadowRoot!.querySelector('[part="transcript"]') as HTMLElement;
+  expect(getComputedStyle(marker).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(transcript).getPropertyValue('--lr-virtual-list-height').trim()).to.equal('123px');
+
+  el.style.setProperty('--lr-av-player-marker-bg', 'rgb(4, 5, 6)');
+  await waitUntil(() => getComputedStyle(marker).backgroundColor === 'rgb(4, 5, 6)');
+});
+
+it('keeps rate hover and every marker category distinguishable in forced colors', async () => {
+  await setForcedColors('active');
+  try {
+    const el = (await fixture(html`
+      <lr-av-player
+        src=${MP3_SRC}
+        .highlights=${[
+          { id: 'accent', anchor: { kind: 'time-range', start: 1 } },
+          { id: 'success', tone: 'success', anchor: { kind: 'time-range', start: 2 } },
+          { id: 'warning', tone: 'warning', anchor: { kind: 'time-range', start: 3 } },
+          { id: 'danger', tone: 'danger', anchor: { kind: 'time-range', start: 4 } },
+          { id: 'neutral', tone: 'neutral', anchor: { kind: 'time-range', start: 5 } },
+        ]}
+      ></lr-av-player>
+    `)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 60, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const markers = [...el.shadowRoot!.querySelectorAll('[part="timeline-marker"]')] as HTMLElement[];
+    expect(markers.map((marker) => getComputedStyle(marker).borderStyle)).to.deep.equal([
+      'solid', 'double', 'dashed', 'dotted', 'solid',
+    ]);
+    expect(getComputedStyle(markers[4]!).outlineStyle).to.equal('dashed');
+
+    const select = el.shadowRoot!.querySelector('[part="rate-select"]') as HTMLSelectElement;
+    await resetMouse();
+    select.scrollIntoView({ block: 'center', inline: 'center' });
+    await aTimeout(0);
+    const rect = select.getBoundingClientRect();
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    // Firefox's forced-colors UA sheet retains the authored hover outline while normalizing the
+    // native select border back to solid. The outline is the stable non-color hover cue owned by
+    // this component across engines; exact native border painting is not.
+    await waitUntil(
+      () => select.matches(':hover') && getComputedStyle(select).outlineStyle === 'solid',
+      'the playback-rate forced-colors hover cue did not settle',
+      { timeout: 3000 },
+    );
+    expect(getComputedStyle(select).outlineStyle).to.equal('solid');
+  } finally {
+    await resetMouse();
+    await setForcedColors('none');
+  }
+});
+
 // -- Document-renderer registry entry ---------------------------------------
 
 it('registers one shared audio/video renderer across every AV MIME type', async () => {
-  const { getDefaultDocumentRendererRegistry } = await import('../../viewers/document-viewer/registry.js');
+  const {
+    adaptDocumentRenderer,
+    getDefaultDocumentRendererRegistry,
+    snapshotLyraDocumentRendererPayload,
+  } = await import('../../viewers/document-viewer/registry.js');
   const registry = getDefaultDocumentRendererRegistry();
   const def = registry.get('audio/mpeg');
   expect(def, 'importing av-player.js registers the renderer').to.exist;
@@ -1993,14 +2399,52 @@ it('registers one shared audio/video renderer across every AV MIME type', async 
   expect(def!.matches!({ name: 'talk.MP3', mimeType: 'audio/mpeg', src: MP3_SRC })).to.be.true;
   expect(def!.matches!({ name: 'no-extension', mimeType: 'video/webm', src: MP3_SRC })).to.be.true;
   expect(def!.matches!({ name: 'notes.txt', mimeType: 'text/plain', src: MP3_SRC })).to.be.false;
-  expect(def!.capabilities).to.deep.equal({ anchors: ['time-range'], search: true });
 
-  const host = (await fixture(html`<div>${def!.render!({
-    name: 'talk.mp3', mimeType: 'audio/mpeg', src: MP3_SRC,
-  })}</div>`)) as HTMLElement;
-  const player = host.querySelector('lr-av-player') as LyraAvPlayer;
-  expect(player).to.exist;
-  expect(player.name).to.equal('talk.mp3');
+  const file = { name: 'talk.mp3', mimeType: 'audio/mpeg', src: MP3_SRC };
+  const legacyInvocation = adaptDocumentRenderer(def!, file);
+  expect(legacyInvocation.capabilities).to.deep.equal({ anchors: ['time-range'], search: false });
+  const legacyHost = (await fixture(html`<div>${legacyInvocation.render()}</div>`)) as HTMLElement;
+  const legacyPlayer = legacyHost.querySelector('lr-av-player') as LyraAvPlayer;
+  expect(legacyPlayer).to.exist;
+  expect(legacyPlayer.name).to.equal('talk.mp3');
+  expect(legacyPlayer.cues.length).to.equal(0);
+  expect(await legacyPlayer.search('unreachable document transcript')).to.equal(0);
+
+  const richPayload = snapshotLyraDocumentRendererPayload({
+    kind: 'av',
+    file,
+    cues: [{ id: 'cue-1', start: 0, text: 'Reachable document transcript' }],
+    tracks: [{
+      src: 'https://example.test/en.vtt',
+      kind: 'captions',
+      srclang: 'en',
+      label: 'English',
+    }],
+  });
+  const richInvocation = adaptDocumentRenderer(def!, file, richPayload);
+  expect(richInvocation.capabilities).to.deep.equal({ anchors: ['time-range'], search: true });
+  const richHost = (await fixture(html`<div>${richInvocation.render()}</div>`)) as HTMLElement;
+  const richPlayer = richHost.querySelector('lr-av-player') as LyraAvPlayer;
+  await richPlayer.updateComplete;
+  expect(richPlayer.cues.map((cue) => cue.id)).to.deep.equal(['cue-1']);
+  expect(richPlayer.tracks.map((track) => track.label)).to.deep.equal(['English']);
+  expect(await richPlayer.search('reachable')).to.equal(1);
+
+  const truncatedPayload = snapshotLyraDocumentRendererPayload({
+    kind: 'av',
+    file,
+    cues: [
+      ...Array.from({ length: 10_000 }, (_unused, index) => ({
+        id: `empty-${index}`,
+        start: index,
+        text: '',
+      })),
+      { id: 'omitted-searchable', start: 10_000, text: 'Only omitted content is searchable' },
+    ],
+    tracks: [],
+  });
+  expect(adaptDocumentRenderer(def!, file, truncatedPayload).capabilities)
+    .to.deep.equal({ anchors: ['time-range'], search: false });
 });
 
 it('searchNext/searchPrevious resolve a boolean, matching the shared viewer search contract', async () => {

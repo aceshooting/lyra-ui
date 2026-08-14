@@ -31,14 +31,22 @@ import {
   componentMetadataPresentation,
 } from '../../../.storybook/component-metadata.js';
 
-const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const packageDir = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..'
+);
 
 function readJson(relativePath) {
-  return JSON.parse(fs.readFileSync(path.join(packageDir, relativePath), 'utf8'));
+  return JSON.parse(
+    fs.readFileSync(path.join(packageDir, relativePath), 'utf8')
+  );
 }
 
 function fixture() {
-  const rawManifest = fs.readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8');
+  const rawManifest = fs.readFileSync(
+    path.join(packageDir, 'custom-elements.json'),
+    'utf8'
+  );
   return {
     metadata: readJson('scripts/fixtures/component-metadata.json'),
     inventory: readJson('scripts/fixtures/component-inventory.json'),
@@ -51,13 +59,16 @@ function fixture() {
 test('checked-in metadata covers the current manifest and inventory', () => {
   const state = fixture();
   assert.deepEqual(validateComponentMetadata(state.metadata, state), []);
-  assert.equal(state.metadata.assignments['published-stable'].length, 264);
+  assert.equal(state.metadata.assignments['published-stable'].length, 259);
   assert.equal(state.metadata.assignments['published-experimental'].length, 2);
   assert.equal(state.metadata.assignments['mapped-experimental'].length, 1);
-  assert.equal(state.metadata.assignments['introduced-mapped-experimental'].length, 2);
+  assert.equal(
+    state.metadata.assignments['introduced-mapped-experimental'].length,
+    2
+  );
   assert.equal(state.metadata.assignments['compatibility-stable'].length, 1);
-  assert.equal(state.metadata.assignments['introduced-stable'].length, 13);
-  assert.equal(state.metadata.deprecations.length, 15);
+  assert.equal(state.metadata.assignments['introduced-stable'].length, 19);
+  assert.equal(state.metadata.deprecations.length, 12);
 });
 
 test('new mirrors of experimental upstream media surfaces remain experimental everywhere authored', () => {
@@ -69,14 +80,21 @@ test('new mirrors of experimental upstream media surfaces remain experimental ev
 
   for (const tag of ['lr-video', 'lr-video-playlist']) {
     assert.equal(maturity.get(tag).status, 'experimental', `${tag} status`);
-    assert.equal(maturity.get(tag).profile, 'introduced-mapped-experimental', `${tag} profile`);
+    assert.equal(
+      maturity.get(tag).profile,
+      'introduced-mapped-experimental',
+      `${tag} profile`
+    );
   }
 
   for (const relativePath of [
     'src/components/media/video/video.class.ts',
     'src/components/media/video-playlist/video-playlist.class.ts',
   ]) {
-    assert.match(fs.readFileSync(path.join(packageDir, relativePath), 'utf8'), /@status experimental/);
+    assert.match(
+      fs.readFileSync(path.join(packageDir, relativePath), 'utf8'),
+      /@status experimental/
+    );
   }
   for (const relativePath of [
     'src/components/media/video/video.stories.ts',
@@ -84,11 +102,14 @@ test('new mirrors of experimental upstream media surfaces remain experimental ev
   ]) {
     assert.match(
       fs.readFileSync(path.join(packageDir, relativePath), 'utf8'),
-      /tags: \['autodocs', 'experimental'\]/,
+      /tags: \['autodocs', 'experimental'\]/
     );
   }
 
-  const mediaDocs = fs.readFileSync(path.join(packageDir, 'llms/media.md'), 'utf8');
+  const mediaDocs = fs.readFileSync(
+    path.join(packageDir, 'llms/media.md'),
+    'utf8'
+  );
   assert.match(mediaDocs, /## `lr-video`\n\nExperimental\b/);
   assert.match(mediaDocs, /## `lr-video-playlist`\n\nExperimental\b/);
 });
@@ -98,10 +119,17 @@ test('exact tag history derives the earliest release and leaves renamed prefixes
     releases: [
       { version: '3.9.0', manifestPresent: true, tags: ['lyra-example'] },
       { version: '4.0.0', manifestPresent: true, tags: ['lr-example'] },
-      { version: '4.1.0', manifestPresent: true, tags: ['lr-example', 'lr-later'] },
+      {
+        version: '4.1.0',
+        manifestPresent: true,
+        tags: ['lr-example', 'lr-later'],
+      },
       { version: '5.0.0', manifestPresent: true, tags: ['lr-later'] },
     ],
-    current: { version: '8.0.0', tags: ['lr-current', 'lr-example', 'lr-later'] },
+    current: {
+      version: '8.0.0',
+      tags: ['lr-current', 'lr-example', 'lr-later'],
+    },
   };
 
   assert.deepEqual(Object.fromEntries(deriveSinceByTag(history)), {
@@ -115,15 +143,25 @@ test('exact tag history derives the earliest release and leaves renamed prefixes
 test('history provenance rejects malformed commit, blob, and digest evidence', () => {
   const state = fixture();
   const metadata = structuredClone(state.metadata);
-  const release = metadata.history.releases.find((entry) => entry.manifestPresent);
+  const release = metadata.history.releases.find(
+    (entry) => entry.manifestPresent
+  );
   release.sourceCommit = 'not-a-commit';
   release.manifestBlob = 'not-a-blob';
   release.manifestSha256 = 'not-a-digest';
 
   const findings = validateComponentMetadata(metadata, { ...state, metadata });
-  assert.ok(findings.includes(`${release.tag}: missing or invalid source commit provenance`));
-  assert.ok(findings.includes(`${release.tag}: manifest blob must be a Git object id`));
-  assert.ok(findings.includes(`${release.tag}: manifest digest must be SHA-256`));
+  assert.ok(
+    findings.includes(
+      `${release.tag}: missing or invalid source commit provenance`
+    )
+  );
+  assert.ok(
+    findings.includes(`${release.tag}: manifest blob must be a Git object id`)
+  );
+  assert.ok(
+    findings.includes(`${release.tag}: manifest digest must be SHA-256`)
+  );
 });
 
 test('a proven current release tag is allowed, then rolls into history on the next version write', () => {
@@ -153,19 +191,31 @@ test('a proven current release tag is allowed, then rolls into history on the ne
   };
   const history = { releases: [prior], current };
 
-  assert.deepEqual(partitionReleaseHistoryAtCurrent([prior, taggedCurrent], current), {
-    releases: [prior],
-    taggedCurrent,
-    currentRelease: taggedCurrent,
-  });
-  assert.deepEqual(reconcileCurrentReleaseHistory(history, [prior, taggedCurrent]), {
-    releases: [prior],
-    taggedCurrent,
-    currentRelease: taggedCurrent,
-  });
   assert.deepEqual(
-    reconcileCurrentReleaseHistory(history, [prior, taggedCurrent], { rolloverCurrent: true }),
-    { releases: [prior, taggedCurrent], taggedCurrent: null, currentRelease: taggedCurrent },
+    partitionReleaseHistoryAtCurrent([prior, taggedCurrent], current),
+    {
+      releases: [prior],
+      taggedCurrent,
+      currentRelease: taggedCurrent,
+    }
+  );
+  assert.deepEqual(
+    reconcileCurrentReleaseHistory(history, [prior, taggedCurrent]),
+    {
+      releases: [prior],
+      taggedCurrent,
+      currentRelease: taggedCurrent,
+    }
+  );
+  assert.deepEqual(
+    reconcileCurrentReleaseHistory(history, [prior, taggedCurrent], {
+      rolloverCurrent: true,
+    }),
+    {
+      releases: [prior, taggedCurrent],
+      taggedCurrent: null,
+      currentRelease: taggedCurrent,
+    }
   );
 });
 
@@ -193,10 +243,18 @@ test('tagged snapshot stays immutable while same-version worktree current evolve
     currentRelease: taggedCurrent,
   });
   assert.deepEqual(
-    reconcileCurrentReleaseHistory(history, [taggedCurrent], { rolloverCurrent: true }),
-    { releases: [taggedCurrent], taggedCurrent: null, currentRelease: taggedCurrent },
+    reconcileCurrentReleaseHistory(history, [taggedCurrent], {
+      rolloverCurrent: true,
+    }),
+    {
+      releases: [taggedCurrent],
+      taggedCurrent: null,
+      currentRelease: taggedCurrent,
+    }
   );
-  assert.deepEqual(Object.fromEntries(deriveSinceByTag(history)), { 'lr-a': '8.0.0' });
+  assert.deepEqual(Object.fromEntries(deriveSinceByTag(history)), {
+    'lr-a': '8.0.0',
+  });
 });
 
 test('full-history checks require a persisted snapshot once same-version current diverges', () => {
@@ -218,45 +276,58 @@ test('full-history checks require a persisted snapshot once same-version current
       tags: taggedCurrent.tags,
     },
   };
-  assert.doesNotThrow(() => reconcileCurrentReleaseHistory(
-    exactHistory,
-    [taggedCurrent],
-    { requirePersistedTaggedCurrent: true },
-  ));
+  assert.doesNotThrow(() =>
+    reconcileCurrentReleaseHistory(exactHistory, [taggedCurrent], {
+      requirePersistedTaggedCurrent: true,
+    })
+  );
 
   const evolvedHistory = structuredClone(exactHistory);
   evolvedHistory.current.manifestSha256 = '8'.repeat(64);
   evolvedHistory.current.tags.push('lr-unreleased');
   assert.throws(
-    () => reconcileCurrentReleaseHistory(
-      evolvedHistory,
-      [taggedCurrent],
-      { requirePersistedTaggedCurrent: true },
-    ),
-    /history\.taggedCurrent must persist the immutable release snapshot/,
+    () =>
+      reconcileCurrentReleaseHistory(evolvedHistory, [taggedCurrent], {
+        requirePersistedTaggedCurrent: true,
+      }),
+    /history\.taggedCurrent must persist the immutable release snapshot/
   );
   assert.equal(
-    reconcileCurrentReleaseHistory(evolvedHistory, [taggedCurrent]).taggedCurrent,
-    taggedCurrent,
+    reconcileCurrentReleaseHistory(evolvedHistory, [taggedCurrent])
+      .taggedCurrent,
+    taggedCurrent
   );
 });
 
 test('component metadata fails closed in a shallow clone', () => {
-  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-component-metadata-'));
+  const temp = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'lyra-component-metadata-')
+  );
   const source = path.join(temp, 'source');
   const shallow = path.join(temp, 'shallow');
   try {
     fs.mkdirSync(source);
     execFileSync('git', ['init', '--quiet'], { cwd: source });
-    execFileSync('git', ['config', 'user.email', 'test@example.invalid'], { cwd: source });
+    execFileSync('git', ['config', 'user.email', 'test@example.invalid'], {
+      cwd: source,
+    });
     execFileSync('git', ['config', 'user.name', 'Lyra Test'], { cwd: source });
     fs.writeFileSync(path.join(source, 'README.md'), 'fixture\n');
     execFileSync('git', ['add', 'README.md'], { cwd: source });
-    execFileSync('git', ['commit', '--quiet', '-m', 'fixture'], { cwd: source });
-    execFileSync('git', ['clone', '--quiet', '--depth', '1', `file://${source}`, shallow]);
+    execFileSync('git', ['commit', '--quiet', '-m', 'fixture'], {
+      cwd: source,
+    });
+    execFileSync('git', [
+      'clone',
+      '--quiet',
+      '--depth',
+      '1',
+      `file://${source}`,
+      shallow,
+    ]);
     assert.throws(
       () => requireCompleteGitHistory(shallow),
-      /requires a non-shallow clone with release tags/,
+      /requires a non-shallow clone with release tags/
     );
     assert.doesNotThrow(() => requireCompleteGitHistory(source));
   } finally {
@@ -272,7 +343,9 @@ test('buildReleaseHistory hashes the exact committed manifest bytes, trailing ne
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-release-history-'));
   try {
     execFileSync('git', ['init', '--quiet'], { cwd: temp });
-    execFileSync('git', ['config', 'user.email', 'test@example.invalid'], { cwd: temp });
+    execFileSync('git', ['config', 'user.email', 'test@example.invalid'], {
+      cwd: temp,
+    });
     execFileSync('git', ['config', 'user.name', 'Lyra Test'], { cwd: temp });
     const manifestRelativePath = 'custom-elements.json';
     const manifestContent = '{"schemaVersion":"1.0.0","modules":[]}\n';
@@ -314,7 +387,7 @@ test('a post-tag component remains unreleased until the package version advances
       tags: ['lr-page'],
       packageVersion: state.packageJson.version,
     }).get('lr-page').since,
-    UNRELEASED_VERSION,
+    UNRELEASED_VERSION
   );
 });
 
@@ -337,34 +410,46 @@ test('current-tag history reconciliation fails closed on provenance and immutabl
   const history = { releases: [], taggedCurrent, current };
 
   assert.throws(
-    () => reconcileCurrentReleaseHistory(history, [{
-      ...taggedCurrent,
-      sourceCommit: 'not-a-commit',
-      manifestBlob: 'not-a-blob',
-    }]),
-    /source commit provenance.*manifest blob provenance/,
+    () =>
+      reconcileCurrentReleaseHistory(history, [
+        {
+          ...taggedCurrent,
+          sourceCommit: 'not-a-commit',
+          manifestBlob: 'not-a-blob',
+        },
+      ]),
+    /source commit provenance.*manifest blob provenance/
   );
   assert.throws(
-    () => reconcileCurrentReleaseHistory(history, [{
-      ...taggedCurrent,
-      manifestSha256: '7'.repeat(64),
-    }]),
-    /differs from immutable Git tag evidence/,
+    () =>
+      reconcileCurrentReleaseHistory(history, [
+        {
+          ...taggedCurrent,
+          manifestSha256: '7'.repeat(64),
+        },
+      ]),
+    /differs from immutable Git tag evidence/
   );
   assert.throws(
-    () => reconcileCurrentReleaseHistory(history, [{
-      ...taggedCurrent,
-      tags: ['lr-other'],
-    }]),
-    /differs from immutable Git tag evidence/,
+    () =>
+      reconcileCurrentReleaseHistory(history, [
+        {
+          ...taggedCurrent,
+          tags: ['lr-other'],
+        },
+      ]),
+    /differs from immutable Git tag evidence/
   );
   assert.throws(
-    () => reconcileCurrentReleaseHistory(history, [{
-      ...taggedCurrent,
-      version: '8.0.1',
-      tag: 'lyra-ui@8.0.1',
-    }]),
-    /missing from Git history/,
+    () =>
+      reconcileCurrentReleaseHistory(history, [
+        {
+          ...taggedCurrent,
+          version: '8.0.1',
+          tag: 'lyra-ui@8.0.1',
+        },
+      ]),
+    /missing from Git history/
   );
 });
 
@@ -382,12 +467,16 @@ test('version comparison is numeric and rejects malformed versions', () => {
 
 test('manifest tag discovery ignores non-elements and sorts exact public tags', () => {
   const manifest = {
-    modules: [{ declarations: [
-      { customElement: true, tagName: 'lr-z' },
-      { customElement: false, tagName: 'lr-hidden' },
-      { customElement: true, tagName: 'lr-a' },
-      { kind: 'class', name: 'Helper' },
-    ] }],
+    modules: [
+      {
+        declarations: [
+          { customElement: true, tagName: 'lr-z' },
+          { customElement: false, tagName: 'lr-hidden' },
+          { customElement: true, tagName: 'lr-a' },
+          { kind: 'class', name: 'Helper' },
+        ],
+      },
+    ],
   };
   assert.deepEqual(manifestComponentTags(manifest), ['lr-a', 'lr-z']);
 });
@@ -397,13 +486,23 @@ test('validation fails closed on missing assignments and experimental semver exe
   const metadata = structuredClone(state.metadata);
   metadata.assignments['published-stable'].splice(
     metadata.assignments['published-stable'].indexOf('lr-graph'),
-    1,
+    1
   );
   metadata.policy.semverCoverage.experimental = 'best-effort';
 
   const findings = validateComponentMetadata(metadata, { ...state, metadata });
-  assert.ok(findings.some((finding) => finding.includes('lr-graph: no authored maturity assignment')));
-  assert.ok(findings.some((finding) => finding.includes('experimental APIs must both retain full semver coverage')));
+  assert.ok(
+    findings.some((finding) =>
+      finding.includes('lr-graph: no authored maturity assignment')
+    )
+  );
+  assert.ok(
+    findings.some((finding) =>
+      finding.includes(
+        'experimental APIs must both retain full semver coverage'
+      )
+    )
+  );
 });
 
 test('validation rejects a removal in the immediately following major and a missing replacement', () => {
@@ -414,8 +513,16 @@ test('validation rejects a removal in the immediately following major and a miss
   icon.replacement.name = 'missingCanvas';
 
   const findings = validateComponentMetadata(metadata, { ...state, metadata });
-  assert.ok(findings.some((finding) => finding.includes('complete subsequent major release')));
-  assert.ok(findings.some((finding) => finding.includes('replacement property missingCanvas does not exist')));
+  assert.ok(
+    findings.some((finding) =>
+      finding.includes('complete subsequent major release')
+    )
+  );
+  assert.ok(
+    findings.some((finding) =>
+      finding.includes('replacement property missingCanvas does not exist')
+    )
+  );
 });
 
 test('validation rejects unsorted, pre-introduction, and future deprecation records', () => {
@@ -424,17 +531,30 @@ test('validation rejects unsorted, pre-introduction, and future deprecation reco
   metadata.deprecations.reverse();
   const icon = metadata.deprecations.find((entry) => entry.tag === 'lr-icon');
   icon.since = '3.0.0';
-  const dateInput = metadata.deprecations.find((entry) =>
-    entry.tag === 'lr-date-input' && entry.name === 'label');
+  const dateInput = metadata.deprecations.find(
+    (entry) => entry.tag === 'lr-date-input' && entry.name === 'label'
+  );
   dateInput.since = '9.0.0';
   dateInput.removalNotBefore = '11.0.0';
 
   const findings = validateComponentMetadata(metadata, { ...state, metadata });
-  assert.ok(findings.includes('deprecations must be sorted by tag, kind, and name'));
-  assert.ok(findings.some((finding) =>
-    finding.includes("lr-icon:property:autoWidth: deprecation cannot predate the component's 4.0.0 introduction")));
-  assert.ok(findings.some((finding) =>
-    finding.includes('lr-date-input:part:label: deprecation cannot start after the current package version')));
+  assert.ok(
+    findings.includes('deprecations must be sorted by tag, kind, and name')
+  );
+  assert.ok(
+    findings.some((finding) =>
+      finding.includes(
+        "lr-icon:property:autoWidth: deprecation cannot predate the component's 4.0.0 introduction"
+      )
+    )
+  );
+  assert.ok(
+    findings.some((finding) =>
+      finding.includes(
+        'lr-date-input:part:label: deprecation cannot start after the current package version'
+      )
+    )
+  );
 });
 
 // Only `part` deprecations remain in the ledger: 9.0.0 removed the last recorded `event` records
@@ -445,25 +565,45 @@ test('validation rejects unsorted, pre-introduction, and future deprecation reco
 test('validation covers prose-only part deprecations', () => {
   const state = fixture();
   const metadata = structuredClone(state.metadata);
-  metadata.deprecations = metadata.deprecations.filter((entry) => entry.tag !== 'lr-sparkline');
+  metadata.deprecations = metadata.deprecations.filter(
+    (entry) => entry.tag !== 'lr-sparkline'
+  );
 
   const findings = validateComponentMetadata(metadata, { ...state, metadata });
-  assert.ok(findings.includes('lr-sparkline:part:base: manifest deprecation has no policy record'));
+  assert.ok(
+    findings.includes(
+      'lr-sparkline:part:base: manifest deprecation has no policy record'
+    )
+  );
 });
 
 test('applying metadata changes only maturity records and remains deterministic', () => {
   const state = fixture();
   const stripped = structuredClone(state.inventory);
   for (const component of stripped.components) {
-    component.maturity = { status: 'unclassified', since: null, deprecated: null };
+    component.maturity = {
+      status: 'unclassified',
+      since: null,
+      deprecated: null,
+    };
   }
   stripped.pins.lyraVersion = '7.8.1';
   const applied = applyMaturityToInventory(state.metadata, stripped);
   const second = applyMaturityToInventory(state.metadata, applied);
   assert.deepEqual(second, applied);
-  assert.equal(applied.components.find((entry) => entry.tag === 'lr-graph').maturity.since, '4.0.0');
-  assert.equal(applied.components.find((entry) => entry.tag === 'lr-page').maturity.since, '8.0.0');
-  assert.equal(applied.components.find((entry) => entry.tag === 'lr-icon').maturity.deprecations.length, 1);
+  assert.equal(
+    applied.components.find((entry) => entry.tag === 'lr-graph').maturity.since,
+    '4.0.0'
+  );
+  assert.equal(
+    applied.components.find((entry) => entry.tag === 'lr-page').maturity.since,
+    '8.0.0'
+  );
+  assert.equal(
+    applied.components.find((entry) => entry.tag === 'lr-icon').maturity
+      .deprecations.length,
+    1
+  );
   assert.equal(applied.pins.lyraVersion, state.packageJson.version);
 });
 
@@ -472,8 +612,9 @@ test('validation rejects a stale component-inventory Lyra version pin', () => {
   const inventory = structuredClone(state.inventory);
   inventory.pins.lyraVersion = '7.8.1';
   assert.ok(
-    validateComponentMetadata(state.metadata, { ...state, inventory })
-      .includes('inventory.pins.lyraVersion must match package.json'),
+    validateComponentMetadata(state.metadata, { ...state, inventory }).includes(
+      'inventory.pins.lyraVersion must match package.json'
+    )
   );
 });
 
@@ -484,7 +625,9 @@ test('CEM projection surfaces status, since, policy, and structured member depre
     packageVersion: state.packageJson.version,
   });
 
-  const declarations = manifest.modules.flatMap((module) => module.declarations ?? []);
+  const declarations = manifest.modules.flatMap(
+    (module) => module.declarations ?? []
+  );
   const graph = declarations.find((entry) => entry.tagName === 'lr-graph');
   assert.equal(graph.status, 'stable');
   assert.equal(graph.since, '4.0.0');
@@ -492,8 +635,12 @@ test('CEM projection surfaces status, since, policy, and structured member depre
   assert.match(graph.maturity.graduationCriteria, /Already stable/);
 
   const icon = declarations.find((entry) => entry.tagName === 'lr-icon');
-  const autoWidth = icon.members.find((entry) => entry.kind === 'field' && entry.name === 'autoWidth');
-  const autoWidthAttribute = icon.attributes.find((entry) => entry.name === 'auto-width');
+  const autoWidth = icon.members.find(
+    (entry) => entry.kind === 'field' && entry.name === 'autoWidth'
+  );
+  const autoWidthAttribute = icon.attributes.find(
+    (entry) => entry.name === 'auto-width'
+  );
   assert.equal(icon.deprecations.length, 1);
   assert.equal(autoWidth.deprecation.since, '8.0.0');
   assert.deepEqual(autoWidth.deprecation.replacement, {
@@ -504,7 +651,9 @@ test('CEM projection surfaces status, since, policy, and structured member depre
   assert.equal(autoWidth.deprecation.removalNotBefore, '10.0.0');
   assert.deepEqual(autoWidthAttribute.deprecation, autoWidth.deprecation);
 
-  const dateInput = declarations.find((entry) => entry.tagName === 'lr-date-input');
+  const dateInput = declarations.find(
+    (entry) => entry.tagName === 'lr-date-input'
+  );
   const basePart = dateInput.cssParts.find((entry) => entry.name === 'base');
   const labelPart = dateInput.cssParts.find((entry) => entry.name === 'label');
   assert.equal(basePart.deprecation.since, '8.0.0');
@@ -515,17 +664,24 @@ test('CEM projection surfaces status, since, policy, and structured member depre
   });
   assert.equal(labelPart.deprecation.removalNotBefore, '10.0.0');
 
-  const knownDate = declarations.find((entry) => entry.tagName === 'lr-known-date');
-  const knownDateLabelPart = knownDate.cssParts.find((entry) => entry.name === 'label');
+  const knownDate = declarations.find(
+    (entry) => entry.tagName === 'lr-known-date'
+  );
+  const knownDateLabelPart = knownDate.cssParts.find(
+    (entry) => entry.name === 'label'
+  );
   assert.deepEqual(knownDateLabelPart.deprecation.replacement, {
     kind: 'part',
     name: 'form-control-label',
     usage: '::part(form-control-label)',
   });
   assert.equal(knownDateLabelPart.deprecation.removalNotBefore, '10.0.0');
-  assert.deepEqual(validateManifestMetadataProjection(state.metadata, manifest, {
-    packageVersion: state.packageJson.version,
-  }), []);
+  assert.deepEqual(
+    validateManifestMetadataProjection(state.metadata, manifest, {
+      packageVersion: state.packageJson.version,
+    }),
+    []
+  );
 });
 
 test('authored compatibility parts carry deprecation markers before metadata validation', async () => {
@@ -534,7 +690,7 @@ test('authored compatibility parts carry deprecation markers before metadata val
     manifest.modules
       .flatMap((module) => module.declarations ?? [])
       .filter((declaration) => declaration.tagName)
-      .map((declaration) => [declaration.tagName, declaration]),
+      .map((declaration) => [declaration.tagName, declaration])
   );
 
   for (const [tag, parts] of [
@@ -546,9 +702,20 @@ test('authored compatibility parts carry deprecation markers before metadata val
     for (const name of parts) {
       const part = declaration.cssParts?.find((entry) => entry.name === name);
       assert.ok(part, `${tag}::part(${name})`);
-      assert.match(part.description ?? '', /^Deprecated\b/i, `${tag}::part(${name}) source marker`);
-      assert.equal(part.deprecation?.kind, 'part', `${tag}::part(${name}) structured policy`);
-      assert.ok(part.deprecation?.replacement?.name, `${tag}::part(${name}) replacement`);
+      assert.match(
+        part.description ?? '',
+        /^Deprecated\b/i,
+        `${tag}::part(${name}) source marker`
+      );
+      assert.equal(
+        part.deprecation?.kind,
+        'part',
+        `${tag}::part(${name}) structured policy`
+      );
+      assert.ok(
+        part.deprecation?.replacement?.name,
+        `${tag}::part(${name}) replacement`
+      );
     }
   }
 });
@@ -560,31 +727,42 @@ test('Storybook presentation exposes central maturity and structured deprecation
     packageVersion: state.packageJson.version,
   });
   const index = buildComponentMetadataIndex(manifest);
-  const presentation = componentMetadataPresentation(index.get('lr-date-input'));
+  const presentation = componentMetadataPresentation(
+    index.get('lr-date-input')
+  );
 
   assert.equal(presentation.status, 'experimental');
   assert.equal(presentation.since, '4.0.0');
-  assert.match(presentation.rationale, /remains experimental under full semver protection/);
-  assert.match(presentation.graduationCriteria, /demonstrate sustained reliability/);
-  assert.deepEqual(presentation.deprecations.map((entry) => ({
-    subject: entry.subject,
-    since: entry.since,
-    replacement: entry.replacement,
-    removalNotBefore: entry.removalNotBefore,
-  })), [
-    {
-      subject: 'part base',
-      since: '8.0.0',
-      replacement: '::part(date-input)',
-      removalNotBefore: '10.0.0',
-    },
-    {
-      subject: 'part label',
-      since: '8.0.0',
-      replacement: '::part(form-control-label)',
-      removalNotBefore: '10.0.0',
-    },
-  ]);
+  assert.match(
+    presentation.rationale,
+    /remains experimental under full semver protection/
+  );
+  assert.match(
+    presentation.graduationCriteria,
+    /demonstrate sustained reliability/
+  );
+  assert.deepEqual(
+    presentation.deprecations.map((entry) => ({
+      subject: entry.subject,
+      since: entry.since,
+      replacement: entry.replacement,
+      removalNotBefore: entry.removalNotBefore,
+    })),
+    [
+      {
+        subject: 'part base',
+        since: '8.0.0',
+        replacement: '::part(date-input)',
+        removalNotBefore: '10.0.0',
+      },
+      {
+        subject: 'part label',
+        since: '8.0.0',
+        replacement: '::part(form-control-label)',
+        removalNotBefore: '10.0.0',
+      },
+    ]
+  );
   assert.equal(componentMetadataPresentation({ status: 'stable' }), null);
 });
 
@@ -610,7 +788,9 @@ test('CEM projection reports drift and marks a new assigned tag unreleased once 
   // componentMetadataByTag itself branches on rather than hardcoding the steady-state-only answer.
   assert.equal(
     resolved.get('lr-new-component').since,
-    metadata.history?.taggedCurrent ? UNRELEASED_VERSION : state.packageJson.version,
+    metadata.history?.taggedCurrent
+      ? UNRELEASED_VERSION
+      : state.packageJson.version
   );
 
   const manifest = structuredClone(state.manifest);
@@ -621,23 +801,32 @@ test('CEM projection reports drift and marks a new assigned tag unreleased once 
     .flatMap((module) => module.declarations ?? [])
     .find((entry) => entry.tagName === 'lr-graph');
   graph.since = '8.0.0';
-  assert.deepEqual(validateManifestMetadataProjection(state.metadata, manifest, {
-    packageVersion: state.packageJson.version,
-  }), ['lr-graph: manifest maturity/deprecation projection drifted']);
+  assert.deepEqual(
+    validateManifestMetadataProjection(state.metadata, manifest, {
+      packageVersion: state.packageJson.version,
+    }),
+    ['lr-graph: manifest maturity/deprecation projection drifted']
+  );
 });
 
 test('the final analyzer plugin projects central metadata into generated CEM', () => {
-  const plugin = cemConfig.plugins.find((entry) => entry.name === 'lr-component-maturity-metadata');
+  const plugin = cemConfig.plugins.find(
+    (entry) => entry.name === 'lr-component-maturity-metadata'
+  );
   assert.ok(plugin);
   const manifest = {
-    modules: [{
-      declarations: [{
-        kind: 'class',
-        name: 'LyraGraph',
-        customElement: true,
-        tagName: 'lr-graph',
-      }],
-    }],
+    modules: [
+      {
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraGraph',
+            customElement: true,
+            tagName: 'lr-graph',
+          },
+        ],
+      },
+    ],
   };
   plugin.packageLinkPhase({ customElementsManifest: manifest });
   assert.equal(manifest.modules[0].declarations[0].status, 'stable');
@@ -645,7 +834,9 @@ test('the final analyzer plugin projects central metadata into generated CEM', (
 });
 
 test('the registration analyzer records module-evaluation definitions but ignores lazy helper calls', () => {
-  const plugin = cemConfig.plugins.find((entry) => entry.name === 'lr-define-element-registration');
+  const plugin = cemConfig.plugins.find(
+    (entry) => entry.name === 'lr-define-element-registration'
+  );
   assert.ok(plugin);
   const SyntaxKind = {
     CallExpression: 1,
@@ -654,7 +845,10 @@ test('the registration analyzer records module-evaluation definitions but ignore
   };
   const sourceFile = { kind: SyntaxKind.SourceFile, parent: null };
   const expressionStatement = { kind: 99, parent: sourceFile };
-  const helperFunction = { kind: SyntaxKind.FunctionDeclaration, parent: sourceFile };
+  const helperFunction = {
+    kind: SyntaxKind.FunctionDeclaration,
+    parent: sourceFile,
+  };
   const lazyExpressionStatement = { kind: 99, parent: helperFunction };
   const call = (parent) => ({
     kind: SyntaxKind.CallExpression,
@@ -664,15 +858,29 @@ test('the registration analyzer records module-evaluation definitions but ignore
   });
 
   const moduleDoc = { exports: [] };
-  plugin.analyzePhase({ ts: { SyntaxKind }, node: call(lazyExpressionStatement), moduleDoc });
-  assert.deepEqual(moduleDoc.exports, [], 'a function-scoped helper call is not an import-time definition');
+  plugin.analyzePhase({
+    ts: { SyntaxKind },
+    node: call(lazyExpressionStatement),
+    moduleDoc,
+  });
+  assert.deepEqual(
+    moduleDoc.exports,
+    [],
+    'a function-scoped helper call is not an import-time definition'
+  );
 
-  plugin.analyzePhase({ ts: { SyntaxKind }, node: call(expressionStatement), moduleDoc });
-  assert.deepEqual(moduleDoc.exports, [{
-    kind: 'custom-element-definition',
-    name: 'lr-fixture',
-    declaration: { name: 'LyraFixture' },
-  }]);
+  plugin.analyzePhase({
+    ts: { SyntaxKind },
+    node: call(expressionStatement),
+    moduleDoc,
+  });
+  assert.deepEqual(moduleDoc.exports, [
+    {
+      kind: 'custom-element-definition',
+      name: 'lr-fixture',
+      declaration: { name: 'LyraFixture' },
+    },
+  ]);
 });
 
 test('generated CSS custom-property names are concrete valid identifiers', () => {
@@ -682,9 +890,15 @@ test('generated CSS custom-property names are concrete valid identifiers', () =>
     .find((entry) => entry.tagName === 'lr-graph');
   const names = graph.cssProperties.map((entry) => entry.name);
 
-  assert.equal(names.some((name) => name.includes('..')), false);
+  assert.equal(
+    names.some((name) => name.includes('..')),
+    false
+  );
   for (let index = 1; index <= 8; index += 1) {
-    assert.ok(names.includes(`--lr-graph-cat-${index}`), `missing concrete graph palette slot ${index}`);
+    assert.ok(
+      names.includes(`--lr-graph-cat-${index}`),
+      `missing concrete graph palette slot ${index}`
+    );
   }
 });
 
@@ -717,22 +931,32 @@ export class LyraExample {}
     since: '4.0.0',
   });
   assert.equal(annotated, expected);
-  assert.equal(annotateComponentSource(annotated, {
-    tag: 'lr-example',
-    status: 'stable',
-    since: '4.0.0',
-  }), expected);
+  assert.equal(
+    annotateComponentSource(annotated, {
+      tag: 'lr-example',
+      status: 'stable',
+      since: '4.0.0',
+    }),
+    expected
+  );
 });
 
 test('source annotation fails closed when the component JSDoc is detached', () => {
-  assert.throws(() => annotateComponentSource(`/**
+  assert.throws(
+    () =>
+      annotateComponentSource(
+        `/**
  * @customElement lr-example
  */
 const detached = true;
 export class LyraExample {}
-`, {
-    tag: 'lr-example',
-    status: 'stable',
-    since: '4.0.0',
-  }), /directly above/);
+`,
+        {
+          tag: 'lr-example',
+          status: 'stable',
+          since: '4.0.0',
+        }
+      ),
+    /directly above/
+  );
 });

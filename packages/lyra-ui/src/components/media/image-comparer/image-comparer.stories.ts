@@ -15,7 +15,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Before/after comparison with a native range input. It emits one native `input` (`Event`) plus `lr-position-change` while moving and one native `change` (`Event`) plus `lr-change` when a gesture commits. The `handle` slot customizes its visible affordance; its flattened subtree is always inert and hidden from assistive technology so the range stays the only interaction target. `--divider-width` and `--handle-size` tune the geometry, and the `dragging` CSS state follows pointer gestures. Host `focus()`, `blur()`, and `click()` forward to the range input; focus transitions are native `FocusEvent`s with `lr-focus`/`lr-blur` aliases.',
+          'Before/after comparison with a native range input. It emits exactly one bubbling/composed native `input` (`Event`) while moving and one native `change` (`Event`) when a gesture commits. Arrow behavior is explicit and cross-browser: horizontal Left/Right follows the mirrored inline axis, while vertical Up/Down follows the physical top-to-bottom divider. The `handle` slot customizes its visible affordance; its flattened subtree is always inert and hidden from assistive technology so the range stays the only interaction target. `--divider-width` and `--handle-size` tune the geometry, and the `dragging` CSS state follows one admitted primary-pointer gesture. Host `focus()`, `blur()`, and `click()` forward to the range input; focus transitions are relayed exactly once as native `FocusEvent`s.',
       },
     },
   },

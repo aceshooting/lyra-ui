@@ -176,6 +176,11 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
   static override styles = [LyraElement.styles, variants, styles];
 
+  /** Live visible toast surface, or `null` before the render root is populated. */
+  get toastItemElement(): HTMLElement | null {
+    return this.renderRoot.querySelector<HTMLElement>('[part="toast-item"]');
+  }
+
   /** Auto-dismiss delay in ms. Set to `Infinity` (or <= 0) to disable. */
   @property({ type: Number }) duration = 5000;
 

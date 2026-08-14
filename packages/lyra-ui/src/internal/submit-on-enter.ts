@@ -99,6 +99,53 @@ function customElementType(element: Element): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+/** Realm-neutral form identity for owners returned by native/FACE association APIs. */
+function isHtmlForm(value: unknown): value is HTMLFormElement {
+  if (value === null || typeof value !== 'object') return false;
+  try {
+    const candidate = value as Element & { requestSubmit?: unknown };
+    return candidate.namespaceURI === HTML_NAMESPACE
+      && candidate.localName === 'form'
+      && typeof candidate.requestSubmit === 'function';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resolves the platform form owner before falling back to DOM ancestry. FACE controls can name a
+ * non-ancestor owner with `form=`, and native controls expose the same association through their
+ * `form` property. Once either owner API exists, its `null` result is authoritative: an explicit
+ * but unresolved `form` attribute must not silently reassociate the control with an ancestor.
+ */
+function resolveFormOwner(host: HTMLElement): HTMLFormElement | null {
+  const candidate = host as HTMLElement & {
+    getForm?: unknown;
+    readonly form?: unknown;
+  };
+
+  if (typeof candidate.getForm === 'function') {
+    try {
+      const owner = candidate.getForm.call(host) as unknown;
+      return isHtmlForm(owner) ? owner : null;
+    } catch {
+      return null;
+    }
+  }
+
+  if ('form' in candidate) {
+    try {
+      const owner = candidate.form;
+      return isHtmlForm(owner) ? owner : null;
+    } catch {
+      return null;
+    }
+  }
+
+  const ancestor = host.closest('form');
+  return isHtmlForm(ancestor) ? ancestor : null;
+}
+
 /** Whether `element` is inert — its own `disabled`, or an ancestor `<fieldset disabled>`'s cascade
  *  (which only `:disabled` tracks; a `[disabled]` attribute check misses it entirely). */
 function isInert(element: Element): boolean {
@@ -179,8 +226,8 @@ export function findImplicitSubmitter(form: HTMLFormElement): HTMLElement | null
  * `event.preventDefault()`: the keystroke has no default action to cancel here — the internal
  * input has no form owner — and cancelling it would suppress unrelated handlers downstream.
  *
- * @param host The form-associated custom element, i.e. the thing that actually sits in the `<form>`
- *   — not the shadow-internal `<input>`, which has no form owner to search from.
+ * @param host The form-associated custom element, i.e. the thing whose FACE `getForm()`/`form`
+ *   association owns submission — not the shadow-internal `<input>`, which has no form owner.
  */
 export function submitOnEnter(
   host: HTMLElement,
@@ -188,7 +235,7 @@ export function submitOnEnter(
   options: SubmitOnEnterOptions = {},
 ): boolean {
   if (!isImplicitSubmission(event)) return false;
-  const form = host.closest('form');
+  const form = resolveFormOwner(host);
   if (!form) return false;
 
   const submitter = findImplicitSubmitter(form);

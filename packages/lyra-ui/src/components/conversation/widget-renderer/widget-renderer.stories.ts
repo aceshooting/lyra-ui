@@ -3,8 +3,8 @@ import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "../../forms/input/input.js";
 import { tag } from "../../../internal/prefix.js";
 import "./widget-renderer.js";
-import type { LyraWidgetDocument, WidgetNode } from "./resolve.js";
-import type { WidgetTypeRegistry } from "./registry.js";
+import { createWidgetDocument, type WidgetNode } from "./resolve.js";
+import { createWidgetTypeRegistry } from "./registry.js";
 import type { LyraWidgetRenderer } from "./widget-renderer.js";
 
 const meta: Meta = {
@@ -31,20 +31,21 @@ const dashboard: WidgetNode = {
     },
     {
       type: "button",
+      id: "refresh-dashboard",
       props: { variant: "brand" },
       actionId: "refresh",
       children: ["Refresh"],
     },
   ],
 };
-const narrowUnbrokenWidgetText = 'WidgetPayloadWithoutNaturalBreaks'.repeat(10);
+const narrowUnbrokenWidgetText = "WidgetPayloadWithoutNaturalBreaks".repeat(10);
 const narrowRtlTree: WidgetNode = {
-  type: 'row',
-  props: { gap: 'm' },
+  type: "row",
+  props: { gap: "m" },
   children: [
     narrowUnbrokenWidgetText,
     {
-      type: 'stat',
+      type: "stat",
       props: {
         label: narrowUnbrokenWidgetText,
         value: narrowUnbrokenWidgetText,
@@ -65,7 +66,7 @@ export const Default: Story = {
   render: () =>
     html`<lr-widget-renderer
       style="display:block;max-width:32rem"
-      .tree=${dashboard}
+      .document=${createWidgetDocument(dashboard)}
     ></lr-widget-renderer>`,
 };
 
@@ -73,7 +74,7 @@ export const SecurityAllowlistDemo: Story = {
   render: () =>
     html`<lr-widget-renderer
       style="display:block;max-width:32rem"
-      .tree=${unsafeTree}
+      .document=${createWidgetDocument(unsafeTree)}
     ></lr-widget-renderer>`,
 };
 
@@ -94,20 +95,20 @@ export const MalformedTreeFailsClosed: Story = {
           const renderer =
             wrapper?.querySelector<LyraWidgetRenderer>("lr-widget-renderer");
           if (renderer)
-            renderer.tree = {
+            renderer.document = createWidgetDocument({
               type: "row",
               children: [null],
-            } as unknown as WidgetNode;
+            } as unknown as WidgetNode);
         }}
       >
         Stream malformed tree
       </button>
       <lr-widget-renderer
-        .tree=${{
+        .document=${createWidgetDocument({
           type: "stat",
           props: { label: "Prior valid tree", value: "Rendered" },
-        } satisfies WidgetNode}
-        @lr-render-error=${(event: CustomEvent<{ error: unknown }>) => {
+        })}
+        @lr-render-error=${(event: CustomEvent<{ error: Error }>) => {
           const output = (event.currentTarget as HTMLElement)
             .nextElementSibling;
           if (output instanceof HTMLOutputElement)
@@ -140,7 +141,7 @@ export const StreamedUnknownTypeGenerations: Story = {
           if (!wrapper || !renderer) return;
           const generation = Number(wrapper.dataset["generation"] ?? "0") + 1;
           wrapper.dataset["generation"] = String(generation);
-          renderer.tree = {
+          renderer.document = createWidgetDocument({
             type: "row",
             children: [
               { type: `unknown-generation-${generation}` },
@@ -152,47 +153,49 @@ export const StreamedUnknownTypeGenerations: Story = {
                 },
               },
             ],
-          };
+          });
         }}
       >
         Stream a fresh tree
       </button>
-      <lr-widget-renderer .tree=${unsafeTree}></lr-widget-renderer>
+      <lr-widget-renderer
+        .document=${createWidgetDocument(unsafeTree)}
+      ></lr-widget-renderer>
     </div>
   `,
 };
 
 export const ControlledDocumentBinding: Story = {
   render: () => {
-    const registry: WidgetTypeRegistry = new Map([
+    const registry = createWidgetTypeRegistry([
       [
         "bound-input",
         {
           tag: tag("input"),
           props: { label: "string", value: "string" },
+          interaction: "control",
           bindings: { value: { event: "lr-input" } },
         },
       ],
     ]);
-    const widgetDocument: LyraWidgetDocument = {
-      version: "1",
-      state: { name: "Ada" },
-      root: {
-        type: "bound-input",
-        id: "name",
-        props: { label: "Name", value: { $bind: "/name", fallback: "" } },
-      },
-    };
+    const widgetDocument = createWidgetDocument({
+      type: "bound-input",
+      id: "name",
+      props: { label: "Name", value: { $bind: "/name", fallback: "" } },
+    });
+    const initialBindingState = { name: "Ada" };
     const handleStateChange = (
       event: CustomEvent<{
         path: string;
         value: unknown;
         nodeId: string;
+        nodeKey: string;
+        nodePath: string;
         prop: string;
       }>
     ): void => {
       const renderer = event.currentTarget as LyraWidgetRenderer;
-      renderer.state = { name: event.detail.value };
+      renderer.bindingState = { name: event.detail.value };
       const output = renderer.nextElementSibling;
       if (output instanceof HTMLOutputElement) {
         output.textContent = JSON.stringify(event.detail);
@@ -203,6 +206,7 @@ export const ControlledDocumentBinding: Story = {
       <div style="display:grid;gap:var(--lr-space-s);max-width:32rem">
         <lr-widget-renderer
           .document=${widgetDocument}
+          .bindingState=${initialBindingState}
           .registry=${registry}
           @lr-widget-state-change=${handleStateChange}
         ></lr-widget-renderer>
@@ -215,12 +219,12 @@ export const ControlledDocumentBinding: Story = {
 };
 
 export const Narrow320: Story = {
-  name: 'Narrow RTL (320px, long content)',
+  name: "Narrow RTL (320px, long content)",
   render: () =>
     html`<div dir="rtl" style="inline-size:320px;max-inline-size:100%">
       <lr-widget-renderer
         style="display:block"
-        .tree=${narrowRtlTree}
+        .document=${createWidgetDocument(narrowRtlTree)}
       ></lr-widget-renderer>
     </div>`,
 };

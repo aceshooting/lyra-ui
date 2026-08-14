@@ -4,8 +4,8 @@ import "./breadcrumb/breadcrumb-item.js";
 import "./details/details.js";
 import "./reorder-list/reorder-list.js";
 import "./reorder-list/reorder-item.js";
-import "./split/split.js";
-import type { LyraSplit } from "./split/split.js";
+import "./multi-split/multi-split.js";
+import type { LyraMultiSplit } from "./multi-split/multi-split.js";
 
 const LONG_LABEL = "unbroken".repeat(4_096);
 
@@ -56,13 +56,13 @@ it("contains long reorder-item labels in a 320px allocation", async () => {
 it("contains long split-panel content in a 320px allocation", async () => {
   const frame = (await fixture(html`
     <div style="inline-size:320px">
-      <lr-split style="block-size:120px">
+      <lr-multi-split style="block-size:120px">
         <section>${LONG_LABEL}</section>
         <section>${LONG_LABEL}</section>
-      </lr-split>
+      </lr-multi-split>
     </div>
   `)) as HTMLElement;
-  const split = frame.querySelector("lr-split") as LyraSplit;
+  const split = frame.querySelector("lr-multi-split") as LyraMultiSplit;
   await split.updateComplete;
 
   expectContained(frame, "split");

@@ -93,6 +93,51 @@ it("selects the active command with Enter and ignores Enter when no enabled comm
   expect(el.open).to.be.true;
 });
 
+it("does not navigate or activate while an IME composition key is committing", async () => {
+  const el = (await fixture(html`<lr-command-palette
+    .commands=${[
+      { id: "first", label: "First" },
+      { id: "second", label: "Second" },
+    ]}
+  ></lr-command-palette>`)) as LyraCommandPalette;
+  let selections = 0;
+  el.addEventListener("lr-select", () => selections += 1);
+  el.openPalette();
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector("input")!;
+  for (const key of ["ArrowDown", "Enter"]) {
+    const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+    Object.defineProperty(event, "isComposing", { value: true });
+    input.dispatchEvent(event);
+    expect(event.defaultPrevented, `${key} remains owned by the IME`).to.be.false;
+  }
+  const legacy = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+  Object.defineProperty(legacy, "keyCode", { value: 229 });
+  input.dispatchEvent(legacy);
+  await el.updateComplete;
+  expect(selections).to.equal(0);
+  expect(el.open).to.be.true;
+  expect(input.getAttribute("aria-activedescendant")).to.equal(
+    el.shadowRoot!.querySelector('[part="command"]')!.id
+  );
+});
+
+it("contains the native search input event at the component boundary", async () => {
+  const el = (await fixture(html`<lr-command-palette
+    .commands=${[{ id: "save", label: "Save" }]}
+  ></lr-command-palette>`)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  let leaked = 0;
+  el.addEventListener("input", () => leaked += 1);
+  const input = el.shadowRoot!.querySelector("input") as HTMLInputElement;
+  input.value = "save";
+  input.dispatchEvent(new InputEvent("input", { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(leaked).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('[part="command"]')).to.have.length(1);
+});
+
 it("is accessible while open", async () => {
   const el = (await fixture(
     html`<lr-command-palette
@@ -460,9 +505,9 @@ it("restores overlay ownership when an open palette reconnects", async () => {
   await el.updateComplete;
 });
 
-it("supports an explicit ctrl shortcut without requiring the platform mod key", async () => {
+it("supports an explicit ctrl hotkey without requiring the platform mod key", async () => {
   const el = (await fixture(
-    html`<lr-command-palette shortcut="ctrl+p"></lr-command-palette>`
+    html`<lr-command-palette hotkey="ctrl+p"></lr-command-palette>`
   )) as LyraCommandPalette;
   window.dispatchEvent(
     new KeyboardEvent("keydown", {
@@ -503,7 +548,7 @@ it("binds its global shortcut to the adopted owner window", async () => {
   });
   const nativeGetComputedStyle = frameWindow.getComputedStyle.bind(frameWindow);
   const el = document.createElement("lr-command-palette") as LyraCommandPalette;
-  el.shortcut = "ctrl+p";
+  el.hotkey = "ctrl+p";
   Object.defineProperty(frameWindow, "getComputedStyle", {
     configurable: true,
     value: (element: Element, pseudo?: string | null) => {
@@ -524,16 +569,16 @@ it("binds its global shortcut to the adopted owner window", async () => {
     expect(constructions).to.be.greaterThan(0);
     expect(observed.includes(list)).to.be.true;
     expect(hostStyleReads).to.be.greaterThan(0);
-    frameWindow.dispatchEvent(
-      new frameWindow.KeyboardEvent("keydown", {
-        key: "p",
-        ctrlKey: true,
-        bubbles: true,
-        cancelable: true,
-      })
-    );
+    const hotkey = new frameWindow.KeyboardEvent("keydown", {
+      key: "p",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    frameWindow.dispatchEvent(hotkey);
     await el.updateComplete;
-    expect(el.open).to.be.false;
+    expect(el.open).to.be.true;
+    expect(hotkey.defaultPrevented).to.be.true;
   } finally {
     el.remove();
     if (resizeDescriptor) Object.defineProperty(frameWindow, "ResizeObserver", resizeDescriptor);
@@ -567,6 +612,46 @@ it("does not match the default mod+k shortcut when an extra Shift modifier is he
   window.dispatchEvent(new KeyboardEvent("keydown", plainInit));
   await el.updateComplete;
   expect(el.open).to.be.true;
+});
+
+it("ignores repeated hotkeys and gives one last-connected palette ownership", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-command-palette></lr-command-palette>
+      <lr-command-palette></lr-command-palette>
+    </div>
+  `);
+  const [first, second] = [...wrapper.querySelectorAll("lr-command-palette")] as LyraCommandPalette[];
+  const chord: KeyboardEventInit = { key: "k", bubbles: true, cancelable: true };
+  if (navigator.platform.includes("Mac")) chord.metaKey = true;
+  else chord.ctrlKey = true;
+
+  window.dispatchEvent(new KeyboardEvent("keydown", { ...chord, repeat: true }));
+  await Promise.all([first!.updateComplete, second!.updateComplete]);
+  expect(first!.open).to.be.false;
+  expect(second!.open).to.be.false;
+
+  window.dispatchEvent(new KeyboardEvent("keydown", chord));
+  await Promise.all([first!.updateComplete, second!.updateComplete]);
+  expect(first!.open).to.be.false;
+  expect(second!.open).to.be.true;
+
+  second!.close();
+  await second!.updateComplete;
+  second!.remove();
+  window.dispatchEvent(new KeyboardEvent("keydown", chord));
+  await first!.updateComplete;
+  expect(first!.open).to.be.true;
+});
+
+it("defines distinct active-plus-pressed and forced-color current-row paint", () => {
+  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
+  expect(css).to.match(
+    /\[part='command'\]\[data-active='true'\]\):active:where\(:not\(:disabled\)\)/
+  );
+  expect(css).to.match(
+    /@media \(forced-colors: active\).*\[part='command'\]\[data-active='true'\].*outline:/
+  );
 });
 
 describe("active-command cssprop", () => {

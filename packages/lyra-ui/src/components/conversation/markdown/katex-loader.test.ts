@@ -1,6 +1,11 @@
 import { expect } from '@open-wc/testing';
-import { loadKatex, getKatex, clearKatexCache } from './katex-loader.js';
+import { loadKatex, getKatex } from './katex-loader.js';
 import { createMarkdownKatexState } from './markdown-shared.js';
+
+const KATEX_CACHE_GENERATION = Symbol.for('@aceshooting/lyra-ui/markdown-katex-cache-generation');
+function clearKatexCache(): void {
+  Reflect.set(globalThis, KATEX_CACHE_GENERATION, {});
+}
 
 describe('loadKatex', () => {
   afterEach(() => clearKatexCache());

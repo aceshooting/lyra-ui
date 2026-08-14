@@ -8,18 +8,137 @@ import type {
   LyraPluralMessage,
 } from './localization-types.js';
 
-const locales = new Map<string, LyraLocaleStrings>();
+type LocaleCatalog = Readonly<LyraLocaleStrings>;
+
+interface LocaleIdentity {
+  /** Canonical public spelling (`pt-BR`) or the normalized lowercase legacy/custom spelling. */
+  readonly publicTag: string;
+  /** Case-insensitive registry/lookup identity. */
+  readonly lookupKey: string;
+  /** Whether `Intl` accepted the tag as structurally well-formed BCP-47. */
+  readonly wellFormed: boolean;
+  /** Whether the complete truncation chain fits the explicit work ceiling. */
+  readonly candidateBounded: boolean;
+  /** Whether a public storage API may retain this identity. */
+  readonly storable: boolean;
+}
+
+interface HostLocaleSubscription {
+  readonly host: Element;
+  readonly listener: () => void;
+}
+
+const MAX_LOCALE_CANDIDATES = 64;
+const MAX_LOCALE_SUBTAGS = 32;
+const MAX_LOCALE_TAG_LENGTH = 255;
+const MAX_LOCALE_CACHE_ENTRIES = 128;
+const MAX_CACHEABLE_LOCALE_LENGTH = 512;
+const LEGACY_LOCALE_PATTERN = /^[a-z0-9]{1,32}(?:-[a-z0-9]{1,32})*$/;
+
+const locales = new Map<string, LocaleCatalog>();
+const localePublicTags = new Map<string, string>();
 const localeMeta = new Map<string, LyraLocaleMeta>();
+const wellFormedLocales = new Set<string>();
 // Synthetic diagnostic catalogs are selected only by their exact locale tag. They must not become
 // reverse regional fallbacks for the ordinary base language merely because their module was
 // imported into a development bundle.
 const exactOnlyLocales = new Set<string>();
 const listeners = new Set<() => void>();
+const hostLocaleListeners = new Set<HostLocaleSubscription>();
 const registryListeners = new Set<() => void>();
 let activeLocale = '';
 
-function normalizeLocale(locale: string): string {
-  return locale.trim().replace(/_/g, '-').toLowerCase();
+const localeIdentityCache = new Map<string, LocaleIdentity>();
+const localeCandidateCache = new Map<string, readonly string[]>();
+
+function cacheBounded<K, V>(cache: Map<K, V>, key: K, value: V): void {
+  if (cache.size >= MAX_LOCALE_CACHE_ENTRIES) cache.clear();
+  cache.set(key, value);
+}
+
+function subtagCountWithinBounds(tag: string): boolean {
+  if (tag.length > MAX_LOCALE_TAG_LENGTH) return false;
+  let count = tag ? 1 : 0;
+  for (let index = 0; index < tag.length; index += 1) {
+    if (tag.charCodeAt(index) === 45 && ++count > MAX_LOCALE_SUBTAGS) return false;
+  }
+  return true;
+}
+
+/**
+ * Produces the single identity used by public locale APIs and internal lookup.
+ *
+ * Underscores remain a supported input alias. Well-formed BCP-47 goes through the platform
+ * canonicalizer (`PT_BR` -> `pt-BR`, deprecated aliases included). The library historically also
+ * accepted private-use-only and short opaque application/test tags that `Intl` rejects; those stay
+ * supported as lowercase hyphenated identities. Over-complex invalid inherited `lang` values
+ * resolve to English and are never retained by registration/active-locale storage APIs.
+ */
+function localeIdentity(locale: string): LocaleIdentity {
+  const normalized = typeof locale === 'string' ? locale.trim().replace(/_/g, '-') : '';
+  if (!normalized) {
+    return {
+      publicTag: '',
+      lookupKey: '',
+      wellFormed: false,
+      candidateBounded: true,
+      storable: false,
+    };
+  }
+  const cached = normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH
+    ? localeIdentityCache.get(normalized)
+    : undefined;
+  if (cached) return cached;
+
+  let publicTag = normalized.toLowerCase();
+  let wellFormed = false;
+  try {
+    const canonical = Intl.getCanonicalLocales(normalized)[0];
+    if (canonical) {
+      publicTag = canonical;
+      wellFormed = true;
+    }
+  } catch {
+    // Preserve the documented lowercase legacy/private identity below.
+  }
+  const lookupKey = publicTag.toLowerCase();
+  const candidateBounded = subtagCountWithinBounds(lookupKey);
+  const identity: LocaleIdentity = {
+    publicTag,
+    lookupKey,
+    wellFormed,
+    candidateBounded,
+    storable: wellFormed || (candidateBounded && LEGACY_LOCALE_PATTERN.test(lookupKey)),
+  };
+  if (normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH) {
+    cacheBounded(localeIdentityCache, normalized, identity);
+  }
+  return identity;
+}
+
+function storedLocaleIdentity(locale: string, required: boolean): LocaleIdentity {
+  if (typeof locale !== 'string') throw new TypeError('A locale must be a string.');
+  const identity = localeIdentity(locale);
+  if (!identity.publicTag) {
+    if (!required) return identity;
+    throw new TypeError('A locale is required.');
+  }
+  if (!identity.storable) {
+    throw new TypeError('The locale must be BCP-47 or a bounded alphanumeric custom tag.');
+  }
+  return identity;
+}
+
+/**
+ * Canonicalizes a component-owned locale value through the shared identity path. Invalid values
+ * beyond the defensive storage bounds resolve to English instead of propagating an unbounded
+ * opaque tag through component state.
+ *
+ * @internal
+ */
+export function canonicalizeLyraLocale(locale: string): string {
+  const identity = localeIdentity(locale);
+  return identity.storable ? identity.publicTag : 'en';
 }
 
 /**
@@ -38,23 +157,26 @@ function normalizeLocale(locale: string): string {
  *      claim that Simplified is the better default — an application that cares registers the
  *      regional tag it means, or offers `zh` itself.
  */
-function regionalFallbacks(subtags: string[]): string[] {
-  const language = subtags[0];
+function regionalFallbacks(requestedKey: string, limit: number, wellFormed: boolean): string[] {
+  if (limit <= 0 || !wellFormed) return [];
+  const separator = requestedKey.indexOf('-');
+  const language = separator === -1 ? requestedKey : requestedKey.slice(0, separator);
   if (!language) return [];
-  const requested = new Set(subtags);
+  const requested = new Set(requestedKey.split('-'));
   const score = (key: string): number => key.split('-').filter((subtag) => requested.has(subtag)).length;
   return [...locales.keys()]
     .filter((key) =>
+      wellFormedLocales.has(key) &&
       !exactOnlyLocales.has(key) &&
-      key.split('-')[0] === language &&
-      !isPrefixOf(key, subtags))
-    .sort((a, b) => score(b) - score(a) || (a < b ? -1 : a > b ? 1 : 0));
+      (key === language || key.startsWith(`${language}-`)) &&
+      !isPrefixOf(key, requestedKey))
+    .sort((a, b) => score(b) - score(a) || (a < b ? -1 : a > b ? 1 : 0))
+    .slice(0, limit);
 }
 
-/** Whether `key` is one of the truncation steps of `subtags` (and therefore already in the chain). */
-function isPrefixOf(key: string, subtags: string[]): boolean {
-  const parts = key.split('-');
-  return parts.length <= subtags.length && parts.every((part, index) => part === subtags[index]);
+/** Whether `key` is one of the truncation steps of `requestedKey`. */
+function isPrefixOf(key: string, requestedKey: string): boolean {
+  return key === requestedKey || requestedKey.startsWith(`${key}-`);
 }
 
 /**
@@ -71,46 +193,222 @@ function isPrefixOf(key: string, subtags: string[]): boolean {
  * reachable from `pt`/`zh` only through the fallback half.
  */
 function localeCandidates(locale: string): string[] {
-  const normalized = normalizeLocale(locale);
-  const subtags = normalized.split('-').filter(Boolean);
+  const identity = localeIdentity(locale);
+  const normalized = identity.lookupKey;
+  if (!normalized) return ['en'];
+  const cached = normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH
+    ? localeCandidateCache.get(normalized)
+    : undefined;
+  if (cached) return [...cached];
+
   const candidates: string[] = [];
-  for (let length = subtags.length; length > 0; length--) {
-    candidates.push(subtags.slice(0, length).join('-'));
+  if (identity.wellFormed || identity.candidateBounded) candidates.push(normalized);
+  if (identity.candidateBounded) {
+    // Boundary indexes avoid rebuilding each prefix through `slice(...).join('-')`. The number and
+    // aggregate size of retained prefixes are bounded before this walk begins.
+    for (let index = normalized.length - 1; index >= 0; index -= 1) {
+      if (normalized.charCodeAt(index) === 45 && index > 0) candidates.push(normalized.slice(0, index));
+    }
+    const regionalBudget = Math.max(0, MAX_LOCALE_CANDIDATES - candidates.length - 1);
+    candidates.push(...regionalFallbacks(normalized, regionalBudget, identity.wellFormed));
+  } else if (identity.wellFormed) {
+    // Valid tags are never rejected for exceeding the defensive malformed-input ceiling. Retain
+    // their exact identity and base-language fallback without materializing an unbounded ladder.
+    const separator = normalized.indexOf('-');
+    if (separator > 0) candidates.push(normalized.slice(0, separator));
   }
-  candidates.push(...regionalFallbacks(subtags));
   if (!candidates.includes('en')) candidates.push('en');
+  if (candidates.length > MAX_LOCALE_CANDIDATES) {
+    candidates.splice(MAX_LOCALE_CANDIDATES - 1, candidates.length, 'en');
+  }
+  const frozen = Object.freeze([...candidates]);
+  if (normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH) {
+    cacheBounded(localeCandidateCache, normalized, frozen);
+  }
   return candidates;
 }
 
-function notify(): void {
-  for (const listener of [...listeners]) listener();
-}
-
 /** Every locale with registered strings, plus 'en' (always available via DEFAULT_STRINGS even
- *  with no explicit registerLyraLocale('en', ...) call), sorted, deduped. */
+ *  with no explicit registerLyraLocale('en', ...) call), in canonical public BCP-47 spelling,
+ *  sorted and deduped by case-insensitive lookup identity. */
 export function getRegisteredLyraLocales(): string[] {
-  const keys = new Set(['en', ...locales.keys()]);
+  const keys = new Set(['en', ...localePublicTags.values()]);
   return [...keys].sort();
 }
 
 /** Subscribe to locale *registry membership* changes (a new locale registered) — distinct from
- *  subscribeLyraLocale(), which only fires for the currently *active* locale's string changes.
+ *  subscribeLyraLocale(), which fires for active-locale selection and relevant active-catalog
+ *  changes. Extending an already registered catalog does not change membership and does not fire.
  *  Only a consumer that enumerates the registry (lr-locale-picker) needs this; every other
  *  component's rendered strings are unaffected by a registration for a locale it isn't using, so
  *  registerLyraLocale() must not force a global requestUpdate() on every mounted component just
- *  to reach the one picker that cares. */
+ *  to reach the one picker that cares.
+ *
+ * All listeners in the starting snapshot receive an eligible change. If one or more callbacks
+ * throw, delivery finishes and the committing register call then throws one `AggregateError`.
+ */
 export function subscribeLyraLocaleRegistry(listener: () => void): () => void {
   registryListeners.add(listener);
   return () => registryListeners.delete(listener);
 }
 
+const MAX_CATALOG_MESSAGES = 4_096;
+const MAX_MESSAGE_KEY_LENGTH = 256;
+const PLURAL_CATEGORIES = new Set<string>(['zero', 'one', 'two', 'few', 'many', 'other']);
+const trustedMessageRecords = new WeakSet<object>();
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+  } catch {
+    return false;
+  }
+}
+
+function ownDataValue(record: Record<string, unknown>, key: string): { found: boolean; value?: unknown } {
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(record, key);
+    if (!descriptor || !('value' in descriptor)) return { found: false };
+    return { found: true, value: descriptor.value };
+  } catch {
+    return { found: false };
+  }
+}
+
+function snapshotPluralMessage(value: unknown): LyraPluralMessage | undefined {
+  if (!isPlainRecord(value)) return undefined;
+  const snapshot = Object.create(null) as Record<string, string>;
+  let count = 0;
+  try {
+    for (const key in value) {
+      if (++count > PLURAL_CATEGORIES.size || !PLURAL_CATEGORIES.has(key)) return undefined;
+      if (!Object.prototype.hasOwnProperty.call(value, key)) return undefined;
+      const entry = ownDataValue(value, key);
+      if (!entry.found || typeof entry.value !== 'string') return undefined;
+      snapshot[key] = entry.value;
+    }
+  } catch {
+    return undefined;
+  }
+  if (typeof snapshot['other'] !== 'string') return undefined;
+  const frozen = Object.freeze(snapshot) as LyraPluralMessage;
+  trustedMessageRecords.add(frozen);
+  return frozen;
+}
+
+function snapshotMessage(value: unknown): LyraMessage | undefined {
+  return typeof value === 'string' ? value : snapshotPluralMessage(value);
+}
+
+function snapshotCatalog(strings: unknown): LocaleCatalog {
+  const snapshot = Object.create(null) as Record<string, LyraMessage>;
+  if (!isPlainRecord(strings)) {
+    const frozen = Object.freeze(snapshot) as LocaleCatalog;
+    trustedMessageRecords.add(frozen);
+    return frozen;
+  }
+  let count = 0;
+  try {
+    for (const key in strings) {
+      if (count >= MAX_CATALOG_MESSAGES) break;
+      count += 1;
+      if (!Object.prototype.hasOwnProperty.call(strings, key)) continue;
+      if (!key || key.length > MAX_MESSAGE_KEY_LENGTH) continue;
+      const entry = ownDataValue(strings, key);
+      if (!entry.found) continue;
+      const message = snapshotMessage(entry.value);
+      if (message !== undefined) snapshot[key] = message;
+    }
+  } catch {
+    // A hostile enumeration trap invalidates the unread suffix only. Entries already copied are
+    // independent data properties, and no caller accessor has executed.
+  }
+  const frozen = Object.freeze(snapshot) as LocaleCatalog;
+  trustedMessageRecords.add(frozen);
+  return frozen;
+}
+
+function mergeCatalogs(current: LocaleCatalog | undefined, incoming: LocaleCatalog): LocaleCatalog {
+  const merged = Object.assign(Object.create(null), current ?? {}, incoming) as LocaleCatalog;
+  Object.freeze(merged);
+  trustedMessageRecords.add(merged);
+  return merged;
+}
+
+function snapshotLocaleMeta(meta: unknown): Readonly<LyraLocaleMeta> | undefined {
+  if (meta === undefined) return undefined;
+  if (!isPlainRecord(meta)) return Object.freeze({});
+  const snapshot: LyraLocaleMeta = {};
+  const dir = ownDataValue(meta, 'dir');
+  if (dir.found && (dir.value === 'ltr' || dir.value === 'rtl')) snapshot.dir = dir.value;
+  const name = ownDataValue(meta, 'name');
+  if (name.found && typeof name.value === 'string') snapshot.name = name.value;
+  return Object.freeze(snapshot);
+}
+
+/**
+ * Creates the immutable, bounded per-instance `.strings` snapshot stored by {@link LyraElement}.
+ * Invalid/accessor entries are omitted per key and cannot execute while rendering.
+ *
+ * @internal
+ */
+export function snapshotLyraLocaleStrings(strings: unknown): LyraLocaleStrings {
+  return snapshotCatalog(strings) as LyraLocaleStrings;
+}
+
+function safeMessageAt(source: unknown, key: string): LyraMessage | undefined {
+  if (!isPlainRecord(source)) return undefined;
+  if (trustedMessageRecords.has(source)) {
+    return (source as Record<string, LyraMessage | undefined>)[key];
+  }
+  const entry = ownDataValue(source, key);
+  return entry.found ? snapshotMessage(entry.value) : undefined;
+}
+
+function deliverLocaleListeners(groups: readonly (readonly (() => void)[])[], operation: string): void {
+  const errors: unknown[] = [];
+  for (const group of groups) {
+    // Each group arrives as a starting snapshot. Unsubscribing or subscribing during delivery does
+    // not strand a listener that was eligible when the committed state change began.
+    for (const listener of group) {
+      try {
+        listener();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+  }
+  if (errors.length > 0) {
+    throw new AggregateError(
+      errors,
+      `${operation} committed, but ${errors.length} locale subscriber${errors.length === 1 ? '' : 's'} failed.`,
+    );
+  }
+}
+
+function localeUsesCatalog(locale: string, lookupKey: string): boolean {
+  return localeCandidates(locale).includes(lookupKey);
+}
+
 /**
  * Register or extend messages for a locale.
+ *
+ * Well-formed tags use their canonical BCP-47 spelling publicly while lookup remains
+ * case-insensitive; `_` is accepted as an input separator. Bounded legacy/private application tags
+ * remain accepted in normalized lowercase. Structurally invalid over-complex storage tags throw.
+ *
+ * `strings` is read as a bounded snapshot of at most 4,096 own enumerable data properties. Plain
+ * strings and plain CLDR plural records with a data-string `other` are cloned and frozen. Invalid
+ * or accessor-backed entries are ignored per key, so they neither execute nor replace that key's
+ * last valid value; valid siblings still merge.
  *
  * `meta` is optional and merged the same way `strings` is, so a later two-argument call adding
  * messages never drops metadata a previous call declared (and vice versa). Passing it is the only
  * way the library can answer {@link getLyraLocaleDirection} for a locale whose direction the
- * runtime's `Intl` cannot report.
+ * runtime's `Intl` cannot report. Subscriber failures are reported as an `AggregateError` only
+ * after the catalog and every eligible listener delivery have completed.
  */
 function registerLocale(
   locale: string,
@@ -118,22 +416,43 @@ function registerLocale(
   meta: LyraLocaleMeta | undefined,
   exactOnly: boolean,
 ): void {
-  const key = normalizeLocale(locale);
-  if (!key) throw new TypeError('A locale is required.');
+  const identity = storedLocaleIdentity(locale, true);
+  const key = identity.lookupKey;
+  const incomingStrings = snapshotCatalog(strings);
+  const incomingMeta = snapshotLocaleMeta(meta);
+  const isNewLocale = !locales.has(key);
+  const candidateTopologyChanged = isNewLocale ||
+    (exactOnly && !exactOnlyLocales.has(key)) ||
+    (identity.wellFormed && !wellFormedLocales.has(key));
   // Exact-only is an identity of the registered locale tag, not of one catalog write. A later
   // public registration may extend a pseudo catalog, but must never turn that tag into a reverse
   // fallback for its ordinary base language.
   if (exactOnly) exactOnlyLocales.add(key);
-  locales.set(key, { ...(locales.get(key) ?? {}), ...strings });
-  if (meta) localeMeta.set(key, { ...(localeMeta.get(key) ?? {}), ...meta });
-  // A new registry key can change what `localeCandidates()` resolves to (a regional-only catalog
-  // becoming reachable from its base language), and `pluralLocale()` memoizes that chain.
-  pluralLocaleCache.clear();
-  // A connected component may resolve its locale from the document, a composed ancestor, or its
-  // own override instead of `activeLocale`. Catalog imports are rare, so notifying every locale
-  // subscriber is both simpler and correct for every inheritance source and fallback chain.
-  notify();
-  for (const listener of [...registryListeners]) listener();
+  if (identity.wellFormed) wellFormedLocales.add(key);
+  locales.set(key, mergeCatalogs(locales.get(key), incomingStrings));
+  localePublicTags.set(key, identity.publicTag);
+  if (incomingMeta) {
+    localeMeta.set(key, Object.freeze({ ...(localeMeta.get(key) ?? {}), ...incomingMeta }));
+  }
+  // New membership or a changed exact-only identity can alter a regional fallback chain. Extending
+  // an existing catalog changes messages/metadata but not candidate topology, so keep those hot
+  // memoized chains intact.
+  if (candidateTopologyChanged) {
+    pluralLocaleCache.clear();
+    localeCandidateCache.clear();
+  }
+
+  const activeSnapshot = activeLocale && localeUsesCatalog(activeLocale, key)
+    ? [...listeners]
+    : [];
+  const hostSnapshot = [...hostLocaleListeners]
+    .filter((subscription) => localeUsesCatalog(inheritedLocale(subscription.host), key))
+    .map((subscription) => subscription.listener);
+  const registrySnapshot = isNewLocale ? [...registryListeners] : [];
+  deliverLocaleListeners(
+    [activeSnapshot, hostSnapshot, registrySnapshot],
+    `registerLyraLocale(${JSON.stringify(identity.publicTag)})`,
+  );
 }
 
 export function registerLyraLocale(
@@ -174,14 +493,14 @@ export function registerLyraExactLocale(
  * forces one from `lang`; this is the lookup an application needs to set `dir` itself.
  */
 export function getLyraLocaleDirection(locale: string): LyraLocaleDirection {
-  const normalized = normalizeLocale(locale);
-  if (!normalized) return 'ltr';
-  for (const candidate of localeCandidates(normalized)) {
+  const identity = localeIdentity(locale);
+  if (!identity.publicTag) return 'ltr';
+  for (const candidate of localeCandidates(identity.publicTag)) {
     const declared = localeMeta.get(candidate)?.dir;
     if (declared) return declared;
   }
   try {
-    const resolved = new Intl.Locale(normalized) as LocaleWithTextInfo;
+    const resolved = new Intl.Locale(identity.publicTag) as LocaleWithTextInfo;
     const direction = resolved.textInfo?.direction ?? resolved.getTextInfo?.().direction;
     return direction === 'rtl' ? 'rtl' : 'ltr';
   } catch {
@@ -208,12 +527,24 @@ type LocaleWithTextInfo = Intl.Locale & {
  * `setLyraLocale('fr')` resolved to `'en'` and looked like a no-op. A per-subtree `locale`/`lang`
  * attribute on the component or any ancestor still wins over both, because that is a deliberate
  * scoped override rather than a page default.
+ *
+ * The stored/returned value follows the same canonical public tag path as registration. Equivalent
+ * spellings are a no-op. Listener failures cannot interrupt delivery: the new locale commits, all
+ * eligible starting-snapshot listeners run, then one `AggregateError` is thrown if any failed.
  */
 export function setLyraLocale(locale: string): void {
-  const next = locale.trim();
+  const next = storedLocaleIdentity(locale, false).publicTag;
   if (activeLocale === next) return;
+  const hostSnapshot = [...hostLocaleListeners];
+  const previousHostLocales = hostSnapshot.map((subscription) => inheritedLocale(subscription.host));
   activeLocale = next;
-  notify();
+  const affectedHostListeners = hostSnapshot
+    .filter((subscription, index) => inheritedLocale(subscription.host) !== previousHostLocales[index])
+    .map((subscription) => subscription.listener);
+  deliverLocaleListeners(
+    [[...listeners], affectedHostListeners],
+    `setLyraLocale(${JSON.stringify(next)})`,
+  );
 }
 
 /** Return the current page-level locale. */
@@ -221,10 +552,29 @@ export function getLyraLocale(): string {
   return activeLocale;
 }
 
-/** Subscribe to locale changes. The returned function is safe to call repeatedly. */
+/**
+ * Subscribe to active-locale selection changes and registrations that can alter the active
+ * locale's messages or direction. Unrelated catalog registrations are registry-only and do not
+ * fire this channel. The returned function is safe to call repeatedly.
+ *
+ * Listener failures are isolated until the eligible starting snapshot has run; the mutator then
+ * throws one `AggregateError` containing every callback error.
+ */
 export function subscribeLyraLocale(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
+}
+
+/**
+ * Subscribes one component host to active changes that alter its effective locale and catalog
+ * registrations reachable through that host's own document/ancestor/host candidate chain.
+ *
+ * @internal
+ */
+export function subscribeLyraLocaleForHost(host: Element, listener: () => void): () => void {
+  const subscription: HostLocaleSubscription = { host, listener };
+  hostLocaleListeners.add(subscription);
+  return () => hostLocaleListeners.delete(subscription);
 }
 
 /**
@@ -246,7 +596,7 @@ export function subscribeLyraLocale(listener: () => void): () => void {
  */
 function inheritedLocale(host: Element): string {
   const explicit = host.getAttribute('locale') || host.getAttribute('lang');
-  if (explicit) return explicit;
+  if (explicit) return canonicalizeLyraLocale(explicit);
   const documentElement = host.ownerDocument?.documentElement;
   const composedParent = (element: Element): Element | null => {
     if (element.parentElement) return element.parentElement;
@@ -265,11 +615,12 @@ function inheritedLocale(host: Element): string {
     const locale = parent === documentElement
       ? parent.getAttribute('locale')
       : parent.getAttribute('locale') || parent.getAttribute('lang');
-    if (locale) return locale;
+    if (locale) return canonicalizeLyraLocale(locale);
     parent = composedParent(parent);
   }
   if (activeLocale) return activeLocale;
-  return documentElement?.getAttribute('lang') || 'en';
+  const documentLocale = documentElement?.getAttribute('lang');
+  return documentLocale ? canonicalizeLyraLocale(documentLocale) : 'en';
 }
 
 /**
@@ -371,10 +722,6 @@ const PLURAL_CATEGORY_FALLBACKS: Record<LyraPluralCategory, readonly LyraPluralC
   other: ['other'],
 };
 
-function isPluralMessage(message: LyraMessage): message is LyraPluralMessage {
-  return typeof message === 'object';
-}
-
 /**
  * The number that drives plural selection. `count` is the documented spelling
  * and the one every built-in message interpolates; `pluralCount` exists for
@@ -383,7 +730,12 @@ function isPluralMessage(message: LyraMessage): message is LyraPluralMessage {
  * category). A non-finite or absent value selects `other`.
  */
 function pluralSelector(values: Record<string, string | number>): number | undefined {
-  const raw = values['pluralCount'] ?? values['count'];
+  let raw: unknown;
+  try {
+    raw = values['pluralCount'] ?? values['count'];
+  } catch {
+    return undefined;
+  }
   return typeof raw === 'number' && Number.isFinite(raw) ? raw : undefined;
 }
 
@@ -458,42 +810,97 @@ export function resolveLyraString(
   values?: Record<string, string | number>,
   defaults?: Readonly<LyraLocaleStrings>,
 ): string {
-  const own = overrides?.[key];
-  let message: LyraMessage | undefined = own ?? fallback;
+  let message = safeMessageAt(overrides, key);
+  if (message === undefined && typeof fallback === 'string') message = fallback;
   let locale: string | undefined;
   if (message === undefined) {
     locale = resolveLyraLocale(host);
     for (const candidate of localeCandidates(locale)) {
-      const registered = locales.get(candidate)?.[key];
+      const registered = safeMessageAt(locales.get(candidate), key);
       if (registered !== undefined) {
         message = registered;
         break;
       }
     }
   }
-  message ??= defaults?.[key] ?? key;
+  message ??= safeMessageAt(defaults, key) ?? key;
   let text: string;
-  if (isPluralMessage(message)) {
+  if (typeof message !== 'string') {
     locale ??= resolveLyraLocale(host);
     text = selectPluralMessage(message, locale, values ? pluralSelector(values) : undefined);
   } else {
     text = message;
   }
   if (!values) return text;
-  return text.replace(/\{(\w+)\}/g, (_match, name: string) => String(values[name] ?? `{${name}}`));
+  return text.replace(/\{(\w+)\}/g, (match, name: string) => {
+    try {
+      const value = values[name];
+      return typeof value === 'string' || typeof value === 'number' ? String(value) : match;
+    } catch {
+      return match;
+    }
+  });
 }
 
 /**
  * Returns the text around one rich localized interpolation. `interpolate` must resolve the
  * message through the normal localization values argument with its supplied marker as the rich
  * value. The marker is selected outside the translated template so repeated and omitted
- * placeholders remain well-defined without parsing a localization token by hand.
+ * placeholders remain well-defined without parsing a localization token by hand. Sentinel
+ * selection is linear in the template with fixed auxiliary bounds; the marker is at most two
+ * UTF-16 code units even for an adversarial template containing every one-unit candidate.
  */
 export function resolveLocalizedParts(
   template: string,
   interpolate: (marker: string) => string,
 ): string[] {
-  let marker = '\ue000';
-  while (template.includes(marker)) marker += '\ue001';
+  const privateUse = new Set<number>();
+  for (let index = 0; index < template.length; index += 1) {
+    const code = template.charCodeAt(index);
+    if (code >= 0xe000 && code <= 0xf8ff) privateUse.add(code);
+  }
+  let marker = '';
+  for (let code = 0xe000; code <= 0xf8ff; code += 1) {
+    if (!privateUse.has(code)) {
+      marker = String.fromCharCode(code);
+      break;
+    }
+  }
+  if (!marker) {
+    // An input containing every BMP private-use code point is already at least 6,400 code units.
+    // Find any absent code unit in one bounded table; if the input contains all 65,536, choose a
+    // missing adjacent pair from the least-frequent first unit. Browser string-size ceilings make
+    // a missing follower inevitable, while keeping the sentinel at one or two code units.
+    const counts = new Uint32Array(65_536);
+    for (let index = 0; index < template.length; index += 1) {
+      const code = template.charCodeAt(index);
+      counts[code] = (counts[code] ?? 0) + 1;
+    }
+    let leastCode = 0;
+    let leastCount = Number.POSITIVE_INFINITY;
+    for (let code = 0; code < counts.length; code += 1) {
+      const count = counts[code] ?? 0;
+      if (count === 0) {
+        marker = String.fromCharCode(code);
+        break;
+      }
+      if (count < leastCount) {
+        leastCode = code;
+        leastCount = count;
+      }
+    }
+    if (!marker) {
+      const followers = new Uint8Array(65_536);
+      for (let index = 0; index + 1 < template.length; index += 1) {
+        if (template.charCodeAt(index) === leastCode) {
+          followers[template.charCodeAt(index + 1)] = 1;
+        }
+      }
+      let follower = 0;
+      while (follower < followers.length && followers[follower] !== 0) follower += 1;
+      // A JavaScript string cannot contain all 2^32 ordered UTF-16 pairs in supported engines.
+      marker = String.fromCharCode(leastCode, follower < followers.length ? follower : leastCode);
+    }
+  }
   return interpolate(marker).split(marker);
 }

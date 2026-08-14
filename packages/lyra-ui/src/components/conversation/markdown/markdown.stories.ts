@@ -27,8 +27,7 @@ const sample = `# Release notes
 - Fenced code blocks
 - [Docs](https://example.com/docs)
 
-> Disable sanitization by setting the \`sanitize\` property (not attribute) to \`false\` --
-> \`.sanitize=\${false}\` -- only for markdown you already trust.
+> Set \`html-mode="trusted"\` only for Markdown whose embedded HTML you already trust.
 `;
 
 export const Default: Story = {
@@ -68,13 +67,13 @@ export const LeadingTabWidth: Story = {
   render: () => html` <lr-markdown tab-size="2" .content=${'Intro\n\n\tA tab-indented paragraph'}></lr-markdown> `,
 };
 
-export const SharedParserRefresh: Story = {
-  name: 'Shared parser refresh',
+export const InstanceParserRefresh: Story = {
+  name: 'Instance parser refresh',
   parameters: {
     docs: {
       description: {
         story:
-          'The button temporarily configures the shared `marked` parser, calls the public `renderMarkdown()` refresh method, and restores the shared defaults immediately afterward.',
+          'The button temporarily configures this element’s isolated `marked` parser, calls the public `renderMarkdown()` refresh method, and restores that instance’s defaults immediately afterward.',
       },
     },
   },
@@ -155,23 +154,24 @@ export const InternalLinks: Story = {
       <lr-markdown
         internal-link-prefix="/docs/"
         .content=${'See [the setup guide](/docs/setup) or visit [our site](https://example.com).'}
-        @lr-link-click=${(e: CustomEvent<{ href: string; internal: boolean }>) => {
+        @lr-link-click=${(e: CustomEvent<{ href: string }>) => {
           const out = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
           out.textContent = `lr-link-click: ${JSON.stringify(e.detail)}`;
         }}
       ></lr-markdown>
       <p style="margin:0; color:var(--lr-color-text-quiet); font-size:0.8125rem;">
-        Click "the setup guide" — its href matches <code>internal-link-prefix</code>, so the click is intercepted and
-        reported via <code>lr-link-click</code> instead of navigating. "our site" is external and opens normally.
+        Click "the setup guide" — its href matches
+        <code>internal-link-prefix</code>, so the click is intercepted and reported via
+        <code>lr-link-click</code> instead of navigating. "our site" is external and opens normally.
       </p>
     </div>
   `,
 };
 
-export const SanitizeOptOut: Story = {
+export const TrustedHtml: Story = {
   render: () => html`
     <lr-markdown
-      .sanitize=${false}
+      html-mode="trusted"
       .content=${'Raw HTML passthrough when explicitly opted out of sanitization: <mark>highlighted</mark> text.'}
     ></lr-markdown>
   `,

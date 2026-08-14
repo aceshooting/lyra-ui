@@ -28,14 +28,14 @@ const SEARCH_ARGS = {
 function openDialog(e: Event): void {
   const trigger = e.currentTarget as HTMLElement;
   const dialog = trigger.parentElement!.querySelector('lr-tool-approval-dialog') as LyraToolApprovalDialog;
-  dialog.open = true;
+  dialog.show();
 }
 
 export const Default: Story = {
   render: () => html`
     <div>
       <button @click=${openDialog}>Propose web_search call</button>
-      <lr-tool-approval-dialog tool-name="web_search" .args=${SEARCH_ARGS}></lr-tool-approval-dialog>
+      <lr-tool-approval-dialog proposal-key="run-1:call-1" tool-name="web_search" .args=${SEARCH_ARGS}></lr-tool-approval-dialog>
     </div>
   `,
 };
@@ -168,13 +168,33 @@ export const AsyncPendingApproval: Story = {
   `,
 };
 
+export const PendingApprovalChrome: Story = {
+  name: 'Pending approval keeps Edit disabled',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'While an approval is pending, Edit is genuinely disabled and keeps its disabled appearance under hover/press instead of relighting with the brand interaction tint.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-tool-approval-dialog
+      .open=${context.viewMode !== 'docs'}
+      tool-name="send_email"
+      pending="approve"
+      .args=${{ to: 'ops@example.com', subject: 'Nightly build failed' }}
+    ></lr-tool-approval-dialog>
+  `,
+};
+
 export const RetintedInvalidEditorBorder: Story = {
   name: 'Retinted invalid editor border',
   parameters: {
     docs: {
       description: {
         story:
-          '`--lr-tool-approval-dialog-invalid-border-color` retints only an invalid raw-JSON editor border. After opening this example, choose "Show invalid editor"; returning the draft to valid JSON restores the regular `--lr-color-border`.',
+          '`--lr-tool-approval-dialog-invalid-border-color` retints only an invalid raw-JSON editor border, and that semantic tone remains authoritative while hovered. After opening this example, choose "Show invalid editor"; returning the draft to valid JSON restores the regular `--lr-color-border`.',
       },
     },
   },

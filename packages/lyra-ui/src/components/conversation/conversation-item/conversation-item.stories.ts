@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A selectable row representing one chat session in a history sidebar list — the intended `renderItem()` payload for a sibling virtualized-list component, but fully usable standalone. Its selectable region uses `role="button"` and does not require a listbox owner; title/excerpt/timestamp are individual props, not a bound `.session` object, for consistency with `<lr-chat-message>`.',
+          'A selectable row representing one chat session in a history sidebar list — the intended `renderItem()` payload for a sibling virtualized-list component, but fully usable standalone. Its selectable region uses `role="button"` and does not require a listbox owner; label/excerpt/timestamp are individual props, not a bound `.session` object, for consistency with `<lr-chat-message>`.',
       },
     },
   },
@@ -23,7 +23,7 @@ export const Default: Story = {
   render: () => html`
     <nav aria-label="Conversations" style="max-width: 22rem;">
       <lr-conversation-item
-        title="Migrating the table component"
+        label="Migrating the table component"
         excerpt="Sure — I can open a PR that swaps the old pagination prop for the new cursor-based API."
         .timestamp=${new Date()}
       ></lr-conversation-item>
@@ -35,18 +35,18 @@ export const ActiveAndInactive: Story = {
   render: () => html`
     <nav aria-label="Conversations" style="display:flex;flex-direction:column;gap:0.125rem;max-width:22rem;">
       <lr-conversation-item
-        title="Nightly build failure"
+        label="Nightly build failure"
         excerpt="The lint step hit a type error in chart.ts — looks like a stale import."
         .timestamp=${new Date()}
         active
       ></lr-conversation-item>
       <lr-conversation-item
-        title="Deploy hotfix to staging"
+        label="Deploy hotfix to staging"
         excerpt="Done — the fix is live and error rates are back to baseline."
         .timestamp=${new Date(Date.now() - 3 * 60 * 60 * 1000)}
       ></lr-conversation-item>
       <lr-conversation-item
-        title="Quarterly report outline"
+        label="Quarterly report outline"
         .timestamp=${new Date('2024-11-02T09:15:00')}
       ></lr-conversation-item>
     </nav>
@@ -57,7 +57,7 @@ export const NoExcerptOrTimestamp: Story = {
   name: 'No excerpt / no timestamp',
   render: () => html`
     <nav aria-label="Conversations" style="max-width: 22rem;">
-      <lr-conversation-item title="Untitled session"></lr-conversation-item>
+      <lr-conversation-item label="Untitled session"></lr-conversation-item>
     </nav>
   `,
 };
@@ -67,7 +67,7 @@ export const LongContentTruncates: Story = {
   render: () => html`
     <nav aria-label="Conversations" style="max-width: 16rem;">
       <lr-conversation-item
-        title="A very long conversation title that should truncate with an ellipsis"
+        label="A very long conversation title that should truncate with an ellipsis"
         excerpt="And an equally long last-message preview snippet that also needs to truncate on a single line instead of wrapping."
         .timestamp=${new Date()}
       ></lr-conversation-item>
@@ -81,7 +81,7 @@ export const Compact: Story = {
     docs: {
       description: {
         story:
-          'Tightens `[part="base"]`\'s padding and gap and collapses `[part="content"]`\'s inter-line gap — retune either through `--lr-conversation-item-compact-padding`/`--lr-conversation-item-compact-gap` on the row or any ancestor. It deliberately leaves the rename button at the shared `--lr-icon-button-size` target floor, so a row with a rename affordance still floors at roughly that height; a row with `editable=false` and no `actions` collapses much further.',
+          'Tightens `[part="base"]`\'s padding and gap and collapses `[part="content"]`\'s inter-line gap — retune either through `--lr-conversation-item-compact-padding`/`--lr-conversation-item-compact-gap` on the row or any ancestor. It deliberately leaves the rename button at the shared `--lr-icon-button-size` target floor, so a row with a rename affordance still floors at roughly that height; a row with `renamable=false` and no `actions` collapses much further.',
       },
     },
   },
@@ -89,13 +89,13 @@ export const Compact: Story = {
     <div style="display:flex;gap:2rem;align-items:flex-start;">
       <nav aria-label="Conversations (comfortable)" style="display:flex;flex-direction:column;width:20rem;">
         <lr-conversation-item
-          title="Nightly build failure"
+          label="Nightly build failure"
           excerpt="The lint step hit a type error in chart.ts."
           .timestamp=${new Date()}
           active
         ></lr-conversation-item>
         <lr-conversation-item
-          title="Deploy hotfix to staging"
+          label="Deploy hotfix to staging"
           excerpt="Done — the fix is live."
           .timestamp=${new Date(Date.now() - 3 * 60 * 60 * 1000)}
         ></lr-conversation-item>
@@ -103,21 +103,21 @@ export const Compact: Story = {
       <nav aria-label="Conversations (compact)" style="display:flex;flex-direction:column;width:20rem;">
         <lr-conversation-item
           compact
-          title="Nightly build failure"
+          label="Nightly build failure"
           excerpt="The lint step hit a type error in chart.ts."
           .timestamp=${new Date()}
           active
         ></lr-conversation-item>
         <lr-conversation-item
           compact
-          title="Deploy hotfix to staging"
+          label="Deploy hotfix to staging"
           excerpt="Done — the fix is live."
           .timestamp=${new Date(Date.now() - 3 * 60 * 60 * 1000)}
         ></lr-conversation-item>
         <lr-conversation-item
           compact
-          .editable=${false}
-          title="Read-only session (no rename affordance)"
+          .renamable=${false}
+          label="Read-only session (no rename affordance)"
           excerpt="Nothing floors this row's height, so compact tightens it the most."
           .timestamp=${new Date(Date.now() - 26 * 60 * 60 * 1000)}
         ></lr-conversation-item>
@@ -127,14 +127,14 @@ export const Compact: Story = {
 };
 
 export const NotEditable: Story = {
-  name: 'editable=false (no rename affordance)',
+  name: 'renamable=false (no rename affordance)',
   render: () => html`
     <nav aria-label="Conversations" style="max-width: 22rem;">
       <lr-conversation-item
-        title="Shared conversation (read-only)"
+        label="Shared conversation (read-only)"
         excerpt="Rename is unavailable for sessions this consumer doesn't own."
         .timestamp=${new Date()}
-        .editable=${false}
+        .renamable=${false}
       ></lr-conversation-item>
     </nav>
   `,
@@ -146,11 +146,12 @@ export const InlineRename: Story = {
     <nav aria-label="Conversations" style="max-width: 22rem;">
       <lr-conversation-item
         id="rename-demo"
-        title="Click the pencil to rename me"
+        label="Click the pencil to rename me"
         .timestamp=${new Date()}
-        @lr-rename=${(e: CustomEvent<{ title: string }>) => {
-          const el = document.getElementById('rename-demo') as HTMLElement & { title: string };
-          el.title = e.detail.title;
+        conversation-id="rename-demo-conversation"
+        @lr-rename=${(e: CustomEvent<{ conversationId: string; label: string }>) => {
+          const el = document.getElementById('rename-demo') as HTMLElement & { label: string };
+          el.label = e.detail.label;
           const out = document.getElementById('conversation-item-rename-log');
           if (out) out.textContent = `lr-rename: ${JSON.stringify(e.detail)}`;
         }}
@@ -166,7 +167,7 @@ export const WithActionsSlot: Story = {
   name: 'actions slot (e.g. a pin/delete control)',
   render: () => html`
     <nav aria-label="Conversations" style="max-width: 22rem;">
-      <lr-conversation-item title="Pinned research thread" .timestamp=${new Date()} active>
+      <lr-conversation-item label="Pinned research thread" .timestamp=${new Date()} active>
         <button
           slot="actions"
           type="button"
@@ -188,7 +189,7 @@ export const WithStartSlot: Story = {
   name: 'start slot (non-interactive adornment)',
   render: () => html`
     <nav aria-label="Conversations" style="max-width: 22rem;">
-      <lr-conversation-item title="Deployment status" excerpt="Production is healthy." .timestamp=${new Date()}>
+      <lr-conversation-item label="Deployment status" excerpt="Production is healthy." .timestamp=${new Date()}>
         <span slot="start" aria-hidden="true" style="color:var(--lr-color-success);">●</span>
       </lr-conversation-item>
     </nav>
@@ -210,26 +211,26 @@ export const HistoryList: Story = {
         style="display:flex;flex-direction:column;gap:0.125rem;max-width:22rem;border:1px solid var(--lr-color-border);border-radius:0.5rem;padding:0.25rem;"
       >
         <lr-conversation-item
-          title="Migrating the table component"
+          label="Migrating the table component"
           excerpt="Sure — I can open a PR for that."
           .timestamp=${new Date(Date.now() - 4 * 60 * 1000)}
           active
           @lr-select=${onSelect}
         ></lr-conversation-item>
         <lr-conversation-item
-          title="Nightly build failure"
+          label="Nightly build failure"
           excerpt="Looks like a stale import in chart.ts."
           .timestamp=${new Date(Date.now() - 55 * 60 * 1000)}
           @lr-select=${onSelect}
         ></lr-conversation-item>
         <lr-conversation-item
-          title="Deploy hotfix to staging"
+          label="Deploy hotfix to staging"
           excerpt="Done — the fix is live."
           .timestamp=${new Date(Date.now() - 4 * 60 * 60 * 1000)}
           @lr-select=${onSelect}
         ></lr-conversation-item>
         <lr-conversation-item
-          title="Quarterly report outline"
+          label="Quarterly report outline"
           .timestamp=${new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)}
           @lr-select=${onSelect}
         ></lr-conversation-item>
@@ -242,7 +243,7 @@ export const CustomTimestampFormat: Story = {
   render: () => html`
     <nav aria-label="Conversations" style="max-width: 22rem;">
       <lr-conversation-item
-        title="Overriding the default formatter"
+        label="Overriding the default formatter"
         excerpt="formatTimestamp swaps the built-in absolute-time rendering for anything a consumer wants."
         .timestamp=${new Date()}
         .formatTimestamp=${(date: Date) => `${date.toLocaleDateString()} · ${date.toLocaleTimeString()}`}
@@ -256,7 +257,7 @@ export const Events: Story = {
     <nav aria-label="Conversations" style="max-width: 22rem;">
       <lr-conversation-item
         id="ci-events"
-        title="Click, or Tab + Enter/Space, to select me"
+        label="Click, or Tab + Enter/Space, to select me"
         .timestamp=${new Date()}
         @lr-select=${(e: Event) => {
           const out = document.getElementById('conversation-item-event-log');
@@ -274,7 +275,7 @@ export const ThemedActiveRow: Story = {
     docs: {
       description: {
         story:
-          'Set `--lr-conversation-item-active-bg` and `--lr-conversation-item-active-color` on the element or any ancestor — neither is declared on `:host`, so an ancestor value is never shadowed. Before these existed the only way to retint a selected row was to hijack library-wide `--lr-color-brand-quiet`, which repainted every other surface reading it. The two are a **contrast-sensitive pair**: the active background and the excerpt/timestamp color must stay at least 4.5:1 apart, and the title keeps `--lr-color-text`, so a dark background needs a matching title color of your own.',
+          'Set `--lr-conversation-item-active-bg` and `--lr-conversation-item-active-color` on the element or any ancestor — neither is declared on `:host`, so an ancestor value is never shadowed. Before these existed the only way to retint a selected row was to hijack library-wide `--lr-color-brand-quiet`, which repainted every other surface reading it. The two are a **contrast-sensitive pair**: the active background and the excerpt/timestamp color must stay at least 4.5:1 apart, and the label keeps `--lr-color-text`, so a dark background needs a matching title color of your own.',
       },
     },
   },
@@ -284,8 +285,8 @@ export const ThemedActiveRow: Story = {
         'text',
       )};"
     >
-      <lr-conversation-item title="Themed active session" excerpt="This row is selected." .timestamp=${new Date()} active></lr-conversation-item>
-      <lr-conversation-item title="Inactive session" excerpt="Untouched by the props." .timestamp=${new Date()}></lr-conversation-item>
+      <lr-conversation-item label="Themed active session" excerpt="This row is selected." .timestamp=${new Date()} active></lr-conversation-item>
+      <lr-conversation-item label="Inactive session" excerpt="Untouched by the props." .timestamp=${new Date()}></lr-conversation-item>
     </nav>
   `,
 };
@@ -303,12 +304,12 @@ export const ActiveIndicator: Story = {
   render: () => html`
     <nav style="display:flex;flex-direction:column;gap:0.125rem;max-width:22rem;">
       <lr-conversation-item
-        title="Active with a custom indicator"
+        label="Active with a custom indicator"
         excerpt="The indicator is a supported part rather than host-generated row markup."
         active
         style="--lr-conversation-item-active-indicator-color: var(--lr-color-warning); --lr-conversation-item-active-indicator-width: var(--lr-size-4px);"
       ></lr-conversation-item>
-      <lr-conversation-item title="Inactive row" excerpt="No indicator is rendered while inactive."></lr-conversation-item>
+      <lr-conversation-item label="Inactive row" excerpt="No indicator is rendered while inactive."></lr-conversation-item>
     </nav>
   `,
 };

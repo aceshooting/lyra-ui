@@ -16,11 +16,20 @@ export const styles = css`
   [part="base"] {
     display: grid;
     grid-template-columns: repeat(
-      var(--lr-dashboard-grid-columns, 12),
+      var(
+        --lr-dashboard-grid-columns,
+        var(--_lr-dashboard-grid-computed-columns, 12)
+      ),
       minmax(0, 1fr)
     );
-    grid-auto-rows: var(--lr-dashboard-grid-row-height, var(--lr-size-5rem));
-    gap: var(--lr-dashboard-grid-gap, var(--lr-space-m));
+    grid-auto-rows: var(
+      --lr-dashboard-grid-row-height,
+      var(--_lr-dashboard-grid-computed-row-height, var(--lr-size-5rem))
+    );
+    gap: var(
+      --lr-dashboard-grid-gap,
+      var(--_lr-dashboard-grid-computed-gap, var(--lr-space-m))
+    );
     align-items: stretch;
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -128,7 +137,7 @@ export const styles = css`
 
   /* Below the breakpoint, drop the two-dimensional grid in favor of a single stacked column --
      each cell's authored x/y/w/h stops driving placement (document flow takes over), but the
-     cells still render in row-major (sortSpatial) DOM order, so the reading order stays the same
+     cells still render in row-major spatial DOM order, so the reading order stays the same
      one the grid itself would have shown. */
   @container (max-inline-size: 40rem) {
     [part="base"] {

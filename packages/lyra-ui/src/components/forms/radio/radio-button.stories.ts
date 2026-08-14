@@ -126,6 +126,24 @@ export const Sizes: StoryObj = {
   `,
 };
 
+export const NonDestructiveGroupProjection: StoryObj = {
+  name: 'Non-destructive group name/size projection',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The group visually projects `size="l"` and owns the submitted name while each child retains its authored `name`/`size`. Read `effectiveName` and `effectiveSize` for the active aggregate values; removing a child immediately restores its own tier.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-radio-group name="aggregate-plan" size="l" label="Projected large tier" orientation="horizontal">
+      <lr-radio-button name="author-free" size="xs" value="free" checked>Free</lr-radio-button>
+      <lr-radio-button name="author-pro" size="s" value="pro">Pro</lr-radio-button>
+    </lr-radio-group>
+  `,
+};
+
 export const Pill: StoryObj = {
   parameters: {
     docs: {
@@ -146,6 +164,40 @@ export const Pill: StoryObj = {
         <lr-radio-button value="day" pill checked>Day</lr-radio-button>
         <lr-radio-button value="week" pill>Week</lr-radio-button>
         <lr-radio-button value="month" pill>Month</lr-radio-button>
+      </lr-radio-group>
+    </div>
+  `,
+};
+
+/** Run geometry follows rendered adjacency rather than DOM first/last position. */
+export const ActualRunGeometry: StoryObj = {
+  name: 'Adjacent, separated, mixed, and wrapped runs',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-l); max-inline-size: var(--lr-size-28rem)">
+      <lr-radio-group
+        name="adjacent"
+        label="Actually adjacent"
+        orientation="horizontal"
+        style="--lr-radio-group-row-gap: 0"
+      >
+        <lr-radio-button value="day" checked>Day</lr-radio-button>
+        <lr-radio-button value="week">Week</lr-radio-button>
+        <lr-radio-button value="month">Month</lr-radio-button>
+      </lr-radio-group>
+      <lr-radio-group name="mixed" label="Separated and mixed" orientation="horizontal">
+        <lr-radio-button value="day" checked>Day</lr-radio-button>
+        <lr-radio value="automatic">Automatic</lr-radio>
+        <lr-radio-button value="month">Month</lr-radio-button>
+      </lr-radio-group>
+      <lr-radio-group
+        name="wrapped"
+        label="Wrapped"
+        orientation="horizontal"
+        style="--lr-radio-group-row-gap: 0; inline-size: var(--lr-size-8rem)"
+      >
+        <lr-radio-button value="alpha" checked>Alpha</lr-radio-button>
+        <lr-radio-button value="beta">Beta</lr-radio-button>
+        <lr-radio-button value="gamma">Gamma</lr-radio-button>
       </lr-radio-group>
     </div>
   `,

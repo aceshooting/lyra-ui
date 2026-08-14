@@ -31,10 +31,29 @@ export function dateTimeFormat(
   options: Intl.DateTimeFormatOptions,
 ): Intl.DateTimeFormat {
   try {
-    return getDateTimeFormat(typeof locale === 'string' && locale ? locale : undefined, options);
+    return getDateTimeFormat(typeof locale === 'string' && locale ? locale : undefined, {
+      calendar: 'gregory',
+      ...options,
+    });
   } catch {
-    return getDateTimeFormat(undefined, options);
+    return getDateTimeFormat(undefined, { calendar: 'gregory', ...options });
   }
+}
+
+/** Local proleptic-Gregorian date construction without Date's legacy 0–99 → 1900 remap. */
+export function localDate(year: number, month = 0, day = 1): Date {
+  const date = new Date(0);
+  date.setHours(0, 0, 0, 0);
+  date.setFullYear(year, month, day);
+  return date;
+}
+
+/** UTC counterpart of {@link localDate}, used for calendar-day arithmetic across DST. */
+export function utcDate(year: number, month = 0, day = 1): Date {
+  const date = new Date(0);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCFullYear(year, month, day);
+  return date;
 }
 
 /** Parse `YYYY-MM-DD` into a local Date, or null if invalid. */
@@ -45,7 +64,7 @@ export function parseISO(s: string): Date | null {
   const year = Number(m[1]);
   const month = Number(m[2]);
   const day = Number(m[3]);
-  const d = new Date(year, month - 1, day);
+  const d = localDate(year, month - 1, day);
   if (isNaN(d.getTime())) return null;
   // The Date constructor silently rolls invalid components over into the
   // next month/year (e.g. month 13 or Feb 30) instead of producing an
@@ -59,7 +78,7 @@ export function parseISO(s: string): Date | null {
 export function formatISO(d: Date): string {
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${mm}-${dd}`;
+  return `${String(d.getFullYear()).padStart(4, '0')}-${mm}-${dd}`;
 }
 
 export function isSameDay(a: Date, b: Date): boolean {
@@ -70,7 +89,7 @@ export function isSameDay(a: Date, b: Date): boolean {
 
 /** First day of the month `n` months from `d`. */
 export function addMonths(d: Date, n: number): Date {
-  return new Date(d.getFullYear(), d.getMonth() + n, 1);
+  return localDate(d.getFullYear(), d.getMonth() + n, 1);
 }
 
 /**
@@ -84,8 +103,8 @@ export function addMonths(d: Date, n: number): Date {
  */
 export function addMonthsClampingDay(d: Date, n: number): Date {
   const targetMonth = d.getMonth() + n;
-  const lastDayOfTargetMonth = new Date(d.getFullYear(), targetMonth + 1, 0).getDate();
-  return new Date(d.getFullYear(), targetMonth, Math.min(d.getDate(), lastDayOfTargetMonth));
+  const lastDayOfTargetMonth = localDate(d.getFullYear(), targetMonth + 1, 0).getDate();
+  return localDate(d.getFullYear(), targetMonth, Math.min(d.getDate(), lastDayOfTargetMonth));
 }
 
 export function clampDate(d: Date, min: Date | null, max: Date | null): Date {
@@ -99,9 +118,9 @@ export function clampDate(d: Date, min: Date | null, max: Date | null): Date {
  * (0=Sunday … 6=Saturday). Includes leading/trailing days from adjacent months.
  */
 export function monthMatrix(year: number, month: number, firstDayOfWeek = 0): Date[][] {
-  const first = new Date(year, month, 1);
+  const first = localDate(year, month, 1);
   const offset = (first.getDay() - firstDayOfWeek + 7) % 7;
-  const cursor = new Date(year, month, 1 - offset);
+  const cursor = localDate(year, month, 1 - offset);
   const weeks: Date[][] = [];
   for (let w = 0; w < 6; w++) {
     const row: Date[] = [];
@@ -133,7 +152,7 @@ export function weekdayLabels(firstDayOfWeek = 0, format: WeekdayFormat = 'short
 /** Localized "Month YYYY" title. */
 export function monthTitle(year: number, month: number, locale?: string): string {
   return dateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(
-    new Date(year, month, 1),
+    localDate(year, month, 1),
   );
 }
 

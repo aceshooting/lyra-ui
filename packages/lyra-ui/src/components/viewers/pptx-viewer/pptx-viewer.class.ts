@@ -3,27 +3,47 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { finiteInteger } from '../../../internal/numbers.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { isAbortError, isResourceLimitError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import {
+  adaptPptxViewer,
   getPptxRenderer,
+  type PptxSearchHighlightHandle,
   type PptxRendererModule,
-  type PptxViewerApi,
+  type PptxTextSearchResult,
+  type PptxViewerAdapter,
+  type PptxViewerAdapterEvent,
 } from './pptx-loader.js';
 import { assertPptxArchiveWithinLimits } from './pptx-resource-guard.js';
 import { styles } from './pptx-viewer.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
+import type {
+  LyraPageViewerSnapshot,
+  LyraPageViewerStateChangeDetail,
+  PageThumbnailRenderHandle,
+} from '../page-rail/page-rail.class.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loading, LYRA_DEFAULT_pptxViewerFidelityNotice, LYRA_DEFAULT_pptxViewerLabel, LYRA_DEFAULT_pptxViewerNextSlide, LYRA_DEFAULT_pptxViewerPreviousSlide, LYRA_DEFAULT_pptxViewerRenderError, LYRA_DEFAULT_pptxViewerSlideOf } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export type {
+  LyraViewerDiagnostic,
+  LyraViewerDiagnosticCode,
+  LyraViewerDiagnosticEventDetail,
+  LyraViewerDiagnosticSeverity,
+} from '../viewer-diagnostics.js';
 
 type PptxPhase = 'idle' | 'loading' | 'mounted' | 'error';
+const MAX_PPTX_SEARCH_MATCHES = 10_000;
+const MAX_PPTX_THUMBNAIL_WIDTH = 2_048;
 
 export interface LyraPptxViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-load': CustomEvent<{ slideCount: number }>;
@@ -32,6 +52,8 @@ export interface LyraPptxViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-text-select': CustomEvent<TextSelectDetail>;
+  'lr-viewer-diagnostic': CustomEvent<LyraViewerDiagnosticEventDetail>;
+  'lr-page-viewer-state-change': CustomEvent<LyraPageViewerStateChangeDetail>;
 }
 
 class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
@@ -47,7 +69,8 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  * @customElement lr-pptx-viewer
  * @event lr-load - Fired after a presentation opens. `detail: { slideCount }`.
  * @event lr-slide-change - Fired when the active slide changes.
- * @event lr-render-error - Fired when fetching or rendering fails.
+ * @event lr-render-error - Fired for terminal fetch/open/render failures. Recoverable post-load
+ *   slide/node/search failures use `lr-viewer-diagnostic` without also posing as terminal errors.
  * @event {CustomEvent<{ query: string; matchCount: number; activeIndex: number }>} lr-search-change -
  *   Fired whenever search state changes. `detail: { query: string; matchCount: number;
  *   activeIndex: number }`. Bubbling, composed, and non-cancelable.
@@ -57,6 +80,10 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  * @event {CustomEvent<TextSelectDetail>} lr-text-select - Fired after a selection ends inside the
  *   rendered presentation. `detail: { text: string; anchor: LyraAnchor | null; rects: DOMRect[] }`.
  *   Bubbling, composed, and non-cancelable.
+ * @event lr-viewer-diagnostic - Structured renderer diagnostics for slide/node/search failures.
+ *   `detail.diagnostic` includes a stable code, source, cause, `fatal`, and page/node when known.
+ * @event lr-page-viewer-state-change - Correlated page lifecycle state for `lr-page-rail` and
+ *   other page-addressed integrations. `detail.snapshot` equals `pageViewerSnapshot`.
  * @csspart base - The named viewer region with explicit `aria-busy`; its ordinary visually-hidden
  *   loading label is announced on later transitions through the shared document-level polite sink.
  * @csspart header - The optional presentation-name row.
@@ -107,13 +134,79 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   @property() name = '';
   /** Accessible-name override for the viewer region. */
   @property() label = '';
+  /** One-based current slide for page-addressed integrations; assignments navigate when ready. */
+  @property({ type: Number, reflect: true }) page = 1;
   /** A CSS `max-height` that caps the scrollable renderer output container; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
-  /** Shared text search and anchor-target API for renderer output when it exposes DOM text. */
-  override async search(query: string): Promise<number> { return super.search(query); }
-  override async searchNext(): Promise<boolean> { return super.searchNext(); }
-  override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
-  override clearSearch(): void { super.clearSearch(); }
+  /**
+   * Searches the renderer's complete presentation model, including slides that windowed rendering
+   * has not mounted. Results are capped at 10,000 and navigation uses renderer-owned node overlays.
+   */
+  override async search(query: string): Promise<number> {
+    const generation = ++this.pptxSearchGeneration;
+    const viewer = this.viewer;
+    this.pptxSearchQuery = query;
+    this.disposeSearchHighlight();
+    viewer?.clearSearchHighlights();
+    if (!viewer || !query.trim()) {
+      this.pptxSearchMatches = [];
+      this.pptxSearchActiveIndex = -1;
+      this.emitPptxSearchChange();
+      return 0;
+    }
+    try {
+      const raw = viewer.searchText(query, { matchCase: false });
+      if (generation !== this.pptxSearchGeneration || viewer !== this.viewer) {
+        return this.pptxSearchMatches.length;
+      }
+      this.pptxSearchMatches = this.normalizeSearchResults(raw, viewer.slideCount);
+      this.pptxSearchActiveIndex = this.pptxSearchMatches.length > 0 ? 0 : -1;
+      this.emitPptxSearchChange();
+      if (this.pptxSearchActiveIndex >= 0) {
+        await this.focusPptxSearchMatch(this.pptxSearchActiveIndex, generation, viewer);
+      }
+      return this.pptxSearchMatches.length;
+    } catch (cause) {
+      if (generation !== this.pptxSearchGeneration || viewer !== this.viewer) return 0;
+      this.pptxSearchMatches = [];
+      this.pptxSearchActiveIndex = -1;
+      this.reportPeerDiagnostic('pptx-search-error', cause);
+      this.emitPptxSearchChange();
+      return 0;
+    }
+  }
+
+  override async searchNext(): Promise<boolean> {
+    const viewer = this.viewer;
+    if (!viewer || this.pptxSearchMatches.length === 0) return false;
+    const generation = ++this.pptxSearchGeneration;
+    this.pptxSearchActiveIndex = (this.pptxSearchActiveIndex + 1) % this.pptxSearchMatches.length;
+    this.emitPptxSearchChange();
+    await this.focusPptxSearchMatch(this.pptxSearchActiveIndex, generation, viewer);
+    return generation === this.pptxSearchGeneration;
+  }
+
+  override async searchPrevious(): Promise<boolean> {
+    const viewer = this.viewer;
+    if (!viewer || this.pptxSearchMatches.length === 0) return false;
+    const generation = ++this.pptxSearchGeneration;
+    this.pptxSearchActiveIndex = (
+      this.pptxSearchActiveIndex - 1 + this.pptxSearchMatches.length
+    ) % this.pptxSearchMatches.length;
+    this.emitPptxSearchChange();
+    await this.focusPptxSearchMatch(this.pptxSearchActiveIndex, generation, viewer);
+    return generation === this.pptxSearchGeneration;
+  }
+
+  override clearSearch(): void {
+    this.pptxSearchGeneration++;
+    this.pptxSearchQuery = '';
+    this.pptxSearchMatches = [];
+    this.pptxSearchActiveIndex = -1;
+    this.disposeSearchHighlight();
+    this.viewer?.clearSearchHighlights();
+    this.emitPptxSearchChange();
+  }
 
   @state() private phase: PptxPhase = 'idle';
   @state() private errorMessage = '';
@@ -123,18 +216,41 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
 
   /** @internal Test seam for replacing the optional renderer. */
   loadRenderer: () => Promise<PptxRendererModule | null> = getPptxRenderer;
-  private viewer?: PptxViewerApi;
+  private viewer?: PptxViewerAdapter;
+  private viewerUnsubscribe?: () => void;
   private generation = 0;
   private readonly announcements = new ViewerAnnouncementController(this);
+  private pptxSearchQuery = '';
+  private pptxSearchMatches: PptxTextSearchResult[] = [];
+  private pptxSearchActiveIndex = -1;
+  private pptxSearchGeneration = 0;
+  private searchHighlight?: PptxSearchHighlightHandle;
+  private pageViewerIdentity = 0;
+  private pageViewerSnapshotValue: LyraPageViewerSnapshot = Object.freeze({
+    identity: 0,
+    status: 'idle',
+    page: 1,
+    pageCount: 0,
+  });
+
+  /** Atomic readonly page/count/lifecycle state; `identity` changes for every load transaction. */
+  get pageViewerSnapshot(): LyraPageViewerSnapshot {
+    return this.pageViewerSnapshotValue;
+  }
 
   protected textContentRoot(): Element | null {
     return this.renderRoot.querySelector('[part="container"]') ?? this.renderRoot.querySelector('[part="base"]');
   }
 
-  private onSlideChange = (event: Event): void => {
-    const index = (event as CustomEvent<{ index: number }>).detail.index;
-    this.currentSlideIndex = index;
-    this.emit('lr-slide-change', { index, count: this.slideCount });
+  private readonly onViewerEvent = (event: PptxViewerAdapterEvent): void => {
+    if (event.kind === 'slide-change') {
+      this.commitSlide(event.index);
+      return;
+    }
+    this.reportPeerDiagnostic(event.code, event.cause, {
+      page: event.page,
+      nodeId: event.nodeId,
+    }, event.fatal);
   };
 
   protected override updated(changed: PropertyValues): void {
@@ -145,6 +261,19 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       this.phase === 'error' ? this.errorMessage : this.localize('loading'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.mount(); });
+    if (changed.has('page') && this.viewer && this.page - 1 !== this.currentSlideIndex) {
+      const page = this.page;
+      this.scheduleAfterUpdate(() => {
+        if (this.page === page) void this.goToSlide(page - 1);
+      }, 'page-navigation');
+    }
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has('page') || changed.has('slideCount')) {
+      this.page = finiteInteger(this.page, 1, 1, Math.max(1, this.slideCount));
+    }
   }
 
   override connectedCallback(): void {
@@ -174,37 +303,227 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     this.phase = 'idle';
     this.slideCount = 0;
     this.currentSlideIndex = 0;
+    this.page = 1;
+    this.pageViewerIdentity++;
+    this.pageViewerSnapshotValue = Object.freeze({
+      identity: this.pageViewerIdentity,
+      status: 'idle',
+      page: 1,
+      pageCount: 0,
+    });
     this.announcements.disconnect();
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.announcements.adopted();
   }
 
-  async goToSlide(index: number): Promise<void> { await this.viewer?.goToSlide(index); }
+  async goToSlide(index: number): Promise<void> {
+    const viewer = this.viewer;
+    if (!viewer || !Number.isSafeInteger(index) || index < 0 || index >= viewer.slideCount) return;
+    await viewer.goToSlide(index);
+    if (viewer === this.viewer && viewer.currentSlideIndex !== this.currentSlideIndex) {
+      this.commitSlide(viewer.currentSlideIndex);
+    }
+  }
+
+  /** Renders a one-based slide preview into `container`. The caller owns the returned handle. */
+  async renderPageThumbnailToContainer(
+    page: number,
+    container: HTMLElement,
+    options?: { width?: number },
+  ): Promise<PageThumbnailRenderHandle | false> {
+    const viewer = this.viewer;
+    const generation = this.generation;
+    const width = options?.width ?? 96;
+    if (
+      !viewer
+      || !Number.isSafeInteger(page)
+      || page < 1
+      || page > viewer.slideCount
+      || !Number.isFinite(width)
+      || width <= 0
+      || width > MAX_PPTX_THUMBNAIL_WIDTH
+    ) return false;
+    container.replaceChildren();
+    const handle = viewer.renderThumbnailToContainer(page - 1, container, { width });
+    if (!handle) return false;
+    try {
+      await handle.ready;
+    } catch {
+      handle.dispose();
+      return false;
+    }
+    if (generation !== this.generation || viewer !== this.viewer || !container.isConnected) {
+      handle.dispose();
+      return false;
+    }
+    return handle;
+  }
+
+  private commitSlide(index: number): void {
+    if (!Number.isSafeInteger(index) || index < 0 || index >= this.slideCount) return;
+    const changed = index !== this.currentSlideIndex;
+    this.currentSlideIndex = index;
+    this.page = index + 1;
+    this.publishPageViewerSnapshot('ready', this.slideCount);
+    if (changed) this.emit('lr-slide-change', { index, count: this.slideCount });
+  }
+
+  private publishPageViewerSnapshot(
+    status: LyraPageViewerSnapshot['status'],
+    pageCount: number,
+  ): void {
+    const snapshot: LyraPageViewerSnapshot = Object.freeze({
+      identity: this.pageViewerIdentity,
+      status,
+      page: status === 'ready'
+        ? finiteInteger(this.page, 1, 1, Math.max(1, pageCount))
+        : 1,
+      pageCount: status === 'ready'
+        ? finiteInteger(pageCount, 0, 0, Number.MAX_SAFE_INTEGER)
+        : 0,
+    });
+    const previous = this.pageViewerSnapshotValue;
+    if (
+      previous.identity === snapshot.identity
+      && previous.status === snapshot.status
+      && previous.page === snapshot.page
+      && previous.pageCount === snapshot.pageCount
+    ) return;
+    this.pageViewerSnapshotValue = snapshot;
+    if (this.isConnected) this.emit('lr-page-viewer-state-change', { snapshot });
+  }
 
   private teardown(): void {
     this.generation++;
-    this.viewer?.removeEventListener('slidechange', this.onSlideChange);
+    this.pptxSearchGeneration++;
+    this.disposeSearchHighlight();
+    this.viewer?.clearSearchHighlights();
+    this.viewerUnsubscribe?.();
+    this.viewerUnsubscribe = undefined;
     this.viewer?.destroy();
     this.viewer = undefined;
+    this.pptxSearchQuery = '';
+    this.pptxSearchMatches = [];
+    this.pptxSearchActiveIndex = -1;
+  }
+
+  private normalizeSearchResults(value: unknown, slideCount: number): PptxTextSearchResult[] {
+    if (!Array.isArray(value)) throw new TypeError('PPTX search returned a non-array result.');
+    const matches: PptxTextSearchResult[] = [];
+    for (const candidate of value) {
+      if (matches.length >= MAX_PPTX_SEARCH_MATCHES) break;
+      if (!candidate || typeof candidate !== 'object') continue;
+      const result = candidate as Partial<PptxTextSearchResult>;
+      if (
+        !Number.isSafeInteger(result.slideIndex)
+        || result.slideIndex! < 0
+        || result.slideIndex! >= slideCount
+        || typeof result.nodeId !== 'string'
+        || typeof result.text !== 'string'
+        || !Number.isSafeInteger(result.matchStart)
+        || !Number.isSafeInteger(result.matchEnd)
+        || result.matchStart! < 0
+        || result.matchEnd! < result.matchStart!
+        || result.matchEnd! > result.text.length
+      ) continue;
+      matches.push(candidate as PptxTextSearchResult);
+    }
+    return matches;
+  }
+
+  private async focusPptxSearchMatch(
+    index: number,
+    generation: number,
+    viewer: PptxViewerAdapter,
+  ): Promise<void> {
+    const match = this.pptxSearchMatches[index];
+    if (!match) return;
+    this.disposeSearchHighlight();
+    viewer.clearSearchHighlights();
+    try {
+      await viewer.goToSlide(match.slideIndex);
+      if (generation !== this.pptxSearchGeneration || viewer !== this.viewer) return;
+      const highlight = await viewer.highlightSearchResult(match, { scrollIntoView: false });
+      if (generation !== this.pptxSearchGeneration || viewer !== this.viewer) {
+        highlight?.dispose();
+        return;
+      }
+      this.searchHighlight = highlight ?? undefined;
+    } catch (cause) {
+      if (generation === this.pptxSearchGeneration && viewer === this.viewer) {
+        this.reportPeerDiagnostic('pptx-search-error', cause, { page: match.slideIndex + 1 });
+      }
+    }
+  }
+
+  private disposeSearchHighlight(): void {
+    this.searchHighlight?.dispose();
+    this.searchHighlight = undefined;
+  }
+
+  private emitPptxSearchChange(): void {
+    this.emit('lr-search-change', {
+      query: this.pptxSearchQuery,
+      matchCount: this.pptxSearchMatches.length,
+      activeIndex: this.pptxSearchActiveIndex,
+    });
+  }
+
+  private reportPeerDiagnostic(
+    code: 'pptx-slide-render-error' | 'pptx-node-render-error' | 'pptx-search-error',
+    cause: unknown,
+    location: { page?: number; nodeId?: string } = {},
+    fatal = false,
+  ): void {
+    this.emit('lr-viewer-diagnostic', {
+      diagnostic: Object.freeze({
+        code,
+        severity: 'error',
+        fatal,
+        source: 'pptx-renderer',
+        cause,
+        ...location,
+      } as const),
+    });
+    if (!fatal) return;
+    this.teardown();
+    this.phase = 'error';
+    this.slideCount = 0;
+    this.currentSlideIndex = 0;
+    this.page = 1;
+    this.errorMessage = this.localize('pptxViewerRenderError');
+    this.publishPageViewerSnapshot('error', 0);
+    this.emit('lr-render-error', { error: cause });
   }
 
   private async mount(): Promise<void> {
     this.teardown();
+    this.pageViewerIdentity++;
     const signal = this.beginAbortableLoad();
     const generation = this.generation;
-    if (!this.src) { this.phase = 'idle'; return; }
+    this.slideCount = 0;
+    this.currentSlideIndex = 0;
+    this.page = 1;
+    if (!this.src) {
+      this.phase = 'idle';
+      this.publishPageViewerSnapshot('idle', 0);
+      return;
+    }
     const fetchTarget = resolveOwnerFetchTarget(this, this.src);
     if (!fetchTarget) {
       const error = new Error(this.localize('documentPreviewUrlNotAllowed'));
       this.phase = 'error';
       this.errorMessage = error.message;
+      this.publishPageViewerSnapshot('error', 0);
       this.emit('lr-render-error', { error });
       return;
     }
     this.phase = 'loading';
+    this.publishPageViewerSnapshot('loading', 0);
     let module: PptxRendererModule | null;
     let response: Response;
     try {
@@ -216,6 +535,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.phase = 'error';
       this.errorMessage = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
+      this.publishPageViewerSnapshot('error', 0);
       this.emit('lr-render-error', { error });
       return;
     }
@@ -226,6 +546,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       );
       this.phase = 'error';
       this.errorMessage = error.message;
+      this.publishPageViewerSnapshot('error', 0);
       this.emit('lr-render-error', { error });
       return;
     }
@@ -238,6 +559,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.phase = 'error';
       this.errorMessage = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
+      this.publishPageViewerSnapshot('error', 0);
       this.emit('lr-render-error', { error });
       return;
     }
@@ -246,27 +568,35 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     await this.updateComplete;
     if (!this.isConnected || generation !== this.generation || !this.containerEl) return;
     try {
-      const viewer = await module.PptxViewer.open(buffer, this.containerEl, {
+      const openedViewer = await module.PptxViewer.open(buffer, this.containerEl, {
         zipLimits: module.RECOMMENDED_ZIP_LIMITS,
         listOptions: { windowed: true },
       });
-      if (!this.isConnected || generation !== this.generation) { viewer.destroy(); return; }
+      if (!this.isConnected || generation !== this.generation) { openedViewer.destroy(); return; }
+      const viewer = adaptPptxViewer(openedViewer);
+      if (!viewer) {
+        openedViewer.destroy();
+        throw new TypeError('The PPTX renderer did not expose the required viewer capabilities.');
+      }
       this.viewer = viewer;
-      viewer.addEventListener('slidechange', this.onSlideChange);
+      this.viewerUnsubscribe = viewer.subscribe(this.onViewerEvent);
       this.slideCount = viewer.slideCount;
       this.currentSlideIndex = viewer.currentSlideIndex;
+      this.page = viewer.currentSlideIndex + 1;
+      this.publishPageViewerSnapshot('ready', viewer.slideCount);
       this.emit('lr-load', { slideCount: viewer.slideCount });
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.phase = 'error';
       this.errorMessage = this.localize('pptxViewerRenderError');
+      this.publishPageViewerSnapshot('error', 0);
       this.emit('lr-render-error', { error });
     }
   }
 
   private renderBody(): TemplateResult | typeof nothing {
     if (this.phase === 'loading') return html`
-      <lr-skeleton variant="rect" .announce=${false}></lr-skeleton>
+      <lr-skeleton shape="rect" .announce=${false}></lr-skeleton>
       <span class="sr-only">${this.localize('loading')}</span>
     `;
     if (this.phase === 'error') return html`<div part="error">${this.errorMessage}</div>`;
@@ -289,12 +619,12 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   }
 
   override render(): TemplateResult {
-    const ariaLabel = this.getAttribute('aria-label') || this.label || this.name || this.localize('pptxViewerLabel');
+    const ariaLabel = viewerSemanticLabel(this, this.label || this.name || this.localize('pptxViewerLabel'));
     return html`
       <div
         part="base"
-        role="region"
-        aria-label=${ariaLabel}
+        role=${viewerSemanticRole(this, 'region') ?? nothing}
+        aria-label=${ariaLabel ?? nothing}
         aria-busy=${this.phase === 'loading' ? 'true' : 'false'}
         style=${sanitizeCssLength(this.maxHeight)
           ? styleMap({ '--lr-pptx-viewer-max-height': sanitizeCssLength(this.maxHeight)! })

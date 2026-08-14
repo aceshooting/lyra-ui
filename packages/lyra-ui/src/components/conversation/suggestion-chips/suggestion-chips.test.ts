@@ -1,12 +1,12 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './suggestion-chips.js';
 import type { LyraSuggestionChips } from './suggestion-chips.js';
 import { styles } from './suggestion-chips.styles.js';
 
 const suggestions = [
-  { id: 'a', label: 'Summarize this' },
-  { id: 'b', label: 'Explain the error', detail: 'Related to the last stack trace' },
-  { id: 'c', label: 'Draft a reply' },
+  { suggestionId: 'a', label: 'Summarize this' },
+  { suggestionId: 'b', label: 'Explain the error', detail: 'Related to the last stack trace' },
+  { suggestionId: 'c', label: 'Draft a reply' },
 ];
 
 it('defaults to empty suggestions, wrap false, and renders nothing when empty', async () => {
@@ -48,8 +48,8 @@ it('renders an optional literal icon as decorative content without changing chip
   const el = (await fixture(
     html`<lr-suggestion-chips
       .suggestions=${[
-        { id: 'icon', label: 'Investigate', icon: '🔎' },
-        { id: 'plain', label: 'Summarize' },
+        { suggestionId: 'icon', label: 'Investigate', icon: '🔎' },
+        { suggestionId: 'plain', label: 'Summarize' },
       ]}
     ></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
@@ -64,7 +64,7 @@ it('renders an optional literal icon as decorative content without changing chip
   await expect(el).to.be.accessible();
 });
 
-it('emits lr-suggestion-select with id and label on activation', async () => {
+it('emits lr-suggestion-select with suggestionId and label on activation', async () => {
   const el = (await fixture(
     html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
@@ -72,7 +72,27 @@ it('emits lr-suggestion-select with id and label on activation', async () => {
   const eventPromise = oneEvent(el, 'lr-suggestion-select');
   chips[1].click();
   const ev = await eventPromise;
-  expect(ev.detail).to.deep.equal({ id: 'b', label: 'Explain the error' });
+  expect(ev.detail).to.deep.equal({ suggestionId: 'b', label: 'Explain the error' });
+});
+
+it('requires unique nonempty suggestionId values with deterministic first-wins rendering', async () => {
+  const el = (await fixture(html`
+    <lr-suggestion-chips
+      .suggestions=${[
+        { suggestionId: '', label: 'Invalid empty' },
+        { suggestionId: 'same', label: 'First occurrence' },
+        { suggestionId: 'same', label: 'Later duplicate' },
+        { suggestionId: 'other', label: 'Other' },
+      ]}
+    ></lr-suggestion-chips>
+  `)) as LyraSuggestionChips;
+  const chips = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="chip"]')];
+  expect(chips.map((chip) => chip.dataset['suggestionId'])).to.deep.equal(['same', 'other']);
+  expect(chips.map((chip) => chip.textContent?.trim())).to.deep.equal(['First occurrence', 'Other']);
+
+  const selected = oneEvent(el, 'lr-suggestion-select');
+  chips[0]!.click();
+  expect((await selected).detail).to.deep.equal({ suggestionId: 'same', label: 'First occurrence' });
 });
 
 it('is a labeled group with a default or custom label', async () => {
@@ -89,6 +109,13 @@ it('is a labeled group with a default or custom label', async () => {
   expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
     'Try asking',
   );
+});
+
+it('preserves an explicitly empty host aria-label', async () => {
+  const el = (await fixture(html`
+    <lr-suggestion-chips aria-label="" .suggestions=${suggestions}></lr-suggestion-chips>
+  `)) as LyraSuggestionChips;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
 });
 
 it('localizes the default group label via .strings override', async () => {
@@ -153,7 +180,7 @@ it('preserves focus on a chip whose id survives a suggestions replacement (keyed
   const secondChip = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')][1] as HTMLButtonElement;
   secondChip.focus();
 
-  el.suggestions = [suggestions[0], suggestions[1], { id: 'd', label: 'New follow-up' }];
+  el.suggestions = [suggestions[0], suggestions[1], { suggestionId: 'd', label: 'New follow-up' }];
   await el.updateComplete;
 
   const stillSecondChip = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')][1] as HTMLButtonElement;
@@ -171,13 +198,51 @@ it('keeps active identity through reorder and transfers focus when that chip is 
 
   el.suggestions = [suggestions[2]!, suggestions[1]!, suggestions[0]!];
   await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.activeElement?.getAttribute('data-suggestion-id') === 'b');
   expect(el.shadowRoot!.activeElement?.dataset['suggestionId']).to.equal('b');
   expect(chips().find((chip) => chip.dataset['suggestionId'] === 'b')?.tabIndex).to.equal(0);
 
   el.suggestions = [suggestions[2]!, suggestions[0]!];
   await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.activeElement?.getAttribute('data-suggestion-id') === 'a');
   expect(el.shadowRoot!.activeElement?.dataset['suggestionId']).to.equal('a');
   expect(chips().filter((chip) => chip.tabIndex === 0)).to.have.length(1);
+});
+
+it('preserves focused suggestion identity when wrap swaps the layout branch in either direction', async () => {
+  const el = (await fixture(
+    html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
+  )) as LyraSuggestionChips;
+  const focusedId = (): string | undefined =>
+    (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['suggestionId'];
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[data-suggestion-id="b"]')!.focus();
+
+  el.wrap = true;
+  await el.updateComplete;
+  await waitUntil(() => focusedId() === 'b');
+  expect(focusedId()).to.equal('b');
+
+  el.wrap = false;
+  await el.updateComplete;
+  await waitUntil(() => focusedId() === 'b');
+  expect(focusedId()).to.equal('b');
+});
+
+it('does not steal a newer external focus destination while the layout branch changes', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <button id="outside-suggestions">Outside</button>
+      <lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-suggestion-chips') as LyraSuggestionChips;
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[data-suggestion-id="b"]')!.focus();
+
+  el.wrap = true;
+  wrapper.querySelector<HTMLButtonElement>('#outside-suggestions')!.focus();
+  await el.updateComplete;
+
+  expect(el.ownerDocument.activeElement?.id).to.equal('outside-suggestions');
 });
 
 it('is accessible', async () => {
@@ -228,7 +293,7 @@ describe('part="row" / --lr-suggestion-chips-justify', () => {
   it('centers the wrapped final line, not just a single unwrapped line', async () => {
     // The reported defect: ::part(base) centering only worked while the chips fit one line. Force a
     // wrap with a narrow host and assert the LAST line's chip is inset from the row's start edge.
-    const many = Array.from({ length: 6 }, (_, i) => ({ id: `s${i}`, label: `Suggestion ${i}` }));
+    const many = Array.from({ length: 6 }, (_, i) => ({ suggestionId: `s${i}`, label: `Suggestion ${i}` }));
     const el = (await fixture(
       html`<lr-suggestion-chips
         wrap

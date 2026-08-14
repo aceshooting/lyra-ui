@@ -36,6 +36,18 @@ export const styles = css`
        themselves from --lr-theme-icon-button-size and --lr-theme-space-s. */
     --lr-radio-label-indent: calc(var(--lr-radio-circle-size) + var(--lr-space-s));
   }
+  /* A group projects its effective tier without rewriting the option's authored size property.
+     Explicit inherit wins over sizes.styles.ts's local default and reads the group host's already
+     resolved ladder variables. Removing/reparenting clears the private marker and restores the
+     option's own tier immediately. */
+  :host([data-lr-group-size]) {
+    --lr-form-control-height: inherit;
+    --lr-form-control-font-size: inherit;
+    --lr-form-control-padding-inline: inherit;
+    --lr-form-control-padding-block: inherit;
+    --lr-form-control-gap: inherit;
+    --lr-form-control-radius: inherit;
+  }
   [part='base'] {
     display: inline-flex;
     align-items: center;
@@ -63,7 +75,7 @@ export const styles = css`
      disabled purely via an ancestor fieldset had effectiveDisabled correctly
      gating tabindex/aria-disabled, but the base still rendered at full
      opacity with a normal cursor. */
-  :host(:disabled) [part='base'] {
+  [part~='base'][part~='disabled'] {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
@@ -85,14 +97,14 @@ export const styles = css`
     background: var(--lr-color-surface);
     transition: border-color var(--lr-transition-fast), background-color var(--lr-transition-fast);
   }
-  :host(:not(:disabled)) [part='base']:hover [part~='circle'] {
+  [part~='base']:not([part~='disabled']):hover [part~='circle'] {
     border-color: var(--lr-radio-hover-border-color, var(--lr-color-brand));
   }
   /* Pressed. A ring rather than a fill, for the same reason <lr-checkbox>'s [part='box'] takes one:
      the circle's fill IS the state readout (surface unchecked, the dot inside it once checked), so
      tinting it under the thumb would read as a half-selected radio. Visibly more than the hover's
      border-colour step, and the same soft-ring vocabulary <lr-slider>'s thumb uses. */
-  :host(:not(:disabled)) [part='base']:active [part~='circle'] {
+  [part~='base']:not([part~='disabled']):active [part~='circle'] {
     border-color: var(--lr-radio-active-border-color, var(--lr-radio-hover-border-color, var(--lr-color-brand)));
     box-shadow: 0 0 0 var(--lr-border-width-medium) var(--lr-radio-active-ring-color, var(--lr-color-brand-quiet));
   }

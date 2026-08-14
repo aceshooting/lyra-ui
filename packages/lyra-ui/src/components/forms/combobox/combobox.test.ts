@@ -13,6 +13,28 @@ import type { LyraColorPicker } from '../color-picker/color-picker.js';
 import { styles } from './combobox.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import {
+  RESET_OPTION_SELECTED_FROM_OWNER,
+  SET_OPTION_SELECTED_FROM_OWNER,
+} from '../../../internal/option-selection.js';
+
+it('rejects direct open writes while disabled or synchronously fieldset-disabled', async () => {
+  const fieldset = await fixture<HTMLFieldSetElement>(html`
+    <fieldset><lr-combobox><lr-option value="a">A</lr-option></lr-combobox></fieldset>
+  `);
+  const el = fieldset.querySelector('lr-combobox') as LyraCombobox;
+  el.disabled = true;
+  el.open = true;
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+
+  el.disabled = false;
+  fieldset.disabled = true;
+  el.setAttribute('open', '');
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+});
 
 function assertiveAnnouncements(): string[] {
   const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
@@ -26,6 +48,47 @@ const basic = () => html`
     <lr-option value="c">Cherry</lr-option>
   </lr-combobox>
 `;
+
+it('collects an option constructed by a same-origin foreign custom-element realm', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameWindow = frame.contentWindow;
+  const frameDocument = frame.contentDocument;
+  if (!frameWindow || !frameDocument) {
+    frame.remove();
+    throw new Error('The iframe realm was unavailable.');
+  }
+
+  class ForeignOption extends frameWindow.HTMLElement {
+    value = 'foreign';
+    label = 'Foreign option';
+    selected = true;
+    defaultSelected = false;
+
+    [SET_OPTION_SELECTED_FROM_OWNER](selected: boolean): void {
+      this.selected = selected;
+    }
+
+    [RESET_OPTION_SELECTED_FROM_OWNER](selected: boolean): void {
+      this.selected = selected;
+    }
+  }
+
+  frameWindow.customElements.define('lr-option', ForeignOption);
+  const foreign = frameDocument.createElement('lr-option');
+  const el = await fixture<LyraCombobox>(html`<lr-combobox></lr-combobox>`);
+  try {
+    const LocalOption = customElements.get('lr-option')!;
+    expect(foreign instanceof LocalOption, 'the fixture must not satisfy the ambient class guard').to.equal(false);
+    el.append(document.adoptNode(foreign));
+    await aTimeout(0);
+    await el.updateComplete;
+
+    expect(el.value).to.equal('foreign');
+  } finally {
+    frame.remove();
+  }
+});
 
 async function typeQuery(el: LyraCombobox, text: string) {
   const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
@@ -1012,6 +1075,10 @@ it('sanitizes maxOptionsVisible/maxRender to finite non-negative integers instea
   el.maxRender = -5;
   expect(el.maxRender).to.equal(0); // clamped to the non-negative floor
 
+  el.maxRender = Number.MAX_SAFE_INTEGER;
+  expect(el.maxRender).to.equal(1000); // bounded resource ceiling, not an effectively-unlimited scan
+  el.maxRender = 0;
+
   // A capped-to-0 maxRender must not crash renderRows()/renderedRows -- rendering falls through to
   // the empty-listbox message (no rows survive the 0-sized cap), rather than throwing.
   const opt = document.createElement('lr-option');
@@ -1111,6 +1178,46 @@ it('calls source with the current query (debounced) and renders its rows', async
   await el.updateComplete;
 
   expect(calls).to.deep.equal(['', 'ban']);
+});
+
+it('passes a hard limit to sources and exposes truthful envelope totals/truncation', async () => {
+  const el = (await fixture(html`<lr-combobox source-delay="0"></lr-combobox>`)) as LyraCombobox;
+  let receivedLimit = 0;
+  el.source = async (_query, options) => {
+    receivedLimit = options.limit;
+    return {
+      rows: [
+        { value: 'a', label: 'Alpha' },
+        { value: 'b', label: 'Beta' },
+      ],
+      total: 5_000,
+    };
+  };
+  el.open = true;
+  await waitUntil(() => el.sourceTotal === 5_000, 'bounded source response never settled');
+  await el.updateComplete;
+
+  expect(receivedLimit).to.equal(2_000);
+  expect(el.sourceTruncated).to.be.true;
+  expect(el.shadowRoot!.querySelectorAll('[part="option"]')).to.have.length(2);
+  expect(el.shadowRoot!.querySelector('[part="option-overflow"]')!.textContent).to.contain('+4,998 more');
+});
+
+it('clone-normalizes source rows, retains valid siblings, and contains hostile getters', async () => {
+  const el = (await fixture(html`<lr-combobox source-delay="0"></lr-combobox>`)) as LyraCombobox;
+  const hostile = Object.create(null) as Record<string, unknown>;
+  Object.defineProperty(hostile, 'value', { get: () => { throw new Error('hostile getter'); } });
+  const mutable = { value: 'safe', label: 'Safe row', data: { id: 1 } };
+  el.source = async () => [hostile as never, { value: 7, label: 'wrong' } as never, mutable];
+  el.open = true;
+  await waitUntil(() => el.sourceTotal === 3, 'normalized source response never settled');
+  mutable.label = 'Mutated after return';
+  await el.updateComplete;
+
+  const rows = el.shadowRoot!.querySelectorAll('[part="option"]');
+  expect(rows).to.have.length(1);
+  expect(rows[0].textContent).to.contain('Safe row');
+  expect(el.sourceTruncated).to.be.true;
 });
 
 it('shows a loading row while an in-flight source call is pending', async () => {

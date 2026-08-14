@@ -22,7 +22,7 @@ import { loadEmojiDataCached } from './emoji-data-loader.js';
 import type { EmojiPickerItem, EmojiPickerGroup } from './emoji-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { EmojiPickerItem, EmojiPickerGroup };
@@ -36,9 +36,93 @@ const GAP_FALLBACK = 2;
 const VIRTUAL_ROW_HEIGHT_FALLBACK = 56;
 const MAX_VIRTUAL_COLUMNS = 20;
 
+// The numeric keys are an implementation detail of the optional emojibase-backed loader, not
+// consumer-authored group metadata. Provenance is tracked separately so a consumer group that
+// happens to use key "0" still renders its caller-owned label verbatim.
+const BUILT_IN_GROUP_LABEL_KEYS: Readonly<Record<string, string>> = {
+  0: 'emojiPickerGroupSmileysEmotion',
+  1: 'emojiPickerGroupPeopleBody',
+  2: 'emojiPickerGroupComponent',
+  3: 'emojiPickerGroupAnimalsNature',
+  4: 'emojiPickerGroupFoodDrink',
+  5: 'emojiPickerGroupTravelPlaces',
+  6: 'emojiPickerGroupActivities',
+  7: 'emojiPickerGroupObjects',
+  8: 'emojiPickerGroupSymbols',
+  9: 'emojiPickerGroupFlags',
+};
+
 interface VirtualEmojiRow {
   label?: string;
-  items: Array<{ item: EmojiPickerItem; index: number }>;
+  items: ReadonlyArray<{ item: EmojiPickerItem; index: number }>;
+}
+
+interface EmojiProjection {
+  source: readonly EmojiPickerGroup[];
+  query: string;
+  locale: string;
+  groups: readonly EmojiPickerGroup[];
+  items: readonly EmojiPickerItem[];
+}
+
+const MAX_EMOJI_GROUPS = 64;
+const MAX_EMOJIS = 20_000;
+const MAX_SHORTCODES_PER_EMOJI = 64;
+
+function snapshotEmojiGroups(
+  source: unknown,
+  itemSnapshots: WeakMap<object, EmojiPickerItem>,
+): readonly EmojiPickerGroup[] {
+  if (!Array.isArray(source)) return Object.freeze([]);
+  const groups: EmojiPickerGroup[] = [];
+  let remaining = MAX_EMOJIS;
+  for (let groupIndex = 0; groupIndex < Math.min(source.length, MAX_EMOJI_GROUPS) && remaining > 0; groupIndex += 1) {
+    try {
+      const rawGroup = source[groupIndex];
+      if (rawGroup === null || typeof rawGroup !== 'object') continue;
+      const group = rawGroup as Record<string, unknown>;
+      const key = group['key'];
+      const label = group['label'];
+      const rawEmojis = group['emojis'];
+      if (typeof key !== 'string' || typeof label !== 'string' || !Array.isArray(rawEmojis)) continue;
+      const emojis: EmojiPickerItem[] = [];
+      const length = Math.min(rawEmojis.length, remaining);
+      for (let itemIndex = 0; itemIndex < length; itemIndex += 1) {
+        try {
+          const rawItem = rawEmojis[itemIndex];
+          if (rawItem === null || typeof rawItem !== 'object') continue;
+          const cached = itemSnapshots.get(rawItem);
+          if (cached) {
+            emojis.push(cached);
+            continue;
+          }
+          const item = rawItem as Record<string, unknown>;
+          const emoji = item['emoji'];
+          const name = item['name'];
+          const rawShortcodes = item['shortcodes'];
+          if (
+            typeof emoji !== 'string' || typeof name !== 'string' ||
+            (rawShortcodes !== undefined && !Array.isArray(rawShortcodes))
+          ) continue;
+          const shortcodes = rawShortcodes === undefined
+            ? undefined
+            : Object.freeze(rawShortcodes.slice(0, MAX_SHORTCODES_PER_EMOJI).filter(
+              (entry): entry is string => typeof entry === 'string',
+            ));
+          const snapshot = Object.freeze({ emoji, name, ...(shortcodes === undefined ? {} : { shortcodes }) });
+          itemSnapshots.set(rawItem, snapshot);
+          emojis.push(snapshot);
+        } catch {
+          // A hostile getter invalidates only its own emoji; later valid items remain reachable.
+        }
+      }
+      remaining -= emojis.length;
+      groups.push(Object.freeze({ key, label, emojis: Object.freeze(emojis) }));
+    } catch {
+      // A hostile getter invalidates only its own group; later valid groups remain reachable.
+    }
+  }
+  return Object.freeze(groups);
 }
 
 /** Pixel geometry of the windowed layout, resolved from the three geometry custom properties. */
@@ -123,12 +207,12 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * wins through normal custom-property inheritance.
  *
  * @customElement lr-emoji-picker
- * @event input - Native `InputEvent` emitted after a user picks an emoji.
- * @event change - Native commit `Event` emitted with `input`.
+ * @event input - Native `InputEvent` emitted in the host's current owner realm after a user pick.
+ * @event change - Native commit `Event` emitted in the host's current owner realm with `input`.
  * @event lr-input - An emoji was picked. `detail: { value }`.
  * @event lr-change - An emoji pick was committed. `detail: { value }`.
- * @event blur - Native `FocusEvent` relayed from the internal search input.
- * @event focus - Native `FocusEvent` relayed from the internal search input.
+ * @event blur - Native owner-realm `FocusEvent` relayed from the internal search input.
+ * @event focus - Native owner-realm `FocusEvent` relayed from the internal search input.
  * @event lr-blur - Lyra alias emitted after the native `blur` relay.
  * @event lr-focus - Lyra alias emitted after the native `focus` relay.
  * @event lr-invalid - The emoji picker failed a validity check. Cancelable — preventing this
@@ -175,11 +259,13 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @cssprop [--lr-emoji-picker-row-height=calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))] -
  *   One windowed row's height. Must stay at or above the item size plus the group-label band, or
  *   consecutive absolutely-positioned rows overlap.
- * @cssprop [--lr-emoji-picker-active-bg=var(--lr-color-brand-quiet)] - Background of the
- *   keyboard-active (`data-active`) **and** hovered emoji button — the two share a single rule, so
- *   this one hook retints both consistently. Declared as an inline `var()` fallback (never on
- *   `:host`), so setting it on the element or an ancestor recolors only the emoji highlight without
- *   hijacking the library-wide `--lr-color-brand-quiet` token.
+ * @cssprop [--lr-emoji-picker-hover-bg=var(--lr-emoji-picker-active-bg,var(--lr-color-brand-quiet))]
+ *   - Pointer-hover background. The legacy `--lr-emoji-picker-active-bg` remains its fallback.
+ * @cssprop [--lr-emoji-picker-keyboard-active-bg=var(--lr-emoji-picker-active-bg,var(--lr-color-brand-quiet))]
+ *   - Roving keyboard/pointer-active background.
+ * @cssprop [--lr-emoji-picker-selected-bg=var(--lr-color-brand-quiet)] - Committed-value background.
+ * @cssprop [--lr-emoji-picker-selected-color=var(--lr-color-text)] - Committed-value foreground.
+ * @cssprop [--lr-emoji-picker-pressed-bg=color-mix(...)] - Pointer-pressed background.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  *   `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
  *   other quoted string (`' (required)'`, a localized word) to replace it.
@@ -213,14 +299,20 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     emojiPickerSearchLabel: LYRA_DEFAULT_emojiPickerSearchLabel,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     item: LYRA_DEFAULT_item,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
 
-  private _groups: EmojiPickerGroup[] = [];
+  private _groups: readonly EmojiPickerGroup[] = Object.freeze([]);
+  private readonly itemSnapshots = new WeakMap<object, EmojiPickerItem>();
+  private builtInGroups = new WeakSet<EmojiPickerGroup>();
   private groupsWereSet = false;
   /** The third state `groups` alone cannot express: the optional `emoji-picker-element-data` peer
    *  was consulted and did not resolve, as opposed to "not loaded yet" or "loaded, and empty". */
@@ -235,10 +327,10 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
    *  provide defaults; explicitly assigning `[]` opts out and renders only the search input and
    *  empty state. See `emoji-data-loader.ts` for the loader contract. */
   @property({ attribute: false })
-  get groups(): EmojiPickerGroup[] {
+  get groups(): readonly EmojiPickerGroup[] {
     return this._groups;
   }
-  set groups(value: EmojiPickerGroup[]) {
+  set groups(value: readonly EmojiPickerGroup[]) {
     const old = this._groups;
     const focused = this.shadowRoot?.activeElement as HTMLElement | null;
     const focusedIndex = Number(focused?.dataset['index']);
@@ -250,7 +342,10 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     // A consumer assignment always supersedes a failed auto-load, including a deliberate `[]`
     // opt-out: from here on the empty grid is the consumer's decision, not a missing install.
     this.peerLoadFailed = false;
-    this._groups = Array.isArray(value) ? value : [];
+    // Every public assignment is caller-owned, even if it reuses an array previously returned by
+    // the optional loader. Only connectedCallback's successful private load restores provenance.
+    this.builtInGroups = new WeakSet<EmojiPickerGroup>();
+    this._groups = snapshotEmojiGroups(value, this.itemSnapshots);
     this.requestUpdate('groups', old);
   }
 
@@ -323,6 +418,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
         return;
       }
       this.groups = loaded;
+      this.builtInGroups = new WeakSet(this._groups);
     });
   }
 
@@ -390,6 +486,8 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     EmojiPickerItem,
     { locale: string; value: string }
   >();
+  private projectionCache?: EmojiProjection;
+  private rowCache?: { projection: EmojiProjection; columns: number; rows: VirtualEmojiRow[] };
 
   private haystackFor(item: EmojiPickerItem): string {
     const locale = this.effectiveLocale;
@@ -404,19 +502,32 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     return cached.value;
   }
 
-  private get filteredGroups(): EmojiPickerGroup[] {
-    const q = this.queryText.trim().toLocaleLowerCase(this.effectiveLocale);
-    if (!q) return this.groups;
-    return this.groups
-      .map((group) => ({
-        ...group,
-        emojis: group.emojis.filter((item) => this.haystackFor(item).includes(q)),
-      }))
-      .filter((group) => group.emojis.length > 0);
+  private projection(): EmojiProjection {
+    const locale = this.effectiveLocale;
+    const query = this.queryText.trim().toLocaleLowerCase(locale);
+    const cached = this.projectionCache;
+    if (cached?.source === this._groups && cached.query === query && cached.locale === locale) {
+      return cached;
+    }
+    const groups = query
+      ? this._groups
+          .map((group) => ({
+            ...group,
+            emojis: group.emojis.filter((item) => this.haystackFor(item).includes(query)),
+          }))
+          .filter((group) => group.emojis.length > 0)
+      : this._groups;
+    const next = { source: this._groups, query, locale, groups, items: groups.flatMap((group) => group.emojis) };
+    this.projectionCache = next;
+    return next;
   }
 
-  private get flatItems(): EmojiPickerItem[] {
-    return this.filteredGroups.flatMap((group) => group.emojis);
+  private get filteredGroups(): readonly EmojiPickerGroup[] {
+    return this.projection().groups;
+  }
+
+  private get flatItems(): readonly EmojiPickerItem[] {
+    return this.projection().items;
   }
 
   private get isVirtualized(): boolean {
@@ -566,18 +677,21 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.requestUpdate();
   };
 
-  /** A group heading, localized when the group came from the built-in `emoji-picker-element-data`
-   *  adapter (which tags each emojibase group with a `labelKey`). A consumer-supplied group has no
-   *  `labelKey` and its `label` is caller-owned content, rendered verbatim. */
+  /** Localizes only groups whose object identity came from the built-in loader. */
   private groupLabel(group: EmojiPickerGroup): string {
-    return group.labelKey ? this.localize(group.labelKey) : group.label;
+    const labelKey = this.builtInGroups.has(group) ? BUILT_IN_GROUP_LABEL_KEYS[group.key] : undefined;
+    return labelKey ? this.localize(labelKey) : group.label;
   }
 
   private virtualRows(): VirtualEmojiRow[] {
+    const projection = this.projection();
     const columns = this.columnsPerRow();
+    if (this.rowCache?.projection === projection && this.rowCache.columns === columns) {
+      return this.rowCache.rows;
+    }
     let index = 0;
     const rows: VirtualEmojiRow[] = [];
-    for (const group of this.filteredGroups) {
+    for (const group of projection.groups) {
       for (let offset = 0; offset < group.emojis.length; offset += columns) {
         rows.push({
           label: offset === 0 ? this.groupLabel(group) : undefined,
@@ -585,11 +699,28 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
         });
       }
     }
+    this.rowCache = { projection, columns, rows };
     return rows;
   }
 
   private optionButtons(): HTMLButtonElement[] {
     return [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
+  }
+
+  /** Selection is the committed form value; roving focus/hover is a separate active projection. */
+  private get selectedIndex(): number {
+    if (!this.value) return -1;
+    return this.flatItems.findIndex((item) => item.emoji === this.value);
+  }
+
+  private syncSelectedProjection(): void {
+    const selectedIndex = this.selectedIndex;
+    for (const button of this.optionButtons()) {
+      button.setAttribute(
+        'aria-selected',
+        Number(button.dataset['index']) === selectedIndex ? 'true' : 'false',
+      );
+    }
   }
 
   /** Options in the first rendered row. Measured from live layout at call time because the
@@ -636,12 +767,10 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     const previous = this.renderRoot.querySelector<HTMLButtonElement>('[part="emoji"][data-active]');
     if (previous && previous !== target) {
       previous.tabIndex = -1;
-      previous.setAttribute('aria-selected', 'false');
       previous.removeAttribute('data-active');
     }
     if (target) {
       target.tabIndex = 0;
-      target.setAttribute('aria-selected', 'true');
       target.setAttribute('data-active', '');
       this.searchEl?.setAttribute('aria-activedescendant', target.id);
       target.scrollIntoView({ block: 'nearest' });
@@ -710,6 +839,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   private pick(item: EmojiPickerItem): void {
     if (this.liveDisabled) return;
     this.value = item.emoji;
+    this.syncSelectedProjection();
     dispatchNativeInputEvent(this);
     this.emit('lr-input', { value: item.emoji });
     dispatchNativeEvent(this, 'change');
@@ -875,9 +1005,9 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.syncGeometryProbe();
     if (!this.hasUpdated) {
       this.seedFirstRenderState(() => {
-        this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
-        this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
-        this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
+        this.hasLabelSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'label');
+        this.hasHintSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'hint');
+        this.hasErrorSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'error');
       });
     }
   }
@@ -914,9 +1044,9 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     } else if (!this.isVirtualized && this.activeIndex >= buttons.length) {
       this.activeIndex = 0;
     }
-    // The grid just re-rendered: re-assert the active option's imperative state (tabindex,
-    // aria-selected, aria-activedescendant) against the fresh DOM and keep it scrolled into view.
+    // The grid just re-rendered: re-assert roving focus separately from committed selection.
     this.setActiveIndex(this.activeIndex, false);
+    this.syncSelectedProjection();
     this.restorePendingGridFocus();
   }
 
@@ -954,7 +1084,8 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.peerErrorAnnouncementSink = undefined;
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.resetOwnerRealmResources();
   }
 
@@ -967,7 +1098,12 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.resetGeometryObserver();
   }
 
-  private renderEmojiButton(item: EmojiPickerItem, itemIndex: number, total: number): TemplateResult {
+  private renderEmojiButton(
+    item: EmojiPickerItem,
+    itemIndex: number,
+    total: number,
+    selectedIndex: number,
+  ): TemplateResult {
     return html`<button
       type="button"
       part="emoji"
@@ -975,7 +1111,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
       data-index=${itemIndex}
       role="option"
       tabindex=${live(itemIndex === this.activeIndex ? '0' : '-1')}
-      aria-selected=${live(itemIndex === this.activeIndex ? 'true' : 'false')}
+      aria-selected=${live(itemIndex === selectedIndex ? 'true' : 'false')}
       aria-setsize=${total}
       aria-posinset=${itemIndex + 1}
       aria-label=${item.name}
@@ -997,6 +1133,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     const start = Math.max(0, Math.floor(this.virtualScrollTop / rowHeight) - 3);
     const end = Math.min(rows.length, Math.ceil((this.virtualScrollTop + viewportHeight) / rowHeight) + 3);
     const total = this.flatItems.length;
+    const selectedIndex = this.selectedIndex;
     return html`
       <div part="virtual-spacer" style=${`block-size: ${rows.length * rowHeight}px`}>
         ${rows.slice(start, end).map(
@@ -1004,7 +1141,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
             <div part="virtual-row" style=${`transform: translateY(${(start + offset) * rowHeight}px)`}>
               ${row.label ? html`<div part="group-label">${row.label}</div>` : html`<div part="virtual-label" aria-hidden="true"></div>`}
               <div part="virtual-items">
-                ${row.items.map(({ item, index }) => this.renderEmojiButton(item, index, total))}
+                ${row.items.map(({ item, index }) => this.renderEmojiButton(item, index, total, selectedIndex))}
               </div>
             </div>
           `,
@@ -1015,6 +1152,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   override render(): TemplateResult {
     const items = this.flatItems;
+    const selectedIndex = this.selectedIndex;
     let index = -1;
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
     const hasHint = this.hasHintSlot || this.hint.length > 0;
@@ -1065,7 +1203,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
                     <div part="group-label">${this.groupLabel(group)}</div>
                     ${group.emojis.map((item) => {
                       index++;
-                      return this.renderEmojiButton(item, index, items.length);
+                      return this.renderEmojiButton(item, index, items.length, selectedIndex);
                     })}
                   `,
                 )}

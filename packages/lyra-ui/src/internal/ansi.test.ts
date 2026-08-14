@@ -139,6 +139,56 @@ describe('createAnsiParser', () => {
     expect(recovered[0]?.styles.fg).to.equal('var(--lr-terminal-color-red)');
   });
 
+  it('drops an overlong terminated SGR without materializing its parameter list', () => {
+    const parser = createAnsiParser();
+    const segments = parser.push(`\x1b[${'1;'.repeat(500_000)}31mvisible`);
+    expect(segments.map((segment) => segment.text).join('')).to.equal('visible');
+    expect(segments[0]?.styles).to.deep.equal({
+      bold: false,
+      dim: false,
+      italic: false,
+      underline: false,
+      inverse: false,
+    });
+  });
+
+  it('drops an overlong terminated OSC and resumes subsequent plain output', () => {
+    const parser = createAnsiParser();
+    const segments = parser.push(`\x1b]0;${'x'.repeat(500_000)}\x07visible`);
+    expect(segments.map((segment) => segment.text).join('')).to.equal('visible');
+  });
+
+  it('discards an overlong CSI through a later-chunk terminator before resuming plain output', () => {
+    const parser = createAnsiParser();
+    expect(parser.push(`\x1b[${'1;'.repeat(2_500)}`)).to.deep.equal([]);
+    const segments = parser.push('31mvisible');
+    expect(segments.map((segment) => segment.text).join('')).to.equal('visible');
+    expect(segments[0]?.styles.fg).to.equal(undefined);
+  });
+
+  it('discards an overlong OSC through a later-chunk terminator before resuming plain output', () => {
+    const parser = createAnsiParser();
+    expect(parser.push(`\x1b]0;${'x'.repeat(5_000)}`)).to.deep.equal([]);
+    const segments = parser.push('tail\x07visible');
+    expect(segments.map((segment) => segment.text).join('')).to.equal('visible');
+  });
+
+  it('ignores an excessive but length-bounded SGR parameter count atomically', () => {
+    const parser = createAnsiParser();
+    parser.push('\x1b[31m');
+    const segments = parser.push(`\x1b[${'0;'.repeat(65)}1mstill red`);
+    expect(segments[0]?.styles.fg).to.equal('var(--lr-terminal-color-red)');
+    expect(segments[0]?.styles.bold).to.equal(false);
+  });
+
+  it('retains the complete supported SGR semantics at the bounded parameter ceiling', () => {
+    const parser = createAnsiParser();
+    const segments = parser.push(`\x1b[${'5;'.repeat(61)}1;4;31mstyled`);
+    expect(segments[0]?.styles.bold).to.equal(true);
+    expect(segments[0]?.styles.underline).to.equal(true);
+    expect(segments[0]?.styles.fg).to.equal('var(--lr-terminal-color-red)');
+  });
+
   it('reset() clears style state and any buffered partial sequence', () => {
     const parser = createAnsiParser();
     parser.push('\x1b[1;31mbold-red\x1b[3');

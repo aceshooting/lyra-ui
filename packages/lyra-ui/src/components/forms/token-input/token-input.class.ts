@@ -5,7 +5,11 @@ import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/a
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
-import { spellcheckConverter } from '../../../internal/converters.js';
+import {
+  autocorrectConverter,
+  normalizeAutocorrect,
+  spellcheckConverter,
+} from '../../../internal/converters.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import {
   dispatchNativeEvent,
@@ -42,11 +46,11 @@ export interface LyraTokenInputEventMap {
   change: Event;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-input': CustomEvent<{ value: string[] }>;
-  'lr-change': CustomEvent<{ value: string[] }>;
+  'lr-input': CustomEvent<Readonly<{ value: readonly string[] }>>;
+  'lr-change': CustomEvent<Readonly<{ value: readonly string[] }>>;
   'lr-focus': CustomEvent<undefined>;
   'lr-blur': CustomEvent<undefined>;
-  'lr-add': CustomEvent<{ value: string }>;
+  'lr-add': CustomEvent<Readonly<{ value: string; values: readonly string[] }>>;
   'lr-remove': CustomEvent<{ value: string; index: number }>;
   'lr-token-edit': CustomEvent<{ value: string; previousValue: string; index: number }>;
 }
@@ -66,17 +70,30 @@ const delimiterConverter = {
   toAttribute: (value: string | null): string => (value === null ? 'none' : value),
 };
 
+function normalizeStringArray(value: unknown): readonly string[] {
+  if (!Array.isArray(value)) return Object.freeze([]);
+  try {
+    const normalized: string[] = [];
+    for (const entry of value) {
+      if (typeof entry === 'string') normalized.push(entry);
+    }
+    return Object.freeze(normalized);
+  } catch {
+    return Object.freeze([]);
+  }
+}
+
 const stringArrayConverter = {
-  fromAttribute: (value: string | null): string[] | null => {
+  fromAttribute: (value: string | null): readonly string[] | null => {
     if (value === null) return null;
     try {
       const parsed: unknown = JSON.parse(value);
-      return Array.isArray(parsed) && parsed.every((entry) => typeof entry === 'string') ? parsed : [];
+      return normalizeStringArray(parsed);
     } catch {
       return [];
     }
   },
-  toAttribute: (value: string[] | null): string | null => value == null ? null : JSON.stringify(value),
+  toAttribute: (value: readonly string[] | null): string | null => value == null ? null : JSON.stringify(value),
 };
 
 /** `<lr-token-input>` — an editable, form-associated list of removable tokens.
@@ -104,7 +121,9 @@ const stringArrayConverter = {
  * @event blur - Native `FocusEvent` relayed from the draft input or inline token editor.
  * @event lr-focus - Lyra alias emitted after each native `focus` relay.
  * @event lr-blur - Lyra alias emitted after each native `blur` relay.
- * @event lr-add - A token was added; detail is `{ value }`.
+ * @event lr-add - One or more tokens were added in a single commit. Detail is
+ *   `{ value, values }`, where `value` is the final added token for compatibility and `values` is
+ *   the complete ordered batch.
  * @event lr-remove - A token is about to be removed; detail is `{ value, index }`. Cancelable --
  *   call `preventDefault()` to veto the removal (e.g. pending an async confirmation or a
  *   protected-token check) and the token stays in `value` unchanged.
@@ -215,9 +234,15 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   @property({ converter: spellcheckConverter }) override spellcheck = true;
   /** Forwarded to both native text inputs. Empty preserves the browser default. */
   @property() override autocapitalize = '';
-  /** Forwarded to both native text inputs through the lowercase `autocorrect` attribute.
-   *  The camel-cased property avoids the boolean `HTMLElement.autocorrect` DOM typing. */
-  @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  private autocorrectValue = true;
+  /** Native editing-assistance state forwarded to both text inputs. Reads are boolean; writes
+   * accept booleans and the native/Shoelace string vocabulary (`off`/`false` disable it). */
+  @property({ converter: autocorrectConverter })
+  override get autocorrect(): boolean { return this.autocorrectValue; }
+  override set autocorrect(next: boolean | string) {
+    this.autocorrectValue = normalizeAutocorrect(next);
+    this.requestUpdate();
+  }
   /** Accessible-name override forwarded to the input wrapper and draft input. Attribute presence
    *  wins, including an explicitly empty `aria-label`, which suppresses visible-label linkage. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
@@ -280,8 +305,8 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private labelId = nextId('token-input-label');
   private hintId = nextId('token-input-hint');
   private errorId = nextId('token-input-error');
-  private _value: string[] = [];
-  private _defaultValue: string[] = [];
+  private _value: readonly string[] = Object.freeze([]);
+  private _defaultValue: readonly string[] = Object.freeze([]);
   private _valueDirty = false;
   private settingDefaultValue = false;
   private reflectingDefaultValue = false;
@@ -295,11 +320,11 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private _disabled = false;
 
   @property({ attribute: false })
-  get value(): string[] { return this._value; }
-  set value(next: string[]) {
+  get value(): readonly string[] { return this._value; }
+  set value(next: readonly string[]) {
     const old = this._value;
     if (!this.settingDefaultValue) this._valueDirty = true;
-    const normalized = Array.isArray(next) ? [...next] : [];
+    const normalized = normalizeStringArray(next);
     if (this.editingIndex >= 0 && normalized !== old) {
       this.editingIndex = -1;
       this.editDraft = '';
@@ -310,11 +335,11 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     if (this.internals) this.syncValidity();
   }
   /** Reflected JSON-array reset default; changing it never overwrites a dirty live token list. */
-  get defaultValue(): string[] { return [...this._defaultValue]; }
-  set defaultValue(next: string[] | null) {
+  get defaultValue(): readonly string[] { return this._defaultValue; }
+  set defaultValue(next: readonly string[] | null) {
     if (this.reflectingDefaultValue) return;
     const old = this._defaultValue;
-    this._defaultValue = Array.isArray(next) ? [...next] : [];
+    this._defaultValue = normalizeStringArray(next);
     this.reflectingDefaultValue = true;
     try {
       if (next == null) this.removeAttribute('value');
@@ -504,11 +529,11 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but keeps a future mixin's willUpdate reachable
     if (!this.hasUpdated) {
-      this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
-      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
-      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
-      this.hasStartSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'start');
-      this.hasEndSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'end');
+      this.hasLabelSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'label');
+      this.hasHintSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'hint');
+      this.hasErrorSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'error');
+      this.hasStartSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'start');
+      this.hasEndSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'end');
     }
   }
 
@@ -543,18 +568,13 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
       createStringArrayFormDataState(this.name, this.value),
     );
   }
-  private updateValue(next: string[], event?: 'add' | 'remove'): void {
+  private updateValue(next: readonly string[]): void {
     this.value = next;
     this.syncValidity();
     dispatchNativeInputEvent(this);
-    this.emit('lr-input', { value: [...this.value] });
+    this.emit('lr-input', Object.freeze({ value: Object.freeze([...this.value]) }));
     dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { value: [...this.value] });
-    if (event === 'add') {
-      // `lr-add` promises a `string`; an 'add' that produced no token has nothing to announce.
-      const added = next[next.length - 1];
-      if (added !== undefined) this.emit('lr-add', { value: added });
-    }
+    this.emit('lr-change', Object.freeze({ value: Object.freeze([...this.value]) }));
   }
   private addDraft(): void {
     if (this.liveDisabled) return;
@@ -562,9 +582,21 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     // explode the draft into one token per character.
     const parts = this.delimiter ? this.draft.split(this.delimiter) : [this.draft];
     const candidates = parts.map((token) => token.trim()).filter(Boolean);
+    const next = [...this.value];
+    const seen = this.allowDuplicates ? null : new Set(next);
+    const added: string[] = [];
     for (const token of candidates) {
-      if (!this.allowDuplicates && this.value.includes(token)) continue;
-      this.updateValue([...this.value, token], 'add');
+      if (seen?.has(token)) continue;
+      seen?.add(token);
+      next.push(token);
+      added.push(token);
+    }
+    if (added.length > 0) {
+      this.updateValue(next);
+      this.emit('lr-add', Object.freeze({
+        value: added[added.length - 1]!,
+        values: Object.freeze([...added]),
+      }));
     }
     this.draft = '';
   }
@@ -821,7 +853,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   }
   private renderEditableToken(token: string, index: number): TemplateResult {
     if (this.editingIndex === index) {
-      return html`<span part="token"><input part="token-editor" .value=${this.editDraft} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.autoCorrect || nothing} @input=${this.onEditInput} @change=${this.stopInternalChange} @keydown=${this.onEditKeyDown} @focus=${this.onEditFocus} @blur=${this.onEditBlur} />${this.renderRemoveButton(token, index)}</span>`;
+      return html`<span part="token"><input part="token-editor" .value=${this.editDraft} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect ? (this.autocorrect ? 'on' : 'off') : nothing} @input=${this.onEditInput} @change=${this.stopInternalChange} @keydown=${this.onEditKeyDown} @focus=${this.onEditFocus} @blur=${this.onEditBlur} />${this.renderRemoveButton(token, index)}</span>`;
     }
     return html`<span part="token"><span part="token-label" role="button" tabindex=${this.effectiveDisabled ? nothing : index === this.activeTokenIndex ? 0 : -1} aria-disabled=${String(this.effectiveDisabled)} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} @click=${() => this.startEdit(index)} @focus=${() => { if (this.rovingIndex !== index) this.rovingIndex = index; }} @keydown=${(event: KeyboardEvent) => this.onTokenKeyDown(event, index)}>${token}</span>${this.renderRemoveButton(token, index)}</span>`;
   }
@@ -836,7 +868,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
       <div part="input-wrapper" role="group" aria-labelledby=${!hasAccessibleLabel && hasLabel ? this.labelId : nothing} aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing}>
         <span part="start" ?hidden=${!this.hasStartSlot}><slot name="start" @slotchange=${this.onStartSlotChange}></slot></span>
         ${this.value.map((token, index) => this.editable ? this.renderEditableToken(token, index) : html`<span part="token"><span>${token}</span><button part="remove" type="button" aria-label=${this.localize('removeWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} @click=${() => this.removeToken(index)}>${closeIcon()}</button></span>`)}
-        <input id="input" part="input" .value=${this.draft} placeholder=${this.placeholder} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.autoCorrect || nothing} aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing} aria-labelledby=${!hasAccessibleLabel && hasLabel ? this.labelId : nothing} aria-describedby=${described} aria-required=${this.required ? 'true' : 'false'} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} @input=${this.onInput} @change=${this.stopInternalChange} @keydown=${this.onKeyDown} @blur=${this.onBlur} @focus=${this.onFocus} />
+        <input id="input" part="input" .value=${this.draft} placeholder=${this.placeholder} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect ? (this.autocorrect ? 'on' : 'off') : nothing} aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing} aria-labelledby=${!hasAccessibleLabel && hasLabel ? this.labelId : nothing} aria-describedby=${described} aria-required=${this.required ? 'true' : 'false'} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} @input=${this.onInput} @change=${this.stopInternalChange} @keydown=${this.onKeyDown} @blur=${this.onBlur} @focus=${this.onFocus} />
         <span part="end" ?hidden=${!this.hasEndSlot}><slot name="end" @slotchange=${this.onEndSlotChange}></slot></span>
       </div>
       <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot></div>

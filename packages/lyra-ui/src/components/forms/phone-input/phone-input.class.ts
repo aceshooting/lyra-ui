@@ -21,39 +21,43 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_phoneInputIncomplete, LYRA_DEF
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type PhoneNumberStatus = 'empty' | 'incomplete' | 'invalid' | 'valid';
-export type PhoneInputSelectionDirection = 'forward' | 'backward' | 'none';
+export type LyraPhoneNumberStatus = 'empty' | 'incomplete' | 'invalid' | 'valid';
+export type LyraPhoneInputSelectionDirection = 'forward' | 'backward' | 'none';
 /** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
  *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
 export type LyraPhoneInputSize = LyraSizeStep;
 
-export interface PhoneCountry {
+export interface LyraPhoneCountry {
   /** ISO 3166-1 alpha-2 region code. */
-  code: string;
+  readonly code: string;
   /** International calling code without a leading plus sign. */
-  callingCode: string;
+  readonly callingCode: string;
   /** Optional display-name override. `Intl.DisplayNames` is used when omitted. */
-  label?: string;
+  readonly label?: string;
 }
 
-export interface PhoneNumberParseResult {
-  status: PhoneNumberStatus;
-  /** Canonical E.164 value. Required when `status` is `valid`. */
-  e164?: string;
+interface LyraPhoneNumberParseMetadata {
   /** Best-effort display text, normally national formatting for the selected country. */
   formatted?: string;
   /** Detected ISO 3166-1 alpha-2 region code. */
   country?: string;
 }
 
+/** Exhaustive adapter result. Only the `valid` branch can carry a canonical form value. */
+export type LyraPhoneNumberParseResult =
+  | ({ status: 'empty' } & LyraPhoneNumberParseMetadata)
+  | ({ status: 'incomplete' } & LyraPhoneNumberParseMetadata)
+  | ({ status: 'invalid' } & LyraPhoneNumberParseMetadata)
+  | ({ status: 'valid'; e164: string } & LyraPhoneNumberParseMetadata);
+
 /**
  * Synchronous formatting seam for a numbering-plan implementation. The base
  * component deliberately includes no country metadata. An adapter can be
  * supplied directly, or created lazily with `loadLibphonenumberAdapter()`.
  */
-export interface PhoneNumberAdapter {
-  readonly countries?: readonly PhoneCountry[];
-  parse(input: string, country?: string): PhoneNumberParseResult;
+export interface LyraPhoneNumberAdapter {
+  readonly countries?: readonly LyraPhoneCountry[];
+  parse(input: string, country?: string): LyraPhoneNumberParseResult;
 }
 
 interface LibphonenumberPhoneLike {
@@ -86,7 +90,7 @@ export interface LibphonenumberModuleLike<CountryCode extends string = string> {
  */
 export async function loadLibphonenumberAdapter<CountryCode extends string>(
   loader: () => Promise<LibphonenumberModuleLike<CountryCode>>,
-): Promise<PhoneNumberAdapter> {
+): Promise<LyraPhoneNumberAdapter> {
   const module = await loader();
   const countries = module.getCountries().map((code) => ({
     code: normalizeCountry(code),
@@ -135,7 +139,7 @@ export interface LyraPhoneInputEventDetail {
   inputValue: string;
   country: string;
   valid: boolean;
-  status: PhoneNumberStatus;
+  status: LyraPhoneNumberStatus;
 }
 
 export interface LyraPhoneInputEventMap {
@@ -190,7 +194,7 @@ function indexAfterDigits(value: string, digitCount: number): number {
   return value.length;
 }
 
-function fallbackParse(input: string): PhoneNumberParseResult {
+function fallbackParse(input: string): LyraPhoneNumberParseResult {
   const raw = input.trim();
   if (!raw) return { status: 'empty' };
   const compact = raw.replace(/[\s().-]/g, '');
@@ -199,11 +203,92 @@ function fallbackParse(input: string): PhoneNumberParseResult {
   return { status: 'invalid', formatted: raw };
 }
 
+/** An adapter is an untrusted public extension seam at runtime even when TypeScript accepted it. */
+function normalizeParseResult(result: unknown, input: string): LyraPhoneNumberParseResult {
+  try {
+    if (result === null || typeof result !== 'object') return { status: 'invalid', formatted: input };
+    const record = result as Record<string, unknown>;
+    const status = record['status'];
+    if (status !== 'empty' && status !== 'incomplete' && status !== 'invalid' && status !== 'valid') {
+      return { status: 'invalid', formatted: input };
+    }
+    const formatted = record['formatted'];
+    if (formatted !== undefined && typeof formatted !== 'string') {
+      return { status: 'invalid', formatted: input };
+    }
+    const rawCountry = record['country'];
+    if (rawCountry !== undefined && typeof rawCountry !== 'string') {
+      return { status: 'invalid', formatted: formatted ?? input };
+    }
+    const country = typeof rawCountry === 'string' && /^[A-Za-z]{2}$/.test(rawCountry.trim())
+      ? normalizeCountry(rawCountry)
+      : undefined;
+    const metadata = {
+      ...(formatted === undefined ? {} : { formatted }),
+      ...(country === undefined ? {} : { country }),
+    };
+    if (status === 'valid') {
+      const e164 = record['e164'];
+      if (typeof e164 !== 'string' || !E164_RE.test(e164)) {
+        return { status: 'invalid', formatted: formatted ?? input, ...(country ? { country } : {}) };
+      }
+      return { status, e164, ...metadata };
+    }
+    return { status, ...metadata };
+  } catch {
+    return { status: 'invalid', formatted: input };
+  }
+}
+
+const MAX_PHONE_COUNTRIES = 512;
+
+/** Validate and copy public country metadata without trusting iteration or property getters. */
+function normalizeCountryCatalog(source: unknown): readonly LyraPhoneCountry[] {
+  if (!Array.isArray(source)) return Object.freeze([]);
+  const rows: LyraPhoneCountry[] = [];
+  const seen = new Set<string>();
+  let length = 0;
+  try {
+    length = Math.min(source.length, MAX_PHONE_COUNTRIES);
+  } catch {
+    return Object.freeze(rows);
+  }
+  for (let index = 0; index < length; index += 1) {
+    try {
+      const item = source[index];
+      if (item === null || typeof item !== 'object') continue;
+      const candidate = item as Record<string, unknown>;
+      const rawCode = candidate['code'];
+      const rawCallingCode = candidate['callingCode'];
+      const rawLabel = candidate['label'];
+      if (typeof rawCode !== 'string' || typeof rawCallingCode !== 'string') continue;
+      const code = normalizeCountry(rawCode);
+      const callingCode = rawCallingCode.replace(/^\+/, '');
+      if (!/^[A-Z]{2}$/.test(code) || !/^[1-9]\d{0,2}$/.test(callingCode) || seen.has(code)) {
+        continue;
+      }
+      if (rawLabel !== undefined && typeof rawLabel !== 'string') continue;
+      seen.add(code);
+      rows.push(Object.freeze({
+        code,
+        callingCode,
+        ...(rawLabel === undefined ? {} : { label: rawLabel }),
+      }));
+    } catch {
+      // A hostile getter invalidates only its own row; later valid rows remain reachable.
+    }
+  }
+  return Object.freeze(rows);
+}
+
 /**
  * `<lr-phone-input>` — a country-aware telephone field whose form value is
  * canonical E.164. National formatting and numbering-plan validation are
  * supplied through `adapter`; without one, already-international E.164 input
  * remains useful and national input stays editable with `incomplete` validity.
+ * Adapter results and country metadata are validated at the runtime boundary: only the exhaustive
+ * result discriminator is accepted, `valid` requires E.164, malformed or hostile country rows are
+ * skipped, and malformed parser output fails closed to `invalid`.
  *
  * Each text edit emits native `input` then `lr-input`; a text commit emits native `change` then
  * `lr-change`, and a country pick emits both pairs in that order. The aliases expose both the
@@ -234,6 +319,8 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * input still wins through normal custom-property inheritance.
  * The country selector retains the shared `--lr-icon-button-size` hit floor, and its row uses the
  * same action-bearing height ladder as input, number-input, and time-input.
+ * `readonly` locks both telephone and country mutation while retaining focus, selection, copying,
+ * form value, and submission. `autofocus` targets the real native telephone input.
  *
  * @customElement lr-phone-input
  * @slot label - Custom label content.
@@ -332,9 +419,26 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   @property({ type: Boolean, reflect: true }) flags = false;
 
   /** Formatting and validation implementation. No metadata is bundled by default. */
-  @property({ attribute: false }) adapter?: PhoneNumberAdapter;
-  /** Explicit country rows. Takes precedence over `adapter.countries`. */
-  @property({ attribute: false }) countries: readonly PhoneCountry[] = [];
+  private _adapter?: LyraPhoneNumberAdapter;
+  private adapterCountries: readonly LyraPhoneCountry[] = Object.freeze([]);
+  @property({ attribute: false })
+  get adapter(): LyraPhoneNumberAdapter | undefined { return this._adapter; }
+  set adapter(next: LyraPhoneNumberAdapter | undefined) {
+    const previous = this._adapter;
+    this._adapter = next;
+    this.adapterCountries = normalizeCountryCatalog(next?.countries);
+    this.requestUpdate('adapter', previous);
+  }
+  /** Explicit country rows. `undefined` discovers `adapter.countries`; every supplied array,
+   * including an empty one, is authoritative. Malformed runtime rows are skipped. */
+  private _countries?: readonly LyraPhoneCountry[];
+  @property({ attribute: false })
+  get countries(): readonly LyraPhoneCountry[] | undefined { return this._countries; }
+  set countries(next: readonly LyraPhoneCountry[] | undefined) {
+    const previous = this._countries;
+    this._countries = next === undefined ? undefined : normalizeCountryCatalog(next);
+    this.requestUpdate('countries', previous);
+  }
   /** Country selected when no explicit `country` has been set. */
   @property({ attribute: 'default-country' }) defaultCountry = '';
   @property() label = '';
@@ -361,6 +465,11 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   @property() autocomplete = 'tel';
   @property() inputmode: 'tel' | 'numeric' | 'text' = 'tel';
   @property() enterkeyhint = '';
+  /** Native readonly mode: keeps the telephone value focusable/copyable/submittable while
+   * preventing telephone and country edits and barring constraint validation. */
+  @property({ type: Boolean, reflect: true }) readonly = false;
+  /** Forwards native autofocus to the real shadow input rather than the non-focusable host. */
+  @property({ type: Boolean, reflect: true }) override autofocus = false;
   /** Forwarded to the internal `<input>`'s own `spellcheck`. Defaults to `true`, matching the
    *  native element's own default. Uses {@link spellcheckConverter} rather than Lit's default
    *  presence-based boolean converter so an explicit `spellcheck="false"` attribute is honored; a
@@ -379,7 +488,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
 
   @query('input[part="input"]') private inputElement?: HTMLInputElement;
   @state() private editableValue = '';
-  @state() private status: PhoneNumberStatus = 'empty';
+  @state() private status: LyraPhoneNumberStatus = 'empty';
   @state() private touched = false;
   @state() private hasLabelSlot = false;
   @state() private hasHintSlot = false;
@@ -390,18 +499,14 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   private hintId = nextId('phone-hint');
   private errorId = nextId('phone-error');
   private explicitCountry = '';
-  private catalogCountryResolved = false;
 
   /** Currently selected ISO 3166-1 alpha-2 country code. */
   get country(): string {
-    if (this.catalogCountryResolved) return normalizeCountry(this.explicitCountry);
-    const firstCountry = this.countries[0]?.code ?? this.adapter?.countries?.[0]?.code ?? '';
-    return normalizeCountry(this.explicitCountry || this.defaultCountry || firstCountry);
+    return this.resolveCountry(this.availableCountries);
   }
 
   set country(next: string) {
     const old = this.country;
-    this.catalogCountryResolved = false;
     this.explicitCountry = normalizeCountry(next ?? '');
     this.requestUpdate('country', old);
   }
@@ -417,7 +522,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   }
 
   /** Current parse/validation state. */
-  get phoneStatus(): PhoneNumberStatus {
+  get phoneStatus(): LyraPhoneNumberStatus {
     return this.status;
   }
 
@@ -437,11 +542,11 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     if (this.inputElement) this.inputElement.selectionEnd = value ?? 0;
   }
 
-  get selectionDirection(): PhoneInputSelectionDirection | null {
-    return this.inputElement?.selectionDirection as PhoneInputSelectionDirection | null;
+  get selectionDirection(): LyraPhoneInputSelectionDirection | null {
+    return this.inputElement?.selectionDirection as LyraPhoneInputSelectionDirection | null;
   }
 
-  set selectionDirection(value: PhoneInputSelectionDirection | null) {
+  set selectionDirection(value: LyraPhoneInputSelectionDirection | null) {
     if (this.inputElement) this.inputElement.selectionDirection = value ?? 'none';
   }
 
@@ -460,49 +565,35 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     this.applyParsed(raw, parsed);
   }
 
-  private get availableCountries(): PhoneCountry[] {
-    const source = this.countries.length ? this.countries : (this.adapter?.countries ?? []);
-    const seen = new Set<string>();
-    const rows: PhoneCountry[] = [];
-    for (const item of source) {
-      const code = normalizeCountry(item.code);
-      if (!/^[A-Z]{2}$/.test(code) || seen.has(code)) continue;
-      seen.add(code);
-      rows.push({ ...item, code, callingCode: item.callingCode.replace(/^\+/, '') });
-    }
-    if (rows.length === 0 && this.country) {
-      rows.push({ code: this.country, callingCode: '' });
-    }
-    return rows;
+  private get availableCountries(): readonly LyraPhoneCountry[] {
+    return this.countries ?? this.adapterCountries;
   }
 
-  private parse(input: string): PhoneNumberParseResult {
+  private resolveCountry(rows: readonly LyraPhoneCountry[]): string {
+    const codes = rows.map((row) => row.code);
+    const explicit = normalizeCountry(this.explicitCountry);
+    const preferred = normalizeCountry(this.defaultCountry);
+    if (codes.includes(explicit)) return explicit;
+    if (codes.includes(preferred)) return preferred;
+    return codes[0] ?? '';
+  }
+
+  private parse(input: string): LyraPhoneNumberParseResult {
     if (!this.adapter) return fallbackParse(input);
     try {
-      const parsed = this.adapter.parse(input, this.country || undefined);
-      if (parsed.status === 'valid' && (!parsed.e164 || !E164_RE.test(parsed.e164))) {
-        return { status: 'invalid', formatted: parsed.formatted ?? input, country: parsed.country };
-      }
-      return parsed;
+      const parse = this.adapter.parse;
+      if (typeof parse !== 'function') return { status: 'invalid', formatted: input };
+      return normalizeParseResult(parse.call(this.adapter, input, this.country || undefined), input);
     } catch {
-      return fallbackParse(input);
+      return { status: 'invalid', formatted: input };
     }
   }
 
   private reconcileCountryCatalog(): void {
-    const source = this.countries.length ? this.countries : (this.adapter?.countries ?? []);
-    const codes = source
-      .map((item) => normalizeCountry(item.code))
-      .filter((code, index, values) => /^[A-Z]{2}$/.test(code) && values.indexOf(code) === index);
-    const old = this.country;
-    const preferred = normalizeCountry(this.defaultCountry);
-    const next = codes.includes(old) ? old : codes.includes(preferred) ? preferred : (codes[0] ?? '');
-    this.explicitCountry = next;
-    this.catalogCountryResolved = true;
-    if (old !== next) this.requestUpdate('country', old);
+    this.explicitCountry = this.resolveCountry(this.availableCountries);
   }
 
-  private applyParsed(raw: string, parsed: PhoneNumberParseResult): void {
+  private applyParsed(raw: string, parsed: LyraPhoneNumberParseResult): void {
     this.editableValue = parsed.formatted ?? raw;
     this.status = parsed.status;
     if (parsed.country) this.country = normalizeCountry(parsed.country);
@@ -551,8 +642,8 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
    *  identically-worded one: the two read the same in English today, but a locale re-wording
    *  contact-viewer's field label would otherwise silently re-label this control too. */
   private get effectivePhoneLabel(): string {
+    if (this.accessibleLabel !== null) return this.accessibleLabel;
     return (
-      this.accessibleLabel ||
       this.phoneLabel ||
       this.label ||
       this.placeholder ||
@@ -574,7 +665,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     );
   }
 
-  private countryName(row: PhoneCountry): string {
+  private countryName(row: LyraPhoneCountry): string {
     if (row.label) return row.label;
     try {
       // Shared per-locale instance: this runs once per country row on every render of the
@@ -624,14 +715,20 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
       });
     }
     if (!this.hasUpdated) {
-      this.hasLabelSlot = Array.from(this.children).some((child) => child.getAttribute('slot') === 'label');
-      this.hasHintSlot = Array.from(this.children).some((child) => child.getAttribute('slot') === 'hint');
-      this.hasErrorSlot = Array.from(this.children).some((child) => child.getAttribute('slot') === 'error');
-      this.hasCountryPrefixSlot = Array.from(this.children).some(
+      this.hasLabelSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'label');
+      this.hasHintSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'hint');
+      this.hasErrorSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'error');
+      this.hasCountryPrefixSlot = Array.from(this.children ?? []).some(
         (child) => child.getAttribute('slot') === 'country-prefix',
       );
     }
-    if (this.hasUpdated && (changed.has('countries') || changed.has('adapter'))) {
+    if (
+      !this.hasUpdated ||
+      changed.has('countries') ||
+      changed.has('adapter') ||
+      changed.has('country') ||
+      changed.has('defaultCountry')
+    ) {
       this.reconcileCountryCatalog();
     }
     if (
@@ -661,7 +758,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   }
 
   private onInput = (event: Event): void => {
-    if (this.liveDisabled) {
+    if (this.liveDisabled || this.readonly) {
       event.stopPropagation();
       return;
     }
@@ -675,7 +772,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   };
 
   private onChange = (event: Event): void => {
-    if (this.liveDisabled) {
+    if (this.liveDisabled || this.readonly) {
       event.stopPropagation();
       return;
     }
@@ -685,7 +782,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   };
 
   private onCountryChange = (event: Event): void => {
-    if (this.liveDisabled) {
+    if (this.liveDisabled || this.readonly) {
       event.stopPropagation();
       return;
     }
@@ -774,7 +871,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   setSelectionRange(
     start: number | null,
     end: number | null,
-    direction?: PhoneInputSelectionDirection,
+    direction?: LyraPhoneInputSelectionDirection,
   ): void {
     this.inputElement?.setSelectionRange(start, end, direction);
   }
@@ -796,7 +893,8 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   }
 
   override formResetCallback(): void {
-    this.country = normalizeCountry(this.defaultCountry || this.availableCountries[0]?.code || '');
+    this.explicitCountry = '';
+    this.reconcileCountryCatalog();
     super.formResetCallback();
     this.touched = false;
   }
@@ -825,7 +923,8 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
               part="country-select"
               aria-label=${this.effectiveCountryLabel}
               .value=${this.country}
-              ?disabled=${this.effectiveDisabled || rows.length === 0}
+              aria-readonly=${this.readonly ? 'true' : nothing}
+              ?disabled=${this.effectiveDisabled || this.readonly || rows.length === 0}
               @change=${this.onCountryChange}
             >
               ${rows.length === 0
@@ -866,6 +965,8 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
             aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
             ?required=${this.required}
             ?disabled=${this.effectiveDisabled}
+            ?readonly=${this.readonly}
+            ?autofocus=${this.autofocus}
             @input=${this.onInput}
             @change=${this.onChange}
             @keydown=${this.onKeyDown}

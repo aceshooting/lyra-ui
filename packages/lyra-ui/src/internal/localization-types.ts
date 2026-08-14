@@ -4,7 +4,13 @@
  * `one`/`other`, Russian `one`/`few`/`many`/`other`, Arabic all six, Japanese
  * and Chinese only `other`.
  */
-export type LyraPluralCategory = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
+export type LyraPluralCategory =
+  | 'zero'
+  | 'one'
+  | 'two'
+  | 'few'
+  | 'many'
+  | 'other';
 
 /**
  * A count-dependent message, authored as one string per plural category the
@@ -16,7 +22,9 @@ export type LyraPluralCategory = 'zero' | 'one' | 'two' | 'few' | 'many' | 'othe
  * carries a pre-formatted, locale-grouped string) run through
  * `new Intl.PluralRules(effectiveLocale).select(count)`.
  */
-export type LyraPluralMessage = Partial<Record<Exclude<LyraPluralCategory, 'other'>, string>> & {
+export type LyraPluralMessage = Partial<
+  Record<Exclude<LyraPluralCategory, 'other'>, string>
+> & {
   other: string;
 };
 
@@ -43,9 +51,22 @@ export type LyraMessageKey =
   | 'terminalHighlightLine'
   | 'schemaViewerIssueLimit'
   | 'toolParamMissingProperty'
+  | 'toolParamBooleanUnset'
+  | 'toolParamBooleanTrue'
+  | 'toolParamBooleanFalse'
+  | 'toolParamSchemaLimit'
+  | 'testResultsLimit'
+  | 'toolTimelineLimit'
+  | 'toolSelectLimit'
   | 'sequenceStripEmpty'
   | 'sequenceStripCategoryCount'
   | 'noColumns'
+  | 'dataGridColumnMenu'
+  | 'dataGridPinStart'
+  | 'dataGridPinEnd'
+  | 'dataGridUnpin'
+  | 'dataGridRowsPerPage'
+  | 'dataGridTreeLimitReached'
   | 'loadMore'
   | 'viewerSearchMatchCount'
   | 'viewerSearchNoMatches'
@@ -152,6 +173,9 @@ export type LyraMessageKey =
   | 'chartPrimaryAxis'
   | 'chartSecondaryAxis'
   | 'chartPointLabel'
+  | 'chartPointCoordinates'
+  | 'chartBubblePointCoordinates'
+  | 'chartLabeledPoint'
   | 'resetZoom'
   | 'chatSending'
   | 'chatResponding'
@@ -390,7 +414,6 @@ export type LyraMessageKey =
   | 'documentPreviewTypeImage'
   | 'documentPreviewTypeEmail'
   | 'documentPreviewTypeCalendar'
-  | 'archiveViewerUnavailable'
   | 'archiveViewerEmpty'
   | 'archiveViewerFolder'
   | 'archiveViewerFile'
@@ -407,6 +430,8 @@ export type LyraMessageKey =
   | 'fileInputRejectedType'
   | 'fileInputRejectedSize'
   | 'fileInputRejectedCount'
+  | 'fileInputRejectedRead'
+  | 'fileInputRejectedLimit'
   | 'elapsedMinutesSecondsTemplate'
   | 'graphNode'
   | 'graphLink'
@@ -426,6 +451,8 @@ export type LyraMessageKey =
   | 'heatmapDefaultRowLabel'
   | 'heatmapDefaultColLabel'
   | 'heatmapSelectedCellLabel'
+  | 'heatmapProjectionLimit'
+  | 'heatmapDecorationLimit'
   | 'inputLabel'
   | 'showPassword'
   | 'hidePassword'
@@ -704,6 +731,10 @@ export type LyraMessageKey =
   | 'qrCodeMissingLibrary'
   | 'qrCodeGenerationFailed'
   | 'mapMissingLibrary'
+  | 'mapStyleRequired'
+  | 'mapWebglUnavailable'
+  | 'mapInitializationFailed'
+  | 'mapLegend'
   | 'chartMissingLibrary'
   | 'boxPlotMissingLibrary'
   | 'graphMissingLibrary'
@@ -761,6 +792,7 @@ export type LyraMessageKey =
   | 'traceTree'
   | 'traceTreeSpanStatus'
   | 'traceTreeMetricLabel'
+  | 'spanProjectionLimit'
   | 'agentTraceFilterLabel'
   | 'spanKindAgent'
   | 'spanKindLlm'
@@ -823,6 +855,7 @@ export type LyraMessageKey =
   | 'commitCardShowFiles'
   | 'commitCardHideFiles'
   | 'stackTraceLabel'
+  | 'stackTraceLimit'
   | 'stackTraceShowFrames'
   | 'stackTraceHideFrames'
   | 'statusSkipped'
@@ -927,6 +960,7 @@ export type LyraMessageKey =
   | 'scoreTierLow'
   | 'chunkInspectorEmpty'
   | 'flowCanvasLabel'
+  | 'flowCanvasLayoutLimit'
   | 'flowCanvasSummary'
   | 'flowNode'
   | 'flowEdge'
@@ -973,7 +1007,7 @@ export type LyraMessageKey =
   | 'neighborExpand'
   | 'neighborListEmpty'
   | 'neighborGroupHeader'
-  | 'flowRunOverlayLabel'
+  | 'flowRunStatusLabel'
   | 'flowRunSummary'
   | 'flowRunStepStatus'
   | 'flowRunStatusCount'
@@ -1268,8 +1302,15 @@ export type LyraMessageKey =
   | 'flagLoadError'
   | 'moveUp'
   | 'moveDown'
+  | 'reorderMovePending'
+  | 'reorderMoveCancelled'
   | 'reorderItemMoved';
 
+/**
+ * Message-catalog input. Registration and per-instance `.strings` assignment snapshot eligible
+ * own data properties; retained catalogs are immutable, so reassign or re-register to publish a
+ * later caller-side mutation.
+ */
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, LyraMessage>> &
   Record<string, LyraMessage | undefined>;
 

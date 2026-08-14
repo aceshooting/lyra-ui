@@ -30,7 +30,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='base'] > *:not(:first-child)::before {
+  [part='summary'][hidden] {
+    display: none;
+  }
+  [part='base'] > :is([part='tokens-in'], [part='tokens-out'], [part='cost'], [part='latency']):not(:first-child)::before {
     content: '·';
     margin-inline-end: var(--lr-size-0-4em);
     opacity: 0.6;

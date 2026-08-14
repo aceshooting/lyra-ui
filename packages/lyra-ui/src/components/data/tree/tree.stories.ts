@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { TreeItem } from '../../../lyra.js';
+import type { LyraTreeNodeData } from '../../../lyra.js';
 
-const data: TreeItem[] = [
+const data: LyraTreeNodeData[] = [
   {
     id: '1',
     label: 'Root',
-    badge: 2,
+    badges: [{ text: '2' }],
     children: [
       { id: '1.1', label: 'Child A' },
       { id: '1.2', label: 'Child B' },
@@ -61,7 +61,7 @@ export const RecursivePartTheming: Story = {
             },
           ],
         },
-      ] satisfies TreeItem[]}
+      ] satisfies LyraTreeNodeData[]}
     ></lr-tree>
   `,
   play: async ({ canvasElement }) => {
@@ -119,7 +119,37 @@ export const InvalidDuplicateIds: Story = {
         { id: 'shared', label: 'Canonical shared record' },
         { id: 'shared', label: 'Conflicting shared record' },
         { id: 'unique', label: 'Unique record' },
-      ] satisfies TreeItem[]}
+      ] satisfies LyraTreeNodeData[]}
+    ></lr-tree>
+  `,
+};
+
+/** Large object trees are snapshotted and bounded on assignment. A collapsed branch does not
+ * instantiate any of its descendants; disclosure projects only the accepted prefix while keeping
+ * the declared sibling count in ARIA. */
+export const BoundedLazyProjection: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The 1,005-child input is intentionally over the 1,000-node budget. Inspect `dataTruncated`, then expand the row to see lazy descendant projection.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-tree
+      style="max-inline-size:var(--lr-size-20rem); --show-duration:0ms"
+      label="Bounded import"
+      .data=${[
+        {
+          id: 'root',
+          label: 'Imported records (1,005 declared)',
+          children: Array.from({ length: 1_005 }, (_, index) => ({
+            id: `record-${index}`,
+            label: `Record ${index + 1}`,
+          })),
+        },
+      ] satisfies LyraTreeNodeData[]}
     ></lr-tree>
   `,
 };
@@ -210,7 +240,7 @@ export const RichRows: Story = {
           label: 'C-42/24 — Commission v Example',
           description: 'Grand Chamber · Judgment · 14 July 2026',
           accessibleLabel: 'Case C-42/24, Commission v Example, Grand Chamber judgment, 14 July 2026',
-          badge: 12,
+          badges: [{ text: '12' }],
           icon: html`<svg aria-hidden="true" viewBox="0 0 16 16" width="1em" height="1em">
             <circle cx="8" cy="8" r="6" fill="currentColor"></circle>
           </svg>`,
@@ -223,7 +253,7 @@ export const RichRows: Story = {
             },
           ],
         },
-      ] satisfies TreeItem[]}
+      ] satisfies LyraTreeNodeData[]}
     ></lr-tree>
   `,
 };
@@ -262,7 +292,7 @@ export const RetintedBadges: Story = {
             { text: 'Fail', tone: 'danger' },
           ],
         },
-      ] satisfies TreeItem[]}
+      ] satisfies LyraTreeNodeData[]}
     ></lr-tree>
   `,
 };
@@ -297,7 +327,7 @@ export const ExpandCollapseAll: Story = {
  */
 export const Reorderable: Story = {
   render: () => {
-    const seed: TreeItem[] = [
+    const seed: LyraTreeNodeData[] = [
       {
         id: 'inputs',
         label: 'Inputs',
@@ -317,17 +347,17 @@ export const Reorderable: Story = {
       },
     ];
     const onReorder = (event: Event): void => {
-      const tree = event.currentTarget as HTMLElement & { data: TreeItem[] };
+      const tree = event.currentTarget as HTMLElement & { data: LyraTreeNodeData[] };
       const { parentId, fromIndex, toIndex } = (
         event as CustomEvent<{ parentId: string | null; fromIndex: number; toIndex: number }>
       ).detail;
-      const move = (list: TreeItem[]): TreeItem[] => {
+      const move = (list: LyraTreeNodeData[]): LyraTreeNodeData[] => {
         const next = [...list];
         const [moved] = next.splice(fromIndex, 1);
         next.splice(toIndex, 0, moved);
         return next;
       };
-      const apply = (list: TreeItem[]): TreeItem[] =>
+      const apply = (list: LyraTreeNodeData[]): LyraTreeNodeData[] =>
         list.map((item) =>
           item.id === parentId && item.children
             ? { ...item, children: move(item.children) }
@@ -355,8 +385,8 @@ export const Reorderable: Story = {
   },
 };
 
-const buildDeepData = (depth: number): TreeItem[] => {
-  let node: TreeItem = { id: `d${depth}`, label: `A very long deeply-nested label all the way at depth ${depth}` };
+const buildDeepData = (depth: number): LyraTreeNodeData[] => {
+  let node: LyraTreeNodeData = { id: `d${depth}`, label: `A very long deeply-nested label all the way at depth ${depth}` };
   for (let d = depth - 1; d >= 0; d--) {
     node = { id: `d${d}`, label: `Level ${d} node with a fairly long descriptive label`, children: [node] };
   }

@@ -496,7 +496,7 @@ describe('dynamic children', () => {
   });
 });
 
-it('reconciles childCount correctly through a forwarding <slot> (children.length under-counts), without a redundant explicit resync alongside it', async () => {
+it('reconciles childCount through a forwarding <slot> without scheduling state from firstUpdated', async () => {
   // Reset Lit's own dedupe set first so this doesn't silently pass just
   // because an earlier test already tripped (and thus suppressed) the exact
   // same warning string -- same guard `<lr-toast-item>`'s equivalent test
@@ -520,22 +520,12 @@ it('reconciles childCount correctly through a forwarding <slot> (children.length
     `)) as ChipGroupForwarder;
     await host.updateComplete;
     const group = host.shadowRoot!.querySelector('lr-chip-group') as LyraChipGroup;
-    // The childCount correction inside firstUpdated() schedules a second,
-    // separate update cycle (that's the whole warning this test is about) --
-    // a single `await updateComplete` only guarantees the *current* cycle
-    // finished, per Lit's own documented `while (!(await el.updateComplete))`
-    // idiom, so loop until nothing more is pending.
+    // Drain the post-update forwarded-slot reconciliation.
     while (!(await group.updateComplete)) {
       /* keep draining until settled */
     }
 
-    // The corrected count (3, not the under-counted 1 `this.children.length`
-    // sees through the forwarding `<slot>`) must actually reach rendered
-    // output -- confirming `updated()`'s own resync (which runs regardless)
-    // is the only thing doing that work now that the redundant explicit
-    // `syncChildVisibility()` call is gone from `firstUpdated()`. The
-    // childCount reassignment causing exactly one extra render pass here is
-    // the accepted structural trade-off noted in `firstUpdated()`'s comment.
+    // The corrected count (3, not the under-counted forwarding slot) reaches rendered output.
     const indicator = group.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLElement;
     expect((indicator) != null).to.equal(true);
     expect(indicator.textContent!.trim()).to.equal('+1');
@@ -546,7 +536,55 @@ it('reconciles childCount correctly through a forwarding <slot> (children.length
   }
 
   const messages = calls.flat().map(String);
-  expect(messages.some((m) => m.includes('scheduled an update'))).to.be.true;
+  expect(messages.some((m) => m.includes('scheduled an update'))).to.be.false;
+});
+
+it('does not charge author-hidden or inert children against max-visible capacity', async () => {
+  const el = (await fixture(html`
+    <lr-chip-group max-visible="2">
+      <lr-chip>A</lr-chip>
+      <lr-chip hidden>author hidden</lr-chip>
+      <lr-chip inert>inert</lr-chip>
+      <lr-chip>B</lr-chip>
+      <lr-chip>C</lr-chip>
+    </lr-chip-group>
+  `)) as LyraChipGroup;
+  await settleChipGroup(el);
+  const children = Array.from(el.children) as HTMLElement[];
+  const indicator = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
+
+  expect(children.map((child) => child.hidden)).to.deep.equal([false, true, false, false, true]);
+  expect(indicator.textContent!.trim()).to.equal('+1');
+
+  children[2]!.removeAttribute('inert');
+  await settleChipGroup(el);
+  expect(children.map((child) => child.hidden)).to.deep.equal([false, true, false, true, true]);
+  expect(indicator.textContent!.trim()).to.equal('+2');
+});
+
+it('uses a real hidden attribute for non-HTMLElement assigned children and restores it', async () => {
+  const el = (await fixture(html`
+    <lr-chip-group max-visible="1">
+      <lr-chip>A</lr-chip>
+      <svg viewBox="0 0 10 10" aria-label="decorative mark"><circle cx="5" cy="5" r="4"></circle></svg>
+    </lr-chip-group>
+  `)) as LyraChipGroup;
+  await settleChipGroup(el);
+  const svg = el.querySelector('svg')!;
+  expect(svg.hasAttribute('hidden')).to.be.true;
+
+  el.remove();
+  expect(svg.hasAttribute('hidden')).to.be.false;
+});
+
+it('keeps the overflow indicator at the shared minimum target size', async () => {
+  const el = (await fixture(html`
+    <lr-chip-group max-visible="1"><lr-chip>A</lr-chip><lr-chip>B</lr-chip></lr-chip-group>
+  `)) as LyraChipGroup;
+  const indicator = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
+  const rect = indicator.getBoundingClientRect();
+  expect(rect.width).to.be.at.least(40);
+  expect(rect.height).to.be.at.least(40);
 });
 
 it('localizes the overflow-toggle aria-label and collapsed text via this.localize(), not hardcoded English', async () => {

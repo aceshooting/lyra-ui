@@ -3,19 +3,19 @@ import './sequence-strip.js';
 import type { LyraSequenceStrip } from './sequence-strip.js';
 
 const categories = [
-  { key: 'text', color: '#4f46e5', label: 'Text' },
-  { key: 'tool', color: '#16a34a', label: 'Tool' },
+  { id: 'text', color: '#4f46e5', label: 'Text' },
+  { id: 'tool', color: '#16a34a', label: 'Tool' },
 ];
 const items = [
-  { id: '1', category: 'text' },
-  { id: '2', category: 'tool', marker: true },
-  { id: '3', category: 'text' },
+  { id: '1', categoryId: 'text' },
+  { id: '2', categoryId: 'tool', marker: true },
+  { id: '3', categoryId: 'text' },
 ];
 
 it('rejects declaration-breaking and url category paint values', async () => {
   const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip show-legend></lr-sequence-strip>`);
-  el.items = [{ id: '1', category: 'bad' }];
-  el.categories = [{ key: 'bad', color: 'red;position:fixed', label: 'Bad' }];
+  el.items = [{ id: '1', categoryId: 'bad' }];
+  el.categories = [{ id: 'bad', color: 'red;position:fixed', label: 'Bad' }];
   await el.updateComplete;
   const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
   const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
@@ -23,7 +23,7 @@ it('rejects declaration-breaking and url category paint values', async () => {
   expect(cell.style.backgroundColor).to.equal('transparent');
   expect(swatch.style.position).to.equal('');
 
-  el.categories = [{ key: 'bad', color: 'var(--lr-color-brand)', label: 'Good' }];
+  el.categories = [{ id: 'bad', color: 'var(--lr-color-brand)', label: 'Good' }];
   await el.updateComplete;
   expect((el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement).style.backgroundColor).to.equal(
     'var(--lr-color-brand)',
@@ -64,7 +64,7 @@ it('renders one cell per item, colored by its category', async () => {
   expect(cells[0].style.backgroundColor).to.not.equal(cells[1].style.backgroundColor);
 });
 
-it('densely contains 200 and 500 items at 320px in LTR and RTL without sacrificing roving focus', async () => {
+it('bounds the DOM window for 200 and 500 items at 320px without sacrificing full roving focus', async () => {
   for (const count of [200, 500] as const) {
     for (const direction of ['ltr', 'rtl'] as const) {
       const wrapper = (await fixture(html`
@@ -76,14 +76,14 @@ it('densely contains 200 and 500 items at 320px in LTR and RTL without sacrifici
       el.categories = categories;
       el.items = Array.from({ length: count }, (_, index) => ({
         id: `item-${index + 1}`,
-        category: index % 2 === 0 ? 'text' : 'tool',
+        categoryId: index % 2 === 0 ? 'text' : 'tool',
         label: `Item ${index + 1}`,
       }));
       await el.updateComplete;
       const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-      const cells = [...base.querySelectorAll<HTMLElement>('[part="cell"]')];
+      let cells = [...base.querySelectorAll<HTMLElement>('[part="cell"]')];
 
-      expect(cells.length, `${count} ${direction} cell count`).to.equal(count);
+      expect(cells.length, `${count} ${direction} cell count`).to.equal(Math.min(count, 200));
       expect(wrapper.scrollWidth, `${count} ${direction} wrapper`).to.be.at.most(wrapper.clientWidth + 1);
       expect(base.scrollWidth, `${count} ${direction} strip`).to.be.at.most(base.clientWidth + 1);
       expect(
@@ -94,12 +94,42 @@ it('densely contains 200 and 500 items at 320px in LTR and RTL without sacrifici
       cells[0]!.focus();
       cells[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
       await el.updateComplete;
+      cells = [...base.querySelectorAll<HTMLElement>('[part="cell"]')];
       expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['itemId']).to.equal(`item-${count}`);
       expect(cells.filter((cell) => cell.tabIndex === 0).map((cell) => cell.dataset['itemId'])).to.deep.equal([
         `item-${count}`,
       ]);
+      expect(cells.at(-1)?.getAttribute('aria-posinset')).to.equal(String(count));
+      expect(cells.at(-1)?.getAttribute('aria-setsize')).to.equal(String(count));
+      if (count > 200) {
+        expect(el.shadowRoot!.querySelector('[part="window-range"]')?.textContent).to.contain('500');
+      }
     }
   }
+});
+
+it('snapshots readonly models and enforces first-wins unique item/category ids', async () => {
+  const el = (await fixture(html`<lr-sequence-strip show-legend></lr-sequence-strip>`)) as LyraSequenceStrip;
+  const sourceItems = [
+    { id: 'same', categoryId: 'first', label: 'First item' },
+    { id: 'same', categoryId: 'second', label: 'Duplicate item' },
+  ];
+  const sourceCategories = [
+    { id: 'first', color: '#111', label: 'First category' },
+    { id: 'first', color: '#222', label: 'Duplicate category' },
+  ];
+  el.items = sourceItems;
+  el.categories = sourceCategories;
+  sourceItems[0]!.label = 'Mutated caller value';
+  sourceCategories[0]!.label = 'Mutated caller category';
+  await el.updateComplete;
+
+  expect(el.items.length).to.equal(1);
+  expect(el.categories.length).to.equal(1);
+  expect(Object.isFrozen(el.items)).to.equal(true);
+  expect(Object.isFrozen(el.items[0]!)).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="cell"]')!.getAttribute('aria-label')).to.equal('First item');
+  expect(el.shadowRoot!.querySelector('[part="legend-label"]')!.textContent?.trim()).to.equal('First category');
 });
 
 it('renders a marker on cells whose item sets marker: true, and none otherwise', async () => {
@@ -143,6 +173,22 @@ it('formats generated category counts with the effective locale', async () => {
   expect(label).to.include(`Tool: ${number.format(1)}`);
 });
 
+it('joins generated clauses with the effective locale list punctuation', async () => {
+  for (const locale of ['ar', 'ja'] as const) {
+    const el = (await fixture(html`<lr-sequence-strip locale=${locale}></lr-sequence-strip>`)) as LyraSequenceStrip;
+    el.items = items;
+    el.categories = categories;
+    await el.updateComplete;
+    const clauses = [
+      el.localize('sequenceStripCategoryCount', undefined, { label: 'Text', count: new Intl.NumberFormat(locale).format(2), pluralCount: 2 }),
+      el.localize('sequenceStripCategoryCount', undefined, { label: 'Tool', count: new Intl.NumberFormat(locale).format(1), pluralCount: 1 }),
+    ];
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+      new Intl.ListFormat(locale, { style: 'long', type: 'unit' }).format(clauses),
+    );
+  }
+});
+
 it('uses accessibleLabel verbatim instead of the auto-generated summary when set', async () => {
   const el = (await fixture(
     html`<lr-sequence-strip accessible-label="Custom summary"></lr-sequence-strip>`,
@@ -153,7 +199,7 @@ it('uses accessibleLabel verbatim instead of the auto-generated summary when set
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Custom summary');
 });
 
-it('lets the standard host aria-label dynamically override the component alias and summary', async () => {
+it('keeps a host aria-label distinct from the internal list name', async () => {
   const el = (await fixture(html`
     <lr-sequence-strip accessible-label="Component alias" aria-label="Host label"></lr-sequence-strip>
   `)) as LyraSequenceStrip;
@@ -162,14 +208,17 @@ it('lets the standard host aria-label dynamically override the component alias a
   await el.updateComplete;
   const renderedLabel = (): string | null =>
     el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label');
-  expect(renderedLabel()).to.equal('Host label');
+  expect(el.getAttribute('aria-label')).to.equal('Host label');
+  expect(renderedLabel()).to.equal('Component alias');
 
   el.setAttribute('aria-label', 'Updated host label');
   await el.updateComplete;
-  expect(renderedLabel()).to.equal('Updated host label');
+  expect(el.getAttribute('aria-label')).to.equal('Updated host label');
+  expect(renderedLabel()).to.equal('Component alias');
 
   el.removeAttribute('aria-label');
   await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.be.null;
   expect(renderedLabel()).to.equal('Component alias');
 });
 
@@ -202,8 +251,8 @@ it('honors a .strings override for the per-category summary clause in the render
 
 describe('hover tooltip', () => {
   const labeledItems = [
-    { id: '1', category: 'text', label: 'Turn 1: text' },
-    { id: '2', category: 'tool', label: 'Turn 2: tool' },
+    { id: '1', categoryId: 'text', label: 'Turn 1: text' },
+    { id: '2', categoryId: 'tool', label: 'Turn 2: tool' },
   ];
 
   it('hides the tooltip until a cell is hovered', async () => {
@@ -280,8 +329,8 @@ describe('hover tooltip', () => {
     first.focus();
     first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     el.items = [
-      { id: 'replacement-a', category: 'text', label: 'Replacement A' },
-      { id: 'replacement-b', category: 'tool', label: 'Replacement B' },
+      { id: 'replacement-a', categoryId: 'text', label: 'Replacement A' },
+      { id: 'replacement-b', categoryId: 'tool', label: 'Replacement B' },
     ];
     await el.updateComplete;
 
@@ -365,7 +414,7 @@ describe('hover tooltip', () => {
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden).to.equal(true);
 
-    el.items = [{ id: 'fresh', category: 'text', label: 'Fresh' }];
+    el.items = [{ id: 'fresh', categoryId: 'text', label: 'Fresh' }];
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden).to.equal(true);
     expect(el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!.tabIndex).to.equal(0);
@@ -449,10 +498,10 @@ describe('category legend', () => {
   it('keys the whole scheme: an unused category still renders, an uncategorized item adds nothing', async () => {
     const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
     el.showLegend = true;
-    el.categories = [...categories, { key: 'mixed', color: '#b45309', label: 'Mixed' }];
+    el.categories = [...categories, { id: 'mixed', color: '#b45309', label: 'Mixed' }];
     el.items = [
-      { id: '1', category: 'text' },
-      { id: '2', category: 'unknown' }, // matches no category entry
+      { id: '1', categoryId: 'text' },
+      { id: '2', categoryId: 'unknown' }, // matches no category entry
     ];
     await el.updateComplete;
     expect(el.hasAttribute('show-legend')).to.be.true; // reflected
@@ -490,9 +539,9 @@ describe('category legend', () => {
     el.items = items;
     el.categories = [
       ...categories,
-      { key: 'mixed', color: '#b45309', label: 'Mixed responses and tool calls' },
-      { key: 'sub', color: '#0e7490', label: 'Dispatched to a subagent' },
-      { key: 'err', color: '#be123c', label: 'Errored tool invocation' },
+      { id: 'mixed', color: '#b45309', label: 'Mixed responses and tool calls' },
+      { id: 'sub', color: '#0e7490', label: 'Dispatched to a subagent' },
+      { id: 'err', color: '#be123c', label: 'Errored tool invocation' },
     ];
     await el.updateComplete;
     const entries = [...el.shadowRoot!.querySelectorAll('[part="legend-item"]')] as HTMLElement[];
@@ -514,7 +563,7 @@ describe('category legend', () => {
 });
 
 describe('marker legend entry', () => {
-  const threeCategories = [...categories, { key: 'mixed', color: '#b45309', label: 'Mixed' }];
+  const threeCategories = [...categories, { id: 'mixed', color: '#b45309', label: 'Mixed' }];
 
   async function strip(template: ReturnType<typeof html>): Promise<LyraSequenceStrip> {
     const el = (await fixture(template)) as LyraSequenceStrip;
@@ -602,7 +651,7 @@ describe('marker legend entry', () => {
     const el = (await fixture(
       html`<lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>`,
     )) as LyraSequenceStrip;
-    el.items = [{ id: '1', category: 'text' }];
+    el.items = [{ id: '1', categoryId: 'text' }];
     el.categories = categories;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Text: 1');

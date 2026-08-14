@@ -36,6 +36,16 @@ it('round-trips ISO parse/format', () => {
   expect(parseISO('')).to.equal(null);
 });
 
+it('round-trips years 0000, 0001, 0099, 0100, and 9999 without the Date 1900 remap', () => {
+  for (const iso of ['0000-02-29', '0001-01-01', '0099-12-31', '0100-01-01', '9999-12-31']) {
+    const parsed = parseISO(iso);
+    expect(parsed, iso).to.not.equal(null);
+    expect(formatISO(parsed!), iso).to.equal(iso);
+  }
+  expect(parseISO('0001-02-29')).to.equal(null);
+  expect(formatISO(monthMatrix(99, 11, 0)[0][0])).to.match(/^0099-/);
+});
+
 it('rejects calendar-invalid dates instead of letting them roll over to the next month', () => {
   // JS Date silently normalizes Feb 30 -> Mar 2, month 13 -> next January,
   // etc. -- parseISO must catch that instead of returning the rolled-over

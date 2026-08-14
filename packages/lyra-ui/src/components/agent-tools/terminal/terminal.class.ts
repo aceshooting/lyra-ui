@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import {
   Announcer,
   acquireAnnouncementSink,
@@ -13,6 +13,7 @@ import { createAnsiParser, type AnsiSegment, type AnsiStyles } from '../../../in
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import { firstByIdentity } from '../collection-identity.js';
 import type {
   LyraAnchor,
   LyraHighlight,
@@ -24,18 +25,23 @@ import { styles } from './terminal.styles.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type { VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import {
+  writeClipboardText,
+  type LyraClipboardWriteFailure,
+  type LyraClipboardWriteSuccess,
+} from '../../../internal/clipboard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_terminalDownload, LYRA_DEFAULT_terminalHighlightLine, LYRA_DEFAULT_terminalLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_terminalDownload, LYRA_DEFAULT_terminalHighlightLine, LYRA_DEFAULT_terminalLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export interface TerminalCell {
+interface TerminalCell {
   char: string;
   styles: AnsiStyles;
 }
 
-export interface TerminalLine {
+interface TerminalLine {
   /** Absolute (1-based) line number since the last `clear()`/`content` assignment. Survives
    *  scrollback trimming as a stable identity even though the line itself may later be trimmed. */
   number: number;
@@ -59,6 +65,13 @@ const ANNOUNCE_THROTTLE_MS = 10;
 /** A search match currently identifies a line, not a character range. Keep occurrence counting
  * bounded so a single adversarial line cannot allocate an unbounded navigation array. */
 const MAX_SEARCH_MATCHES = 10_000;
+/** Total input and retained-cell ceilings. These bound work even when output contains no newline,
+ * contains only tabs/newlines, or supplies an arbitrarily large finite `maxScrollback`. */
+const MAX_INPUT_CHARACTERS = 1_000_000;
+const MAX_CELLS_PER_LINE = 20_000;
+const MAX_RETAINED_CELLS = 200_000;
+const MAX_SCROLLBACK_LINES = 10_000;
+const SCROLLBACK_PRUNE_BATCH = 256;
 
 // Each tone reads its own scoped cssprop (falling back to today's exact shared token) rather than
 // the bare shared --lr-color-*-quiet token directly -- `accent` in particular would otherwise
@@ -119,7 +132,9 @@ interface SearchState {
 }
 
 export interface LyraTerminalEventMap {
-  'lr-copy': CustomEvent<{ text: string }>;
+  'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
+  'lr-error': CustomEvent<undefined>;
+  'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   'lr-download': CustomEvent<{ filename: string }>;
   'lr-follow-change': CustomEvent<{ following: boolean }>;
   'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
@@ -138,14 +153,17 @@ export interface LyraTerminalEventMap {
  * `lr-result-card`, `lr-stack-trace`, `lr-task-list`, and `lr-thinking-panel` expose.
  *
  * @customElement lr-terminal
- * @event lr-copy - `detail: { text }` — the copy button copied the SGR-stripped plain text.
+ * @event lr-copy - `detail: { ok: true, text }` — the plain-text clipboard write completed.
+ * @event lr-error - The clipboard write failed; generic no-detail notification.
+ * @event lr-copy-error - `detail: { ok: false, text, reason, error }` — typed clipboard failure.
  * @event lr-download - `detail: { filename }` — the download button was activated. Cancelable: by
  *   default this component itself builds an in-memory Blob of the current plain-text log and
  *   triggers a browser download via a synthetic `<a download>` click; a host that calls
  *   `preventDefault()` on this event suppresses that built-in download entirely and can substitute
  *   its own handling (e.g. routing a large log through a server-side export instead), mirroring
  *   `<lr-media-card>`'s `lr-open` convention.
- * @event lr-follow-change - `detail: { following }` — stick-to-bottom engaged/disengaged.
+ * @event lr-follow-change - `detail: { following }` — a user viewport/jump action changed
+ *   stick-to-bottom. Direct `follow` assignments and imperative navigation do not echo an event.
  * @event lr-search-change - `detail: { query, matchCount, activeIndex }`.
  * @event lr-highlight-activate - `detail: { id }` — a highlighted line was clicked/activated.
  * @event lr-text-select - `detail: { text, anchor, rects }` — fires on pointerup after a text
@@ -160,6 +178,14 @@ export interface LyraTerminalEventMap {
  *   Rendered through `<lr-virtual-list>`'s `renderItem`, so it lives inside that element's own
  *   shadow root rather than this component's -- this component's own stylesheet reaches it via
  *   `lr-virtual-list::part(line)`, one hop of the standard CSS Shadow Parts selector.
+ * @csspart line-interactive - Alias on a line that owns an activatable highlight.
+ * @csspart line-highlight-accent - Alias on an accent-highlighted line.
+ * @csspart line-highlight-success - Alias on a success-highlighted line.
+ * @csspart line-highlight-warning - Alias on a warning-highlighted line.
+ * @csspart line-highlight-danger - Alias on a danger-highlighted line.
+ * @csspart line-highlight-neutral - Alias on a neutral-highlighted line.
+ * @csspart line-match - Alias on a line containing a search match.
+ * @csspart line-active-match - Alias on the active search-match line.
  * @csspart jump-to-latest - The pill shown while `follow` is disengaged and new output has arrived.
  * @csspart announcer - The visually-hidden, `aria-hidden` mirror of the text last announced while
  *   `announce-output` is set. The announcement itself lands in the shared light-DOM region
@@ -202,6 +228,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     accessibleLabelSeparator: LYRA_DEFAULT_accessibleLabelSeparator,
     copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
+    copyFailed: LYRA_DEFAULT_copyFailed,
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
     jumpToLatest: LYRA_DEFAULT_jumpToLatest,
     terminalDownload: LYRA_DEFAULT_terminalDownload,
@@ -213,8 +240,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
   @property() content = '';
-  /** Line-count scrollback buffer limit. NaN/negative/oversized (e.g. `Infinity`) all normalize
-   *  through `finiteCount`, with a floor of 1 -- see `appendLine()`. */
+  /** Line-count scrollback buffer limit. NaN/negative/oversized (e.g. `Infinity`) normalize to a
+   *  1..10,000 range; total retained cells and cells per line have independent hard ceilings. */
   @property({ type: Number, attribute: 'max-scrollback' }) maxScrollback = 5000;
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) wrap = true;
@@ -223,8 +250,14 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   @property() filename = 'terminal.log';
   @property({ type: Boolean, attribute: 'announce-output' }) announceOutput = false;
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
+  /** Line-range highlights keyed by stable id. Duplicate ids normalize first-wins before range
+   *  ownership, activation, and anchor lookup. */
   @property({ attribute: false }) highlights: LyraHighlight[] = [];
   @property({ attribute: false }) activeHighlightId: string | null = null;
+
+  private get normalizedHighlights(): LyraHighlight[] {
+    return firstByIdentity(Array.isArray(this.highlights) ? this.highlights : [], (highlight) => highlight.id);
+  }
 
   /** Tightens the toolbar's padding/gap and each rendered line's inline padding for a terminal
    *  embedded in an already-padded transcript row -- same convention as `lr-task-list`'s and
@@ -242,18 +275,22 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   /** Feature-detectable capability mirror -- the same pattern `DocumentAnchorTarget`-adopting
    *  viewers use for their own `anchorKinds` field. This component isn't document-viewer-registry-
    *  routed, so it has no registry `capabilities.anchors` entry to declare this on instead. */
-  readonly anchorKinds: LyraAnchor['kind'][] = ['line-range'];
+  readonly anchorKinds = ['line-range'] as const satisfies readonly LyraAnchor['kind'][];
 
   @state() private lines: TerminalLine[] = [];
   @state() private scrollTargetLineNumber: number | null = null;
-  @state() private justCopied = false;
+  @state() private copyStatus: 'rest' | 'success' | 'error' = 'rest';
 
   private buffer: TerminalLine[] = [];
+  private retainedCellCount = 0;
   private lineSeq = 0;
   private column = 0;
+  private appliedContent = '';
   private readonly ansiParser = createAnsiParser();
   private copyTimeoutId?: number;
   private copyTimeoutWindow?: Window;
+  private copyTimeoutGeneration?: number;
+  private copyGeneration = 0;
   /** Plain text appended since the last announcer flush -- coalesced so a burst of small
    *  `write()` chunks (a common line-by-line stdout pattern) becomes one throttled announcement
    *  instead of one per chunk. Reset in the announcer's own `onFlush` callback below, so it always
@@ -292,14 +329,15 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.clearCopyTimeout();
-    this.justCopied = false;
+    this.resetCopyFeedback();
     this.cancelPendingAnnouncement();
     this.sink?.release();
     this.sink = undefined;
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.resetCopyFeedback();
     const ownerWindow = this.ownerDocument.defaultView;
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
   }
@@ -312,11 +350,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('content')) {
-      const previousSearch = this.searchState();
-      this.cancelPendingAnnouncement();
-      this.resetBuffer();
-      this.writeInternal(this.content, false);
-      this.emitSearchChangeIfChanged(previousSearch);
+      this.commitPendingContent();
     }
     if (changed.has('maxScrollback')) this.trimScrollback();
     if (changed.has('announceOutput') && !this.announceOutput) this.cancelPendingAnnouncement();
@@ -327,6 +361,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   private resetBuffer(): void {
     this.ansiParser.reset();
     this.buffer = [];
+    this.retainedCellCount = 0;
     this.lineSeq = 0;
     this.column = 0;
     this.lines = [];
@@ -338,18 +373,28 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private appendLine(): void {
     this.buffer.push({ number: ++this.lineSeq, cells: [] });
-    this.trimScrollback(false);
+    const max = this.effectiveMaxScrollback();
+    if (this.buffer.length - max >= SCROLLBACK_PRUNE_BATCH) this.trimScrollback(false);
     this.column = 0;
+  }
+
+  private effectiveMaxScrollback(): number {
+    return Math.max(1, finiteCount(this.maxScrollback, 5000, MAX_SCROLLBACK_LINES));
   }
 
   private trimScrollback(notifySearch = true): void {
     const previousSearch = this.searchState();
-    const max = Math.max(1, finiteCount(this.maxScrollback, 5000));
-    let trimmed = false;
-    while (this.buffer.length > max) {
-      this.buffer.shift();
-      trimmed = true;
+    const max = this.effectiveMaxScrollback();
+    const removeCount = Math.max(0, this.buffer.length - max);
+    const removed = removeCount > 0 ? this.buffer.splice(0, removeCount) : [];
+    for (const line of removed) this.retainedCellCount -= line.cells.length;
+    let resourceTrimmed = false;
+    while (this.retainedCellCount > MAX_RETAINED_CELLS && this.buffer.length > 1) {
+      const line = this.buffer.shift();
+      if (line) this.retainedCellCount -= line.cells.length;
+      resourceTrimmed = true;
     }
+    const trimmed = removed.length > 0 || resourceTrimmed;
     if (!trimmed) return;
     this.lines = [...this.buffer];
     if (this.searchQuery) this.recomputeSearchMatches();
@@ -365,13 +410,18 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   private putChar(ch: string, styles: AnsiStyles): void {
     if (this.buffer.length === 0) this.appendLine();
     const line = this.buffer[this.buffer.length - 1]!; // safe: appendLine() above guarantees ≥1 line
+    if (this.column >= MAX_CELLS_PER_LINE) return;
     if (this.column < line.cells.length) {
       line.cells[this.column] = { char: ch, styles };
     } else {
-      while (line.cells.length < this.column) line.cells.push({ char: ' ', styles: EMPTY_CELL_STYLES });
+      const before = line.cells.length;
+      while (line.cells.length < this.column && line.cells.length < MAX_CELLS_PER_LINE) {
+        line.cells.push({ char: ' ', styles: EMPTY_CELL_STYLES });
+      }
       line.cells.push({ char: ch, styles });
+      this.retainedCellCount += line.cells.length - before;
     }
-    this.column++;
+    this.column = Math.min(MAX_CELLS_PER_LINE, this.column + 1);
   }
 
   private applyChunk(text: string, styles: AnsiStyles): void {
@@ -379,30 +429,39 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
       if (ch === '\n') this.appendLine();
       else if (ch === '\r') this.column = 0;
       else if (ch === '\b') this.column = Math.max(0, this.column - 1);
-      else if (ch === '\t') this.column = (Math.floor(this.column / 8) + 1) * 8;
+      else if (ch === '\t') this.column = Math.min(MAX_CELLS_PER_LINE, (Math.floor(this.column / 8) + 1) * 8);
       else this.putChar(ch, styles);
     }
   }
 
   private writeInternal(raw: string, notifySearch = true): void {
     const previousSearch = this.searchState();
-    if (raw !== '') {
-      const segments = this.ansiParser.push(raw);
-      for (const seg of segments) this.applyChunk(seg.text, seg.styles);
+    const previousText = this.getPlainText();
+    const boundedRaw = raw.slice(0, MAX_INPUT_CHARACTERS);
+    if (boundedRaw !== '') {
+      const segments = this.ansiParser.push(boundedRaw);
+      for (const seg of segments) {
+        this.applyChunk(seg.text, seg.styles);
+      }
     }
+    this.trimScrollback(false);
     this.lines = [...this.buffer];
     if (this.searchQuery) this.recomputeSearchMatches();
     if (this.follow) {
       const last = this.buffer[this.buffer.length - 1];
       this.scrollTargetLineNumber = last ? last.number : null;
     }
-    if (this.hasUpdated && this.announceOutput && raw !== '') {
+    const nextText = this.getPlainText();
+    const visibleAnnouncement = nextText.startsWith(previousText)
+      ? nextText.slice(previousText.length)
+      : nextText;
+    if (this.hasUpdated && this.announceOutput && visibleAnnouncement !== '') {
       // Always hand the *cumulative* not-yet-spoken text to announce() -- Announcer.announce()
       // overwrites (never appends) its own pending text, and only the onFlush callback above
       // (fired at most once per throttle window) clears pendingAnnounceText, so a burst of small
       // write() chunks inside one throttle window still ends up fully spoken as a single
       // announcement instead of losing every chunk but the last.
-      this.pendingAnnounceText += (this.pendingAnnounceText ? '\n' : '') + raw;
+      this.pendingAnnounceText += (this.pendingAnnounceText ? '\n' : '') + visibleAnnouncement;
       this.announcer.announce(this.pendingAnnounceText);
     }
     if (notifySearch) this.emitSearchChangeIfChanged(previousSearch);
@@ -412,12 +471,33 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
    *  partial sequences internally up to its 4,096-character ceiling, then drops an unterminated
    *  sequence and resumes from a clean boundary on the next write. */
   write(chunk: string): void {
-    this.writeInternal(chunk);
+    this.commitPendingContent();
+    this.writeInternal(typeof chunk === 'string' ? chunk : String(chunk));
+  }
+
+  /** Synchronously replaces the buffer and the reactive `content` source. This is the explicit
+   *  commit-order primitive for code that mixes replacement with same-turn `write()`/`clear()`. */
+  replace(content: string): void {
+    this.content = typeof content === 'string' ? content : String(content);
+    this.commitPendingContent();
+  }
+
+  private commitPendingContent(): void {
+    if (this.appliedContent === this.content) return;
+    const previousSearch = this.searchState();
+    this.cancelPendingAnnouncement();
+    this.resetBuffer();
+    this.appliedContent = this.content;
+    this.writeInternal(this.content, false);
+    this.emitSearchChangeIfChanged(previousSearch);
   }
 
   clear(): void {
     const previousSearch = this.searchState();
     this.cancelPendingAnnouncement();
+    // `clear()` wins over a pending reactive replacement in the same turn; willUpdate sees this
+    // marker and cannot resurrect the just-cleared content.
+    this.appliedContent = this.content;
     this.resetBuffer();
     this.emitSearchChangeIfChanged(previousSearch);
   }
@@ -427,14 +507,15 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   }
 
   scrollToBottom(): void {
+    this.follow = true;
     const last = this.buffer[this.buffer.length - 1];
     this.scrollTargetLineNumber = last ? last.number : null;
   }
 
   private jumpToLatest = (): void => {
-    this.follow = true;
-    this.emit('lr-follow-change', { following: true });
+    const changed = !this.follow;
     this.scrollToBottom();
+    if (changed) this.emit('lr-follow-change', { following: true });
   };
 
   // --- Search ------------------------------------------------------------
@@ -491,7 +572,6 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     if (!match) return;
     if (this.follow) {
       this.follow = false;
-      this.emit('lr-follow-change', { following: false });
     }
     this.scrollTargetLineNumber = match.lineNumber;
   }
@@ -562,10 +642,11 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   } {
     const perLine = new Map<number, LyraHighlight>();
     const owners = new Map<LyraHighlight, number>();
-    if (this.lines.length === 0 || this.highlights.length === 0) return { perLine, owners };
+    const highlights = this.normalizedHighlights;
+    if (this.lines.length === 0 || highlights.length === 0) return { perLine, owners };
     const minLine = this.lines[0]!.number;
     const maxLine = this.lines[this.lines.length - 1]!.number;
-    for (const highlight of this.highlights) {
+    for (const highlight of highlights) {
       if (highlight.anchor.kind !== 'line-range') continue;
       const start = Math.max(highlight.anchor.start, minLine);
       const end = Math.min(highlight.anchor.end ?? highlight.anchor.start, maxLine);
@@ -593,7 +674,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
     let start: number | undefined;
     if (typeof target === 'string') {
-      const highlight = this.highlights.find((h) => h.id === target);
+      const highlight = this.normalizedHighlights.find((h) => h.id === target);
       if (highlight?.anchor.kind === 'line-range') start = highlight.anchor.start;
     } else if (target.kind === 'line-range') {
       start = target.start;
@@ -603,7 +684,6 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     if (!found) return false;
     if (this.follow) {
       this.follow = false;
-      this.emit('lr-follow-change', { following: false });
     }
     this.scrollTargetLineNumber = start;
     await this.updateComplete;
@@ -613,29 +693,64 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   // --- Copy / download ------------------------------------------------------
 
   private onCopy = (): void => {
+    void this.copyOutput();
+  };
+
+  private async copyOutput(): Promise<void> {
     const text = this.getPlainText();
-    const ownerWindow = this.ownerDocument.defaultView;
-    try {
-      void ownerWindow?.navigator.clipboard?.writeText(text)?.catch(() => {});
-    } catch {
-      // best-effort
-    }
-    this.emit('lr-copy', { text });
-    this.justCopied = true;
+    const ownerWindow = this.isConnected ? this.ownerDocument.defaultView : null;
+    const generation = ++this.copyGeneration;
     this.clearCopyTimeout();
-    if (!ownerWindow) return;
+    this.copyStatus = 'rest';
+    const outcome = await writeClipboardText(ownerWindow, text);
+    if (!ownerWindow || !this.isCurrentCopy(generation, ownerWindow)) return;
+    if (!outcome.ok) {
+      this.showCopyStatus('error', generation, ownerWindow);
+      this.emit('lr-error');
+      this.emit('lr-copy-error', outcome);
+      return;
+    }
+    this.showCopyStatus('success', generation, ownerWindow);
+    this.emit('lr-copy', outcome);
+  }
+
+  private isCurrentCopy(generation: number, ownerWindow: Window): boolean {
+    return this.isConnected
+      && generation === this.copyGeneration
+      && this.ownerDocument.defaultView === ownerWindow;
+  }
+
+  private showCopyStatus(status: 'success' | 'error', generation: number, ownerWindow: Window): void {
+    this.copyStatus = status;
+    this.clearCopyTimeout();
     this.copyTimeoutWindow = ownerWindow;
+    this.copyTimeoutGeneration = generation;
     this.copyTimeoutId = ownerWindow.setTimeout(() => {
+      if (
+        this.copyTimeoutWindow !== ownerWindow
+        || this.copyTimeoutGeneration !== generation
+        || generation !== this.copyGeneration
+        || !this.isConnected
+        || this.ownerDocument.defaultView !== ownerWindow
+      ) return;
       this.copyTimeoutId = undefined;
       this.copyTimeoutWindow = undefined;
-      this.justCopied = false;
+      this.copyTimeoutGeneration = undefined;
+      this.copyStatus = 'rest';
     }, 1500);
-  };
+  }
+
+  private resetCopyFeedback(): void {
+    this.copyGeneration += 1;
+    this.clearCopyTimeout();
+    this.copyStatus = 'rest';
+  }
 
   private clearCopyTimeout(): void {
     if (this.copyTimeoutId !== undefined) this.copyTimeoutWindow?.clearTimeout(this.copyTimeoutId);
     this.copyTimeoutId = undefined;
     this.copyTimeoutWindow = undefined;
+    this.copyTimeoutGeneration = undefined;
   }
 
   private cancelPendingAnnouncement(): void {
@@ -777,9 +892,16 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
           lineLabel,
         ].join(this.localize('accessibleLabelSeparator'))
       : lineLabel;
+    const stateParts = [
+      'line',
+      highlightOwner ? 'line-interactive' : '',
+      tone ? `line-highlight-${tone}` : '',
+      isMatchLine ? 'line-match' : '',
+      isActiveMatchLine ? 'line-active-match' : '',
+    ].filter(Boolean).join(' ');
     return html`
       <div
-        part="line"
+        part=${stateParts}
         dir="ltr"
         style=${styleMap(this.lineStateStyle(highlight, highlightOwner !== undefined, isMatchLine, isActiveMatchLine))}
         data-line-number=${line.number}
@@ -799,20 +921,23 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private segmentStyle(s: AnsiStyles): Record<string, string> {
     const fg = sanitizeCssColor(s.fg) ?? 'var(--lr-color-text)';
-    const bg = sanitizeCssColor(s.bg) ?? 'transparent';
+    const bg = sanitizeCssColor(s.bg);
+    const defaultSurface = 'var(--lr-terminal-surface-color, var(--lr-color-surface-raised))';
     return {
       'font-weight': s.bold ? 'bold' : 'normal',
       opacity: s.dim ? '0.7' : '1',
       'font-style': s.italic ? 'italic' : 'normal',
       'text-decoration': s.underline ? 'underline' : 'none',
-      color: s.inverse ? bg : fg,
-      'background-color': s.inverse ? fg : bg,
+      color: s.inverse ? (bg ?? defaultSurface) : fg,
+      'background-color': s.inverse ? fg : (bg ?? 'transparent'),
     };
   }
 
   override render(): TemplateResult {
     const hasToolbar = this.copyable || this.downloadable;
-    const ariaLabel = this.accessibleLabel || this.localize('terminalLabel');
+    const ariaLabel = hostAriaLabel(this) === null && this.accessibleLabel
+      ? this.accessibleLabel
+      : this.localize('terminalLabel');
     // Computed once per render, then consumed with O(1) lookups inside renderLine() for every
     // visible row -- rather than each row independently re-scanning `highlights`/`searchMatches`.
     const { perLine: highlightByLine, owners: highlightOwnerLines } = this.resolvedHighlightLines();
@@ -825,8 +950,12 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
           ? html`
               <div part="toolbar">
                 ${this.copyable
-                  ? html`<button part="copy-button" type="button" @click=${this.onCopy}>
-                      ${this.justCopied ? this.localize('copied') : this.localize('copy')}
+                  ? html`<button part="copy-button" type="button" data-copy-status=${this.copyStatus} @click=${this.onCopy}>
+                      ${this.copyStatus === 'success'
+                        ? this.localize('copied')
+                        : this.copyStatus === 'error'
+                          ? this.localize('copyFailed')
+                          : this.localize('copy')}
                     </button>`
                   : nothing}
                 ${this.downloadable
@@ -846,7 +975,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
           @pointerup=${this.onViewportPointerUp}
         >
           <lr-virtual-list
-            exportparts="line:line"
+            exportparts="line:line, line-interactive:line-interactive, line-highlight-accent:line-highlight-accent, line-highlight-success:line-highlight-success, line-highlight-warning:line-highlight-warning, line-highlight-danger:line-highlight-danger, line-highlight-neutral:line-highlight-neutral, line-match:line-match, line-active-match:line-active-match"
             .items=${this.lines}
             .renderItem=${(item: unknown) =>
               this.renderLine(

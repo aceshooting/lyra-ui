@@ -1,0 +1,160 @@
+import type { LyraToolStatus } from '../../../internal/shared-unions.js';
+import type { LyraVariant } from '../../../internal/variants.js';
+import type {
+  FlowEdge,
+  FlowHandle,
+  FlowNode,
+  FlowRunDecoration,
+  FlowRunDecorations,
+} from './flow-types.js';
+
+const FLOW_STATUSES = new Set<LyraToolStatus>([
+  'pending',
+  'running',
+  'success',
+  'error',
+  'denied',
+]);
+const FLOW_VARIANTS = new Set<LyraVariant>([
+  'neutral',
+  'brand',
+  'success',
+  'warning',
+  'danger',
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+/** Clones and freezes the JSON-shaped portion of consumer node metadata without invoking getters.
+ * Cycles and shared references retain their topology. Non-plain leaf objects remain opaque values;
+ * the public `data` contract only promises a record, while arrays/plain nested records are the
+ * structured state the canvas can safely own. */
+function snapshotFlowData(value: Record<string, unknown>): Readonly<Record<string, unknown>> {
+  const root: Record<string, unknown> = {};
+  const seen = new WeakMap<object, Record<string, unknown> | unknown[]>();
+  const work: Array<{
+    source: Record<string, unknown> | unknown[];
+    target: Record<string, unknown> | unknown[];
+  }> = [{ source: value, target: root }];
+  const owned: Array<Record<string, unknown> | unknown[]> = [root];
+  seen.set(value, root);
+
+  while (work.length > 0) {
+    const { source, target } = work.pop()!;
+    const descriptors = Object.getOwnPropertyDescriptors(source);
+    for (const [key, descriptor] of Object.entries(descriptors)) {
+      if (!descriptor.enumerable || !('value' in descriptor)) continue;
+      const item = descriptor.value as unknown;
+      if (Array.isArray(item) || isRecord(item)) {
+        let clone = seen.get(item);
+        if (!clone) {
+          clone = Array.isArray(item) ? [] : {};
+          seen.set(item, clone);
+          owned.push(clone);
+          work.push({ source: item, target: clone });
+        }
+        (target as Record<string, unknown>)[key] = clone;
+      } else {
+        (target as Record<string, unknown>)[key] = item;
+      }
+    }
+  }
+
+  for (let index = owned.length - 1; index >= 0; index--) Object.freeze(owned[index]);
+  return root;
+}
+
+export function normalizeFlowStatus(value: unknown): LyraToolStatus | null {
+  return typeof value === 'string' && FLOW_STATUSES.has(value as LyraToolStatus)
+    ? (value as LyraToolStatus)
+    : null;
+}
+
+export function normalizeFlowVariant(value: unknown): LyraVariant | undefined {
+  return typeof value === 'string' && FLOW_VARIANTS.has(value as LyraVariant)
+    ? (value as LyraVariant)
+    : undefined;
+}
+
+export function snapshotFlowHandles(
+  value: readonly FlowHandle[] | undefined,
+): readonly FlowHandle[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return Object.freeze(
+    value.map((handle) =>
+      Object.freeze({
+        id: typeof handle?.id === 'string' ? handle.id : '',
+        ...(typeof handle?.label === 'string' ? { label: handle.label } : {}),
+      }),
+    ),
+  );
+}
+
+export function snapshotFlowNodes(value: readonly FlowNode[]): readonly FlowNode[] {
+  if (!Array.isArray(value)) return Object.freeze([]);
+  return Object.freeze(
+    value.map((node) => {
+      const data = isRecord(node?.data) ? snapshotFlowData(node.data) : undefined;
+      const position = node?.position
+        ? Object.freeze({ x: node.position.x, y: node.position.y })
+        : undefined;
+      const inputs = snapshotFlowHandles(node?.inputs);
+      const outputs = snapshotFlowHandles(node?.outputs);
+      return Object.freeze({
+        id: typeof node?.id === 'string' ? node.id : '',
+        ...(typeof node?.type === 'string' ? { type: node.type } : {}),
+        ...(position ? { position } : {}),
+        ...(data ? { data } : {}),
+        ...(typeof node?.accessibleLabel === 'string'
+          ? { accessibleLabel: node.accessibleLabel }
+          : {}),
+        ...(inputs ? { inputs } : {}),
+        ...(outputs ? { outputs } : {}),
+      });
+    }),
+  );
+}
+
+export function snapshotFlowEdges(value: readonly FlowEdge[]): readonly FlowEdge[] {
+  if (!Array.isArray(value)) return Object.freeze([]);
+  return Object.freeze(
+    value.map((edge) => {
+      const tone = normalizeFlowVariant(edge?.tone);
+      return Object.freeze({
+        id: typeof edge?.id === 'string' ? edge.id : '',
+        source: typeof edge?.source === 'string' ? edge.source : '',
+        target: typeof edge?.target === 'string' ? edge.target : '',
+        ...(typeof edge?.sourceHandle === 'string' ? { sourceHandle: edge.sourceHandle } : {}),
+        ...(typeof edge?.targetHandle === 'string' ? { targetHandle: edge.targetHandle } : {}),
+        ...(typeof edge?.label === 'string' ? { label: edge.label } : {}),
+        ...(tone ? { tone } : {}),
+      });
+    }),
+  );
+}
+
+export function snapshotFlowDecorations(value: unknown): FlowRunDecorations {
+  if (!isRecord(value)) return Object.freeze({});
+  const entries: [string, Readonly<FlowRunDecoration>][] = [];
+  for (const [id, candidate] of Object.entries(value)) {
+    if (!isRecord(candidate)) continue;
+    const status = normalizeFlowStatus(candidate['status']);
+    if (!status) continue;
+    entries.push([
+      id,
+      Object.freeze({
+        status,
+        ...(typeof candidate['progress'] === 'number' ? { progress: candidate['progress'] } : {}),
+        ...(typeof candidate['durationMs'] === 'number'
+          ? { durationMs: candidate['durationMs'] }
+          : {}),
+        ...(typeof candidate['detail'] === 'string' ? { detail: candidate['detail'] } : {}),
+      }),
+    ]);
+  }
+  return Object.freeze(Object.fromEntries(entries));
+}

@@ -13,17 +13,17 @@ type Story = StoryObj;
 export const Gallery: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
-      <lr-stat label="Revenue" value="12.4" unit="k€" trend="3.2" variant="success"></lr-stat>
+      <lr-stat label="Revenue" value="12.4" unit="k€" delta-percent="3.2" variant="success"></lr-stat>
       <lr-stat label="Active agents" value="17" variant="brand"></lr-stat>
-      <lr-stat label="Errors" value="128" trend="-5.1" variant="danger"></lr-stat>
-      <lr-stat label="Pending Reviews" value="42" trend="8.6" variant="warning"></lr-stat>
+      <lr-stat label="Errors" value="128" delta-percent="-5.1" variant="danger"></lr-stat>
+      <lr-stat label="Pending Reviews" value="42" delta-percent="8.6" variant="warning"></lr-stat>
       <lr-stat label="Sessions" value="9,204"></lr-stat>
       <lr-stat label="Uptime" value="99.98" unit="%" caption="Last 30 days">
         <svg slot="start" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="9"></circle>
         </svg>
       </lr-stat>
-      <lr-stat label="Latency" value="182" unit="ms" trend="14" good-direction="down">
+      <lr-stat label="Latency" value="182" unit="ms" delta-percent="14" good-direction="down">
         <span slot="caption">Median over <strong>1,000</strong> requests</span>
       </lr-stat>
     </div>
@@ -82,11 +82,11 @@ export const RetintedVariants: Story = {
 export const SparkAndBreakdown: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
-      <lr-stat label="Revenue" value="12.4" unit="k€" trend="3.2" variant="success" caption="Last 30 days">
-        <lr-sparkline slot="spark" type="line" .values=${[4, 6, 5, 8, 7, 9, 12, 10, 13, 12.4]}></lr-sparkline>
+      <lr-stat label="Revenue" value="12.4" unit="k€" delta-percent="3.2" variant="success" caption="Last 30 days">
+        <lr-sparkline slot="spark" mark="line" .values=${[4, 6, 5, 8, 7, 9, 12, 10, 13, 12.4]}></lr-sparkline>
       </lr-stat>
       <lr-stat label="Sessions" value="9,204" caption="By channel">
-        <lr-sparkline slot="spark" type="bar" .values=${[3, 5, 4, 6, 8, 7, 9]}></lr-sparkline>
+        <lr-sparkline slot="spark" mark="bar" .values=${[3, 5, 4, 6, 8, 7, 9]}></lr-sparkline>
       </lr-stat>
     </div>
   `,
@@ -131,8 +131,8 @@ export const BreakdownRowsWithExactValue: Story = {
 export const Emphasis: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
-      <lr-stat label="Revenue" value="12.4" unit="k€" trend="3.2" emphasis></lr-stat>
-      <lr-stat label="Errors" value="128" trend="-5.1" variant="danger" emphasis></lr-stat>
+      <lr-stat label="Revenue" value="12.4" unit="k€" delta-percent="3.2" emphasis></lr-stat>
+      <lr-stat label="Errors" value="128" delta-percent="-5.1" variant="danger" emphasis></lr-stat>
     </div>
   `,
 };
@@ -185,8 +185,8 @@ export const LinkedKpiWithAction: Story = {
 export const Frame: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
-      <lr-stat label="Revenue" value="12.4" unit="k€" trend="3.2" caption="Last 30 days"></lr-stat>
-      <lr-stat frame="plain" label="Revenue" value="12.4" unit="k€" trend="3.2" caption="Last 30 days"></lr-stat>
+      <lr-stat label="Revenue" value="12.4" unit="k€" delta-percent="3.2" caption="Last 30 days"></lr-stat>
+      <lr-stat frame="plain" label="Revenue" value="12.4" unit="k€" delta-percent="3.2" caption="Last 30 days"></lr-stat>
       <lr-stat
         frame="plain"
         label="Memories"
@@ -206,7 +206,7 @@ export const Orientation: Story = {
         label="Checks"
         value="87"
         unit="/100"
-        trend="4.2"
+        delta-percent="4.2"
         caption="42 of 48 clean"
       ></lr-stat>
       <!-- The acceptance shape: chrome-less, single baseline row, no label box. -->
@@ -223,7 +223,7 @@ export const Orientation: Story = {
           { label: 'Other', value: '15%' },
         ]}
       >
-        <lr-sparkline slot="spark" type="bar" .values=${[3, 5, 4, 6, 8, 7, 9]}></lr-sparkline>
+        <lr-sparkline slot="spark" mark="bar" .values=${[3, 5, 4, 6, 8, 7, 9]}></lr-sparkline>
       </lr-stat>
     </div>
   `,
@@ -238,7 +238,7 @@ export const ExactValueSubProseCompact: Story = {
         exact-value="$1,204.37"
         sub="vs. last week"
         caption="Updated 2h ago"
-        trend="3.2"
+        delta-percent="3.2"
         variant="success"
       ></lr-stat>
       <lr-stat label="Status" prose value="Waiting for the next sync…"></lr-stat>

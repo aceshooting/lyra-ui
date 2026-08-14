@@ -49,7 +49,7 @@ export const IconOnlyTooltip: StoryObj = {
   `,
 };
 
-/** The `active`/`aria-current="page"` treatment is themeable through `--lr-app-rail-item-current-bg`
+/** The `current`/`aria-current="page"` treatment is themeable through `--lr-app-rail-item-current-bg`
  *  and `--lr-app-rail-item-current-color`. Neither is declared on `:host`, so setting them on an
  *  ancestor is never shadowed, and they recolor only the current item — not everything else that
  *  reads `--lr-color-brand-quiet`/`--lr-color-brand`. */
@@ -86,7 +86,7 @@ export const ThemedCurrent: StoryObj = {
         --lr-app-rail-item-active-color: ${storyColor('danger')};
       "
     >
-      <lr-app-rail-item href="/home" active>Home</lr-app-rail-item>
+      <lr-app-rail-item href="/home" current>Home</lr-app-rail-item>
       <lr-app-rail-item href="/inbox">Inbox</lr-app-rail-item>
       <lr-app-rail-item href="/settings">Settings</lr-app-rail-item>
     </div>

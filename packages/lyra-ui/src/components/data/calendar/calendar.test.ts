@@ -30,7 +30,7 @@ it('keeps exactly one focusable day after navigating the view away from any anch
   // whole grid keyboard-unreachable.
   const el = (await fixture(html`<lr-calendar></lr-calendar>`)) as LyraCalendar;
   await el.updateComplete;
-  const next = el.shadowRoot!.querySelector('[part="nav"] button') as HTMLButtonElement;
+  const next = el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement;
   for (let i = 0; i < 3; i++) {
     next.click();
     await el.updateComplete;
@@ -66,11 +66,8 @@ it('rolls the view to the next month when ArrowDown moves focus past the bottom 
 
 it('gives the previous/next month nav buttons the shared minimum hit area and matching chrome', async () => {
   const el = (await fixture(html`<lr-calendar view-date="2026-07-01"></lr-calendar>`)) as LyraCalendar;
-  // The 'previous' button itself carries part="nav"; the 'next' button is nested inside a
-  // wrapping <span part="nav"> instead (see calendar.class.ts's render()) -- both selector shapes
-  // are needed to reach both buttons.
-  const previous = el.shadowRoot!.querySelector('button[part="nav"]') as HTMLElement;
-  const next = el.shadowRoot!.querySelector('[part="nav"] button') as HTMLElement;
+  const previous = el.shadowRoot!.querySelector('button[part~="previous-button"]') as HTMLElement;
+  const next = el.shadowRoot!.querySelector('button[part~="next-button"]') as HTMLElement;
   for (const button of [previous, next]) {
     expect(getComputedStyle(button).minInlineSize).to.equal('40px');
     expect(getComputedStyle(button).minBlockSize).to.equal('40px');
@@ -86,8 +83,8 @@ it('gives the previous/next month nav buttons the shared minimum hit area and ma
 
 it('gives nav buttons, day cells, and agenda-event buttons hover/focus-visible treatment', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/button\[part='nav'\]:hover[^{]*\{[^}]*background:/);
-  expect(css).to.match(/button\[part='nav'\]:focus-visible[^{]*\{[^}]*outline:/);
+  expect(css).to.match(/button\[part~='nav'\]:hover[^{]*\{[^}]*background:/);
+  expect(css).to.match(/button\[part~='nav'\]:focus-visible[^{]*\{[^}]*outline:/);
   expect(css).to.match(/\[part='day'\]:focus-visible[^{]*\{[^}]*outline:/);
   expect(css).to.match(/\[part='agenda-event'\]:hover[^{]*\{[^}]*background:/);
   expect(css).to.match(/\[part='agenda-event'\]:focus-visible[^{]*\{[^}]*outline:/);
@@ -420,10 +417,48 @@ it('uses calendar-specific localized names for month navigation', async () => {
       }}
     ></lr-calendar>`,
   )) as LyraCalendar;
-  const previous = el.shadowRoot!.querySelector('button[part="nav"]') as HTMLButtonElement;
-  const next = el.shadowRoot!.querySelector('[part="nav"] button') as HTMLButtonElement;
+  const previous = el.shadowRoot!.querySelector('button[part~="previous-button"]') as HTMLButtonElement;
+  const next = el.shadowRoot!.querySelector('button[part~="next-button"]') as HTMLButtonElement;
   expect(previous.getAttribute('aria-label')).to.equal('Earlier month');
   expect(next.getAttribute('aria-label')).to.equal('Later month');
+});
+
+it('exposes a stable navigation wrapper and purpose-specific parts on both direct buttons', async () => {
+  const el = (await fixture(html`<lr-calendar></lr-calendar>`)) as LyraCalendar;
+  const wrapper = el.shadowRoot!.querySelector('[part~="navigation"]') as HTMLElement;
+  const previous = el.shadowRoot!.querySelector('button[part~="previous-button"]') as HTMLButtonElement;
+  const next = el.shadowRoot!.querySelector('button[part~="next-button"]') as HTMLButtonElement;
+  expect(wrapper.localName).to.equal('header');
+  expect(previous.parentElement?.localName).to.equal('header');
+  expect(next.parentElement?.localName).to.equal('header');
+  expect(previous.getAttribute('part')?.split(/\s+/)).to.include('nav');
+  expect(next.getAttribute('part')?.split(/\s+/)).to.include('nav');
+});
+
+it('normalizes a foreign view token to the month contract and reflected value', async () => {
+  const el = (await fixture(html`<lr-calendar view="foreign"></lr-calendar>`)) as LyraCalendar;
+  await el.updateComplete;
+  expect(el.view).to.equal('month');
+  expect(el.shadowRoot!.querySelectorAll('[part="day"]').length).to.equal(42);
+  // The reflected surface must not keep advertising a branch runtime never uses.
+  expect(el.getAttribute('view')).to.equal('month');
+});
+
+it('uses the normalized current month for agenda filtering when view-date is invalid', async () => {
+  const now = new Date();
+  const date = formatISO(new Date(now.getFullYear(), now.getMonth(), 15));
+  const el = (await fixture(html`
+    <lr-calendar view="agenda" view-date="not-a-date" .events=${[{ date, title: 'Current event' }]}></lr-calendar>
+  `)) as LyraCalendar;
+  expect(el.shadowRoot!.querySelectorAll('[part="agenda-event"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelector('[part="agenda-event"]')?.textContent).to.contain('Current event');
+});
+
+it('keeps an authored host aria-label distinct from the purpose-specific section name', async () => {
+  const el = (await fixture(html`<lr-calendar aria-label="Product schedule"></lr-calendar>`)) as LyraCalendar;
+  const section = el.shadowRoot!.querySelector('section')!;
+  expect(el.getAttribute('aria-label')).to.equal('Product schedule');
+  expect(section.getAttribute('aria-label')).to.equal('Calendar');
 });
 
 it('themes the title and date weights through the shared semibold token', async () => {
@@ -512,6 +547,17 @@ it('keeps the narrow day-cell floor overridable through its own cssprop', async 
   expect(getComputedStyle(day).minBlockSize).to.equal('32px');
 });
 
+it('inherits the regular day-cell floor from a theme ancestor', async () => {
+  const wrapper = await fixture(html`
+    <div style="inline-size: 600px; --lr-calendar-day-min-block-size: 7rem">
+      <lr-calendar view-date="2026-07-01"></lr-calendar>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-calendar') as LyraCalendar;
+  const day = el.shadowRoot!.querySelector('[part="day"]') as HTMLElement;
+  expect(getComputedStyle(day).minBlockSize).to.equal('112px');
+});
+
 it('centers the chevron glyph in each icon-only month-nav button', async () => {
   // The same defect first reported on <lr-widget>'s view toggle: [part='nav'] carries the
   // min-inline-size hit-area floor, its content is a single chevron far narrower than that
@@ -520,7 +566,7 @@ it('centers the chevron glyph in each icon-only month-nav button', async () => {
   const el = (await fixture(html`<lr-calendar></lr-calendar>`)) as LyraCalendar;
   await el.updateComplete;
   const buttons = [
-    ...el.shadowRoot!.querySelectorAll('button[part="nav"]'),
+    ...el.shadowRoot!.querySelectorAll('button[part~="nav"]'),
   ] as HTMLElement[];
   expect(buttons.length, 'both a previous and a next button').to.equal(2);
   for (const button of buttons) {

@@ -47,26 +47,20 @@ it('unwraps a { default: [...] } module namespace, matching the real installed p
   expect(allEmojis.some((e) => e.emoji === '😀' && e.name === 'grinning face')).to.be.true;
 });
 
-it('tags every known emojibase group with a localizable labelKey, keeping the English label as the fallback', async () => {
+it('keeps localization metadata out of the public group result while retaining English labels', async () => {
   const fakeRaw = [
     { emoji: '😀', group: 0, annotation: 'grinning face' },
     { emoji: '🐶', group: 3, annotation: 'dog face' },
     { emoji: '🏳️', group: 9, annotation: 'white flag' },
   ];
   const result = await loadEmojiData(() => Promise.resolve(fakeRaw));
-  expect(result!.map((g) => g.labelKey)).to.deep.equal([
-    'emojiPickerGroupSmileysEmotion',
-    'emojiPickerGroupAnimalsNature',
-    'emojiPickerGroupFlags',
-  ]);
-  // The English text stays on `label` so a consumer reading `groups` directly still sees something
-  // readable without going through `localize()`.
+  expect(result!.every((group) => !('labelKey' in group))).to.be.true;
   expect(result!.map((g) => g.label)).to.deep.equal(['Smileys & Emotion', 'Animals & Nature', 'Flags']);
 });
 
-it('leaves labelKey undefined for an unknown group id, falling back to the generated label', async () => {
+it('falls back to a generated label for an unknown group id without adding metadata', async () => {
   const result = await loadEmojiData(() => Promise.resolve([{ emoji: '🛸', group: 42, annotation: 'flying saucer' }]));
-  expect(result![0].labelKey).to.equal(undefined);
+  expect('labelKey' in result![0]).to.be.false;
   expect(result![0].label).to.equal('Group 42');
 });
 

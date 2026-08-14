@@ -63,8 +63,33 @@ function isPdfJsApi(value: unknown): value is PdfJsApi {
 
 let pdfjs: Promise<PdfJsApi | null> | undefined;
 
+type WorkerModuleResolver = (specifier: string) => string | null | undefined;
+
+function defaultWorkerModuleResolver(specifier: string): string | null {
+  const resolver = (import.meta as ImportMeta & {
+    resolve?: (value: string) => string;
+  }).resolve;
+  if (!resolver) return null;
+  try {
+    return resolver(specifier);
+  } catch {
+    return null;
+  }
+}
+
+function safeWorkerModuleUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:', 'blob:', 'file:'].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function loadPdfJsDeps(
   importPdfjs: () => Promise<unknown> = () => import('pdfjs-dist'),
+  resolveWorkerModule: WorkerModuleResolver = defaultWorkerModuleResolver,
 ): Promise<PdfJsApi | null> {
   try {
     const module = await importPdfjs();
@@ -72,7 +97,16 @@ export async function loadPdfJsDeps(
     const defaultExport = unwrapOptionalPeerDefault(module);
     const pdfjsLib = direct ?? (isPdfJsApi(defaultExport) ? defaultExport : null);
     if (!pdfjsLib) return null;
-    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+    // `GlobalWorkerOptions` belongs to the consumer's singleton PDF.js module. Never overwrite a
+    // worker they configured. When it is unset, resolve the peer's worker module through the
+    // runtime/import-map resolver; concatenating the bare package specifier onto this library's
+    // own `import.meta.url` produces a URL inside Lyra's dist tree where no worker exists.
+    if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      const workerSrc = safeWorkerModuleUrl(
+        resolveWorkerModule('pdfjs-dist/build/pdf.worker.min.mjs'),
+      );
+      if (workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+    }
     return pdfjsLib;
   } catch (error) {
     console.warn(

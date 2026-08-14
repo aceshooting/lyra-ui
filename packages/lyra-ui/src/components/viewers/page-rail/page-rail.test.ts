@@ -1,7 +1,11 @@
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import './page-rail.js';
-import type { LyraPageRail, PageThumbnailSource } from './page-rail.js';
+import type {
+  LyraPageRail,
+  LyraPageViewerSnapshot,
+  PageThumbnailSource,
+} from './page-rail.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.js';
 import type { LyraHighlight, LyraHighlightTone } from '../document-viewer/anchors.js';
 
@@ -33,6 +37,23 @@ class StubViewer extends EventTarget implements PageThumbnailSource {
   }
 }
 
+class SnapshotViewer extends StubViewer {
+  pageViewerSnapshot: LyraPageViewerSnapshot = Object.freeze({
+    identity: 0,
+    status: 'idle',
+    page: 1,
+    pageCount: 0,
+  });
+
+  transition(snapshot: LyraPageViewerSnapshot): void {
+    this.pageViewerSnapshot = Object.freeze({ ...snapshot });
+    this.page = snapshot.page;
+    this.dispatchEvent(new CustomEvent('lr-page-viewer-state-change', {
+      detail: { snapshot: this.pageViewerSnapshot },
+    }));
+  }
+}
+
 describe('lr-page-rail', () => {
   it('defaults to page-count 0, page 1, thumb-width 96', async () => {
     const el = await fixture<LyraPageRail>(html`<lr-page-rail></lr-page-rail>`);
@@ -45,8 +66,38 @@ describe('lr-page-rail', () => {
   it('mediated mode: page-count host attribute drives the number of rows without a viewer', async () => {
     const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="5"></lr-page-rail>`);
     await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
-    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[] };
-    expect(list.items).to.deep.equal([1, 2, 3, 4, 5]);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+      items: unknown[];
+      source: { count: number; itemAt(index: number): number };
+    };
+    expect(list.items).to.deep.equal([]);
+    expect(list.source.count).to.equal(5);
+    expect(Array.from({ length: list.source.count }, (_unused, index) => list.source.itemAt(index)))
+      .to.deep.equal([1, 2, 3, 4, 5]);
+  });
+
+  it('hydrates wired state immediately from a snapshot even when binding after load', async () => {
+    const viewer = new SnapshotViewer();
+    viewer.transition({ identity: 7, status: 'ready', page: 3, pageCount: 8 });
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+      source: { count: number };
+    };
+    expect(list.source.count).to.equal(8);
+    expect(el.page).to.equal(3);
+  });
+
+  it('atomically clears stale rows while the same wired viewer starts a replacement load', async () => {
+    const viewer = new SnapshotViewer();
+    viewer.transition({ identity: 1, status: 'ready', page: 2, pageCount: 8 });
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
+    viewer.transition({ identity: 2, status: 'loading', page: 1, pageCount: 0 });
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+      source: { count: number };
+    };
+    expect(list.source.count).to.equal(0);
+    expect(el.page).to.equal(1);
   });
 
   it('does not expose the internal virtual-list range event', async () => {
@@ -65,9 +116,9 @@ describe('lr-page-rail', () => {
     const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="2"></lr-page-rail>`);
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     let leaked = 0;
-    el.addEventListener('lr-scroll', () => leaked++);
+    el.addEventListener('lr-virtual-scroll', () => leaked++);
     list.dispatchEvent(new CustomEvent(
-      'lr-scroll',
+      'lr-virtual-scroll',
       { detail: { scrollTop: 0, viewportHeight: 100 }, bubbles: true, composed: true },
     ));
     expect(leaked).to.equal(0);
@@ -90,8 +141,8 @@ describe('lr-page-rail', () => {
     const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
     viewer.emitLoad(4);
     await el.updateComplete;
-    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[] };
-    expect(list.items).to.deep.equal([1, 2, 3, 4]);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { source: { count: number } };
+    expect(list.source.count).to.equal(4);
   });
 
   it('wired mode: tracks the current page from the viewer\'s lr-page-change event', async () => {
@@ -122,8 +173,8 @@ describe('lr-page-rail', () => {
 
     viewer.emitLoad(5);
     await el.updateComplete;
-    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[] };
-    expect(list.items, 'page-count tracking should survive a reparent').to.deep.equal([1, 2, 3, 4, 5]);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { source: { count: number } };
+    expect(list.source.count, 'page-count tracking should survive a reparent').to.equal(5);
   });
 
   it('for= resolves a PageThumbnailSource by id in the same root', async () => {
@@ -157,8 +208,8 @@ describe('lr-page-rail', () => {
     await aTimeout(0);
     first.dispatchEvent(new CustomEvent('lr-load', { detail: { pageCount: 2 } }));
     await waitUntil(() => {
-      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items?: unknown[] };
-      return list.items?.length === 2;
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { source?: { count: number } };
+      return list.source?.count === 2;
     });
 
     first.remove();
@@ -167,8 +218,8 @@ describe('lr-page-rail', () => {
     await aTimeout(0);
     second.dispatchEvent(new CustomEvent('lr-load', { detail: { pageCount: 4 } }));
     await waitUntil(() => {
-      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items?: unknown[] };
-      return list.items?.length === 4;
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { source?: { count: number } };
+      return list.source?.count === 4;
     });
 
     first.dispatchEvent(new CustomEvent('lr-page-change', { detail: { page: 2 } }));
@@ -216,6 +267,39 @@ describe('lr-page-rail', () => {
     expect(viewer.renderCalls[0].width).to.equal(64);
   });
 
+  it('supports renderer-owned DOM thumbnails and disposes their handles when rows are invalidated', async () => {
+    class DomThumbnailViewer extends EventTarget implements PageThumbnailSource {
+      page = 1;
+      renders = 0;
+      disposals = 0;
+      async renderPageThumbnailToContainer(
+        page: number,
+        container: HTMLElement,
+        options?: { width?: number },
+      ) {
+        this.renders++;
+        const preview = document.createElement('div');
+        preview.dataset['preview'] = `${page}:${options?.width}`;
+        container.append(preview);
+        return { dispose: () => { this.disposals++; preview.remove(); } };
+      }
+      emitLoad(pageCount: number): void {
+        this.dispatchEvent(new CustomEvent('lr-load', { detail: { pageCount } }));
+      }
+    }
+    const viewer = new DomThumbnailViewer();
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer} thumb-width="72"></lr-page-rail>`);
+    viewer.emitLoad(1);
+    await waitUntil(() => viewer.renders > 0);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    await waitUntil(() => list.shadowRoot!.querySelector('[data-preview="1:72"]') != null);
+    expect(list.shadowRoot!.querySelector('canvas') === null).to.equal(true);
+
+    viewer.emitLoad(1);
+    await waitUntil(() => viewer.disposals > 0 && viewer.renders > 1);
+    expect(viewer.disposals).to.be.greaterThan(0);
+  });
+
   it('gives each same-count viewer reload fresh canvas ownership', async () => {
     const firstRender = deferred<void>();
     type RenderCall = { document: string; canvas: HTMLCanvasElement };
@@ -255,6 +339,19 @@ describe('lr-page-rail', () => {
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     expect(list.shadowRoot!.querySelector('canvas') === currentCanvas).to.be.true;
     expect(currentCanvas.dataset['document']).to.equal('second');
+  });
+
+  it('uses snapshot identity to give a same-count replacement fresh canvas ownership', async () => {
+    const viewer = new SnapshotViewer();
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
+    viewer.transition({ identity: 1, status: 'ready', page: 1, pageCount: 1 });
+    await waitUntil(() => viewer.renderCalls.length > 0);
+    const firstCanvas = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelector('canvas');
+
+    viewer.transition({ identity: 2, status: 'ready', page: 1, pageCount: 1 });
+    await waitUntil(() => viewer.renderCalls.length > 1);
+    const replacementCanvas = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelector('canvas');
+    expect(replacementCanvas === firstCanvas).to.equal(false);
   });
 
   it('falls back to lr-file-icon when renderPageThumbnail() rejects, same as resolving false (regression)', async () => {
@@ -844,6 +941,23 @@ describe('lr-page-rail', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Vignettes de page');
   });
 
+  it('does not duplicate a non-empty host name and preserves explicit-empty ownership', async () => {
+    const labeled = await fixture<LyraPageRail>(
+      html`<lr-page-rail label="Fallback" aria-label="Document pages"></lr-page-rail>`,
+    );
+    const labeledBase = labeled.shadowRoot!.querySelector('[part="base"]')!;
+    expect(labeledBase.getAttribute('role')).to.be.null;
+    expect(labeledBase.getAttribute('aria-label')).to.be.null;
+
+    const decorative = await fixture<LyraPageRail>(
+      html`<lr-page-rail label="Fallback" aria-label=""></lr-page-rail>`,
+    );
+    const decorativeBase = decorative.shadowRoot!.querySelector('[part="base"]')!;
+    expect(decorativeBase.getAttribute('role')).to.equal('navigation');
+    expect(decorativeBase.hasAttribute('aria-label')).to.be.true;
+    expect(decorativeBase.getAttribute('aria-label')).to.equal('');
+  });
+
   it('formats visible and accessible page numbers with the effective locale', async () => {
     const el = await fixture<LyraPageRail>(
       html`<lr-page-rail locale="ar-EG" page-count="12" page="12"></lr-page-rail>`,
@@ -898,15 +1012,22 @@ describe('lr-page-rail', () => {
     for (const raw of ['-5', 'NaN']) {
       const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count=${raw}></lr-page-rail>`);
       await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
-      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[] };
-      expect(list.items, raw).to.deep.equal([]);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+        source: { count: number };
+      };
+      expect(list.source.count, raw).to.equal(0);
     }
   });
 
-  it('caps a pathological page count before materializing virtual-list items', async () => {
+  it('caps a pathological page count without materializing virtual-list items', async () => {
     const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="1000000000"></lr-page-rail>`);
-    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[] };
-    expect(list.items.length).to.equal(100_000);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+      items: unknown[];
+      source: { count: number; itemAt(index: number): number };
+    };
+    expect(list.items).to.deep.equal([]);
+    expect(list.source.count).to.equal(100_000);
+    expect(list.source.itemAt(99_999)).to.equal(100_000);
   });
 
   it('clamps thumbnail work to a narrow live allocation', async () => {

@@ -89,7 +89,10 @@ function fireResize(callback: ResizeObserverCallback, width: number): void {
   );
 }
 
-function installOwnerMatchMediaStub(owner: Window, width: number): {
+function installOwnerMatchMediaStub(
+  owner: Window,
+  width: number
+): {
   queries: string[];
   removed: string[];
   restore(): void;
@@ -99,7 +102,9 @@ function installOwnerMatchMediaStub(owner: Window, width: number): {
   const removed: string[] = [];
   owner.matchMedia = ((query: string) => {
     queries.push(query);
-    const max = Number.parseFloat(/max-width:\s*([\d.]+)px/.exec(query)?.[1] ?? 'NaN');
+    const max = Number.parseFloat(
+      /max-width:\s*([\d.]+)px/.exec(query)?.[1] ?? "NaN"
+    );
     return {
       media: query,
       matches: width <= max,
@@ -129,6 +134,47 @@ describe("lr-stepper", () => {
     expect(buttons[2]!.getAttribute("data-state")).to.equal("pending");
     expect(buttons[0]!.getAttribute("aria-current")).to.equal("false");
     expect(buttons[2]!.getAttribute("aria-current")).to.equal("false");
+  });
+
+  it("uses a bounded immutable realm-neutral schema snapshot and skips hostile records", async () => {
+    const frame = document.createElement("iframe");
+    document.body.append(frame);
+    const foreignArray = new frame.contentWindow!.Array();
+    const hostile = {};
+    Object.defineProperty(hostile, "id", {
+      get(): never {
+        throw new Error("hostile id");
+      },
+    });
+    const source = { id: "safe", label: "Safe", state: "current" as const };
+    foreignArray.push(
+      hostile,
+      { id: "", label: "Missing id", state: "pending" },
+      source,
+      { id: "later", label: "Later", state: "completed" }
+    );
+    const el = (await fixture(
+      html`<lr-stepper .steps=${foreignArray}></lr-stepper>`
+    )) as LyraStepper;
+    frame.remove();
+
+    source.label = "Caller mutation";
+    expect(stepButtons(el).map((button) => button.dataset["id"])).to.deep.equal(
+      ["safe", "later"]
+    );
+    expect(el.steps[0]!.label).to.equal("Safe");
+    expect(Object.isFrozen(el.steps)).to.be.true;
+    expect(Object.isFrozen(el.steps[0])).to.be.true;
+
+    const oversized = Array.from({ length: 260 }, (_, index) => ({
+      id: `step-${index}`,
+      label: `Step ${index}`,
+      state: "pending" as const,
+    }));
+    el.steps = oversized;
+    await el.updateComplete;
+    expect(el.steps).to.have.length(256);
+    expect(stepButtons(el)).to.have.length(256);
   });
 
   it("uses list/progress semantics instead of tabs without tabpanels", async () => {
@@ -239,7 +285,12 @@ describe("lr-stepper", () => {
     const el = (await fixture(
       html`<lr-stepper
         .steps=${[
-          { id: "basics", label: "Basics", state: "disabled" as const },
+          {
+            id: "basics",
+            label: "Basics",
+            state: "completed" as const,
+            disabled: true,
+          },
           { id: "inputs", label: "Inputs", state: "pending" as const },
         ]}
       ></lr-stepper>`
@@ -257,8 +308,10 @@ describe("lr-stepper", () => {
       html`<lr-stepper .steps=${mutableSteps}></lr-stepper>`
     )) as LyraStepper;
     stepButtons(el)[1]!.focus();
-    mutableSteps[1]!.state = "disabled";
-    el.steps = [...mutableSteps];
+    const disabledSteps = mutableSteps.map((step, index) =>
+      index === 1 ? { ...step, disabled: true } : step
+    );
+    el.steps = disabledSteps;
     await el.updateComplete;
 
     const focused = el.shadowRoot!.activeElement as HTMLElement | null;
@@ -335,7 +388,8 @@ describe("lr-stepper", () => {
           {
             id: "inputs",
             label: "Inputs",
-            state: "disabled" as const,
+            state: "pending" as const,
+            disabled: true,
             title: "Complete Basics first",
           },
         ]}
@@ -376,7 +430,10 @@ describe("lr-stepper", () => {
     const buttons = stepButtons(el);
 
     const paymentIcon = buttons[0]!.querySelector('[part="step-icon"]');
-    expect((paymentIcon) !== (null), "expected a step-icon part for the icon-bearing current step").to.equal(true);
+    expect(
+      paymentIcon !== null,
+      "expected a step-icon part for the icon-bearing current step"
+    ).to.equal(true);
     expect(paymentIcon!.textContent).to.equal("\u{1F4B3}");
     expect(paymentIcon!.getAttribute("aria-hidden")).to.equal("true");
     // The state chip still renders alongside the icon -- the icon identifies the topic, the chip
@@ -384,11 +441,16 @@ describe("lr-stepper", () => {
     expect(buttons[0]!.querySelector('[part="step-index"]')).to.not.equal(null);
 
     const shippingIcon = buttons[1]!.querySelector('[part="step-icon"]');
-    expect((shippingIcon) !== (null), "expected a step-icon part for the icon-bearing completed step").to.equal(true);
+    expect(
+      shippingIcon !== null,
+      "expected a step-icon part for the icon-bearing completed step"
+    ).to.equal(true);
     expect(buttons[1]!.querySelector('[part="step-check"]')).to.not.equal(null);
 
     // No icon field at all -- no step-icon part rendered, byte-for-byte unaffected.
-    expect(buttons[2]!.querySelector('[part="step-icon"]') === null).to.equal(true);
+    expect(buttons[2]!.querySelector('[part="step-icon"]') === null).to.equal(
+      true
+    );
   });
 
   it("keeps rich step icons inert so the step button remains the only action", async () => {
@@ -399,23 +461,30 @@ describe("lr-stepper", () => {
             id: "payment",
             label: "Payment",
             state: "current" as const,
-            icon: html`<button id="step-icon-control" type="button">Payment graphic</button>`,
+            icon: html`<button id="step-icon-control" type="button">
+              Payment graphic
+            </button>`,
           },
         ]}
       ></lr-stepper>`
     )) as LyraStepper;
     const step = stepButtons(el)[0]!;
     const icon = step.querySelector<HTMLElement>('[part="step-icon"]');
-    const iconControl = step.querySelector<HTMLButtonElement>("#step-icon-control");
+    const iconControl =
+      step.querySelector<HTMLButtonElement>("#step-icon-control");
 
     expect(icon !== null, "expected the rich icon wrapper").to.equal(true);
-    expect(iconControl !== null, "expected the rich icon control").to.equal(true);
+    expect(iconControl !== null, "expected the rich icon control").to.equal(
+      true
+    );
     expect(icon!.inert).to.equal(true);
     expect(icon!.getAttribute("aria-hidden")).to.equal("true");
 
     step.focus();
     iconControl!.focus();
-    expect(el.shadowRoot!.activeElement?.getAttribute("data-id")).to.equal("payment");
+    expect(el.shadowRoot!.activeElement?.getAttribute("data-id")).to.equal(
+      "payment"
+    );
 
     const selection = oneEvent(el, "lr-step-select");
     step.click();
@@ -428,7 +497,12 @@ describe("lr-stepper", () => {
       html`<lr-stepper
         .steps=${[
           ...steps().slice(0, 2),
-          { id: "review", label: "Review", state: "disabled" as const },
+          {
+            id: "review",
+            label: "Review",
+            state: "pending" as const,
+            disabled: true,
+          },
         ]}
       ></lr-stepper>`
     )) as LyraStepper;
@@ -438,6 +512,29 @@ describe("lr-stepper", () => {
     buttons[2]!.click();
     await el.updateComplete;
     expect(fired).to.be.false;
+    expect(buttons[2]!.getAttribute("data-state")).to.equal("pending");
+    expect(buttons[2]!.getAttribute("aria-disabled")).to.equal("true");
+  });
+
+  it("keeps current progress while independently disabling activation", async () => {
+    const el = (await fixture(html`
+      <lr-stepper
+        .steps=${[
+          {
+            id: "current-locked",
+            label: "Current but locked",
+            state: "current" as const,
+            disabled: true,
+          },
+          { id: "next", label: "Next", state: "pending" as const },
+        ]}
+      ></lr-stepper>
+    `)) as LyraStepper;
+    const buttons = stepButtons(el);
+    expect(buttons[0]!.getAttribute("aria-current")).to.equal("step");
+    expect(buttons[0]!.getAttribute("aria-disabled")).to.equal("true");
+    expect(buttons[0]!.tabIndex).to.equal(-1);
+    expect(buttons[1]!.tabIndex).to.equal(0);
   });
 
   it("supports ArrowRight/ArrowLeft/Home/End among non-disabled steps, clamped (not cyclic)", async () => {
@@ -454,7 +551,9 @@ describe("lr-stepper", () => {
       })
     );
     await el.updateComplete;
-    expect((document.activeElement === el || el.shadowRoot!.activeElement) != null).to.equal(true);
+    expect(
+      (document.activeElement === el || el.shadowRoot!.activeElement) != null
+    ).to.equal(true);
   });
 
   it("uses Up and Down to skip disabled steps in a vertical stepper, then selects the focused step", async () => {
@@ -464,7 +563,12 @@ describe("lr-stepper", () => {
         .steps=${[
           { id: "account", label: "Account", state: "completed" as const },
           { id: "details", label: "Details", state: "current" as const },
-          { id: "locked", label: "Locked", state: "disabled" as const },
+          {
+            id: "locked",
+            label: "Locked",
+            state: "error" as const,
+            disabled: true,
+          },
           { id: "review", label: "Review", state: "pending" as const },
         ]}
       ></lr-stepper>
@@ -473,18 +577,30 @@ describe("lr-stepper", () => {
 
     buttons[1]!.focus();
     buttons[1]!.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true })
+      new KeyboardEvent("keydown", {
+        key: "ArrowDown",
+        bubbles: true,
+        cancelable: true,
+      })
     );
     expect(el.shadowRoot!.activeElement === buttons[3]).to.equal(true);
 
     buttons[3]!.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true })
+      new KeyboardEvent("keydown", {
+        key: "ArrowUp",
+        bubbles: true,
+        cancelable: true,
+      })
     );
     expect(el.shadowRoot!.activeElement === buttons[1]).to.equal(true);
 
     const selection = oneEvent(el, "lr-step-select");
     buttons[1]!.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        bubbles: true,
+        cancelable: true,
+      })
     );
     expect((await selection).detail).to.deep.equal({ index: 1, id: "details" });
   });
@@ -504,12 +620,20 @@ describe("lr-stepper", () => {
 
     buttons[0]!.focus();
     buttons[0]!.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true, cancelable: true })
+      new KeyboardEvent("keydown", {
+        key: "ArrowLeft",
+        bubbles: true,
+        cancelable: true,
+      })
     );
     expect(el.shadowRoot!.activeElement === buttons[1]).to.equal(true);
 
     buttons[1]!.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true })
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      })
     );
     expect(el.shadowRoot!.activeElement === buttons[0]).to.equal(true);
   });
@@ -535,7 +659,7 @@ describe("lr-stepper", () => {
       )
     ).not.to.throw();
     await el.updateComplete;
-    expect((el.shadowRoot!.activeElement) === (buttons[1])).to.equal(true);
+    expect(el.shadowRoot!.activeElement === buttons[1]).to.equal(true);
   });
 
   it("is accessible", async () => {
@@ -594,7 +718,10 @@ describe("lr-stepper", () => {
 
     for (const direction of ["ltr", "rtl"] as const) {
       const wrapper = await fixture<HTMLElement>(html`
-        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+        <div
+          dir=${direction}
+          style="inline-size: 320px; max-inline-size: 100%;"
+        >
           <lr-stepper
             orientation="vertical"
             wrap-labels
@@ -611,18 +738,27 @@ describe("lr-stepper", () => {
       const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
       const baseBounds = base.getBoundingClientRect();
 
-      expect(Math.round(el.getBoundingClientRect().width), `${direction} host width`).to.equal(320);
-      expect(base.scrollWidth, `${direction} base horizontal overflow`).to.be.at.most(
-        base.clientWidth + 1
-      );
+      expect(
+        Math.round(el.getBoundingClientRect().width),
+        `${direction} host width`
+      ).to.equal(320);
+      expect(
+        base.scrollWidth,
+        `${direction} base horizontal overflow`
+      ).to.be.at.most(base.clientWidth + 1);
       for (const step of stepButtons(el)) {
         const label = step.querySelector('[part="step-label"]') as HTMLElement;
         const bounds = label.getBoundingClientRect();
-        expect(label.scrollWidth, `${direction} label horizontal overflow`).to.be.at.most(
-          label.clientWidth + 1
+        expect(
+          label.scrollWidth,
+          `${direction} label horizontal overflow`
+        ).to.be.at.most(label.clientWidth + 1);
+        expect(bounds.left, `${direction} label start`).to.be.at.least(
+          baseBounds.left - 1
         );
-        expect(bounds.left, `${direction} label start`).to.be.at.least(baseBounds.left - 1);
-        expect(bounds.right, `${direction} label end`).to.be.at.most(baseBounds.right + 1);
+        expect(bounds.right, `${direction} label end`).to.be.at.most(
+          baseBounds.right + 1
+        );
       }
     }
   });
@@ -638,6 +774,11 @@ describe("lr-stepper", () => {
     await el.updateComplete;
     expect(el.accessibleLabel).to.equal("Signup progress");
     expect(list.getAttribute("aria-label")).to.equal("Signup progress");
+
+    el.setAttribute("aria-label", "");
+    await el.updateComplete;
+    expect(list.hasAttribute("aria-label")).to.be.true;
+    expect(list.getAttribute("aria-label")).to.equal("");
   });
 
   it("keeps exactly one roving stop and navigates by occurrence when step ids are duplicated", async () => {
@@ -663,7 +804,7 @@ describe("lr-stepper", () => {
     );
     await el.updateComplete;
     buttons = stepButtons(el);
-    expect((el.shadowRoot!.activeElement) === (buttons[1])).to.equal(true);
+    expect(el.shadowRoot!.activeElement === buttons[1]).to.equal(true);
   });
 
   it("formats numbered step chips with the effective locale", async () => {
@@ -717,7 +858,7 @@ describe("lr-stepper", () => {
         })
       );
       await elementUpdated(el);
-      expect((el.shadowRoot!.activeElement) === (buttons[2])).to.equal(true);
+      expect(el.shadowRoot!.activeElement === buttons[2]).to.equal(true);
 
       const changed = oneEvent(el, "lr-stepper-orientation-change");
       fireResizeAll(spy.callbacks, 700);
@@ -1061,7 +1202,9 @@ describe("lr-stepper", () => {
     });
 
     it("rebinds viewport breakpoints to the destination owner after adoption", async () => {
-      const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+      const frame = (await fixture(
+        html`<iframe></iframe>`
+      )) as HTMLIFrameElement;
       const frameDocument = frame.contentDocument;
       const frameWindow = frame.contentWindow;
       if (!frameDocument || !frameWindow)
@@ -1111,6 +1254,16 @@ describe("lr-stepper", () => {
 });
 
 describe("horizontal step row overflow", () => {
+  it("removes both decorative masks in forced-colors mode", () => {
+    const css = styles.cssText.replace(/\s+/g, " ");
+    expect(css).to.contain("@media (forced-colors: active)");
+    const forcedColors = css.slice(
+      css.indexOf("@media (forced-colors: active)")
+    );
+    expect(forcedColors).to.contain("-webkit-mask-image: none");
+    expect(forcedColors).to.contain("mask-image: none");
+  });
+
   it("pairs overflow-y with overflow-x on the horizontal (default) axis to avoid a phantom vertical scrollbar", async () => {
     const el = (await fixture(
       html`<lr-stepper .steps=${steps()}></lr-stepper>`
@@ -1334,13 +1487,19 @@ describe("state-styling cssprops", () => {
           Math.round(rect.top + rect.height / 2),
         ],
       });
-      expect(getComputedStyle(hovered).backgroundColor).to.equal("rgb(1, 2, 3)");
+      expect(getComputedStyle(hovered).backgroundColor).to.equal(
+        "rgb(1, 2, 3)"
+      );
       expect(getComputedStyle(hovered).color).to.equal("rgb(4, 5, 6)");
 
       await sendMouse({ type: "down" });
-      expect(getComputedStyle(hovered).backgroundColor).to.equal("rgb(7, 8, 9)");
+      expect(getComputedStyle(hovered).backgroundColor).to.equal(
+        "rgb(7, 8, 9)"
+      );
       expect(getComputedStyle(hovered).color).to.equal("rgb(10, 11, 12)");
-      expect(getComputedStyle(current).backgroundColor).to.equal("rgba(0, 0, 0, 0)");
+      expect(getComputedStyle(current).backgroundColor).to.equal(
+        "rgba(0, 0, 0, 0)"
+      );
       expect(getComputedStyle(current).color).to.equal(
         resolvedInShadow(el, "color: var(--lr-color-text)", "color")
       );
@@ -1368,7 +1527,11 @@ describe("state-styling cssprops", () => {
         ],
       });
       expect(getComputedStyle(interactive).backgroundColor).to.equal(
-        resolvedInShadow(el, "background: var(--lr-color-brand-quiet)", "background-color")
+        resolvedInShadow(
+          el,
+          "background: var(--lr-color-brand-quiet)",
+          "background-color"
+        )
       );
       expect(getComputedStyle(interactive).color).to.equal(
         resolvedInShadow(el, "color: var(--lr-color-text)", "color")

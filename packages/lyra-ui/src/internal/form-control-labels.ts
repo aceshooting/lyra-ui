@@ -115,9 +115,32 @@ const SEMANTIC_TARGET_SELECTOR = [
 /** Roles whose native counterpart activates (not merely focuses) when its label is clicked. */
 const ACTIVATING_ROLES = new Set(['checkbox', 'switch', 'radio', 'menuitemcheckbox', 'menuitemradio']);
 
+const MAX_ASSOCIATION_CANDIDATES_PER_MUTATION = 2_048;
+const MAX_ASSOCIATION_REFRESHES_PER_TASK = 256;
+
+interface AssociationSubscription {
+  readonly host: HTMLElement;
+  readonly listener: () => void;
+  id: string;
+  implicit: boolean;
+  active: boolean;
+}
+
 interface AssociationRootObservation {
-  readonly listeners: Set<() => void>;
+  readonly subscriptions: Set<AssociationSubscription>;
+  readonly subscriptionsById: Map<string, Set<AssociationSubscription>>;
+  readonly implicitSubscriptions: Set<AssociationSubscription>;
+  readonly subscriptionsByHost: WeakMap<HTMLElement, AssociationSubscription>;
+  readonly pending: Set<AssociationSubscription>;
   readonly observer?: MutationObserver;
+  drainQueued: boolean;
+  fallbackIterator?: SetIterator<AssociationSubscription>;
+  restartFallback: boolean;
+}
+
+interface AssociationRootSubscription {
+  update(labels: readonly HTMLLabelElement[]): void;
+  disconnect(): void;
 }
 
 /**
@@ -170,55 +193,242 @@ function isCurrentlyAssociatedLabel(label: HTMLLabelElement, host: HTMLElement):
   return [...root.querySelectorAll('[id]')].find((candidate) => candidate.id === id) === host;
 }
 
-function containsAssociationCandidate(node: Node): boolean {
-  if (isLabelElement(node)) return true;
-  if (node.nodeType === 1 && (node as Element).hasAttribute('id')) return true;
-  return 'querySelector' in node && typeof node.querySelector === 'function'
-    ? node.querySelector('label,[id]') !== null
-    : false;
+function addSubscriptionById(observation: AssociationRootObservation, subscription: AssociationSubscription): void {
+  if (!subscription.id) return;
+  const subscribers = observation.subscriptionsById.get(subscription.id) ?? new Set<AssociationSubscription>();
+  subscribers.add(subscription);
+  observation.subscriptionsById.set(subscription.id, subscribers);
 }
 
-function canChangeLabelAssociation(mutation: MutationRecord): boolean {
-  if (mutation.type === 'attributes') {
-    return mutation.attributeName === 'id' || isLabelElement(mutation.target);
+function removeSubscriptionById(
+  observation: AssociationRootObservation,
+  subscription: AssociationSubscription,
+): void {
+  if (!subscription.id) return;
+  const subscribers = observation.subscriptionsById.get(subscription.id);
+  subscribers?.delete(subscription);
+  if (subscribers?.size === 0) observation.subscriptionsById.delete(subscription.id);
+}
+
+function updateSubscriptionId(
+  observation: AssociationRootObservation,
+  subscription: AssociationSubscription,
+): void {
+  const id = subscription.host.id;
+  if (id === subscription.id) return;
+  removeSubscriptionById(observation, subscription);
+  subscription.id = id;
+  addSubscriptionById(observation, subscription);
+}
+
+function drainAssociationRefreshes(observation: AssociationRootObservation): void {
+  observation.drainQueued = false;
+  let remaining = MAX_ASSOCIATION_REFRESHES_PER_TASK;
+  for (const subscription of observation.pending) {
+    observation.pending.delete(subscription);
+    if (subscription.active) subscription.listener();
+    if (--remaining === 0) break;
   }
-  // Inserting/removing another element with the same id can move a `<label for>` away from (or
-  // back to) the host because HTML resolves the first matching id in tree order. The markup is
-  // invalid, but the native association still changes and the bridge must not retain a stale name
-  // or click listener. Subtrees with neither labels nor ids cannot affect membership.
-  return [...mutation.addedNodes, ...mutation.removedNodes].some(containsAssociationCandidate);
+  while (remaining > 0 && observation.fallbackIterator) {
+    const next = observation.fallbackIterator.next();
+    if (next.done) {
+      observation.fallbackIterator = undefined;
+      if (observation.restartFallback) {
+        observation.restartFallback = false;
+        observation.fallbackIterator = observation.subscriptions.values();
+        continue;
+      }
+      break;
+    }
+    if (next.value.active) next.value.listener();
+    remaining--;
+  }
+  if (
+    (observation.pending.size === 0 && observation.fallbackIterator === undefined) ||
+    observation.drainQueued
+  ) return;
+  observation.drainQueued = true;
+  queueMicrotask(() => drainAssociationRefreshes(observation));
 }
 
-function observeAssociationRoot(host: HTMLElement, listener: () => void): () => void {
+function notifyAssociationSubscriptions(
+  observation: AssociationRootObservation,
+  subscriptions: Iterable<AssociationSubscription>,
+  fallbackAll = false,
+): void {
+  for (const subscription of subscriptions) {
+    if (subscription.active) observation.pending.add(subscription);
+  }
+  if (fallbackAll) {
+    if (observation.fallbackIterator) observation.restartFallback = true;
+    else observation.fallbackIterator = observation.subscriptions.values();
+  }
+  if (
+    (observation.pending.size === 0 && observation.fallbackIterator === undefined) ||
+    observation.drainQueued
+  ) return;
+  observation.drainQueued = true;
+  queueMicrotask(() => drainAssociationRefreshes(observation));
+}
+
+interface AssociationCandidates {
+  readonly ids: Set<string>;
+  implicit: boolean;
+  truncated: boolean;
+  work: number;
+}
+
+function collectAssociationElement(element: Element, result: AssociationCandidates): void {
+  if (++result.work > MAX_ASSOCIATION_CANDIDATES_PER_MUTATION) {
+    result.truncated = true;
+    return;
+  }
+  const id = element.getAttribute('id');
+  if (id) result.ids.add(id);
+  if (!isLabelElement(element)) return;
+  if (element.hasAttribute('for')) {
+    if (element.htmlFor) result.ids.add(element.htmlFor);
+  } else {
+    result.implicit = true;
+  }
+}
+
+function collectAssociationCandidates(node: Node, result: AssociationCandidates): void {
+  if (result.truncated) return;
+  if (node.nodeType === 1) collectAssociationElement(node as Element, result);
+  if (result.truncated) return;
+  const walker = node.ownerDocument?.createTreeWalker(node, NodeFilter.SHOW_ELEMENT);
+  if (!walker) {
+    result.truncated = true;
+    return;
+  }
+  let current = walker.nextNode();
+  while (current) {
+    collectAssociationElement(current as Element, result);
+    if (result.truncated) return;
+    current = walker.nextNode();
+  }
+}
+
+function affectedAssociationSubscriptions(
+  observation: AssociationRootObservation,
+  mutations: readonly MutationRecord[],
+): { readonly subscriptions: Set<AssociationSubscription>; readonly fallbackAll: boolean } {
+  const affected = new Set<AssociationSubscription>();
+  const candidates: AssociationCandidates = {
+    ids: new Set<string>(),
+    implicit: false,
+    truncated: false,
+    work: 0,
+  };
+  for (const mutation of mutations) {
+    if (mutation.type === 'attributes') {
+      const target = mutation.target as Element;
+      if (mutation.attributeName === 'id') {
+        const oldId = mutation.oldValue ?? '';
+        const id = target.getAttribute('id') ?? '';
+        if (oldId) candidates.ids.add(oldId);
+        if (id) candidates.ids.add(id);
+        const hostSubscription = observation.subscriptionsByHost.get(target as HTMLElement);
+        if (hostSubscription) {
+          affected.add(hostSubscription);
+          updateSubscriptionId(observation, hostSubscription);
+        }
+      } else if (mutation.attributeName === 'for' && isLabelElement(target)) {
+        const oldFor = mutation.oldValue ?? '';
+        if (oldFor) candidates.ids.add(oldFor);
+        if (target.htmlFor) candidates.ids.add(target.htmlFor);
+        if (!oldFor || !target.hasAttribute('for')) candidates.implicit = true;
+      }
+      continue;
+    }
+    for (const node of mutation.addedNodes) collectAssociationCandidates(node, candidates);
+    for (const node of mutation.removedNodes) collectAssociationCandidates(node, candidates);
+  }
+
+  if (candidates.truncated) return { subscriptions: affected, fallbackAll: true };
+  for (const id of candidates.ids) {
+    for (const subscription of observation.subscriptionsById.get(id) ?? []) affected.add(subscription);
+  }
+  if (candidates.implicit) {
+    for (const subscription of observation.implicitSubscriptions) affected.add(subscription);
+  }
+  return { subscriptions: affected, fallbackAll: false };
+}
+
+function observeAssociationRoot(host: HTMLElement, listener: () => void): AssociationRootSubscription {
   const root = host.getRootNode();
   let observation = associationRootObservations.get(root);
   if (!observation) {
-    const listeners = new Set<() => void>();
     const Observer = host.ownerDocument.defaultView?.MutationObserver;
-    const observer =
-      Observer === undefined
-        ? undefined
-        : new Observer((mutations) => {
-            if (!mutations.some(canChangeLabelAssociation)) return;
-            for (const notify of [...listeners]) notify();
-          });
+    const subscriptions = new Set<AssociationSubscription>();
+    const subscriptionsById = new Map<string, Set<AssociationSubscription>>();
+    const implicitSubscriptions = new Set<AssociationSubscription>();
+    const subscriptionsByHost = new WeakMap<HTMLElement, AssociationSubscription>();
+    const pending = new Set<AssociationSubscription>();
+    const holder: { observation?: AssociationRootObservation } = {};
+    const observer = Observer === undefined
+      ? undefined
+      : new Observer((mutations) => {
+          const current = holder.observation;
+          if (!current) return;
+          const affected = affectedAssociationSubscriptions(current, mutations);
+          notifyAssociationSubscriptions(current, affected.subscriptions, affected.fallbackAll);
+        });
     observer?.observe(root, {
       attributes: true,
       attributeFilter: ['for', 'id'],
+      attributeOldValue: true,
       childList: true,
       subtree: true,
     });
-    observation = { listeners, observer };
+    observation = {
+      subscriptions,
+      subscriptionsById,
+      implicitSubscriptions,
+      subscriptionsByHost,
+      pending,
+      observer,
+      drainQueued: false,
+      restartFallback: false,
+    };
+    holder.observation = observation;
     associationRootObservations.set(root, observation);
   }
-  observation.listeners.add(listener);
-  return () => {
-    const current = associationRootObservations.get(root);
-    if (!current) return;
-    current.listeners.delete(listener);
-    if (current.listeners.size > 0) return;
-    current.observer?.disconnect();
-    associationRootObservations.delete(root);
+  const subscription: AssociationSubscription = {
+    host,
+    listener,
+    id: host.id,
+    implicit: host.closest('label') !== null,
+    active: true,
+  };
+  observation.subscriptions.add(subscription);
+  observation.subscriptionsByHost.set(host, subscription);
+  addSubscriptionById(observation, subscription);
+  if (subscription.implicit) observation.implicitSubscriptions.add(subscription);
+  return {
+    update(labels) {
+      if (!subscription.active) return;
+      updateSubscriptionId(observation!, subscription);
+      const implicit = labels.some((label) => !label.hasAttribute('for'));
+      if (implicit === subscription.implicit) return;
+      subscription.implicit = implicit;
+      if (implicit) observation!.implicitSubscriptions.add(subscription);
+      else observation!.implicitSubscriptions.delete(subscription);
+    },
+    disconnect() {
+      if (!subscription.active) return;
+      subscription.active = false;
+      observation!.pending.delete(subscription);
+      observation!.subscriptions.delete(subscription);
+      observation!.subscriptionsByHost.delete(host);
+      observation!.implicitSubscriptions.delete(subscription);
+      removeSubscriptionById(observation!, subscription);
+      const current = associationRootObservations.get(root);
+      if (!current || current.subscriptions.size > 0) return;
+      current.observer?.disconnect();
+      associationRootObservations.delete(root);
+    },
   };
 }
 
@@ -329,7 +539,7 @@ export function resolveExternalLabelText(
 export class ExternalLabelController implements ReactiveController {
   private labels: HTMLLabelElement[] = [];
   private labelObserver?: MutationObserver;
-  private stopAssociationRootObservation?: () => void;
+  private associationRootSubscription?: AssociationRootSubscription;
   /** The element currently carrying an applied name, and what it read before. */
   private applied?: { target: HTMLElement; name: string; had: boolean; previous: string | null };
   /** Guards the synthetic activation click against an implicit (ancestor) label re-entering. */
@@ -338,8 +548,8 @@ export class ExternalLabelController implements ReactiveController {
   constructor(private readonly host: ExternalLabelHost & ReactiveControllerHost) {}
 
   hostConnected(): void {
-    this.stopAssociationRootObservation?.();
-    this.stopAssociationRootObservation = observeAssociationRoot(this.host, () => this.refresh());
+    this.associationRootSubscription?.disconnect();
+    this.associationRootSubscription = observeAssociationRoot(this.host, () => this.refresh());
     this.refresh();
   }
 
@@ -350,8 +560,8 @@ export class ExternalLabelController implements ReactiveController {
   hostDisconnected(): void {
     this.release();
     this.stopObservingLabels();
-    this.stopAssociationRootObservation?.();
-    this.stopAssociationRootObservation = undefined;
+    this.associationRootSubscription?.disconnect();
+    this.associationRootSubscription = undefined;
     for (const label of this.labels) label.removeEventListener('click', this.onLabelClick);
     this.labels = [];
   }
@@ -367,6 +577,7 @@ export class ExternalLabelController implements ReactiveController {
       for (const label of this.labels) label.addEventListener('click', this.onLabelClick);
       this.observeLabels();
     }
+    this.associationRootSubscription?.update(next);
     this.apply();
   }
 

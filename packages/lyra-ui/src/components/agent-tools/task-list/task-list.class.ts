@@ -20,13 +20,17 @@ import { styles } from './task-list.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_open, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_taskListCompletedOfTotal, LYRA_DEFAULT_taskListLabel, LYRA_DEFAULT_taskListStepCompletedAnnounce, LYRA_DEFAULT_taskListStepFailedAnnounce, LYRA_DEFAULT_taskListStepStartedAnnounce, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_taskListCompletedOfTotal, LYRA_DEFAULT_taskListLabel, LYRA_DEFAULT_taskListStepCompletedAnnounce, LYRA_DEFAULT_taskListStepFailedAnnounce, LYRA_DEFAULT_taskListStepStartedAnnounce, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 /** A plan step's lifecycle state — not permission-gated, so there is no `denied` state here
  *  (unlike `<lr-tool-call-chip>`'s status vocabulary, which does need one). */
 export type TaskStatus = 'pending' | 'running' | 'success' | 'error';
+
+function normalizeTaskStatus(value: unknown): TaskStatus {
+  return value === 'running' || value === 'success' || value === 'error' ? value : 'pending';
+}
 
 /** Visual chrome for `<lr-task-list>`'s root — the library's shared container-frame vocabulary. */
 export type TaskListAppearance = LyraFrame;
@@ -123,7 +127,7 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
  *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
  *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead (mirrors `lr-generation-status`'s
+ *  `fromAttribute` checks the literal string instead (mirrors `lr-generation-metrics`'s
  *  `showStopConverter`). Unlike that converter, `toAttribute` here reflects the `true` state as a
  *  present attribute rather than omitting it: `expanded`'s host attribute drives this component's
  *  own `:host([expanded])` styling, so the attribute must actually be present while expanded and
@@ -194,7 +198,11 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     details: LYRA_DEFAULT_details,
     item: LYRA_DEFAULT_item,
     items: LYRA_DEFAULT_items,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
     statusPending: LYRA_DEFAULT_statusPending,
     statusRunning: LYRA_DEFAULT_statusRunning,
@@ -310,25 +318,26 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     const region = this.liveRegion;
     const nextMap = new Map<string, TaskStatus>();
     for (const item of this.flattenOneLevel(this.items)) {
-      nextMap.set(item.id, item.status);
+      const status = normalizeTaskStatus(item.status);
+      nextMap.set(item.id, status);
       if (!firstSight && region) {
         const previous = this.previousStatusById.get(item.id);
-        if (previous !== undefined && previous !== item.status) {
+        if (previous !== undefined && previous !== status) {
           // Every branch forces an immediate flush -- these are discrete lifecycle transitions
           // (a step starting/finishing), not a high-frequency stream where throttling matters, and
           // a caller updating `items` in a synchronous batch expects the *latest* transition heard
           // right away rather than coalesced behind the announcer's default throttle window.
-          if (item.status === 'running') {
+          if (status === 'running') {
             region.mode = 'polite';
             region.announce(this.localize('taskListStepStartedAnnounce', undefined, { label: item.label }), {
               force: true,
             });
-          } else if (item.status === 'success') {
+          } else if (status === 'success') {
             region.mode = 'polite';
             region.announce(this.localize('taskListStepCompletedAnnounce', undefined, { label: item.label }), {
               force: true,
             });
-          } else if (item.status === 'error') {
+          } else if (status === 'error') {
             region.mode = 'assertive';
             region.announce(this.localize('taskListStepFailedAnnounce', undefined, { label: item.label }), {
               force: true,
@@ -463,19 +472,20 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     parentId: string | null,
     canReorder: boolean,
   ): TemplateResult {
+    const status = normalizeTaskStatus(item.status);
     const hasChildren = depth === 0 && !!item.children && item.children.length > 0;
     return html`
       <div
         part="item"
         role="listitem"
-        data-status=${item.status}
+        data-status=${status}
         data-id=${item.id}
         data-depth=${depth}
         tabindex=${canReorder ? '0' : nothing}
         @keydown=${(event: Event) => this.onItemKeyDown(event as KeyboardEvent, item, parentId)}
       >
-        <span part="status-icon" aria-hidden="true">${STATUS_ICON[item.status]()}</span>
-        <span class="sr-only">${this.localize(STATUS_LABEL_KEY[item.status])}</span>
+        <span part="status-icon" aria-hidden="true">${STATUS_ICON[status]()}</span>
+        <span class="sr-only">${this.localize(STATUS_LABEL_KEY[status])}</span>
         <span part="item-label">${item.label}</span>
         ${item.detail ? html`<span part="item-detail">${item.detail}</span>` : nothing}
         <slot name=${`detail-${item.id}`}></slot>
@@ -496,9 +506,9 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
 
   override render(): TemplateResult {
     const label = this.label === 'Tasks' ? this.localize('taskListLabel') : this.label;
-    const ariaLabel = this.getAttribute('aria-label') || label;
+    const ariaLabel = label;
     const total = this.items.length;
-    const completed = this.items.filter((item) => item.status === 'success').length;
+    const completed = this.items.filter((item) => normalizeTaskStatus(item.status) === 'success').length;
     const canReorder = this.canReorderItems();
     const number = getNumberFormat(this.effectiveLocale);
     const summary = this.localize('taskListCompletedOfTotal', undefined, {

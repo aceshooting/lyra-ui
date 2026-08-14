@@ -2,6 +2,10 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type {
   GraphQuery,
+  GraphQueryDeleteDetail,
+  GraphQueryLoadDetail,
+  GraphQueryRunDetail,
+  GraphQuerySaveDetail,
   GraphQuerySavedItem,
   GraphQueryTypeOption,
   LyraGraphQueryBuilder,
@@ -67,6 +71,14 @@ const populatedValue: GraphQuery = {
 
 /** An already-populated query with active relationship/node-type filters and a saved-query list. */
 export const Populated: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Run, save, load, and delete each emit a cancelable `lr-before-query-*` request followed by a non-cancelable accepted `lr-query-*` notification. The console logs both phases for every action.',
+      },
+    },
+  },
   render: () => html`
     <lr-graph-query-builder
       style="max-width: 40rem"
@@ -74,10 +86,14 @@ export const Populated: Story = {
       .nodeTypeOptions=${nodeTypeOptions}
       .savedQueries=${savedQueries}
       .value=${populatedValue}
-      @lr-query-run=${(e: CustomEvent<{ query: GraphQuery }>) => console.log('run', e.detail.query)}
-      @lr-query-save=${(e: CustomEvent<{ name: string; query: GraphQuery }>) => console.log('save', e.detail)}
-      @lr-query-load=${(e: CustomEvent<{ id: string; query: GraphQuery }>) => console.log('load', e.detail)}
-      @lr-query-delete=${(e: CustomEvent<{ id: string }>) => console.log('delete', e.detail)}
+      @lr-before-query-run=${(e: CustomEvent<GraphQueryRunDetail>) => console.log('before run', e.detail)}
+      @lr-query-run=${(e: CustomEvent<GraphQueryRunDetail>) => console.log('run accepted', e.detail)}
+      @lr-before-query-save=${(e: CustomEvent<GraphQuerySaveDetail>) => console.log('before save', e.detail)}
+      @lr-query-save=${(e: CustomEvent<GraphQuerySaveDetail>) => console.log('save accepted', e.detail)}
+      @lr-before-query-load=${(e: CustomEvent<GraphQueryLoadDetail>) => console.log('before load', e.detail)}
+      @lr-query-load=${(e: CustomEvent<GraphQueryLoadDetail>) => console.log('load accepted', e.detail)}
+      @lr-before-query-delete=${(e: CustomEvent<GraphQueryDeleteDetail>) => console.log('before delete', e.detail)}
+      @lr-query-delete=${(e: CustomEvent<GraphQueryDeleteDetail>) => console.log('delete accepted', e.detail)}
     ></lr-graph-query-builder>
   `,
 };
@@ -95,6 +111,23 @@ export const FormResetDefault: Story = {
       ></lr-graph-query-builder>
       <button type="reset">Reset query</button>
     </form>
+  `,
+};
+
+/** Save uses the shared two-phase action contract: this example vetoes the reserved name
+ * `Production` in the before phase and leaves that draft in the field for correction; accepted
+ * names clear normally and then emit `lr-query-save`. */
+export const CancelableSave: Story = {
+  render: () => html`
+    <lr-graph-query-builder
+      style="max-width: 40rem"
+      .value=${populatedValue}
+      @lr-before-query-save=${(event: CustomEvent<GraphQuerySaveDetail>) => {
+        if (event.detail.name === 'Production') event.preventDefault();
+      }}
+    >
+      <span slot="label">Account relationship query</span>
+    </lr-graph-query-builder>
   `,
 };
 

@@ -76,16 +76,16 @@ export const styles = css`
     gap: var(--lr-space-s);
   }
 
-  [part='leading'] {
+  [part='start'] {
     display: flex;
     flex: 0 0 auto;
     align-items: center;
-    /* Matches the textarea's own first-line box so a leading icon button
+    /* Matches the textarea's own first-line box so a start icon button
        sits level with placeholder/typed text at min-rows, not glued to the
        row's cross-axis edge. */
     padding-block-end: var(--lr-space-xs);
   }
-  [part='leading'][hidden] {
+  [part='start'][hidden] {
     display: none;
   }
 
@@ -114,7 +114,7 @@ export const styles = css`
     cursor: not-allowed;
   }
 
-  [part='trailing'] {
+  [part='end'] {
     display: flex;
     flex: 0 0 auto;
     align-items: center;
@@ -144,10 +144,10 @@ export const styles = css`
      subtree -- dims the glyph inside the button along with its fill. Mixing the resting fill toward
      --lr-color-mix-partner (which tracks the text color) always moves, always in the direction the
      surface needs, and leaves the icon alone. */
-  [part='action-button']:hover {
+  :where([part='action-button']):hover:where(:not(:disabled)) {
     background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
-  [part='action-button']:active {
+  :where([part='action-button']):active:where(:not(:disabled)) {
     background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='action-button']:focus-visible {
@@ -157,6 +157,13 @@ export const styles = css`
   [part='action-button']:disabled {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
+  }
+  [part='send-glyph'],
+  [part='stop-glyph'] {
+    display: inline-flex;
+  }
+  :host(:dir(rtl)) [part='send-glyph'] {
+    transform: scaleX(-1);
   }
   /* Stop affordance while generating -- a neutral/quiet treatment rather
      than the resting brand fill, so it doesn't read as "send is still
@@ -171,16 +178,16 @@ export const styles = css`
   :host([status='streaming']) [part='action-button'] {
     background: var(--lr-chat-composer-busy-bg, var(--lr-color-text-quiet));
   }
-  :host([status='sending']) [part='action-button']:hover,
-  :host([status='streaming']) [part='action-button']:hover {
+  :host([status='sending']) :where([part='action-button']):hover:where(:not(:disabled)),
+  :host([status='streaming']) :where([part='action-button']):hover:where(:not(:disabled)) {
     background: color-mix(
       in oklab,
       var(--lr-chat-composer-busy-bg, var(--lr-color-text-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-hover)
     );
   }
-  :host([status='sending']) [part='action-button']:active,
-  :host([status='streaming']) [part='action-button']:active {
+  :host([status='sending']) :where([part='action-button']):active:where(:not(:disabled)),
+  :host([status='streaming']) :where([part='action-button']):active:where(:not(:disabled)) {
     background: color-mix(
       in oklab,
       var(--lr-chat-composer-busy-bg, var(--lr-color-text-quiet)),

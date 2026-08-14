@@ -1,8 +1,11 @@
 import { AUTOLOADER_TAG_SET } from '../internal/autoloader-tags.js';
+import { registryForRoot, type LyraDefinitionRoot } from '../internal/definition-registry.js';
 import {
-  registryForRoot,
-  type LyraDefinitionRoot,
-} from '../internal/definition-registry.js';
+  collectRenderedTree,
+  renderedTreeTraversalLimits,
+  type RenderedTreeTraversalOptions,
+  type RenderedTreeTraversalState,
+} from '../internal/rendered-tree-traversal.js';
 
 export type { LyraDefinitionRoot } from '../internal/definition-registry.js';
 
@@ -10,61 +13,85 @@ interface UpdateCompleteElement extends Element {
   readonly updateComplete?: Promise<unknown>;
 }
 
+/** Resource ceilings for {@link allDefined}. Every limit is a nonnegative integer except
+ * `maxPasses`, which must be at least one. Exceeding a ceiling rejects the returned promise. */
+export interface AllDefinedOptions extends RenderedTreeTraversalOptions {
+  /** Maximum render/upgrade discovery passes. Default 100. */
+  readonly maxPasses?: number;
+}
+
 function defaultRoot(): LyraDefinitionRoot | undefined {
   return typeof document === 'undefined' ? undefined : document;
 }
 
-function isElement(node: Node): node is Element {
-  return node.nodeType === 1;
+function maxPasses(value: number | undefined): number {
+  const resolved = value ?? 100;
+  if (!Number.isFinite(resolved) || !Number.isInteger(resolved) || resolved < 1) {
+    throw new RangeError('allDefined() maxPasses must be an integer >= 1');
+  }
+  return resolved;
 }
 
-function collectElements(root: LyraDefinitionRoot): Element[] {
-  const elements: Element[] = [];
-  const seenElements = new Set<Element>();
-  const seenRoots = new Set<LyraDefinitionRoot>();
+function whenDefined(
+  registry: CustomElementRegistry,
+  tagName: string
+): Promise<CustomElementConstructor> | undefined {
+  try {
+    const method = registry.whenDefined;
+    if (typeof method !== 'function') return undefined;
+    return method.call(registry, tagName);
+  } catch {
+    return undefined;
+  }
+}
 
-  const visit = (current: LyraDefinitionRoot): void => {
-    if (seenRoots.has(current)) return;
-    seenRoots.add(current);
+function isDefined(registry: CustomElementRegistry, tagName: string): boolean {
+  try {
+    return typeof registry.get === 'function' && registry.get(tagName) !== undefined;
+  } catch {
+    return false;
+  }
+}
 
-    const candidates = [
-      ...(isElement(current) ? [current] : []),
-      ...current.querySelectorAll('*'),
-    ];
-    for (const element of candidates) {
-      if (!seenElements.has(element)) {
-        seenElements.add(element);
-        elements.push(element);
-      }
-      if (element.shadowRoot) visit(element.shadowRoot);
-    }
-  };
-
-  visit(root);
-  return elements;
+function updateCompleteFor(element: Element): Promise<unknown> | undefined {
+  try {
+    const updateComplete = (element as UpdateCompleteElement).updateComplete;
+    return updateComplete && typeof updateComplete.then === 'function' ? updateComplete : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
  * Resolves after every currently rendered, known `lr-*` element below `root` is defined.
  *
- * Open shadow roots are traversed recursively. The registry associated with each element's own
+ * Open shadow roots are traversed iteratively. The registry associated with each element's own
  * root is used, so scoped registries and elements in another same-realm document do not fall back
  * to the ambient global registry. Unknown `lr-*` tags are ignored rather than making the promise
  * hang forever. With no browser document (or no registry), this helper resolves immediately.
+ * `options` bounds retained elements/roots and total traversal work; exceeding a ceiling rejects
+ * rather than returning a partial readiness result. A consumer-owned element whose registry or
+ * update-completion accessors throw is treated as unavailable without blocking valid siblings.
  */
-export async function allDefined(root: LyraDefinitionRoot | undefined = defaultRoot()): Promise<void> {
-  if (!root || typeof root.querySelectorAll !== 'function') return;
+export async function allDefined(
+  root: LyraDefinitionRoot | undefined = defaultRoot(),
+  options: AllDefinedOptions = {}
+): Promise<void> {
+  const limits = renderedTreeTraversalLimits(options, 'allDefined()');
+  const passLimit = maxPasses(options.maxPasses);
+  if (!root) return;
 
   const seenElements = new Set<Element>();
+  const traversalState: RenderedTreeTraversalState = { work: 0 };
   let pass = 0;
 
   while (true) {
     pass += 1;
-    if (pass > 100) {
-      throw new Error('allDefined() exceeded 100 nested custom-element upgrade passes');
+    if (pass > passLimit) {
+      throw new Error(`allDefined() exceeded maxPasses (${passLimit})`);
     }
-    const collected = collectElements(root);
-    const elements = collected.filter((element) => !seenElements.has(element));
+    const collected = collectRenderedTree(root, limits, traversalState, 'allDefined()');
+    const elements = collected.elements.filter((element) => !seenElements.has(element));
     if (elements.length === 0) return;
     for (const element of elements) seenElements.add(element);
 
@@ -82,7 +109,8 @@ export async function allDefined(root: LyraDefinitionRoot | undefined = defaultR
       }
       if (tags.has(element.localName)) continue;
       tags.add(element.localName);
-      pendingDefinitions.push(registry.whenDefined(element.localName));
+      const pending = whenDefined(registry, element.localName);
+      if (pending) pendingDefinitions.push(pending);
     }
 
     await Promise.all(pendingDefinitions);
@@ -91,9 +119,9 @@ export async function allDefined(root: LyraDefinitionRoot | undefined = defaultR
     for (const element of elements) {
       if (!AUTOLOADER_TAG_SET.has(element.localName)) continue;
       const registry = registryForRoot(element);
-      if (!registry?.get(element.localName)) continue;
-      const updateComplete = (element as UpdateCompleteElement).updateComplete;
-      if (updateComplete && typeof updateComplete.then === 'function') pendingUpdates.push(updateComplete);
+      if (!registry || !isDefined(registry, element.localName)) continue;
+      const updateComplete = updateCompleteFor(element);
+      if (updateComplete) pendingUpdates.push(updateComplete);
     }
     await Promise.all(pendingUpdates);
   }

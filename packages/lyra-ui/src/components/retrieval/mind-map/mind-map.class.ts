@@ -170,7 +170,8 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.resetResizeWork();
     this.announcementSink?.release();
     this.announcementSink = undefined;
@@ -233,7 +234,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   }
 
   private relayout(): void {
-    const hubLabel = this.getAttribute('aria-label') ?? (this.label || this.localize('mindMapLabel'));
+    const hubLabel = this.label || this.localize('mindMapLabel');
     this.cachedLayout = layoutMindMap(this.topics, hubLabel, {
       ringGap: this.ringGapPx(),
       rtl: isRtl(this),
@@ -243,7 +244,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    const hubLabel = this.getAttribute('aria-label') ?? (this.label || this.localize('mindMapLabel'));
+    const hubLabel = this.label || this.localize('mindMapLabel');
     const context = `${hubLabel}\u0000${isRtl(this) ? 'rtl' : 'ltr'}\u0000${this.ringGapPx()}`;
     const structuralChange =
       changed.has('topics') ||
@@ -414,7 +415,10 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     if (layout.placed.length === 0) {
       return html`<div part="base"><div part="empty">${this.localize('noData')}</div></div>`;
     }
-    const ariaLabel = this.getAttribute('aria-label') ?? (this.label || this.localize('mindMapLabel'));
+    // A host aria-label names the complete component. The interactive SVG keeps
+    // a purpose-specific name and the parallel semantic tree is unnamed so each
+    // representation has one distinct semantic owner.
+    const ariaLabel = this.label || this.localize('mindMapLabel');
     const byId = new Map(layout.placed.map((p) => [p.id, p]));
     const childrenByParent = new Map<string | null, PlacedTopic[]>();
     for (const topic of layout.placed) {
@@ -462,7 +466,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
           )}
           ${focused ? svg`<circle part="focus-ring" cx=${focused.x} cy=${focused.y} r="10"></circle>` : nothing}
         </svg>
-        <div class="sr-only" role="tree" aria-label=${ariaLabel}>
+        <div class="sr-only" role="tree">
           ${(childrenByParent.get(null) ?? []).map((topic) => this.renderSemanticNode(topic, childrenByParent))}
         </div>
         <div id="mind-map-live" part="live-region" class="sr-only">${this.liveText}</div>

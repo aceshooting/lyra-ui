@@ -4,6 +4,7 @@ import './dropdown-item.js';
 import type { LyraMenuItem } from './menu-item.js';
 import './menu.js';
 import type { MenuFocusTarget } from './menu.js';
+import type { LyraMenu } from './menu.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 // role="menuitem" requires a role="menu"/"menubar"/"group" ancestor to
@@ -11,9 +12,22 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 // that; a plain wrapper stands in for it here since this file tests
 // <lr-menu-item> in isolation, mirroring lr-conversation-item's
 // identical fixtureInListbox helper for its own role="option".
-async function fixtureInMenu(item: import('lit').TemplateResult): Promise<LyraMenuItem> {
-  const wrapper = (await fixture(html`<div role="menu" aria-label="Actions">${item}</div>`)) as HTMLElement;
+async function fixtureInMenu(
+  item: import('lit').TemplateResult
+): Promise<LyraMenuItem> {
+  const wrapper = (await fixture(
+    html`<div role="menu" aria-label="Actions">${item}</div>`
+  )) as HTMLElement;
   return wrapper.querySelector('lr-menu-item') as LyraMenuItem;
+}
+
+async function fixtureInOwnedMenu(
+  item: import('lit').TemplateResult
+): Promise<{ menu: LyraMenu; item: LyraMenuItem }> {
+  const menu = await fixture<LyraMenu>(
+    html`<lr-menu label="Actions">${item}</lr-menu>`
+  );
+  return { menu, item: menu.querySelector('lr-menu-item') as LyraMenuItem };
 }
 
 class MenuItemLabelForwardWrapper extends HTMLElement {
@@ -33,14 +47,19 @@ class MenuItemLabelForwardWrapper extends HTMLElement {
   }
 }
 if (!customElements.get('menu-item-label-forward-wrapper')) {
-  customElements.define('menu-item-label-forward-wrapper', MenuItemLabelForwardWrapper);
+  customElements.define(
+    'menu-item-label-forward-wrapper',
+    MenuItemLabelForwardWrapper
+  );
 }
 
-it('defaults to value="", disabled=false, destructive=false, type="normal", checked=false', async () => {
-  const el = (await fixture(html`<lr-menu-item>Rename</lr-menu-item>`)) as LyraMenuItem;
+it('defaults to value="", disabled=false, variant="default", type="normal", checked=false', async () => {
+  const el = (await fixture(
+    html`<lr-menu-item>Rename</lr-menu-item>`
+  )) as LyraMenuItem;
   expect(el.value).to.equal('');
   expect(el.disabled).to.be.false;
-  expect(el.destructive).to.be.false;
+  expect(el.variant).to.equal('default');
   expect(el.type).to.equal('normal');
   expect(el.checked).to.be.false;
 });
@@ -50,21 +69,13 @@ it('sets role="menuitem" on the host', async () => {
   expect(el.getAttribute('role')).to.equal('menuitem');
 });
 
-it('reflects disabled/destructive to attributes', async () => {
-  const el = (await fixture(html`<lr-menu-item disabled destructive>Delete</lr-menu-item>`)) as LyraMenuItem;
+it('reflects disabled and the danger variant to attributes', async () => {
+  const el = (await fixture(
+    html`<lr-menu-item disabled variant="danger">Delete</lr-menu-item>`
+  )) as LyraMenuItem;
   expect(el.hasAttribute('disabled')).to.be.true;
-  expect(el.hasAttribute('destructive')).to.be.true;
+  expect(el.getAttribute('variant')).to.equal('danger');
   expect(el.getAttribute('aria-disabled')).to.equal('true');
-});
-
-it('normalizes variant="danger" with the legacy destructive treatment', async () => {
-  const modern = (await fixture(html`<lr-menu-item variant="danger">Delete</lr-menu-item>`)) as LyraMenuItem;
-  const legacy = (await fixture(html`<lr-menu-item destructive>Delete</lr-menu-item>`)) as LyraMenuItem;
-  const modernBase = modern.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  const legacyBase = legacy.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-
-  expect(modern.variant).to.equal('danger');
-  expect(getComputedStyle(modernBase).color).to.equal(getComputedStyle(legacyBase).color);
 });
 
 describe('row chrome cssprops', () => {
@@ -72,7 +83,9 @@ describe('row chrome cssprops', () => {
     el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
   it('preserves the pre-existing computed gap and corner-radius defaults', async () => {
-    const el = (await fixture(html`<lr-menu-item>Rename</lr-menu-item>`)) as LyraMenuItem;
+    const el = (await fixture(
+      html`<lr-menu-item>Rename</lr-menu-item>`
+    )) as LyraMenuItem;
     const chrome = getComputedStyle(base(el));
 
     expect(chrome.gap).to.equal('4px');
@@ -99,18 +112,20 @@ describe('danger-state cssprops', () => {
   const base = (el: LyraMenuItem): HTMLElement =>
     el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
-  it('inherits destructive foreground, hover, and pressed-fill hooks through both menu-item names without retinting ordinary rows', async function () {
+  it('inherits variant="danger" foreground, hover, and pressed-fill hooks through both menu-item names without retinting ordinary rows', async function () {
     this.timeout(15_000);
     const wrapper = (await fixture(html`
       <div>
-        <lr-menu-item destructive value="delete">Delete</lr-menu-item>
+        <lr-menu-item variant="danger" value="delete">Delete</lr-menu-item>
         <lr-menu-item variant="danger" value="archive">Archive</lr-menu-item>
-        <lr-dropdown-item variant="danger" value="remove">Remove</lr-dropdown-item>
+        <lr-dropdown-item variant="danger" value="remove"
+          >Remove</lr-dropdown-item
+        >
         <lr-menu-item value="rename">Rename</lr-menu-item>
       </div>
     `)) as HTMLElement;
     const [destructive, variant, dropdown, ordinary] = Array.from(
-      wrapper.querySelectorAll<LyraMenuItem>('lr-menu-item, lr-dropdown-item'),
+      wrapper.querySelectorAll<LyraMenuItem>('lr-menu-item, lr-dropdown-item')
     );
     const destructiveBase = base(destructive!);
     const variantBase = base(variant!);
@@ -126,86 +141,155 @@ describe('danger-state cssprops', () => {
     };
     const centerOf = (target: HTMLElement): [number, number] => {
       const rect = target.getBoundingClientRect();
-      expect(rect.width, 'each danger row needs rendered geometry for pointer-state coverage').to.be.greaterThan(0);
-      return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+      expect(
+        rect.width,
+        'each danger row needs rendered geometry for pointer-state coverage'
+      ).to.be.greaterThan(0);
+      return [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ];
     };
     const destructiveCentre = centerOf(destructiveBase);
 
     expect(getComputedStyle(destructiveBase).color).to.equal(
-      resolveInShadow('color: var(--lr-color-danger)', 'color'),
+      resolveInShadow('color: var(--lr-color-danger)', 'color')
     );
-    expect(getComputedStyle(variantBase).color).to.equal(getComputedStyle(destructiveBase).color);
+    expect(getComputedStyle(variantBase).color).to.equal(
+      getComputedStyle(destructiveBase).color
+    );
 
     try {
-      const defaultHover = resolveInShadow('background: var(--lr-color-danger-quiet)', 'background-color');
+      const defaultHover = resolveInShadow(
+        'background: var(--lr-color-danger-quiet)',
+        'background-color'
+      );
       const defaultActive = resolveInShadow(
         'background: color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
-        'background-color',
+        'background-color'
       );
       await sendMouse({ type: 'move', position: destructiveCentre });
       await waitUntil(
-        () => getComputedStyle(destructiveBase).backgroundColor === defaultHover,
-        'destructive hover paint did not settle',
+        () =>
+          getComputedStyle(destructiveBase).backgroundColor === defaultHover,
+        'destructive hover paint did not settle'
       );
-      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal(defaultHover);
+      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal(
+        defaultHover
+      );
       await sendMouse({ type: 'down' });
       await waitUntil(
-        () => getComputedStyle(destructiveBase).backgroundColor === defaultActive,
-        'destructive pressed paint did not settle',
+        () =>
+          getComputedStyle(destructiveBase).backgroundColor === defaultActive,
+        'destructive pressed paint did not settle'
       );
-      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal(defaultActive);
+      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal(
+        defaultActive
+      );
       await sendMouse({ type: 'up' });
 
       wrapper.style.setProperty('--lr-menu-item-danger-color', 'rgb(1, 2, 3)');
-      wrapper.style.setProperty('--lr-menu-item-danger-hover-bg', 'rgb(4, 5, 6)');
-      wrapper.style.setProperty('--lr-menu-item-danger-active-bg', 'rgb(7, 8, 9)');
+      wrapper.style.setProperty(
+        '--lr-menu-item-danger-hover-bg',
+        'rgb(4, 5, 6)'
+      );
+      wrapper.style.setProperty(
+        '--lr-menu-item-danger-active-bg',
+        'rgb(7, 8, 9)'
+      );
       expect(getComputedStyle(destructiveBase).color).to.equal('rgb(1, 2, 3)');
       expect(getComputedStyle(variantBase).color).to.equal('rgb(1, 2, 3)');
       expect(getComputedStyle(dropdownBase).color).to.equal('rgb(1, 2, 3)');
       expect(getComputedStyle(ordinaryBase).color).to.not.equal('rgb(1, 2, 3)');
       await sendMouse({ type: 'move', position: destructiveCentre });
       await waitUntil(
-        () => getComputedStyle(destructiveBase).backgroundColor === 'rgb(4, 5, 6)',
-        'themed destructive hover paint did not settle',
+        () =>
+          getComputedStyle(destructiveBase).backgroundColor === 'rgb(4, 5, 6)',
+        'themed variant="danger" hover paint did not settle'
       );
-      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal('rgb(4, 5, 6)');
+      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal(
+        'rgb(4, 5, 6)'
+      );
 
       await sendMouse({ type: 'down' });
       await waitUntil(
-        () => getComputedStyle(destructiveBase).backgroundColor === 'rgb(7, 8, 9)',
-        'themed destructive pressed paint did not settle',
+        () =>
+          getComputedStyle(destructiveBase).backgroundColor === 'rgb(7, 8, 9)',
+        'themed variant="danger" pressed paint did not settle'
       );
-      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal('rgb(7, 8, 9)');
+      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal(
+        'rgb(7, 8, 9)'
+      );
       await sendMouse({ type: 'up' });
 
       await sendMouse({ type: 'move', position: centerOf(dropdownBase) });
       await waitUntil(
         () => getComputedStyle(dropdownBase).backgroundColor === 'rgb(4, 5, 6)',
-        'dropdown danger hover paint did not settle',
+        'dropdown danger hover paint did not settle'
       );
-      expect(getComputedStyle(dropdownBase).backgroundColor).to.equal('rgb(4, 5, 6)');
+      expect(getComputedStyle(dropdownBase).backgroundColor).to.equal(
+        'rgb(4, 5, 6)'
+      );
       await sendMouse({ type: 'down' });
       await waitUntil(
         () => getComputedStyle(dropdownBase).backgroundColor === 'rgb(7, 8, 9)',
-        'dropdown danger pressed paint did not settle',
+        'dropdown danger pressed paint did not settle'
       );
-      expect(getComputedStyle(dropdownBase).backgroundColor).to.equal('rgb(7, 8, 9)');
+      expect(getComputedStyle(dropdownBase).backgroundColor).to.equal(
+        'rgb(7, 8, 9)'
+      );
       await sendMouse({ type: 'up' });
 
       const ordinaryResting = getComputedStyle(ordinaryBase).backgroundColor;
       await sendMouse({ type: 'move', position: centerOf(ordinaryBase) });
       await waitUntil(
-        () => getComputedStyle(ordinaryBase).backgroundColor !== ordinaryResting,
-        'ordinary hover paint did not settle',
+        () =>
+          getComputedStyle(ordinaryBase).backgroundColor !== ordinaryResting,
+        'ordinary hover paint did not settle'
       );
       const ordinaryHover = getComputedStyle(ordinaryBase).backgroundColor;
       expect(ordinaryHover).to.not.equal('rgb(4, 5, 6)');
       await sendMouse({ type: 'down' });
       await waitUntil(
         () => getComputedStyle(ordinaryBase).backgroundColor !== ordinaryHover,
-        'ordinary pressed paint did not settle',
+        'ordinary pressed paint did not settle'
       );
-      expect(getComputedStyle(ordinaryBase).backgroundColor).to.not.equal('rgb(7, 8, 9)');
+      expect(getComputedStyle(ordinaryBase).backgroundColor).to.not.equal(
+        'rgb(7, 8, 9)'
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('does not repaint a disabled or loading danger row on hover or press', async function () {
+    this.timeout(15_000);
+    const wrapper = await fixture<HTMLElement>(html`<div>
+      <lr-menu-item variant="danger" disabled>Disabled delete</lr-menu-item>
+      <lr-menu-item variant="danger" loading>Pending delete</lr-menu-item>
+    </div>`);
+    try {
+      for (const item of [
+        ...wrapper.querySelectorAll('lr-menu-item'),
+      ] as LyraMenuItem[]) {
+        const row = base(item);
+        const rect = row.getBoundingClientRect();
+        await sendMouse({
+          type: 'move',
+          position: [
+            Math.round(rect.left + rect.width / 2),
+            Math.round(rect.top + rect.height / 2),
+          ],
+        });
+        expect(getComputedStyle(row).backgroundColor).to.equal(
+          'rgba(0, 0, 0, 0)'
+        );
+        await sendMouse({ type: 'down' });
+        expect(getComputedStyle(row).backgroundColor).to.equal(
+          'rgba(0, 0, 0, 0)'
+        );
+        await sendMouse({ type: 'up' });
+      }
     } finally {
       await resetMouse();
     }
@@ -221,27 +305,33 @@ it('renders WA details and Shoelace prefix/suffix compatibility slots through na
       <span slot="suffix">S</span>
     </lr-menu-item>
   `)) as LyraMenuItem;
-  expect(el.shadowRoot!.querySelector('[part~="icon"] slot[name="prefix"]')).to.exist;
-  expect(el.shadowRoot!.querySelector('[part~="details"] slot[name="details"]')).to.exist;
-  expect(el.shadowRoot!.querySelector('[part~="suffix"] slot[name="suffix"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part~="icon"] slot[name="prefix"]')).to
+    .exist;
+  expect(el.shadowRoot!.querySelector('[part~="details"] slot[name="details"]'))
+    .to.exist;
+  expect(el.shadowRoot!.querySelector('[part~="suffix"] slot[name="suffix"]'))
+    .to.exist;
 });
 
 it('keeps every display slot decorative while the host retains the sole menuitem action', async () => {
   const wrapper = (await fixture(html`
-    <div role="menu" aria-label="Actions">
+    <lr-menu label="Actions">
       <lr-menu-item id="rename" value="rename" tabindex="0">
         <button id="icon" slot="icon" type="button">Icon action</button>
         <button id="prefix" slot="prefix" type="button">Prefix action</button>
         <button id="label" type="button">Rename</button>
-        <button id="details" slot="details" type="button">Shortcut action</button>
+        <button id="details" slot="details" type="button">
+          Shortcut action
+        </button>
         <button id="suffix" slot="suffix" type="button">Suffix action</button>
       </lr-menu-item>
-    </div>
-  `)) as HTMLElement;
+    </lr-menu>
+  `)) as LyraMenu;
   const item = wrapper.querySelector<LyraMenuItem>('#rename')!;
   const label = wrapper.querySelector<HTMLButtonElement>('#label')!;
-  const displayControls = ['icon', 'prefix', 'label', 'details', 'suffix']
-    .map((id) => wrapper.querySelector<HTMLButtonElement>(`#${id}`)!);
+  const displayControls = ['icon', 'prefix', 'label', 'details', 'suffix'].map(
+    (id) => wrapper.querySelector<HTMLButtonElement>(`#${id}`)!
+  );
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
   await item.updateComplete;
 
@@ -249,11 +339,13 @@ it('keeps every display slot decorative while the host retains the sole menuitem
     control.focus();
     expect(
       item.ownerDocument.activeElement?.id,
-      `${control.id} cannot become a second focus stop inside the menuitem`,
+      `${control.id} cannot become a second focus stop inside the menuitem`
     ).to.not.equal(control.id);
     expect(
-      control.assignedSlot?.closest<HTMLElement>('[inert]')?.getAttribute('aria-hidden'),
-      `${control.id} is visual-only item chrome`,
+      control.assignedSlot
+        ?.closest<HTMLElement>('[inert]')
+        ?.getAttribute('aria-hidden'),
+      `${control.id} is visual-only item chrome`
     ).to.equal('true');
   }
 
@@ -262,13 +354,16 @@ it('keeps every display slot decorative while the host retains the sole menuitem
 
   let slottedClicks = 0;
   let selections = 0;
-  label.addEventListener('click', () => slottedClicks += 1);
-  item.addEventListener('lr-menu-item-select', () => selections += 1);
+  label.addEventListener('click', () => (slottedClicks += 1));
+  wrapper.addEventListener('lr-select', () => (selections += 1));
   const rect = label.getBoundingClientRect();
   try {
     await sendMouse({
       type: 'click',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
     });
   } finally {
     await resetMouse();
@@ -280,7 +375,9 @@ it('keeps every display slot decorative while the host retains the sole menuitem
 });
 
 it('treats loading as interaction-disabled and renders the spinner parts', async () => {
-  const el = (await fixture(html`<lr-menu-item loading>Saving</lr-menu-item>`)) as LyraMenuItem;
+  const el = (await fixture(
+    html`<lr-menu-item loading>Saving</lr-menu-item>`
+  )) as LyraMenuItem;
   let selected = false;
   el.addEventListener('lr-menu-item-select', () => {
     selected = true;
@@ -298,14 +395,16 @@ it('keeps loading opt-in and exposes the visible text through getTextLabel()', a
   expect(el.loading).to.equal(false);
   expect(el.hasAttribute('loading')).to.equal(false);
   expect(el.getAttribute('aria-disabled')).to.equal('false');
-  expect((el.shadowRoot!.querySelector('[part~="spinner"]')) === (null)).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part~="spinner"]') === null).to.equal(
+    true
+  );
   expect(el.getTextLabel()).to.equal('Rename');
 });
 
 it('constructs native-state and label observers in the adopted owner document realm', async () => {
   const frame = document.createElement('iframe');
   const loaded = new Promise<void>((resolve) =>
-    frame.addEventListener('load', () => resolve(), { once: true }),
+    frame.addEventListener('load', () => resolve(), { once: true })
   );
   document.body.append(frame);
   await loaded;
@@ -313,7 +412,9 @@ it('constructs native-state and label observers in the adopted owner document re
   const frameWindow = frame.contentWindow!;
   const OriginalFrameObserver = frameWindow.MutationObserver;
   let frameObserverConstructions = 0;
-  frameWindow.MutationObserver = function (callback: MutationCallback): MutationObserver {
+  frameWindow.MutationObserver = function (
+    callback: MutationCallback
+  ): MutationObserver {
     frameObserverConstructions += 1;
     return new OriginalFrameObserver(callback);
   } as unknown as typeof MutationObserver;
@@ -344,7 +445,10 @@ it('constructs native-state and label observers in the adopted owner document re
     await Promise.resolve();
     await el.updateComplete;
 
-    expect(frameObserverConstructions, 'both observers use the iframe constructor').to.be.at.least(2);
+    expect(
+      frameObserverConstructions,
+      'both observers use the iframe constructor'
+    ).to.be.at.least(2);
     expect(el.getTextLabel()).to.equal('After adoption');
   } finally {
     el?.remove();
@@ -355,42 +459,52 @@ it('constructs native-state and label observers in the adopted owner document re
 });
 
 it('renders aria-disabled="false" when enabled', async () => {
-  const el = (await fixture(html`<lr-menu-item>Rename</lr-menu-item>`)) as LyraMenuItem;
+  const el = (await fixture(
+    html`<lr-menu-item>Rename</lr-menu-item>`
+  )) as LyraMenuItem;
   expect(el.getAttribute('aria-disabled')).to.equal('false');
 });
 
-it('forwards host click() to the visual row and fires lr-menu-item-select exactly once', async () => {
-  const el = (await fixture(html`<lr-menu-item value="rename">Rename</lr-menu-item>`)) as LyraMenuItem;
+it('forwards host click() to the visual row and activates its owner exactly once', async () => {
+  const { menu, item: el } = await fixtureInOwnedMenu(
+    html`<lr-menu-item value="rename">Rename</lr-menu-item>`
+  );
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   let baseClicks = 0;
-  const selections: CustomEvent<undefined>[] = [];
+  const selections: CustomEvent<{ item: LyraMenuItem }>[] = [];
+  let legacy = 0;
   base.addEventListener('click', () => {
     baseClicks += 1;
   });
-  el.addEventListener('lr-menu-item-select', (event) => {
-    selections.push(event as CustomEvent<undefined>);
+  menu.addEventListener('lr-select', (event) => {
+    selections.push(event as CustomEvent<{ item: LyraMenuItem }>);
   });
+  el.addEventListener('lr-menu-item-select', () => (legacy += 1));
 
   el.click();
 
   expect(baseClicks).to.equal(1);
   expect(selections).to.have.lengthOf(1);
-  // emit() forwards `detail` verbatim to the CustomEvent constructor; an
-  // omitted detail resolves to `null` there, not `undefined`.
-  expect(selections[0]!.detail).to.be.null;
+  expect(selections[0]!.detail.item === el).to.equal(true);
+  expect(legacy).to.equal(0);
 });
 
-it('select() fires lr-menu-item-select directly, for a parent menu\'s own keyboard handling', async () => {
-  const el = (await fixture(html`<lr-menu-item value="rename">Rename</lr-menu-item>`)) as LyraMenuItem;
+it('select() activates the owning menu through private plumbing', async () => {
+  const { menu, item: el } = await fixtureInOwnedMenu(
+    html`<lr-menu-item value="rename">Rename</lr-menu-item>`
+  );
   setTimeout(() => el.select());
-  await oneEvent(el, 'lr-menu-item-select');
+  const event = await oneEvent(menu, 'lr-select');
+  expect(event.detail.item === el).to.equal(true);
 });
 
-it('does not fire lr-menu-item-select on click or select() while disabled', async () => {
-  const el = (await fixture(html`<lr-menu-item disabled>Delete</lr-menu-item>`)) as LyraMenuItem;
+it('does not activate its owner on click or select() while disabled', async () => {
+  const { menu, item: el } = await fixtureInOwnedMenu(
+    html`<lr-menu-item disabled>Delete</lr-menu-item>`
+  );
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   let fired = false;
-  el.addEventListener('lr-menu-item-select', () => (fired = true));
+  menu.addEventListener('lr-select', () => (fired = true));
   base.click();
   el.select();
   expect(fired).to.be.false;
@@ -400,8 +514,12 @@ it('leaves host click() inert while disabled or loading', async () => {
   for (const state of ['disabled', 'loading'] as const) {
     const el = (await fixture(
       state === 'disabled'
-        ? html`<lr-menu-item type="checkbox" disabled value="wrap">Wrap text</lr-menu-item>`
-        : html`<lr-menu-item type="checkbox" loading value="wrap">Wrap text</lr-menu-item>`,
+        ? html`<lr-menu-item type="checkbox" disabled value="wrap"
+            >Wrap text</lr-menu-item
+          >`
+        : html`<lr-menu-item type="checkbox" loading value="wrap"
+            >Wrap text</lr-menu-item
+          >`
     )) as LyraMenuItem;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     let baseClicks = 0;
@@ -428,35 +546,45 @@ it('leaves host click() inert while disabled or loading', async () => {
 });
 
 it('starts with tabIndex -1 before any parent menu manages roving focus', async () => {
-  const el = (await fixture(html`<lr-menu-item>Rename</lr-menu-item>`)) as LyraMenuItem;
+  const el = (await fixture(
+    html`<lr-menu-item>Rename</lr-menu-item>`
+  )) as LyraMenuItem;
   expect(el.tabIndex).to.equal(-1);
 });
 
 it('forces tabIndex to -1 and blurs itself the moment disabled flips true while it holds real focus', async () => {
-  const el = await fixtureInMenu(html`<lr-menu-item tabindex="0">Rename</lr-menu-item>`);
+  const el = await fixtureInMenu(
+    html`<lr-menu-item tabindex="0">Rename</lr-menu-item>`
+  );
   el.focus();
-  expect((document.activeElement) === (el)).to.equal(true);
+  expect(document.activeElement === el).to.equal(true);
 
   el.disabled = true;
   await el.updateComplete;
   expect(el.tabIndex).to.equal(-1);
-  expect((document.activeElement) !== (el)).to.equal(true);
+  expect(document.activeElement !== el).to.equal(true);
 });
 
 it('hides the icon part when the icon slot is empty, shows it once populated', async () => {
-  const el = (await fixture(html`<lr-menu-item>Rename</lr-menu-item>`)) as LyraMenuItem;
+  const el = (await fixture(
+    html`<lr-menu-item>Rename</lr-menu-item>`
+  )) as LyraMenuItem;
   const iconPart = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
   expect(iconPart.hidden).to.be.true;
 
   const el2 = (await fixture(html`
     <lr-menu-item><span slot="icon">✏️</span>Rename</lr-menu-item>
   `)) as LyraMenuItem;
-  const iconPart2 = el2.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+  const iconPart2 = el2.shadowRoot!.querySelector(
+    '[part="icon"]'
+  ) as HTMLElement;
   expect(iconPart2.hidden).to.be.false;
 });
 
 it('type="checkbox" renders role="menuitemcheckbox" with aria-checked reflecting checked', async () => {
-  const el = await fixtureInMenu(html`<lr-menu-item type="checkbox">Wrap text</lr-menu-item>`);
+  const el = await fixtureInMenu(
+    html`<lr-menu-item type="checkbox">Wrap text</lr-menu-item>`
+  );
   expect(el.getAttribute('role')).to.equal('menuitemcheckbox');
   expect(el.getAttribute('aria-checked')).to.equal('false');
 
@@ -466,9 +594,9 @@ it('type="checkbox" renders role="menuitemcheckbox" with aria-checked reflecting
 });
 
 it('host click() emits a checkbox change proposal before mutating checked, then selects', async () => {
-  const el = (await fixture(
-    html`<lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>`,
-  )) as LyraMenuItem;
+  const { menu, item: el } = await fixtureInOwnedMenu(
+    html`<lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>`
+  );
   const order: string[] = [];
   const changes: CustomEvent<{ value: string; checked: boolean }>[] = [];
   const checkedDuringChanges: boolean[] = [];
@@ -479,7 +607,7 @@ it('host click() emits a checkbox change proposal before mutating checked, then 
     checkedDuringChanges.push(el.checked);
     changeCancelable.push(event.cancelable);
   });
-  el.addEventListener('lr-menu-item-select', () => {
+  menu.addEventListener('lr-select', () => {
     order.push('select');
   });
 
@@ -503,16 +631,16 @@ it('host click() emits a checkbox change proposal before mutating checked, then 
 });
 
 it('honors preventDefault on a checkbox change proposal without suppressing selection', async () => {
-  const el = (await fixture(
-    html`<lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>`,
-  )) as LyraMenuItem;
+  const { menu, item: el } = await fixtureInOwnedMenu(
+    html`<lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>`
+  );
   let checkedDuringChange = true;
   let selectionCount = 0;
   el.addEventListener('lr-menu-item-change', (event) => {
     checkedDuringChange = el.checked;
     event.preventDefault();
   });
-  el.addEventListener('lr-menu-item-select', () => {
+  menu.addEventListener('lr-select', () => {
     selectionCount += 1;
   });
 
@@ -525,7 +653,7 @@ it('honors preventDefault on a checkbox change proposal without suppressing sele
 
 it('select() toggles checked and fires lr-menu-item-change for type="checkbox" (Enter/Space, via a parent menu\'s own keydown handling)', async () => {
   const el = (await fixture(
-    html`<lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>`,
+    html`<lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>`
   )) as LyraMenuItem;
 
   setTimeout(() => el.select());
@@ -539,7 +667,9 @@ it('select() toggles checked and fires lr-menu-item-change for type="checkbox" (
 
 it('does not toggle checked or fire lr-menu-item-change on click or select() while disabled', async () => {
   const el = (await fixture(
-    html`<lr-menu-item type="checkbox" disabled value="wrap">Wrap text</lr-menu-item>`,
+    html`<lr-menu-item type="checkbox" disabled value="wrap"
+      >Wrap text</lr-menu-item
+    >`
   )) as LyraMenuItem;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   let fired = false;
@@ -552,26 +682,31 @@ it('does not toggle checked or fire lr-menu-item-change on click or select() whi
 
 it('renders a checkmark glyph only when type="checkbox" and checked', async () => {
   const unchecked = (await fixture(
-    html`<lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>`,
+    html`<lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>`
   )) as LyraMenuItem;
-  expect((unchecked.shadowRoot!.querySelector('[part="checkmark"]')) == null).to.be.true;
+  expect(unchecked.shadowRoot!.querySelector('[part="checkmark"]') == null).to
+    .be.true;
 
   const checked = (await fixture(
-    html`<lr-menu-item type="checkbox" checked value="wrap">Wrap text</lr-menu-item>`,
+    html`<lr-menu-item type="checkbox" checked value="wrap"
+      >Wrap text</lr-menu-item
+    >`
   )) as LyraMenuItem;
   expect(checked.shadowRoot!.querySelector('[part="checkmark"]')).to.exist;
 });
 
 it('type="normal" (default, omitted) is completely unaffected -- same role, no aria-checked, no checkmark, no lr-menu-item-change event', async () => {
-  const el = await fixtureInMenu(html`<lr-menu-item value="rename">Rename</lr-menu-item>`);
+  const { menu, item: el } = await fixtureInOwnedMenu(
+    html`<lr-menu-item value="rename">Rename</lr-menu-item>`
+  );
   expect(el.getAttribute('role')).to.equal('menuitem');
   expect(el.hasAttribute('aria-checked')).to.be.false;
-  expect((el.shadowRoot!.querySelector('[part="checkmark"]')) == null).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="checkmark"]') == null).to.be.true;
 
   let changeFired = false;
   let selectFired = false;
   el.addEventListener('lr-menu-item-change', () => (changeFired = true));
-  el.addEventListener('lr-menu-item-select', () => (selectFired = true));
+  menu.addEventListener('lr-select', () => (selectFired = true));
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   base.click();
   expect(changeFired).to.be.false;
@@ -583,23 +718,29 @@ it('is accessible with type="checkbox", both unchecked and checked', async () =>
   const wrapper = (await fixture(html`
     <div role="menu" aria-label="View">
       <lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>
-      <lr-menu-item type="checkbox" checked value="minimap">Minimap</lr-menu-item>
+      <lr-menu-item type="checkbox" checked value="minimap"
+        >Minimap</lr-menu-item
+      >
     </div>
   `)) as HTMLElement;
   await expect(wrapper).to.be.accessible();
 });
 
 it('is accessible in the default state', async () => {
-  const el = await fixtureInMenu(html`<lr-menu-item value="rename">Rename</lr-menu-item>`);
+  const el = await fixtureInMenu(
+    html`<lr-menu-item value="rename">Rename</lr-menu-item>`
+  );
   await expect(el).to.be.accessible();
 });
 
-it('is accessible with an icon, disabled and destructive states', async () => {
+it('is accessible with an icon, disabled and variant="danger" states', async () => {
   const wrapper = (await fixture(html`
     <div role="menu" aria-label="Actions">
-      <lr-menu-item value="rename"><span slot="icon">✏️</span>Rename</lr-menu-item>
+      <lr-menu-item value="rename"
+        ><span slot="icon">✏️</span>Rename</lr-menu-item
+      >
       <lr-menu-item value="archive" disabled>Archive</lr-menu-item>
-      <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+      <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
     </div>
   `)) as HTMLElement;
   await expect(wrapper).to.be.accessible();
@@ -607,23 +748,35 @@ it('is accessible with an icon, disabled and destructive states', async () => {
 
 describe('size', () => {
   const rowHeight = (el: LyraMenuItem): number =>
-    (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getBoundingClientRect().height;
+    (
+      el.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+    ).getBoundingClientRect().height;
 
   // Every assertion below measures the RENDERED row, never the stylesheet: the ladder reaches this
   // component through custom properties declared on :host by a shared sheet, so a wrong import
   // order or a shadowed knob shows up only in the resolved box.
   it('defaults to size="m", reflected, and renders identically to that tier restated', async () => {
-    const implicit = (await fixture(html`<lr-menu-item>Rename</lr-menu-item>`)) as LyraMenuItem;
-    const explicit = (await fixture(html`<lr-menu-item size="m">Rename</lr-menu-item>`)) as LyraMenuItem;
+    const implicit = (await fixture(
+      html`<lr-menu-item>Rename</lr-menu-item>`
+    )) as LyraMenuItem;
+    const explicit = (await fixture(
+      html`<lr-menu-item size="m">Rename</lr-menu-item>`
+    )) as LyraMenuItem;
     expect(implicit.size).to.equal('m');
     expect(implicit.getAttribute('size')).to.equal('m');
     expect(rowHeight(implicit)).to.equal(rowHeight(explicit));
   });
 
   it('grows the rendered row measurably from size="s" through "m" to "l"', async () => {
-    const small = (await fixture(html`<lr-menu-item size="s">Rename</lr-menu-item>`)) as LyraMenuItem;
-    const medium = (await fixture(html`<lr-menu-item size="m">Rename</lr-menu-item>`)) as LyraMenuItem;
-    const large = (await fixture(html`<lr-menu-item size="l">Rename</lr-menu-item>`)) as LyraMenuItem;
+    const small = (await fixture(
+      html`<lr-menu-item size="s">Rename</lr-menu-item>`
+    )) as LyraMenuItem;
+    const medium = (await fixture(
+      html`<lr-menu-item size="m">Rename</lr-menu-item>`
+    )) as LyraMenuItem;
+    const large = (await fixture(
+      html`<lr-menu-item size="l">Rename</lr-menu-item>`
+    )) as LyraMenuItem;
     expect(rowHeight(medium)).to.be.greaterThan(rowHeight(small));
     expect(rowHeight(large)).to.be.greaterThan(rowHeight(medium));
   });
@@ -634,8 +787,12 @@ describe('size', () => {
       ['medium', 'm'],
       ['large', 'l'],
     ]) {
-      const aliased = (await fixture(html`<lr-menu-item size=${alias}>Rename</lr-menu-item>`)) as LyraMenuItem;
-      const stepped = (await fixture(html`<lr-menu-item size=${step}>Rename</lr-menu-item>`)) as LyraMenuItem;
+      const aliased = (await fixture(
+        html`<lr-menu-item size=${alias}>Rename</lr-menu-item>`
+      )) as LyraMenuItem;
+      const stepped = (await fixture(
+        html`<lr-menu-item size=${step}>Rename</lr-menu-item>`
+      )) as LyraMenuItem;
       expect(rowHeight(aliased), alias).to.equal(rowHeight(stepped));
     }
   });
@@ -644,7 +801,9 @@ describe('size', () => {
   // below 24px on their own -- a menu row is a pointer target, so it floors there instead.
   it('keeps every tier at or above the 24px pointer-target floor', async () => {
     for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl']) {
-      const el = (await fixture(html`<lr-menu-item size=${size}>Rename</lr-menu-item>`)) as LyraMenuItem;
+      const el = (await fixture(
+        html`<lr-menu-item size=${size}>Rename</lr-menu-item>`
+      )) as LyraMenuItem;
       expect(rowHeight(el), size).to.be.at.least(24);
     }
   });
@@ -672,9 +831,13 @@ describe('size', () => {
   });
 
   it('is accessible at the smallest and largest tiers', async () => {
-    const smallest = await fixtureInMenu(html`<lr-menu-item size="2xs" value="rename">Rename</lr-menu-item>`);
+    const smallest = await fixtureInMenu(
+      html`<lr-menu-item size="2xs" value="rename">Rename</lr-menu-item>`
+    );
     await expect(smallest).to.be.accessible();
-    const largest = await fixtureInMenu(html`<lr-menu-item size="xl" value="rename">Rename</lr-menu-item>`);
+    const largest = await fixtureInMenu(
+      html`<lr-menu-item size="xl" value="rename">Rename</lr-menu-item>`
+    );
     await expect(largest).to.be.accessible();
   });
 });
@@ -698,30 +861,53 @@ describe('submenu parent', () => {
     return item;
   };
 
-  type SubmenuPanelElement = HTMLElement & {
-    anchor: HTMLElement | null;
-    open: boolean;
-    hide(options?: { focusTrigger?: boolean }): void | Promise<void>;
-  };
-
-  const panelOf = (item: LyraMenuItem): SubmenuPanelElement =>
-    item.querySelector('#panel') as SubmenuPanelElement;
+  const panelOf = (item: LyraMenuItem): LyraMenu =>
+    item.querySelector('#panel') as LyraMenu;
 
   const popupOf = (item: LyraMenuItem): HTMLElement =>
-    panelOf(item).shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    panelOf(item).shadowRoot!.querySelector('.submenu-surface') as HTMLElement;
 
   const settleLabel = async (item: LyraMenuItem): Promise<void> => {
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     await item.updateComplete;
   };
 
-  const waitForPlacedPopup = async (popup: HTMLElement): Promise<HTMLElement> => {
+  const waitForPlacedPopup = async (
+    popup: HTMLElement
+  ): Promise<HTMLElement> => {
     for (let frame = 0; frame < 120 && popup.style.left === ''; frame += 1) {
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve())
+      );
     }
     expect(popup.style.left).to.not.equal('');
     return popup;
   };
+
+  it('normalizes a submenu parent to a plain menuitem without discarding its authored checkbox mode', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div role="menu">
+      <lr-menu-item id="mode-parent" type="checkbox">
+        More
+        <lr-menu slot="submenu"
+          ><lr-menu-item value="child">Child</lr-menu-item></lr-menu
+        >
+      </lr-menu-item>
+    </div>`);
+    const item = wrapper.querySelector<LyraMenuItem>('#mode-parent')!;
+    await item.updateComplete;
+    expect(item.type).to.equal('checkbox');
+    expect(item.getAttribute('role')).to.equal('menuitem');
+    expect(item.hasAttribute('aria-checked')).to.equal(false);
+    expect(item.getAttribute('aria-haspopup')).to.equal('menu');
+
+    item.querySelector('[slot="submenu"]')!.remove();
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
+    await item.updateComplete;
+    expect(item.getAttribute('role')).to.equal('menuitemcheckbox');
+    expect(item.getAttribute('aria-checked')).to.equal('false');
+  });
 
   it('reports hasSubmenu and renders BOTH aria-expanded states, never omitting the attribute', async () => {
     const item = await parentOf();
@@ -735,13 +921,13 @@ describe('submenu parent', () => {
     await item.updateComplete;
     expect(item.submenuOpen).to.equal(true);
     expect(item.getAttribute('aria-expanded')).to.equal('true');
-    expect(panelOf(item).open).to.equal(true);
+    expect(getComputedStyle(popupOf(item)).visibility).to.equal('visible');
 
     item.closeSubmenu();
     await item.updateComplete;
     expect(item.submenuOpen).to.equal(false);
     expect(item.getAttribute('aria-expanded')).to.equal('false');
-    expect(panelOf(item).open).to.equal(false);
+    expect(item.submenuOpen).to.equal(false);
   });
 
   it('returns promises from submenu methods and settles them after the reflected state', async () => {
@@ -759,95 +945,78 @@ describe('submenu parent', () => {
     expect(item.hasAttribute('submenu-open')).to.equal(false);
   });
 
-  it('retires a replaced submenu while its show transition is still settling', async () => {
+  it('retires an open replaced submenu and attaches the replacement closed', async () => {
     const wrapper = (await fixture(html`
       <div role="menu" aria-label="Actions">
         <lr-menu-item id="share" value="share">
           Share
-          <lr-menu id="old-panel" slot="submenu"><lr-menu-item value="old">Old</lr-menu-item></lr-menu>
-          <lr-menu id="replacement-panel" slot="retired"><lr-menu-item value="new">New</lr-menu-item></lr-menu>
+          <lr-menu id="old-panel" slot="submenu"
+            ><lr-menu-item value="old">Old</lr-menu-item></lr-menu
+          >
+          <lr-menu id="replacement-panel" slot="retired"
+            ><lr-menu-item value="new">New</lr-menu-item></lr-menu
+          >
         </lr-menu-item>
       </div>
     `)) as HTMLElement;
     const item = wrapper.querySelector<LyraMenuItem>('#share')!;
-    const oldPanel = wrapper.querySelector<SubmenuPanelElement>('#old-panel')!;
-    const replacement = wrapper.querySelector<SubmenuPanelElement>('#replacement-panel')!;
+    const oldPanel = wrapper.querySelector<LyraMenu>('#old-panel')!;
+    const replacement = wrapper.querySelector<LyraMenu>('#replacement-panel')!;
     await item.updateComplete;
-
-    oldPanel.addEventListener('lr-show', () => {
-      oldPanel.slot = 'retired';
-      replacement.slot = 'submenu';
-    }, { once: true });
-
     await item.openSubmenu('none');
+    expect(item.submenuOpen).to.equal(true);
+    oldPanel.slot = 'retired';
+    replacement.slot = 'submenu';
     await new Promise<void>((resolve) => queueMicrotask(resolve));
     await item.updateComplete;
 
     expect(oldPanel.isConnected).to.equal(true);
-    expect(oldPanel.open).to.equal(false);
-    expect(oldPanel.anchor === null).to.equal(true);
-    expect(replacement.anchor === item).to.equal(true);
-    expect(replacement.open).to.equal(false);
+    expect(
+      oldPanel.shadowRoot!.querySelector('.submenu-surface') === null
+    ).to.equal(true);
+    expect(
+      replacement.shadowRoot!.querySelector('.submenu-surface') !== null
+    ).to.equal(true);
     expect(item.submenuOpen).to.equal(false);
     expect(item.getAttribute('aria-expanded')).to.equal('false');
   });
 
-  it('keeps a replacement submenu open when a retired panel finishes hiding', async () => {
+  it('does not let a stale close continuation overwrite an opened replacement', async () => {
     const wrapper = (await fixture(html`
       <div role="menu" aria-label="Actions">
         <lr-menu-item id="share" value="share">
           Share
-          <lr-menu id="old-panel" slot="submenu"><lr-menu-item value="old">Old</lr-menu-item></lr-menu>
-          <lr-menu id="replacement-panel" slot="retired"><lr-menu-item value="new">New</lr-menu-item></lr-menu>
+          <lr-menu id="old-panel" slot="submenu"
+            ><lr-menu-item value="old">Old</lr-menu-item></lr-menu
+          >
+          <lr-menu id="replacement-panel" slot="retired"
+            ><lr-menu-item value="new">New</lr-menu-item></lr-menu
+          >
         </lr-menu-item>
       </div>
     `)) as HTMLElement;
     const item = wrapper.querySelector<LyraMenuItem>('#share')!;
-    const oldPanel = wrapper.querySelector<SubmenuPanelElement>('#old-panel')!;
-    const replacement = wrapper.querySelector<SubmenuPanelElement>('#replacement-panel')!;
+    const oldPanel = wrapper.querySelector<LyraMenu>('#old-panel')!;
+    const replacement = wrapper.querySelector<LyraMenu>('#replacement-panel')!;
     await item.updateComplete;
     await item.openSubmenu('none');
+    const closing = item.closeSubmenu();
+    oldPanel.slot = 'retired';
+    replacement.slot = 'submenu';
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    await item.updateComplete;
+    await item.openSubmenu('none');
+    await closing;
+    await item.updateComplete;
 
-    const originalHide = oldPanel.hide.bind(oldPanel);
-    let resolveInitialHide!: () => void;
-    const initialHide = new Promise<void>((resolve) => {
-      resolveInitialHide = resolve;
-    });
-    let hideCalls = 0;
-    oldPanel.hide = (options) => {
-      hideCalls += 1;
-      return hideCalls === 1
-        ? initialHide.then(() => originalHide(options))
-        : originalHide(options);
-    };
-
-    let closing: Promise<void> | undefined;
-    try {
-      closing = item.closeSubmenu();
-      oldPanel.slot = 'retired';
-      replacement.slot = 'submenu';
-      await new Promise<void>((resolve) => queueMicrotask(resolve));
-      await item.updateComplete;
-      await item.openSubmenu('none');
-
-      expect(oldPanel.isConnected).to.equal(true);
-      expect(oldPanel.open).to.equal(false);
-      expect(oldPanel.anchor === null).to.equal(true);
-      expect(replacement.open).to.equal(true);
-      expect(item.submenuOpen).to.equal(true);
-
-      resolveInitialHide();
-      await closing;
-      await item.updateComplete;
-
-      expect(replacement.open).to.equal(true);
-      expect(item.submenuOpen).to.equal(true);
-      expect(item.getAttribute('aria-expanded')).to.equal('true');
-    } finally {
-      resolveInitialHide();
-      await closing;
-      oldPanel.hide = originalHide;
-    }
+    expect(
+      oldPanel.shadowRoot!.querySelector('.submenu-surface') === null
+    ).to.equal(true);
+    expect(
+      replacement.shadowRoot!.querySelector('.submenu-surface.open') !== null
+    ).to.equal(true);
+    expect(item.submenuOpen).to.equal(true);
+    expect(item.getAttribute('aria-expanded')).to.equal('true');
   });
 
   it('renders the mapped --submenu-offset default and responds live to an override', async () => {
@@ -875,7 +1044,9 @@ describe('submenu parent', () => {
     expect(renderedOffset()).to.be.closeTo(-2, 1);
 
     item.style.setProperty('--submenu-offset', '12px');
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
     expect(renderedOffset()).to.be.closeTo(12, 1);
   });
 
@@ -905,7 +1076,9 @@ describe('submenu parent', () => {
     expect(renderedOffset()).to.be.closeTo(-2, 1);
 
     item.style.setProperty('--submenu-offset', '12px');
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
     expect(renderedOffset()).to.be.closeTo(12, 1);
   });
 
@@ -914,8 +1087,12 @@ describe('submenu parent', () => {
       <div role="menu" aria-label="Actions">
         <lr-menu-item id="share">
           Share
-          <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
-          <lr-dropdown-item slot="submenu" value="copy">Copy link</lr-dropdown-item>
+          <lr-dropdown-item slot="submenu" value="email"
+            >Email</lr-dropdown-item
+          >
+          <lr-dropdown-item slot="submenu" value="copy"
+            >Copy link</lr-dropdown-item
+          >
         </lr-menu-item>
       </div>
     `)) as HTMLElement;
@@ -924,8 +1101,12 @@ describe('submenu parent', () => {
     expect(item.hasSubmenu).to.equal(true);
     await item.openSubmenu('first');
     expect(item.submenuOpen).to.equal(true);
-    expect((document.activeElement as HTMLElement).getAttribute('value')).to.equal('email');
-    expect(item.shadowRoot!.querySelector('[part~="submenu"]')?.localName).to.equal('lr-menu');
+    expect(
+      (document.activeElement as HTMLElement).getAttribute('value')
+    ).to.equal('email');
+    expect(
+      item.shadowRoot!.querySelector('[part~="submenu"]')?.localName
+    ).to.equal('lr-menu');
   });
 
   it('applies --submenu-offset to the generated direct-item submenu too', async () => {
@@ -937,37 +1118,47 @@ describe('submenu parent', () => {
       >
         <lr-menu-item id="share">
           Share
-          <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
+          <lr-dropdown-item slot="submenu" value="email"
+            >Email</lr-dropdown-item
+          >
         </lr-menu-item>
       </div>
     `)) as HTMLElement;
     const item = wrapper.querySelector('#share') as LyraMenuItem;
     await item.updateComplete;
     await item.openSubmenu('none');
-    const panel = item.shadowRoot!.querySelector('[data-generated-submenu]') as HTMLElement;
+    const panel = item.shadowRoot!.querySelector(
+      '[data-generated-submenu]'
+    ) as HTMLElement;
     const popup = await waitForPlacedPopup(
-      panel.shadowRoot!.querySelector('[part="popup"]') as HTMLElement,
+      panel.shadowRoot!.querySelector('.submenu-surface') as HTMLElement
     );
 
     expect(
-      popup.getBoundingClientRect().left - item.getBoundingClientRect().right,
+      popup.getBoundingClientRect().left - item.getBoundingClientRect().right
     ).to.be.closeTo(-2, 1);
   });
 
   it('leaves a plain item with no submenu ARIA at all', async () => {
-    const el = (await fixture(html`<lr-menu-item value="rename">Rename</lr-menu-item>`)) as LyraMenuItem;
+    const el = (await fixture(
+      html`<lr-menu-item value="rename">Rename</lr-menu-item>`
+    )) as LyraMenuItem;
     expect(el.hasSubmenu).to.equal(false);
     expect(el.hasAttribute('aria-haspopup')).to.equal(false);
     expect(el.hasAttribute('aria-expanded')).to.equal(false);
-    expect((el.shadowRoot!.querySelector('[part="submenu-icon"]')) === (null)).to.equal(true);
+    expect(
+      el.shadowRoot!.querySelector('[part="submenu-icon"]') === null
+    ).to.equal(true);
   });
 
   it('renders the submenu chevron part only for a submenu parent', async () => {
     const item = await parentOf();
-    expect(item.shadowRoot!.querySelector('[part="submenu-icon"]') === null).to.equal(false);
+    expect(
+      item.shadowRoot!.querySelector('[part="submenu-icon"]') === null
+    ).to.equal(false);
   });
 
-  it('opens the submenu on activation instead of firing lr-menu-item-select', async () => {
+  it('opens the submenu on activation without any public child selection event', async () => {
     const item = await parentOf();
     let selects = 0;
     item.addEventListener('lr-menu-item-select', () => {
@@ -976,7 +1167,7 @@ describe('submenu parent', () => {
     item.click();
     await item.updateComplete;
     expect(selects).to.equal(0);
-    expect(panelOf(item).open).to.equal(true);
+    expect(item.submenuOpen).to.equal(true);
   });
 
   it('names itself and its panel from its own label text, so an open submenu never leaks into the name', async () => {
@@ -1032,7 +1223,9 @@ describe('submenu parent', () => {
     const wrapper = (await fixture(html`
       <div role="menu" aria-label="Actions">
         <span id="rename-document-name">Rename document</span>
-        <lr-menu-item id="rename" value="rename"><span id="label">Rename</span></lr-menu-item>
+        <lr-menu-item id="rename" value="rename"
+          ><span id="label">Rename</span></lr-menu-item
+        >
       </div>
     `)) as HTMLElement;
     const item = wrapper.querySelector<LyraMenuItem>('#rename')!;
@@ -1062,7 +1255,9 @@ describe('submenu parent', () => {
           <span id="decorative" aria-hidden=" TRUE ">Decorative</span>
           <span id="hidden" hidden>Hidden</span>
           <span id="css-hidden" style="display: none">CSS hidden</span>
-          <span style="visibility: hidden">Invisible <span style="visibility: visible">Exposed</span></span>
+          <span style="visibility: hidden"
+            >Invisible <span style="visibility: visible">Exposed</span></span
+          >
           <span id="label">Share</span>
           <lr-menu slot="submenu" id="panel">
             <lr-menu-item value="email">Email</lr-menu-item>
@@ -1085,11 +1280,17 @@ describe('submenu parent', () => {
     expect(panel.getAttribute('aria-label')).to.equal('Exposed');
 
     wrapper.querySelector('#hidden')!.removeAttribute('hidden');
-    wrapper.querySelector<HTMLElement>('#css-hidden')!.style.removeProperty('display');
+    wrapper
+      .querySelector<HTMLElement>('#css-hidden')!
+      .style.removeProperty('display');
     await settleLabel(item);
     expect(item.getTextLabel()).to.equal('Hidden CSS hidden Exposed');
-    expect(item.getAttribute('aria-label')).to.equal('Hidden CSS hidden Exposed');
-    expect(panel.getAttribute('aria-label')).to.equal('Hidden CSS hidden Exposed');
+    expect(item.getAttribute('aria-label')).to.equal(
+      'Hidden CSS hidden Exposed'
+    );
+    expect(panel.getAttribute('aria-label')).to.equal(
+      'Hidden CSS hidden Exposed'
+    );
 
     wrapper.style.display = 'none';
     await settleLabel(item);
@@ -1100,8 +1301,12 @@ describe('submenu parent', () => {
     wrapper.style.removeProperty('display');
     await settleLabel(item);
     expect(item.getTextLabel()).to.equal('Hidden CSS hidden Exposed');
-    expect(item.getAttribute('aria-label')).to.equal('Hidden CSS hidden Exposed');
-    expect(panel.getAttribute('aria-label')).to.equal('Hidden CSS hidden Exposed');
+    expect(item.getAttribute('aria-label')).to.equal(
+      'Hidden CSS hidden Exposed'
+    );
+    expect(panel.getAttribute('aria-label')).to.equal(
+      'Hidden CSS hidden Exposed'
+    );
   });
 
   it('observes flattened label text projected through a forwarding slot', async () => {
@@ -1139,7 +1344,10 @@ describe('submenu parent', () => {
 
     replacement.setAttribute('aria-hidden', ' TRUE ');
     await settleLabel(item);
-    expect(item.getTextLabel(), 'a hidden assignment does not expose the forwarding fallback').to.equal('');
+    expect(
+      item.getTextLabel(),
+      'a hidden assignment does not expose the forwarding fallback'
+    ).to.equal('');
     expect(item.getAttribute('aria-label')).to.equal('');
     expect(panel.getAttribute('aria-label')).to.equal('');
 
@@ -1177,7 +1385,9 @@ describe('submenu parent', () => {
       <div role="menu" aria-label="Actions">
         <lr-menu-item value="share" id="share" aria-label="Share with someone">
           Share
-          <lr-menu slot="submenu" id="panel"><lr-menu-item value="email">Email</lr-menu-item></lr-menu>
+          <lr-menu slot="submenu" id="panel"
+            ><lr-menu-item value="email">Email</lr-menu-item></lr-menu
+          >
         </lr-menu-item>
       </div>
     `)) as HTMLElement;
@@ -1191,7 +1401,9 @@ describe('submenu parent', () => {
       <div role="menu" aria-label="Actions">
         <lr-menu-item value="share" id="share">
           <span id="label">Share</span>
-          <lr-menu slot="submenu" id="panel"><lr-menu-item value="email">Email</lr-menu-item></lr-menu>
+          <lr-menu slot="submenu" id="panel"
+            ><lr-menu-item value="email">Email</lr-menu-item></lr-menu
+          >
         </lr-menu-item>
       </div>
     `)) as HTMLElement;
@@ -1232,7 +1444,9 @@ describe('submenu parent', () => {
       <div role="menu" aria-label="Actions">
         <lr-menu-item value="share" id="share" aria-label="">
           <span id="label">Share</span>
-          <lr-menu slot="submenu" id="panel"><lr-menu-item value="email">Email</lr-menu-item></lr-menu>
+          <lr-menu slot="submenu" id="panel"
+            ><lr-menu-item value="email">Email</lr-menu-item></lr-menu
+          >
         </lr-menu-item>
       </div>
     `)) as HTMLElement;
@@ -1290,7 +1504,9 @@ describe('submenu parent', () => {
     item.openSubmenu(targets[1]);
     await item.updateComplete;
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    expect((document.activeElement as HTMLElement).tagName).to.equal('LR-MENU-ITEM');
+    expect((document.activeElement as HTMLElement).tagName).to.equal(
+      'LR-MENU-ITEM'
+    );
     outside.remove();
   });
 
@@ -1303,12 +1519,40 @@ describe('submenu parent', () => {
     await item.updateComplete;
     expect(item.submenuOpen).to.equal(false);
   });
+
+  it('reacquires an authored submenu after reconnect without restoring transient open state', async () => {
+    const item = await parentOf();
+    const owner = item.parentElement!;
+    const panel = panelOf(item);
+    await item.openSubmenu('none');
+    expect(item.submenuOpen).to.equal(true);
+
+    item.remove();
+    expect(item.submenuOpen).to.equal(false);
+    owner.append(item);
+    await item.updateComplete;
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
+
+    expect(item.submenuOpen).to.equal(false);
+    await item.openSubmenu('none');
+    expect(item.submenuOpen).to.equal(true);
+    expect(
+      panel.shadowRoot!.querySelector('.submenu-surface.open') !== null
+    ).to.equal(true);
+  });
 });
 
 it('contains a long menu-item label in exact 320px LTR and RTL allocations', async () => {
   for (const direction of ['ltr', 'rtl'] as const) {
     const wrapper = await fixture<HTMLElement>(html`
-      <div dir=${direction} role="menu" aria-label="Document actions" style="inline-size: 320px; max-inline-size: 100%;">
+      <div
+        dir=${direction}
+        role="menu"
+        aria-label="Document actions"
+        style="inline-size: 320px; max-inline-size: 100%;"
+      >
         <lr-menu-item value=${direction}>
           <span slot="icon" aria-hidden="true">✎</span>
           InternationalizedMenuItemLabelWithoutAnyNaturalBreakOpportunity

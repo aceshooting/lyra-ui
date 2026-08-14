@@ -72,9 +72,22 @@ it('renders supported composition and item branches while safely ignoring malfor
     (button) => button.dataset['path'],
   );
   expect(paths).to.include.members(['/allOf/0', '/anyOf/0', '/items']);
-  expect(el.shadowRoot!.textContent).to.contain('enum: compact, full');
+  expect(el.shadowRoot!.textContent).to.contain('enum: ["compact", "full"]');
   expect(el.shadowRoot!.textContent).to.contain('$ref: #/$defs/payload');
   expect(el.shadowRoot!.querySelectorAll('[part="issue"]').length).to.equal(1);
+});
+
+it('distinguishes no selection from the empty JSON Pointer that selects the root', async () => {
+  const el = await fixture<LyraSchemaViewer>(html`
+    <lr-schema-viewer .schema=${schema}></lr-schema-viewer>
+  `);
+  expect(el.selectedPath).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part~="node-selected"]') === null).to.be.true;
+
+  el.selectedPath = '';
+  await el.updateComplete;
+  const selected = el.shadowRoot!.querySelector('[part~="node-selected"]') as HTMLElement;
+  expect(selected.querySelector('[data-path]')!.getAttribute('data-path')).to.equal('');
 });
 
 it('applies per-instance localized strings', async () => {

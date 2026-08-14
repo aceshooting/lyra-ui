@@ -133,6 +133,20 @@ assert.match(
   migration,
   /\| `<wa-data-grid>` \| `<lr-data-grid>` \| `rewritten` \| Automatic: tag\/import plus events: wa-cell-click → lr-cell-click;/,
 );
+assert.match(
+  migration,
+  /\| `<wa-accordion>` \| `<lr-accordion>` \| `rewritten` \| Automatic: tag\/import plus events:/,
+  'C-567 guidance must stop freezing the removed legacy-details warning',
+);
+assert.doesNotMatch(
+  migration,
+  /wa-accordion[^\n]*legacy direct <lr-details>/u,
+);
+assert.match(
+  migration,
+  /\| `<wa-page>` \| `<lr-page>` \| `warning-required` \| Manual: Lyra returns a finite 0 for null[^\n]*ambient page viewport\./u,
+  'C-576 guidance must expose the reviewed method-edge divergence',
+);
 assert.match(migration, /\| `<wa-include>` \| `<lr-include>` \| `warning-required` \| Manual:/);
 assert.doesNotMatch(migration, /mechanical tag\/import rename|Documented 1:1 mirrors/);
 

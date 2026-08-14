@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './virtual-list.js';
 import type { LyraVirtualList } from './virtual-list.js';
+import type { VirtualListIndexedSource } from './virtual-list.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 interface DemoMessage {
@@ -22,6 +23,25 @@ function buildMessages(count: number): DemoMessage[] {
 }
 
 const messages = buildMessages(2000);
+
+const indexedMessages: VirtualListIndexedSource<DemoMessage> = {
+  count: 100_000,
+  itemAt(index) {
+    return {
+      id: `indexed-${index}`,
+      author: index % 2 === 0 ? 'Alex' : 'Assistant',
+      text: `Synthetic message ${index + 1}`,
+    };
+  },
+  keyAt(index) {
+    return `indexed-${index}`;
+  },
+  indexOfKey(key) {
+    if (typeof key !== 'string') return -1;
+    const match = /^indexed-(\d+)$/.exec(key);
+    return match ? Number(match[1]) : -1;
+  },
+};
 
 const narrowMessages: DemoMessage[] = [
   {
@@ -83,6 +103,19 @@ export const FixedRowHeight: Story = {
       .items=${messages}
       .renderItem=${renderMessage}
       .keyFunction=${keyFunction}
+    ></lr-virtual-list>
+  `,
+};
+
+/** A count/index source renders 100,000 synthetic rows without first allocating 100,000 items. */
+export const IndexedSource: Story = {
+  render: () => html`
+    <lr-virtual-list
+      style="max-width: 32rem; --lr-virtual-list-height: 20rem;"
+      row-height="56"
+      active-id="indexed-90000"
+      .source=${indexedMessages}
+      .renderItem=${renderMessage}
     ></lr-virtual-list>
   `,
 };
@@ -212,12 +245,37 @@ export const ScrollToActive: Story = {
   },
 };
 
+/** Real group markers are measured entries, so even a wrapping label reserves space before its row. */
+export const MeasuredGroupMarkers: Story = {
+  render: () => {
+    const rows = messages.slice(0, 36);
+    return html`
+      <lr-virtual-list
+        aria-label="Messages with measured group markers"
+        style="inline-size:320px; max-inline-size:100%; --lr-virtual-list-height:20rem;"
+        row-height="56"
+        .items=${rows}
+        .groups=${[
+          { key: 'recent', label: 'Recent messages', startIndex: 0 },
+          {
+            key: 'earlier',
+            label: 'Earlier messages with a deliberately long marker that wraps at this allocation',
+            startIndex: 18,
+          },
+        ]}
+        .renderItem=${renderMessage}
+        .keyFunction=${keyFunction}
+      ></lr-virtual-list>
+    `;
+  },
+};
+
 /**
  * `renderStickyGroup` pins a copy of the current group's header to the top of the viewport, and
  * pushes it off as the next group arrives. The real header here is an ordinary row (that is why the
  * `groups` entries carry `label: ''` -- they are position anchors only, so no second marker
- * renders), and the pinned copy is `aria-hidden` and `pointer-events: none` unless a consumer opts
- * back in with `lr-virtual-list::part(sticky-group) { pointer-events: auto; }`.
+ * renders), and the pinned copy is `aria-hidden`, `inert`, and pointer-transparent. Interactive
+ * actions belong to the real row so they retain one semantic and keyboard owner.
  */
 export const StickyGroups: Story = {
   render: () => {

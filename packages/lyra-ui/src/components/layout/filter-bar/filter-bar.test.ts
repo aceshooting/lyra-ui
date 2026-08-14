@@ -4,11 +4,11 @@ import "../../forms/checkbox/checkbox.js";
 import "../../forms/time-range/time-range.js";
 import type {
   LyraFilterBar,
-  FilterBarFilterDefinition,
-  FilterBarInputDetail,
+  LyraFilterBarFilterDefinition,
+  LyraFilterBarInputDetail,
 } from "./filter-bar.js";
 
-const basicFilters: FilterBarFilterDefinition[] = [
+const basicFilters: LyraFilterBarFilterDefinition[] = [
   {
     id: "status",
     label: "Status",
@@ -85,7 +85,7 @@ it("renders one composed control per filter, matched to its declared type", asyn
 });
 
 it("forwards common field and input parts from every built-in composed control", async () => {
-  const filters: FilterBarFilterDefinition[] = [
+  const filters: LyraFilterBarFilterDefinition[] = [
     ...basicFilters.slice(0, 3),
     { id: "query", label: "Query", type: "text" },
   ];
@@ -135,7 +135,7 @@ it("forwards common field and input parts from every built-in composed control",
 
 describe("custom filters", () => {
   it("renders an existing control with controlled value, disabled, required, and error state", async () => {
-    const filters: FilterBarFilterDefinition[] = [
+    const filters: LyraFilterBarFilterDefinition[] = [
       {
         id: "archived",
         label: "Include archived",
@@ -145,7 +145,7 @@ describe("custom filters", () => {
           adapter: {
             valueFromEvent: (event) =>
               (event as CustomEvent<{ checked: boolean }>).detail.checked,
-            emptyValue: false,
+            clearValue: false,
             formatValue: (value) => (value === true ? "Enabled" : "Disabled"),
           },
           render: (context) => html`
@@ -177,7 +177,7 @@ describe("custom filters", () => {
 
     const inputPromise = oneEvent(el, "lr-input");
     checkbox.click();
-    const input = (await inputPromise) as CustomEvent<FilterBarInputDetail>;
+    const input = (await inputPromise) as CustomEvent<LyraFilterBarInputDetail>;
     expect(input.detail.value).to.deep.equal({ archived: true });
     expect(el.value).to.deep.equal({ archived: true });
     expect(el.shadowRoot!.querySelector('[part="chip"]')!.textContent!.trim()).to.equal(
@@ -205,7 +205,7 @@ describe("custom filters", () => {
   });
 
   it("adapts a two-handle lr-time-range and clears it through its active chip", async () => {
-    const filters: FilterBarFilterDefinition[] = [
+    const filters: LyraFilterBarFilterDefinition[] = [
       {
         id: "window",
         label: "Time window",
@@ -218,7 +218,7 @@ describe("custom filters", () => {
               ).detail;
               return `${start}/${end}`;
             },
-            emptyValue: "",
+            clearValue: "",
           },
           render: (context) => {
             const [start, end] =
@@ -256,7 +256,7 @@ describe("custom filters", () => {
     const inputPromise = oneEvent(el, "lr-input");
     handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
     handle.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowRight", bubbles: true }));
-    const input = (await inputPromise) as CustomEvent<FilterBarInputDetail>;
+    const input = (await inputPromise) as CustomEvent<LyraFilterBarInputDetail>;
     expect(input.detail.value.window).to.equal("21/80");
     expect(el.value.window).to.equal("21/80");
 
@@ -265,18 +265,18 @@ describe("custom filters", () => {
       new CustomEvent("lr-remove", { bubbles: true, composed: true, detail: {} })
     );
     await el.updateComplete;
-    expect(el.value.window).to.equal("");
+    expect(Object.hasOwn(el.value, 'window')).to.equal(false);
     expect(el.hasActiveFilters).to.be.false;
   });
 
   it("lets an eventless custom control set a string array and uses the default list chip label", async () => {
-    const filters: FilterBarFilterDefinition[] = [
+    const filters: LyraFilterBarFilterDefinition[] = [
       {
         id: "reviewers",
         label: "Reviewers",
         type: "custom",
         custom: {
-          adapter: { valueFromEvent: () => undefined },
+          adapter: { valueFromEvent: () => undefined, clearValue: undefined },
           render: (context) => html`
             <button type="button" @click=${() => context.setValue(["Ada", "Lin"])}>Assign reviewers</button>
           `,
@@ -290,7 +290,7 @@ describe("custom filters", () => {
 
     const inputPromise = oneEvent(el, "lr-input");
     button.click();
-    const input = (await inputPromise) as CustomEvent<FilterBarInputDetail>;
+    const input = (await inputPromise) as CustomEvent<LyraFilterBarInputDetail>;
     await el.updateComplete;
 
     expect(input.detail.filterId).to.equal("reviewers");
@@ -323,8 +323,13 @@ it("treats a null/undefined filters or value as empty rather than throwing", asy
   )) as LyraFilterBar;
   expect(el.filters).to.deep.equal([]);
   expect(el.value).to.deep.equal({});
-  el.filters = null as unknown as FilterBarFilterDefinition[];
-  el.value = null as unknown as Record<string, unknown>;
+  el.filters = null;
+  el.value = null;
+  await el.updateComplete;
+  expect(el.filters).to.deep.equal([]);
+  expect(el.value).to.deep.equal({});
+  el.filters = undefined;
+  el.value = undefined;
   await el.updateComplete;
   expect(el.filters).to.deep.equal([]);
   expect(el.value).to.deep.equal({});
@@ -349,9 +354,9 @@ describe("value getter/setter (URL/state serialization contract)", () => {
     ).to.deep.equal(["urgent", "billing"]);
   });
 
-  it("passes a scalar controlled value through a single-value combobox with no declared options", async () => {
-    const filters: FilterBarFilterDefinition[] = [
-      { id: "assignee", label: "Assignee", type: "combobox" },
+  it("passes a scalar controlled value through a single-value combobox with an explicit empty catalog", async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { id: "assignee", label: "Assignee", type: "combobox", options: [] },
     ];
     const el = (await fixture(
       html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
@@ -371,13 +376,13 @@ describe("value getter/setter (URL/state serialization contract)", () => {
     expect(chip.textContent!.trim()).to.equal("Assignee: unlisted");
   });
 
-  it("returns a fresh copy from the value getter so external mutation cannot corrupt internal state", async () => {
+  it("returns an immutable value snapshot so external mutation cannot corrupt internal state", async () => {
     const el = (await fixture(
       html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
     )) as LyraFilterBar;
     el.value = { status: "open" };
     const snapshot = el.value;
-    snapshot.status = "closed";
+    expect(Object.isFrozen(snapshot)).to.equal(true);
     expect(el.value.status).to.equal("open");
   });
 
@@ -392,16 +397,17 @@ describe("value getter/setter (URL/state serialization contract)", () => {
     expect(el.value.tags).to.deep.equal(["urgent"]);
 
     const snapshot = el.value;
-    (snapshot.tags as string[]).push("review");
+    expect(Object.isFrozen(snapshot.tags)).to.equal(true);
     expect(el.value.tags).to.deep.equal(["urgent"]);
 
     const combo = control(el, "tags") as HTMLElement & { value: string[] };
     const inputPromise = oneEvent(el, "lr-input");
     combo.value = ["billing"];
     combo.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
-    const input = (await inputPromise) as CustomEvent<FilterBarInputDetail>;
+    const input = (await inputPromise) as CustomEvent<LyraFilterBarInputDetail>;
 
-    (input.detail.value.tags as string[]).push("review");
+    expect(Object.isFrozen(input.detail.value)).to.equal(true);
+    expect(Object.isFrozen(input.detail.value.tags)).to.equal(true);
     expect(el.value.tags).to.deep.equal(["billing"]);
   });
 });
@@ -418,7 +424,7 @@ describe("lr-input (filter edits)", () => {
     select.dispatchEvent(
       new Event("change", { bubbles: true, composed: true })
     );
-    const ev = (await promise) as CustomEvent<FilterBarInputDetail>;
+    const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
     expect(ev.detail.filterId).to.equal("status");
     expect(ev.detail.value).to.deep.equal({ status: "open" });
     expect(el.value).to.deep.equal({ status: "open" });
@@ -433,7 +439,7 @@ describe("lr-input (filter edits)", () => {
     const promise = oneEvent(el, "lr-input");
     combo.value = ["urgent"];
     combo.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
-    const ev = (await promise) as CustomEvent<FilterBarInputDetail>;
+    const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
     expect(ev.detail.filterId).to.equal("tags");
     expect(ev.detail.value.tags).to.deep.equal(["urgent"]);
   });
@@ -449,7 +455,7 @@ describe("lr-input (filter edits)", () => {
     dateRange.dispatchEvent(
       new Event("change", { bubbles: true, composed: true })
     );
-    const ev = (await promise) as CustomEvent<FilterBarInputDetail>;
+    const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
     expect(ev.detail.value.range).to.equal("2026-01-01/2026-01-31");
   });
 
@@ -468,12 +474,12 @@ describe("lr-input (filter edits)", () => {
       composed.open = true;
       await composed.updateComplete;
 
-      const filterInputs: FilterBarInputDetail[] = [];
+      const filterInputs: LyraFilterBarInputDetail[] = [];
       let childChanges = 0;
       let nativeInputs = 0;
       let nativeChanges = 0;
       el.addEventListener("lr-input", (event) => {
-        filterInputs.push((event as CustomEvent<FilterBarInputDetail>).detail);
+        filterInputs.push((event as CustomEvent<LyraFilterBarInputDetail>).detail);
       });
       el.addEventListener("lr-change", () => {
         childChanges += 1;
@@ -672,9 +678,9 @@ describe("active-filter chips", () => {
         detail: { value: "status" },
       })
     );
-    const ev = (await promise) as CustomEvent<FilterBarInputDetail>;
+    const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
     expect(ev.detail.filterId).to.equal("status");
-    expect(el.value).to.deep.equal({ status: "", created: "2026-02-01" });
+    expect(el.value).to.deep.equal({ created: "2026-02-01" });
   });
 
   it("does not leak the composed chip's lr-remove event past the host under its own name", async () => {
@@ -700,7 +706,7 @@ describe("active-filter chips", () => {
     expect(count).to.equal(0);
   });
 
-  it("clears a multiple combobox filter to an empty array (not an empty string) when its chip is removed", async () => {
+  it("omits a cleared multiple combobox filter from the sparse value", async () => {
     const el = (await fixture(
       html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
     )) as LyraFilterBar;
@@ -716,11 +722,11 @@ describe("active-filter chips", () => {
       })
     );
     await el.updateComplete;
-    expect(el.value.tags).to.deep.equal([]);
+    expect(Object.hasOwn(el.value, 'tags')).to.equal(false);
   });
 
   it("keeps focus on the nearest remaining chip, or its originating filter control, after focused removal", async () => {
-    const filters: FilterBarFilterDefinition[] = [
+    const filters: LyraFilterBarFilterDefinition[] = [
       {
         id: "first",
         label: "First",
@@ -798,13 +804,13 @@ describe("active-filter chips", () => {
   });
 
   it("moves a sole custom-filter chip's focus to its rendered control after removal", async () => {
-    const filters: FilterBarFilterDefinition[] = [
+    const filters: LyraFilterBarFilterDefinition[] = [
       {
         id: "custom",
         label: "Custom",
         type: "custom",
         custom: {
-          adapter: { valueFromEvent: () => "", emptyValue: "" },
+          adapter: { valueFromEvent: () => "", clearValue: "" },
           render: (context) => html`
             <input
               data-custom-filter-input
@@ -839,7 +845,7 @@ describe("active-filter chips", () => {
   });
 
   it("preserves a consumer focus move made by an lr-input listener after focused removal", async () => {
-    const filters: FilterBarFilterDefinition[] = [
+    const filters: LyraFilterBarFilterDefinition[] = [
       {
         id: "status",
         label: "Status",
@@ -861,7 +867,7 @@ describe("active-filter chips", () => {
     await el.updateComplete;
     el.addEventListener("lr-input", (event) => {
       if (
-        (event as CustomEvent<FilterBarInputDetail>).detail.filterId ===
+        (event as CustomEvent<LyraFilterBarInputDetail>).detail.filterId ===
         "status"
       ) {
         consumerTarget.focus();
@@ -931,7 +937,7 @@ describe("reset()", () => {
 
   it("restores every filter to its own defaultValue (or unset), clears touched state, and emits lr-input then lr-reset", async () => {
     const defaultTags = ["urgent"];
-    const filtersWithDefault: FilterBarFilterDefinition[] = [
+    const filtersWithDefault: LyraFilterBarFilterDefinition[] = [
       { ...basicFilters[0], defaultValue: "open" },
       { ...basicFilters[1], defaultValue: defaultTags },
     ];
@@ -1034,7 +1040,7 @@ describe("disabled", () => {
   });
 
   it("does not treat a disabled focusout as a required filter interaction, but preserves enabled focusout", async () => {
-    const builtInTypes: FilterBarFilterDefinition["type"][] = [
+    const builtInTypes: LyraFilterBarFilterDefinition["type"][] = [
       "select",
       "combobox",
       "date",
@@ -1043,7 +1049,7 @@ describe("disabled", () => {
     ];
 
     for (const type of builtInTypes) {
-      const filters: FilterBarFilterDefinition[] = [
+      const filters: LyraFilterBarFilterDefinition[] = [
         {
           id: "required",
           label: "Required",
@@ -1091,14 +1097,14 @@ describe("disabled", () => {
   });
 
   it("applies the disabled focusout guard to custom controls too", async () => {
-    const filters: FilterBarFilterDefinition[] = [
+    const filters: LyraFilterBarFilterDefinition[] = [
       {
         id: "required",
         label: "Required",
         type: "custom",
         required: true,
         custom: {
-          adapter: { valueFromEvent: () => "" },
+          adapter: { valueFromEvent: () => "", clearValue: "" },
           render: (context) => html`
             <input
               ?disabled=${context.disabled}
@@ -1335,7 +1341,7 @@ describe("RTL and narrow-allocation layout", () => {
   for (const direction of ["ltr", "rtl"] as const) {
     it(`contains one unbroken active-filter chip inside a 320px ${direction.toUpperCase()} allocation`, async () => {
       const longLabel = "LocalizedFilterValueWithoutBreakOpportunity".repeat(100);
-      const filters: FilterBarFilterDefinition[] = [
+      const filters: LyraFilterBarFilterDefinition[] = [
         {
           id: "status",
           label: "Status",
@@ -1375,7 +1381,7 @@ describe("RTL and narrow-allocation layout", () => {
 });
 
 describe("'text' free-text filters", () => {
-  const textFilters: FilterBarFilterDefinition[] = [
+  const textFilters: LyraFilterBarFilterDefinition[] = [
     { id: "q", label: "Search", type: "text", placeholder: "Search logs" },
     {
       id: "severity",
@@ -1387,7 +1393,7 @@ describe("'text' free-text filters", () => {
       ],
     },
   ];
-  const debouncedFilters: FilterBarFilterDefinition[] = [
+  const debouncedFilters: LyraFilterBarFilterDefinition[] = [
     {
       id: "q",
       label: "Search",
@@ -1421,7 +1427,7 @@ describe("'text' free-text filters", () => {
     )) as LyraFilterBar;
     const promise = oneEvent(el, "lr-input");
     await typeInto(el, "q", "timeout");
-    const ev = (await promise) as CustomEvent<FilterBarInputDetail>;
+    const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
     expect(ev.detail.filterId).to.equal("q");
     expect(ev.detail.value).to.deep.equal({ q: "timeout" });
     expect(el.value).to.deep.equal({ q: "timeout" });
@@ -1448,7 +1454,7 @@ describe("'text' free-text filters", () => {
       details.length,
       "exactly one lr-input, carrying this component's own detail shape"
     ).to.equal(1);
-    expect((details[0] as FilterBarInputDetail).value).to.deep.equal({
+    expect((details[0] as LyraFilterBarInputDetail).value).to.deep.equal({
       q: "abc",
     });
     expect(
@@ -1464,7 +1470,7 @@ describe("'text' free-text filters", () => {
     const values: string[] = [];
     el.addEventListener("lr-input", (e) =>
       values.push(
-        String((e as CustomEvent<FilterBarInputDetail>).detail.value.q)
+        String((e as CustomEvent<LyraFilterBarInputDetail>).detail.value.q)
       )
     );
 
@@ -1491,7 +1497,7 @@ describe("'text' free-text filters", () => {
     native.dispatchEvent(
       new Event("change", { bubbles: true, composed: true })
     );
-    const ev = (await promise) as CustomEvent<FilterBarInputDetail>;
+    const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
     expect(ev.detail.value).to.deep.equal({ q: "flush" });
   });
 
@@ -1560,7 +1566,7 @@ describe("'text' free-text filters", () => {
     );
     await aTimeout(300);
 
-    expect(el.value).to.deep.equal({ q: "" });
+    expect(el.value).to.deep.equal({});
     expect(inputs, "only the chip removal itself emitted").to.equal(1);
     const native = await nativeInput(el, "q");
     expect(native.value).to.equal("");
@@ -1603,9 +1609,9 @@ describe("'text' free-text filters", () => {
     const el = (await fixture(
       html`<lr-filter-bar .filters=${debouncedFilters}></lr-filter-bar>`
     )) as LyraFilterBar;
-    const emitted: FilterBarInputDetail[] = [];
+    const emitted: LyraFilterBarInputDetail[] = [];
     el.addEventListener("lr-input", (event) => {
-      emitted.push((event as CustomEvent<FilterBarInputDetail>).detail);
+      emitted.push((event as CustomEvent<LyraFilterBarInputDetail>).detail);
     });
     await typeInto(el, "q", "stale draft");
 
@@ -1670,7 +1676,7 @@ describe("'text' free-text filters", () => {
   });
 
   it("reveals a required text filter's error on blur, not per keystroke, and flushes first", async () => {
-    const requiredText: FilterBarFilterDefinition[] = [
+    const requiredText: LyraFilterBarFilterDefinition[] = [
       { id: "q", label: "Search", type: "text", required: true, debounce: 400 },
     ];
     const el = (await fixture(
@@ -1700,7 +1706,7 @@ describe("'text' free-text filters", () => {
   });
 
   it("still reveals the required error on blur when the text filter is genuinely empty", async () => {
-    const requiredText: FilterBarFilterDefinition[] = [
+    const requiredText: LyraFilterBarFilterDefinition[] = [
       { id: "q", label: "Search", type: "text", required: true, debounce: 60 },
     ];
     const el = (await fixture(
@@ -1731,7 +1737,7 @@ describe("'text' free-text filters", () => {
   });
 
   it("is accessible with a text filter populated, its chip shown, and a revealed required error", async () => {
-    const filters: FilterBarFilterDefinition[] = [
+    const filters: LyraFilterBarFilterDefinition[] = [
       {
         id: "q",
         label: "Search",
@@ -1799,7 +1805,7 @@ it("renders an option's optional icon into lr-option's leading start slot for se
         type: "combobox",
         options: [{ value: "ada", label: "Ada", icon: dot("ada") }],
       },
-    ] as FilterBarFilterDefinition[]}
+    ] as LyraFilterBarFilterDefinition[]}
   ></lr-filter-bar>`)) as LyraFilterBar;
   await el.updateComplete;
 

@@ -13,7 +13,7 @@ export * from './image-viewer/image-viewer.js';
 export * from './lightbox/lightbox.js';
 export * from './map/map.js';
 export * from './media-card/media-card.js';
-export * from './playback/playback.js';
+export * from './sequence-playback/sequence-playback.js';
 export * from './pan-zoom/pan-zoom.js';
 export * from './qr-code/qr-code.js';
 export * from './video/video.js';

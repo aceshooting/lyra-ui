@@ -99,15 +99,20 @@ export function validatePinConfiguration(pins, { inventory, upstreamTags }) {
       `${label}: manifest path must be package/dist/custom-elements.json`,
     );
     invariant(/^[a-f0-9]{64}$/u.test(pin.manifestSha256), `${label}: manifestSha256 must be a lowercase SHA-256 digest`);
-    const runtimeEvidenceSource = upstreamTags?.[ecosystem]?.runtimeEventCancelability?.source;
-    if (runtimeEvidenceSource) {
+    for (const [field, evidenceLabel] of [
+      ['runtimeEventCancelability', 'runtime evidence'],
+      ['runtimeMethodEdgeSemantics', 'runtime method-edge evidence'],
+    ]) {
+      const runtimeEvidenceSource = upstreamTags?.[ecosystem]?.[field]?.source;
+      if (!runtimeEvidenceSource) continue;
       invariant(
-        runtimeEvidenceSource.package === pin.name && runtimeEvidenceSource.version === pin.version,
-        `${label}: runtime evidence package identity does not match the reviewed artifact`,
+        runtimeEvidenceSource.package === pin.name &&
+          runtimeEvidenceSource.version === pin.version,
+        `${label}: ${evidenceLabel} package identity does not match the reviewed artifact`,
       );
       invariant(
         runtimeEvidenceSource.tarballIntegrity === pin.tarballIntegrity,
-        `${label}: runtime evidence integrity does not match the reviewed artifact`,
+        `${label}: ${evidenceLabel} integrity does not match the reviewed artifact`,
       );
     }
   }

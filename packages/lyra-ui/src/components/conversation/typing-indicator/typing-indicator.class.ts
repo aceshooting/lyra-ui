@@ -12,10 +12,9 @@ import { LYRA_DEFAULT_thinking } from '../../../internal/default-strings.generat
 
 
 /**
- * Which animation SHAPE to draw. Deliberately NOT the shared `LyraVariant`: these are three
- * different decorative motions, not semantic tones, so they share only the property name.
+ * Which decorative animation shape to draw.
  */
-export type TypingIndicatorVariant = 'dots' | 'pulse' | 'cursor';
+export type TypingIndicatorShape = 'dots' | 'pulse' | 'cursor';
 /**
  * An alias of the shared {@linkcode LyraSize} ladder, so this component speaks the same size
  * vocabulary as everything else (it used to have a private `'sm' | 'md'` scale of its own).
@@ -31,7 +30,7 @@ export type TypingIndicatorSize = LyraSize;
  * it while a response is being generated and removes it (or hides it) once
  * real content has arrived.
  *
- * Three visual variants share one component rather than three separate tags
+ * Three visual shapes share one component rather than three separate tags
  * because callers pick between them along a single axis — how the
  * surrounding surface wants the cue to read — and nothing else about the
  * component differs:
@@ -52,8 +51,8 @@ export type TypingIndicatorSize = LyraSize;
  * accessible name derived from `label` is sufficient, set both as an
  * `aria-label` on the host *and* as a visually-hidden text node in the
  * shadow tree, so the name survives even if only one of the two is picked up
- * by a given assistive-tech/browser pairing. An untouched-default, empty, or
- * whitespace-only `label` falls back to the localized "Thinking…" copy in
+ * by a given assistive-tech/browser pairing. An empty or whitespace-only
+ * `label` falls back to the localized "Thinking…" copy in
  * both places, rather than leaving the component with no accessible name at
  * all. An `aria-label` set directly on the host element (the idiomatic way to
  * name any custom element) wins over the `label`-derived default, in both
@@ -64,16 +63,16 @@ export type TypingIndicatorSize = LyraSize;
  *
  * @customElement lr-typing-indicator
  * @csspart base - The decorative (`aria-hidden`) wrapper around the animated shape.
- * @csspart dot - Each of the three dots in the `dots` variant.
- * @csspart pulse - The single pulsing dot in the `pulse` variant.
- * @csspart cursor - The blinking bar in the `cursor` variant.
+ * @csspart dot - Each of the three dots in the `dots` shape.
+ * @csspart pulse - The single pulsing dot in the `pulse` shape.
+ * @csspart cursor - The blinking bar in the `cursor` shape.
  * @cssprop [--lr-typing-dot-size=var(--lr-space-s)] - Diameter of each dot in the `dots` and
  * `pulse` variants. The `size` property supplies compact and roomy tier overrides.
  * @cssprop [--lr-typing-gap=var(--lr-space-xs)] - Gap between dots in the `dots` variant. The
  * `size` property supplies compact and roomy tier overrides.
- * @cssprop [--lr-typing-cursor-width=var(--lr-size-0-125rem)] - Width of the `cursor` variant. The
- * `size` property supplies compact and roomy tier overrides.
- * @cssprop [--lr-typing-cursor-height=var(--lr-size-1em)] - Height of the `cursor` variant.
+ * @cssprop [--lr-inline-cursor-width=var(--lr-size-0-125rem)] - Shared inline-cursor width. The
+ * `size` property supplies compact and roomy tier fallbacks.
+ * @cssprop [--lr-inline-cursor-height=var(--lr-size-1em)] - Shared inline-cursor height.
  * @cssprop [--lr-typing-duration=var(--lr-transition-ambient)] - Animation duration and timing
  * function for the dot-bounce/pulse/cursor-blink loop, shared by all variants. Aliases the
  * shared `--lr-transition-ambient` token (default `1.8s ease-in-out`) by default, so retiming
@@ -95,14 +94,14 @@ export class LyraTypingIndicator extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Which decorative presentation to render. */
-  @property({ reflect: true }) variant: TypingIndicatorVariant = 'dots';
+  @property({ reflect: true }) shape: TypingIndicatorShape = 'dots';
 
   /** Accessible name, exposed via `role="status"`. Not re-announced on every
    *  animation frame — only mount (and any later change to this property)
-   *  produces a new announcement. An untouched-default, empty, or
-   *  whitespace-only value falls back to the localized "Thinking…" copy (see
+   *  produces a new announcement. An empty or whitespace-only value falls
+   *  back to the localized "Thinking…" copy (see
    *  `accessibleLabel`) so the component never loses its accessible name. */
-  @property() label = 'Thinking…';
+  @property() label = '';
 
   /** Visual size on the shared ladder — drop to `s`/`small` (or below) for dense layouts, e.g.
    *  inline with a message bubble. `'m'` (the default) is the standalone status-line size. */
@@ -119,14 +118,14 @@ export class LyraTypingIndicator extends LyraElement {
 
   /** The accessible name actually used: an explicit host `aria-label` wins outright; otherwise
    *  falls back to the localized `'thinking'` message (`"Thinking…"` in English) when `label` is
-   *  left at its untouched default or set to an empty/whitespace-only string -- otherwise both the
+   *  empty/whitespace-only -- otherwise both the
    *  `aria-label` and the sr-only text node would go blank, leaving this purely-decorative
    *  component with no accessible name at all. A caller-customized `label` is used verbatim (not a
    *  translation concern), same convention as `<lr-date-picker>`'s `previousLabel`. */
   private get accessibleLabel(): string {
-    if (this.explicitAriaLabel) return this.explicitAriaLabel;
+    if (this.explicitAriaLabel !== null) return this.explicitAriaLabel;
     const trimmed = this.label.trim();
-    return this.localize('thinking', trimmed === '' || trimmed === 'Thinking…' ? undefined : trimmed);
+    return trimmed === '' ? this.localize('thinking') : trimmed;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -148,7 +147,7 @@ export class LyraTypingIndicator extends LyraElement {
   }
 
   private renderShape(): TemplateResult {
-    switch (this.variant) {
+    switch (this.shape) {
       case 'pulse':
         return html`<span part="pulse"></span>`;
       case 'cursor':

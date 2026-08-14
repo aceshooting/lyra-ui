@@ -1,34 +1,42 @@
-import { html, nothing, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteCount, finiteRange } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
-import type { StatVariant } from '../../data/stat/stat.class.js';
-import '../../data/stat/stat.class.js';
-import '../citation-badge/citation-badge.class.js';
-import '../../overlays/empty/empty.class.js';
-import type { Citation, CitationSelectEventDetail, GroundedClaim, GroundingAssessment } from '../../../ai/types.js';
-import { styles } from './grounding-summary.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import '../claim-evidence/claim-evidence.class.js';
+import { html, nothing, type TemplateResult } from "lit";
+import { property } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import {
+  finiteCount,
+  finiteInteger,
+  finiteRange,
+} from "../../../internal/numbers.js";
+import { getNumberFormat } from "../../../internal/intl-cache.js";
+import type { LyraVariant } from "../../../internal/variants.js";
+import "../../data/stat/stat.class.js";
+import "../citation-badge/citation-badge.class.js";
+import "../../overlays/empty/empty.class.js";
+import type {
+  Citation,
+  CitationSelectEventDetail,
+  GroundedClaim,
+  GroundingAssessment,
+} from "../../../ai/types.js";
+import { styles } from "./grounding-summary.styles.js";
+import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
+import "../claim-evidence/claim-evidence.class.js";
+import type { LyraScoreThresholds } from "../graph/graph.class.js";
+import {
+  retrievalSemanticLabel,
+  retrievalSemanticRole,
+} from "../retrieval-semantic-owner.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 export interface LyraGroundingSummaryEventMap {
-  'lr-citation-select': CustomEvent<CitationSelectEventDetail>;
-  'lr-claim-select': CustomEvent<{ claim: GroundedClaim }>;
+  "lr-citation-select": CustomEvent<CitationSelectEventDetail>;
+  "lr-claim-select": CustomEvent<{ claim: GroundedClaim }>;
 }
 
-/** Coverage/confidence tone thresholds (both are 0-1 fractions) -- the same shape and default
- *  magnitude `<lr-chunk-inspector>`'s own `thresholds` prop already establishes for its
- *  relevance-score tiers, reused here for the analogous "how well grounded" reading. */
-export interface GroundingSummaryThresholds {
-  high: number;
-  medium: number;
-}
+/** Document-outline level used by the warnings and evidence section headings. */
+export type GroundingSummaryHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
 /**
  * `<lr-grounding-summary>` -- the claim-level scorecard for one generated answer: supported/
@@ -51,7 +59,8 @@ export interface GroundingSummaryThresholds {
  * @customElement lr-grounding-summary
  * @event lr-citation-select - An evidence citation badge was activated. `detail: { citation }`.
  * @event lr-claim-select - A composed claim-evidence row was activated. `detail: { claim }`.
- * @csspart base - The `role="group"` root wrapper.
+ * @csspart base - The root wrapper. It owns `role="group"` and the fallback name unless a
+ *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart stats - Container for the claim-count/coverage/confidence `<lr-stat>` row.
  * @csspart warnings - Wrapper for the warnings section. Omitted when there are no warnings.
  * @csspart warnings-heading - The "Warnings" heading text.
@@ -65,6 +74,7 @@ export interface GroundingSummaryThresholds {
  * @csspart evidence-label - A citation's `label`, shown next to its badge (omitted when unset).
  * @csspart evidence-span - A citation's formatted `span` range, shown next to its badge (omitted
  *   when `span` is unset).
+ * @csspart evidence-list - The semantic list containing the evidence citations.
  * @csspart claims - Claim-level evidence, when present and enabled.
  * @csspart empty - The empty-state message, shown when `assessment` is `null`.
  * @status stable
@@ -86,7 +96,11 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     groundingSummarySupportedLabel: LYRA_DEFAULT_groundingSummarySupportedLabel,
     groundingSummaryUnsupportedLabel: LYRA_DEFAULT_groundingSummaryUnsupportedLabel,
     groundingSummaryWarningsHeading: LYRA_DEFAULT_groundingSummaryWarningsHeading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -104,108 +118,173 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   /** Tone thresholds applied to both `coverage` and `confidence` (both 0-1 fractions): at or above
    *  `high` renders `success`, at or above `medium` renders `warning`, below `medium` renders
    *  `danger`. */
-  @property({ attribute: false }) thresholds: GroundingSummaryThresholds = { high: 0.8, medium: 0.5 };
+  @property({ attribute: false }) thresholds: LyraScoreThresholds = {
+    high: 0.8,
+    medium: 0.5,
+  };
 
-  /** Accessible group label override. Falls back to a host `aria-label`, then the localized
-   *  `groundingSummaryLabel` default. */
-  @property() label = '';
+  /** Accessible name used by the stable group when the host has no `aria-label`; falls back to the
+   *  localized `groundingSummaryLabel` default. An explicitly empty host label stays empty. */
+  @property() label = "";
 
   /** Renders `assessment.claims` through `<lr-claim-evidence>` when available. */
-  @property({ type: Boolean, attribute: 'show-claims', reflect: true, converter: trueDefaultBooleanConverter })
+  @property({
+    type: Boolean,
+    attribute: "show-claims",
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
   showClaims = true;
 
-  private tone(value: number): StatVariant {
-    if (value >= this.thresholds.high) return 'success';
-    if (value >= this.thresholds.medium) return 'warning';
-    return 'danger';
+  /** Heading level for the warnings and evidence sections. Clamped to the HTML outline range. */
+  @property({ type: Number, attribute: "heading-level" })
+  headingLevel: GroundingSummaryHeadingLevel = 3;
+
+  private sectionHeading(part: string, text: string): TemplateResult {
+    const level = finiteInteger(this.headingLevel, 3, 1, 6);
+    switch (level) {
+      case 1:
+        return html`<h1 part=${part}>${text}</h1>`;
+      case 2:
+        return html`<h2 part=${part}>${text}</h2>`;
+      case 4:
+        return html`<h4 part=${part}>${text}</h4>`;
+      case 5:
+        return html`<h5 part=${part}>${text}</h5>`;
+      case 6:
+        return html`<h6 part=${part}>${text}</h6>`;
+      default:
+        return html`<h3 part=${part}>${text}</h3>`;
+    }
+  }
+
+  private tone(value: number): LyraVariant {
+    if (value >= this.thresholds.high) return "success";
+    if (value >= this.thresholds.medium) return "warning";
+    return "danger";
   }
 
   private formatPercent(value: number): string {
-    return getNumberFormat(this.effectiveLocale, { style: 'percent' }).format(finiteRange(value, 0, 0, 1));
+    return getNumberFormat(this.effectiveLocale, { style: "percent" }).format(
+      finiteRange(value, 0, 0, 1)
+    );
   }
 
-  private onCitationSelect(citation: Citation): void {
-    this.emit('lr-citation-select', { citation });
+  private onCitationSelect(citation: Citation, event: Event): void {
+    event.stopPropagation();
+    this.emit("lr-citation-select", { citation });
   }
 
-  private renderEvidenceItem = (citation: Citation, index: number): TemplateResult => {
+  private renderEvidenceItem = (
+    citation: Citation,
+    index: number
+  ): TemplateResult => {
     // The offsets are locale-formatted before interpolation, the same way every other number in
     // this component (and the adjacent citation badge's own index) is: interpolating raw JS numbers
     // into a translated sentence renders Latin digits with English grouping inside an otherwise
     // localized string.
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const spanText = citation.span
-      ? this.localize('groundingSummaryEvidenceSpan', undefined, {
+      ? this.localize("groundingSummaryEvidenceSpan", undefined, {
           start: numberFormat.format(finiteCount(citation.span.start)),
           end: numberFormat.format(finiteCount(citation.span.end)),
         })
-      : '';
+      : "";
     return html`
-      <div part="evidence-item">
+      <li part="evidence-item">
         <lr-citation-badge
           index=${index + 1}
-          source-id=${citation.sourceId ?? ''}
-          @lr-citation-activate=${() => this.onCitationSelect(citation)}
+          source-id=${citation.sourceId ?? ""}
+          @lr-citation-activate=${(event: Event) =>
+            this.onCitationSelect(citation, event)}
         >
           ${citation.label ? html`<span>${citation.label}</span>` : nothing}
           ${spanText ? html`<span>${spanText}</span>` : nothing}
         </lr-citation-badge>
-        ${citation.label ? html`<span part="evidence-label">${citation.label}</span>` : nothing}
-        ${spanText ? html`<span part="evidence-span">${spanText}</span>` : nothing}
-      </div>
+        ${citation.label
+          ? html`<span part="evidence-label">${citation.label}</span>`
+          : nothing}
+        ${spanText
+          ? html`<span part="evidence-span">${spanText}</span>`
+          : nothing}
+      </li>
     `;
   };
 
   override render(): TemplateResult {
-    const groupLabel = this.getAttribute('aria-label') ?? (this.label || this.localize('groundingSummaryLabel'));
+    const groupLabel = retrievalSemanticLabel(
+      this,
+      this.label || this.localize("groundingSummaryLabel")
+    );
+    const groupRole = retrievalSemanticRole(this, "group");
     const a = this.assessment;
 
     if (!a) {
-      return html`<div part="base" role="group" aria-label=${groupLabel}>
-        <lr-empty part="empty" heading=${this.localize('groundingSummaryEmpty')}></lr-empty>
+      return html`<div
+        part="base"
+        role=${groupRole ?? nothing}
+        aria-label=${groupLabel ?? nothing}
+      >
+        <lr-empty
+          part="empty"
+          heading=${this.localize("groundingSummaryEmpty")}
+        ></lr-empty>
       </div>`;
     }
 
     const supportedClaims = finiteCount(a.supportedClaims);
     const unsupportedClaims = finiteCount(a.unsupportedClaims);
     const coverage = finiteRange(a.coverage, 0, 0, 1);
-    const hasConfidence = typeof a.confidence === 'number';
+    const hasConfidence = typeof a.confidence === "number";
     const warnings = a.warnings ?? [];
     const numberFormat = getNumberFormat(this.effectiveLocale);
 
     return html`
-      <div part="base" role="group" aria-label=${groupLabel}>
+      <div
+        part="base"
+        role=${groupRole ?? nothing}
+        aria-label=${groupLabel ?? nothing}
+      >
         <div part="stats">
           <lr-stat
-            label=${this.localize('groundingSummarySupportedLabel')}
+            label=${this.localize("groundingSummarySupportedLabel")}
             value=${numberFormat.format(supportedClaims)}
-            variant=${supportedClaims > 0 ? 'success' : 'neutral'}
+            variant=${supportedClaims > 0 ? "success" : "neutral"}
           ></lr-stat>
           <lr-stat
-            label=${this.localize('groundingSummaryUnsupportedLabel')}
+            label=${this.localize("groundingSummaryUnsupportedLabel")}
             value=${numberFormat.format(unsupportedClaims)}
-            variant=${unsupportedClaims > 0 ? 'danger' : 'neutral'}
+            variant=${unsupportedClaims > 0 ? "danger" : "neutral"}
           ></lr-stat>
           <lr-stat
-            label=${this.localize('groundingSummaryCoverageLabel')}
+            label=${this.localize("groundingSummaryCoverageLabel")}
             value=${this.formatPercent(coverage)}
             variant=${this.tone(coverage)}
           ></lr-stat>
           ${hasConfidence
             ? html`<lr-stat
-                label=${this.localize('groundingSummaryConfidenceLabel')}
+                label=${this.localize("groundingSummaryConfidenceLabel")}
                 value=${this.formatPercent(a.confidence as number)}
-                variant=${this.tone(finiteRange(a.confidence as number, 0, 0, 1))}
+                variant=${this.tone(
+                  finiteRange(a.confidence as number, 0, 0, 1)
+                )}
               ></lr-stat>`
             : nothing}
         </div>
         ${warnings.length > 0
           ? html`
               <div part="warnings">
-                <span part="warnings-heading">${this.localize('groundingSummaryWarningsHeading')}</span>
-                <span part="warnings-count">${numberFormat.format(warnings.length)}</span>
+                ${this.sectionHeading(
+                  "warnings-heading",
+                  this.localize("groundingSummaryWarningsHeading")
+                )}
+                <span part="warnings-count"
+                  >${numberFormat.format(warnings.length)}</span
+                >
                 <ul part="warnings-list">
-                  ${warnings.map((warning) => html`<li part="warning">${warning}</li>`)}
+                  ${warnings.map(
+                    (warning) => html`<li part="warning">${warning}</li>`
+                  )}
                 </ul>
               </div>
             `
@@ -222,9 +301,18 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
         ${this.citations.length > 0
           ? html`
               <div part="evidence">
-                <span part="evidence-heading">${this.localize('groundingSummaryEvidenceHeading')}</span>
-                <span part="evidence-count">${numberFormat.format(this.citations.length)}</span>
-                <div>${this.citations.map((citation, index) => this.renderEvidenceItem(citation, index))}</div>
+                ${this.sectionHeading(
+                  "evidence-heading",
+                  this.localize("groundingSummaryEvidenceHeading")
+                )}
+                <span part="evidence-count"
+                  >${numberFormat.format(this.citations.length)}</span
+                >
+                <ul part="evidence-list">
+                  ${this.citations.map((citation, index) =>
+                    this.renderEvidenceItem(citation, index)
+                  )}
+                </ul>
               </div>
             `
           : nothing}
@@ -235,6 +323,6 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-grounding-summary': LyraGroundingSummary;
+    "lr-grounding-summary": LyraGroundingSummary;
   }
 }

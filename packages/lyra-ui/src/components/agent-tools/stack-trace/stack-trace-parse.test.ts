@@ -1,15 +1,45 @@
 import { expect } from '@open-wc/testing';
-import { parseStackTrace, DEFAULT_INTERNAL_PATTERNS } from './stack-trace-parse.js';
+import {
+  parseStackTrace as parseStackTraceResult,
+  DEFAULT_INTERNAL_PATTERNS,
+  STACK_TRACE_LIMITS,
+} from './stack-trace-parse.js';
+
+function parseStackTrace(trace: string, internalPatterns: readonly (string | RegExp)[]) {
+  return parseStackTraceResult(trace, { internalPatterns }).groups;
+}
 
 const OVERFLOW_LOCATION = '9'.repeat(400);
 
 describe('parseStackTrace', () => {
-  it('resets stateful global RegExp patterns before every frame test', () => {
+  it('does not mutate caller-owned stateful RegExp patterns', () => {
+    const pattern = /vendor/gy;
+    pattern.lastIndex = 3;
     const groups = parseStackTrace(
       ['Error', '    at one (/vendor/a.js:1:1)', '    at two (/vendor/b.js:2:1)'].join('\n'),
-      [/vendor/g],
+      [pattern],
     );
     expect(groups[0]!.frames.map((frame) => frame.internal)).to.deep.equal([true, true]);
+    expect(pattern.lastIndex).to.equal(3);
+  });
+
+  it('requires a real Python header before selecting the Python grammar', () => {
+    const result = parseStackTraceResult([
+      'Error: mixed provider output',
+      '    at safe (/app/safe.js:1:1)',
+      '  File "/app/incidental.py", line 2, in prose',
+    ].join('\n'), { internalPatterns: [] });
+
+    expect(result.groups[0]!.frames[0]).to.deep.include({ file: '/app/safe.js', line: 1 });
+  });
+
+  it('bounds bytes, lines, and rendered source before parsing', () => {
+    const oversizedLine = `Error: ${'x'.repeat(STACK_TRACE_LIMITS.bytes + 10)}`;
+    const result = parseStackTraceResult(oversizedLine);
+
+    expect(result.truncated).to.equal(true);
+    expect(new TextEncoder().encode(result.source).byteLength).to.be.at.most(STACK_TRACE_LIMITS.bytes);
+    expect(result.source.length).to.be.at.most(STACK_TRACE_LIMITS.lineCharacters);
   });
   it('parses a V8/JS trace with function-named frames', () => {
     const trace = [

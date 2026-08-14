@@ -37,6 +37,12 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
+  [part='fit-control']:disabled,
+  [part='rotate-button']:disabled,
+  [part='annotate-toggle']:disabled {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
+  }
   [part='fit-control'] {
     appearance: none;
     max-inline-size: 100%;
@@ -81,6 +87,20 @@ export const styles = css`
   [part='annotate-toggle'][aria-pressed='true'] {
     background: var(--lr-image-viewer-annotate-active-bg, var(--lr-color-brand-quiet));
     border-color: var(--lr-image-viewer-annotate-active-border, var(--lr-color-brand));
+  }
+  [part='rotation-frame'] {
+    position: relative;
+    display: inline-block;
+    max-inline-size: 100%;
+  }
+  :host([fit='actual']) [part='rotation-frame'] {
+    max-inline-size: none;
+  }
+  [part='rotation-frame'][data-measured] [part='image-wrapper'] {
+    position: absolute;
+    /* policy-allow(physical-css): rotation geometry is a physical raster coordinate system. */
+    left: 50%;
+    top: 50%;
   }
   [part='image-wrapper'] {
     position: relative;
@@ -145,18 +165,22 @@ export const styles = css`
     padding: 0;
   }
   [part='highlight']:where([data-tone='success']) {
+    border-style: double;
     border-color: var(--lr-image-viewer-highlight-success-border, var(--lr-color-success));
     --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-success-bg, color-mix(in srgb, var(--lr-color-success) 20%, transparent));
   }
   [part='highlight']:where([data-tone='warning']) {
+    border-style: dashed;
     border-color: var(--lr-image-viewer-highlight-warning-border, var(--lr-color-warning));
     --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-warning-bg, color-mix(in srgb, var(--lr-color-warning) 20%, transparent));
   }
   [part='highlight']:where([data-tone='danger']) {
+    border-style: dotted;
     border-color: var(--lr-image-viewer-highlight-danger-border, var(--lr-color-danger));
     --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-danger-bg, color-mix(in srgb, var(--lr-color-danger) 20%, transparent));
   }
   [part='highlight']:where([data-tone='neutral']) {
+    border-style: groove;
     border-color: var(--lr-image-viewer-highlight-neutral-border, var(--lr-color-border));
     --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-neutral-bg, color-mix(in srgb, var(--lr-color-text) 12%, transparent));
   }
@@ -202,6 +226,20 @@ export const styles = css`
     border: var(--lr-border-width-medium) dashed var(--lr-color-brand);
     background: color-mix(in srgb, var(--lr-color-brand) 15%, transparent);
     pointer-events: none;
+  }
+  .reveal-target {
+    position: absolute;
+    pointer-events: none;
+  }
+  @media (forced-colors: active) {
+    [part='highlight'] {
+      background: transparent;
+      border-color: CanvasText;
+      forced-color-adjust: none;
+    }
+    [part='highlight']:where([data-active]) {
+      outline-color: Highlight;
+    }
   }
   .empty-note,
   [part='error'] {

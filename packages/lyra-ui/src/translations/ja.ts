@@ -22,10 +22,26 @@ const strings: LyraLocaleStrings = {
   terminalDownload: 'ログをダウンロード',
   terminalHighlightLine: '{line} 行目',
   schemaViewerIssueLimit: '検証エラーは先頭の {count} 件のみ表示しています。',
-  toolParamMissingProperty: '必須キー「{key}」に対応するスキーマプロパティがありません。',
+  toolParamMissingProperty:
+    '必須キー「{key}」に対応するスキーマプロパティがありません。',
+  toolParamBooleanUnset: '未設定',
+  toolParamBooleanTrue: '真',
+  toolParamBooleanFalse: '偽',
+  toolParamSchemaLimit:
+    'ツールパラメータのスキーマでは、フィールドは最大 {fields} 件、各フィールドの選択肢は最大 {options} 件までサポートされます。',
+  testResultsLimit: '最初の {count} 件のテスト結果のみを表示しています。',
+  toolTimelineLimit: 'ツール呼び出しは最大 {count} 件まで表示されます。',
+  toolSelectLimit: '最初の {count} 件のツールのみを表示しています。',
   sequenceStripEmpty: '項目がありません',
   sequenceStripCategoryCount: '{label}：{count}',
   noColumns: '列が設定されていません',
+  dataGridColumnMenu: '{label} のオプション',
+  dataGridPinStart: '{label} を先頭に固定',
+  dataGridPinEnd: '{label} を末尾に固定',
+  dataGridUnpin: '{label} の固定を解除',
+  dataGridRowsPerPage: '1ページあたりの行数',
+  dataGridTreeLimitReached:
+    'データグリッドのツリー上限に達したため、追加のネストされた行は省略されました。',
   loadMore: 'さらに読み込む',
   viewerSearchMatchCount: {
     other: '{count} 件一致',
@@ -134,6 +150,9 @@ const strings: LyraLocaleStrings = {
   chartPrimaryAxis: '主軸',
   chartSecondaryAxis: '第 2 軸',
   chartPointLabel: 'データポイント {n}',
+  chartPointCoordinates: 'x {x}、y {y}',
+  chartBubblePointCoordinates: 'x {x}、y {y}、半径 {radius}',
+  chartLabeledPoint: '{label}：{coordinates}',
   resetZoom: 'ズームをリセット',
   chatSending: '送信中…',
   chatResponding: '応答中…',
@@ -167,7 +186,8 @@ const strings: LyraLocaleStrings = {
   jsonKeyCount: {
     other: 'キー {count} 個',
   },
-  jsonViewerLimit: '表示と検索の対象は先頭 {count} 個の JSON ノードとネスト {depth} 段までです。',
+  jsonViewerLimit:
+    '表示と検索の対象は先頭 {count} 個の JSON ノードとネスト {depth} 段までです。',
   untitledSource: '無題の出典',
   sourcePageSuffix: '{base} — {page} ページ',
   toolCall: 'ツール呼び出し',
@@ -183,7 +203,8 @@ const strings: LyraLocaleStrings = {
   promptStudioVariableName: '変数 {index} の名前',
   promptStudioVariableValue: '変数 {index} の値',
   schemaViewerLimit: 'スキーマノードは先頭 {count} 個のみ表示しています。',
-  subagentPanelLimit: 'サブエージェントの実行は先頭 {count} 件のみ表示しています。',
+  subagentPanelLimit:
+    'サブエージェントの実行は先頭 {count} 件のみ表示しています。',
   pollPause: '一時停止',
   pollResume: '再開',
   pollInactive: '停止中',
@@ -232,7 +253,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewAlt: 'ドキュメントのプレビュー',
   documentPreviewUrlNotAllowed: 'このドキュメントの URL は許可されていません。',
   documentPreviewFailedToLoad: 'ドキュメントを読み込めませんでした。',
-  documentPreviewResourceTooLarge: 'このドキュメントは大きすぎてプレビューできません。',
+  documentPreviewResourceTooLarge:
+    'このドキュメントは大きすぎてプレビューできません。',
   documentPreviewGenericError: '問題が発生しました。',
   ebookViewerLoadError: '電子書籍を読み込めませんでした。',
   ebookViewerRegionLabel: '電子書籍の本文',
@@ -259,12 +281,15 @@ const strings: LyraLocaleStrings = {
   documentViewerLabel: 'ドキュメントビューアー',
   attachmentPreviewName: '{name} をプレビュー',
   attachmentPreviewFile: 'ファイルをプレビュー',
-  documentViewerMissingSanitizer: 'このビューアーで安全に表示するには、オプションの "dompurify" パッケージをインストールしてください。',
+  documentViewerMissingSanitizer:
+    'このビューアーで安全に表示するには、オプションの "dompurify" パッケージをインストールしてください。',
   docxViewerLabel: 'Word 文書',
-  docxViewerMissingConverter: 'このビューアーでこの文書を変換するには、オプションの "mammoth" パッケージをインストールしてください。',
+  docxViewerMissingConverter:
+    'このビューアーでこの文書を変換するには、オプションの "mammoth" パッケージをインストールしてください。',
   svgViewerLabel: 'SVG 画像',
   htmlViewerLabel: 'HTML ドキュメント',
-  datasetViewerMissingParser: 'このビューアーでこのファイルを解析するには、オプションの "papaparse" パッケージをインストールしてください。',
+  datasetViewerMissingParser:
+    'このビューアーでこのファイルを解析するには、オプションの "papaparse" パッケージをインストールしてください。',
   datasetViewerEmpty: 'このデータセットには行がありません。',
   datasetViewerCaption: '{count} 行',
   datasetViewerCaptionNamed: '{name}：{count} 行',
@@ -276,7 +301,8 @@ const strings: LyraLocaleStrings = {
   contactViewerAddressLabel: '住所',
   contactViewerOrganization: '組織：{value}',
   contactViewerTypedValue: '{value}（{types}）',
-  contactViewerAddressFormat: '{postalCode}\n{country} {region} {locality} {streetAddress}\n{extendedAddress}\n{poBox}',
+  contactViewerAddressFormat:
+    '{postalCode}\n{country} {region} {locality} {streetAddress}\n{extendedAddress}\n{poBox}',
   contactViewerTypeHome: '自宅',
   contactViewerTypeWork: '勤務先',
   contactViewerTypeCell: '携帯',
@@ -301,16 +327,21 @@ const strings: LyraLocaleStrings = {
   chartTrendIncreasing: '上昇',
   chartTrendDecreasing: '下降',
   chartTrendFlat: '横ばい',
-  chartSummary: '{label}：{count} 件の値、範囲は {min} から {max}、傾向は{trend}',
+  chartSummary:
+    '{label}：{count} 件の値、範囲は {min} から {max}、傾向は{trend}',
   chartSeriesNoData: '{label}：データなし',
   chartSummaryWithData: '{type}チャート。{summaries}。',
   chartSummaryEmpty: 'データのない{type}チャート。',
   chartSummarySeparator: '。',
   chartData: 'チャートのデータ',
-  chartDataSampled: '生成されたデータテーブルには、最大 1,000 件のレコードのサンプルが表示されます。すべてのチャートデータにアクセスするには、カスタムデータテーブルを指定してください。',
-  chartZoomUnavailable: 'ズームは利用できませんが、チャート本体は引き続き利用できます。',
-  chartDataLabelsUnavailable: 'データラベルは利用できませんが、チャート本体は引き続き利用できます。',
-  chartStackTotalsUnavailable: '積み上げ合計は利用できませんが、チャート本体は引き続き利用できます。',
+  chartDataSampled:
+    '生成されたデータテーブルには、最大 1,000 件のレコードのサンプルが表示されます。すべてのチャートデータにアクセスするには、カスタムデータテーブルを指定してください。',
+  chartZoomUnavailable:
+    'ズームは利用できませんが、チャート本体は引き続き利用できます。',
+  chartDataLabelsUnavailable:
+    'データラベルは利用できませんが、チャート本体は引き続き利用できます。',
+  chartStackTotalsUnavailable:
+    '積み上げ合計は利用できませんが、チャート本体は引き続き利用できます。',
   chart: 'チャート',
   chartTypeLine: '折れ線',
   chartTypeBar: '棒',
@@ -320,7 +351,8 @@ const strings: LyraLocaleStrings = {
   chartTypeRadar: 'レーダー',
   chartTypePolarArea: '極座標面',
   chartTypeBubble: 'バブル',
-  boxPlotSeriesSummary: '{label}：{count} 件の分布、中央値の範囲は {min} から {max}、中央値の傾向は{trend}',
+  boxPlotSeriesSummary:
+    '{label}：{count} 件の分布、中央値の範囲は {min} から {max}、中央値の傾向は{trend}',
   boxPlotSummaryWithData: '箱ひげ図。{summaries}。',
   boxPlotSummaryEmpty: 'データのない箱ひげ図。',
   boxPlotData: '箱ひげ図のデータ',
@@ -332,7 +364,8 @@ const strings: LyraLocaleStrings = {
   boxPlotMax: '最大値',
   boxPlot: '箱ひげ図',
   histogramFrequency: '度数',
-  liteChartMarkSummary: '{series}、{label}：{value}（{total} 件中 {index} 件目）',
+  liteChartMarkSummary:
+    '{series}、{label}：{value}（{total} 件中 {index} 件目）',
   liteChartBarLabel: '{series}、{label}：{value}',
   chartValueLabel: '{label}：{value}',
   liteChartCustomMarkSummary: '{content}（{total} 件中 {index} 件目）',
@@ -368,7 +401,8 @@ const strings: LyraLocaleStrings = {
   timeInputInvalid: '完全な時刻を入力してください。',
   timeInputMinMessage: '{min} 以降の時刻を指定してください。',
   timeInputMaxMessage: '{max} 以前の時刻を指定してください。',
-  timeInputRangeMessage: '日付をまたぐ {min} から {max} の間の時刻を指定してください。',
+  timeInputRangeMessage:
+    '日付をまたぐ {min} から {max} の間の時刻を指定してください。',
   timeInputStepMessage: '指定された間隔に合う時刻を入力してください。',
   documentPreviewEmpty: '表示できる{type}がありません。',
   convertingDocument: 'ドキュメントを変換中…',
@@ -378,11 +412,11 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeImage: '画像',
   documentPreviewTypeEmail: 'メール',
   documentPreviewTypeCalendar: 'カレンダー',
-  archiveViewerUnavailable: 'アーカイブのプレビューは利用できません。',
   archiveViewerEmpty: 'このアーカイブは空です。',
   archiveViewerFolder: 'フォルダー',
   archiveViewerFile: 'ファイル',
-  spreadsheetViewerUnavailable: 'スプレッドシートのプレビューは利用できません。',
+  spreadsheetViewerUnavailable:
+    'スプレッドシートのプレビューは利用できません。',
   csvViewerUnavailable: 'CSV のプレビューは利用できません。',
   csvViewerLabel: 'CSV ドキュメント',
   spreadsheetViewerLabel: 'スプレッドシート',
@@ -401,7 +435,10 @@ const strings: LyraLocaleStrings = {
   fileInputFolderRejected: 'ここではフォルダーを受け付けられません。',
   fileInputRejectedType: '{filename}：このファイル形式は受け付けられません。',
   fileInputRejectedSize: '{filename}：このファイルは大きすぎます。',
-  fileInputRejectedCount: '{filename}：一度に選択できるファイルは 1 つだけです。',
+  fileInputRejectedCount:
+    '{filename}：一度に選択できるファイルは 1 つだけです。',
+  fileInputRejectedRead: '{filename}：ファイルを読み取れませんでした。',
+  fileInputRejectedLimit: '{filename}：フォルダー内の項目数が多すぎます。',
   elapsedMinutesSecondsTemplate: '{minutes} 分 {seconds} 秒',
   graphNode: 'ノード {label}',
   graphLink: '{source} から {target} へのリンク',
@@ -414,13 +451,19 @@ const strings: LyraLocaleStrings = {
   graphCommunity: 'コミュニティ {label}、ノード {count} 個',
   heatmapValueLabel: '値',
   heatmapMatrixCellLabel: '{row} 行 {col} 列：{value}',
-  heatmapCalendarLabel: '{days} 日分のカレンダーヒートマップ、{label} の範囲は {range}',
-  heatmapMatrixLabel: '{rows} × {cols} セルのヒートマップ、{label} の範囲は {range}',
+  heatmapCalendarLabel:
+    '{days} 日分のカレンダーヒートマップ、{label} の範囲は {range}',
+  heatmapMatrixLabel:
+    '{rows} × {cols} セルのヒートマップ、{label} の範囲は {range}',
   heatmapCalendarCellLabel: '{date}：{value}',
   heatmapNoDataValue: 'データなし',
   heatmapDefaultRowLabel: '{n} 行目',
   heatmapDefaultColLabel: '{n} 列目',
   heatmapSelectedCellLabel: '選択中：{cell}。',
+  heatmapProjectionLimit:
+    'ヒートマップの先頭 {count} セルのみを表示しています。',
+  heatmapDecorationLimit:
+    'ヒートマップの先頭 {count} 件の色、凡例の区切り、注釈のみを表示しています。',
   inputLabel: 'テキスト',
   showPassword: 'パスワードを表示',
   hidePassword: 'パスワードを非表示',
@@ -604,7 +647,8 @@ const strings: LyraLocaleStrings = {
   fieldMustBeOneOf: '次のいずれかを指定してください：{values}。',
   fieldMustEqual: '{value} と一致する必要があります。',
   schemaMustBeObject: 'スキーマはオブジェクトを表す必要があります。',
-  schemaPropertiesMustBeFlat: 'スキーマのプロパティはフラットなオブジェクトである必要があります。',
+  schemaPropertiesMustBeFlat:
+    'スキーマのプロパティはフラットなオブジェクトである必要があります。',
   valueMustBeSerializable: '値は JSON にシリアライズできる必要があります。',
   valueInvalid: '値が不正です。',
   phoneInputLabel: '電話',
@@ -621,7 +665,8 @@ const strings: LyraLocaleStrings = {
   },
   copyFailed: 'コピーに失敗しました',
   colorPickerSaturationBrightness: '彩度と明度',
-  colorPickerSaturationBrightnessValue: '彩度 {saturation}%、明度 {brightness}%',
+  colorPickerSaturationBrightnessValue:
+    '彩度 {saturation}%、明度 {brightness}%',
   colorPickerHue: '色相',
   colorPickerHueValue: '{hue} 度',
   colorPickerOpacity: '不透明度',
@@ -635,7 +680,8 @@ const strings: LyraLocaleStrings = {
   selectSelectedOverflow: '他 {n} 件',
   iconLoadError: 'アイコンを読み込めませんでした。',
   iconTooLarge: 'アイコンファイルが大きすぎて表示できません。',
-  iconSanitizerMissing: 'このアイコンを安全に表示するには、オプションの "dompurify" パッケージをインストールしてください。',
+  iconSanitizerMissing:
+    'このアイコンを安全に表示するには、オプションの "dompurify" パッケージをインストールしてください。',
   paginationFirstPage: '最初のページ',
   paginationLastPage: '最後のページ',
   accessibleLabelSeparator: '、',
@@ -687,7 +733,8 @@ const strings: LyraLocaleStrings = {
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Shift',
   emailViewerLabel: 'メールビューアー',
-  emailViewerMissingParser: 'このビューアーでこのメッセージを解析するには、オプションの "postal-mime" パッケージをインストールしてください。',
+  emailViewerMissingParser:
+    'このビューアーでこのメッセージを解析するには、オプションの "postal-mime" パッケージをインストールしてください。',
   emailViewerFrom: '差出人',
   emailViewerTo: '宛先',
   emailViewerSubject: '件名',
@@ -699,17 +746,29 @@ const strings: LyraLocaleStrings = {
   emailViewerHideQuoted: '引用文を非表示',
   emailViewerGroupAddress: '{name}：{members}',
   calendarViewerLabel: 'カレンダービューアー',
-  calendarViewerMissingParser: 'このビューアーでこのカレンダーを解析するには、オプションの "ical.js" パッケージをインストールしてください。',
+  calendarViewerMissingParser:
+    'このビューアーでこのカレンダーを解析するには、オプションの "ical.js" パッケージをインストールしてください。',
   calendarViewerEmpty: 'このカレンダーに予定はありません。',
   calendarViewerNoSummary: '（タイトルなし）',
   pdfViewerLabel: 'PDF ドキュメント',
-  pdfViewerMissingLibrary: 'このビューアーで PDF ファイルを表示するには、オプションの "pdfjs-dist" パッケージをインストールしてください。',
-  qrCodeMissingLibrary: 'このコンポーネントで QR コードを生成するには、オプションの "qrcode" パッケージをインストールしてください。',
+  pdfViewerMissingLibrary:
+    'このビューアーで PDF ファイルを表示するには、オプションの "pdfjs-dist" パッケージをインストールしてください。',
+  qrCodeMissingLibrary:
+    'このコンポーネントで QR コードを生成するには、オプションの "qrcode" パッケージをインストールしてください。',
   qrCodeGenerationFailed: 'この値は QR コードにエンコードできませんでした。',
-  mapMissingLibrary: 'このコンポーネントで地図を表示するには、オプションの "maplibre-gl" パッケージをインストールしてください。',
-  chartMissingLibrary: 'このコンポーネントでチャートを表示するには、オプションの "chart.js" パッケージをインストールしてください。',
-  boxPlotMissingLibrary: 'このコンポーネントで箱ひげ図を表示するには、オプションの箱ひげ図チャートパッケージをインストールしてください。',
-  graphMissingLibrary: 'このコンポーネントでグラフを表示するには、オプションの "d3" パッケージをインストールしてください。',
+  mapMissingLibrary:
+    'このコンポーネントで地図を表示するには、オプションの "maplibre-gl" パッケージをインストールしてください。',
+  mapStyleRequired: '地図を表示するには、地図スタイルを指定してください。',
+  mapWebglUnavailable:
+    'このブラウザーでは、地図の表示に必要なグラフィックス機能を利用できません。',
+  mapInitializationFailed: '地図を初期化できませんでした。',
+  mapLegend: '地図の凡例',
+  chartMissingLibrary:
+    'このコンポーネントでチャートを表示するには、オプションの "chart.js" パッケージをインストールしてください。',
+  boxPlotMissingLibrary:
+    'このコンポーネントで箱ひげ図を表示するには、オプションの箱ひげ図チャートパッケージをインストールしてください。',
+  graphMissingLibrary:
+    'このコンポーネントでグラフを表示するには、オプションの "d3" パッケージをインストールしてください。',
   pdfViewerPageOf: '{total} ページ中 {page} ページ目',
   pdfViewerZoomIn: '拡大',
   pdfViewerZoomOut: '縮小',
@@ -759,6 +818,7 @@ const strings: LyraLocaleStrings = {
   traceTree: 'トレースツリー',
   traceTreeSpanStatus: '{name}：{status}',
   traceTreeMetricLabel: '{label}：{value}',
+  spanProjectionLimit: '最初の {count} 件のスパンのみを表示しています。',
   agentTraceFilterLabel: 'トレーススパンの種類',
   spanKindAgent: 'エージェント',
   spanKindLlm: 'LLM',
@@ -808,8 +868,10 @@ const strings: LyraLocaleStrings = {
   imageViewerAnnotate: '注釈',
   imageViewerHighlightsLabel: 'ハイライトされた領域',
   imageViewerUnlabeledHighlight: 'ハイライト {index}',
-  imageViewerAnnotationHint: '注釈モードがオンです。Enter キーで領域を配置し、矢印キーで移動、Shift と矢印キーでサイズ変更、Enter キーで保存、Escape キーでキャンセルします。',
-  imageViewerAnnotationBoxPosition: '領域の位置は横 {x} パーセント、縦 {y} パーセント、大きさは幅 {width} パーセント、高さ {height} パーセントです。',
+  imageViewerAnnotationHint:
+    '注釈モードがオンです。Enter キーで領域を配置し、矢印キーで移動、Shift と矢印キーでサイズ変更、Enter キーで保存、Escape キーでキャンセルします。',
+  imageViewerAnnotationBoxPosition:
+    '領域の位置は横 {x} パーセント、縦 {y} パーセント、大きさは幅 {width} パーセント、高さ {height} パーセントです。',
   imageViewerAnnotationAdded: '領域を追加しました。',
   imageViewerAnnotationCancelled: '領域をキャンセルしました。',
   transcriptFeedLabel: '文字起こし',
@@ -821,6 +883,8 @@ const strings: LyraLocaleStrings = {
   commitCardShowFiles: '変更された {count} ファイルを表示',
   commitCardHideFiles: '変更された {count} ファイルを非表示',
   stackTraceLabel: 'スタックトレース',
+  stackTraceLimit:
+    '表示上限に達したため、スタックトレースの一部を省略しました。',
   stackTraceShowFrames: '内部フレーム {count} 件を表示',
   stackTraceHideFrames: '内部フレーム {count} 件を非表示',
   statusSkipped: 'スキップ',
@@ -830,7 +894,8 @@ const strings: LyraLocaleStrings = {
   testResultsSkipped: 'スキップ {count} 件',
   testResultsRunning: '実行中 {count} 件',
   testResultsFilterLabel: 'ステータスで絞り込む',
-  testResultsCompleteAnnounce: '成功 {passed} 件、失敗 {failed} 件、スキップ {skipped} 件',
+  testResultsCompleteAnnounce:
+    '成功 {passed} 件、失敗 {failed} 件、スキップ {skipped} 件',
   testResultsExpandTest: '{name} を展開',
   testResultsCollapseTest: '{name} を折りたたむ',
   envListLabel: '環境変数',
@@ -865,9 +930,12 @@ const strings: LyraLocaleStrings = {
   browserFrameControllerAgent: 'エージェント',
   browserFrameControllerUser: 'ユーザー',
   notebookViewerLabel: 'ノートブックビューアー',
-  notebookViewerInvalid: 'このファイルは有効な Jupyter ノートブックではありません。',
-  notebookViewerUnsupportedVersion: 'ノートブック形式 {version} はサポートされていません。',
-  notebookViewerTooManyCells: 'このノートブックはセル数が多すぎて表示できません。',
+  notebookViewerInvalid:
+    'このファイルは有効な Jupyter ノートブックではありません。',
+  notebookViewerUnsupportedVersion:
+    'ノートブック形式 {version} はサポートされていません。',
+  notebookViewerTooManyCells:
+    'このノートブックはセル数が多すぎて表示できません。',
   notebookViewerInPrompt: 'In [{count}]',
   notebookViewerInPromptEmpty: 'In [ ]',
   notebookViewerCodeCell: 'コードセル {index}',
@@ -901,7 +969,8 @@ const strings: LyraLocaleStrings = {
   geojsonViewFeatureCount: {
     other: 'フィーチャー {count} 件',
   },
-  geojsonViewMissingMapLibrary: 'このファイルを地図上に表示するには、オプションの maplibre-gl をインストールしてください。代わりに GeoJSON をそのまま表示しています。',
+  geojsonViewMissingMapLibrary:
+    'このファイルを地図上に表示するには、オプションの maplibre-gl をインストールしてください。代わりに GeoJSON をそのまま表示しています。',
   mindMapLabel: 'マインドマップ',
   mindMapTopicStatus: '{label}、レベル {level}、サブトピック {count} 件',
   mindMapLeafStatus: '{label}、レベル {level}',
@@ -929,13 +998,17 @@ const strings: LyraLocaleStrings = {
   scoreTierLow: '関連度：低',
   chunkInspectorEmpty: '取得したチャンクはありません',
   flowCanvasLabel: 'ワークフローキャンバス',
-  flowCanvasSummary: 'ノード {nodeCount} 個、エッジ {edgeCount} 本のワークフロー',
+  flowCanvasLayoutLimit:
+    'フローレイアウトの処理上限に達したため、エッジの順序付けに関する一部の詳細は省略されました。',
+  flowCanvasSummary:
+    'ノード {nodeCount} 個、エッジ {edgeCount} 本のワークフロー',
   flowNode: 'ノード {label}',
   flowEdge: '{source} から {target} へのエッジ',
   flowEdgeWithLabel: '{label}、{source} から {target} へのエッジ',
   flowItemAnnouncement: '{item}（{total} 件中 {index} 件目）',
   dashboardGridLabel: 'ダッシュボードグリッド',
-  dashboardCellCollisionRejected: '{label} は他のセルと重なるため、そこには配置できません。',
+  dashboardCellCollisionRejected:
+    '{label} は他のセルと重なるため、そこには配置できません。',
   dashboardCellMoved: '{label} を {x} 列 {y} 行へ移動しました。',
   dashboardCellResized: '{label} のサイズを幅 {w}、高さ {h} に変更しました。',
   flowEdgeList: 'ワークフローのエッジ',
@@ -943,8 +1016,10 @@ const strings: LyraLocaleStrings = {
   flowNodeDeselected: '{label} の選択を解除しました',
   flowSelectionCleared: '選択を解除しました',
   flowNodeMoved: '{label} を {x}, {y} へ移動しました',
-  flowConnectStarted: '{label} から接続します。矢印キーで接続先を選び、Enter キーで接続、Escape キーでキャンセルします。',
-  flowConnectTarget: '{source} を {target} に接続します（{total} 件中 {index} 件目）',
+  flowConnectStarted:
+    '{label} から接続します。矢印キーで接続先を選び、Enter キーで接続、Escape キーでキャンセルします。',
+  flowConnectTarget:
+    '{source} を {target} に接続します（{total} 件中 {index} 件目）',
   flowConnectCommitted: '{source} を {target} に接続しました',
   flowConnectCancelled: '接続をキャンセルしました',
   zoomToFit: '全体に合わせる',
@@ -952,7 +1027,8 @@ const strings: LyraLocaleStrings = {
   flowControlsLabel: 'キャンバスのコントロール',
   flowMinimapLabel: 'ワークフローの全体表示',
   flowMinimapViewport: '表示範囲',
-  flowMinimapInstructions: '矢印キーで移動、プラスとマイナスでズーム、Enter または Home でワークフロー全体に合わせます。',
+  flowMinimapInstructions:
+    '矢印キーで移動、プラスとマイナスでズーム、Enter または Home でワークフロー全体に合わせます。',
   flowMinimapViewportChanged: '位置 {x}, {y}。ズーム {zoom}。',
   nodePaletteLabel: 'ノードパレット',
   nodePalettePlaceholder: 'ノードを検索…',
@@ -977,7 +1053,7 @@ const strings: LyraLocaleStrings = {
   neighborExpand: 'グラフで {label} を展開',
   neighborListEmpty: '関係がありません',
   neighborGroupHeader: '{relation}（{count}）',
-  flowRunOverlayLabel: '実行状況',
+  flowRunStatusLabel: '実行状況',
   flowRunSummary: '{total} ステップ中 {done} ステップ完了',
   flowRunStepStatus: '{label}：{status}',
   flowRunStatusCount: '{status}：{count}',
@@ -1046,7 +1122,8 @@ const strings: LyraLocaleStrings = {
   memoryPanelConfirmAddHeading: 'これを長期メモリに追加しますか？',
   memoryPanelConfirmRemoveHeading: 'この項目を削除しますか？',
   memoryPanelConfirmForgetHeading: '長期メモリをすべて削除しますか？',
-  memoryPanelConfirmForgetBody: '{count} 件の長期メモリがすべて完全に削除されます。',
+  memoryPanelConfirmForgetBody:
+    '{count} 件の長期メモリがすべて完全に削除されます。',
   graphExplorerLabel: 'ナレッジグラフエクスプローラー',
   graphExplorerSearchPlaceholder: 'エンティティを検索…',
   graphExplorerSearchResultsLabel: '検索結果',
@@ -1090,7 +1167,8 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardRuns: '評価の実行',
   ragEvalDashboardSlices: '評価スライス',
   ragEvalDashboardAllSlices: 'すべて',
-  ragEvalDashboardSliceUnavailable: '{slice} で利用できる評価の実行はありません。',
+  ragEvalDashboardSliceUnavailable:
+    '{slice} で利用できる評価の実行はありません。',
   promptStudioLabel: 'プロンプトスタジオ',
   promptStudioMessages: 'プロンプトのメッセージ',
   promptStudioVariables: '変数',
@@ -1232,12 +1310,14 @@ const strings: LyraLocaleStrings = {
   contextInspectorSegmentTokens: '{tokens} トークン',
   knowledgeBaseDocumentCount: 'インデックス済み {count} 件',
   knowledgeBaseRowActionsLabel: '{name} の操作',
-  knowledgeBaseEmptyDescription: 'ソースを追加すると、コンテンツのインデックス作成が始まります。',
+  knowledgeBaseEmptyDescription:
+    'ソースを追加すると、コンテンツのインデックス作成が始まります。',
   ingestionChunkCount: {
     other: '{count} チャンク',
   },
   ingestionItemProgressLabel: '{name}：{stage}',
-  ingestionEmbeddedOfTotal: '{total} チャンク中 {embedded} チャンクの埋め込みが完了',
+  ingestionEmbeddedOfTotal:
+    '{total} チャンク中 {embedded} チャンクの埋め込みが完了',
   ingestionAttemptCount: '{count} 回目の試行',
   ingestionRetryWithContext: '{label} を再試行',
   ingestionCancelWithContext: '{label} をキャンセル',
@@ -1274,6 +1354,8 @@ const strings: LyraLocaleStrings = {
   flagLoadError: '国旗を表示できません',
   moveUp: '上へ移動',
   moveDown: '下へ移動',
+  reorderMovePending: '並べ替えを保留しています。',
+  reorderMoveCancelled: '並べ替えをキャンセルしました。',
   reorderItemMoved: '{total} 件中 {index} 番目へ移動しました',
 };
 

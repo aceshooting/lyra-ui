@@ -10,32 +10,39 @@ describe('<lr-reorder-item>', () => {
     expect(el.textContent?.trim()).to.equal('Row A');
   });
 
-  it('defaults to value=undefined, disabled=false, atStart=false, atEnd=false, listDisabled=false', async () => {
+  it('defaults to an empty required value and readonly false owner state', async () => {
     const el = await fixture<LyraReorderItem>(html`<lr-reorder-item>Row</lr-reorder-item>`);
-    expect(el.value).to.be.undefined;
+    expect(el.value).to.equal('');
     expect(el.disabled).to.be.false;
     expect(el.atStart).to.be.false;
     expect(el.atEnd).to.be.false;
     expect(el.listDisabled).to.be.false;
   });
 
-  it('renders localized move-up/move-down button aria-labels, overridable via .strings', async () => {
-    const el = await fixture<LyraReorderItem>(html`<lr-reorder-item>Row</lr-reorder-item>`);
+  it('correlates localized move actions with the row label and honors explicit overrides', async () => {
+    const el = await fixture<LyraReorderItem>(html`<lr-reorder-item value="row">Row</lr-reorder-item>`);
+    const labelledText = (button: Element): string =>
+      (button.getAttribute('aria-labelledby') ?? '')
+        .split(/\s+/)
+        .map((id) => el.shadowRoot!.getElementById(id)?.textContent ?? '')
+        .join(' ')
+        .trim();
     let up = el.shadowRoot!.querySelector('[part="move-up-button"]')!;
     let down = el.shadowRoot!.querySelector('[part="move-down-button"]')!;
-    expect(up.getAttribute('aria-label')).to.equal('Move up');
-    expect(down.getAttribute('aria-label')).to.equal('Move down');
+    expect(labelledText(up)).to.equal('Move up Row');
+    expect(labelledText(down)).to.equal('Move down Row');
 
+    el.accessibleLabel = 'Account name';
     el.strings = { moveUp: 'Déplacer vers le haut', moveDown: 'Déplacer vers le bas' };
     await el.updateComplete;
     up = el.shadowRoot!.querySelector('[part="move-up-button"]')!;
     down = el.shadowRoot!.querySelector('[part="move-down-button"]')!;
-    expect(up.getAttribute('aria-label')).to.equal('Déplacer vers le haut');
-    expect(down.getAttribute('aria-label')).to.equal('Déplacer vers le bas');
+    expect(labelledText(up)).to.equal('Déplacer vers le haut Account name');
+    expect(labelledText(down)).to.equal('Déplacer vers le bas Account name');
   });
 
   it('emits lr-move-request with the correct direction on click', async () => {
-    const el = await fixture<LyraReorderItem>(html`<lr-reorder-item>Row</lr-reorder-item>`);
+    const el = await fixture<LyraReorderItem>(html`<lr-reorder-item value="row">Row</lr-reorder-item>`);
     const up = el.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
     const down = el.shadowRoot!.querySelector('[part="move-down-button"]') as HTMLButtonElement;
 
@@ -66,30 +73,18 @@ describe('<lr-reorder-item>', () => {
     expect(emitted).to.be.false;
   });
 
-  it('disables the move-up button at atStart, the move-down button at atEnd, and both when listDisabled', async () => {
+  it('keeps owner state readonly and disables both actions without a stable identity', async () => {
     const el = await fixture<LyraReorderItem>(html`<lr-reorder-item>Row</lr-reorder-item>`);
-    el.atStart = true;
-    await el.updateComplete;
-    let up = el.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
-    let down = el.shadowRoot!.querySelector('[part="move-down-button"]') as HTMLButtonElement;
-    expect(up.disabled).to.be.true;
-    expect(down.disabled).to.be.false;
-
-    el.atStart = false;
-    el.atEnd = true;
-    await el.updateComplete;
-    up = el.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
-    down = el.shadowRoot!.querySelector('[part="move-down-button"]') as HTMLButtonElement;
-    expect(up.disabled).to.be.false;
-    expect(down.disabled).to.be.true;
-
-    el.atEnd = false;
-    el.listDisabled = true;
-    await el.updateComplete;
-    up = el.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
-    down = el.shadowRoot!.querySelector('[part="move-down-button"]') as HTMLButtonElement;
+    const up = el.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+    const down = el.shadowRoot!.querySelector('[part="move-down-button"]') as HTMLButtonElement;
     expect(up.disabled).to.be.true;
     expect(down.disabled).to.be.true;
+    const descriptor = Object.getOwnPropertyDescriptor(
+      Object.getPrototypeOf(el),
+      'atStart',
+    );
+    expect(typeof descriptor?.get).to.equal('function');
+    expect(descriptor?.set === undefined).to.equal(true);
   });
 
   // A `role="listitem"` host is only ARIA-valid nested inside a `role="list"` ancestor (the
@@ -99,13 +94,13 @@ describe('<lr-reorder-item>', () => {
   // accessibility on the item's own instance.
   it('is accessible, including when disabled', async () => {
     const wrapper = await fixture<HTMLDivElement>(
-      html`<div role="list"><lr-reorder-item>Row</lr-reorder-item></div>`,
+      html`<div role="list"><lr-reorder-item value="row">Row</lr-reorder-item></div>`,
     );
     const el = wrapper.querySelector('lr-reorder-item') as LyraReorderItem;
     await expect(el).to.be.accessible();
 
     const disabledWrapper = await fixture<HTMLDivElement>(
-      html`<div role="list"><lr-reorder-item disabled>Row</lr-reorder-item></div>`,
+      html`<div role="list"><lr-reorder-item value="row" disabled>Row</lr-reorder-item></div>`,
     );
     const disabledEl = disabledWrapper.querySelector('lr-reorder-item') as LyraReorderItem;
     await expect(disabledEl).to.be.accessible();
@@ -113,7 +108,7 @@ describe('<lr-reorder-item>', () => {
 
   it('renders correctly under dir="rtl"', async () => {
     const wrapper = await fixture<HTMLDivElement>(
-      html`<div dir="rtl" role="list"><lr-reorder-item>Row</lr-reorder-item></div>`,
+      html`<div dir="rtl" role="list"><lr-reorder-item value="row">Row</lr-reorder-item></div>`,
     );
     const el = wrapper.querySelector('lr-reorder-item') as LyraReorderItem;
     await expect(el).to.be.accessible();
@@ -161,7 +156,7 @@ describe('move-button state cssprops', () => {
 
   it('keeps the pre-cssprop hover and active paint when the props are unset', async () => {
     const wrapper = await fixture<HTMLElement>(
-      html`<div role="list"><lr-reorder-item>Row</lr-reorder-item></div>`,
+      html`<div role="list"><lr-reorder-item value="row">Row</lr-reorder-item></div>`,
     );
     const el = wrapper.querySelector('lr-reorder-item') as LyraReorderItem;
     const up = el.shadowRoot!.querySelector<HTMLElement>('[part="move-up-button"]')!;
@@ -204,7 +199,7 @@ describe('move-button state cssprops', () => {
           --lr-reorder-item-move-button-active-color: rgb(255, 255, 0);
         "
       >
-        <lr-reorder-item>Row</lr-reorder-item>
+        <lr-reorder-item value="row">Row</lr-reorder-item>
       </div>
     `);
     const el = wrapper.querySelector('lr-reorder-item') as LyraReorderItem;
@@ -240,7 +235,7 @@ describe('move-button state cssprops', () => {
           --lr-reorder-item-move-button-active-bg: rgb(0, 30, 60);
         "
       >
-        <lr-reorder-item disabled>Row</lr-reorder-item>
+        <lr-reorder-item value="row" disabled>Row</lr-reorder-item>
       </div>
     `);
     const el = wrapper.querySelector('lr-reorder-item') as LyraReorderItem;

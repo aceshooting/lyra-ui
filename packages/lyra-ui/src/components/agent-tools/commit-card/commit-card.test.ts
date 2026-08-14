@@ -1,7 +1,14 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './commit-card.js';
 import type { LyraCommitCard } from './commit-card.js';
-import { styles } from './commit-card.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+
+async function settleClipboard(el: LyraCommitCard): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  await el.updateComplete;
+}
 
 describe('lr-commit-card', () => {
   it('defaults to filesCollapsed=true and copyable=true', async () => {
@@ -23,7 +30,7 @@ describe('lr-commit-card', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="copy-button"]').length).to.equal(0);
   });
 
-  it('lets a host aria-label override the default computed commitCardLabel', async () => {
+  it('keeps a non-empty host name on the host and preserves explicit-empty overall semantics', async () => {
     const withoutOverride = (await fixture(html`<lr-commit-card></lr-commit-card>`)) as LyraCommitCard;
     await withoutOverride.updateComplete;
     const defaultLabel = withoutOverride.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label');
@@ -33,21 +40,88 @@ describe('lr-commit-card', () => {
       html`<lr-commit-card aria-label="Commit abc123"></lr-commit-card>`,
     )) as LyraCommitCard;
     await withOverride.updateComplete;
-    expect(withOverride.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
-      'Commit abc123',
-    );
+    const namedBase = withOverride.shadowRoot!.querySelector('[part="base"]')!;
+    expect(withOverride.getAttribute('aria-label')).to.equal('Commit abc123');
+    expect(namedBase.hasAttribute('role')).to.equal(false);
+    expect(namedBase.hasAttribute('aria-label')).to.equal(false);
+
+    const decorative = (await fixture(
+      html`<lr-commit-card aria-label=""></lr-commit-card>`,
+    )) as LyraCommitCard;
+    const decorativeBase = decorative.shadowRoot!.querySelector('[part="base"]')!;
+    expect(decorativeBase.getAttribute('role')).to.equal('group');
+    expect(decorativeBase.getAttribute('aria-label')).to.equal('');
   });
 
   it('abbreviates hash to 7 chars for display but copies the full hash', async () => {
-    const el = (await fixture(
-      html`<lr-commit-card hash="abcdef1234567890" copyable></lr-commit-card>`,
-    )) as LyraCommitCard;
-    await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="hash"]')!.textContent!.trim()).to.equal('abcdef1');
-    const listener = oneEvent(el, 'lr-copy');
-    (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
-    const event = (await listener) as CustomEvent<{ text: string }>;
-    expect(event.detail.text).to.equal('abcdef1234567890');
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.resolve() },
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-commit-card hash="abcdef1234567890" copyable></lr-commit-card>`,
+      )) as LyraCommitCard;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="hash"]')!.textContent!.trim()).to.equal('abcdef1');
+      const listener = oneEvent(el, 'lr-copy');
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      const event = (await listener) as CustomEvent<{ ok: true; text: string }>;
+      expect(event.detail).to.deep.equal({ ok: true, text: 'abcdef1234567890' });
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('waits for clipboard success and exposes a localized, typed failure outcome', async () => {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    let resolveWrite!: () => void;
+    const pendingWrite = new Promise<void>((resolve) => { resolveWrite = resolve; });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => pendingWrite },
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-commit-card hash="abcdef1234567890"></lr-commit-card>`,
+      )) as LyraCommitCard;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+
+      button.click();
+      await el.updateComplete;
+      expect(button.textContent!.trim(), 'pending is not success').to.equal('Copy');
+      resolveWrite();
+      await pendingWrite;
+      await settleClipboard(el);
+      expect(button.textContent!.trim()).to.equal('Copied!');
+
+      const denial = new DOMException('denied', 'NotAllowedError');
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: () => Promise.reject(denial) },
+      });
+      const genericError = oneEvent(el, 'lr-error');
+      const detailedError = oneEvent(el, 'lr-copy-error');
+      button.click();
+      const [genericEvent, detailedEvent] = await Promise.all([genericError, detailedError]) as [
+        CustomEvent<undefined>,
+        CustomEvent<{ ok: false; text: string; reason: string; error: unknown }>,
+      ];
+      await el.updateComplete;
+      expect(genericEvent.detail).to.equal(null);
+      expect(detailedEvent.detail).to.deep.equal({
+        ok: false,
+        text: 'abcdef1234567890',
+        reason: 'denied',
+        error: denial,
+      });
+      expect(button.textContent!.trim()).to.equal('Copy failed');
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
   });
 
   it('uses the adopted owner clipboard and does not arm ambient resources when ownerless', async () => {
@@ -111,11 +185,21 @@ describe('lr-commit-card', () => {
     const frameWindow = frame.contentWindow!;
     const originalSetTimeout = frameWindow.setTimeout;
     const originalClearTimeout = frameWindow.clearTimeout;
+    const ambientClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const frameClipboard = Object.getOwnPropertyDescriptor(frameWindow.navigator, 'clipboard');
     let queued: (() => void) | undefined;
     const cleared: number[] = [];
     let el: LyraCommitCard | undefined;
 
     try {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: () => Promise.resolve() },
+      });
+      Object.defineProperty(frameWindow.navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: () => Promise.resolve() },
+      });
       frameWindow.setTimeout = ((handler: TimerHandler) => {
         if (typeof handler === 'function') queued = handler as () => void;
         return 992;
@@ -130,53 +214,77 @@ describe('lr-commit-card', () => {
       await el.updateComplete;
       const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
       button.click();
-      await el.updateComplete;
+      await settleClipboard(el);
       expect(queued).to.be.a('function');
 
       document.body.append(document.adoptNode(el));
       await el.updateComplete;
       expect(cleared).to.deep.equal([992]);
       button.click();
-      await el.updateComplete;
+      await settleClipboard(el);
       queued!();
       await el.updateComplete;
       expect(button.textContent?.trim(), 'the retired owner callback must not clear new feedback').to.equal('Copied!');
     } finally {
       frameWindow.setTimeout = originalSetTimeout;
       frameWindow.clearTimeout = originalClearTimeout;
+      if (ambientClipboard) Object.defineProperty(navigator, 'clipboard', ambientClipboard);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+      if (frameClipboard) Object.defineProperty(frameWindow.navigator, 'clipboard', frameClipboard);
+      else Reflect.deleteProperty(frameWindow.navigator, 'clipboard');
       el?.remove();
       frame.remove();
     }
   });
 
   it('updates the copy button accessible name together with its visible copied state', async () => {
-    const el = (await fixture(
-      html`<lr-commit-card hash="abcdef1234567890"></lr-commit-card>`,
-    )) as LyraCommitCard;
-    const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
-    expect(button.getAttribute('aria-label')).to.equal('Copy commit hash');
-    button.click();
-    await el.updateComplete;
-    const copiedText = button.textContent?.trim();
-    expect(copiedText).to.equal('Copied!');
-    expect(button.getAttribute('aria-label')).to.equal(copiedText);
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.resolve() },
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-commit-card hash="abcdef1234567890"></lr-commit-card>`,
+      )) as LyraCommitCard;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+      expect(button.getAttribute('aria-label')).to.equal('Copy commit hash');
+      button.click();
+      await settleClipboard(el);
+      const copiedText = button.textContent?.trim();
+      expect(copiedText).to.equal('Copied!');
+      expect(button.getAttribute('aria-label')).to.equal(copiedText);
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
   });
 
   it('resets copied feedback when disconnected so reconnecting starts in the resting state', async () => {
-    const host = (await fixture(html`
-      <div><lr-commit-card hash="abcdef1234567890"></lr-commit-card></div>
-    `)) as HTMLElement;
-    const el = host.querySelector('lr-commit-card') as LyraCommitCard;
-    (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
-    await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent?.trim()).to.equal('Copied!');
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.resolve() },
+    });
+    try {
+      const host = (await fixture(html`
+        <div><lr-commit-card hash="abcdef1234567890"></lr-commit-card></div>
+      `)) as HTMLElement;
+      const el = host.querySelector('lr-commit-card') as LyraCommitCard;
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      await settleClipboard(el);
+      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent?.trim()).to.equal('Copied!');
 
-    el.remove();
-    host.append(el);
-    await el.updateComplete;
-    const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
-    expect(button.textContent?.trim()).to.equal('Copy');
-    expect(button.getAttribute('aria-label')).to.equal('Copy commit hash');
+      el.remove();
+      host.append(el);
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+      expect(button.textContent?.trim()).to.equal('Copy');
+      expect(button.getAttribute('aria-label')).to.equal('Copy commit hash');
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
   });
 
   it('splits message into subject (first line) and body (remaining lines)', async () => {
@@ -225,6 +333,33 @@ describe('lr-commit-card', () => {
     );
     expect(el.shadowRoot!.querySelector('[part="file-additions"]')!.textContent).to.equal(expectedAdditions);
     expect(el.shadowRoot!.querySelector('[part="file-deletions"]')!.textContent).to.equal(expectedDeletions);
+  });
+
+  it('normalizes malformed diff counts before totals, visible text, and accessible text', async () => {
+    const el = await fixture<LyraCommitCard>(html`
+      <lr-commit-card
+        files-collapsed="false"
+        .files=${[
+          { path: 'invalid.ts', additions: Number.NaN, deletions: Number.POSITIVE_INFINITY },
+          { path: 'fractional.ts', additions: 2.9, deletions: -4 },
+        ]}
+      ></lr-commit-card>
+    `);
+    const fileAdditions = Array.from(
+      el.shadowRoot!.querySelectorAll('[part="file-additions"]'),
+      (node) => node.textContent,
+    );
+    const fileDeletions = Array.from(
+      el.shadowRoot!.querySelectorAll('[part="file-deletions"]'),
+      (node) => node.textContent,
+    );
+    expect(fileAdditions).to.deep.equal(['+0', '+2']);
+    expect(fileDeletions).to.deep.equal(['-0', '-0']);
+    expect(el.shadowRoot!.querySelector('[part="additions"]')?.textContent).to.equal('+2');
+    expect(el.shadowRoot!.querySelector('[part="deletions"]')?.textContent).to.equal('-0');
+    const label = el.shadowRoot!.querySelector('[part="diffstat"]')?.getAttribute('aria-label') ?? '';
+    expect(label).to.not.include('NaN');
+    expect(label).to.not.include('Infinity');
   });
 
   it('files list starts collapsed and toggles via files-toggle, emitting lr-toggle', async () => {
@@ -398,15 +533,6 @@ describe('lr-commit-card', () => {
     expect(base.paddingTop).to.equal('0px');
   });
 
-  it('orders :host([frame="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
-    const css = styles.cssText;
-    const compactAt = css.indexOf(':host([compact])');
-    const plainAt = css.indexOf(":host([frame='plain'])");
-    expect(compactAt).to.be.greaterThan(-1);
-    expect(plainAt).to.be.greaterThan(-1);
-    expect(plainAt).to.be.greaterThan(compactAt);
-  });
-
   it('is accessible in the populated compact + plain states', async () => {
     const compactEl = (await fixture(
       html`<lr-commit-card compact hash="abcdef1" message="Fix bug" author="Ada"></lr-commit-card>`,
@@ -419,18 +545,26 @@ describe('lr-commit-card', () => {
     await expect(plainEl).to.be.accessible();
   });
 
-  it('gives files-toggle, file, and copy-button a hover state', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='files-toggle'\]:hover/);
-    expect(css).to.match(/\[part='file'\]:hover/);
-    expect(css).to.match(/\[part='copy-button'\]:hover/);
-  });
-
-  it('gives files-toggle, file, and copy-button a :focus-visible outline matching their :hover treatment (regression)', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='files-toggle'\]:focus-visible[^{]*\{[^}]*outline:/);
-    expect(css).to.match(/\[part='file'\]:focus-visible[^{]*\{[^}]*outline:/);
-    expect(css).to.match(/\[part='copy-button'\]:focus-visible[^{]*\{[^}]*outline:/);
+  it('paints rendered hover feedback on files-toggle, file, and copy-button', async () => {
+    const el = await fixture<LyraCommitCard>(html`
+      <lr-commit-card
+        hash="abcdef1"
+        files-collapsed="false"
+        style="--lr-color-brand-quiet: rgb(1, 2, 3)"
+        .files=${[{ path: 'a.ts', additions: 1, deletions: 0 }]}
+      ></lr-commit-card>
+    `);
+    for (const part of ['files-toggle', 'file', 'copy-button']) {
+      const control = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      const rect = control.getBoundingClientRect();
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => getComputedStyle(control).backgroundColor === 'rgb(1, 2, 3)');
+      expect(getComputedStyle(control).backgroundColor, part).to.equal('rgb(1, 2, 3)');
+    }
+    await resetMouse();
   });
 
   it('renders a real :focus-visible outline on the files-toggle, file row, and copy-button using the shared focus-ring tokens', async () => {
@@ -498,4 +632,19 @@ describe('lr-commit-card', () => {
     expect(meta.scrollWidth).to.be.at.most(Math.ceil(meta.getBoundingClientRect().width) + 1);
     expect(author.scrollWidth).to.be.at.most(Math.ceil(author.getBoundingClientRect().width) + 1);
   });
+});
+
+it('normalizes duplicate file paths first-wins before diffstat and row events', async () => {
+  const el = await fixture<LyraCommitCard>(html`
+    <lr-commit-card
+      files-collapsed="false"
+      .files=${[
+        { path: 'same.ts', additions: 2, deletions: 1 },
+        { path: 'same.ts', additions: 90, deletions: 80 },
+      ]}
+    ></lr-commit-card>
+  `);
+  expect(el.shadowRoot!.querySelectorAll('[part="file"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelector('[part="additions"]')!.textContent).to.contain('2');
+  expect(el.shadowRoot!.querySelector('[part="deletions"]')!.textContent).to.contain('1');
 });

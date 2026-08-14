@@ -148,10 +148,21 @@ export class LyraProgressRing extends LyraElement {
     return formatProgressPercent(this.effectiveLocale, this.percent);
   }
 
+  /** Live SVG indicator circle, or `null` before the render root is populated. */
+  get indicator(): SVGCircleElement | null {
+    return this.renderRoot.querySelector<SVGCircleElement>('[part="indicator"]');
+  }
+
+  /** Current normalized stroke offset used by the rendered indicator. */
+  get indicatorOffset(): number {
+    const circumference = 2 * Math.PI * 42;
+    return this.indeterminate ? circumference * 0.65 : circumference * (1 - this.percent / 100);
+  }
+
   override render(): TemplateResult {
     const radius = 42;
     const circumference = 2 * Math.PI * radius;
-    const offset = circumference * (1 - this.percent / 100);
+    const offset = this.indicatorOffset;
     const label = resolveProgressLabel(this, {
       label: this.label,
       accessibleLabel: this.accessibleLabel,
@@ -164,7 +175,7 @@ export class LyraProgressRing extends LyraElement {
       <svg viewBox="0 0 100 100" aria-hidden="true">
         <circle part="track" cx="50" cy="50" r=${radius} stroke-width="10"></circle>
         <circle part="indicator" cx="50" cy="50" r=${radius} stroke-width="10"
-          stroke-dasharray=${circumference} stroke-dashoffset=${this.indeterminate ? circumference * 0.65 : offset}></circle>
+          stroke-dasharray=${circumference} stroke-dashoffset=${offset}></circle>
       </svg>
       <span part="label"><slot @slotchange=${this.onLabelSlotChange}>${this.indeterminate ? '' : this.formattedPercent}</slot></span>
     </div>`;

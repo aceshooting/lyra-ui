@@ -206,7 +206,7 @@ describe('lr-video-playlist public contract', () => {
     expect(getComputedStyle(themedCurrent).backgroundColor).to.equal('rgb(26, 27, 28)');
   });
 
-  it('uses only direct video children and skips inert videos for activation and roving focus', async () => {
+  it('uses only direct video children and skips inert videos for activation and arrow-navigation focus', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>
         <lr-video title="Unavailable" inert></lr-video>
@@ -243,7 +243,7 @@ describe('lr-video-playlist public contract', () => {
     expect(items(el)[0]!.tabIndex).to.equal(0);
   });
 
-  it('emits the exact composed change detail with fresh inert metadata snapshots', async () => {
+  it('emits exact composed change detail as fresh mutable detached metadata snapshots', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>
         <lr-video title="First"></lr-video>
@@ -275,16 +275,22 @@ describe('lr-video-playlist public contract', () => {
         { src: 'data:text/vtt,WEBVTT', kind: 'captions', srclang: 'en', label: 'English', default: true },
       ],
     });
-    expect(Object.isFrozen(event.detail.video)).to.be.true;
-    expect(Object.isFrozen(event.detail.video.sources)).to.be.true;
-    expect(Object.isFrozen(event.detail.video.sources[0]!)).to.be.true;
-    expect(Object.isFrozen(event.detail.video.tracks[0]!)).to.be.true;
+    expect(Object.isFrozen(event.detail.video)).to.be.false;
+    expect(Object.isFrozen(event.detail.video.sources)).to.be.false;
+    expect(Object.isFrozen(event.detail.video.sources[0]!)).to.be.false;
+    expect(Object.isFrozen(event.detail.video.tracks[0]!)).to.be.false;
+    event.detail.video.title = 'Consumer-owned title';
+    event.detail.video.sources[0]!.src = 'https://example.test/consumer-owned.mp4';
+    event.detail.video.tracks[0]!.label = 'Consumer-owned captions';
 
     const again = oneEvent(el, 'lr-video-change');
     el.goTo(1);
     const secondEvent = await again as CustomEvent<LyraVideoPlaylistChangeDetail>;
     expect(secondEvent.detail.video === event.detail.video).to.be.false;
     expect(secondEvent.detail.video.sources === event.detail.video.sources).to.be.false;
+    expect(secondEvent.detail.video.title).to.equal('Second');
+    expect(secondEvent.detail.video.sources[0]!.src).to.equal('https://example.test/direct.mp4');
+    expect(secondEvent.detail.video.tracks[0]!.label).to.equal('English');
   });
 
   it('emits for goTo(current), while invalid and boundary navigation are inert', async () => {
@@ -398,7 +404,7 @@ describe('lr-video-playlist public contract', () => {
     expect(b!.hidden).to.be.false;
   });
 
-  it('auto-advances ended and error only for the current activation generation', async () => {
+  it('auto-advances ended only for the current activation generation and never skips errors', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>
         <lr-video title="A"></lr-video><lr-video title="B"></lr-video><lr-video title="C"></lr-video>
@@ -418,6 +424,11 @@ describe('lr-video-playlist public contract', () => {
     expect(b!.hidden).to.be.false;
     expect(cPlayback.playCalls).to.equal(0);
     b!.dispatchEvent(new Event('error'));
+    await aTimeout(0);
+    expect(b!.hidden).to.be.false;
+    expect(c!.hidden).to.be.true;
+    expect(cPlayback.playCalls).to.equal(0);
+    b!.dispatchEvent(new Event('ended'));
     await aTimeout(0);
     expect(c!.hidden).to.be.false;
     expect(cPlayback.playCalls).to.equal(1);
@@ -541,7 +552,7 @@ describe('lr-video-playlist public contract', () => {
     expect(media(b!).volume).to.equal(0.35);
     expect(media(b!).muted).to.be.true;
     expect(media(b!).playbackRate).to.equal(1.5);
-    expect(incomingEnglish.mode).to.equal('showing');
+    expect(incomingEnglish.mode).to.equal('hidden');
     expect(incomingFrench.mode).to.equal('disabled');
   });
 
@@ -580,8 +591,46 @@ describe('lr-video-playlist public contract', () => {
     expect(media(b!).volume).to.equal(0.35);
     expect(media(b!).muted).to.be.true;
     expect(media(b!).playbackRate).to.equal(1.5);
-    expect(incomingCaption.mode).to.equal('showing');
+    expect(incomingCaption.mode).to.equal('hidden');
     expect(alternateCaption.mode).to.equal('disabled');
+  });
+
+  it('restores every authored child presentation and resource field when ownership ends', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-video-playlist controls="full" icon-library="system">
+          <lr-video
+            title="Authored"
+            controls="standard"
+            icon-library="custom-icons"
+            hidden
+            src="https://example.test/authored.mp4"
+          >
+            <source src="https://example.test/authored.webm" type="video/webm">
+            <track src="data:text/vtt,WEBVTT" kind="captions" srclang="en" label="English">
+          </lr-video>
+        </lr-video-playlist>
+      </div>
+    `);
+    const playlist = wrapper.querySelector('lr-video-playlist') as LyraVideoPlaylist;
+    await settle(playlist);
+    const video = childVideos(playlist)[0]!;
+    expect(video.controls).to.equal('full');
+    expect(video.iconLibrary).to.equal('system');
+    expect(video.hidden).to.be.false;
+
+    wrapper.append(video);
+    await settle(playlist);
+    await video.updateComplete;
+
+    expect(video.controls).to.equal('standard');
+    expect(video.iconLibrary).to.equal('custom-icons');
+    expect(video.hidden).to.be.true;
+    expect(video.src).to.equal('https://example.test/authored.mp4');
+    expect(video.querySelector('source')?.getAttribute('src')).to.equal(
+      'https://example.test/authored.webm',
+    );
+    expect(video.querySelector('track')?.getAttribute('src')).to.equal('data:text/vtt,WEBVTT');
   });
 
   it('does not resume the successor after the user pauses the active child before removal', async () => {
@@ -622,7 +671,7 @@ describe('lr-video-playlist public contract', () => {
       load: { configurable: true, value: () => undefined },
     });
     el.goTo(1);
-    expect(incomingDescriptions.mode).to.equal('showing');
+    expect(incomingDescriptions.mode).to.equal('hidden');
   });
 
   it('guards rejected play promises from superseded activations', async () => {
@@ -711,7 +760,7 @@ describe('lr-video-playlist public contract', () => {
     expect(childVideos(el)[1]!.hidden).to.be.true;
   });
 
-  it('does not wrap roving focus past either end of the list', async () => {
+  it('does not wrap arrow-navigation focus past either end of the list', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist><lr-video title="One"></lr-video><lr-video title="Two"></lr-video></lr-video-playlist>
     `);
@@ -728,7 +777,7 @@ describe('lr-video-playlist public contract', () => {
     expect(el.shadowRoot!.activeElement === buttons[1]).to.be.true;
   });
 
-  it('ignores a roving move started from a row that just went stale', async () => {
+  it('ignores a arrow-navigation move started from a row that just went stale', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>
         <lr-video title="One"></lr-video><lr-video title="Two"></lr-video><lr-video title="Three"></lr-video>
@@ -929,7 +978,7 @@ describe('lr-video-playlist public contract', () => {
 
       expect(
         el.shadowRoot!.activeElement === items(el)[1],
-        'focus follows the new roving row even when the old focused node came from the iframe realm',
+        'focus follows the new arrow-navigation row even when the old focused node came from the iframe realm',
       ).to.be.true;
     } finally {
       el.remove();
@@ -937,7 +986,7 @@ describe('lr-video-playlist public contract', () => {
     }
   });
 
-  it('implements one roving tab stop, keyboard activation, and mirrored horizontal keys', async () => {
+  it('keeps every enabled row Tab-reachable while retaining optional arrow shortcuts', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>
         <lr-video title="One"></lr-video><lr-video title="Two"></lr-video><lr-video title="Three"></lr-video>
@@ -945,13 +994,13 @@ describe('lr-video-playlist public contract', () => {
     `);
     await settle(el);
     let buttons = items(el);
-    expect(buttons.map((button) => button.tabIndex)).to.deep.equal([0, -1, -1]);
+    expect(buttons.map((button) => button.tabIndex)).to.deep.equal([0, 0, 0]);
     buttons[0]!.focus();
     expect(press(buttons[0]!, 'ArrowDown').defaultPrevented).to.be.true;
     await el.updateComplete;
     buttons = items(el);
     expect(el.shadowRoot!.activeElement === buttons[1]).to.be.true;
-    expect(buttons.map((button) => button.tabIndex)).to.deep.equal([-1, 0, -1]);
+    expect(buttons.map((button) => button.tabIndex)).to.deep.equal([0, 0, 0]);
     press(buttons[1]!, 'Enter');
     await el.updateComplete;
     expect(childVideos(el)[1]!.hidden).to.be.false;
@@ -991,14 +1040,23 @@ describe('lr-video-playlist public contract', () => {
     video.duration = 65;
     video.dispatchEvent(new Event('loadedmetadata'));
     await settle(el);
+    const row = items(el)[0]!;
+    const duration = el.shadowRoot!.querySelector('[part="playlist-duration"]') as HTMLElement;
     expect(el.shadowRoot!.querySelector('[part="playlist-title"]')!.textContent!.trim()).to.equal('Renamed');
-    expect(el.shadowRoot!.querySelector('[part="playlist-duration"]')!.textContent!.trim()).to.equal('1:05');
+    expect(duration.textContent!.trim()).to.equal('1:05');
+    expect(row.getAttribute('aria-describedby')).to.equal(duration.id);
 
     // An hour or more switches the duration format to include an hours segment.
     video.duration = 3725;
     video.dispatchEvent(new Event('loadedmetadata'));
     await settle(el);
     expect(el.shadowRoot!.querySelector('[part="playlist-duration"]')!.textContent!.trim()).to.equal('1:02:05');
+
+    video.duration = 0;
+    video.dispatchEvent(new Event('loadedmetadata'));
+    await settle(el);
+    expect(items(el)[0]!.hasAttribute('aria-describedby')).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="playlist-duration"]')!.textContent!.trim()).to.equal('');
   });
 
   it('gives host aria-label precedence, handles 320px long titles, RTL, and populated axe', async () => {
@@ -1014,10 +1072,14 @@ describe('lr-video-playlist public contract', () => {
     await settle(el);
     const root = el.shadowRoot!.querySelector('[part~="video-playlist"]') as HTMLElement;
     const title = el.shadowRoot!.querySelector('[part="playlist-title"]') as HTMLElement;
-    expect(el.shadowRoot!.querySelector('[part="playlist"]')!.getAttribute('aria-label')).to.equal('Host playlist label');
+    const thumbnail = el.shadowRoot!.querySelector('[part="playlist-thumbnail"]') as HTMLElement;
+    expect(el.getAttribute('aria-label')).to.equal('Host playlist label');
+    expect(el.shadowRoot!.querySelector('[part="playlist"]')!.getAttribute('aria-label')).to.equal('Video playlist');
     expect(getComputedStyle(root).gridTemplateColumns.split(' ').length).to.equal(1);
     expect(getComputedStyle(title).overflow).to.equal('hidden');
     expect(getComputedStyle(title).textOverflow).to.equal('ellipsis');
+    expect(thumbnail.getAttribute('aria-hidden')).to.equal('true');
+    expect(thumbnail.inert).to.be.true;
     expect(getComputedStyle(el).direction).to.equal('rtl');
     await expect(el).to.be.accessible();
   });
@@ -1031,7 +1093,7 @@ describe('lr-video-playlist public contract', () => {
 });
 
 describe('lr-video-playlist inert handling', () => {
-  it('skips an inert video for activation and for the roving tabindex', async () => {
+  it('skips an inert video while every enabled row remains in the sequential Tab order', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>
         <lr-video title="One"></lr-video><lr-video title="Two" inert></lr-video><lr-video title="Three"></lr-video>
@@ -1042,14 +1104,14 @@ describe('lr-video-playlist inert handling', () => {
     // The row standing in for inert content is itself disabled, so it refuses focus outright --
     // which is exactly why arrow navigation must never step onto it.
     expect(buttons[1]!.disabled).to.be.true;
-    expect(buttons.map((button) => button.tabIndex)).to.deep.equal([0, -1, -1]);
+    expect(buttons.map((button) => button.tabIndex)).to.deep.equal([0, -1, 0]);
 
     buttons[0]!.focus();
     expect(press(buttons[0]!, 'ArrowDown').defaultPrevented).to.be.true;
     await el.updateComplete;
     buttons = items(el);
     expect(el.shadowRoot!.activeElement === buttons[2]).to.be.true;
-    expect(buttons.map((button) => button.tabIndex)).to.deep.equal([-1, -1, 0]);
+    expect(buttons.map((button) => button.tabIndex)).to.deep.equal([0, -1, 0]);
 
     press(buttons[2]!, 'ArrowUp');
     await el.updateComplete;
@@ -1073,7 +1135,7 @@ describe('lr-video-playlist inert handling', () => {
     expect(childVideos(el)[2]!.hidden).to.be.false;
   });
 
-  it('rehomes roving focus when the row it sits on becomes inert', async () => {
+  it('rehomes arrow-navigation focus when the row it sits on becomes inert', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>
         <lr-video title="One"></lr-video><lr-video title="Two"></lr-video>
@@ -1116,7 +1178,7 @@ describe('lr-video-playlist inert handling', () => {
   });
 });
 
-it('forwards host focus()/blur()/click() to the roving playlist row and re-dispatches its focus/blur', async () => {
+it('forwards host focus()/blur()/click() to the arrow-navigation playlist row and re-dispatches its focus/blur', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div>
       <lr-video-playlist>
@@ -1158,14 +1220,14 @@ it('forwards host focus()/blur()/click() to the roving playlist row and re-dispa
   await changed;
   await settle(el);
   el.focus();
-  expect(el.shadowRoot!.activeElement === items(el)[1], 'focus follows the roving row').to.equal(true);
+  expect(el.shadowRoot!.activeElement === items(el)[1], 'focus follows the arrow-navigation row').to.equal(true);
 
   let clicks = 0;
   items(el)[1]!.addEventListener('click', () => {
     clicks += 1;
   });
   el.click();
-  expect(clicks, 'click() activates the roving row').to.equal(1);
+  expect(clicks, 'click() activates the arrow-navigation row').to.equal(1);
   expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur', 'focus']);
   expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
   expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;

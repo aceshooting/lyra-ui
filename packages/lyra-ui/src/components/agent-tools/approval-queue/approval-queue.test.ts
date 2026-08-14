@@ -144,11 +144,82 @@ describe('lr-approval-queue', () => {
     expect(deny.defaultPrevented).to.be.true;
   });
 
-  it('forwards the host aria-label to the semantic section', async () => {
+  it('preserves the selected identity for close when a decision listener removes the request synchronously', async () => {
+    const el = await fixture<LyraApprovalQueue>(html`
+      <lr-approval-queue selected-id="call-1" open .requests=${requests}></lr-approval-queue>
+    `);
+    const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
+    el.addEventListener('lr-approval-decision', () => {
+      el.requests = [];
+    });
+    const closed = oneEvent(el, 'lr-approval-close');
+    dialog.dispatchEvent(new CustomEvent('lr-approve', {
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+      detail: { args: requests[0]!.args },
+    }));
+    dialog.dispatchEvent(new CustomEvent('lr-close', {
+      bubbles: true,
+      composed: true,
+      detail: 'approve',
+    }));
+    expect((await closed).detail).to.deep.equal({ invocationId: 'call-1', reason: 'approve' });
+  });
+
+  it('clears stale selected and open state when the controlled queue shrinks', async () => {
+    const el = await fixture<LyraApprovalQueue>(html`
+      <lr-approval-queue selected-id="call-1" open .requests=${requests}></lr-approval-queue>
+    `);
+    el.requests = [];
+    await el.updateComplete;
+    expect(el.selectedId).to.equal(null);
+    expect(el.open).to.be.false;
+    expect(el.shadowRoot!.querySelector('lr-tool-approval-dialog') === null).to.be.true;
+  });
+
+  it('keeps resolved requests visible but non-actionable', async () => {
+    const resolved: ToolApprovalRequest[] = [
+      { ...requests[0]!, status: 'approved' },
+    ];
+    const el = await fixture<LyraApprovalQueue>(html`
+      <lr-approval-queue selected-id="call-1" open .requests=${resolved}></lr-approval-queue>
+    `);
+    let selections = 0;
+    el.addEventListener('lr-approval-select', () => selections += 1);
+    const row = el.shadowRoot!.querySelector('[part="request"]') as HTMLButtonElement;
+    expect(row.disabled).to.be.true;
+    row.click();
+    await el.updateComplete;
+    expect(selections).to.equal(0);
+    expect(el.selectedId).to.equal(null);
+    expect(el.open).to.be.false;
+  });
+
+  it('distinguishes no selection from a request whose valid identity is empty string', async () => {
+    const emptyIdRequest: ToolApprovalRequest = { id: '', toolName: 'empty_id_tool', args: {} };
+    const el = await fixture<LyraApprovalQueue>(html`
+      <lr-approval-queue .requests=${[emptyIdRequest]}></lr-approval-queue>
+    `);
+    expect(el.selectedId).to.equal(null);
+
+    (el.shadowRoot!.querySelector('[part="request"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.selectedId).to.equal('');
+    expect(el.open).to.be.true;
+    expect(el.shadowRoot!.querySelector('lr-tool-approval-dialog') === null).to.be.false;
+  });
+
+  it('keeps a non-empty host name on the host and preserves explicit-empty section semantics', async () => {
     const el = (await fixture(html`
       <lr-approval-queue aria-label="Author approvals" label="Visible approvals"></lr-approval-queue>
     `)) as LyraApprovalQueue;
-    expect(el.shadowRoot!.querySelector('section')!.getAttribute('aria-label')).to.equal('Author approvals');
+    expect(el.getAttribute('aria-label')).to.equal('Author approvals');
+    expect(el.shadowRoot!.querySelector('section')!.hasAttribute('aria-label')).to.equal(false);
+
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('section')!.getAttribute('aria-label')).to.equal('');
   });
 
   it('renders a strings override in the DOM', async () => {
@@ -224,4 +295,17 @@ describe('lr-approval-queue', () => {
     expect(toolName.scrollWidth).to.be.at.most(Math.ceil(toolName.getBoundingClientRect().width) + 1);
     expect(requestId.scrollWidth).to.be.at.most(Math.ceil(requestId.getBoundingClientRect().width) + 1);
   });
+});
+
+it('normalizes duplicate request ids first-wins before selection and dialog lookup', async () => {
+  const el = await fixture<LyraApprovalQueue>(html`
+    <lr-approval-queue .requests=${[
+      { id: 'same', toolName: 'first_tool', args: { first: true } },
+      { id: 'same', toolName: 'later_tool', args: { later: true } },
+    ]}></lr-approval-queue>
+  `);
+  const rows = el.shadowRoot!.querySelectorAll('[part="request"]');
+  expect(rows).to.have.length(1);
+  expect(rows[0]!.textContent).to.contain('first_tool');
+  expect(rows[0]!.textContent).not.to.contain('later_tool');
 });

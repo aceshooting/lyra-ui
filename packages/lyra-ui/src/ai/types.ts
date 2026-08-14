@@ -17,8 +17,8 @@ export type { ChatMessageRole, ChatMessageStatus, LyraAnchor, ToolCallStatus };
  * existing component's own exported type outright (`ChatMessageRole`, `ChatMessageStatus`,
  * `ToolCallStatus`), it is imported and re-exported here rather than redefined. See each
  * interface's own doc comment below for the specific existing component(s) it composes with.
- * `types.contract.ts` (a sibling file -- see its own header for why it is deliberately not named
- * `*.test.ts`) asserts this compatibility at compile time.
+ * The package's no-emit `type-tests/ai-contracts.ts` program asserts this compatibility at
+ * compile time so contract assertions never become importable runtime modules.
  *
  * Every `*EventDetail` type below is plain serializable data (no class instances, no functions),
  * matching this package's own `*EventMap`/`*Detail` event-contract convention (e.g.
@@ -142,7 +142,8 @@ export interface DocumentRef {
 /** Format-neutral location understood by Lyra's anchor-capable document viewers. */
 export type DocumentLocator = LyraAnchor;
 
-export type MessagePartState = 'streaming' | 'complete' | 'error';
+/** Transport progress only. Failures use `ErrorMessagePart` or a domain-specific error field. */
+export type MessagePartState = 'streaming' | 'complete';
 
 export interface MessagePartBase {
   id: string;
@@ -167,13 +168,25 @@ export interface ToolCallMessagePart extends MessagePartBase {
   invocation: ToolInvocation;
 }
 
-export interface ToolResultMessagePart extends MessagePartBase {
+interface ToolResultMessagePartBase extends MessagePartBase {
   type: 'tool-result';
   invocationId: string;
   name?: string;
-  result?: unknown;
-  error?: string;
 }
+
+export interface ToolResultSuccessMessagePart extends ToolResultMessagePartBase {
+  result: unknown;
+  error?: never;
+}
+
+export interface ToolResultErrorMessagePart extends ToolResultMessagePartBase {
+  error: string;
+  /** Optional partial output retained for diagnostics. */
+  result?: unknown;
+}
+
+/** A tool result is always either a success value or an error, never neither. */
+export type ToolResultMessagePart = ToolResultSuccessMessagePart | ToolResultErrorMessagePart;
 
 export interface CitationMessagePart extends MessagePartBase {
   type: 'citation';
@@ -189,8 +202,15 @@ export interface DataMessagePart extends MessagePartBase {
   type: 'data';
   name?: string;
   data: unknown;
-  /** Optional allowlisted widget document consumed by `<lr-widget-renderer>`. */
-  widget?: unknown;
+  widget?: never;
+}
+
+export interface WidgetMessagePart extends MessagePartBase {
+  type: 'data';
+  name?: string;
+  data?: never;
+  /** Allowlisted widget document consumed by `<lr-widget-renderer>`. */
+  widget: unknown;
 }
 
 export interface AudioMessagePart extends MessagePartBase {
@@ -216,6 +236,7 @@ export type MessagePart =
   | CitationMessagePart
   | AttachmentMessagePart
   | DataMessagePart
+  | WidgetMessagePart
   | AudioMessagePart
   | ErrorMessagePart;
 

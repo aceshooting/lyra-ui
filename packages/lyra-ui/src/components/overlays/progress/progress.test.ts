@@ -46,6 +46,23 @@ it('reflects value on both progress components', async () => {
   expect(ring.getAttribute('value')).to.equal('30');
 });
 
+it('exposes the live progress-ring indicator and normalized offset', async () => {
+  const el = (await fixture(html`<lr-progress-ring value="25"></lr-progress-ring>`)) as LyraProgressRing;
+  const first = el.indicator;
+  expect(first === el.shadowRoot!.querySelector('[part="indicator"]')).to.equal(true);
+  expect(el.indicatorOffset).to.be.closeTo(Number(first!.getAttribute('stroke-dashoffset')), 0.001);
+  el.value = 75;
+  await el.updateComplete;
+  expect(el.indicator === first).to.equal(true);
+  expect(el.indicatorOffset).to.be.closeTo(Number(first!.getAttribute('stroke-dashoffset')), 0.001);
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  expect(el.indicator === first).to.equal(true);
+  expect(el.indicatorOffset).to.be.closeTo(Number(first!.getAttribute('stroke-dashoffset')), 0.001);
+});
+
 it('accepts both upstream progress custom-property vocabularies', async () => {
   const bar = await fixture(html`
     <lr-progress-bar
@@ -636,4 +653,31 @@ it('still lets genuinely slotted content name the ring', async () => {
   const el = (await fixture(html`<lr-progress-ring value="40">Uploading</lr-progress-ring>`)) as LyraProgressRing;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[role="progressbar"]')!.getAttribute('aria-label')).to.contain('Uploading');
+});
+
+it('bounds style resolution for adversarially deep slotted progress labels', async () => {
+  const el = (await fixture(html`<lr-progress-bar></lr-progress-bar>`)) as LyraProgressBar;
+  let parent: HTMLElement = el;
+  for (let index = 0; index < 1200; index++) {
+    const child = document.createElement('span');
+    parent.append(child);
+    parent = child;
+  }
+  parent.textContent = 'Unbounded tail';
+
+  const ownerWindow = el.ownerDocument.defaultView!;
+  const original = ownerWindow.getComputedStyle;
+  let styleReads = 0;
+  ownerWindow.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+    styleReads++;
+    return original.call(ownerWindow, element, pseudo);
+  }) as typeof ownerWindow.getComputedStyle;
+  try {
+    expect(() =>
+      (el as unknown as { computeVisibleLabelText(): string }).computeVisibleLabelText(),
+    ).to.not.throw();
+    expect(styleReads, 'one label extraction has a fixed descendant budget').to.be.at.most(600);
+  } finally {
+    ownerWindow.getComputedStyle = original;
+  }
 });

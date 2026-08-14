@@ -1,22 +1,22 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './tree.js';
-import type { LyraTree, TreeItem } from './tree.js';
+import type { LyraTree, LyraTreeNodeData } from './tree.js';
 import type { LyraTreeItem } from './tree-item.js';
 
 describe('tree-item badges', () => {
-  const dataWithBadges: TreeItem[] = [
+  const dataWithBadges: LyraTreeNodeData[] = [
     {
       id: 'a',
       label: 'src/app.ts',
-      badge: 3,
       badges: [
+        { text: '3' },
         { text: 'M', tone: 'brand', label: 'Modified' },
         { text: '+2', tone: 'success' },
       ],
     },
   ];
 
-  it('renders no badge parts when neither badge nor badges is set', async () => {
+  it('renders no badge parts when badges is unset', async () => {
     const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
     el.data = [{ id: 'a', label: 'no badges here' }];
     await el.updateComplete;
@@ -25,13 +25,21 @@ describe('tree-item badges', () => {
     expect(badgeParts.length).to.equal(0);
   });
 
-  it('renders badges chips with data-tone after the legacy badge', async () => {
+  it('does not retain the removed singular badge shortcut', async () => {
+    const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+    el.data = [{ id: 'a', label: 'Legacy input', badge: 3 } as unknown as LyraTreeNodeData];
+    await el.updateComplete;
+    const node = el.querySelector('lr-tree-item') as LyraTreeItem;
+    expect(node.shadowRoot!.querySelectorAll('[part="badge"]')).to.have.length(0);
+    expect('badge' in el.data[0]!).to.be.false;
+  });
+
+  it('renders badge chips in array order with a normalized tone', async () => {
     const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
     el.data = dataWithBadges;
     await el.updateComplete;
     const node = el.querySelector('lr-tree-item') as LyraTreeItem;
     const badgeParts = [...node.shadowRoot!.querySelectorAll('[part="badge"]')] as HTMLElement[];
-    // legacy badge (3) first, then the two badges chips, in array order
     expect(badgeParts.length).to.equal(3);
     expect(badgeParts[0].textContent!.trim()).to.equal('3');
     expect(badgeParts[1].textContent!.trim()).to.equal('M');
@@ -102,7 +110,7 @@ describe('tree-item badges', () => {
     }
   });
 
-  it('is accessible with badges and the legacy badge both present', async () => {
+  it('is accessible with multiple badges present', async () => {
     const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
     el.data = dataWithBadges;
     await el.updateComplete;

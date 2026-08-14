@@ -405,6 +405,53 @@ it('create() on the region resolves to the item', async () => {
   expect(item.textContent).to.contain('direct');
 });
 
+it('rejects create() deterministically while the region is detached', async () => {
+  const region = document.createElement('lr-toast') as LyraToast;
+  const outcome = await Promise.race([
+    region.create('detached').then(() => 'resolved', (error) => String(error)),
+    aTimeout(100).then(() => 'timed out'),
+  ]);
+  expect(outcome).to.include('must be connected');
+});
+
+it('requires object-form routing options to match the region it is called on', async () => {
+  const region = (await fixture(html`<lr-toast placement="bottom-start"></lr-toast>`)) as LyraToast;
+  const mismatch = await region.create({
+    message: 'Wrong region',
+    placement: 'top-end',
+  }).then(() => 'resolved', (error) => String(error));
+  expect(mismatch).to.include('placement must match');
+
+  const item = await region.create({
+    message: 'Correct region',
+    placement: 'bottom-start',
+    ownerDocument: document,
+    duration: 0,
+  });
+  expect(item.textContent).to.contain('Correct region');
+});
+
+it('shares canonical icon/action options across region.create() and toast()', async () => {
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  let actionItem: LyraToastItem | undefined;
+  const direct = await region.create({
+    message: 'Saved',
+    duration: 0,
+    icon: (ownerDocument) => html`<strong data-owner=${ownerDocument === document}>✓</strong>`,
+    action: { label: 'Undo', onClick: (item) => { actionItem = item; } },
+  });
+  expect(direct.withIcon).to.be.true;
+  expect(direct.querySelector('[slot="icon"]')?.textContent).to.equal('✓');
+  (direct.querySelector('button') as HTMLButtonElement).click();
+  expect(actionItem === direct).to.equal(true);
+
+  const icon = document.createElement('span');
+  icon.textContent = 'i';
+  const helper = await toast({ message: 'Helper', duration: 0, icon }).item;
+  expect(helper.querySelector('[slot="icon"]')?.textContent).to.equal('i');
+  expect(icon.parentElement?.getAttribute('slot')).to.equal('icon');
+});
+
 it('keeps three toast items active and queues later items inertly until a slot opens', async () => {
   const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
   const items: LyraToastItem[] = [];
@@ -870,4 +917,18 @@ it('keeps an actionable toast persistent when duration is omitted', async () => 
   const item = await handle.item;
   expect(item.duration).to.equal(0);
   await item.hide();
+});
+
+it('exposes the live stack surface across placement updates and reconnects', async () => {
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  const stack = region.stack;
+  expect(stack === region.shadowRoot!.querySelector('[part="stack"]')).to.equal(true);
+  region.placement = 'bottom-start';
+  await region.updateComplete;
+  expect(region.stack === stack).to.equal(true);
+  const parent = region.parentElement!;
+  region.remove();
+  parent.append(region);
+  await region.updateComplete;
+  expect(region.stack === stack).to.equal(true);
 });

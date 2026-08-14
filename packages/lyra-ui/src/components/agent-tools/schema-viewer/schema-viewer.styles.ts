@@ -2,9 +2,22 @@ import { css } from 'lit';
 
 export const styles = css`
   :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
-  ul { display: flex; flex-direction: column; gap: var(--lr-space-xs); margin: 0; padding-inline-start: var(--lr-space-l); list-style: none; }
+  ul { display: flex; flex-direction: column; gap: var(--lr-space-xs); margin: 0; padding-inline-start: 0; list-style: none; }
   [part='tree'] { padding-inline-start: 0; }
-  [part~='node'] { min-inline-size: 0; border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border); padding-inline-start: var(--lr-space-s); }
+  [part~='node'] {
+    --_lr-schema-indent: min(
+      calc(var(--_lr-schema-depth, 0) * var(--lr-space-s)),
+      var(--lr-schema-viewer-max-indent, var(--lr-size-12rem))
+    );
+    min-inline-size: 0;
+    border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    padding-inline-start: 0;
+  }
+  [part~='node'] > :not(ul) {
+    margin-inline-start: var(--_lr-schema-indent);
+    max-inline-size: calc(100% - var(--_lr-schema-indent));
+    box-sizing: border-box;
+  }
   [part~='node-selected'] {
     border-inline-start-color: var(--lr-schema-viewer-selected-border, var(--lr-color-brand));
   }
@@ -38,5 +51,12 @@ export const styles = css`
     background: var(--lr-schema-viewer-info-bg, var(--lr-color-brand-quiet));
   }
   [part='constraints'] { display: flex; flex-flow: row wrap; gap: var(--lr-space-xs); padding: var(--lr-space-xs); color: var(--lr-color-text-quiet); font-family: var(--lr-font-mono); font-size: var(--lr-font-size-xs); }
-  @container (max-inline-size: 319.98px) { ul { padding-inline-start: var(--lr-space-s); } [part='tree'] { padding-inline-start: 0; } }
+  @container (max-inline-size: 319.98px) {
+    [part~='node'] {
+      --_lr-schema-indent: min(
+        calc(var(--_lr-schema-depth, 0) * var(--lr-space-xs)),
+        var(--lr-schema-viewer-max-indent, var(--lr-size-12rem))
+      );
+    }
+  }
 `;

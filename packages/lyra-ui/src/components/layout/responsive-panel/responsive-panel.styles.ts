@@ -62,6 +62,11 @@ export const styles = css`
   [part='base'].overlay [part='panel'] {
     inline-size: 100%;
     block-size: 100%;
+    box-sizing: border-box;
+    padding-block-start: var(--lr-safe-area-top);
+    padding-block-end: var(--lr-safe-area-bottom);
+    padding-inline-start: var(--lr-safe-area-inline-start);
+    padding-inline-end: var(--lr-safe-area-inline-end);
     /* Only the OVERLAY presentations repaint the panel: docked/inline is resting chrome in the
        page's own flow and must keep the page surface, while an overlay sits over a scrim and in
        dark mode would otherwise be the same near-black as the page behind it. The bottom-sheet
@@ -85,7 +90,6 @@ export const styles = css`
   :host([variant='bottom-sheet']) [part='base'].overlay [part='panel'] {
     block-size: auto;
     max-block-size: var(--lr-responsive-panel-sheet-max-block-size, 85vh);
-    padding-block-end: var(--lr-safe-area-bottom);
     border-start-start-radius: var(--lr-radius);
     border-start-end-radius: var(--lr-radius);
   }

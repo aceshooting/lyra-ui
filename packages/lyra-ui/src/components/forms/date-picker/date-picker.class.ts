@@ -13,6 +13,7 @@ import { isRtl } from '../../../internal/rtl.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { isDateObject } from '../../../internal/dom-guards.js';
 import {
   dispatchNativeEvent,
@@ -31,6 +32,8 @@ import {
   addMonthsClampingDay,
   clampDate,
   dateTimeFormat,
+  localDate,
+  utcDate,
   normalizeCalendarMode,
   normalizeCalendarMonths,
   normalizeWeekdayFormat,
@@ -112,6 +115,8 @@ export interface LyraDatePickerEventMap {
  * or a date range. Mirrors the core `<wa-date-picker>` API under `lr-`.
  *
  * Value is ISO 8601: `YYYY-MM-DD` (single) or `YYYY-MM-DD/YYYY-MM-DD` (range).
+ * Calendar arithmetic and formatting are explicitly proleptic Gregorian, including ISO years
+ * 0000–0099; visible day/week digits still follow the effective locale's numbering system.
  *
  * Deliberately does **not** perform implicit form submission on Enter (unlike its `<lr-date-input>`
  * wrapper, which routes through `internal/submit-on-enter.ts`): Enter selects the focused day in
@@ -261,7 +266,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    *  requiring this to be set; an explicit override wins verbatim. */
   @property({ attribute: 'next-label' }) nextLabel = 'Next month';
 
-  @state() private viewDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  @state() private viewDate = localDate(new Date().getFullYear(), new Date().getMonth(), 1);
   @state() private rangePreview: Date | null = null;
   private focusedViewStart = '';
   private focusPending = false;
@@ -345,7 +350,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   private resolvedToday(): Date {
     const configured = parseISO(this.today);
     const today = configured ?? new Date();
-    return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return localDate(today.getFullYear(), today.getMonth(), today.getDate());
   }
 
   private syncCustomStates(): void {
@@ -368,7 +373,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
       this.suppressViewSync = false;
       if (external && this.value) {
         const from = this.selection.from;
-        if (from) this.viewDate = new Date(from.getFullYear(), from.getMonth(), 1);
+        if (from) this.viewDate = localDate(from.getFullYear(), from.getMonth(), 1);
       }
     }
 
@@ -433,8 +438,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   }
 
   private rangeLength(from: Date, to: Date): number {
-    const fromUtc = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
-    const toUtc = Date.UTC(to.getFullYear(), to.getMonth(), to.getDate());
+    const fromUtc = utcDate(from.getFullYear(), from.getMonth(), from.getDate()).getTime();
+    const toUtc = utcDate(to.getFullYear(), to.getMonth(), to.getDate()).getTime();
     return Math.round(Math.abs(toUtc - fromUtc) / 86_400_000) + 1;
   }
 
@@ -472,16 +477,16 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   private nearestEnabledDate(anchor: Date, min: Date | null, max: Date | null, today: Date): Date | null {
     if (!this.isDisabled(anchor, min, max, today)) return new Date(anchor.getTime());
     for (let distance = 1; distance <= 732; distance++) {
-      const before = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - distance);
+      const before = localDate(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - distance);
       if (!this.isDisabled(before, min, max, today)) return before;
-      const after = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() + distance);
+      const after = localDate(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() + distance);
       if (!this.isDisabled(after, min, max, today)) return after;
     }
     return null;
   }
 
   private isVisibleDate(date: Date): boolean {
-    const start = new Date(this.viewDate.getFullYear(), this.viewDate.getMonth(), 1);
+    const start = localDate(this.viewDate.getFullYear(), this.viewDate.getMonth(), 1);
     const end = addMonths(start, this.visibleMonths);
     return date >= start && date < end;
   }
@@ -524,12 +529,12 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    *  visible day is disabled (pathological but possible with a very narrow
    *  min/max window). */
   private firstEnabledDate(min: Date | null, max: Date | null, today: Date): Date | null {
-    let d = new Date(this.viewDate.getFullYear(), this.viewDate.getMonth(), 1);
+    let d = localDate(this.viewDate.getFullYear(), this.viewDate.getMonth(), 1);
     const lastVisibleMonth = addMonths(d, this.visibleMonths - 1);
-    const boundEnd = new Date(lastVisibleMonth.getFullYear(), lastVisibleMonth.getMonth() + 1, 0);
+    const boundEnd = localDate(lastVisibleMonth.getFullYear(), lastVisibleMonth.getMonth() + 1, 0);
     for (let i = 0; i < 732 && d <= boundEnd; i++) {
       if (!this.isDisabled(d, min, max, today)) return d;
-      d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+      d = localDate(d.getFullYear(), d.getMonth(), d.getDate() + 1);
     }
     return null;
   }
@@ -596,9 +601,9 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     // itself as a future date any time after 00:00:00, bumping the roving
     // focus back to yesterday. parseISO()-parsed strings are already
     // midnight, so this only ever changes a `Date` argument's clock time.
-    const midnight = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const midnight = localDate(d.getFullYear(), d.getMonth(), d.getDate());
     const clamped = clampDate(midnight, parseISO(this.min), parseISO(this.max));
-    this.viewDate = new Date(clamped.getFullYear(), clamped.getMonth(), 1);
+    this.viewDate = localDate(clamped.getFullYear(), clamped.getMonth(), 1);
     this.setFocusedDate(clamped);
     this.focusPending = true;
   }
@@ -623,16 +628,16 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   }
 
   private viewPeriodStart(date: Date, view = this.effectiveView): Date {
-    if (view === 'years') return new Date(date.getFullYear(), 0, 1);
-    if (view === 'decades') return new Date(Math.floor(date.getFullYear() / 10) * 10, 0, 1);
-    return new Date(date.getFullYear(), date.getMonth(), 1);
+    if (view === 'years') return localDate(date.getFullYear(), 0, 1);
+    if (view === 'decades') return localDate(Math.floor(date.getFullYear() / 10) * 10, 0, 1);
+    return localDate(date.getFullYear(), date.getMonth(), 1);
   }
 
   private viewPageStart(view = this.effectiveView): Date {
     const year = this.viewDate.getFullYear();
-    if (view === 'months') return new Date(year, 0, 1);
-    if (view === 'years') return new Date(Math.floor(year / 12) * 12, 0, 1);
-    return new Date(Math.floor(year / 120) * 120, 0, 1);
+    if (view === 'months') return localDate(year, 0, 1);
+    if (view === 'years') return localDate(Math.floor(year / 12) * 12, 0, 1);
+    return localDate(Math.floor(year / 120) * 120, 0, 1);
   }
 
   private viewPeriods(view = this.effectiveView): ViewPeriod[] {
@@ -640,7 +645,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const span = this.viewPeriodMonths(view);
     return Array.from({ length: 12 }, (_, index) => {
       const start = addMonths(pageStart, index * span);
-      return { start, end: new Date(start.getFullYear(), start.getMonth() + span, 0) };
+      return { start, end: localDate(start.getFullYear(), start.getMonth() + span, 0) };
     });
   }
 
@@ -671,7 +676,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
           ?? this.firstEnabledViewPeriod(addMonths(first.start, -span), -1);
     if (!next) return null;
 
-    this.viewDate = new Date(next.getFullYear(), next.getMonth(), 1);
+    this.viewDate = localDate(next.getFullYear(), next.getMonth(), 1);
     return next;
   }
 
@@ -702,7 +707,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const span = this.viewPeriodMonths();
     let candidate = this.viewPeriodStart(start);
     for (let index = 0; index < 366; index++) {
-      const end = new Date(candidate.getFullYear(), candidate.getMonth() + span, 0);
+      const end = localDate(candidate.getFullYear(), candidate.getMonth() + span, 0);
       if (!this.viewPeriodDisabled(candidate, end)) return candidate;
       candidate = addMonths(candidate, direction * span);
     }
@@ -761,7 +766,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
 
     event.preventDefault();
     if (!next) return;
-    this.viewDate = new Date(next.getFullYear(), next.getMonth(), 1);
+    this.viewDate = localDate(next.getFullYear(), next.getMonth(), 1);
     this.focusViewPeriod(next, view);
   };
 
@@ -799,8 +804,9 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
       this.focusedDateValue ??
       this.selection.from ??
       this.firstEnabledDate(min, max, today) ??
-      new Date(this.viewDate.getFullYear(), this.viewDate.getMonth(), 1);
-    const step = (base: Date, days: number): Date => new Date(base.getFullYear(), base.getMonth(), base.getDate() + days);
+      localDate(this.viewDate.getFullYear(), this.viewDate.getMonth(), 1);
+    const step = (base: Date, days: number): Date =>
+      localDate(base.getFullYear(), base.getMonth(), base.getDate() + days);
     // Walks in the requested direction until an enabled day is found, bounded
     // by a step cap (366 days -- more than a year) so an all-disabled range
     // (e.g. min/max entirely in the past with disable-past set) can't loop
@@ -818,7 +824,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     // explicit `direction` override, so under `dir="rtl"` the browser mirrors
     // the column order itself (day 1 of the week renders at the inline-start
     // edge, which `direction` puts on the right) -- the same auto-mirroring
-    // `<lr-tab-group>`/`<lr-split>`/`<lr-tree>` rely on for their own
+    // `<lr-tab-group>`/`<lr-multi-split>`/`<lr-tree>` rely on for their own
     // row/track layouts. So ArrowLeft/ArrowRight must swap which physical key
     // advances a day, or keyboard nav would point the opposite way from what
     // the mirrored grid shows. ArrowUp/ArrowDown move by week (the block
@@ -847,10 +853,10 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
         next = firstEnabledFrom(addMonthsClampingDay(current, 1), 1);
         break;
       case 'Home':
-        next = firstEnabledFrom(new Date(current.getFullYear(), current.getMonth(), 1), 1);
+        next = firstEnabledFrom(localDate(current.getFullYear(), current.getMonth(), 1), 1);
         break;
       case 'End':
-        next = firstEnabledFrom(new Date(current.getFullYear(), current.getMonth() + 1, 0), -1);
+        next = firstEnabledFrom(localDate(current.getFullYear(), current.getMonth() + 1, 0), -1);
         break;
       case 'Enter':
       case ' ':
@@ -874,8 +880,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    * that's already on-screen.
    */
   private viewDateForFocus(next: Date): Date {
-    const firstMonth = new Date(this.viewDate.getFullYear(), this.viewDate.getMonth(), 1);
-    const nextMonth = new Date(next.getFullYear(), next.getMonth(), 1);
+    const firstMonth = localDate(this.viewDate.getFullYear(), this.viewDate.getMonth(), 1);
+    const nextMonth = localDate(next.getFullYear(), next.getMonth(), 1);
     const lastMonth = addMonths(firstMonth, this.visibleMonths - 1);
     if (nextMonth < firstMonth) return nextMonth;
     if (nextMonth > lastMonth) return addMonths(nextMonth, -(this.visibleMonths - 1));
@@ -992,11 +998,11 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     if (inRange) parts.push('day-range-inner');
     if (inRangePreview) parts.push('day-range-preview');
 
-    let content: unknown = date.getDate();
+    let content: unknown = getNumberFormat(this.effectiveLocale).format(date.getDate());
     try {
-      content = this.dayContent?.(new Date(date.getTime())) ?? date.getDate();
+      content = this.dayContent?.(new Date(date.getTime())) ?? content;
     } catch {
-      content = date.getDate();
+      // Keep the localized built-in digit projection when caller content fails.
     }
     const iso = formatISO(date);
 
@@ -1037,10 +1043,10 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const titleId = this.titleIds[offset];
 
     const weekNumber = (date: Date): number => {
-      const utc = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const utc = utcDate(date.getFullYear(), date.getMonth(), date.getDate());
       const day = utc.getUTCDay() || 7;
       utc.setUTCDate(utc.getUTCDate() + 4 - day);
-      const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
+      const yearStart = utcDate(utc.getUTCFullYear(), 0, 1);
       return Math.ceil((((utc.getTime() - yearStart.getTime()) / 86_400_000) + 1) / 7);
     };
 
@@ -1059,7 +1065,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
                   ?disabled=${this.disabled || this.readonly}
                   @click=${() => this.nav(-1)}
                 >
-                  <span aria-hidden="true"><slot name="previous-icon">${chevronIcon()}</slot></span>
+                  <span aria-hidden="true" inert><slot name="previous-icon">${chevronIcon()}</slot></span>
                 </button>`
               : html`<span></span>`}
             <button
@@ -1080,7 +1086,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
                   ?disabled=${this.disabled || this.readonly}
                   @click=${() => this.nav(1)}
                 >
-                  <span aria-hidden="true"><slot name="next-icon">${chevronIcon()}</slot></span>
+                  <span aria-hidden="true" inert><slot name="next-icon">${chevronIcon()}</slot></span>
                 </button>`
               : html`<span></span>`}
           </div>
@@ -1090,7 +1096,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
       <div class="calendar-body">
         ${this.withWeekNumbers
           ? html`<div part="weeknumbers" aria-hidden="true">
-              ${matrix.map((week) => html`<span part="weeknumber">${weekNumber(week[0]!)}</span>`)}
+              ${matrix.map((week) => html`<span part="weeknumber">${getNumberFormat(this.effectiveLocale).format(weekNumber(week[0]!))}</span>`)}
             </div>`
           : nothing}
         <div part="grid" role="grid" aria-labelledby=${titleId} @keydown=${this.onGridKey}>
@@ -1122,14 +1128,14 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
       return false;
     }
 
-    let date = new Date(first.getFullYear(), first.getMonth(), first.getDate());
-    const lastTime = new Date(last.getFullYear(), last.getMonth(), last.getDate()).getTime();
+    let date = localDate(first.getFullYear(), first.getMonth(), first.getDate());
+    const lastTime = localDate(last.getFullYear(), last.getMonth(), last.getDate()).getTime();
     for (let days = 0; days < MAX_VIEW_PERIOD_DAYS && date.getTime() <= lastTime; days++) {
       if (!this.isDisabled(date, min, max, today)) {
         this.viewPeriodAvailabilityCache.set(key, true);
         return true;
       }
-      date = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+      date = localDate(date.getFullYear(), date.getMonth(), date.getDate() + 1);
     }
 
     this.viewPeriodAvailabilityCache.set(key, false);
@@ -1172,9 +1178,9 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     if (this.disabled || this.readonly) return;
     const start = this.viewPeriodStart(date);
     const span = this.viewPeriodMonths();
-    const end = new Date(start.getFullYear(), start.getMonth() + span, 0);
+    const end = localDate(start.getFullYear(), start.getMonth() + span, 0);
     if (this.viewPeriodDisabled(start, end)) return;
-    this.viewDate = new Date(date.getFullYear(), date.getMonth(), 1);
+    this.viewDate = localDate(date.getFullYear(), date.getMonth(), 1);
     if (this.effectiveView === 'months') {
       this.setView('days', date);
       const firstEnabled = this.firstEnabledDate(
@@ -1238,7 +1244,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
               aria-label=${this.localize('previousMonth', this.previousLabel === 'Previous month' ? undefined : this.previousLabel)}
               ?disabled=${this.disabled || this.readonly}
               @click=${() => this.navView(-1)}
-            ><span aria-hidden="true"><slot name="previous-icon">${chevronIcon()}</slot></span></button>
+            ><span aria-hidden="true" inert><slot name="previous-icon">${chevronIcon()}</slot></span></button>
             <button
               part="title"
               type="button"
@@ -1251,7 +1257,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
               aria-label=${this.localize('nextMonth', this.nextLabel === 'Next month' ? undefined : this.nextLabel)}
               ?disabled=${this.disabled || this.readonly}
               @click=${() => this.navView(1)}
-            ><span aria-hidden="true"><slot name="next-icon">${chevronIcon()}</slot></span></button>
+            ><span aria-hidden="true" inert><slot name="next-icon">${chevronIcon()}</slot></span></button>
           </div>
         </slot>
       </div>

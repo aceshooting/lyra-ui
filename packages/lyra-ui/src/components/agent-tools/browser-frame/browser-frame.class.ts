@@ -8,9 +8,12 @@ import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
+import type { LyraStreamPhase } from '../../../internal/stream-phase.js';
+import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_browserFrameControllerAgent, LYRA_DEFAULT_browserFrameControllerUser, LYRA_DEFAULT_browserFrameHandBack, LYRA_DEFAULT_browserFrameLabel, LYRA_DEFAULT_browserFrameStatusConnecting, LYRA_DEFAULT_browserFrameStatusIdle, LYRA_DEFAULT_browserFrameStatusLive, LYRA_DEFAULT_browserFrameStatusStalled, LYRA_DEFAULT_browserFrameStop, LYRA_DEFAULT_browserFrameTakeOver, LYRA_DEFAULT_browserFrameUrlLabel, LYRA_DEFAULT_browserFrameViewOf, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_browserFrameControllerAgent, LYRA_DEFAULT_browserFrameControllerUser, LYRA_DEFAULT_browserFrameHandBack, LYRA_DEFAULT_browserFrameLabel, LYRA_DEFAULT_browserFrameStatusConnecting, LYRA_DEFAULT_browserFrameStatusIdle, LYRA_DEFAULT_browserFrameStatusLive, LYRA_DEFAULT_browserFrameStatusStalled, LYRA_DEFAULT_browserFrameStop, LYRA_DEFAULT_browserFrameTakeOver, LYRA_DEFAULT_browserFrameUrlLabel, LYRA_DEFAULT_browserFrameViewOf, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -49,9 +52,6 @@ export interface BrowserPing {
   y: number;
   kind: 'click' | 'type' | 'scroll' | 'move';
 }
-
-/** The `<lr-browser-frame>` connection/streaming lifecycle state. */
-export type BrowserFrameStatus = 'idle' | 'connecting' | 'streaming' | 'stalled';
 
 /** Who currently holds input control of the browser session. */
 export type BrowserFrameController = 'agent' | 'user';
@@ -124,7 +124,11 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     browserFrameViewOf: LYRA_DEFAULT_browserFrameViewOf,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -145,8 +149,10 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   }
 
   @property() url = '';
-  @property({ reflect: true }) status: BrowserFrameStatus = 'idle';
+  /** The browser session's connection/streaming lifecycle phase. */
+  @property({ reflect: true }) phase: LyraStreamPhase = 'idle';
   @property({ reflect: true }) controller: BrowserFrameController = 'agent';
+  /** Pointer markers keyed by stable id. Duplicate ids normalize first-wins before rendering. */
   @property({ attribute: false }) pings: BrowserPing[] = [];
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) controls = true;
 
@@ -201,7 +207,8 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     this.suppressNextStatusAnnouncement = true;
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     // Adoption can happen while already detached, in which case no new disconnectedCallback runs.
     // Drop all old-realm resources here and let the next connectedCallback bind the destination.
     this.resetViewportObserver();
@@ -214,8 +221,8 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     super.willUpdate(changed);
     // The status shown at mount is context, not a user-triggered change. Later lifecycle
     // transitions are infrequent and useful, so announce each one as its own light-DOM addition.
-    if (this.hasUpdated && !this.suppressNextStatusAnnouncement && changed.has('status')) {
-      this.statusAnnouncementSink?.announce(this.localize(STATUS_KEY[this.status]));
+    if (this.hasUpdated && !this.suppressNextStatusAnnouncement && changed.has('phase')) {
+      this.statusAnnouncementSink?.announce(this.localize(STATUS_KEY[this.phase]));
     }
   }
 
@@ -316,11 +323,15 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   override render(): TemplateResult {
     const safeSrc = safeMediaSrc(this.frameSrc);
     return html`
-      <div part="base" role="group" aria-label=${this.getAttribute('aria-label') || this.localize('browserFrameLabel')}>
+      <div
+        part="base"
+        role=${overallSemanticRole(this, 'group') ?? nothing}
+        aria-label=${overallSemanticLabel(this, this.localize('browserFrameLabel')) ?? nothing}
+      >
         <div part="toolbar">
           <span class="sr-only">${this.localize('browserFrameUrlLabel')}</span>
           <span part="url" dir="ltr" title=${this.url}>${this.url}</span>
-          <span part="status">${this.localize(STATUS_KEY[this.status])}</span>
+          <span part="status">${this.localize(STATUS_KEY[this.phase])}</span>
           <span part="controller-badge">
             ${this.localize(
               this.controller === 'agent' ? 'browserFrameControllerAgent' : 'browserFrameControllerUser',
@@ -351,7 +362,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
                 @error=${this.onFrameError}
               />`
             : nothing}
-          ${this.pings.map(
+          ${firstByIdentity(Array.isArray(this.pings) ? this.pings : [], (ping) => ping.id).map(
             (ping) => html`<span
               part="ping"
               data-kind=${ping.kind}

@@ -4,9 +4,23 @@ import {
   assertTableSize,
   isAbortError,
   LyraResourceLimitError,
+  MAX_RESOURCE_STREAM_CHUNKS,
+  readResponseArrayBuffer,
   readResponseText,
   resolveOwnerFetchTarget,
 } from './resource-loader.js';
+
+function responseWithReader(
+  read: () => Promise<ReadableStreamReadResult<Uint8Array>>,
+  cancel: () => Promise<void> = async () => undefined,
+): Response {
+  return {
+    headers: new Headers(),
+    body: {
+      getReader: () => ({ read, cancel, releaseLock() {} }),
+    },
+  } as unknown as Response;
+}
 
 it('caps streamed response data even without a Content-Length header', async () => {
   const response = new Response('1234567890');
@@ -28,6 +42,45 @@ it('rejects a response whose declared length exceeds the cap', async () => {
     error = caught;
   }
   expect(error).to.be.instanceOf(LyraResourceLimitError);
+});
+
+it('copies streamed bytes as they arrive instead of retaining mutable chunk objects', async () => {
+  const expected = Uint8Array.from({ length: 64 }, (_, index) => index);
+  let index = 0;
+  let previous: Uint8Array | undefined;
+  const response = responseWithReader(async () => {
+    if (previous) previous[0] = 255;
+    if (index >= expected.length) return { done: true, value: undefined };
+    previous = Uint8Array.of(expected[index++]!);
+    return { done: false, value: previous };
+  });
+
+  const actual = new Uint8Array(await readResponseArrayBuffer(response, expected.length));
+  expect([...actual]).to.deep.equal([...expected]);
+});
+
+it('rejects pathological tiny-chunk cardinality before exhausting the byte ceiling', async () => {
+  let reads = 0;
+  let cancellations = 0;
+  const response = responseWithReader(
+    async () => {
+      reads += 1;
+      return { done: false, value: Uint8Array.of(1) };
+    },
+    async () => {
+      cancellations += 1;
+    },
+  );
+
+  let error: unknown;
+  try {
+    await readResponseArrayBuffer(response, MAX_RESOURCE_STREAM_CHUNKS * 2);
+  } catch (caught) {
+    error = caught;
+  }
+  expect(error).to.be.instanceOf(LyraResourceLimitError);
+  expect(reads).to.equal(MAX_RESOURCE_STREAM_CHUNKS + 1);
+  expect(cancellations).to.equal(1);
 });
 
 it('rejects tabular data over the row or column budget', () => {

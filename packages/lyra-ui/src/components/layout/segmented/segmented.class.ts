@@ -3,15 +3,15 @@ import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { sizes } from "../../../internal/sizes.styles.js";
-import type { LyraSize, LyraSizeStep } from "../../../internal/variants.js";
+import type { LyraSize } from "../../../internal/variants.js";
 import { isRtl } from "../../../internal/rtl.js";
 import { prefersReducedMotion } from "../../../internal/motion.js";
 import { observeScrollOverflow } from "../../../internal/scroll-overflow.js";
 import { hostAriaLabel } from "../../../internal/a11y.js";
 import { styles } from "./segmented.styles.js";
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn } from "../../../internal/active-element.js";
 
-export interface SegmentedItem {
+export interface LyraSegmentedItem {
   value: string;
   label: string;
   /** Optional decorative leading visual rendered before the label. This is intentionally general
@@ -22,14 +22,64 @@ export interface SegmentedItem {
   disabled?: boolean;
 }
 
-/** The canonical six-step ladder, re-exported under this component's historical name so existing
- *  imports keep working while there is exactly one definition of the union. New code should use
- *  {@linkcode LyraSizeStep} -- or {@linkcode LyraSize}, which `size` accepts, and which also covers
- *  the `small`/`medium`/`large` spellings. */
-export type LyraSegmentedSize = LyraSizeStep;
-
 export interface LyraSegmentedEventMap {
   "lr-change": CustomEvent<{ value: string }>;
+}
+
+const MAX_SEGMENTED_ITEMS = 256;
+
+/** First-valid-value-wins schema boundary. A segment's value is its selection, event, focus, and
+ * keyed-render identity, so later duplicates cannot describe a second observable choice. */
+function snapshotSegmentedItems(
+  value: unknown
+): readonly Readonly<LyraSegmentedItem>[] {
+  try {
+    if (!Array.isArray(value)) return Object.freeze([]);
+  } catch {
+    return Object.freeze([]);
+  }
+
+  const seenValues = new Set<string>();
+  const normalized: Readonly<LyraSegmentedItem>[] = [];
+  let length = 0;
+  try {
+    length = Math.min(value.length, MAX_SEGMENTED_ITEMS);
+  } catch {
+    return Object.freeze(normalized);
+  }
+  for (let index = 0; index < length; index += 1) {
+    try {
+      const candidate: unknown = value[index];
+      if (!candidate || typeof candidate !== "object") continue;
+      const record = candidate as Record<string, unknown>;
+      const itemValue = record["value"];
+      const label = record["label"];
+      const disabled = record["disabled"];
+      const icon = record["icon"];
+      if (
+        typeof itemValue !== "string" ||
+        itemValue.length === 0 ||
+        itemValue !== itemValue.trim() ||
+        seenValues.has(itemValue) ||
+        typeof label !== "string" ||
+        (disabled !== undefined && typeof disabled !== "boolean")
+      ) {
+        continue;
+      }
+      seenValues.add(itemValue);
+      normalized.push(
+        Object.freeze({
+          value: itemValue,
+          label,
+          ...(icon !== undefined ? { icon } : {}),
+          ...(disabled !== undefined ? { disabled } : {}),
+        })
+      );
+    } catch {
+      // Malformed accessors are isolated to their record; valid neighbors still render.
+    }
+  }
+  return Object.freeze(normalized);
 }
 
 /**
@@ -72,7 +122,7 @@ export interface LyraSegmentedEventMap {
  * @cssprop [--lr-segmented-selected-color=var(--lr-color-text)] - Text color of the checked segment.
  * @cssprop [--lr-segmented-selected-font-weight=var(--lr-font-weight-semibold)] - Font weight of the
  *   checked segment.
- * @cssprop [--lr-segmented-selected-shadow=var(--lr-shadow)] - Box shadow lifting the checked
+ * @cssprop [--lr-segmented-selected-shadow=var(--lr-shadow-xs)] - Box shadow lifting the checked
  *   segment off the track.
  * @cssprop [--lr-segmented-hover-color=var(--lr-color-text)] - Text color of a hovered segment that
  *   is neither checked nor disabled. Independent of the selected-state props above — recoloring the
@@ -96,8 +146,19 @@ export interface LyraSegmentedEventMap {
 export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   static override styles = [LyraElement.styles, sizes, styles];
 
-  /** The button row's items. */
-  @property({ attribute: false }) items: SegmentedItem[] = [];
+  private effectiveItems: readonly Readonly<LyraSegmentedItem>[] =
+    Object.freeze([]);
+
+  /** The button row's immutable, bounded items. Later duplicate values are ignored. */
+  @property({ attribute: false })
+  get items(): readonly LyraSegmentedItem[] {
+    return this.effectiveItems;
+  }
+  set items(value: readonly LyraSegmentedItem[]) {
+    const previous = this.effectiveItems;
+    this.effectiveItems = snapshotSegmentedItems(value);
+    this.requestUpdate("items", previous);
+  }
 
   /** The currently selected item's `value`. */
   @property() value = "";
@@ -115,7 +176,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
    *  `size` attribute. */
   @property({ reflect: true }) size: LyraSize = "m";
 
-  @state() private selectedItem?: SegmentedItem;
+  @state() private selectedItem?: Readonly<LyraSegmentedItem>;
 
   private rehomeSegmentFocus = false;
 
@@ -128,7 +189,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     );
   }
 
-  private select(item: SegmentedItem): void {
+  private select(item: Readonly<LyraSegmentedItem>): void {
     if (item.disabled || item === this.selectedItem) return;
     const valueChanged = item.value !== this.value;
     this.selectedItem = item;
@@ -157,7 +218,9 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     this.segmentButtonAt(index)?.scrollIntoView({
       block: "nearest",
       inline: "nearest",
-      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? "auto" : "smooth",
+      behavior: prefersReducedMotion(this.ownerDocument.defaultView)
+        ? "auto"
+        : "smooth",
     });
   }
 
@@ -208,17 +271,25 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
    * selection. Duplicate values and an unselected group both make value-derived origin ambiguous,
    * while the event path and real shadow focus retain the exact rendered index. */
   private keyboardOriginIndex(event: KeyboardEvent): number {
-    const fromEvent = event.composedPath().find(
-      (candidate): candidate is HTMLElement =>
-        (candidate as Partial<Node>).nodeType === 1 &&
-        (candidate as Partial<Element>).getAttribute?.("part") === "segment" &&
-        (candidate as Element).getRootNode() === this.renderRoot
-    );
+    const fromEvent = event
+      .composedPath()
+      .find(
+        (candidate): candidate is HTMLElement =>
+          (candidate as Partial<Node>).nodeType === 1 &&
+          (candidate as Partial<Element>).getAttribute?.("part") ===
+            "segment" &&
+          (candidate as Element).getRootNode() === this.renderRoot
+      );
     const focused = activeElementIn(this.renderRoot as ShadowRoot);
-    const candidate = fromEvent ??
-      (focused?.getAttribute("part") === "segment" ? focused as HTMLElement : undefined);
+    const candidate =
+      fromEvent ??
+      (focused?.getAttribute("part") === "segment"
+        ? (focused as HTMLElement)
+        : undefined);
     const index = Number(candidate?.dataset["index"]);
-    return Number.isInteger(index) && index >= 0 && index < this.items.length ? index : -1;
+    return Number.isInteger(index) && index >= 0 && index < this.items.length
+      ? index
+      : -1;
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -296,7 +367,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
       >
         ${repeat(
           this.items,
-          (item, index) => `${item.value}\u0000${index}`,
+          (item) => item.value,
           (item, index) => html`<button
             type="button"
             part="segment"
@@ -308,7 +379,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
             tabindex=${index === tabbableIndex ? "0" : "-1"}
             @click=${() => this.select(item)}
           >
-            ${item.icon
+            ${item.icon !== undefined
               ? html`<span part="segment-icon" aria-hidden="true" inert
                   >${item.icon}</span
                 >`

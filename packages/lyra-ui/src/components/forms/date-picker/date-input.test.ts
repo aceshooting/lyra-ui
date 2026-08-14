@@ -5,6 +5,24 @@ import type { LyraDateInput } from './date-input.js';
 import type { LyraDatePicker } from './date-picker.js';
 import { styles } from './date-input.styles.js';
 
+it('rejects direct open writes while readonly or synchronously fieldset-disabled', async () => {
+  const fieldset = await fixture<HTMLFieldSetElement>(html`
+    <fieldset><lr-date-input></lr-date-input></fieldset>
+  `);
+  const el = fieldset.querySelector('lr-date-input') as LyraDateInput;
+  el.readonly = true;
+  el.open = true;
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+
+  el.readonly = false;
+  fieldset.disabled = true;
+  el.setAttribute('open', '');
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+});
+
 it('parses typed input into an ISO value and emits change', async () => {
   const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
@@ -972,6 +990,42 @@ it('formats the displayed value using the locale property', async () => {
   expect(input.value).to.equal(new Date(2026, 6, 15).toLocaleDateString('fr-FR'));
 });
 
+it('round-trips its own localized Arabic digits and bidi marks as Gregorian ISO', async () => {
+  const el = (await fixture(
+    html`<lr-date-input value="2026-07-15" locale="ar-EG"></lr-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const rendered = input.value;
+  expect(rendered).to.match(/[٠-٩]/);
+  el.value = '';
+  await el.updateComplete;
+  input.value = rendered;
+  input.dispatchEvent(new Event('change'));
+  expect(el.value).to.equal('2026-07-15');
+});
+
+it('uses locale formatRange and round-trips its Persian Gregorian range presentation', async () => {
+  const el = (await fixture(
+    html`<lr-date-input mode="range" value="2026-05-01/2026-05-15" locale="fa-IR"></lr-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const rendered = input.value;
+  const expected = new Intl.DateTimeFormat('fa-IR', {
+    calendar: 'gregory',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  }).formatRange(new Date(2026, 4, 1), new Date(2026, 4, 15));
+  expect(rendered).to.equal(expected);
+  el.value = '';
+  await el.updateComplete;
+  input.value = rendered;
+  input.dispatchEvent(new Event('change'));
+  expect(el.value).to.equal('2026-05-01/2026-05-15');
+});
+
 it('derives the displayed value, the day/month/year parse order, and the nested picker locale from an inherited lang ancestor with no locale attribute set', async () => {
   // Regression test: displayText's formatter, localeDateOrder() (which
   // decides how an ambiguous typed date like "03/04/2026" is parsed), and the
@@ -1375,9 +1429,11 @@ describe('blur/focus bubbling', () => {
     expect(ev.composed).to.be.true;
   });
 
-  it('gives the clear/expand buttons a :hover treatment', () => {
+  it('gives enabled clear/expand buttons a :hover treatment', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='clear-button'\]:hover,\s*\[part='expand-button'\]:hover\s*\{[^}]+\}/);
+    expect(css).to.match(
+      /\[part='clear-button'\]:hover:not\(:disabled\),\s*\[part='expand-button'\]:hover:not\(:disabled\)\s*\{[^}]+\}/,
+    );
   });
 });
 

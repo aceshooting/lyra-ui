@@ -40,6 +40,8 @@ export interface LyraMessagePartsEventMap
  * `<lr-message-parts>` — renders ordered, interleavable provider-neutral AI message parts. It
  * composes Lyra's existing Markdown, reasoning, tool, citation, attachment, widget, JSON, and
  * media primitives while keeping streaming order stable by part id.
+ * Part ids are unique occurrence identities; when malformed input repeats
+ * an id, the first occurrence wins and later duplicates are ignored.
  * Streaming text and reasoning parts forward that state into their nested Markdown renderer, so
  * parsing/highlighting coalesces until the same-id part becomes complete.
  * Citation ranks are derived in one linear render prepass, including for mixed streaming arrays.
@@ -55,7 +57,7 @@ export interface LyraMessagePartsEventMap
  * @event lr-highlight-activate - Passthrough from rendered Markdown.
  * @event lr-text-select - Passthrough from rendered Markdown.
  * @event lr-anchor-result - Passthrough from rendered Markdown.
- * @event lr-preview - Passthrough from a rendered attachment.
+ * @event lr-preview-request - Cancelable passthrough from a rendered attachment.
  * @event lr-retry - Passthrough from a rendered attachment.
  * @event lr-remove - Passthrough from a rendered attachment.
  * @event lr-citation-open - Passthrough from a rendered citation's full-preview action.
@@ -70,10 +72,12 @@ export interface LyraMessagePartsEventMap
  * @csspart reasoning - A reasoning part.
  * @csspart tool-call - A tool-call part.
  * @csspart tool-result - A tool-result part.
+ * @csspart tool-result-error - Error copy for a failed tool-result part.
  * @csspart citation - A citation part.
  * @csspart attachment - An attachment part.
  * @csspart data - A data or widget part.
  * @csspart audio - An audio part.
+ * @csspart audio-control - The native audio playback control.
  * @csspart audio-transcript - An audio part's transcript.
  * @csspart error - An error part.
  * @csspart retry - A retryable error part's action.
@@ -103,14 +107,8 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   /** Ordered message content. */
   @property({ attribute: false }) parts: MessagePart[] = [];
 
-  /** Render text parts as sanitized Markdown; `false` renders plain text. */
-  @property({
-    type: Boolean,
-    attribute: 'render-markdown',
-    reflect: true,
-    converter: trueDefaultBooleanConverter,
-  })
-  renderMarkdown = true;
+  /** Text/reasoning rendering mode. */
+  @property({ reflect: true, attribute: 'content-mode' }) contentMode: 'plain' | 'markdown' = 'markdown';
 
   /** Include reasoning parts. */
   @property({
@@ -124,7 +122,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   /** Optional host renderer. Returning `undefined` delegates to the built-in renderer. */
   @property({ attribute: false }) renderPart?: MessagePartRenderer;
 
-  @property() label = '';
+  /** Accessible name override for the internal message-part group. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   private knownErrorIds = new Set<string>();
   private errorAnnouncementSink?: AnnouncementSink;
@@ -215,7 +213,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   private renderBuiltin(part: MessagePart, citationRank: number): unknown {
     switch (part.type) {
       case 'text':
-        return this.renderMarkdown
+        return this.contentMode === 'markdown'
           ? html`<lr-markdown .content=${part.text} .streaming=${part.state === 'streaming'}></lr-markdown>`
           : part.text;
       case 'reasoning':
@@ -223,7 +221,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
           .label=${this.localize('thinkingPanelLabel')}
           .mode=${part.state === 'streaming' ? 'live' : 'post-hoc'}
           ?expanded=${part.collapsed === false}
-          >${this.renderMarkdown
+          >${this.contentMode === 'markdown'
             ? html`<lr-markdown .content=${part.text} .streaming=${part.state === 'streaming'}></lr-markdown>`
             : part.text}</lr-thinking-panel
         >`;
@@ -235,10 +233,20 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
           .summary=${part.invocation.error ?? ''}
         ></lr-tool-call-chip>`;
       case 'tool-result':
+        if ('error' in part) {
+          return html`<div part="tool-result-error">
+            <span>${part.error}</span>
+            ${part.result !== undefined
+              ? html`<lr-tool-result-view
+                  .toolName=${part.name ?? ''}
+                  .result=${part.result}
+                ></lr-tool-result-view>`
+              : nothing}
+          </div>`;
+        }
         return html`<lr-tool-result-view
           .toolName=${part.name ?? ''}
-          .result=${part.result ?? part.error ?? null}
-          .status=${part.error ? 'error' : 'success'}
+          .result=${part.result}
         ></lr-tool-result-view>`;
       case 'citation':
         return html`<lr-citation-badge
@@ -250,22 +258,26 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
         >`;
       case 'attachment':
         return html`<lr-attachment-chip
-          .id=${part.document.id}
+          .attachmentId=${part.document.id}
           .name=${part.document.name}
           .mimeType=${part.document.mimeType ?? ''}
           .previewSrc=${part.document.uri ?? ''}
           .previewable=${Boolean(part.document.uri)}
           .removable=${false}
-          status="done"
+          status="success"
           compact
         ></lr-attachment-chip>`;
       case 'data':
         return part.widget && typeof part.widget === 'object'
-          ? html`<lr-widget-renderer .tree=${part.widget}></lr-widget-renderer>`
+          ? html`<lr-widget-renderer .document=${{ version: '2', root: part.widget }}></lr-widget-renderer>`
           : html`<lr-json-viewer .data=${part.data}></lr-json-viewer>`;
       case 'audio': {
         const src = safeMediaSrc(part.src);
-        return html`${src ? html`<audio part="audio" controls src=${src}></audio>` : nothing}
+        return html`${src
+          ? html`<audio part="audio-control" controls>
+              <source src=${src} type=${part.mimeType || nothing} />
+            </audio>`
+          : nothing}
         ${part.transcript ? html`<p part="audio-transcript">${part.transcript}</p>` : nothing}`;
       }
       case 'error':
@@ -291,15 +303,21 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   }
 
   override render(): TemplateResult {
-    const label = this.accessibleLabel || this.label || this.localize('messagePartsLabel');
-    const citationRanks = new Array<number>(this.parts.length).fill(0);
+    const label = this.accessibleLabel ?? this.localize('messagePartsLabel');
+    const seenIds = new Set<string>();
+    const parts = this.parts.filter((part) => {
+      if (seenIds.has(part.id)) return false;
+      seenIds.add(part.id);
+      return true;
+    });
+    const citationRanks = new Array<number>(parts.length).fill(0);
     let citationRank = 0;
-    for (let index = 0; index < this.parts.length; index++) {
-      if (this.parts[index]?.type === 'citation') citationRanks[index] = ++citationRank;
+    for (let index = 0; index < parts.length; index++) {
+      if (parts[index]?.type === 'citation') citationRanks[index] = ++citationRank;
     }
     return html`<div part="base" role="group" aria-label=${label}>
       ${repeat(
-        this.parts,
+        parts,
         (part) => part.id,
         (part, index) => this.renderOne(part, index, citationRanks[index] ?? 0)
       )}

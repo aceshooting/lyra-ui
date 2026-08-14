@@ -14,7 +14,7 @@ const mainContent = html`
   <div style="padding: 1rem;">
     <h3 style="margin-top: 0;">Main content</h3>
     <p>The dock panel drops in next to this content with no layout restructuring — no shared
-    parent needs to become an <code>&lt;lr-split&gt;</code> child list.</p>
+    parent needs to become an <code>&lt;lr-multi-split&gt;</code> child list.</p>
   </div>
 `;
 
@@ -118,6 +118,37 @@ export const NarrowRtlLongContent: Story = {
       >
         <div style="padding:var(--lr-space-s);white-space:nowrap">
           DockPanelLocalizedContentWithoutAnyNaturalBreakOpportunityDockPanelLocalizedContentWithoutAnyNaturalBreakOpportunity
+        </div>
+      </lr-dock-panel>
+    </div>
+  `,
+};
+
+export const LiveContainerBounds: Story = {
+  name: 'Live container bounds',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Drag the native resize corner on the outer box. The panel clamps immediately when the box becomes narrower than its extent, keeps the separator range truthful, and does not grow back implicitly when space returns.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="position:relative;resize:horizontal;overflow:auto;inline-size:400px;max-inline-size:100%;min-inline-size:180px;block-size:16rem;border:1px solid var(--lr-color-border)"
+    >
+      <div style="padding:var(--lr-space-s);max-inline-size:8rem">
+        Resize this containing block.
+      </div>
+      <lr-dock-panel
+        style="position:absolute;inset-block:0;inset-inline-end:0"
+        edge="end"
+        extent="350px"
+        min-extent="120px"
+      >
+        <div style="padding:var(--lr-space-s)">
+          Live bounds keep the rendered panel and separator ARIA in sync.
         </div>
       </lr-dock-panel>
     </div>

@@ -220,21 +220,18 @@ it('exports additive WA/Shoelace control and state part aliases', async () => {
   expect(mixedIcon.getAttribute('part')!.split(/\s+/)).to.include.members(['checkmark', 'indeterminate-icon']);
 });
 
-it('accepts Shoelace default-checked while retaining native dirty checked semantics', async () => {
+it('does not treat fictional default-checked as a reset-default alias', async () => {
   const form = (await fixture(html`
     <form><lr-checkbox default-checked>Choice</lr-checkbox></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-checkbox') as LyraCheckbox;
   await el.updateComplete;
-  expect(el.checked).to.be.true;
-  expect(el.defaultChecked).to.be.true;
+  expect(el.checked).to.be.false;
+  expect(el.defaultChecked).to.be.false;
 
-  el.checked = false;
-  el.setAttribute('default-checked', '');
-  await el.updateComplete;
-  expect(el.checked, 'changing the default must not overwrite dirty live state').to.be.false;
+  el.checked = true;
   form.reset();
-  expect(el.checked, 'reset uses the Shoelace-spelled default').to.be.true;
+  expect(el.checked, 'only canonical checked/defaultChecked controls reset').to.be.false;
 });
 
 it('emits exactly one native Event pair and one prefixed alias pair for user toggles', async () => {
@@ -1171,17 +1168,22 @@ it('is accessible in an indeterminate, labeled state', async () => {
   await expect(el).to.be.accessible();
 });
 
-// The class doc's default @slot warning exists specifically because [part="base checkbox"] carries
-// role="checkbox" and wraps the label slot -- axe-core's nested-interactive rule forbids a
-// focusable descendant of that role, the same contract lr-conversation-item documents (and tests)
-// for its own meta/excerpt slots. A consumer who ignores that prose and slots a real focusable
-// control (e.g. a Terms-of-Service link) must actually trip the violation, or the documented
-// limitation is untested and could silently stop being true.
-it('a focusable element slotted into the default label trips axe nested-interactive', async () => {
+it('keeps interactive label content outside the checkbox semantic owner', async () => {
   const el = (await fixture(
-    html`<lr-checkbox>Accept the <a href="/terms">Terms of Service</a></lr-checkbox>`,
+    html`<lr-checkbox>Accept the <button type="button">Terms of Service</button></lr-checkbox>`,
   )) as LyraCheckbox;
-  await expect(el).to.not.be.accessible();
+  const button = el.querySelector('button')!;
+  let buttonClicks = 0;
+  button.addEventListener('click', () => { buttonClicks += 1; });
+
+  await expect(el).to.be.accessible();
+  button.click();
+  expect(buttonClicks).to.equal(1);
+  expect(el.checked, 'the nested action does not activate the checkbox').to.be.false;
+
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  label.click();
+  expect(el.checked, 'ordinary label activation still toggles the checkbox').to.be.true;
 });
 
 it('publishes --lr-checkbox-label-indent and drives the real label offset from it', async () => {
@@ -1331,10 +1333,11 @@ describe('size', () => {
       const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
       const box = el.shadowRoot!.querySelector('[part~="box"]') as HTMLElement;
       const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
-      const gap = Number.parseFloat(getComputedStyle(base).columnGap);
       const boxWidth = box.getBoundingClientRect().width;
       const measured = label.getBoundingClientRect().left - base.getBoundingClientRect().left;
-      expect(measured, `${size} indent`).to.be.closeTo(boxWidth + gap, 0.5);
+      const ownerWidth = base.getBoundingClientRect().width;
+      const labelMargin = Number.parseFloat(getComputedStyle(label).marginInlineStart);
+      expect(measured, `${size} indent`).to.be.closeTo(ownerWidth + labelMargin, 0.5);
       expect(boxWidth, `${size} box grows with the tier`).to.be.greaterThan(previous);
       previous = boxWidth;
     }

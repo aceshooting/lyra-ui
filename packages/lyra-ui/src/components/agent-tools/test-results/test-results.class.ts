@@ -7,17 +7,21 @@ import { styles } from './test-results.styles.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsSkipped } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsLimit, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsSkipped } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 export type TestStatus = 'passed' | 'failed' | 'skipped' | 'running';
+export type TestRunState = 'idle' | 'running' | 'complete';
 
 export interface TestCaseResult {
   id: string;
   name: string;
+  /** Foreign runtime values normalize once to the localized neutral `skipped` fallback. */
   status: TestStatus;
   durationMs?: number;
   message?: string;
@@ -30,6 +34,22 @@ export interface TestSuiteResult {
 }
 
 const STATUSES: TestStatus[] = ['passed', 'failed', 'skipped', 'running'];
+const MAX_RENDERED_TESTS = 1_000;
+
+/** Provider payloads can bypass the compile-time union. Unknown states use the neutral,
+ * non-success `skipped` fallback so every accepted row retains a visible localized status and
+ * participates in exactly one complete summary count. */
+function normalizeTestStatus(value: unknown): TestStatus {
+  switch (value) {
+    case 'passed':
+    case 'failed':
+    case 'skipped':
+    case 'running':
+      return value;
+    default:
+      return 'skipped';
+  }
+}
 
 /** localize() key for each status's count-bearing summary/filter text, e.g. "3 passed". */
 const STATUS_COUNT_KEY: Record<TestStatus, string> = {
@@ -86,27 +106,33 @@ export function testResultDetailSlotName(suiteId: string, testId: string): strin
 export interface LyraTestResultsEventMap {
   'lr-test-select': CustomEvent<{ suiteId: string; testId: string }>;
   'lr-filter-change': CustomEvent<{ statuses: TestStatus[] }>;
-  'lr-toggle': CustomEvent<{ id: string; suiteId?: string; expanded: boolean }>;
+  'lr-toggle': CustomEvent<{ suiteId: string; testId: string; expanded: boolean }>;
 }
 
 /**
  * `<lr-test-results>` — a pass/fail suite summary with per-status counts, status filter
  * toggles, and per-test rows whose failures auto-expand by default and can host rich slotted
  * detail (e.g. a diff or code block) alongside the plain failure message.
+ * At most 1,000 uniquely identified suite/test rows are mounted. Manually expanded identities and
+ * failures reserve positions before ordinary input-order rows, while the four summary counts cover
+ * the complete normalized input. Foreign runtime statuses normalize once to the localized neutral
+ * `skipped` fallback. Completion announcements require an explicit same-`runId`
+ * `runState="running"` -> `"complete"` transition; clearing data alone is not treated as a
+ * completed run.
  *
  * @customElement lr-test-results
  * @event lr-test-select - `detail: { suiteId, testId }` — a test row's name was activated.
  * @event lr-filter-change - `detail: { statuses }` — the status-set filter changed.
- * @event lr-toggle - `detail: { id, suiteId?, expanded }` — a row's failure detail was
- *   expanded/collapsed. `suiteId` is included when the test id is not globally unique.
+ * @event lr-toggle - `detail: { suiteId, testId, expanded }` — a row's failure detail was
+ *   expanded/collapsed. The identity shape is invariant even when `testId` is globally unique.
  * @slot detail-{encodedSuiteId}:{encodedTestId} - Collision-free suite-scoped rich detail for a
  *   test, and the only detail slot this component reads. Derive it with
  *   `testResultDetailSlotName(suiteId, testId)` rather than assembling it by hand. The legacy
  *   `detail-{suiteId}-{testId}` and `detail-{testId}` spellings were removed in 9.0.0; content
  *   assigned to either is simply never slotted.
- * @csspart base - The root wrapper; carries `role="group"`. Its `aria-label` defaults to the
- *   localized "Test results", but a host `aria-label` on `<lr-test-results>` itself wins over
- *   that default.
+ * @csspart base - The root wrapper; carries the localized "Test results" `role="group"` semantics
+ *   unless a non-empty host `aria-label` already makes the host the overall semantic owner.
+ *   Explicit `aria-label=""` remains empty instead of restoring the fallback.
  * @csspart summary - The status-count strip.
  * @csspart count - One status count; carries `data-status`.
  * @csspart filter - The filter-toggle row.
@@ -122,6 +148,8 @@ export interface LyraTestResultsEventMap {
  *   for any failed test, or any test with canonical suite-scoped detail content.
  * @csspart failure - The failure-detail wrapper; hidden while collapsed.
  * @csspart failure-message - The failure's plain message text.
+ * @csspart limit - Localized resource-ceiling notice.
+ * @csspart empty - Empty/no-match state, including a populated run hidden entirely by filters.
  * @cssprop [--lr-test-results-filter-active-bg=var(--lr-color-brand-quiet)] - Background of a pressed
  *   (active) status filter toggle.
  * @cssprop [--lr-test-results-filter-active-border=var(--lr-color-brand)] - Border color of a pressed
@@ -145,8 +173,12 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     details: LYRA_DEFAULT_details,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     expand: LYRA_DEFAULT_expand,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
     statusSkipped: LYRA_DEFAULT_statusSkipped,
@@ -157,6 +189,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     testResultsFailed: LYRA_DEFAULT_testResultsFailed,
     testResultsFilterLabel: LYRA_DEFAULT_testResultsFilterLabel,
     testResultsLabel: LYRA_DEFAULT_testResultsLabel,
+    testResultsLimit: LYRA_DEFAULT_testResultsLimit,
     testResultsPassed: LYRA_DEFAULT_testResultsPassed,
     testResultsRunning: LYRA_DEFAULT_testResultsRunning,
     testResultsSkipped: LYRA_DEFAULT_testResultsSkipped,
@@ -166,11 +199,18 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The suites to render, grouped in order. Controlled and never mutated by this component --
-   *  pass a new array (e.g. as a run streams in) to update it. */
+   *  pass a new array (e.g. as a run streams in) to update it. Duplicate suite ids and per-suite
+   *  test ids use deterministic first-wins identity. */
   @property({ attribute: false }) suites: TestSuiteResult[] = [];
 
   /** When non-empty, only tests whose status is in this set are shown. Empty means "show all". */
   @property({ attribute: false }) statusFilter: TestStatus[] = [];
+
+  /** Stable source-run identity used to correlate lifecycle announcements. */
+  @property({ attribute: 'run-id' }) runId: string | null = null;
+
+  /** Explicit source-run lifecycle; only a same-id running -> complete transition announces. */
+  @property({ attribute: 'run-state', reflect: true }) runState: TestRunState = 'idle';
 
   /** Whether a failed test's detail auto-expands. A row the user has manually toggled always
    *  keeps its own explicit state regardless of this flag. */
@@ -183,27 +223,65 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
-  /** Whether any test across all suites was `running` as of the last `suites` update -- diffed to
-   *  detect the running -> not-running transition that triggers the completion announcement. */
-  private previouslyRunning = false;
+  private normalizedSuitesCache: TestSuiteResult[] = [];
+  private projectedSuitesCache: TestSuiteResult[] = [];
+  private completeStatusCounts: Record<TestStatus, number> = { passed: 0, failed: 0, skipped: 0, running: 0 };
+  private normalizedTestKeys = new Set<string>();
+  private detailSlotNames = new Set<string>();
+  private projectionTruncated = false;
+  private limitAnnouncementSink?: AnnouncementSink;
+  private limitAnnouncementInitialized = false;
+  private previouslyTruncated = false;
   private readonly idPrefix = nextId('test-results');
 
   /** Text queued by `willUpdate` for the completion announcement, flushed once the live region
    *  has rendered (it may not exist yet on the very first update). */
   private pendingCompletionAnnouncement: string | null = null;
 
-  /** test.id -> number of rows across all suites sharing that id. Rebuilt once per render by
-   *  `rebuildTestIdCounts()` so `isGloballyUniqueTestId()` -- which decides whether `lr-toggle`
-   *  carries a disambiguating `suiteId` -- is an O(1) lookup instead of a nested per-call rescan
-   *  of every suite/test. Detail slots no longer consult it: the canonical
-   *  `testResultDetailSlotName()` form is collision-free by construction. */
-  private testIdCounts = new Map<string, number>();
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncLimitAnnouncementSink();
+    this.limitAnnouncementInitialized = this.hasUpdated;
+    this.previouslyTruncated = this.projectionTruncated;
+  }
+
+  override disconnectedCallback(): void {
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = undefined;
+    super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = undefined;
+    this.syncLimitAnnouncementSink();
+  }
+
+  private syncLimitAnnouncementSink(): void {
+    if (!this.isConnected || this.limitAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('suites')) {
-      const anyRunning = this.suites.some((suite) => suite.tests.some((t) => t.status === 'running'));
-      if (this.previouslyRunning && !anyRunning) {
+      this.rebuildNormalizedSuites();
+      const pruned = new Map([...this.manualExpanded].filter(([key]) => this.normalizedTestKeys.has(key)));
+      if (pruned.size !== this.manualExpanded.size) this.manualExpanded = pruned;
+    }
+    if (changed.has('suites') || changed.has('statusFilter')) this.rebuildProjection();
+    this.rebuildDetailSlotNames();
+    if (changed.has('runState') || changed.has('runId')) {
+      const previousState = changed.has('runState') ? changed.get('runState') : this.runState;
+      const previousRunId = changed.has('runId') ? changed.get('runId') : this.runId;
+      if (
+        previousState === 'running'
+        && this.runState === 'complete'
+        && this.runId !== null
+        && previousRunId === this.runId
+      ) {
         const number = getNumberFormat(this.effectiveLocale);
         this.pendingCompletionAnnouncement = this.localize('testResultsCompleteAnnounce', undefined, {
           passed: number.format(this.countOf('passed')),
@@ -211,8 +289,71 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
           skipped: number.format(this.countOf('skipped')),
         });
       }
-      this.previouslyRunning = anyRunning;
     }
+  }
+
+  private rebuildNormalizedSuites(): void {
+    const normalizedSuites: TestSuiteResult[] = [];
+    const suiteIds = new Set<string>();
+    const normalizedTestKeys = new Set<string>();
+    const counts: Record<TestStatus, number> = { passed: 0, failed: 0, skipped: 0, running: 0 };
+    for (const suite of Array.isArray(this.suites) ? this.suites : []) {
+      if (!suite || typeof suite.id !== 'string' || suite.id === '' || suiteIds.has(suite.id)) continue;
+      suiteIds.add(suite.id);
+      const testIds = new Set<string>();
+      const tests: TestCaseResult[] = [];
+      for (const test of Array.isArray(suite.tests) ? suite.tests : []) {
+        if (!test || typeof test.id !== 'string' || test.id === '' || testIds.has(test.id)) continue;
+        testIds.add(test.id);
+        const status = normalizeTestStatus((test as { status?: unknown }).status);
+        const normalized: TestCaseResult = {
+          id: test.id,
+          name: typeof test.name === 'string' ? test.name : '',
+          status,
+          ...(typeof test.durationMs === 'number' ? { durationMs: test.durationMs } : {}),
+          ...(typeof test.message === 'string' ? { message: test.message } : {}),
+        };
+        tests.push(normalized);
+        normalizedTestKeys.add(this.testKey(suite.id, normalized.id));
+        counts[status]++;
+      }
+      if (tests.length > 0) {
+        normalizedSuites.push({
+          id: suite.id,
+          name: typeof suite.name === 'string' ? suite.name : '',
+          tests,
+        });
+      }
+    }
+    this.normalizedSuitesCache = normalizedSuites;
+    this.normalizedTestKeys = normalizedTestKeys;
+    this.completeStatusCounts = counts;
+  }
+
+  private rebuildProjection(): void {
+    const filteredStatuses = new Set(this.statusFilter);
+    const candidates = this.normalizedSuitesCache.flatMap((suite) =>
+      suite.tests
+        .filter((test) => filteredStatuses.size === 0 || filteredStatuses.has(test.status))
+        .map((test) => ({ suiteId: suite.id, test })));
+    const chosenKeys = new Set<string>();
+    const reserve = (predicate: (suiteId: string, test: TestCaseResult) => boolean): void => {
+      for (const { suiteId, test } of candidates) {
+        if (chosenKeys.size >= MAX_RENDERED_TESTS) break;
+        if (predicate(suiteId, test)) chosenKeys.add(this.testKey(suiteId, test.id));
+      }
+    };
+    reserve((suiteId, test) => this.manualExpanded.get(this.testKey(suiteId, test.id)) === true);
+    reserve((_suiteId, test) => test.status === 'failed');
+    reserve(() => true);
+
+    this.projectedSuitesCache = this.normalizedSuitesCache
+      .map((suite) => ({
+        ...suite,
+        tests: suite.tests.filter((test) => chosenKeys.has(this.testKey(suite.id, test.id))),
+      }))
+      .filter((suite) => suite.tests.length > 0);
+    this.projectionTruncated = chosenKeys.size < candidates.length;
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -224,21 +365,24 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
       // force so it lands immediately instead of waiting out the live region's default throttle.
       this.liveRegion?.announce(text, { force: true });
     }
+    if (this.limitAnnouncementInitialized && this.projectionTruncated && !this.previouslyTruncated) {
+      this.limitAnnouncementSink?.announce(this.localize('testResultsLimit', undefined, {
+        count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_TESTS),
+      }));
+    }
+    this.limitAnnouncementInitialized = true;
+    this.previouslyTruncated = this.projectionTruncated;
   }
 
   private countOf(status: TestStatus): number {
-    return this.suites.reduce((n, suite) => n + suite.tests.filter((t) => t.status === status).length, 0);
+    return this.completeStatusCounts[status];
   }
 
   /** All four status counts in one pass over every suite/test, for callers (namely
    *  `renderSummary()`) that need every status's count together rather than one at a time via
    *  repeated `countOf()` calls. */
   private computeStatusCounts(): Record<TestStatus, number> {
-    const counts: Record<TestStatus, number> = { passed: 0, failed: 0, skipped: 0, running: 0 };
-    for (const suite of this.suites) {
-      for (const test of suite.tests) counts[test.status]++;
-    }
-    return counts;
+    return this.completeStatusCounts;
   }
 
   private testKey(suiteId: string, testId: string): string {
@@ -249,24 +393,16 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     return testResultDetailSlotName(suiteId, testId);
   }
 
-  private rebuildTestIdCounts(): void {
-    const testIdCounts = new Map<string, number>();
-    for (const suite of this.suites) {
-      for (const test of suite.tests) testIdCounts.set(test.id, (testIdCounts.get(test.id) ?? 0) + 1);
-    }
-    this.testIdCounts = testIdCounts;
-  }
-
-  private isGloballyUniqueTestId(testId: string): boolean {
-    return this.testIdCounts.get(testId) === 1;
-  }
-
-  private hasSlottedChild(name: string): boolean {
-    return [...this.children].some((child) => child.getAttribute('slot') === name);
+  private rebuildDetailSlotNames(): void {
+    this.detailSlotNames = new Set(
+      [...this.children]
+        .map((child) => child.getAttribute('slot'))
+        .filter((name): name is string => name !== null),
+    );
   }
 
   private hasDetail(suiteId: string, testId: string): boolean {
-    return this.hasSlottedChild(this.scopedDetailSlot(suiteId, testId));
+    return this.detailSlotNames.has(this.scopedDetailSlot(suiteId, testId));
   }
 
   private isExpanded(suiteId: string, test: TestCaseResult): boolean {
@@ -288,12 +424,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     const next = new Map(this.manualExpanded);
     next.set(this.testKey(suiteId, test.id), expanded);
     this.manualExpanded = next;
-    this.emit(
-      'lr-toggle',
-      this.isGloballyUniqueTestId(test.id)
-        ? { id: test.id, expanded }
-        : { id: test.id, suiteId, expanded },
-    );
+    this.emit('lr-toggle', { suiteId, testId: test.id, expanded });
   }
 
   private onDetailSlotChange(): void {
@@ -412,15 +543,27 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   }
 
   override render(): TemplateResult {
-    this.rebuildTestIdCounts();
-    const ariaLabel = this.getAttribute('aria-label') || this.localize('testResultsLabel');
+    const ariaLabel = overallSemanticLabel(this, this.localize('testResultsLabel'));
+    const visibleSuites = this.projectedSuitesCache.filter((suite) =>
+      suite.tests.some((test) => this.statusFilter.length === 0 || this.statusFilter.includes(test.status)));
     return html`
-      ${this.suites.length === 0
-        ? html`<lr-empty heading=${this.localize('noData')}></lr-empty>`
+      ${this.normalizedSuitesCache.length === 0
+        ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
         : html`
-            <div part="base" role="group" aria-label=${ariaLabel}>
-              ${this.renderSummary(this.computeStatusCounts())} ${this.suites.map((suite, index) =>
-                this.renderSuite(suite, index))}
+            <div
+              part="base"
+              role=${overallSemanticRole(this, 'group') ?? nothing}
+              aria-label=${ariaLabel ?? nothing}
+            >
+              ${this.renderSummary(this.computeStatusCounts())}
+              ${visibleSuites.length === 0
+                ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
+                : this.projectedSuitesCache.map((suite, index) => this.renderSuite(suite, index))}
+              ${this.projectionTruncated
+                ? html`<p part="limit" role="note">${this.localize('testResultsLimit', undefined, {
+                    count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_TESTS),
+                  })}</p>`
+                : nothing}
             </div>
           `}
       <lr-live-region mode="polite"></lr-live-region>

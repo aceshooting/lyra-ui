@@ -1,10 +1,14 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import './embedding-explorer.js';
-import type { EmbeddingPoint, LyraEmbeddingExplorer } from './embedding-explorer.class.js';
+import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import "./embedding-explorer.js";
+import type {
+  EmbeddingPoint,
+  LyraEmbeddingExplorer,
+} from "./embedding-explorer.class.js";
+import { specialistTokens } from "../../../internal/specialist-tokens.styles.js";
 
 const points: EmbeddingPoint[] = [
-  { id: 'a', x: 0, y: 0, label: 'Alpha', cluster: 1 },
-  { id: 'b', x: 1, y: 1, label: 'Beta', cluster: 1 },
+  { id: "a", x: 0, y: 0, label: "Alpha", cluster: 1 },
+  { id: "b", x: 1, y: 1, label: "Beta", cluster: 1 },
 ];
 
 // This build of WebKit hangs the whole test file indefinitely (not just this test -- the entire
@@ -16,110 +20,257 @@ const points: EmbeddingPoint[] = [
 // contention and rules out any single API call as the sole trigger, but stops short of a
 // confirmed root cause. Skip on WebKit rather than guess further fixes with no diagnosis to test
 // them against; investigate with real WebKit devtools/native debugging before removing this.
-const isWebKit = /Safari\//.test(navigator.userAgent) && !/Chrome|Chromium|Edg\//.test(navigator.userAgent);
+const isWebKit =
+  /Safari\//.test(navigator.userAgent) &&
+  !/Chrome|Chromium|Edg\//.test(navigator.userAgent);
 
-describe('lr-embedding-explorer', () => {
-  it('renders one focusable SVG point per finite coordinate', async () => {
-    const el = (await fixture(html`<lr-embedding-explorer .strings=${{ embeddingExplorerLabel: 'Vectors' }} .points=${[...points, { id: 'bad', x: NaN, y: 0 }]}></lr-embedding-explorer>`)) as LyraEmbeddingExplorer;
+describe("lr-embedding-explorer", () => {
+  it("renders one focusable SVG point per finite coordinate", async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer
+        .strings=${{ embeddingExplorerLabel: "Vectors" }}
+        .points=${[...points, { id: "bad", x: NaN, y: 0 }]}
+      ></lr-embedding-explorer>`
+    )) as LyraEmbeddingExplorer;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelectorAll('[part="point"]').length).to.equal(2);
+    expect(el.shadowRoot!.querySelectorAll('[part="point"]').length).to.equal(
+      2
+    );
   });
 
-  it('applies strings overrides to populated and empty accessible labels', async () => {
+  it("applies strings overrides to populated and empty accessible labels", async () => {
     const strings = {
-      embeddingExplorerLabel: 'Vectors',
-      embeddingExplorerEmpty: 'No vectors',
+      embeddingExplorerLabel: "Vectors",
+      embeddingExplorerEmpty: "No vectors",
     };
     const empty = (await fixture(
-      html`<lr-embedding-explorer .strings=${strings}></lr-embedding-explorer>`,
+      html`<lr-embedding-explorer .strings=${strings}></lr-embedding-explorer>`
     )) as LyraEmbeddingExplorer;
-    const emptyBase = empty.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
-    expect(emptyBase.getAttribute('aria-label')).to.equal('Vectors');
-    expect(emptyBase.querySelector('[part="empty"]')?.textContent).to.equal('No vectors');
+    const emptyBase =
+      empty.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    expect(emptyBase.getAttribute("aria-label")).to.equal("Vectors");
+    expect(emptyBase.querySelector('[part="empty"]')?.textContent).to.equal(
+      "No vectors"
+    );
 
     const populated = (await fixture(
-      html`<lr-embedding-explorer .strings=${strings} .points=${points}></lr-embedding-explorer>`,
+      html`<lr-embedding-explorer
+        .strings=${strings}
+        .points=${points}
+      ></lr-embedding-explorer>`
     )) as LyraEmbeddingExplorer;
-    const populatedBase = populated.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
-    const plot = populated.shadowRoot!.querySelector<SVGElement>('[part="plot"]')!;
-    expect(populatedBase.getAttribute('aria-label')).to.equal('Vectors');
-    expect(plot.getAttribute('aria-label')).to.equal('Vectors');
+    const populatedBase =
+      populated.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const plot =
+      populated.shadowRoot!.querySelector<SVGElement>('[part="plot"]')!;
+    expect(populatedBase.getAttribute("aria-label")).to.equal(null);
+    expect(plot.getAttribute("aria-label")).to.equal("Vectors");
   });
 
-  it('emits the selected point', async () => {
-    const el = (await fixture(html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`)) as LyraEmbeddingExplorer;
+  it("keeps host naming distinct from the plot across explicit-empty and dynamic changes", async () => {
+    const el = (await fixture(html`
+      <lr-embedding-explorer aria-label="Author vectors" .points=${points}></lr-embedding-explorer>
+    `)) as LyraEmbeddingExplorer;
+    const plot = () => el.shadowRoot!.querySelector('[part="plot"]')!;
+    expect(el.getAttribute("aria-label")).to.equal("Author vectors");
+    expect(plot().getAttribute("aria-label")).to.equal("Embedding explorer");
+    el.setAttribute("aria-label", "");
     await el.updateComplete;
-    const event = new Promise<CustomEvent>((resolve) => el.addEventListener('lr-point-select', resolve, { once: true }));
-    (el.shadowRoot!.querySelector('[part="point"]') as SVGCircleElement).dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect((await event).detail.point.id).to.equal('a');
+    expect(el.getAttribute("aria-label")).to.equal("");
+    expect(plot().getAttribute("aria-label")).to.equal("Embedding explorer");
+    el.setAttribute("aria-label", "Revised vectors");
+    await el.updateComplete;
+    expect(el.getAttribute("aria-label")).to.equal("Revised vectors");
+    expect(plot().getAttribute("aria-label")).to.equal("Embedding explorer");
   });
 
-  it('supports keyboard activation and navigation', async () => {
-    const el = (await fixture(html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`)) as LyraEmbeddingExplorer;
-    await el.updateComplete;
-    const rendered = () => [...el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]')];
-
-    const selectEvent = oneEvent(el, 'lr-point-select');
-    rendered()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    expect((await selectEvent).detail.point.id).to.equal('a');
-
-    rendered()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-    await el.updateComplete;
-    expect(rendered().map((point) => point.getAttribute('tabindex'))).to.deep.equal(['-1', '0']);
+  it("resolves distinct clusters through the canonical chart palette tokens", async () => {
+    const el = (await fixture(html`
+      <lr-embedding-explorer
+        style="--lr-color-chart-1: rgb(1, 2, 3); --lr-color-chart-2: rgb(4, 5, 6)"
+        .points=${[
+          { ...points[0]!, cluster: "first" },
+          { ...points[1]!, cluster: "second" },
+        ]}
+      ></lr-embedding-explorer>
+    `)) as LyraEmbeddingExplorer;
+    const markers = [
+      ...el.shadowRoot!.querySelectorAll<SVGCircleElement>(".point-marker"),
+    ];
+    expect(markers.map((marker) => marker.getAttribute("fill"))).to.deep.equal([
+      "var(--lr-color-chart-1)",
+      "var(--lr-color-chart-2)",
+    ]);
+    expect(
+      markers.map((marker) => getComputedStyle(marker).fill)
+    ).to.deep.equal(["rgb(1, 2, 3)", "rgb(4, 5, 6)"]);
   });
 
-  it('exposes selectable points as listbox options with explicit selected state', async () => {
+  it("ships reachable light, dark, and forced-color values for all eight canonical slots", async () => {
+    const palettePoints: EmbeddingPoint[] = Array.from(
+      { length: 8 },
+      (_, index) => ({
+        id: `cluster-${index}`,
+        x: index,
+        y: index,
+        cluster: index,
+      })
+    );
+    const fills = (el: LyraEmbeddingExplorer) =>
+      [
+        ...el.shadowRoot!.querySelectorAll<SVGCircleElement>(".point-marker"),
+      ].map((marker) => getComputedStyle(marker).fill);
+    const light = (await fixture(html`
+      <lr-embedding-explorer
+        data-lr-theme="light"
+        .points=${palettePoints}
+      ></lr-embedding-explorer>
+    `)) as LyraEmbeddingExplorer;
+    const dark = (await fixture(html`
+      <lr-embedding-explorer
+        data-lr-theme="dark"
+        .points=${palettePoints}
+      ></lr-embedding-explorer>
+    `)) as LyraEmbeddingExplorer;
+    const lightFills = fills(light);
+    const darkFills = fills(dark);
+    expect(new Set(lightFills).size).to.equal(8);
+    expect(new Set(darkFills).size).to.equal(8);
+    expect(darkFills).to.not.deep.equal(lightFills);
+
+    const forced = new CSSStyleSheet();
+    forced.replaceSync(
+      specialistTokens.cssText.replace(
+        "@media (forced-colors: active)",
+        "@media all"
+      )
+    );
+    light.shadowRoot!.adoptedStyleSheets = [
+      ...light.shadowRoot!.adoptedStyleSheets,
+      forced,
+    ];
+    const forcedFills = fills(light);
+    expect(new Set(forcedFills).size).to.be.at.least(2);
+    expect(
+      forcedFills.every(
+        (fill) => fill !== "none" && fill !== "rgba(0, 0, 0, 0)"
+      )
+    ).to.equal(true);
+  });
+
+  it("emits the selected point", async () => {
     const el = (await fixture(
-      html`<lr-embedding-explorer selected-id="b" .points=${points}></lr-embedding-explorer>`,
+      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`
     )) as LyraEmbeddingExplorer;
-    expect(el.shadowRoot!.querySelector('[part="plot"]')!.getAttribute('role')).to.equal('listbox');
+    await el.updateComplete;
+    const event = new Promise<CustomEvent>((resolve) =>
+      el.addEventListener("lr-point-select", resolve, { once: true })
+    );
+    (
+      el.shadowRoot!.querySelector('[part="point"]') as SVGCircleElement
+    ).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect((await event).detail.point.id).to.equal("a");
+  });
+
+  it("supports keyboard activation and navigation", async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`
+    )) as LyraEmbeddingExplorer;
+    await el.updateComplete;
+    const rendered = () => [
+      ...el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]'),
+    ];
+
+    const selectEvent = oneEvent(el, "lr-point-select");
+    rendered()[0]!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+    );
+    expect((await selectEvent).detail.point.id).to.equal("a");
+
+    rendered()[0]!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+    );
+    await el.updateComplete;
+    expect(
+      rendered().map((point) => point.getAttribute("tabindex"))
+    ).to.deep.equal(["-1", "0"]);
+  });
+
+  it("exposes selectable points as listbox options with explicit selected state", async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer
+        selected-id="b"
+        .points=${points}
+      ></lr-embedding-explorer>`
+    )) as LyraEmbeddingExplorer;
+    expect(
+      el.shadowRoot!.querySelector('[part="plot"]')!.getAttribute("role")
+    ).to.equal("listbox");
     expect(
       [...el.shadowRoot!.querySelectorAll('[part="point"]')].map((point) => [
-        point.getAttribute('role'),
-        point.getAttribute('aria-selected'),
-      ]),
+        point.getAttribute("role"),
+        point.getAttribute("aria-selected"),
+      ])
     ).to.deep.equal([
-      ['option', 'false'],
-      ['option', 'true'],
+      ["option", "false"],
+      ["option", "true"],
     ]);
   });
 
-  it('keeps a real focus stop when the focused point is removed', async () => {
+  it("keeps a real focus stop when the focused point is removed", async () => {
     const el = (await fixture(
-      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`,
+      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`
     )) as LyraEmbeddingExplorer;
-    const second = el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]')[1]!;
+    const second =
+      el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]')[1]!;
     second.focus();
     el.points = [points[0]!];
     await el.updateComplete;
-    expect(el.shadowRoot!.activeElement?.getAttribute('data-index')).to.equal('0');
+    expect(el.shadowRoot!.activeElement?.getAttribute("data-index")).to.equal(
+      "0"
+    );
   });
 
-  it('synchronizes the roving tab stop for pointer and direct-focus activation', async () => {
+  it("synchronizes the roving tab stop for pointer and direct-focus activation", async () => {
     const el = (await fixture(
-      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`,
+      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`
     )) as LyraEmbeddingExplorer;
-    let rendered = [...el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]')];
-    rendered[1]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    let rendered = [
+      ...el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]'),
+    ];
+    rendered[1]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await el.updateComplete;
-    rendered = [...el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]')];
-    expect(rendered.map((point) => point.getAttribute('tabindex'))).to.deep.equal(['-1', '0']);
+    rendered = [
+      ...el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]'),
+    ];
+    expect(
+      rendered.map((point) => point.getAttribute("tabindex"))
+    ).to.deep.equal(["-1", "0"]);
 
     rendered[0]!.focus();
     await el.updateComplete;
-    rendered = [...el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]')];
-    expect(rendered.map((point) => point.getAttribute('tabindex'))).to.deep.equal(['0', '-1']);
-    expect(el.shadowRoot!.activeElement?.getAttribute('data-id')).to.equal('a');
+    rendered = [
+      ...el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]'),
+    ];
+    expect(
+      rendered.map((point) => point.getAttribute("tabindex"))
+    ).to.deep.equal(["0", "-1"]);
+    expect(el.shadowRoot!.activeElement?.getAttribute("data-id")).to.equal("a");
   });
 
-  it('formats the point position with the effective locale', async () => {
+  it("formats the point position with the effective locale", async () => {
     const el = (await fixture(
-      html`<lr-embedding-explorer lang="ar-u-nu-arab" .points=${points}></lr-embedding-explorer>`,
+      html`<lr-embedding-explorer
+        lang="ar-u-nu-arab"
+        .points=${points}
+      ></lr-embedding-explorer>`
     )) as LyraEmbeddingExplorer;
-    expect(el.shadowRoot!.querySelector('[part="point"]')!.getAttribute('aria-label')).to.contain('١');
+    expect(
+      el.shadowRoot!.querySelector('[part="point"]')!.getAttribute("aria-label")
+    ).to.contain("١");
   });
 
-  it('keeps point picking at least 24px across narrow allocations', async function () {
+  it("keeps point picking at least 24px across narrow allocations", async function () {
     if (isWebKit) this.skip();
     for (const width of [320, 383]) {
       const wrapper = await fixture(html`
@@ -128,13 +279,13 @@ describe('lr-embedding-explorer', () => {
         </div>
       `);
       const hit = wrapper
-        .querySelector<LyraEmbeddingExplorer>('lr-embedding-explorer')!
-        .shadowRoot!.querySelector<SVGGeometryElement>('.point-hit')!;
+        .querySelector<LyraEmbeddingExplorer>("lr-embedding-explorer")!
+        .shadowRoot!.querySelector<SVGGeometryElement>(".point-hit")!;
       // Each iteration appends another fixture below the previous one, so the later allocations
       // can sit past the bottom of the viewport -- where `elementFromPoint` returns `null`
       // regardless of how big the pick target is. Scroll first, then read the CTM, so the
       // screen-space coordinates below are the ones actually being hit-tested.
-      wrapper.scrollIntoView({ block: 'center', inline: 'nearest' });
+      wrapper.scrollIntoView({ block: "center", inline: "nearest" });
       const style = getComputedStyle(hit);
       const matrix = hit.getScreenCTM()!;
       const renderedScale = Math.hypot(matrix.a, matrix.b);
@@ -142,23 +293,32 @@ describe('lr-embedding-explorer', () => {
         hit instanceof SVGCircleElement
           ? hit.r.baseVal.value * 2
           : Math.hypot(
-              (hit as SVGLineElement).x2.baseVal.value - (hit as SVGLineElement).x1.baseVal.value,
-              (hit as SVGLineElement).y2.baseVal.value - (hit as SVGLineElement).y1.baseVal.value,
+              (hit as SVGLineElement).x2.baseVal.value -
+                (hit as SVGLineElement).x1.baseVal.value,
+              (hit as SVGLineElement).y2.baseVal.value -
+                (hit as SVGLineElement).y1.baseVal.value
             );
-      const strokeWidth = style.stroke === 'none' ? 0 : Number.parseFloat(style.strokeWidth);
+      const strokeWidth =
+        style.stroke === "none" ? 0 : Number.parseFloat(style.strokeWidth);
       const renderedStroke =
-        hit.getAttribute('vector-effect') === 'non-scaling-stroke'
+        hit.getAttribute("vector-effect") === "non-scaling-stroke"
           ? strokeWidth
           : strokeWidth * renderedScale;
-      expect(worldDiameter * renderedScale + renderedStroke, `${width}px allocation`).to.be.at.least(
-        24,
-      );
+      expect(
+        worldDiameter * renderedScale + renderedStroke,
+        `${width}px allocation`
+      ).to.be.at.least(24);
       const center = new DOMPoint(0, 0).matrixTransform(matrix);
-      expect((hit.getRootNode<ShadowRoot>().elementFromPoint(center.x + 11, center.y)) === (hit), `${width}px allocation pointer edge`).to.equal(true);
+      expect(
+        hit
+          .getRootNode<ShadowRoot>()
+          .elementFromPoint(center.x + 11, center.y) === hit,
+        `${width}px allocation pointer edge`
+      ).to.equal(true);
     }
   });
 
-  it('keeps a dense, long-label point set from overflowing a 320px allocation', async () => {
+  it("keeps a dense, long-label point set from overflowing a 320px allocation", async () => {
     const dense: EmbeddingPoint[] = Array.from({ length: 18 }, (_, index) => ({
       id: `point-${index}`,
       x: Math.cos((index / 18) * Math.PI * 2),
@@ -171,40 +331,48 @@ describe('lr-embedding-explorer', () => {
         <lr-embedding-explorer .points=${dense}></lr-embedding-explorer>
       </div>
     `);
-    const el = wrapper.querySelector<LyraEmbeddingExplorer>('lr-embedding-explorer')!;
+    const el = wrapper.querySelector<LyraEmbeddingExplorer>(
+      "lr-embedding-explorer"
+    )!;
     await el.updateComplete;
-    expect(el.scrollWidth, `host ${el.scrollWidth}/${el.clientWidth}`).to.be.at.most(el.clientWidth + 1);
+    expect(
+      el.scrollWidth,
+      `host ${el.scrollWidth}/${el.clientWidth}`
+    ).to.be.at.most(el.clientWidth + 1);
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.scrollWidth, `base ${base.scrollWidth}/${el.clientWidth}`).to.be.at.most(el.clientWidth + 1);
+    expect(
+      base.scrollWidth,
+      `base ${base.scrollWidth}/${el.clientWidth}`
+    ).to.be.at.most(el.clientWidth + 1);
   });
 
-  it('applies the height property to the rendered plot', async () => {
+  it("applies the height property to the rendered plot", async () => {
     // `height` is documented as the SVG block size. Rendering it as an SVG presentation attribute
     // cannot deliver that: a stylesheet declaration always beats a presentation attribute, so
     // `[part='plot'] { block-size: auto }` won at every value, including the 360px default.
     const el = (await fixture(
       html`<lr-embedding-explorer
         height="240px"
-        .points=${[{ id: 'a', x: 0.1, y: 0.2, label: 'A' }]}
-      ></lr-embedding-explorer>`,
+        .points=${[{ id: "a", x: 0.1, y: 0.2, label: "A" }]}
+      ></lr-embedding-explorer>`
     )) as LyraEmbeddingExplorer;
     await el.updateComplete;
 
     const plot = el.shadowRoot!.querySelector('[part="plot"]') as SVGElement;
-    expect(getComputedStyle(plot).blockSize).to.equal('240px');
+    expect(getComputedStyle(plot).blockSize).to.equal("240px");
   });
 
-  it('renders its documented default height when height is left unset', async () => {
+  it("renders its documented default height when height is left unset", async () => {
     const el = (await fixture(
-      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`,
+      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`
     )) as LyraEmbeddingExplorer;
     await el.updateComplete;
 
     const plot = el.shadowRoot!.querySelector('[part="plot"]') as SVGElement;
-    expect(getComputedStyle(plot).blockSize).to.equal('360px');
+    expect(getComputedStyle(plot).blockSize).to.equal("360px");
   });
 
-  it('lets a consumer ::part(plot) block-size rule win over the height property', async () => {
+  it("lets a consumer ::part(plot) block-size rule win over the height property", async () => {
     // The height plumbing must stay in a custom property read by the component's own
     // `[part='plot']` rule. An inline `block-size` on the SVG would out-rank an outside
     // `::part(plot)` rule and leave the plot unsizeable by consumers.
@@ -222,16 +390,21 @@ describe('lr-embedding-explorer', () => {
         ></lr-embedding-explorer>
       </div>
     `);
-    const el = wrapper.querySelector<LyraEmbeddingExplorer>('lr-embedding-explorer')!;
+    const el = wrapper.querySelector<LyraEmbeddingExplorer>(
+      "lr-embedding-explorer"
+    )!;
     await el.updateComplete;
 
     const plot = el.shadowRoot!.querySelector('[part="plot"]') as SVGElement;
-    expect(getComputedStyle(plot).blockSize).to.equal('120px');
+    expect(getComputedStyle(plot).blockSize).to.equal("120px");
   });
 
-  it('keeps aspect-ratio-preserved sizing when height is auto', async () => {
+  it("keeps aspect-ratio-preserved sizing when height is auto", async () => {
     const el = (await fixture(
-      html`<lr-embedding-explorer height="auto" .points=${points}></lr-embedding-explorer>`,
+      html`<lr-embedding-explorer
+        height="auto"
+        .points=${points}
+      ></lr-embedding-explorer>`
     )) as LyraEmbeddingExplorer;
     await el.updateComplete;
 
@@ -239,33 +412,44 @@ describe('lr-embedding-explorer', () => {
     const style = getComputedStyle(plot);
     const inline = Number.parseFloat(style.inlineSize);
     const block = Number.parseFloat(style.blockSize);
-    expect(inline, 'plot inline size').to.be.greaterThan(0);
-    expect(block, 'plot block size').to.be.greaterThan(0);
+    expect(inline, "plot inline size").to.be.greaterThan(0);
+    expect(block, "plot block size").to.be.greaterThan(0);
     // The plot's `viewBox` is 640x360, so `auto` resolves through that intrinsic aspect ratio.
-    expect(block, 'plot block size').to.be.closeTo(inline * (360 / 640), 1);
+    expect(block, "plot block size").to.be.closeTo(inline * (360 / 640), 1);
   });
 
-  it('keeps the narrow-allocation minimum block size a floor above the height property', async () => {
+  it("keeps the narrow-allocation minimum block size a floor above the height property", async () => {
     const wrapper = await fixture(html`
       <div style="inline-size: 300px">
-        <lr-embedding-explorer height="100px" .points=${points}></lr-embedding-explorer>
+        <lr-embedding-explorer
+          height="100px"
+          .points=${points}
+        ></lr-embedding-explorer>
       </div>
     `);
-    const el = wrapper.querySelector<LyraEmbeddingExplorer>('lr-embedding-explorer')!;
+    const el = wrapper.querySelector<LyraEmbeddingExplorer>(
+      "lr-embedding-explorer"
+    )!;
     await el.updateComplete;
 
     const plot = el.shadowRoot!.querySelector('[part="plot"]') as SVGElement;
-    const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
-    expect(Number.parseFloat(getComputedStyle(plot).blockSize), 'narrow floor').to.be.closeTo(
-      rootFontSize * 12,
-      0.5,
+    const rootFontSize = Number.parseFloat(
+      getComputedStyle(document.documentElement).fontSize
     );
+    expect(
+      Number.parseFloat(getComputedStyle(plot).blockSize),
+      "narrow floor"
+    ).to.be.closeTo(rootFontSize * 12, 0.5);
   });
 
-  it('is accessible in empty and populated states', async () => {
-    const empty = (await fixture(html`<lr-embedding-explorer></lr-embedding-explorer>`)) as LyraEmbeddingExplorer;
+  it("is accessible in empty and populated states", async () => {
+    const empty = (await fixture(
+      html`<lr-embedding-explorer></lr-embedding-explorer>`
+    )) as LyraEmbeddingExplorer;
     await expect(empty).to.be.accessible();
-    const populated = (await fixture(html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`)) as LyraEmbeddingExplorer;
+    const populated = (await fixture(
+      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`
+    )) as LyraEmbeddingExplorer;
     await expect(populated).to.be.accessible();
   });
 });

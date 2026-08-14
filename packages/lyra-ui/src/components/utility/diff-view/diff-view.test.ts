@@ -1,8 +1,8 @@
-import { fixture, expect, html, aTimeout, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, aTimeout, oneEvent, waitUntil } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import './diff-view.js';
 import type { LyraDiffView } from './diff-view.js';
-import type { DiffOp } from './diff-line-diff.js';
+import type { LyraDiffOp } from './diff-line-diff.js';
 import { styles } from './diff-view.styles.js';
 
 function stubClipboard(target: Navigator, value: unknown): () => void {
@@ -31,16 +31,10 @@ describe('lr-diff-view', () => {
 
   it('renders the English size fallback with no locale registered', async () => {
     const el = (await fixture(
-      html`<lr-diff-view
-        .oldText=${'a\nb\nc'}
-        .newText=${'a\nb\nd'}
-        .maxLines=${2}
-      ></lr-diff-view>`,
+      html`<lr-diff-view .oldText=${'a\nb\nc'} .newText=${'a\nb\nd'} .maxLines=${2}></lr-diff-view>`,
     )) as LyraDiffView;
 
-    expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal(
-      'Diff is too large to display.',
-    );
+    expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('Diff is too large to display.');
   });
 
   it('defaults maxLines to 5000 and leaves ordinary diffs unchanged', async () => {
@@ -51,6 +45,53 @@ describe('lr-diff-view', () => {
     expect(el.maxLines).to.equal(5000);
     expect(el.shadowRoot!.querySelectorAll('[part="limit"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('[part="line"]')).to.have.length(3);
+  });
+
+  it('represents an empty document as zero lines while preserving real trailing newlines', async () => {
+    const restoreClipboard = stubClipboard(navigator, { writeText: () => Promise.resolve() });
+    try {
+      const empty = (await fixture(
+        html`<lr-diff-view copyable .oldText=${''} .newText=${''}></lr-diff-view>`,
+      )) as LyraDiffView;
+      expect(empty.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(0);
+      const copied = oneEvent(empty, 'lr-copy');
+      (empty.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      const event = await copied;
+      expect(event.detail).to.deep.equal({ ok: true, text: '' });
+      expect(Object.isFrozen(event.detail)).to.equal(true);
+    } finally {
+      restoreClipboard();
+    }
+
+    const addition = (await fixture(
+      html`<lr-diff-view layout="split" .oldText=${''} .newText=${'line'}></lr-diff-view>`,
+    )) as LyraDiffView;
+    expect(addition.shadowRoot!.querySelectorAll('[data-type="remove"]').length).to.equal(0);
+    expect(addition.shadowRoot!.querySelectorAll('[data-type="add"]').length).to.equal(1);
+
+    const trailing = (await fixture(
+      html`<lr-diff-view .oldText=${'line'} .newText=${'line\n'}></lr-diff-view>`,
+    )) as LyraDiffView;
+    const types = [...trailing.shadowRoot!.querySelectorAll('[part="line"]')].map((line) =>
+      line.getAttribute('data-type'),
+    );
+    expect(types).to.deep.equal(['equal', 'add']);
+  });
+
+  it('rejects aggregate character and comparison work beyond the hard resource budget', async () => {
+    const long = 'x'.repeat(500_001);
+    const characterLimited = (await fixture(
+      html`<lr-diff-view .oldText=${long} .newText=${long}></lr-diff-view>`,
+    )) as LyraDiffView;
+    expect(characterLimited.shadowRoot!.querySelectorAll('[part="limit"]').length).to.equal(1);
+
+    const oldText = Array.from({ length: 2001 }, (_, index) => `old-${index}`).join('\n');
+    const newText = Array.from({ length: 2000 }, (_, index) => `new-${index}`).join('\n');
+    const workLimited = (await fixture(
+      html`<lr-diff-view .oldText=${oldText} .newText=${newText}></lr-diff-view>`,
+    )) as LyraDiffView;
+    expect(workLimited.shadowRoot!.querySelectorAll('[part="limit"]').length).to.equal(1);
+    expect(workLimited.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(0);
   });
 
   it('enforces the default ceiling and accepts explicit Infinity as the documented opt-out', async () => {
@@ -86,8 +127,10 @@ describe('lr-diff-view', () => {
 
   it('renders no copy button by default, one when copyable is set', async () => {
     const plain = (await fixture(html`<lr-diff-view .oldText=${'a'} .newText=${'b'}></lr-diff-view>`)) as LyraDiffView;
-    expect((plain.shadowRoot!.querySelector('[part="copy-button"]')) == null).to.be.true;
-    const withCopy = (await fixture(html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`)) as LyraDiffView;
+    expect(plain.shadowRoot!.querySelector('[part="copy-button"]') == null).to.be.true;
+    const withCopy = (await fixture(
+      html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+    )) as LyraDiffView;
     expect(withCopy.shadowRoot!.querySelector('[part="copy-button"]')).to.exist;
   });
 
@@ -98,7 +141,12 @@ describe('lr-diff-view', () => {
 
   it('localizes the copy-button aria-label via this.localize(), not a hardcoded "diff" suffix', async () => {
     const el = (await fixture(
-      html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'} .strings=${{ copyDiff: 'Copier la diff' }}></lr-diff-view>`,
+      html`<lr-diff-view
+        copyable
+        .oldText=${'a'}
+        .newText=${'b'}
+        .strings=${{ copyDiff: 'Copier la diff' }}
+      ></lr-diff-view>`,
     )) as LyraDiffView;
     const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
     expect(button.getAttribute('aria-label')).to.equal('Copier la diff');
@@ -128,16 +176,12 @@ describe('lr-diff-view', () => {
         html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
       )) as LyraDiffView;
       let events = 0;
-      let detail = '';
       let errors = 0;
-      let errorReason = '';
-      el.addEventListener('lr-copy', (event) => {
-        events++;
-        detail = (event as CustomEvent<{ text: string }>).detail.text;
-      });
+      let failure: { ok: false; text: string; reason: string; error: unknown } | undefined;
+      el.addEventListener('lr-copy', () => events++);
       el.addEventListener('lr-error', () => errors++);
       el.addEventListener('lr-copy-error', (event) => {
-        errorReason = (event as CustomEvent<{ reason: string }>).detail.reason;
+        failure = (event as CustomEvent<typeof failure>).detail;
       });
 
       (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
@@ -145,10 +189,10 @@ describe('lr-diff-view', () => {
         () => el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim() === 'Copy failed',
       );
 
-      expect(events).to.equal(1);
-      expect(detail).to.equal('- a\n+ b');
+      expect(events).to.equal(0);
       expect(errors).to.equal(1);
-      expect(errorReason).to.equal('failed');
+      expect(failure).to.include({ ok: false, text: '- a\n+ b', reason: 'failed' });
+      expect(Object.isFrozen(failure)).to.equal(true);
       expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copy failed');
     } finally {
       restoreClipboard();
@@ -170,9 +214,7 @@ describe('lr-diff-view', () => {
       await waitUntil(() => reason !== '');
 
       expect(reason).to.equal('unsupported');
-      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal(
-        'Copy failed',
-      );
+      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copy failed');
     } finally {
       restoreClipboard();
     }
@@ -198,9 +240,7 @@ describe('lr-diff-view', () => {
 
       (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
       await waitUntil(
-        () =>
-          el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()
-          === 'Échec de la copie',
+        () => el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim() === 'Échec de la copie',
       );
 
       const announcement = document.querySelector('[data-lr-live-region="polite"]')?.textContent ?? '';
@@ -278,9 +318,7 @@ describe('lr-diff-view', () => {
       expect(errors).to.equal(0);
       document.body.append(el);
       await el.updateComplete;
-      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal(
-        'Copy',
-      );
+      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copy');
     } finally {
       rejectWrite?.(new Error('cleanup'));
       el.remove();
@@ -304,11 +342,21 @@ describe('lr-diff-view', () => {
     const cancelled: number[] = [];
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
-      value: { writeText: () => { mainWrites++; return Promise.resolve(); } },
+      value: {
+        writeText: () => {
+          mainWrites++;
+          return Promise.resolve();
+        },
+      },
     });
     Object.defineProperty(frameWindow.navigator, 'clipboard', {
       configurable: true,
-      value: { writeText: (text: string) => { frameWrites.push(text); return Promise.resolve(); } },
+      value: {
+        writeText: (text: string) => {
+          frameWrites.push(text);
+          return Promise.resolve();
+        },
+      },
     });
     frameWindow.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
       const handle = nativeSetTimeout(handler, timeout, ...args);
@@ -330,7 +378,7 @@ describe('lr-diff-view', () => {
       frameDocument.body.append(frameDocument.adoptNode(el));
       await el.updateComplete;
       (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
-      await el.updateComplete;
+      await waitUntil(() => confirmationHandle !== undefined);
       expect(mainWrites).to.equal(0);
       expect(frameWrites).to.deep.equal(['- a\n+ b']);
       expect(confirmationHandle).to.be.a('number');
@@ -341,9 +389,11 @@ describe('lr-diff-view', () => {
       expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copy');
 
       (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
-      await el.updateComplete;
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim() === 'Copied!',
+      );
       confirmationCallback?.();
-      await el.updateComplete;
+      await aTimeout(0);
       expect(
         el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim(),
         'the retired iframe callback cannot clear the new owner state',
@@ -369,7 +419,12 @@ describe('lr-diff-view', () => {
     let timers = 0;
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
-      value: { writeText: () => { writes++; return Promise.resolve(); } },
+      value: {
+        writeText: () => {
+          writes++;
+          return Promise.resolve();
+        },
+      },
     });
     window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
       timers++;
@@ -408,9 +463,7 @@ describe('lr-diff-view', () => {
     )) as LyraDiffView;
     try {
       (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim() === 'Copied!',
-      );
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim() === 'Copied!');
       expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copied!');
 
       el.remove();
@@ -450,29 +503,78 @@ describe('lr-diff-view', () => {
     }
   });
 
+  it('invalidates a pending copy when copyability or the active limit mode changes', async () => {
+    let resolveWrite: (() => void) | undefined;
+    const restoreClipboard = stubClipboard(navigator, {
+      writeText: () =>
+        new Promise<void>((resolve) => {
+          resolveWrite = resolve;
+        }),
+    });
+    const el = (await fixture(
+      html`<lr-diff-view copyable .oldText=${'old'} .newText=${'new'}></lr-diff-view>`,
+    )) as LyraDiffView;
+    try {
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      el.copyable = false;
+      await el.updateComplete;
+      el.copyable = true;
+      await el.updateComplete;
+      resolveWrite?.();
+      await aTimeout(0);
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copy');
+
+      let resolveSecond: (() => void) | undefined;
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: () =>
+            new Promise<void>((resolve) => {
+              resolveSecond = resolve;
+            }),
+        },
+      });
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      el.maxLines = 0;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('[part="limit"]').length).to.equal(1);
+      el.maxLines = 5000;
+      await el.updateComplete;
+      resolveSecond?.();
+      await aTimeout(0);
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copy');
+    } finally {
+      restoreClipboard();
+    }
+  });
+
   it('does not recompute the diff when only the copy-confirmation state toggles, only when oldText/newText change', async () => {
     const el = (await fixture(html`
       <lr-diff-view copyable .oldText=${'a\nb'} .newText=${'a\nX'}></lr-diff-view>
     `)) as LyraDiffView;
     await el.updateComplete;
-    const opsBefore = (el as unknown as { diffOps: DiffOp[] }).diffOps;
+    const opsBefore = (el as unknown as { diffOps: LyraDiffOp[] }).diffOps;
 
     // Clicking the copy button only flips the `justCopied` @state field -- a render triggered
     // purely by that must reuse the same cached diff array instead of a freshly recomputed one.
     (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
-    expect((el as unknown as { diffOps: DiffOp[] }).diffOps).to.equal(opsBefore);
+    expect((el as unknown as { diffOps: LyraDiffOp[] }).diffOps).to.equal(opsBefore);
 
     // Changing the actual compared text must still produce a fresh diff.
     el.newText = 'a\nY';
     await el.updateComplete;
-    expect((el as unknown as { diffOps: DiffOp[] }).diffOps).to.not.equal(opsBefore);
+    expect((el as unknown as { diffOps: LyraDiffOp[] }).diffOps).to.not.equal(opsBefore);
   });
 });
 
 describe('layout', () => {
   it('defaults to unified and renders the existing single <pre>', async () => {
-    const el = (await fixture(html`<lr-diff-view .oldText=${'a\nb'} .newText=${'a\nc'}></lr-diff-view>`)) as LyraDiffView;
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${'a\nb'} .newText=${'a\nc'}></lr-diff-view>`,
+    )) as LyraDiffView;
     expect(el.layout).to.equal('unified');
     expect(el.shadowRoot!.querySelectorAll('[part="side"]').length).to.equal(0);
   });
@@ -490,11 +592,7 @@ describe('layout', () => {
   });
 
   it('placeholder cells in split layout carry no +/- prefix', async () => {
-    // Deliberately not `oldText=${''}` -- `''.split('\n')` is `['']` (one empty-string line, not
-    // zero lines), so an empty `oldText` against a single-line `newText` is actually a *balanced*
-    // 1-remove/1-add pairing (see `pairOpsForSplit`'s tests), producing no placeholder at all.
-    // `oldText='a'` against a two-line `newText` genuinely produces a pure-add hunk after the
-    // shared `'a'` line, giving the old side a real placeholder to assert against.
+    // A shared first line followed by a pure addition gives the old side a real placeholder.
     const el = (await fixture(
       html`<lr-diff-view layout="split" .oldText=${'a'} .newText=${'a\nnew line'}></lr-diff-view>`,
     )) as LyraDiffView;
@@ -504,29 +602,31 @@ describe('layout', () => {
   });
 
   it('copies the same unified text regardless of layout', async () => {
-    const unified = (await fixture(
-      html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
-    )) as LyraDiffView;
-    const split = (await fixture(
-      html`<lr-diff-view copyable layout="split" .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
-    )) as LyraDiffView;
-    let unifiedText = '';
-    let splitText = '';
-    unified.addEventListener('lr-copy', (e) => (unifiedText = (e as CustomEvent).detail.text));
-    split.addEventListener('lr-copy', (e) => (splitText = (e as CustomEvent).detail.text));
-    (unified.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
-    (split.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
-    expect(unifiedText).to.equal(splitText);
+    const restoreClipboard = stubClipboard(navigator, { writeText: () => Promise.resolve() });
+    try {
+      const unified = (await fixture(
+        html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+      )) as LyraDiffView;
+      const split = (await fixture(
+        html`<lr-diff-view copyable layout="split" .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+      )) as LyraDiffView;
+      const unifiedCopy = oneEvent(unified, 'lr-copy');
+      const splitCopy = oneEvent(split, 'lr-copy');
+      (unified.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      (split.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      const [unifiedEvent, splitEvent] = await Promise.all([unifiedCopy, splitCopy]);
+      expect(unifiedEvent.detail.text).to.equal(splitEvent.detail.text);
+      expect(unifiedEvent.detail.ok).to.equal(true);
+      expect(splitEvent.detail.ok).to.equal(true);
+    } finally {
+      restoreClipboard();
+    }
   });
 
   it('paints a changed plain-text line through its full horizontal overflow width', async () => {
     const longValue = 'unbrokenplainvalue'.repeat(80);
     const el = (await fixture(html`
-      <lr-diff-view
-        style="inline-size: 20rem;"
-        .oldText=${'before'}
-        .newText=${longValue}
-      ></lr-diff-view>
+      <lr-diff-view style="inline-size: 20rem;" .oldText=${'before'} .newText=${longValue}></lr-diff-view>
     `)) as LyraDiffView;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const line = el.shadowRoot!.querySelector('[part="line"][data-type="add"]') as HTMLElement;
@@ -562,14 +662,20 @@ describe('line-ending normalization', () => {
   });
 
   it('emits an lr-copy payload with no stray carriage returns for CRLF input', async () => {
-    const el = (await fixture(html`
-      <lr-diff-view copyable .oldText=${'a\r\nb'} .newText=${'a\r\nc'}></lr-diff-view>
-    `)) as LyraDiffView;
-    await el.updateComplete;
-    let copyText = '';
-    el.addEventListener('lr-copy', (e) => (copyText = (e as CustomEvent).detail.text));
-    (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
-    expect(copyText.includes('\r')).to.equal(false);
+    const restoreClipboard = stubClipboard(navigator, { writeText: () => Promise.resolve() });
+    try {
+      const el = (await fixture(html`
+        <lr-diff-view copyable .oldText=${'a\r\nb'} .newText=${'a\r\nc'}></lr-diff-view>
+      `)) as LyraDiffView;
+      await el.updateComplete;
+      const copied = oneEvent(el, 'lr-copy');
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      const event = await copied;
+      expect(event.detail.text.includes('\r')).to.equal(false);
+      expect(event.detail.ok).to.equal(true);
+    } finally {
+      restoreClipboard();
+    }
   });
 });
 
@@ -579,7 +685,7 @@ describe('syntax highlighting', () => {
     await el.updateComplete;
     // No direct way to assert "no dynamic import happened" without a bundler-level check; this
     // test instead asserts the plain-text rendering path is used (no shiki-generated span classes).
-    expect((el.shadowRoot!.querySelector('.shiki')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('.shiki') == null).to.be.true;
   });
 
   it('parses highlighted markup with the adopted owner DOMParser', async () => {
@@ -604,15 +710,21 @@ describe('syntax highlighting', () => {
       },
     }) as typeof DOMParser;
     const el = (await fixture(html`<lr-diff-view></lr-diff-view>`)) as LyraDiffView;
-    const tokenize = (el as unknown as {
-      tokenizeLines(highlighter: { codeToHtml(text: string): string }, text: string, lang: string): string[] | null;
-    }).tokenizeLines.bind(el);
+    const tokenize = (
+      el as unknown as {
+        tokenizeLines(highlighter: { codeToHtml(text: string): string }, text: string, lang: string): string[] | null;
+      }
+    ).tokenizeLines.bind(el);
 
     try {
       frameDocument.body.append(frameDocument.adoptNode(el));
-      const lines = tokenize({
-        codeToHtml: (text: string) => `<pre><code><span class="line">${text}</span></code></pre>`,
-      }, 'owner', 'text');
+      const lines = tokenize(
+        {
+          codeToHtml: (text: string) => `<pre><code><span class="line">${text}</span></code></pre>`,
+        },
+        'owner',
+        'text',
+      );
       expect(lines).to.deep.equal(['owner']);
       expect(mainParsers).to.equal(0);
       expect(frameParsers).to.equal(1);
@@ -730,20 +842,16 @@ describe('contextLines', () => {
 
   it('does not fold anything when contextLines is unset, regardless of run length', async () => {
     const el = (await fixture(html`<lr-diff-view .oldText=${old8} .newText=${new8}></lr-diff-view>`)) as LyraDiffView;
-    expect((el.shadowRoot!.querySelector('[data-type="fold"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[data-type="fold"]') == null).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(10);
   });
 
   for (const contextLines of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
     it(`treats contextLines=${String(contextLines)} as unset instead of enabling zero-context folding`, async () => {
       const el = (await fixture(
-        html`<lr-diff-view
-          .oldText=${old8}
-          .newText=${new8}
-          .contextLines=${contextLines}
-        ></lr-diff-view>`,
+        html`<lr-diff-view .oldText=${old8} .newText=${new8} .contextLines=${contextLines}></lr-diff-view>`,
       )) as LyraDiffView;
-      expect((el.shadowRoot!.querySelector('[data-type="fold"]')) == null).to.be.true;
+      expect(el.shadowRoot!.querySelector('[data-type="fold"]') == null).to.be.true;
       expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(10);
     });
   }
@@ -752,12 +860,7 @@ describe('contextLines', () => {
     const oldText = ['a', ...Array.from({ length: 1236 }, (_, index) => `same-${index}`), 'z'].join('\n');
     const newText = ['A', ...Array.from({ length: 1236 }, (_, index) => `same-${index}`), 'Z'].join('\n');
     const el = (await fixture(
-      html`<lr-diff-view
-        lang="ar"
-        .oldText=${oldText}
-        .newText=${newText}
-        .contextLines=${1}
-      ></lr-diff-view>`,
+      html`<lr-diff-view lang="ar" .oldText=${oldText} .newText=${newText} .contextLines=${1}></lr-diff-view>`,
     )) as LyraDiffView;
     const expected = new Intl.NumberFormat(el.effectiveLocale).format(1234);
     expect(el.shadowRoot!.querySelector('[data-type="fold"]')!.textContent).to.contain(expected);
@@ -805,7 +908,7 @@ describe('contextLines', () => {
     const el = (await fixture(
       html`<lr-diff-view .oldText=${oldText} .newText=${newText} .contextLines=${2}></lr-diff-view>`,
     )) as LyraDiffView;
-    expect((el.shadowRoot!.querySelector('[data-type="fold"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[data-type="fold"]') == null).to.be.true;
   });
 
   it('uses singular localized text for exactly one hidden line', async () => {
@@ -833,7 +936,7 @@ describe('contextLines', () => {
     const el = (await fixture(
       html`<lr-diff-view .oldText=${old8} .newText=${old8} .contextLines=${1}></lr-diff-view>`,
     )) as LyraDiffView;
-    expect((el.shadowRoot!.querySelector('[data-type="fold"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[data-type="fold"]') == null).to.be.true;
   });
 });
 
@@ -860,7 +963,9 @@ describe('RTL / bidi isolation', () => {
 
 describe('back-compat', () => {
   it('default (unified, no language) output is byte-identical to today', async () => {
-    const el = (await fixture(html`<lr-diff-view .oldText=${'a\nb'} .newText=${'a\nc'}></lr-diff-view>`)) as LyraDiffView;
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${'a\nb'} .newText=${'a\nc'}></lr-diff-view>`,
+    )) as LyraDiffView;
     const lines = [...el.shadowRoot!.querySelectorAll('[part="line"]')].map((l) => l.textContent);
     // Today's actual (pre-existing, unchanged) template literally concatenates `${marker} ${text}`
     // -- for an `equal` op the marker itself is already a space, so the rendered prefix is two

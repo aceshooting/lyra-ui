@@ -11,14 +11,15 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { closeIcon, expandIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { durationMessageValue } from '../../../internal/duration.js';
 import { styles } from './tool-result-dialog.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_maximize, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_maximize, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -166,27 +167,6 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
   },
 };
 
-/** `820` -> `"820ms"`; `1500` -> `"1.5s"`; `2000` -> `"2s"`. Sub-second
- *  durations are the common case for a single tool call, so they get the
- *  more precise unit; once a call runs a full second or longer, trimming to
- *  (at most) one decimal place of seconds reads better than a 4-5 digit
- *  millisecond count. The returned numeric value is interpolated through a
- *  localized duration message by the caller. */
-function formatDuration(ms: number): {
-  key: 'durationMilliseconds' | 'durationSeconds';
-  value: number;
-} {
-  if (!Number.isFinite(ms) || ms < 1000) {
-    return { key: 'durationMilliseconds', value: Math.round(Math.max(0, ms)) };
-  }
-  const seconds = ms / 1000;
-  const rounded = Math.round(seconds * 10) / 10;
-  return {
-    key: 'durationSeconds',
-    value: rounded,
-  };
-}
-
 /**
  * `<lr-tool-result-dialog>` — a full tool-call detail overlay: a status/
  * duration header plus a `body` slot where a consumer typically places a
@@ -213,6 +193,9 @@ function formatDuration(ms: number): {
  * Stacking: opening more than one of these dialogs at once is supported --
  * Escape and the Tab focus trap only ever act on the topmost open instance,
  * so instances beneath it stay open and untouched until the one on top closes.
+ * The header also remains usable in narrow allocations: long localized status
+ * labels wrap within their badge while the maximize and close actions move to
+ * a reachable row instead of forcing the panel wider.
  *
  * @customElement lr-tool-result-dialog
  * @slot body - The dialog's main content — typically a `<lr-tab-group>` with
@@ -262,9 +245,13 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     details: LYRA_DEFAULT_details,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     durationSeconds: LYRA_DEFAULT_durationSeconds,
+    map: LYRA_DEFAULT_map,
     maximize: LYRA_DEFAULT_maximize,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     statusDenied: LYRA_DEFAULT_statusDenied,
     statusError: LYRA_DEFAULT_statusError,
     statusPending: LYRA_DEFAULT_statusPending,
@@ -277,16 +264,16 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   static override styles = [LyraElement.styles, styles];
 
   /**
-   * Whether the dialog is open. Set this (or call `close()`) — there is no
-   * separate `show()`/`hide()` pair. Both paths restore focus to the trigger
-   * element identically; only `close()` additionally fires
+   * Whether the dialog is open. Set this directly or use `show()`/`hide()`/`close()`. Each path
+   * restores focus to the trigger element identically; reasoned closing additionally fires
    * `lr-close`, since a direct assignment carries no reason string
    * to attach to that event.
    */
   @property({ type: Boolean, reflect: true }) open = false;
 
-  /** Accessible name forwarded to the internal element that owns the dialog role. When omitted,
-   *  the visible tool name labels the dialog. */
+  /** Accessible name for the component. When assigned directly as a property without a host
+   *  attribute it names the internal dialog; a host `aria-label` remains on the host and the
+   *  internal dialog stays labelled by its visible tool name to avoid cloning the same owner. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** The tool's name, rendered prominently in the header. */
@@ -380,6 +367,17 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     this.emit('lr-close', reason);
   }
 
+  /** Opens the dialog. No-op when already open. */
+  show(): void {
+    if (this.open) return;
+    this.open = true;
+  }
+
+  /** Closes the dialog through the same reasoned lifecycle as `close()`. */
+  hide(reason: ToolResultDialogCloseReason = 'api'): void {
+    this.close(reason);
+  }
+
   private onBackdropClick = (): void => {
     this.overlay?.dismissBackdrop();
   };
@@ -411,7 +409,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   }
 
   private localizedDuration(ms: number): string {
-    const duration = formatDuration(ms);
+    const duration = durationMessageValue(ms);
     return this.localize(duration.key, undefined, {
       value: getNumberFormat(this.effectiveLocale, {
         maximumFractionDigits: duration.key === 'durationSeconds' ? 1 : 0,
@@ -430,14 +428,15 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   override render(): TemplateResult {
     const durationMs = this.safeDurationMs;
+    const panelLabel = hostAriaLabel(this) === null && this.accessibleLabel ? this.accessibleLabel : null;
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
         part="panel"
         role=${this.open ? 'dialog' : nothing}
         aria-modal=${this.open ? 'true' : nothing}
-        aria-label=${this.accessibleLabel || nothing}
-        aria-labelledby=${this.accessibleLabel ? nothing : this.titleId}
+        aria-label=${panelLabel ?? nothing}
+        aria-labelledby=${panelLabel === null ? this.titleId : nothing}
         tabindex="-1"
       >
         <div part="header">

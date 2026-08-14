@@ -21,9 +21,9 @@ type Story = StoryObj;
 export const Variants: Story = {
   render: () => html`
     <div style="display:flex; gap:2rem; align-items:center;">
-      <lr-typing-indicator variant="dots"></lr-typing-indicator>
-      <lr-typing-indicator variant="pulse"></lr-typing-indicator>
-      <lr-typing-indicator variant="cursor"></lr-typing-indicator>
+      <lr-typing-indicator shape="dots"></lr-typing-indicator>
+      <lr-typing-indicator shape="pulse"></lr-typing-indicator>
+      <lr-typing-indicator shape="cursor"></lr-typing-indicator>
     </div>
   `,
 };
@@ -73,7 +73,7 @@ export const InlineWithStreamedText: Story = {
   render: () => html`
     <p style="font-family: system-ui, sans-serif; max-width: 32rem;">
       The quick brown fox jumps over the lazy dog, and then keeps going
-      <lr-typing-indicator variant="cursor" label="Response is still streaming"></lr-typing-indicator>
+      <lr-typing-indicator shape="cursor" label="Response is still streaming"></lr-typing-indicator>
     </p>
   `,
 };
@@ -90,9 +90,9 @@ export const ReducedMotion: Story = {
   },
   render: () => html`
     <div style="display:flex; gap:2rem; align-items:center;">
-      <lr-typing-indicator variant="dots"></lr-typing-indicator>
-      <lr-typing-indicator variant="pulse"></lr-typing-indicator>
-      <lr-typing-indicator variant="cursor"></lr-typing-indicator>
+      <lr-typing-indicator shape="dots"></lr-typing-indicator>
+      <lr-typing-indicator shape="pulse"></lr-typing-indicator>
+      <lr-typing-indicator shape="cursor"></lr-typing-indicator>
     </div>
   `,
 };

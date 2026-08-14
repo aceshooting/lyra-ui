@@ -162,7 +162,7 @@ it("filters by search text (name/owner/tag substring) and emits lr-filter-change
   );
   const event = await listener;
   expect((event as CustomEvent).detail).to.deep.equal({
-    text: "priya",
+    searchTerm: "priya",
     tags: [],
     matchCount: 1,
   });
@@ -172,16 +172,17 @@ it("filters by search text (name/owner/tag substring) and emits lr-filter-change
   );
 });
 
-it("translates child filter and selection events without leaking their raw contracts", async () => {
+it("translates child filter and selection events without leaking any native or prefixed aliases", async () => {
   const el = (await fixture(
     html`<lr-document-library .documents=${docs}></lr-document-library>`
   )) as LyraDocumentLibrary;
-  const rawCounts = { input: 0, change: 0, checkbox: 0 };
+  const rawCounts = { input: 0, change: 0, lrInput: 0, lrChange: 0 };
   let filterCount = 0;
   let selectionCount = 0;
-  el.addEventListener("lr-input", () => rawCounts.input++);
+  el.addEventListener("input", () => rawCounts.input++);
   el.addEventListener("change", () => rawCounts.change++);
-  el.addEventListener("lr-change", () => rawCounts.checkbox++);
+  el.addEventListener("lr-input", () => rawCounts.lrInput++);
+  el.addEventListener("lr-change", () => rawCounts.lrChange++);
   el.addEventListener("lr-filter-change", () => filterCount++);
   el.addEventListener("lr-selection-change", () => selectionCount++);
 
@@ -189,6 +190,7 @@ it("translates child filter and selection events without leaking their raw contr
     value: string;
   };
   input.value = "priya";
+  input.dispatchEvent(new InputEvent("input", { bubbles: true, composed: true }));
   input.dispatchEvent(
     new CustomEvent("lr-input", {
       detail: { value: "priya" },
@@ -196,21 +198,29 @@ it("translates child filter and selection events without leaking their raw contr
       composed: true,
     })
   );
+  input.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+  input.dispatchEvent(new CustomEvent("lr-change", { bubbles: true, composed: true }));
   await el.updateComplete;
 
   const combobox = el.shadowRoot!.querySelector(
     "lr-combobox"
   ) as HTMLElement & { value: string[] };
   combobox.value = ["ops"];
+  combobox.dispatchEvent(new InputEvent("input", { bubbles: true, composed: true }));
+  combobox.dispatchEvent(new CustomEvent("lr-input", { bubbles: true, composed: true }));
   combobox.dispatchEvent(
     new Event("change", { bubbles: true, composed: true })
   );
+  combobox.dispatchEvent(new CustomEvent("lr-change", { bubbles: true, composed: true }));
   await el.updateComplete;
 
   const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
   const checkbox = table.shadowRoot!.querySelector(
     "tbody lr-checkbox"
   ) as HTMLElement;
+  checkbox.dispatchEvent(new InputEvent("input", { bubbles: true, composed: true }));
+  checkbox.dispatchEvent(new CustomEvent("lr-input", { bubbles: true, composed: true }));
+  checkbox.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
   checkbox.dispatchEvent(
     new CustomEvent("lr-change", {
       detail: { checked: true },
@@ -222,7 +232,7 @@ it("translates child filter and selection events without leaking their raw contr
 
   expect(filterCount).to.equal(2);
   expect(selectionCount).to.equal(1);
-  expect(rawCounts).to.deep.equal({ input: 0, change: 0, checkbox: 0 });
+  expect(rawCounts).to.deep.equal({ input: 0, change: 0, lrInput: 0, lrChange: 0 });
 });
 
 it("filters by tag facet with AND semantics across multiple selected tags", async () => {
@@ -281,8 +291,9 @@ it("toggles sort direction on a repeated header activation and re-sorts rows (un
   nameHeader.click();
   const sortEvent = await sortListener;
   expect((sortEvent as CustomEvent).detail).to.deep.equal({
-    key: "name",
-    direction: "descending",
+    phase: "commit",
+    sortKey: "name",
+    sortDir: "desc",
   });
   await el.updateComplete;
   let names = [
@@ -298,8 +309,9 @@ it("toggles sort direction on a repeated header activation and re-sorts rows (un
   nameHeader.click();
   const secondEvent = await secondListener;
   expect((secondEvent as CustomEvent).detail).to.deep.equal({
-    key: "name",
-    direction: "ascending",
+    phase: "commit",
+    sortKey: "name",
+    sortDir: "asc",
   });
   await el.updateComplete;
   names = [...table.shadowRoot!.querySelectorAll('[part="document-name"]')].map(
@@ -322,7 +334,7 @@ it("emits one host lr-sort event for one bubbling table lr-sort event", async ()
 
   table.dispatchEvent(
     new CustomEvent("lr-sort", {
-      detail: { key: "name", direction: "desc" },
+      detail: { phase: "commit", sortKey: "name", sortDir: "desc" },
       bubbles: true,
       composed: true,
     })
@@ -630,7 +642,7 @@ it("sorts the Updated column chronologically, not alphabetically by its formatte
     html`<lr-document-library
       .documents=${dated}
       sort-key="updatedAt"
-      sort-direction="ascending"
+      sort-dir="asc"
     ></lr-document-library>`
   )) as LyraDocumentLibrary;
   await el.updateComplete;
@@ -642,4 +654,166 @@ it("sorts the Updated column chronologically, not alphabetically by its formatte
   // Chronological. The alphabetical-by-formatted-date order would be
   // "Feb 3, 2020" < "Jan 5, 2026" < "Mar 2, 2019" -- i.e. Middle, Recent, Ancient.
   expect(names).to.deep.equal(["Ancient.md", "Middle.md", "Recent.md"]);
+});
+
+describe("v9 controlled and immutable contracts", () => {
+  it("snapshots readonly collection inputs at assignment time", async () => {
+    const inputDate = new Date("2026-01-02T00:00:00.000Z");
+    const inputDocuments: LibraryDocument[] = [
+      { id: "owned", name: "Owned.md", tags: ["stable"], updatedAt: inputDate },
+    ];
+    const inputSelected = ["owned"];
+    const inputTags = ["stable"];
+    const el = (await fixture(
+      html`<lr-document-library></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    el.documents = inputDocuments;
+    el.selectedIds = inputSelected;
+    el.tagFilter = inputTags;
+
+    inputDocuments[0]!.name = "Mutated.md";
+    inputDocuments[0]!.tags!.push("mutated");
+    inputDocuments.length = 0;
+    inputDate.setUTCFullYear(2030);
+    inputSelected.length = 0;
+    inputTags.length = 0;
+    await el.updateComplete;
+
+    expect(el.documents).to.have.lengthOf(1);
+    expect(el.documents[0]!.name).to.equal("Owned.md");
+    expect(el.documents[0]!.tags).to.deep.equal(["stable"]);
+    expect((el.documents[0]!.updatedAt as Date).toISOString()).to.equal("2026-01-02T00:00:00.000Z");
+    expect(el.selectedIds).to.deep.equal(["owned"]);
+    expect(el.tagFilter).to.deep.equal(["stable"]);
+    expect(Object.isFrozen(el.documents)).to.equal(true);
+    expect(Object.isFrozen(el.documents[0])).to.equal(true);
+    expect(Object.isFrozen(el.documents[0]!.tags)).to.equal(true);
+    expect(Object.isFrozen(el.selectedIds)).to.equal(true);
+    expect(Object.isFrozen(el.tagFilter)).to.equal(true);
+
+    const publicDate = el.documents[0]!.updatedAt as Date;
+    publicDate.setUTCFullYear(2040);
+    expect((el.documents[0]!.updatedAt as Date).toISOString()).to.equal("2026-01-02T00:00:00.000Z");
+  });
+
+  it("exposes controlled searchTerm and emits an isolated readonly filter snapshot", async () => {
+    const el = (await fixture(
+      html`<lr-document-library .documents=${docs}></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    (el as unknown as { searchTerm: string }).searchTerm = "alpha";
+    await el.updateComplete;
+
+    const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
+    expect(table.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
+
+    let detail: Record<string, unknown> | undefined;
+    el.addEventListener("lr-filter-change", (event) => {
+      detail = (event as CustomEvent).detail;
+    });
+    const search = el.shadowRoot!.querySelector("lr-input")! as unknown as HTMLElement & { value: string };
+    search.value = "zeta";
+    search.dispatchEvent(
+      new CustomEvent("lr-input", { detail: { value: "zeta" }, bubbles: true, composed: true })
+    );
+
+    expect(detail).to.deep.equal({ searchTerm: "zeta", tags: [], matchCount: 1 });
+    expect(Object.isFrozen(detail)).to.equal(true);
+    expect(Object.isFrozen(detail?.["tags"])).to.equal(true);
+  });
+
+  it("publishes fresh frozen selection snapshots that cannot mutate component state or prior events", async () => {
+    const el = (await fixture(
+      html`<lr-document-library .documents=${docs}></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    const details: Array<{ ids: readonly string[] }> = [];
+    el.addEventListener("lr-selection-change", (event) => details.push(event.detail));
+    const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
+
+    findCheckbox(table, 0).click();
+    await el.updateComplete;
+    findCheckbox(table, 1).click();
+    await el.updateComplete;
+
+    expect(details.length).to.equal(2);
+    expect(Object.isFrozen(details[0])).to.equal(true);
+    expect(Object.isFrozen(details[0]!.ids)).to.equal(true);
+    expect(details[0]!.ids).to.deep.equal(["d1"]);
+    expect(details[1]!.ids).to.deep.equal(["d1", "d3"]);
+    expect(details[0]!.ids === details[1]!.ids).to.equal(false);
+    expect([...el.selectedIds]).to.deep.equal(["d1", "d3"]);
+  });
+
+  it("puts the composed table in multiple selection mode so selected ids reach row semantics", async () => {
+    const el = (await fixture(
+      html`<lr-document-library .documents=${docs} .selectedIds=${["d1"]}></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement & { selectionMode: string };
+    expect(table.selectionMode).to.equal("multiple");
+    const selectedRows = table.shadowRoot!.querySelectorAll('[part="row"][aria-selected="true"]');
+    expect(selectedRows.length).to.equal(1);
+  });
+
+  it("contains the table selection event and keeps row activation from changing checkbox-owned selection", async () => {
+    const el = (await fixture(
+      html`<lr-document-library .documents=${docs} .selectedIds=${["d1"]}></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement & {
+      selectedKeys: ReadonlySet<string | number>;
+      updateComplete: Promise<unknown>;
+    };
+    let leakedTableSelections = 0;
+    el.addEventListener("lr-selection-change", (event) => {
+      if (event.composedPath()[0] === table) leakedTableSelections++;
+    });
+
+    const secondRow = table.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')[1]!;
+    secondRow.click();
+    await table.updateComplete;
+
+    expect(leakedTableSelections).to.equal(0);
+    expect(el.selectedIds).to.deep.equal(["d1"]);
+    expect([...table.selectedKeys]).to.deep.equal(["d1"]);
+  });
+
+  it("translates canonical sort request/commit phases and honors a wrapper veto", async () => {
+    const el = (await fixture(
+      html`<lr-document-library .documents=${docs}></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
+    const headers = table.shadowRoot!.querySelectorAll('[part="header-cell"]');
+    const details: Array<Record<string, unknown>> = [];
+    el.addEventListener("lr-sort-request", (event) => details.push((event as CustomEvent).detail));
+    el.addEventListener("lr-sort", (event) => details.push((event as CustomEvent).detail));
+    (headers[3] as HTMLElement).click();
+
+    expect(details).to.deep.equal([
+      { phase: "request", sortKey: "version", sortDir: "asc" },
+      { phase: "commit", sortKey: "version", sortDir: "asc" },
+    ]);
+    expect((el as unknown as { sortDir: string }).sortDir).to.equal("asc");
+
+    el.addEventListener("lr-sort-request", (event) => event.preventDefault(), { once: true });
+    (headers[4] as HTMLElement).click();
+    expect((el as unknown as { sortKey: string }).sortKey).to.equal("version");
+  });
+
+  it("contains the composed table pagination event and inherits the bounded default projection", async () => {
+    const many = Array.from({ length: 130 }, (_, index) => ({
+      id: `d-${index}`,
+      name: `Document ${String(index).padStart(3, "0")}`,
+    }));
+    const el = (await fixture(
+      html`<lr-document-library .documents=${many}></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
+    expect(table.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(100);
+    expect(table.shadowRoot!.querySelectorAll("lr-pagination").length).to.equal(1);
+
+    let leaked = 0;
+    el.addEventListener("lr-page-change", () => leaked++);
+    table.dispatchEvent(
+      new CustomEvent("lr-page-change", { detail: { page: 2 }, bubbles: true, composed: true })
+    );
+    expect(leaked).to.equal(0);
+  });
 });

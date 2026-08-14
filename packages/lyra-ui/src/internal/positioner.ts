@@ -423,11 +423,15 @@ async function popupRectAtPosition(
     offsetParent: offsetParent as Element,
     strategy,
   });
+  const convertedX = finiteGeometry(rect.x, 'place() converted popup rect.x');
+  const convertedY = finiteGeometry(rect.y, 'place() converted popup rect.y');
+  const width = finiteGeometry(rect.width, 'place() converted popup rect.width', true);
+  const height = finiteGeometry(rect.height, 'place() converted popup rect.height', true);
   return {
-    top: rect.y,
-    right: rect.x + rect.width,
-    bottom: rect.y + rect.height,
-    left: rect.x,
+    top: convertedY,
+    right: finiteGeometry(convertedX + width, 'place() converted popup rect.right'),
+    bottom: finiteGeometry(convertedY + height, 'place() converted popup rect.bottom'),
+    left: convertedX,
   };
 }
 
@@ -447,10 +451,64 @@ export interface VirtualAnchor {
   contextElement?: Element;
 }
 
+class PositionerGeometryError extends RangeError {}
+
+function finiteGeometry(value: number, label: string, nonnegative = false): number {
+  if (!Number.isFinite(value) || (nonnegative && value < 0)) {
+    throw new PositionerGeometryError(
+      `${label} must be a ${nonnegative ? 'finite nonnegative' : 'finite'} number`,
+    );
+  }
+  return value;
+}
+
+function validatedClientRect(rect: DOMRect, label: string): DOMRect {
+  finiteGeometry(rect.x, `${label}.x`);
+  finiteGeometry(rect.y, `${label}.y`);
+  finiteGeometry(rect.width, `${label}.width`, true);
+  finiteGeometry(rect.height, `${label}.height`, true);
+  finiteGeometry(rect.top, `${label}.top`);
+  finiteGeometry(rect.right, `${label}.right`);
+  finiteGeometry(rect.bottom, `${label}.bottom`);
+  finiteGeometry(rect.left, `${label}.left`);
+  return rect;
+}
+
+function validatePlaceNumericOptions(opts: PlaceOptions): void {
+  for (const [name, value] of [
+    ['offset', opts.offset],
+    ['skidding', opts.skidding],
+  ] as const) {
+    if (value !== undefined) finiteGeometry(value, `place() ${name}`);
+  }
+  for (const [name, value] of [
+    ['flipPadding', opts.flipPadding],
+    ['shiftPadding', opts.shiftPadding],
+    ['padding', opts.padding],
+    ['autoSizePadding', opts.autoSizePadding],
+    ['arrowPadding', opts.arrowPadding],
+  ] as const) {
+    if (value !== undefined) finiteGeometry(value, `place() ${name}`, true);
+  }
+}
+
+function validateAnchorBeforeSetup(anchor: Element | VirtualAnchor): void {
+  try {
+    validatedClientRect(anchor.getBoundingClientRect(), 'place() anchor rect');
+  } catch (error) {
+    // A hostile getter/revoked proxy already follows the established async fail-closed path once
+    // Floating UI begins. Only a rect that was actually returned with invalid numeric geometry is
+    // a synchronous caller contract error.
+    if (error instanceof PositionerGeometryError) throw error;
+  }
+}
+
 /**
  * Builds a `VirtualAnchor` from a plain rect, for `showAt()`-style APIs that anchor a popup to an
  * arbitrary point or box instead of a real DOM element. `width`/`height` default to `0` (a point).
  * An optional `contextElement` is forwarded verbatim -- see `VirtualAnchor.contextElement`.
+ * Throws `RangeError` unless every coordinate/dimension is finite and each dimension is
+ * nonnegative.
  */
 export function virtualAnchorFromRect(rect: {
   x: number;
@@ -459,7 +517,11 @@ export function virtualAnchorFromRect(rect: {
   height?: number;
   contextElement?: Element;
 }): VirtualAnchor {
-  const domRect = new DOMRect(rect.x, rect.y, rect.width ?? 0, rect.height ?? 0);
+  const x = finiteGeometry(rect.x, 'virtualAnchorFromRect() x');
+  const y = finiteGeometry(rect.y, 'virtualAnchorFromRect() y');
+  const width = finiteGeometry(rect.width ?? 0, 'virtualAnchorFromRect() width', true);
+  const height = finiteGeometry(rect.height ?? 0, 'virtualAnchorFromRect() height', true);
+  const domRect = new DOMRect(x, y, width, height);
   return { getBoundingClientRect: () => domRect, contextElement: rect.contextElement };
 }
 
@@ -467,13 +529,20 @@ export function virtualAnchorFromRect(rect: {
  * Position `popup` relative to `anchor` with flip/shift, keeping it updated on scroll/resize.
  * Returns a cleanup function that stops updating. Re-calling `place()` on the same popup with
  * different options is the supported way to change them: each call re-establishes every write it
- * owns, so no run inherits the previous one's sizing.
+ * owns, so no run inherits the previous one's sizing. Throws `RangeError` before observers,
+ * callbacks, or style writes when an input rect or numeric option is non-finite, or when a rect
+ * dimension/padding is negative; signed finite `offset` and `skidding` remain supported.
  */
 export function place(
   anchor: Element | VirtualAnchor,
   popup: HTMLElement,
   opts: PlaceOptions = {},
 ): () => void {
+  // Reject hostile JS inputs before claiming placement ownership, touching inline styles, adding
+  // observers, or scheduling a callback. A valid virtual anchor can later become invalid, so each
+  // update repeats the rect preflight below and disposes without committing partial coordinates.
+  validatePlaceNumericOptions(opts);
+  validateAnchorBeforeSetup(anchor);
   // A placement computation may finish out of order after a visual-viewport or observer update,
   // and an older `place()` call can likewise still be settling while its replacement starts.
   // Style generations keep those computations from overwriting each other; placement/update
@@ -537,15 +606,25 @@ export function place(
         ? size({
             apply({ rects, elements }) {
               if (disposed) return;
+              const referenceWidth = finiteGeometry(
+                rects.reference.width,
+                'place() reference width',
+                true,
+              );
+              const referenceHeight = finiteGeometry(
+                rects.reference.height,
+                'place() reference height',
+                true,
+              );
               styleTransaction.set(
                 elements.floating,
                 'width',
-                sync === 'width' || sync === 'both' ? `${rects.reference.width}px` : '',
+                sync === 'width' || sync === 'both' ? `${referenceWidth}px` : '',
               );
               styleTransaction.set(
                 elements.floating,
                 'height',
-                sync === 'height' || sync === 'both' ? `${rects.reference.height}px` : '',
+                sync === 'height' || sync === 'both' ? `${referenceHeight}px` : '',
               );
             },
           })
@@ -579,8 +658,14 @@ export function place(
           // live element until every later geometry read has succeeded. Synced dimensions cannot
           // be staged because flip and shift must measure the resized box; those writes stay in
           // the rollback journal above.
-          stagedStyles.availableInline = `${Math.max(0, availableWidth)}px`;
-          stagedStyles.availableBlock = `${Math.max(0, availableHeight)}px`;
+          stagedStyles.availableInline = `${Math.max(
+            0,
+            finiteGeometry(availableWidth, 'place() available width'),
+          )}px`;
+          stagedStyles.availableBlock = `${Math.max(
+            0,
+            finiteGeometry(availableHeight, 'place() available height'),
+          )}px`;
         },
       }),
       // Runs last so it overwrites the shared measurement above, and only on the axes it names.
@@ -591,10 +676,16 @@ export function place(
             apply({ availableWidth, availableHeight }) {
               if (disposed) return;
               if (autoSize === 'horizontal' || autoSize === 'both') {
-                stagedStyles.availableInline = `${Math.max(0, availableWidth)}px`;
+                stagedStyles.availableInline = `${Math.max(
+                  0,
+                  finiteGeometry(availableWidth, 'place() auto-size available width'),
+                )}px`;
               }
               if (autoSize === 'vertical' || autoSize === 'both') {
-                stagedStyles.availableBlock = `${Math.max(0, availableHeight)}px`;
+                stagedStyles.availableBlock = `${Math.max(
+                  0,
+                  finiteGeometry(availableHeight, 'place() auto-size available height'),
+                )}px`;
               }
             },
           })
@@ -603,6 +694,12 @@ export function place(
 
   function update(): void {
     if (disposed) return;
+    try {
+      validatedClientRect(anchor.getBoundingClientRect(), 'place() anchor rect');
+    } catch {
+      dispose();
+      return;
+    }
     const updateRun = placementSyncOwnership.beginUpdate(placementRun);
     const styleTransaction = createPlacementStyleTransaction();
     const stagedStyles: StagedPlacementStyles = {};
@@ -620,9 +717,23 @@ export function place(
         }
         let bridgeQuad: HoverBridgeQuad | undefined;
         try {
+          finiteGeometry(x, 'place() resolved x');
+          finiteGeometry(y, 'place() resolved y');
+          if (middlewareData.arrow?.x !== undefined) {
+            finiteGeometry(middlewareData.arrow.x, 'place() resolved arrow x');
+          }
+          if (middlewareData.arrow?.y !== undefined) {
+            finiteGeometry(middlewareData.arrow.y, 'place() resolved arrow y');
+          }
           if (hoverBridge) {
-            const anchorRect = anchor.getBoundingClientRect();
-            const currentPopupRect = popup.getBoundingClientRect();
+            const anchorRect = validatedClientRect(
+              anchor.getBoundingClientRect(),
+              'place() anchor rect',
+            );
+            const currentPopupRect = validatedClientRect(
+              popup.getBoundingClientRect(),
+              'place() popup rect',
+            );
             const placedPopupRect = await popupRectAtPosition(
               anchor,
               popup,
@@ -710,7 +821,8 @@ export function place(
  * resulting double-invocation of `onUpdate` per tick (from ancestor-scroll listeners being
  * attached once per role) is harmless, since `getBoundingClientRect()` reads are idempotent.
  * Returns a cleanup function, same contract as `place()`. Calls `onUpdate` once synchronously
- * before returning so the first paint doesn't wait for a scroll/resize tick.
+ * before returning (through `autoUpdate()`'s own initial publication) so the first paint doesn't
+ * wait for a scroll/resize tick.
  */
 export function trackRect(target: HTMLElement, onUpdate: (rect: DOMRect) => void): () => void {
   const update = () => onUpdate(target.getBoundingClientRect());
@@ -719,7 +831,6 @@ export function trackRect(target: HTMLElement, onUpdate: (rect: DOMRect) => void
   const onVisualViewportChange = () => update();
   visualViewport?.addEventListener('resize', onVisualViewportChange);
   visualViewport?.addEventListener('scroll', onVisualViewportChange);
-  update();
   return () => {
     stopAutoUpdate();
     visualViewport?.removeEventListener('resize', onVisualViewportChange);

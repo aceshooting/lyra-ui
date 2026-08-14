@@ -1,313 +1,432 @@
 import { expect } from "@open-wc/testing";
 import {
   resolveTree,
+  readWidgetPointer,
+  WIDGET_MAX_NODES,
+  WIDGET_MAX_PROPS_PER_NODE,
+  WIDGET_MAX_WARNINGS,
   type ResolveContext,
   type WidgetNode,
 } from "./resolve.js";
-import type { WidgetTypeRegistry } from "./registry.js";
+import {
+  createWidgetTypeRegistry,
+  type WidgetTypeRegistry,
+} from "./registry.js";
 
 function ctx(
-  registry: WidgetTypeRegistry,
-  warnings: string[] = []
+  registry: WidgetTypeRegistry = createWidgetTypeRegistry(),
+  warnings: string[] = [],
+  bindingState: unknown = undefined
 ): ResolveContext {
-  return { registry, warned: new Set(), warn: (m) => warnings.push(m) };
+  return {
+    registry,
+    bindingState,
+    warned: new Set(),
+    warn: (message) => warnings.push(message),
+  };
 }
 
-describe("resolveTree (security-critical allowlist enforcement)", () => {
-  it("skips an entire node (and its subtree) whose type is not in the registry, with one dev warning", () => {
-    const registry: WidgetTypeRegistry = new Map();
+describe("resolveTree (bounded allowlist enforcement)", () => {
+  it("rejects mutable structural maps at an untyped registry boundary", () => {
+    const mutable = new Map([
+      ["card", { tag: "lr-card", interaction: "none" }],
+    ]);
+    expect(() => resolveTree({ type: "card" }, ctx(mutable as never))).to.throw(
+      TypeError
+    );
+  });
+
+  it("skips an unknown type and its subtree with one warning", () => {
     const warnings: string[] = [];
-    const node: WidgetNode = {
-      type: "evil-widget",
-      children: [{ type: "text" as never }],
-    };
-    const resolved = resolveTree(node, ctx(registry, warnings));
+    const resolved = resolveTree(
+      { type: "evil-widget", children: [{ type: "row" }] },
+      ctx(createWidgetTypeRegistry(), warnings)
+    );
     expect(resolved).to.be.null;
     expect(warnings).to.have.lengthOf(1);
     expect(warnings[0]).to.include("evil-widget");
   });
 
-  it("deduplicates repeated warnings for the same unknown type within one instance", () => {
-    const registry: WidgetTypeRegistry = new Map();
-    const warnings: string[] = [];
-    const c = ctx(registry, warnings);
-    resolveTree(
-      { type: "row", children: [{ type: "evil" }, { type: "evil" }] },
-      c
+  it("filters mapped props by primitive type and applies forced props last", () => {
+    const registry = createWidgetTypeRegistry([
+      [
+        "card",
+        {
+          tag: "lr-card",
+          interaction: "none",
+          props: { appearance: "string", disabled: "boolean" },
+          forcedProps: { disabled: true },
+        },
+      ],
+    ]);
+    const resolved = resolveTree(
+      {
+        type: "card",
+        props: { appearance: "outlined", disabled: false, href: "bad" },
+      },
+      ctx(registry)
     );
-    expect(warnings.filter((w) => w.includes("evil"))).to.have.lengthOf(1);
-  });
-
-  it("skips a prop not in the allowlist (never assigned), keeping allowlisted props", () => {
-    const registry: WidgetTypeRegistry = new Map([
-      [
-        "button",
-        {
-          tag: "lr-button",
-          props: { variant: "string" },
-          action: { event: "click" },
-        },
-      ],
-    ]);
-    const node: WidgetNode = {
-      type: "button",
-      props: { variant: "brand", onclick: "alert(1)" as never },
-    };
-    const resolved = resolveTree(node, ctx(registry));
-    expect(resolved).to.not.be.null;
-    expect(resolved!.kind === "mapped" && resolved!.props).to.deep.equal({
-      variant: "brand",
+    expect(resolved?.kind).to.equal("mapped");
+    expect(resolved?.props).to.deep.equal({
+      appearance: "outlined",
+      disabled: true,
     });
   });
 
-  it("skips a prop whose runtime type does not match the allowlisted primitive type", () => {
-    const registry: WidgetTypeRegistry = new Map([
-      ["stat", { tag: "lr-stat", props: { value: "string" } }],
+  it("drops unallowlisted named slots without dropping their nodes", () => {
+    const registry = createWidgetTypeRegistry([
+      ["card", { tag: "lr-card", interaction: "none", slots: ["header"] }],
     ]);
-    const node: WidgetNode = { type: "stat", props: { value: 42 } }; // number, allowlist says string
-    const resolved = resolveTree(node, ctx(registry));
-    expect(resolved!.kind === "mapped" && resolved!.props).to.deep.equal({});
+    const resolved = resolveTree(
+      {
+        type: "card",
+        children: [
+          { type: "text", slot: "header", children: ["ok"] },
+          { type: "text", slot: "footer", children: ["default"] },
+        ],
+      },
+      ctx(registry)
+    );
+    expect(resolved?.children[0]?.slot).to.equal("header");
+    expect(resolved?.children[1]?.slot).to.be.undefined;
   });
 
-  it("forcedProps always win over an allowlisted prop value from the node", () => {
-    const registry: WidgetTypeRegistry = new Map([
-      [
-        "markdown",
-        {
-          tag: "lr-markdown",
-          props: { content: "string" },
-          forcedProps: { sanitize: true },
-        },
-      ],
-    ]);
-    const node: WidgetNode = {
-      type: "markdown",
-      props: { content: "hi", sanitize: false as never },
-    };
-    const resolved = resolveTree(node, ctx(registry));
-    expect(resolved!.kind === "mapped" && resolved!.props).to.deep.equal({
-      content: "hi",
-      sanitize: true,
-    });
-  });
-
-  it("drops a child slot not in the parent type's allowlist -- child renders unslotted, not dropped", () => {
-    const registry: WidgetTypeRegistry = new Map([
-      ["card", { tag: "lr-card", slots: ["header"] }],
-      ["text", undefined as never], // never looked up -- built-in
-    ]);
-    const node: WidgetNode = {
-      type: "card",
-      children: [
-        { type: "text", slot: "header", children: ["ok"] },
-        { type: "text", slot: "footer", children: ["dropped-slot"] },
-      ],
-    };
-    const resolved = resolveTree(node, ctx(registry));
-    const children = resolved!.kind === "mapped" ? resolved!.children : [];
-    expect(children[0].slot).to.equal("header");
-    expect(children[1].slot).to.be.undefined; // 'footer' not allowlisted -> unslotted, still rendered
-  });
-
-  it("converts a string child into a text leaf node without allowlist checks", () => {
-    const registry: WidgetTypeRegistry = new Map([["row", undefined as never]]);
-    const node: WidgetNode = { type: "row", children: ["hello world"] };
-    const resolved = resolveTree(node, ctx(registry));
-    expect(resolved!.children[0]).to.deep.equal({
-      key: "0.0",
-      kind: "text",
-      text: "hello world",
-    });
-  });
-
-  it("never has an innerHTML/unsafeHTML code path -- structural guarantee via source inspection", async () => {
-    const response = await fetch(new URL("./resolve.ts", import.meta.url));
-    expect(response.ok).to.be.true;
-    const source = await response.text();
-    expect(source).to.not.include("innerHTML");
-    expect(source).to.not.include("unsafeHTML");
-  });
-
-  it("enforces the depth cap (32), skipping nodes beyond it with a warning", () => {
-    const registry: WidgetTypeRegistry = new Map([
-      ["row", {}],
-      ["col", {}],
-    ]);
-    let node: WidgetNode = { type: "row" };
-    for (let i = 0; i < 40; i++) node = { type: "row", children: [node] };
-    const warnings: string[] = [];
-    const resolved = resolveTree(node, ctx(registry, warnings));
-    expect(resolved).to.not.be.null;
-    expect(warnings.some((w) => w.includes("depth"))).to.be.true;
-  });
-
-  it("enforces the node-count cap (5000), skipping excess nodes with a warning", () => {
-    const registry: WidgetTypeRegistry = new Map([["row", {}]]);
-    const children: WidgetNode[] = [];
-    for (let i = 0; i < 5010; i++) children.push({ type: "row" });
-    const node: WidgetNode = { type: "row", children };
-    const warnings: string[] = [];
-    const resolved = resolveTree(node, ctx(registry, warnings));
-    expect(resolved!.children.length).to.be.at.most(5000);
-    expect(warnings.some((w) => w.includes("5000") || w.includes("node"))).to.be
-      .true;
-  });
-
-  it("resolves the built-in row/col types with their gap/align/justify enum props, never a tag", () => {
-    const node: WidgetNode = {
-      type: "row",
-      props: { gap: "m", align: "center", justify: "between" },
-    };
-    const resolved = resolveTree(node, ctx(new Map()));
-    expect(resolved!.kind).to.equal("builtin-row");
-    expect(resolved!.tag).to.be.undefined;
-    expect(resolved!.props).to.deep.equal({
+  it("resolves structural rows, columns, text and raw string children", () => {
+    const resolved = resolveTree(
+      {
+        type: "row",
+        props: { gap: "m", align: "center", justify: "between" },
+        children: ["hello", { type: "text", props: { value: "world" } }],
+      },
+      ctx()
+    );
+    expect(resolved?.kind).to.equal("builtin-row");
+    expect(resolved?.props).to.deep.equal({
       gap: "m",
       align: "center",
       justify: "between",
     });
+    expect(resolved?.children[0]).to.deep.include({
+      nodeKey: "path:0.0",
+      nodePath: "0.0",
+      kind: "text",
+      text: "hello",
+    });
+    expect(resolved?.children[1]?.kind).to.equal("builtin-text");
   });
 
-  it("rejects a row/col gap/align/justify value outside its enum", () => {
-    const node: WidgetNode = { type: "row", props: { gap: "huge" as never } };
-    const resolved = resolveTree(node, ctx(new Map()));
-    expect(resolved!.props).to.deep.equal({});
-  });
-
-  it("resolves the built-in text type as a childless-props plain node", () => {
-    const node: WidgetNode = { type: "text", children: ["hi"] };
-    const resolved = resolveTree(node, ctx(new Map()));
-    expect(resolved!.kind).to.equal("builtin-text");
-    expect(resolved!.props).to.deep.equal({});
-  });
-
-  it("returns null for a structurally unusable root (non-object)", () => {
-    expect(resolveTree(null, ctx(new Map()))).to.be.null;
-    expect(resolveTree(undefined, ctx(new Map()))).to.be.null;
-    expect(resolveTree("nope" as unknown as WidgetNode, ctx(new Map()))).to.be
-      .null;
-  });
-
-  it("fails closed for malformed nested node and children shapes instead of throwing", () => {
-    const malformedTrees: unknown[] = [
+  it("fails closed for malformed roots, nested shapes and cycles", () => {
+    const cyclic: WidgetNode = { type: "row" };
+    cyclic.children = [cyclic];
+    const malformed: unknown[] = [
+      null,
+      "bad",
+      { children: [] },
       { type: "row", children: [null] },
-      { type: "row", children: [{ children: [] }] },
       { type: "row", children: { type: "text" } },
-      { type: "row", children: [{ type: "text", children: [42] }] },
-      { type: "row", children: [{ type: "text", props: [] }] },
+      { type: "row", props: [] },
+      cyclic,
     ];
-
-    for (const tree of malformedTrees) {
-      const resolved = resolveTree(tree as WidgetNode, ctx(new Map()));
-      expect(resolved).to.be.null;
+    for (const input of malformed) {
+      expect(resolveTree(input as WidgetNode, ctx())).to.be.null;
     }
   });
 
-  it("wires actionId/payload only when the resolved type has a registered action", () => {
-    const registry: WidgetTypeRegistry = new Map([
-      ["button", { tag: "lr-button", action: { event: "click" } }],
-    ]);
-    const node: WidgetNode = {
-      type: "button",
-      actionId: "submit",
-      payload: { formId: "f1" },
+  it("bounds depth and node count", () => {
+    let deep: WidgetNode = { type: "row" };
+    for (let index = 0; index < 40; index++) {
+      deep = { type: "row", children: [deep] };
+    }
+    const depthWarnings: string[] = [];
+    expect(resolveTree(deep, ctx(createWidgetTypeRegistry(), depthWarnings))).to
+      .not.be.null;
+    expect(depthWarnings.some((warning) => warning.includes("depth"))).to.equal(
+      true
+    );
+
+    const nodeWarnings: string[] = [];
+    const wide: WidgetNode = {
+      type: "row",
+      children: Array.from({ length: WIDGET_MAX_NODES + 10 }, () => ({
+        type: "row",
+      })),
     };
-    const resolved = resolveTree(node, ctx(registry));
-    expect(resolved!.actionEvent).to.equal("click");
-    expect(resolved!.actionId).to.equal("submit");
-    expect(resolved!.payload).to.deep.equal({ formId: "f1" });
+    const resolved = resolveTree(
+      wide,
+      ctx(createWidgetTypeRegistry(), nodeWarnings)
+    );
+    expect(resolved?.children.length).to.equal(WIDGET_MAX_NODES - 1);
+    expect(
+      nodeWarnings.some((warning) => warning.includes("node cap"))
+    ).to.equal(true);
   });
 
-  it("drops interactive descendants from an actionable mapped content model", () => {
-    const registry: WidgetTypeRegistry = new Map([
-      ["button", { tag: "lr-button", action: { event: "click" } }],
+  it("never dereferences a sibling outside the one shared node budget", () => {
+    const children = Array.from(
+      { length: WIDGET_MAX_NODES + 2 },
+      () => ({ type: "row" } as WidgetNode)
+    );
+    Object.defineProperty(children, WIDGET_MAX_NODES - 1, {
+      configurable: true,
+      get(): never {
+        throw new Error("out-of-budget sibling was touched");
+      },
+    });
+    const resolved = resolveTree({ type: "row", children }, ctx());
+    expect(resolved?.children.length).to.equal(WIDGET_MAX_NODES - 1);
+  });
+
+  it("caps authored props before reading an out-of-budget getter", () => {
+    const props: Record<string, unknown> = {};
+    for (let index = 0; index < WIDGET_MAX_PROPS_PER_NODE; index++) {
+      props[`disallowed${index}`] = index;
+    }
+    Object.defineProperty(props, `disallowed${WIDGET_MAX_PROPS_PER_NODE}`, {
+      enumerable: true,
+      get(): never {
+        throw new Error("out-of-budget prop was touched");
+      },
+    });
+    const warnings: string[] = [];
+    const registry = createWidgetTypeRegistry([
+      ["card", { tag: "lr-card", interaction: "none" }],
+    ]);
+    const resolved = resolveTree(
+      { type: "card", props },
+      ctx(registry, warnings)
+    );
+    expect(resolved?.props).to.deep.equal({});
+    expect(warnings.some((warning) => warning.includes("prop cap"))).to.equal(
+      true
+    );
+  });
+
+  it("caps retained/emitted warnings and adds one aggregate suppression diagnostic", () => {
+    const warnings: string[] = [];
+    const context = ctx(createWidgetTypeRegistry(), warnings);
+    resolveTree(
+      {
+        type: "row",
+        children: Array.from(
+          { length: WIDGET_MAX_WARNINGS * 3 },
+          (_, index) => ({
+            type: `unknown-${index}`,
+          })
+        ),
+      },
+      context
+    );
+    expect(context.warned.size).to.equal(WIDGET_MAX_WARNINGS + 1);
+    expect(warnings).to.have.lengthOf(WIDGET_MAX_WARNINGS + 1);
+    expect(warnings.at(-1)).to.include("suppressed further diagnostics");
+  });
+
+  it("propagates admitted throwing access so the host can emit one normalized render error", () => {
+    const root = {
+      get type(): never {
+        throw "unreadable type";
+      },
+    };
+    expect(() => resolveTree(root as WidgetNode, ctx())).to.throw();
+  });
+
+  it("requires unique, nonempty authored ids", () => {
+    const warnings: string[] = [];
+    const resolved = resolveTree(
+      {
+        type: "row",
+        children: [
+          { type: "text", id: "duplicate", props: { value: "first" } },
+          { type: "text", id: "duplicate", props: { value: "second" } },
+        ],
+      },
+      ctx(createWidgetTypeRegistry(), warnings)
+    );
+    expect(resolved).to.be.null;
+    expect(warnings.some((warning) => warning.includes("duplicate"))).to.equal(
+      true
+    );
+    expect(resolveTree({ type: "text", id: "" } as WidgetNode, ctx())).to.be
+      .null;
+  });
+
+  it("publishes deterministic node ids, keys and paths", () => {
+    const resolved = resolveTree(
+      {
+        type: "row",
+        children: [
+          { type: "text", id: "stable", props: { value: "first" } },
+          { type: "text", props: { value: "second" } },
+        ],
+      },
+      ctx()
+    );
+    expect(resolved?.children[0]).to.deep.include({
+      nodeId: "stable",
+      nodeKey: "id:stable",
+      nodePath: "0.0",
+    });
+    expect(resolved?.children[1]).to.deep.include({
+      nodeKey: "path:0.1",
+      nodePath: "0.1",
+    });
+  });
+
+  it("requires stable ids for bound and actionable nodes", () => {
+    const registry = createWidgetTypeRegistry([
+      [
+        "button",
+        {
+          tag: "lr-button",
+          interaction: "control",
+          action: { event: "click" },
+        },
+      ],
+      [
+        "field",
+        {
+          tag: "lr-input",
+          props: { value: "string" },
+          interaction: "control",
+          bindings: { value: { event: "lr-input" } },
+        },
+      ],
+    ]);
+    expect(() =>
+      resolveTree({ type: "button", actionId: "submit" }, ctx(registry))
+    ).to.throw(TypeError);
+    expect(() =>
+      resolveTree(
+        { type: "field", props: { value: { $bind: "/name" } } },
+        ctx(registry, [], { name: "Ada" })
+      )
+    ).to.throw(TypeError);
+    expect(() =>
+      resolveTree(
+        { type: "text", props: { value: { $bind: "/name" } } },
+        ctx(createWidgetTypeRegistry(), [], { name: "Ada" })
+      )
+    ).to.throw(TypeError);
+  });
+
+  it("uses explicit interaction metadata to reject every nested control", () => {
+    const registry = createWidgetTypeRegistry([
+      [
+        "outer",
+        {
+          tag: "lr-button",
+          interaction: "control",
+          action: { event: "click" },
+        },
+      ],
+      [
+        "bound-input",
+        {
+          tag: "lr-input",
+          props: { value: "string" },
+          interaction: "control",
+          bindings: { value: { event: "lr-input" } },
+        },
+      ],
     ]);
     const warnings: string[] = [];
     const resolved = resolveTree(
       {
-        type: "button",
-        actionId: "outer",
+        type: "outer",
+        id: "outer",
+        actionId: "save",
         children: [
-          "Outer label",
+          "Save",
           {
-            type: "button",
-            actionId: "inner",
-            children: ["Invalid nested action"],
+            type: "bound-input",
+            id: "name",
+            props: { value: { $bind: "/name", fallback: "" } },
           },
         ],
       },
-      ctx(registry, warnings)
+      ctx(registry, warnings, { name: "Ada" })
     );
-    expect(resolved!.children).to.have.lengthOf(1);
-    expect(resolved!.children[0].kind).to.equal("text");
+    expect(resolved?.children).to.have.lengthOf(1);
+    expect(resolved?.children[0]?.kind).to.equal("text");
     expect(
-      warnings.some((warning) => warning.includes("interactive descendant"))
-    ).to.be.true;
+      warnings.some((warning) => warning.includes("control descendant"))
+    ).to.equal(true);
   });
 
-  it("keys a node by id when present, else by structural path", () => {
-    const registry: WidgetTypeRegistry = new Map([["row", {}]]);
-    const node: WidgetNode = {
-      type: "row",
-      children: [{ type: "row", id: "stable-1" }, { type: "row" }],
-    };
-    const resolved = resolveTree(node, ctx(registry));
-    expect(resolved!.children[0].key).to.equal("stable-1");
-    expect(resolved!.children[1].key).to.equal("0.1");
-  });
-
-  // `readPointer` (private to resolve.ts, exercised only through a $bind prop on the built-in
-  // `text` type) already guards __proto__/prototype/constructor segments -- these cases prove
-  // that guard, they don't add one.
-  describe("$bind path resolution (readPointer prototype-pollution guard)", () => {
-    it("blocks a top-level __proto__ segment, falling back instead of resolving Object.prototype", () => {
-      const node: WidgetNode = {
-        type: "text",
-        props: { value: { $bind: "/__proto__/polluted", fallback: "safe" } },
-      };
-      const resolved = resolveTree(node, { ...ctx(new Map()), state: {} });
-      expect(resolved!.props).to.deep.equal({ value: "safe" });
-    });
-
-    it('blocks a "constructor" segment, refusing to walk toward Function via the constructor chain', () => {
-      const node: WidgetNode = {
-        type: "text",
-        props: { value: { $bind: "/constructor/prototype", fallback: "safe" } },
-      };
-      const resolved = resolveTree(node, { ...ctx(new Map()), state: {} });
-      expect(resolved!.props).to.deep.equal({ value: "safe" });
-    });
-
-    it('blocks a "prototype" segment nested mid-path, not just at the root', () => {
-      const node: WidgetNode = {
-        type: "text",
-        props: {
-          value: { $bind: "/nested/prototype/polluted", fallback: "safe" },
+  it("wires action metadata only when actionId is authored", () => {
+    const registry = createWidgetTypeRegistry([
+      [
+        "button",
+        {
+          tag: "lr-button",
+          interaction: "control",
+          action: { event: "click" },
         },
-      };
-      const resolved = resolveTree(node, {
-        ...ctx(new Map()),
-        state: { nested: {} },
-      });
-      expect(resolved!.props).to.deep.equal({ value: "safe" });
+      ],
+    ]);
+    const active = resolveTree(
+      { type: "button", id: "submit-button", actionId: "submit", payload: 3 },
+      ctx(registry)
+    );
+    const inactive = resolveTree(
+      { type: "button", id: "plain-button" },
+      ctx(registry)
+    );
+    expect(active).to.deep.include({
+      actionEvent: "click",
+      actionId: "submit",
+      payload: 3,
+      interactive: true,
+    });
+    expect(inactive?.actionEvent).to.be.undefined;
+    expect(inactive?.interactive).to.equal(true);
+  });
+
+  describe("canonical JSON Pointer binding reads", () => {
+    it("accepts only canonical decimal spellings for array indices", () => {
+      const state = ["zero", "one"];
+      expect(readWidgetPointer(state, "/0")).to.equal("zero");
+      expect(readWidgetPointer(state, "/1")).to.equal("one");
+      for (const pointer of ["/", "/00", "/+0", "/0x0", "/0.0", "/-", "/-1"]) {
+        expect(readWidgetPointer(state, pointer), pointer).to.be.undefined;
+      }
     });
 
-    it("does not resolve a value at all (undefined, not just blocked) when no fallback is declared", () => {
-      const node: WidgetNode = {
-        type: "text",
-        props: { value: { $bind: "/__proto__/polluted" } },
-      };
-      const resolved = resolveTree(node, { ...ctx(new Map()), state: {} });
-      expect(resolved!.props).to.deep.equal({});
+    it("retains standard escape decoding and rejects malformed escapes", () => {
+      const state = { "a/b": { "m~n": "ok" }, "": "empty-key" };
+      expect(readWidgetPointer(state, "/a~1b/m~0n")).to.equal("ok");
+      expect(readWidgetPointer(state, "/")).to.equal("empty-key");
+      expect(readWidgetPointer(state, "/a~2b")).to.be.undefined;
     });
 
-    it("never mutates Object.prototype as a side effect of resolving a malicious $bind path", () => {
-      const node: WidgetNode = {
-        type: "text",
-        props: { value: { $bind: "/__proto__/polluted", fallback: "safe" } },
-      };
-      resolveTree(node, { ...ctx(new Map()), state: {} });
+    it("blocks prototype-chain segments without mutating Object.prototype", () => {
+      expect(readWidgetPointer({}, "/__proto__/polluted")).to.be.undefined;
+      expect(readWidgetPointer({ nested: {} }, "/nested/constructor/prototype"))
+        .to.be.undefined;
       expect(({} as Record<string, unknown>)["polluted"]).to.be.undefined;
     });
+
+    it("preserves explicit null rather than taking a binding fallback", () => {
+      const resolved = resolveTree(
+        {
+          type: "text",
+          id: "status",
+          props: { value: { $bind: "/status", fallback: "fallback" } },
+        },
+        ctx(createWidgetTypeRegistry(), [], { status: null })
+      );
+      expect(resolved?.props).to.deep.equal({});
+    });
+  });
+
+  it("contains no raw HTML or browser-DOM creation path", async () => {
+    const response = await fetch(new URL("./resolve.ts", import.meta.url));
+    const rendererResponse = await fetch(
+      new URL("./widget-renderer.class.ts", import.meta.url)
+    );
+    expect(response.ok && rendererResponse.ok).to.equal(true);
+    const source = `${await response.text()}\n${await rendererResponse.text()}`;
+    expect(source).to.not.include("innerHTML");
+    expect(source).to.not.include("document.createElement");
   });
 });

@@ -1,10 +1,10 @@
 ---
-"@aceshooting/lyra-ui": minor
+"@aceshooting/lyra-ui": major
 ---
 
-Add cross-component accessibility, correctness, localization, theming, performance, and API
-capabilities. Every change is additive: no public member was removed or renamed, no default value
-or attribute polarity changed.
+Prepare the 9.0 public contract while adding cross-component accessibility, correctness,
+localization, theming, performance, and API capabilities. This release deliberately removes and
+renames superseded original-component APIs; the migration reference carries the exact replacements.
 
 Accessibility and announcements:
 
@@ -19,7 +19,7 @@ Accessibility and announcements:
 - name an icon-only toggleable `lr-chip`'s real control, and give `lr-phone-input` an accessible-name
   fallback;
 - carry a persistent region landmark on `lr-dataset-viewer` in every fetch state;
-- announce timeline and step position on `lr-video` and `lr-playback` through localized
+- announce timeline and step position on `lr-video` and `lr-sequence-playback` through localized
   `aria-valuetext`;
 - floor the `lr-flow-minimap` viewport rect and `lr-data-grid` hit targets to a real pointer size.
 

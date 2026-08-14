@@ -21,11 +21,28 @@ const strings: LyraLocaleStrings = {
   terminalLabel: 'Terminalausgabe',
   terminalDownload: 'Protokoll herunterladen',
   terminalHighlightLine: 'Zeile {line}',
-  schemaViewerIssueLimit: 'Es werden nur die ersten {count} Validierungsprobleme angezeigt.',
-  toolParamMissingProperty: 'Für den erforderlichen Schlüssel „{key}“ gibt es keine passende Schema-Eigenschaft.',
+  schemaViewerIssueLimit:
+    'Es werden nur die ersten {count} Validierungsprobleme angezeigt.',
+  toolParamMissingProperty:
+    'Für den erforderlichen Schlüssel „{key}“ gibt es keine passende Schema-Eigenschaft.',
+  toolParamBooleanUnset: 'Nicht festgelegt',
+  toolParamBooleanTrue: 'Wahr',
+  toolParamBooleanFalse: 'Falsch',
+  toolParamSchemaLimit:
+    'Schemata für Werkzeugparameter unterstützen höchstens {fields} Felder und {options} Auswahlmöglichkeiten pro Feld.',
+  testResultsLimit: 'Nur die ersten {count} Testergebnisse werden angezeigt.',
+  toolTimelineLimit: 'Es werden höchstens {count} Tool-Aufrufe angezeigt.',
+  toolSelectLimit: 'Nur die ersten {count} Tools werden angezeigt.',
   sequenceStripEmpty: 'Keine Elemente',
   sequenceStripCategoryCount: '{label}: {count}',
   noColumns: 'Keine Spalten konfiguriert',
+  dataGridColumnMenu: 'Optionen für {label}',
+  dataGridPinStart: '{label} am Anfang anheften',
+  dataGridPinEnd: '{label} am Ende anheften',
+  dataGridUnpin: 'Anheftung von {label} lösen',
+  dataGridRowsPerPage: 'Zeilen pro Seite',
+  dataGridTreeLimitReached:
+    'Weitere verschachtelte Zeilen wurden ausgelassen, da das Baumlimit des Datenrasters erreicht wurde.',
   loadMore: 'Mehr laden',
   viewerSearchMatchCount: {
     one: '{count} Treffer',
@@ -135,6 +152,9 @@ const strings: LyraLocaleStrings = {
   chartPrimaryAxis: 'Primärachse',
   chartSecondaryAxis: 'Sekundärachse',
   chartPointLabel: 'Punkt {n}',
+  chartPointCoordinates: 'x: {x}, y: {y}',
+  chartBubblePointCoordinates: 'x: {x}, y: {y}, Radius: {radius}',
+  chartLabeledPoint: '{label} – {coordinates}',
   resetZoom: 'Zoom zurücksetzen',
   chatSending: 'Wird gesendet…',
   chatResponding: 'Antwortet…',
@@ -171,7 +191,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} Schlüssel',
     other: '{count} Schlüssel',
   },
-  jsonViewerLimit: 'Es werden nur die ersten {count} JSON-Knoten und {depth} Verschachtelungsebenen angezeigt und durchsucht.',
+  jsonViewerLimit:
+    'Es werden nur die ersten {count} JSON-Knoten und {depth} Verschachtelungsebenen angezeigt und durchsucht.',
   untitledSource: 'Unbenannte Quelle',
   sourcePageSuffix: '{base} — S. {page}',
   toolCall: 'Tool-Aufruf',
@@ -186,8 +207,10 @@ const strings: LyraLocaleStrings = {
   wordCloudWords: 'Wörtern',
   promptStudioVariableName: 'Name der Variablen {index}',
   promptStudioVariableValue: 'Wert der Variablen {index}',
-  schemaViewerLimit: 'Es werden nur die ersten {count} Schema-Knoten angezeigt.',
-  subagentPanelLimit: 'Es werden nur die ersten {count} Subagenten-Läufe angezeigt.',
+  schemaViewerLimit:
+    'Es werden nur die ersten {count} Schema-Knoten angezeigt.',
+  subagentPanelLimit:
+    'Es werden nur die ersten {count} Subagenten-Läufe angezeigt.',
   pollPause: 'Pausieren',
   pollResume: 'Fortsetzen',
   pollInactive: 'Inaktiv',
@@ -205,7 +228,8 @@ const strings: LyraLocaleStrings = {
   attachmentMenuFiles: 'Dateien hochladen',
   attachmentMenuImage: 'Foto hochladen',
   attachmentMenuCamera: 'Foto aufnehmen',
-  checkboxRequired: 'Bitte aktivieren Sie dieses Kontrollkästchen, um fortzufahren.',
+  checkboxRequired:
+    'Bitte aktivieren Sie dieses Kontrollkästchen, um fortzufahren.',
   checkboxGroupRequired: 'Bitte wählen Sie mindestens eine Option aus.',
   tokenInputRequired: 'Bitte geben Sie mindestens einen Wert ein.',
   tokenInputEditWithContext: '{label} bearbeiten',
@@ -236,7 +260,8 @@ const strings: LyraLocaleStrings = {
   documentPreviewAlt: 'Dokumentvorschau',
   documentPreviewUrlNotAllowed: 'Die Dokument-URL ist nicht zulässig.',
   documentPreviewFailedToLoad: 'Das Dokument konnte nicht geladen werden.',
-  documentPreviewResourceTooLarge: 'Dieses Dokument ist zu groß für eine Vorschau.',
+  documentPreviewResourceTooLarge:
+    'Dieses Dokument ist zu groß für eine Vorschau.',
   documentPreviewGenericError: 'Es ist ein Fehler aufgetreten.',
   ebookViewerLoadError: 'Das E-Book konnte nicht geladen werden.',
   ebookViewerRegionLabel: 'E-Book-Inhalt',
@@ -255,7 +280,8 @@ const strings: LyraLocaleStrings = {
   fileTypeVideo: 'Video',
   fileTypeWithSize: '{label} ({size})',
   pptxViewerLabel: 'Präsentationsbetrachter',
-  pptxViewerFidelityNotice: 'Einige Folieninhalte werden möglicherweise nicht angezeigt.',
+  pptxViewerFidelityNotice:
+    'Einige Folieninhalte werden möglicherweise nicht angezeigt.',
   pptxViewerRenderError: 'Diese Präsentation konnte nicht dargestellt werden.',
   pptxViewerPreviousSlide: 'Vorherige Folie',
   pptxViewerNextSlide: 'Nächste Folie',
@@ -263,12 +289,15 @@ const strings: LyraLocaleStrings = {
   documentViewerLabel: 'Dokumentbetrachter',
   attachmentPreviewName: 'Vorschau von {name}',
   attachmentPreviewFile: 'Dateivorschau',
-  documentViewerMissingSanitizer: 'Für diesen Betrachter muss das optionale Paket „dompurify“ installiert sein, damit sicher gerendert werden kann.',
+  documentViewerMissingSanitizer:
+    'Für diesen Betrachter muss das optionale Paket „dompurify“ installiert sein, damit sicher gerendert werden kann.',
   docxViewerLabel: 'Word-Dokument',
-  docxViewerMissingConverter: 'Für diesen Betrachter muss das optionale Paket „mammoth“ installiert sein, um dieses Dokument zu konvertieren.',
+  docxViewerMissingConverter:
+    'Für diesen Betrachter muss das optionale Paket „mammoth“ installiert sein, um dieses Dokument zu konvertieren.',
   svgViewerLabel: 'SVG-Bild',
   htmlViewerLabel: 'HTML-Dokument',
-  datasetViewerMissingParser: 'Für diesen Betrachter muss das optionale Paket „papaparse“ installiert sein, um diese Datei zu parsen.',
+  datasetViewerMissingParser:
+    'Für diesen Betrachter muss das optionale Paket „papaparse“ installiert sein, um diese Datei zu parsen.',
   datasetViewerEmpty: 'Dieser Datensatz enthält keine Zeilen.',
   datasetViewerCaption: '{count} Zeilen',
   datasetViewerCaptionNamed: '{name}: {count} Zeilen',
@@ -280,7 +309,8 @@ const strings: LyraLocaleStrings = {
   contactViewerAddressLabel: 'Adresse',
   contactViewerOrganization: 'Organisation: {value}',
   contactViewerTypedValue: '{value} ({types})',
-  contactViewerAddressFormat: '{poBox}\n{extendedAddress}\n{streetAddress}\n{postalCode} {locality} {region}\n{country}',
+  contactViewerAddressFormat:
+    '{poBox}\n{extendedAddress}\n{streetAddress}\n{postalCode} {locality} {region}\n{country}',
   contactViewerTypeHome: 'Privat',
   contactViewerTypeWork: 'Geschäftlich',
   contactViewerTypeCell: 'Mobil',
@@ -305,16 +335,21 @@ const strings: LyraLocaleStrings = {
   chartTrendIncreasing: 'steigend',
   chartTrendDecreasing: 'fallend',
   chartTrendFlat: 'gleichbleibend',
-  chartSummary: '{label}: {count} Werte, Bereich {min} bis {max}, Trend {trend}',
+  chartSummary:
+    '{label}: {count} Werte, Bereich {min} bis {max}, Trend {trend}',
   chartSeriesNoData: '{label}: keine Daten',
   chartSummaryWithData: '{type}-Diagramm. {summaries}.',
   chartSummaryEmpty: '{type}-Diagramm ohne Daten.',
   chartSummarySeparator: '. ',
   chartData: 'Diagrammdaten',
-  chartDataSampled: 'Die generierte Datentabelle zeigt eine Stichprobe von bis zu 1.000 Datensätzen. Stellen Sie eine eigene Datentabelle bereit, um auf alle Diagrammdaten zuzugreifen.',
-  chartZoomUnavailable: 'Die Zoomfunktion ist nicht verfügbar, aber das Diagramm bleibt verfügbar.',
-  chartDataLabelsUnavailable: 'Datenbeschriftungen sind nicht verfügbar, aber das Diagramm bleibt verfügbar.',
-  chartStackTotalsUnavailable: 'Stapelsummen sind nicht verfügbar, aber das Diagramm bleibt verfügbar.',
+  chartDataSampled:
+    'Die generierte Datentabelle zeigt eine Stichprobe von bis zu 1.000 Datensätzen. Stellen Sie eine eigene Datentabelle bereit, um auf alle Diagrammdaten zuzugreifen.',
+  chartZoomUnavailable:
+    'Die Zoomfunktion ist nicht verfügbar, aber das Diagramm bleibt verfügbar.',
+  chartDataLabelsUnavailable:
+    'Datenbeschriftungen sind nicht verfügbar, aber das Diagramm bleibt verfügbar.',
+  chartStackTotalsUnavailable:
+    'Stapelsummen sind nicht verfügbar, aber das Diagramm bleibt verfügbar.',
   chart: 'Diagramm',
   chartTypeLine: 'Linien',
   chartTypeBar: 'Balken',
@@ -324,7 +359,8 @@ const strings: LyraLocaleStrings = {
   chartTypeRadar: 'Radar',
   chartTypePolarArea: 'Polarflächen',
   chartTypeBubble: 'Blasen',
-  boxPlotSeriesSummary: '{label}: {count} Verteilungen, Medianbereich {min} bis {max}, Median-Trend {trend}',
+  boxPlotSeriesSummary:
+    '{label}: {count} Verteilungen, Medianbereich {min} bis {max}, Median-Trend {trend}',
   boxPlotSummaryWithData: 'Boxplot. {summaries}.',
   boxPlotSummaryEmpty: 'Boxplot ohne Daten.',
   boxPlotData: 'Boxplot-Daten',
@@ -372,8 +408,10 @@ const strings: LyraLocaleStrings = {
   timeInputInvalid: 'Bitte geben Sie eine vollständige Uhrzeit ein.',
   timeInputMinMessage: 'Die Uhrzeit muss {min} oder später sein.',
   timeInputMaxMessage: 'Die Uhrzeit muss {max} oder früher sein.',
-  timeInputRangeMessage: 'Die Uhrzeit muss über Mitternacht zwischen {min} und {max} liegen.',
-  timeInputStepMessage: 'Bitte geben Sie eine Uhrzeit im erforderlichen Intervall ein.',
+  timeInputRangeMessage:
+    'Die Uhrzeit muss über Mitternacht zwischen {min} und {max} liegen.',
+  timeInputStepMessage:
+    'Bitte geben Sie eine Uhrzeit im erforderlichen Intervall ein.',
   documentPreviewEmpty: '{type} nicht vorhanden.',
   convertingDocument: 'Dokument wird konvertiert…',
   documentPreviewNotAvailable: 'Für {label} ist keine Vorschau verfügbar.',
@@ -382,11 +420,11 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeImage: 'Bild',
   documentPreviewTypeEmail: 'E-Mail',
   documentPreviewTypeCalendar: 'Kalender',
-  archiveViewerUnavailable: 'Die Archivvorschau ist nicht verfügbar.',
   archiveViewerEmpty: 'Dieses Archiv ist leer.',
   archiveViewerFolder: 'Ordner',
   archiveViewerFile: 'Datei',
-  spreadsheetViewerUnavailable: 'Die Vorschau der Tabellenkalkulation ist nicht verfügbar.',
+  spreadsheetViewerUnavailable:
+    'Die Vorschau der Tabellenkalkulation ist nicht verfügbar.',
   csvViewerUnavailable: 'Die CSV-Vorschau ist nicht verfügbar.',
   csvViewerLabel: 'CSV-Dokument',
   spreadsheetViewerLabel: 'Tabellenkalkulation',
@@ -405,11 +443,15 @@ const strings: LyraLocaleStrings = {
   fileInputFolderRejected: 'Ordner werden hier nicht akzeptiert.',
   fileInputRejectedType: '{filename}: Dieser Dateityp wird nicht akzeptiert.',
   fileInputRejectedSize: '{filename}: Diese Datei ist zu groß.',
-  fileInputRejectedCount: '{filename}: Es kann jeweils nur eine Datei ausgewählt werden.',
+  fileInputRejectedCount:
+    '{filename}: Es kann jeweils nur eine Datei ausgewählt werden.',
+  fileInputRejectedRead: '{filename}: Die Datei konnte nicht gelesen werden.',
+  fileInputRejectedLimit: '{filename}: Der Ordner enthält zu viele Einträge.',
   elapsedMinutesSecondsTemplate: '{minutes} min {seconds} s',
   graphNode: 'Knoten {label}',
   graphLink: 'Verbindung von {source} zu {target}',
-  graphDiagram: 'Knoten-Kanten-Diagramm mit {nodeCount} Knoten und {linkCount} Verbindungen',
+  graphDiagram:
+    'Knoten-Kanten-Diagramm mit {nodeCount} Knoten und {linkCount} Verbindungen',
   graphTypedNode: '{label} ({type})',
   graphExpandableItem: '{item}, ausklappbar',
   graphNodeFocused: 'Zentriert auf {label}',
@@ -418,13 +460,19 @@ const strings: LyraLocaleStrings = {
   graphCommunity: 'Community {label}, {count} Knoten',
   heatmapValueLabel: 'Wert',
   heatmapMatrixCellLabel: 'Zeile {row}, Spalte {col}: {value}',
-  heatmapCalendarLabel: 'Kalender-Heatmap über {days} Tage, {label}-Bereich {range}',
-  heatmapMatrixLabel: 'Heatmap mit {rows} × {cols} Zellen, {label}-Bereich {range}',
+  heatmapCalendarLabel:
+    'Kalender-Heatmap über {days} Tage, {label}-Bereich {range}',
+  heatmapMatrixLabel:
+    'Heatmap mit {rows} × {cols} Zellen, {label}-Bereich {range}',
   heatmapCalendarCellLabel: '{date}: {value}',
   heatmapNoDataValue: 'keine Daten',
   heatmapDefaultRowLabel: 'Zeile {n}',
   heatmapDefaultColLabel: 'Spalte {n}',
   heatmapSelectedCellLabel: 'Ausgewählt: {cell}.',
+  heatmapProjectionLimit:
+    'Nur die ersten {count} Heatmap-Zellen werden angezeigt.',
+  heatmapDecorationLimit:
+    'Nur die ersten {count} Heatmap-Farben, Legendenstufen und Anmerkungen werden angezeigt.',
   inputLabel: 'Text',
   showPassword: 'Passwort anzeigen',
   hidePassword: 'Passwort ausblenden',
@@ -609,7 +657,8 @@ const strings: LyraLocaleStrings = {
   fieldMustBeOneOf: 'Muss einer der folgenden Werte sein: {values}.',
   fieldMustEqual: 'Muss gleich {value} sein.',
   schemaMustBeObject: 'Das Schema muss ein Objekt beschreiben.',
-  schemaPropertiesMustBeFlat: 'Die Schema-Eigenschaften müssen ein flaches Objekt sein.',
+  schemaPropertiesMustBeFlat:
+    'Die Schema-Eigenschaften müssen ein flaches Objekt sein.',
   valueMustBeSerializable: 'Der Wert muss JSON-serialisierbar sein.',
   valueInvalid: 'Der Wert ist ungültig.',
   phoneInputLabel: 'Telefon',
@@ -628,7 +677,8 @@ const strings: LyraLocaleStrings = {
   },
   copyFailed: 'Kopieren fehlgeschlagen',
   colorPickerSaturationBrightness: 'Sättigung und Helligkeit',
-  colorPickerSaturationBrightnessValue: 'Sättigung {saturation} %, Helligkeit {brightness} %',
+  colorPickerSaturationBrightnessValue:
+    'Sättigung {saturation} %, Helligkeit {brightness} %',
   colorPickerHue: 'Farbton',
   colorPickerHueValue: '{hue} Grad',
   colorPickerOpacity: 'Deckkraft',
@@ -642,7 +692,8 @@ const strings: LyraLocaleStrings = {
   selectSelectedOverflow: '+{n} weitere',
   iconLoadError: 'Das Symbol konnte nicht geladen werden.',
   iconTooLarge: 'Die Symboldatei ist zu groß für die Anzeige.',
-  iconSanitizerMissing: 'Für dieses Symbol muss das optionale Paket „dompurify“ installiert sein, damit sicher gerendert werden kann.',
+  iconSanitizerMissing:
+    'Für dieses Symbol muss das optionale Paket „dompurify“ installiert sein, damit sicher gerendert werden kann.',
   paginationFirstPage: 'Erste Seite',
   paginationLastPage: 'Letzte Seite',
   accessibleLabelSeparator: ' — ',
@@ -695,7 +746,8 @@ const strings: LyraLocaleStrings = {
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Umschalt',
   emailViewerLabel: 'E-Mail-Betrachter',
-  emailViewerMissingParser: 'Für diesen Betrachter muss das optionale Paket „postal-mime“ installiert sein, um diese Nachricht zu parsen.',
+  emailViewerMissingParser:
+    'Für diesen Betrachter muss das optionale Paket „postal-mime“ installiert sein, um diese Nachricht zu parsen.',
   emailViewerFrom: 'Von',
   emailViewerTo: 'An',
   emailViewerSubject: 'Betreff',
@@ -707,17 +759,30 @@ const strings: LyraLocaleStrings = {
   emailViewerHideQuoted: 'Zitierten Text ausblenden',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Kalenderbetrachter',
-  calendarViewerMissingParser: 'Für diesen Betrachter muss das optionale Paket „ical.js“ installiert sein, um diesen Kalender zu parsen.',
+  calendarViewerMissingParser:
+    'Für diesen Betrachter muss das optionale Paket „ical.js“ installiert sein, um diesen Kalender zu parsen.',
   calendarViewerEmpty: 'Dieser Kalender enthält keine Termine.',
   calendarViewerNoSummary: '(kein Titel)',
   pdfViewerLabel: 'PDF-Dokument',
-  pdfViewerMissingLibrary: 'Für diesen Betrachter muss das optionale Paket „pdfjs-dist“ installiert sein, um PDF-Dateien darzustellen.',
-  qrCodeMissingLibrary: 'Für diese Komponente muss das optionale Paket „qrcode“ installiert sein, um QR-Codes zu erzeugen.',
-  qrCodeGenerationFailed: 'Dieser Wert konnte nicht als QR-Code kodiert werden.',
-  mapMissingLibrary: 'Für diese Komponente muss das optionale Paket „maplibre-gl“ installiert sein, um die Karte darzustellen.',
-  chartMissingLibrary: 'Für diese Komponente muss das optionale Paket „chart.js“ installiert sein, um Diagramme darzustellen.',
-  boxPlotMissingLibrary: 'Für diese Komponente muss das optionale Boxplot-Diagrammpaket installiert sein, um Boxplots darzustellen.',
-  graphMissingLibrary: 'Für diese Komponente muss das optionale Paket „d3“ installiert sein, um den Graphen darzustellen.',
+  pdfViewerMissingLibrary:
+    'Für diesen Betrachter muss das optionale Paket „pdfjs-dist“ installiert sein, um PDF-Dateien darzustellen.',
+  qrCodeMissingLibrary:
+    'Für diese Komponente muss das optionale Paket „qrcode“ installiert sein, um QR-Codes zu erzeugen.',
+  qrCodeGenerationFailed:
+    'Dieser Wert konnte nicht als QR-Code kodiert werden.',
+  mapMissingLibrary:
+    'Für diese Komponente muss das optionale Paket „maplibre-gl“ installiert sein, um die Karte darzustellen.',
+  mapStyleRequired: 'Geben Sie einen Kartenstil an, um die Karte darzustellen.',
+  mapWebglUnavailable:
+    'Dieser Browser kann die zum Darstellen der Karte erforderliche Grafikunterstützung nicht bereitstellen.',
+  mapInitializationFailed: 'Die Karte konnte nicht initialisiert werden.',
+  mapLegend: 'Kartenlegende',
+  chartMissingLibrary:
+    'Für diese Komponente muss das optionale Paket „chart.js“ installiert sein, um Diagramme darzustellen.',
+  boxPlotMissingLibrary:
+    'Für diese Komponente muss das optionale Boxplot-Diagrammpaket installiert sein, um Boxplots darzustellen.',
+  graphMissingLibrary:
+    'Für diese Komponente muss das optionale Paket „d3“ installiert sein, um den Graphen darzustellen.',
   pdfViewerPageOf: 'Seite {page} von {total}',
   pdfViewerZoomIn: 'Vergrößern',
   pdfViewerZoomOut: 'Verkleinern',
@@ -768,6 +833,7 @@ const strings: LyraLocaleStrings = {
   traceTree: 'Trace-Baum',
   traceTreeSpanStatus: '{name} — {status}',
   traceTreeMetricLabel: '{label}: {value}',
+  spanProjectionLimit: 'Nur die ersten {count} Spans werden angezeigt.',
   agentTraceFilterLabel: 'Span-Arten im Trace',
   spanKindAgent: 'Agent',
   spanKindLlm: 'LLM',
@@ -817,8 +883,10 @@ const strings: LyraLocaleStrings = {
   imageViewerAnnotate: 'Annotieren',
   imageViewerHighlightsLabel: 'Hervorgehobene Bereiche',
   imageViewerUnlabeledHighlight: 'Hervorhebung {index}',
-  imageViewerAnnotationHint: 'Annotationsmodus aktiv. Mit der Eingabetaste einen Bereich setzen, dann mit den Pfeiltasten verschieben, mit Umschalt und Pfeiltasten die Größe ändern, mit der Eingabetaste speichern oder mit Escape abbrechen.',
-  imageViewerAnnotationBoxPosition: 'Bereich bei {x} Prozent, {y} Prozent, {width} mal {height} Prozent.',
+  imageViewerAnnotationHint:
+    'Annotationsmodus aktiv. Mit der Eingabetaste einen Bereich setzen, dann mit den Pfeiltasten verschieben, mit Umschalt und Pfeiltasten die Größe ändern, mit der Eingabetaste speichern oder mit Escape abbrechen.',
+  imageViewerAnnotationBoxPosition:
+    'Bereich bei {x} Prozent, {y} Prozent, {width} mal {height} Prozent.',
   imageViewerAnnotationAdded: 'Bereich hinzugefügt.',
   imageViewerAnnotationCancelled: 'Bereich abgebrochen.',
   transcriptFeedLabel: 'Transkript',
@@ -830,6 +898,8 @@ const strings: LyraLocaleStrings = {
   commitCardShowFiles: '{count} geänderte Dateien anzeigen',
   commitCardHideFiles: '{count} geänderte Dateien ausblenden',
   stackTraceLabel: 'Stacktrace',
+  stackTraceLimit:
+    'Ein Teil des Stacktrace-Inhalts wurde ausgelassen, weil das Anzeigelimit erreicht wurde.',
   stackTraceShowFrames: '{count} interne Frames anzeigen',
   stackTraceHideFrames: '{count} interne Frames ausblenden',
   statusSkipped: 'Übersprungen',
@@ -839,7 +909,8 @@ const strings: LyraLocaleStrings = {
   testResultsSkipped: '{count} übersprungen',
   testResultsRunning: '{count} laufen',
   testResultsFilterLabel: 'Nach Status filtern',
-  testResultsCompleteAnnounce: '{passed} bestanden, {failed} fehlgeschlagen, {skipped} übersprungen',
+  testResultsCompleteAnnounce:
+    '{passed} bestanden, {failed} fehlgeschlagen, {skipped} übersprungen',
   testResultsExpandTest: '{name} ausklappen',
   testResultsCollapseTest: '{name} einklappen',
   envListLabel: 'Umgebungsvariablen',
@@ -875,8 +946,10 @@ const strings: LyraLocaleStrings = {
   browserFrameControllerUser: 'Benutzer',
   notebookViewerLabel: 'Notebook-Betrachter',
   notebookViewerInvalid: 'Diese Datei ist kein gültiges Jupyter-Notebook.',
-  notebookViewerUnsupportedVersion: 'Das Notebook-Format {version} wird nicht unterstützt.',
-  notebookViewerTooManyCells: 'Dieses Notebook hat zu viele Zellen für die Anzeige.',
+  notebookViewerUnsupportedVersion:
+    'Das Notebook-Format {version} wird nicht unterstützt.',
+  notebookViewerTooManyCells:
+    'Dieses Notebook hat zu viele Zellen für die Anzeige.',
   notebookViewerInPrompt: 'In [{count}]',
   notebookViewerInPromptEmpty: 'In [ ]',
   notebookViewerCodeCell: 'Codezelle {index}',
@@ -885,7 +958,8 @@ const strings: LyraLocaleStrings = {
   notebookViewerErrorOutput: 'Fehler',
   notebookViewerShowAllOutput: 'Gesamte Ausgabe anzeigen',
   notebookViewerCollapseOutput: 'Ausgabe einklappen',
-  notebookViewerUnrenderedOutput: 'Dieser Ausgabetyp kann nicht angezeigt werden.',
+  notebookViewerUnrenderedOutput:
+    'Dieser Ausgabetyp kann nicht angezeigt werden.',
   xmlViewerLabel: 'XML-Betrachter',
   xmlViewerParseError: 'Dieses Dokument konnte nicht als XML geparst werden.',
   xmlViewerTooManyNodes: 'Dieses Dokument hat zu viele Knoten für die Anzeige.',
@@ -912,7 +986,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} Feature',
     other: '{count} Features',
   },
-  geojsonViewMissingMapLibrary: 'Installieren Sie die optionale Peer-Abhängigkeit maplibre-gl, um diese Datei auf einer Karte darzustellen. Stattdessen wird das rohe GeoJSON angezeigt.',
+  geojsonViewMissingMapLibrary:
+    'Installieren Sie die optionale Peer-Abhängigkeit maplibre-gl, um diese Datei auf einer Karte darzustellen. Stattdessen wird das rohe GeoJSON angezeigt.',
   mindMapLabel: 'Mindmap',
   mindMapTopicStatus: '{label}, Ebene {level}, {count} Unterthemen',
   mindMapLeafStatus: '{label}, Ebene {level}',
@@ -940,13 +1015,16 @@ const strings: LyraLocaleStrings = {
   scoreTierLow: 'Geringe Relevanz',
   chunkInspectorEmpty: 'Keine Abschnitte abgerufen',
   flowCanvasLabel: 'Workflow-Arbeitsfläche',
+  flowCanvasLayoutLimit:
+    'Einige Details zur Kantenreihenfolge wurden ausgelassen, da das Arbeitslimit des Workflow-Layouts erreicht wurde.',
   flowCanvasSummary: 'Workflow mit {nodeCount} Knoten und {edgeCount} Kanten',
   flowNode: 'Knoten {label}',
   flowEdge: 'Kante von {source} zu {target}',
   flowEdgeWithLabel: '{label}, Kante von {source} zu {target}',
   flowItemAnnouncement: '{item} ({index} von {total})',
   dashboardGridLabel: 'Dashboard-Raster',
-  dashboardCellCollisionRejected: '{label} kann dort nicht platziert werden, weil es eine andere Zelle überlappt.',
+  dashboardCellCollisionRejected:
+    '{label} kann dort nicht platziert werden, weil es eine andere Zelle überlappt.',
   dashboardCellMoved: '{label} in Spalte {x}, Zeile {y} verschoben.',
   dashboardCellResized: '{label} auf Breite {w}, Höhe {h} geändert.',
   flowEdgeList: 'Workflow-Kanten',
@@ -954,8 +1032,10 @@ const strings: LyraLocaleStrings = {
   flowNodeDeselected: '{label} abgewählt',
   flowSelectionCleared: 'Auswahl aufgehoben',
   flowNodeMoved: '{label} nach {x}, {y} verschoben',
-  flowConnectStarted: 'Verbindung von {label} wird erstellt. Mit den Pfeiltasten ein Ziel wählen, mit der Eingabetaste verbinden, mit Escape abbrechen.',
-  flowConnectTarget: '{source} wird mit {target} verbunden ({index} von {total})',
+  flowConnectStarted:
+    'Verbindung von {label} wird erstellt. Mit den Pfeiltasten ein Ziel wählen, mit der Eingabetaste verbinden, mit Escape abbrechen.',
+  flowConnectTarget:
+    '{source} wird mit {target} verbunden ({index} von {total})',
   flowConnectCommitted: '{source} mit {target} verbunden',
   flowConnectCancelled: 'Verbindung abgebrochen',
   zoomToFit: 'Einpassen',
@@ -963,12 +1043,14 @@ const strings: LyraLocaleStrings = {
   flowControlsLabel: 'Steuerung der Arbeitsfläche',
   flowMinimapLabel: 'Workflow-Übersicht',
   flowMinimapViewport: 'Sichtbarer Bereich',
-  flowMinimapInstructions: 'Mit den Pfeiltasten verschieben. Mit Plus und Minus zoomen. Mit der Eingabetaste oder Pos 1 den Workflow einpassen.',
+  flowMinimapInstructions:
+    'Mit den Pfeiltasten verschieben. Mit Plus und Minus zoomen. Mit der Eingabetaste oder Pos 1 den Workflow einpassen.',
   flowMinimapViewportChanged: 'Position {x}, {y}. Zoom {zoom}.',
   nodePaletteLabel: 'Knotenpalette',
   nodePalettePlaceholder: 'Knoten suchen…',
   nodePaletteEmpty: 'Keine passenden Knoten.',
-  nodePaletteDragHint: 'Auf die Arbeitsfläche ziehen oder mit der Eingabetaste platzieren',
+  nodePaletteDragHint:
+    'Auf die Arbeitsfläche ziehen oder mit der Eingabetaste platzieren',
   nodePaletteResultCount: {
     one: '{count} Element',
     other: '{count} Elemente',
@@ -989,7 +1071,7 @@ const strings: LyraLocaleStrings = {
   neighborExpand: '{label} im Graphen ausklappen',
   neighborListEmpty: 'Keine Beziehungen',
   neighborGroupHeader: '{relation} ({count})',
-  flowRunOverlayLabel: 'Ausführungsstatus',
+  flowRunStatusLabel: 'Ausführungsstatus',
   flowRunSummary: '{done} von {total} Schritten abgeschlossen',
   flowRunStepStatus: '{label}: {status}',
   flowRunStatusCount: '{status}: {count}',
@@ -1058,7 +1140,8 @@ const strings: LyraLocaleStrings = {
   memoryPanelConfirmAddHeading: 'Dies zum Langzeitgedächtnis hinzufügen?',
   memoryPanelConfirmRemoveHeading: 'Dieses Element entfernen?',
   memoryPanelConfirmForgetHeading: 'Das gesamte Langzeitgedächtnis vergessen?',
-  memoryPanelConfirmForgetBody: 'Dadurch werden alle {count} Langzeit-Erinnerungen dauerhaft vergessen.',
+  memoryPanelConfirmForgetBody:
+    'Dadurch werden alle {count} Langzeit-Erinnerungen dauerhaft vergessen.',
   graphExplorerLabel: 'Wissensgraph-Explorer',
   graphExplorerSearchPlaceholder: 'Entitäten suchen…',
   graphExplorerSearchResultsLabel: 'Suchergebnisse',
@@ -1091,7 +1174,8 @@ const strings: LyraLocaleStrings = {
   claimEvidenceConfidence: '{percent} Konfidenz',
   retrievalCompareLabel: 'Abrufvergleich',
   retrievalCompareEmpty: 'Keine Abrufergebnisse zum Vergleichen',
-  retrievalCompareOverlap: 'Top-k-Überschneidung zwischen {left} und {right}: {percent}',
+  retrievalCompareOverlap:
+    'Top-k-Überschneidung zwischen {left} und {right}: {percent}',
   retrievalCompareRank: 'Rang {rank}',
   retrievalCompareDenseScore: 'Dense',
   retrievalCompareSparseScore: 'Sparse',
@@ -1102,7 +1186,8 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardRuns: 'Evaluierungsläufe',
   ragEvalDashboardSlices: 'Evaluierungssegmente',
   ragEvalDashboardAllSlices: 'Alle',
-  ragEvalDashboardSliceUnavailable: 'Für {slice} sind keine Evaluierungsläufe verfügbar.',
+  ragEvalDashboardSliceUnavailable:
+    'Für {slice} sind keine Evaluierungsläufe verfügbar.',
   promptStudioLabel: 'Prompt-Studio',
   promptStudioMessages: 'Prompt-Nachrichten',
   promptStudioVariables: 'Variablen',
@@ -1208,7 +1293,8 @@ const strings: LyraLocaleStrings = {
   documentCompareNoVersion: 'Keine Version angegeben.',
   documentCompareLabel: 'Dokumentvergleich',
   agentRunCurrentStepLabel: 'Aktueller Schritt',
-  graphQueryHopRangeInvalid: 'Die maximale Sprunganzahl muss mindestens der minimalen entsprechen.',
+  graphQueryHopRangeInvalid:
+    'Die maximale Sprunganzahl muss mindestens der minimalen entsprechen.',
   graphQueryRelationshipTypeLabel: 'Beziehungstyp',
   graphQueryNodeTypeLabel: 'Knotentyp',
   graphQueryBuilderLabel: 'Graph-Abfrage-Editor',
@@ -1238,13 +1324,15 @@ const strings: LyraLocaleStrings = {
   evaluationRunLabel: 'Evaluierungslauf',
   evaluationRunProgressLabel: 'Fortschritt des Evaluierungsstapels',
   retrievalFilterChipLabel: '{key}: {value}',
-  retrievalSearchEmptyDescription: 'Versuchen Sie einen anderen Suchbegriff oder andere Filter.',
+  retrievalSearchEmptyDescription:
+    'Versuchen Sie einen anderen Suchbegriff oder andere Filter.',
   groundingSummaryEvidenceSpan: 'Zeichen {start}–{end}',
   contextInspectorTruncatedCount: 'Gekürzt — {count} Token ausgelassen',
   contextInspectorSegmentTokens: '{tokens} Token',
   knowledgeBaseDocumentCount: '{count} indexiert',
   knowledgeBaseRowActionsLabel: 'Aktionen für {name}',
-  knowledgeBaseEmptyDescription: 'Fügen Sie eine Quelle hinzu, um Inhalte zu indexieren.',
+  knowledgeBaseEmptyDescription:
+    'Fügen Sie eine Quelle hinzu, um Inhalte zu indexieren.',
   ingestionChunkCount: {
     one: '{count} Abschnitt',
     other: '{count} Abschnitte',
@@ -1264,7 +1352,8 @@ const strings: LyraLocaleStrings = {
   evaluationRunExampleCancelledAnnounce: '{label} abgebrochen',
   evaluationRunExampleWaitingInputAnnounce: '{label} benötigt eine Eingabe',
   evaluationRunExampleWaitingApprovalAnnounce: '{label} benötigt eine Freigabe',
-  evaluationRunProgressSummary: '{completed} von {total} Beispielen abgeschlossen',
+  evaluationRunProgressSummary:
+    '{completed} von {total} Beispielen abgeschlossen',
   evaluationRunRunningCount: '{count} laufen',
   evaluationRunFailedCount: '{count} fehlgeschlagen',
   retrievalStageQueryRewrite: 'Anfrage-Umschreibung',
@@ -1287,6 +1376,8 @@ const strings: LyraLocaleStrings = {
   flagLoadError: 'Flagge nicht verfügbar',
   moveUp: 'Nach oben verschieben',
   moveDown: 'Nach unten verschieben',
+  reorderMovePending: 'Neuordnung ausstehend.',
+  reorderMoveCancelled: 'Neuordnung abgebrochen.',
   reorderItemMoved: 'An Position {index} von {total} verschoben',
 };
 

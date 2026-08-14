@@ -48,18 +48,17 @@ it('suppresses the chip-selection event while opening a pending approval', async
   expect(dialog(el).open).to.be.true;
 });
 
-it('handles one chip activation exactly once — the removed alias binding is gone', async () => {
+it('owns one chip activation and emits one correlated timeline event', async () => {
   const el = (await fixture(
     html`<lr-tool-timeline .entries=${[makeEntry()]}></lr-tool-timeline>`,
   )) as LyraToolTimeline;
-  let selections = 0;
-  el.addEventListener('lr-tool-call-chip-select', () => selections++);
-  el.addEventListener('lr-tool-chip-select', () => selections++);
+  let rawSelections = 0;
+  el.addEventListener('lr-tool-call-chip-select', () => rawSelections++);
+  const activation = oneEvent(el, 'lr-tool-activate');
 
   chipIn(entriesEl(el)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
-  await el.updateComplete;
-
-  expect(selections).to.equal(1);
+  expect((await activation).detail).to.deep.equal({ invocationId: 'call-1' });
+  expect(rawSelections).to.equal(0);
 });
 
 it('ignores a stray lr-tool-chip-select on a pending-approval entry', async () => {
@@ -152,6 +151,47 @@ it('does not mount heavy result views until an entry is disclosed', async () => 
   expect(el.shadowRoot!.querySelectorAll('lr-tool-result-view')).to.have.lengthOf(0);
 });
 
+it('defers redaction traversal until disclosure and memoizes it across unrelated updates', async () => {
+  let ownKeyReads = 0;
+  const args = new Proxy({ secret: 'hidden', visible: 'ok' }, {
+    ownKeys(target) {
+      ownKeyReads++;
+      return Reflect.ownKeys(target);
+    },
+  });
+  const entry = makeEntry({ args, redactedFields: ['args.secret'] });
+  const el = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>
+  `);
+
+  expect(ownKeyReads).to.equal(0);
+  expect(el.shadowRoot!.querySelector('lr-tool-result-view') === null).to.be.true;
+  expect(resultViewIn(await openEntry(el)).args).to.deep.equal({ secret: 'Value hidden', visible: 'ok' });
+  const readsAfterOpen = ownKeyReads;
+  expect(readsAfterOpen).to.be.greaterThan(0);
+
+  el.approvalEditable = false;
+  await el.updateComplete;
+  expect(ownKeyReads).to.equal(readsAfterOpen);
+});
+
+it('fails redaction closed at path, depth, and node ceilings without throwing', async () => {
+  const tooManyPaths = Array.from({ length: 101 }, (_, index) => `args.field-${index}`);
+  const deepPath = `args.${Array.from({ length: 65 }, () => 'child').join('.')}`;
+  const wide = Object.fromEntries(Array.from({ length: 10_001 }, (_, index) => [`field-${index}`, index]));
+  const el = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline .entries=${[
+      makeEntry({ id: 'paths', args: { visible: 'sensitive' }, redactedFields: tooManyPaths }),
+      makeEntry({ id: 'depth', args: { child: { visible: 'sensitive' } }, redactedFields: [deepPath] }),
+      makeEntry({ id: 'nodes', args: wide, redactedFields: ['args.field-10000'] }),
+    ]}></lr-tool-timeline>
+  `);
+
+  expect(resultViewIn(await openEntry(el, 0)).args).to.equal('Value hidden');
+  expect(resultViewIn(await openEntry(el, 1)).args).to.equal('Value hidden');
+  expect(resultViewIn(await openEntry(el, 2)).args).to.equal('Value hidden');
+});
+
 it('sorts non-finite timestamps with untimed entries after valid chronology', async () => {
   const el = (await fixture(html`
     <lr-tool-timeline
@@ -165,12 +205,22 @@ it('sorts non-finite timestamps with untimed entries after valid chronology', as
   expect(entriesEl(el).map((row) => chipIn(row).callId)).to.deep.equal(['earlier', 'later', 'nan']);
 });
 
+it('normalizes a foreign provider status once to pending for both timeline row and child chip', async () => {
+  const el = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline .entries=${[makeEntry({ status: 'foreign' as never })]}></lr-tool-timeline>
+  `);
+  const row = entriesEl(el)[0]!;
+  expect(row.dataset.status).to.equal('pending');
+  expect(chipIn(row).status).to.equal('pending');
+});
+
 it('defaults to entries=[] and approvalEditable=true, rendering an empty list with no dialog decision affordance', async () => {
   const el = (await fixture(html`<lr-tool-timeline></lr-tool-timeline>`)) as LyraToolTimeline;
   expect(el.entries).to.deep.equal([]);
   expect(el.approvalEditable).to.be.true;
   expect(el.pendingApproval).to.equal(null);
   expect(entriesEl(el).length).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
   expect(dialog(el).open).to.be.false;
 });
 
@@ -223,6 +273,13 @@ it('composes lr-tool-call-chip per entry, wiring name/status/call-id and a durat
   expect(chipB.durationMs).to.be.undefined;
 });
 
+it('forwards an entry icon to the composed tool-call chip', async () => {
+  const el = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline .entries=${[makeEntry({ icon: '🔎' })]}></lr-tool-timeline>
+  `);
+  expect(chipIn(entriesEl(el)[0]).icon).to.equal('🔎');
+});
+
 it('composes lr-tool-result-view per entry, wiring tool-name/args/result', async () => {
   const entries: ToolTimelineEntry[] = [
     makeEntry({ args: { query: 'x' }, result: { count: 3 } }),
@@ -247,6 +304,19 @@ it('redacts top-level and nested fields named in redactedFields with the localiz
   expect(view.args).to.deep.equal({ apiKey: 'Value hidden', query: 'ok' });
   expect(view.result).to.deep.equal({ rows: [{ ssn: 'Value hidden', name: 'ok' }] });
   expect(entriesEl(el)[0].querySelector('[part="entry-redacted-indicator"]')).to.exist;
+});
+
+it('exposes localized redaction state text while hiding only the decorative glyph', async () => {
+  const el = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline
+      .entries=${[makeEntry({ redactedFields: ['args.secret'] })]}
+      .strings=${{ envListValueHidden: 'Sensitive fields hidden' }}
+    ></lr-tool-timeline>
+  `);
+  const indicator = entriesEl(el)[0]!.querySelector<HTMLElement>('[part="entry-redacted-indicator"]')!;
+  expect(indicator.hasAttribute('aria-hidden')).to.be.false;
+  expect(indicator.querySelector('[aria-hidden="true"]')).to.exist;
+  expect(indicator.textContent).to.contain('Sensitive fields hidden');
 });
 
 it('renders no redacted-indicator and leaves args/result untouched when redactedFields is unset', async () => {
@@ -333,14 +403,152 @@ it('dismissing the dialog via escape/backdrop closes it without emitting a decis
   expect(fired).to.be.false;
 });
 
-it('does not open the dialog for an entry that does not need approval, and lets its raw chip-select event bubble out unmodified', async () => {
+it('does not open the dialog for an entry that does not need approval and emits its owned activation', async () => {
   const entries: ToolTimelineEntry[] = [makeEntry({ id: 'call-plain' })];
   const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
-  const listener = oneEvent(el, 'lr-tool-call-chip-select');
+  const listener = oneEvent(el, 'lr-tool-activate');
   chipIn(entriesEl(el)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
-  const event = (await listener) as CustomEvent<{ name: string; callId: string }>;
-  expect(event.detail).to.deep.equal({ name: 'web_search', callId: 'call-plain' });
+  const event = (await listener) as CustomEvent<{ invocationId: string }>;
+  expect(event.detail).to.deep.equal({ invocationId: 'call-plain' });
   expect(dialog(el).open).to.be.false;
+});
+
+it('uses deterministic first-wins duplicate identities and accepts duplicate ids with distinct source keys', async () => {
+  const ambiguous = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline .entries=${[
+      makeEntry({ id: 'reused', name: 'first' }),
+      makeEntry({ id: 'reused', name: 'second' }),
+    ]}></lr-tool-timeline>
+  `);
+  expect(entriesEl(ambiguous)).to.have.length(1);
+  expect(chipIn(entriesEl(ambiguous)[0]!).name).to.equal('first');
+  expect(dialog(ambiguous).open).to.be.false;
+
+  const distinct = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline .entries=${[
+      makeEntry({ id: 'reused', sourceKey: 'run-a', name: 'first' }),
+      makeEntry({ id: 'reused', sourceKey: 'run-b', name: 'second' }),
+    ]}></lr-tool-timeline>
+  `);
+  expect(entriesEl(distinct)).to.have.length(2);
+  const activated = oneEvent(distinct, 'lr-tool-activate');
+  chipIn(entriesEl(distinct)[1]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
+  expect((await activated).detail).to.deep.equal({ invocationId: 'reused', sourceKey: 'run-b' });
+});
+
+it('prunes disclosure state when an identity disappears so later reuse starts collapsed', async () => {
+  const entry = makeEntry({ id: 'reused', sourceKey: 'run-a' });
+  const el = await fixture<LyraToolTimeline>(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`);
+  await openEntry(el);
+  expect((entriesEl(el)[0]!.querySelector('lr-details') as HTMLElement & { open: boolean }).open).to.be.true;
+
+  el.entries = [];
+  await el.updateComplete;
+  el.entries = [{ ...entry }];
+  await el.updateComplete;
+
+  expect((entriesEl(el)[0]!.querySelector('lr-details') as HTMLElement & { open: boolean }).open).to.be.false;
+});
+
+it('bounds mounted history and exposes a localized truncation notice', async () => {
+  const entries = Array.from({ length: 501 }, (_, index) => makeEntry({ id: `call-${index}` }));
+  const el = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline
+      .entries=${entries}
+      .strings=${{ toolTimelineLimit: 'At most {count} calls shown' }}
+    ></lr-tool-timeline>
+  `);
+  expect(entriesEl(el)).to.have.length(500);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('At most 500 calls shown');
+});
+
+it('keeps an open row and the row under approval review mounted when history pushes them past the cap', async () => {
+  const openTarget = makeEntry({ id: 'open-target' });
+  const reviewTarget = makeEntry({ id: 'review-target', needsApproval: true });
+  const el = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline .entries=${[openTarget, reviewTarget]}></lr-tool-timeline>
+  `);
+  await openEntry(el, 0);
+  chipIn(entriesEl(el)[1]!).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
+  await el.updateComplete;
+  expect(dialog(el).open).to.be.true;
+
+  const newer = Array.from({ length: 500 }, (_, index) => makeEntry({ id: `new-${index}` }));
+  el.entries = [...newer, openTarget, reviewTarget];
+  await el.updateComplete;
+
+  const rows = entriesEl(el);
+  expect(rows).to.have.length(500);
+  const openRow = rows.find((row) => chipIn(row).callId === 'open-target');
+  const reviewRow = rows.find((row) => chipIn(row).callId === 'review-target');
+  expect(openRow).to.exist;
+  expect((openRow!.querySelector('lr-details') as HTMLElement & { open: boolean }).open).to.be.true;
+  expect(reviewRow).to.exist;
+  expect(dialog(el).open).to.be.true;
+  expect(dialog(el).toolName).to.equal(reviewTarget.name);
+});
+
+it('resets review drafts and disclosure state across a source-generation replacement', async () => {
+  const first = makeEntry({
+    id: 'reused',
+    sourceKey: 'run-a',
+    name: 'web_search',
+    args: { query: 'first' },
+    needsApproval: true,
+    status: 'pending',
+  });
+  const el = await fixture<LyraToolTimeline>(html`<lr-tool-timeline .entries=${[first]}></lr-tool-timeline>`);
+  await openEntry(el);
+  chipIn(entriesEl(el)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
+  await el.updateComplete;
+  const approval = dialog(el);
+  approval.shadowRoot!.querySelector<HTMLButtonElement>('[part="edit-button"]')!.click();
+  await approval.updateComplete;
+  const editor = approval.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="args-editor"]')!;
+  editor.value = '{"query":"stale"}';
+  editor.dispatchEvent(new Event('input'));
+
+  el.entries = [{
+    ...first,
+    sourceKey: 'run-b',
+    name: 'read_file',
+    args: { path: 'replacement.md' },
+  }];
+  await el.updateComplete;
+  await approval.updateComplete;
+
+  expect(approval.open).to.be.false;
+  expect(approval.shadowRoot!.querySelector('[part="args-editor"]') === null).to.be.true;
+  expect((entriesEl(el)[0].querySelector('lr-details') as HTMLElement & { open: boolean }).open).to.be.false;
+});
+
+it('contains details lifecycle events and translates renderer failures with entry identity', async () => {
+  const el = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline .entries=${[
+      makeEntry({ id: 'first', sourceKey: 'run-a' }),
+      makeEntry({ id: 'second', sourceKey: 'run-a' }),
+    ]}></lr-tool-timeline>
+  `);
+  let rawShows = 0;
+  let rawErrors = 0;
+  el.addEventListener('lr-show', () => rawShows++);
+  el.addEventListener('lr-render-error', () => rawErrors++);
+  const second = await openEntry(el, 1);
+  expect(rawShows).to.equal(0);
+
+  const correlated = oneEvent(el, 'lr-tool-render-error');
+  second.querySelector('lr-tool-result-view')!.dispatchEvent(new CustomEvent('lr-render-error', {
+    bubbles: true,
+    composed: true,
+    detail: { toolName: 'web_search', error: 'failed' },
+  }));
+  expect((await correlated).detail).to.deep.equal({
+    invocationId: 'second',
+    sourceKey: 'run-a',
+    toolName: 'web_search',
+    error: 'failed',
+  });
+  expect(rawErrors).to.equal(0);
 });
 
 it('does not reopen the dialog for an already-decided entry, and shows the localized decision badge instead', async () => {
@@ -408,9 +616,17 @@ it('honors a `.strings` override for the reused "envListValueHidden" redaction p
   expect(resultViewIn(await openEntry(el)).args).to.deep.equal({ apiKey: 'Masqué' });
 });
 
-it('forwards a host aria-label onto the internal list element', async () => {
-  const el = (await fixture(html`<lr-tool-timeline aria-label="Run timeline"></lr-tool-timeline>`)) as LyraToolTimeline;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Run timeline');
+it('keeps a non-empty host name on the host and preserves an explicit-empty list name', async () => {
+  const el = (await fixture(html`
+    <lr-tool-timeline aria-label="Run timeline" .entries=${[makeEntry()]}></lr-tool-timeline>
+  `)) as LyraToolTimeline;
+  const list = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(el.getAttribute('aria-label')).to.equal('Run timeline');
+  expect(list.hasAttribute('aria-label')).to.equal(false);
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(list.getAttribute('aria-label')).to.equal('');
 });
 
 it('names each details disclosure with its entry name', async () => {

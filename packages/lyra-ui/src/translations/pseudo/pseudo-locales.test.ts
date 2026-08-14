@@ -29,7 +29,7 @@ it('generates deterministic synthetic catalogs without changing placeholders or 
 });
 
 it('registers explicit LTR and RTL pseudo locales without claiming native translation coverage', () => {
-  expect(getRegisteredLyraLocales()).to.include.members(['en-xa', 'ar-xb']);
+  expect(getRegisteredLyraLocales()).to.include.members(['en-XA', 'ar-XB']);
   expect(getLyraLocaleDirection('en-XA')).to.equal('ltr');
   expect(getLyraLocaleDirection('ar-XB')).to.equal('rtl');
 });

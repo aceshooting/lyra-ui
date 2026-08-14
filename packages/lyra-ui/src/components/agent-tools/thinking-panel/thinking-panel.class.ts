@@ -7,10 +7,12 @@ import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { durationMessageValue } from '../../../internal/duration.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { styles } from './thinking-panel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_open, LYRA_DEFAULT_thinking, LYRA_DEFAULT_thinkingPanelLabel, LYRA_DEFAULT_thoughtFor } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_thinking, LYRA_DEFAULT_thinkingPanelLabel, LYRA_DEFAULT_thoughtFor } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -26,7 +28,9 @@ export interface ThinkingPanelToggleDetail {
 }
 
 export interface LyraThinkingPanelEventMap {
+  'lr-toggle-request': CustomEvent<ThinkingPanelToggleDetail>;
   'lr-toggle': CustomEvent<ThinkingPanelToggleDetail>;
+  'lr-follow-change': CustomEvent<{ following: boolean }>;
 }
 
 /** "Close enough to the body's own max scroll position to count as anchored
@@ -34,23 +38,6 @@ export interface LyraThinkingPanelEventMap {
  *  who has barely nudged the scrollbar while reading the latest line isn't
  *  mistaken for having deliberately scrolled away to read earlier content. */
 const NEAR_BOTTOM_PX = 48;
-
-/** `820` -> a localized millisecond value; `1500` -> a localized seconds value. Identical
- *  algorithm to lr-tool-call-chip's and lr-tool-result-dialog's own
- *  `formatDuration` -- duplicated rather than imported (three independent,
- *  separately-consumable components) but kept in lockstep so the same
- *  elapsed time reads identically everywhere it's shown in this library. */
-function formatDuration(ms: number): { key: 'durationMilliseconds' | 'durationSeconds'; value: number } {
-  if (!Number.isFinite(ms) || ms < 1000) {
-    return { key: 'durationMilliseconds', value: Math.round(Math.max(0, Number.isFinite(ms) ? ms : 0)) };
-  }
-  const seconds = ms / 1000;
-  const rounded = Math.round(seconds * 10) / 10;
-  return {
-    key: 'durationSeconds',
-    value: rounded,
-  };
-}
 
 /**
  * `<lr-thinking-panel>` — a collapsible panel for an AI agent's
@@ -92,7 +79,7 @@ function formatDuration(ms: number): { key: 'durationMilliseconds' | 'durationSe
  * never yanked away from them. This is tracked continuously via a `scroll`
  * listener on `[part="body"]` (not recomputed from the mutation itself,
  * which necessarily observes the DOM only *after* it has already changed):
- * every user-driven scroll records whether the body was left within
+ * every user-driven scroll updates the public `follow` state to record whether the body was left within
  * `NEAR_BOTTOM_PX` of its own max scroll position, and only a mutation that
  * arrives while that's still true triggers a follow-up scroll-to-bottom.
  * Opening an already-`'live'` panel (or one that later becomes `'live'`)
@@ -122,9 +109,12 @@ function formatDuration(ms: number): { key: 'durationMilliseconds' | 'durationSe
  *
  * @customElement lr-thinking-panel
  * @slot - The reasoning/thinking content.
- * @event lr-toggle - The header was activated, expanding or collapsing the
- * panel. `detail: { expanded }` — same event name and shape as
- * `<lr-source-list>`'s own `lr-toggle`.
+ * @event lr-toggle-request - Cancelable proposal emitted before a header activation changes
+ *   `expanded`. `detail: { expanded }` carries the requested next state.
+ * @event lr-toggle - The accepted header request committed. `detail: { expanded }` carries the
+ *   new state and is never emitted for a vetoed proposal.
+ * @event lr-follow-change - `detail: { following }`; emitted only when a user scroll releases or
+ *   re-engages tail following. Direct `follow` assignment and `scrollToBottom()` do not echo it.
  * @csspart base - The outer container.
  * @csspart header - The clickable header (`<button>`) toggling `expanded`.
  * @csspart label - The `label` text.
@@ -154,7 +144,11 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     details: LYRA_DEFAULT_details,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     durationSeconds: LYRA_DEFAULT_durationSeconds,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     thinking: LYRA_DEFAULT_thinking,
     thinkingPanelLabel: LYRA_DEFAULT_thinkingPanelLabel,
     thoughtFor: LYRA_DEFAULT_thoughtFor,
@@ -188,6 +182,11 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
    *  for the concrete behavior differences this drives. */
   @property({ reflect: true }) mode: ThinkingPanelMode = 'live';
 
+  /** Whether live, expanded content follows the transcript tail. User scrolling updates this
+   *  property and emits `lr-follow-change`; direct assignments are controlled input and do not
+   *  echo an event. Opening a live panel or calling `scrollToBottom()` re-engages it silently. */
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
+
   /** How long the reasoning took, in milliseconds, once known. Omitted
    *  entirely (nothing rendered in `'post-hoc'`, a pulsing placeholder in
    *  `'live'`) while unset. */
@@ -200,13 +199,6 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   private scrollRafId?: number;
   private scrollRafOwner?: Window;
   private realmGeneration = 0;
-
-  // Whether the body was left within NEAR_BOTTOM_PX of its own max scroll
-  // position the last time a real (user-driven) scroll was recorded -- see
-  // onScroll(). Starts `true` so a panel that mounts already `expanded` and
-  // `mode="live"` follows its very first streamed content by default,
-  // before any scroll event has ever fired.
-  private stickToBottom = true;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -222,9 +214,20 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     this.resetOwnerRealmWork();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     // Do not re-arm while detached. The next connectedCallback binds all work to the new owner.
     this.resetOwnerRealmWork();
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if ((changed.has('expanded') || changed.has('mode')) && this.expanded && this.mode === 'live') {
+      // Re-engagement is part of the update being prepared. Doing it here keeps the reflected
+      // property and the rendered scroll behavior in one update instead of scheduling a second
+      // reactive update from updated().
+      this.follow = true;
+    }
   }
 
   private armContentObserver(): void {
@@ -272,7 +275,6 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
       // the sticky-bottom flag, so it starts following again regardless of
       // wherever the body happened to be scrolled beforehand. `'post-hoc'`
       // deliberately skips this -- see the class doc's Auto-scroll section.
-      this.stickToBottom = true;
       this.scrollToBottom();
     }
   }
@@ -283,6 +285,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
    *  smooth scrolls under a fast token stream). Safe to call directly, e.g.
    *  from a host that wants to force a jump-to-latest action of its own. */
   scrollToBottom(): void {
+    this.follow = true;
     const body = this.renderRoot.querySelector('[part="body"]') as HTMLElement | null;
     if (!body) return;
     body.scrollTop = body.scrollHeight;
@@ -290,11 +293,14 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
 
   private onScroll = (e: Event): void => {
     const body = e.currentTarget as HTMLElement;
-    this.stickToBottom = body.scrollHeight - body.scrollTop - body.clientHeight <= NEAR_BOTTOM_PX;
+    const following = body.scrollHeight - body.scrollTop - body.clientHeight <= NEAR_BOTTOM_PX;
+    if (following === this.follow) return;
+    this.follow = following;
+    this.emit('lr-follow-change', { following });
   };
 
   private onContentMutated = (): void => {
-    if (this.mode !== 'live' || !this.expanded || !this.stickToBottom) return;
+    if (this.mode !== 'live' || !this.expanded || !this.follow) return;
     // Coalesce to at most one scroll-to-bottom per animation frame -- a fast
     // token stream can otherwise fire many mutation records in quick
     // succession, each individually cheap to react to but wasteful (and
@@ -317,18 +323,20 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
       this.scrollRafId = undefined;
       this.scrollRafOwner = undefined;
       // Re-check the same guard here, not just in the caller: mode/expanded/
-      // stickToBottom can all change in the ~1-frame window between this
+      // follow can all change in the ~1-frame window between this
       // mutation being observed and this callback actually firing (e.g. the
       // reader scrolling away mid-frame), and this is the only place that
       // reflects state as of the moment the scroll would actually happen.
-      if (this.mode === 'live' && this.expanded && this.stickToBottom) this.scrollToBottom();
+      if (this.mode === 'live' && this.expanded && this.follow) this.scrollToBottom();
     });
     this.scrollRafId = handle;
     this.scrollRafOwner = ownerWindow;
   };
 
   private toggle = (): void => {
-    this.expanded = !this.expanded;
+    const expanded = !this.expanded;
+    if (this.emit('lr-toggle-request', { expanded }, { cancelable: true }).defaultPrevented) return;
+    this.expanded = expanded;
     this.emit('lr-toggle', { expanded: this.expanded });
   };
 
@@ -344,7 +352,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   private get durationDisplay(): { text: string; pending: boolean } | null {
     const durationMs = this.safeDurationMs;
     if (durationMs != null) {
-      const duration = formatDuration(durationMs);
+      const duration = durationMessageValue(durationMs);
       const value = getNumberFormat(this.effectiveLocale, {
         maximumFractionDigits: duration.key === 'durationSeconds' ? 1 : 0,
       }).format(duration.value);
@@ -396,7 +404,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
           part="body"
           id=${this.bodyId}
           role="group"
-          aria-label=${this.getAttribute('aria-label') || label}
+          aria-label=${label}
           tabindex="0"
           ?hidden=${!this.expanded}
           @scroll=${this.onScroll}

@@ -1,9 +1,9 @@
-import { fixture, expect, html, aTimeout } from '@open-wc/testing';
-import './streaming-text.js';
-import '../markdown/markdown.js';
-import { looksLikeMarkdown } from './streaming-text.js';
-import type { LyraStreamingText } from './streaming-text.js';
-import { setReducedMotion } from '../../../../test/wtr-media.js';
+import { fixture, expect, html, aTimeout } from "@open-wc/testing";
+import "./streaming-text.js";
+import "../markdown/markdown.js";
+import { looksLikeMarkdown } from "./streaming-text.js";
+import type { LyraStreamingText } from "./streaming-text.js";
+import { setReducedMotion } from "../../../../test/wtr-media.js";
 
 // `@sinonjs/fake-timers` doesn't work in this test environment (CJS-only,
 // no shim configured) -- real timers with short, generously-margined
@@ -16,63 +16,79 @@ type Internals = {
 };
 
 function plainText(el: LyraStreamingText): string {
-  const span = el.shadowRoot!.querySelector('.plain');
-  return span ? (span.textContent ?? '') : '';
+  const span = el.shadowRoot!.querySelector(".plain");
+  return span ? span.textContent ?? "" : "";
 }
 
-it('defaults to empty content, streaming=false, coalesce-ms=50, and markdown=undefined (auto-detect)', async () => {
-  const el = (await fixture(html`<lr-streaming-text></lr-streaming-text>`)) as LyraStreamingText;
-  expect(el.content).to.equal('');
+it('defaults to empty content, streaming=false, coalesce-ms=50, and contentMode="auto"', async () => {
+  const el = (await fixture(
+    html`<lr-streaming-text></lr-streaming-text>`
+  )) as LyraStreamingText;
+  expect(el.content).to.equal("");
   expect(el.streaming).to.be.false;
   expect(el.coalesceMs).to.equal(50);
-  expect(el.markdown).to.be.undefined;
+  expect(el.contentMode).to.equal("auto");
 });
 
-it('reflects streaming as a boolean host attribute', async () => {
-  const el = (await fixture(html`<lr-streaming-text></lr-streaming-text>`)) as LyraStreamingText;
-  expect(el.hasAttribute('streaming')).to.be.false;
+it("reflects streaming as a boolean host attribute", async () => {
+  const el = (await fixture(
+    html`<lr-streaming-text></lr-streaming-text>`
+  )) as LyraStreamingText;
+  expect(el.hasAttribute("streaming")).to.be.false;
 
   el.streaming = true;
   await el.updateComplete;
-  expect(el.hasAttribute('streaming')).to.be.true;
+  expect(el.hasAttribute("streaming")).to.be.true;
 
   el.streaming = false;
   await el.updateComplete;
-  expect(el.hasAttribute('streaming')).to.be.false;
+  expect(el.hasAttribute("streaming")).to.be.false;
 });
 
-it('maps the coalesce-ms attribute onto the coalesceMs number property', async () => {
-  const el = (await fixture(html`<lr-streaming-text coalesce-ms="120"></lr-streaming-text>`)) as LyraStreamingText;
+it("maps the coalesce-ms attribute onto the coalesceMs number property", async () => {
+  const el = (await fixture(
+    html`<lr-streaming-text coalesce-ms="120"></lr-streaming-text>`
+  )) as LyraStreamingText;
   expect(el.coalesceMs).to.equal(120);
 });
 
-it('self-heals a NaN/negative coalesce-ms instead of feeding setTimeout a nonsensical delay', async () => {
+it("self-heals a NaN/negative coalesce-ms instead of feeding setTimeout a nonsensical delay", async () => {
   // Regression test: `coalesceMs` reaches `Announcer.throttleMs` and, from there, a raw
   // `setTimeout()` call -- a NaN/negative value must not reach it unsanitized.
-  const nanEl = (await fixture(html`<lr-streaming-text coalesce-ms="NaN"></lr-streaming-text>`)) as LyraStreamingText;
-  expect((nanEl as unknown as Internals).coalescer.throttleMs, 'NaN falls back to the constructed default').to.equal(
-    50,
-  );
+  const nanEl = (await fixture(
+    html`<lr-streaming-text coalesce-ms="NaN"></lr-streaming-text>`
+  )) as LyraStreamingText;
+  expect(
+    (nanEl as unknown as Internals).coalescer.throttleMs,
+    "NaN falls back to the constructed default"
+  ).to.equal(50);
 
   const negativeEl = (await fixture(
-    html`<lr-streaming-text coalesce-ms="-30"></lr-streaming-text>`,
+    html`<lr-streaming-text coalesce-ms="-30"></lr-streaming-text>`
   )) as LyraStreamingText;
-  expect((negativeEl as unknown as Internals).coalescer.throttleMs, 'a negative delay clamps to 0').to.equal(0);
+  expect(
+    (negativeEl as unknown as Internals).coalescer.throttleMs,
+    "a negative delay clamps to 0"
+  ).to.equal(0);
 
   // Also re-clamped when reassigned after mount, not just at initial attribute mapping.
   const reassigned = (await fixture(
-    html`<lr-streaming-text coalesce-ms="80"></lr-streaming-text>`,
+    html`<lr-streaming-text coalesce-ms="80"></lr-streaming-text>`
   )) as LyraStreamingText;
   reassigned.coalesceMs = Number.NaN;
   await reassigned.updateComplete;
-  expect((reassigned as unknown as Internals).coalescer.throttleMs).to.equal(50);
+  expect((reassigned as unknown as Internals).coalescer.throttleMs).to.equal(
+    50
+  );
 });
 
-it('honors coalesceMs reassigned after mount for a subsequent burst, not just the initial attribute mapping', async () => {
+it("honors coalesceMs reassigned after mount for a subsequent burst, not just the initial attribute mapping", async () => {
   const el = (await fixture(
-    html`<lr-streaming-text coalesce-ms="5000"></lr-streaming-text>`,
+    html`<lr-streaming-text coalesce-ms="5000"></lr-streaming-text>`
   )) as LyraStreamingText;
-  expect(el.coalesceMs, 'precondition: mounted with the large window').to.equal(5000);
+  expect(el.coalesceMs, "precondition: mounted with the large window").to.equal(
+    5000
+  );
 
   // Shrink the window well below the original mount-time value before
   // starting a fresh burst -- if the reassignment didn't actually reach the
@@ -81,22 +97,24 @@ it('honors coalesceMs reassigned after mount for a subsequent burst, not just th
   el.coalesceMs = 50;
   await el.updateComplete;
 
-  el.content = 'a';
+  el.content = "a";
   await el.updateComplete;
-  el.content = 'ab';
+  el.content = "ab";
   await el.updateComplete;
-  el.content = 'abc';
+  el.content = "abc";
   await el.updateComplete;
 
   await aTimeout(150);
   expect(
     plainText(el),
-    'the burst should flush using the newly-assigned coalesceMs, not the original 5000ms window',
-  ).to.equal('abc');
+    "the burst should flush using the newly-assigned coalesceMs, not the original 5000ms window"
+  ).to.equal("abc");
 });
 
-it('schedules and cancels coalescing with the adopted document window', async () => {
-  const el = (await fixture(html`<lr-streaming-text coalesce-ms="5000"></lr-streaming-text>`)) as LyraStreamingText;
+it("schedules and cancels coalescing with the adopted document window", async () => {
+  const el = (await fixture(
+    html`<lr-streaming-text coalesce-ms="5000"></lr-streaming-text>`
+  )) as LyraStreamingText;
   const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
   const ownerWindow = iframe.contentWindow!;
   const originalSetTimeout = ownerWindow.setTimeout;
@@ -104,7 +122,7 @@ it('schedules and cancels coalescing with the adopted document window', async ()
   const callbacks = new Map<number, () => void>();
   const clears: number[] = [];
   ownerWindow.setTimeout = ((handler: TimerHandler) => {
-    if (typeof handler === 'function') callbacks.set(81, handler);
+    if (typeof handler === "function") callbacks.set(81, handler);
     return 81;
   }) as typeof ownerWindow.setTimeout;
   ownerWindow.clearTimeout = ((handle?: number) => {
@@ -117,8 +135,9 @@ it('schedules and cancels coalescing with the adopted document window', async ()
   try {
     el.remove();
     iframe.contentDocument!.adoptNode(el);
-    (el as unknown as Internals).coalescer.announce('coalesced in the frame');
-    expect(callbacks.has(81), 'the adopted window must schedule the coalescer').to.be.true;
+    (el as unknown as Internals).coalescer.announce("coalesced in the frame");
+    expect(callbacks.has(81), "the adopted window must schedule the coalescer")
+      .to.be.true;
 
     iframe.contentDocument!.body.append(el);
     el.remove();
@@ -132,164 +151,203 @@ it('schedules and cancels coalescing with the adopted document window', async ()
   }
 });
 
-describe('markdown tri-state attribute parsing', () => {
-  it('is undefined when the markdown attribute is entirely absent', async () => {
-    const el = (await fixture(html`<lr-streaming-text></lr-streaming-text>`)) as LyraStreamingText;
-    expect(el.markdown).to.be.undefined;
+describe("content mode", () => {
+  it("is auto when the content-mode attribute is absent", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text></lr-streaming-text>`
+    )) as LyraStreamingText;
+    expect(el.contentMode).to.equal("auto");
   });
 
-  it('is true for a bare markdown attribute', async () => {
-    const el = (await fixture(html`<lr-streaming-text markdown></lr-streaming-text>`)) as LyraStreamingText;
-    expect(el.markdown).to.be.true;
+  it("reads and reflects the markdown mode", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text content-mode="markdown"></lr-streaming-text>`
+    )) as LyraStreamingText;
+    expect(el.contentMode).to.equal("markdown");
+    expect(el.getAttribute("content-mode")).to.equal("markdown");
   });
 
-  it('is false only for markdown="false"', async () => {
-    const el = (await fixture(html`<lr-streaming-text markdown="false"></lr-streaming-text>`)) as LyraStreamingText;
-    expect(el.markdown).to.be.false;
+  it("reads the plain mode", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text content-mode="plain"></lr-streaming-text>`
+    )) as LyraStreamingText;
+    expect(el.contentMode).to.equal("plain");
   });
 
-  it('never reflects a programmatic .markdown assignment back to the attribute (not declared reflect: true)', async () => {
-    const el = (await fixture(html`<lr-streaming-text></lr-streaming-text>`)) as LyraStreamingText;
+  it("reflects a programmatic contentMode assignment", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text></lr-streaming-text>`
+    )) as LyraStreamingText;
 
-    el.markdown = true;
+    el.contentMode = "markdown";
     await el.updateComplete;
-    expect(el.hasAttribute('markdown')).to.be.false;
+    expect(el.getAttribute("content-mode")).to.equal("markdown");
 
-    el.markdown = false;
+    el.contentMode = "plain";
     await el.updateComplete;
-    expect(el.hasAttribute('markdown')).to.be.false;
+    expect(el.getAttribute("content-mode")).to.equal("plain");
 
-    el.markdown = undefined;
+    el.contentMode = "auto";
     await el.updateComplete;
-    expect(el.hasAttribute('markdown')).to.be.false;
+    expect(el.getAttribute("content-mode")).to.equal("auto");
   });
 });
 
-describe('coalescing', () => {
-  it('flushes the element\'s initial content immediately, even with a huge coalesce-ms window', async () => {
+describe("coalescing", () => {
+  it("flushes the element's initial content immediately, even with a huge coalesce-ms window", async () => {
     // coalesce-ms is set absurdly high on purpose: if the very first update
     // weren't force-flushed, this assertion would only ever pass after a
     // 5s real-timer wait -- proving the "no artificial startup delay" claim
     // in the class doc without actually waiting 5s.
     const el = (await fixture(
-      html`<lr-streaming-text coalesce-ms="5000" .content=${'hello'}></lr-streaming-text>`,
+      html`<lr-streaming-text
+        coalesce-ms="5000"
+        .content=${"hello"}
+      ></lr-streaming-text>`
     )) as LyraStreamingText;
-    expect(plainText(el)).to.equal('hello');
+    expect(plainText(el)).to.equal("hello");
   });
 
-  it('coalesces a rapid burst of subsequent content changes across several render passes, keeping only the latest', async () => {
-    const el = (await fixture(html`<lr-streaming-text coalesce-ms="150"></lr-streaming-text>`)) as LyraStreamingText;
-    expect(plainText(el), 'the initial empty content is the forced first flush').to.equal('');
+  it("coalesces a rapid burst of subsequent content changes across several render passes, keeping only the latest", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text coalesce-ms="150"></lr-streaming-text>`
+    )) as LyraStreamingText;
+    expect(
+      plainText(el),
+      "the initial empty content is the forced first flush"
+    ).to.equal("");
 
     // Each assignment below is its own Lit update pass (separated by an
     // awaited updateComplete), not a single batched pass -- proving the
     // *Announcer's* coalescing, not just Lit's own synchronous batching.
-    el.content = 'a';
+    el.content = "a";
     await el.updateComplete;
-    el.content = 'ab';
+    el.content = "ab";
     await el.updateComplete;
-    el.content = 'abc';
+    el.content = "abc";
     await el.updateComplete;
 
-    expect(plainText(el), 'nothing should have flushed yet -- still inside the coalesce window').to.equal('');
+    expect(
+      plainText(el),
+      "nothing should have flushed yet -- still inside the coalesce window"
+    ).to.equal("");
 
     await aTimeout(250);
-    expect(plainText(el), 'only the latest value in the burst should ever land').to.equal('abc');
+    expect(
+      plainText(el),
+      "only the latest value in the burst should ever land"
+    ).to.equal("abc");
   });
 
-  it('flushes immediately, bypassing the coalesce window, when streaming transitions from true to false', async () => {
+  it("flushes immediately, bypassing the coalesce window, when streaming transitions from true to false", async () => {
     const el = (await fixture(
-      html`<lr-streaming-text streaming coalesce-ms="5000"></lr-streaming-text>`,
+      html`<lr-streaming-text streaming coalesce-ms="5000"></lr-streaming-text>`
     )) as LyraStreamingText;
-    expect(plainText(el)).to.equal('');
+    expect(plainText(el)).to.equal("");
 
-    el.content = 'final chunk';
+    el.content = "final chunk";
     el.streaming = false;
     await el.updateComplete;
 
-    expect(plainText(el), 'the stream-end transition must force-flush the final content').to.equal('final chunk');
+    expect(
+      plainText(el),
+      "the stream-end transition must force-flush the final content"
+    ).to.equal("final chunk");
   });
 
-  it('flushes immediately, bypassing the coalesce window, when streaming restarts (false -> true) on a reused element', async () => {
+  it("flushes immediately, bypassing the coalesce window, when streaming restarts (false -> true) on a reused element", async () => {
     const el = (await fixture(
-      html`<lr-streaming-text coalesce-ms="5000"></lr-streaming-text>`,
+      html`<lr-streaming-text coalesce-ms="5000"></lr-streaming-text>`
     )) as LyraStreamingText;
 
     // Finish a first stream so the element is left showing that stream's
     // final content, exactly like a reused chat-message element would be
     // between two separate assistant turns.
-    el.content = 'first stream final content';
+    el.content = "first stream final content";
     el.streaming = true;
     await el.updateComplete;
     el.streaming = false;
     await el.updateComplete;
-    expect(plainText(el), 'precondition: the first stream flushed its final content').to.equal(
-      'first stream final content',
-    );
+    expect(
+      plainText(el),
+      "precondition: the first stream flushed its final content"
+    ).to.equal("first stream final content");
 
     // Restarting the stream on the same element with new content must
     // force-flush immediately -- otherwise the previous stream's stale final
     // content would keep showing for up to the full 5000ms coalesce window
     // even though a new stream has already started.
-    el.content = 'second stream first chunk';
+    el.content = "second stream first chunk";
     el.streaming = true;
     await el.updateComplete;
 
-    expect(plainText(el), 'a stream restart must force-flush immediately').to.equal('second stream first chunk');
+    expect(
+      plainText(el),
+      "a stream restart must force-flush immediately"
+    ).to.equal("second stream first chunk");
   });
 
-  it('does not force-flush a no-op reassignment of streaming to the same value', async () => {
+  it("does not force-flush a no-op reassignment of streaming to the same value", async () => {
     const el = (await fixture(
-      html`<lr-streaming-text streaming coalesce-ms="5000"></lr-streaming-text>`,
+      html`<lr-streaming-text streaming coalesce-ms="5000"></lr-streaming-text>`
     )) as LyraStreamingText;
-    el.content = 'partial';
+    el.content = "partial";
     el.streaming = true; // no-op: already true, must not force-flush
     await el.updateComplete;
-    expect(plainText(el), 'reassigning streaming to its current value must not bypass the coalesce window').to.equal(
-      '',
-    );
+    expect(
+      plainText(el),
+      "reassigning streaming to its current value must not bypass the coalesce window"
+    ).to.equal("");
   });
 
-  it('cancels any pending coalesced flush on disconnect', async () => {
-    const el = (await fixture(html`<lr-streaming-text coalesce-ms="60"></lr-streaming-text>`)) as LyraStreamingText;
-    el.content = 'partial';
+  it("cancels any pending coalesced flush on disconnect", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text coalesce-ms="60"></lr-streaming-text>`
+    )) as LyraStreamingText;
+    el.content = "partial";
     await el.updateComplete;
-    expect((el as unknown as Internals).displayedContent, 'precondition: still queued, not yet flushed').to.equal(
-      '',
-    );
+    expect(
+      (el as unknown as Internals).displayedContent,
+      "precondition: still queued, not yet flushed"
+    ).to.equal("");
 
     el.remove();
     await aTimeout(120);
     expect(
       (el as unknown as Internals).displayedContent,
-      'a disconnected element must not still flush a pending burst',
-    ).to.equal('');
+      "a disconnected element must not still flush a pending burst"
+    ).to.equal("");
   });
 
-  it('flushes the latest public content when reconnected after a pending update was cancelled', async () => {
+  it("flushes the latest public content when reconnected after a pending update was cancelled", async () => {
     const el = (await fixture(
-      html`<lr-streaming-text coalesce-ms="5000" content="first"></lr-streaming-text>`,
+      html`<lr-streaming-text
+        coalesce-ms="5000"
+        content="first"
+      ></lr-streaming-text>`
     )) as LyraStreamingText;
-    expect(plainText(el)).to.equal('first');
-    el.content = 'latest while reconnecting';
+    expect(plainText(el)).to.equal("first");
+    el.content = "latest while reconnecting";
     await el.updateComplete;
-    expect(plainText(el)).to.equal('first');
+    expect(plainText(el)).to.equal("first");
 
     el.remove();
     document.body.append(el);
     try {
       await el.updateComplete;
-      expect(plainText(el)).to.equal('latest while reconnecting');
+      expect(plainText(el)).to.equal("latest while reconnecting");
     } finally {
       el.remove();
     }
   });
 });
 
-describe('markdown heuristic memoization', () => {
-  it('does not re-run the markdown auto-detect heuristic on a render triggered only by streaming, with no displayedContent change', async () => {
+describe("Markdown heuristic memoization", () => {
+  it("does not re-run auto-detection on a render triggered only by streaming, with no displayedContent change", async () => {
     const el = (await fixture(
-      html`<lr-streaming-text .content=${'just plain prose, no markdown syntax here'}></lr-streaming-text>`,
+      html`<lr-streaming-text
+        .content=${"just plain prose, no Markdown syntax here"}
+      ></lr-streaming-text>`
     )) as LyraStreamingText;
     await el.updateComplete;
 
@@ -311,19 +369,22 @@ describe('markdown heuristic memoization', () => {
 
       expect(
         scans,
-        'a render triggered only by `streaming` toggling must not re-scan unchanged displayedContent',
+        "a render triggered only by `streaming` toggling must not re-scan unchanged displayedContent"
       ).to.equal(0);
     } finally {
       RegExp.prototype.test = originalTest;
     }
   });
 
-  it('skips re-running the regex battery when already-matched content only appends', async () => {
-    // markdown="false" keeps the rendered output on the plain-text path (so no
+  it("skips re-running the regex battery when already-matched content only appends", async () => {
+    // content-mode="plain" keeps the rendered output on the plain-text path (so no
     // <lr-markdown>/marked regex activity pollutes the counter below) while the
     // auto-detect scan in willUpdate still runs on every displayedContent change.
     const el = (await fixture(
-      html`<lr-streaming-text markdown="false" .content=${'# Heading'}></lr-streaming-text>`,
+      html`<lr-streaming-text
+        content-mode="plain"
+        .content=${"# Heading"}
+      ></lr-streaming-text>`
     )) as LyraStreamingText;
     await el.updateComplete;
 
@@ -335,7 +396,7 @@ describe('markdown heuristic memoization', () => {
         return originalTest.call(this, str);
       };
 
-      el.content = '# Heading\n\nmore streamed prose arriving later';
+      el.content = "# Heading\n\nmore streamed prose arriving later";
       // The false -> true streaming transition forces the coalescer to flush the new
       // content within this same update, so the appended text reaches displayedContent
       // (and the memo check) without waiting out a coalesce window.
@@ -344,154 +405,220 @@ describe('markdown heuristic memoization', () => {
 
       expect(
         scans,
-        'appended content whose prefix already matched must not re-run the full pattern battery',
+        "appended content whose prefix already matched must not re-run the full pattern battery"
       ).to.equal(0);
     } finally {
       RegExp.prototype.test = originalTest;
     }
   });
 
-  it('re-evaluates the markdown auto-detect when content is replaced rather than appended', async () => {
+  it("re-evaluates auto-detection when content is replaced rather than appended", async () => {
     const el = (await fixture(
-      html`<lr-streaming-text .content=${'# Heading'}></lr-streaming-text>`,
+      html`<lr-streaming-text .content=${"# Heading"}></lr-streaming-text>`
     )) as LyraStreamingText;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('lr-markdown'), 'precondition: auto-detected as Markdown').to.exist;
+    expect(
+      el.shadowRoot!.querySelector("lr-markdown"),
+      "precondition: auto-detected as Markdown"
+    ).to.exist;
 
     // A brand-new stream on a reused element: the replacement is not an append of the
     // previous text, so the memoized "already matched" result must not stick.
-    el.content = 'plain prose for a brand-new stream';
+    el.content = "plain prose for a brand-new stream";
     el.streaming = true;
     await el.updateComplete;
 
-    expect((el.shadowRoot!.querySelector('lr-markdown')) == null).to.be.true;
-    expect(el.shadowRoot!.querySelector('.plain')).to.exist;
+    expect(el.shadowRoot!.querySelector("lr-markdown") == null).to.be.true;
+    expect(el.shadowRoot!.querySelector(".plain")).to.exist;
+  });
+
+  it("re-evaluates a boundary-sensitive match when appended text invalidates it", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text .content=${"_x_"}></lr-streaming-text>`
+    )) as LyraStreamingText;
+    expect(
+      el.shadowRoot!.querySelector("lr-markdown"),
+      "the closed emphasis is initially Markdown"
+    ).to.exist;
+
+    el.content = "_x_a";
+    el.streaming = true;
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector("lr-markdown") === null).to.be.true;
+    expect(plainText(el)).to.equal("_x_a");
   });
 });
 
-describe('markdown auto-detection and rendering mode', () => {
-  it('renders plain prose through the .plain text container by default', async () => {
+describe("Markdown auto-detection and rendering mode", () => {
+  it("renders plain prose through the .plain text container by default", async () => {
     const el = (await fixture(
-      html`<lr-streaming-text .content=${'just some ordinary sentence, nothing special.'}></lr-streaming-text>`,
+      html`<lr-streaming-text
+        .content=${"just some ordinary sentence, nothing special."}
+      ></lr-streaming-text>`
     )) as LyraStreamingText;
-    expect(el.shadowRoot!.querySelector('.plain')).to.exist;
-    expect((el.shadowRoot!.querySelector('lr-markdown')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector(".plain")).to.exist;
+    expect(el.shadowRoot!.querySelector("lr-markdown") == null).to.be.true;
   });
 
-  it('auto-detects Markdown syntax and routes it through lr-markdown', async () => {
+  it("auto-detects Markdown syntax and routes it through lr-markdown", async () => {
     const el = (await fixture(
-      html`<lr-streaming-text .content=${'# Heading\n\nSome **bold** text.'}></lr-streaming-text>`,
+      html`<lr-streaming-text
+        .content=${"# Heading\n\nSome **bold** text."}
+      ></lr-streaming-text>`
     )) as LyraStreamingText;
-    expect(el.shadowRoot!.querySelector('lr-markdown')).to.exist;
-    expect((el.shadowRoot!.querySelector('.plain')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector("lr-markdown")).to.exist;
+    expect(el.shadowRoot!.querySelector(".plain") == null).to.be.true;
   });
 
-  it('markdown=true forces Markdown rendering even for plain-looking content', async () => {
+  it('contentMode="markdown" forces Markdown rendering even for plain-looking content', async () => {
     const el = (await fixture(
-      html`<lr-streaming-text markdown .content=${'no markdown syntax here at all'}></lr-streaming-text>`,
+      html`<lr-streaming-text
+        content-mode="markdown"
+        .content=${"no Markdown syntax here at all"}
+      ></lr-streaming-text>`
     )) as LyraStreamingText;
-    expect(el.shadowRoot!.querySelector('lr-markdown')).to.exist;
+    expect(el.shadowRoot!.querySelector("lr-markdown")).to.exist;
   });
 
-  it('markdown=false forces plain-text rendering even for Markdown-looking content', async () => {
+  it('contentMode="plain" forces plain-text rendering even for Markdown-looking content', async () => {
     const el = (await fixture(
-      html`<lr-streaming-text markdown="false" .content=${'# Heading with **bold**'}></lr-streaming-text>`,
+      html`<lr-streaming-text
+        content-mode="plain"
+        .content=${"# Heading with **bold**"}
+      ></lr-streaming-text>`
     )) as LyraStreamingText;
-    expect((el.shadowRoot!.querySelector('lr-markdown')) == null).to.be.true;
-    expect(plainText(el)).to.equal('# Heading with **bold**');
+    expect(el.shadowRoot!.querySelector("lr-markdown") == null).to.be.true;
+    expect(plainText(el)).to.equal("# Heading with **bold**");
   });
 
-  it('forwards streaming through to the nested lr-markdown as its own streaming hint prop', async () => {
+  it("forwards streaming through to the nested lr-markdown as its own streaming hint prop", async () => {
     const el = (await fixture(
-      html`<lr-streaming-text streaming markdown .content=${'# Heading'}></lr-streaming-text>`,
+      html`<lr-streaming-text
+        streaming
+        content-mode="markdown"
+        .content=${"# Heading"}
+      ></lr-streaming-text>`
     )) as LyraStreamingText;
-    const md = el.shadowRoot!.querySelector('lr-markdown') as unknown as { streaming: boolean };
+    const md = el.shadowRoot!.querySelector("lr-markdown") as unknown as {
+      streaming: boolean;
+    };
     expect(md.streaming).to.be.true;
   });
 });
 
-describe('looksLikeMarkdown()', () => {
-  it('returns false for empty or plain prose', () => {
-    expect(looksLikeMarkdown('')).to.be.false;
-    expect(looksLikeMarkdown('just a normal sentence with no special syntax')).to.be.false;
+describe("looksLikeMarkdown()", () => {
+  it("returns false for empty or plain prose", () => {
+    expect(looksLikeMarkdown("")).to.be.false;
+    expect(looksLikeMarkdown("just a normal sentence with no special syntax"))
+      .to.be.false;
   });
 
-  it('recognizes headings, emphasis, code, lists, links, and blockquotes', () => {
-    expect(looksLikeMarkdown('# Heading')).to.be.true;
-    expect(looksLikeMarkdown('some **bold** text')).to.be.true;
-    expect(looksLikeMarkdown('some _italic_ text')).to.be.true;
-    expect(looksLikeMarkdown('inline `code` span')).to.be.true;
-    expect(looksLikeMarkdown('```\nfenced\n```')).to.be.true;
-    expect(looksLikeMarkdown('- a bullet item')).to.be.true;
-    expect(looksLikeMarkdown('1. a numbered item')).to.be.true;
-    expect(looksLikeMarkdown('see [the docs](https://example.com)')).to.be.true;
-    expect(looksLikeMarkdown('> a quoted line')).to.be.true;
+  it("recognizes headings, emphasis, code, lists, links, and blockquotes", () => {
+    expect(looksLikeMarkdown("# Heading")).to.be.true;
+    expect(looksLikeMarkdown("some **bold** text")).to.be.true;
+    expect(looksLikeMarkdown("some _italic_ text")).to.be.true;
+    expect(looksLikeMarkdown("inline `code` span")).to.be.true;
+    expect(looksLikeMarkdown("```\nfenced\n```")).to.be.true;
+    expect(looksLikeMarkdown("- a bullet item")).to.be.true;
+    expect(looksLikeMarkdown("1. a numbered item")).to.be.true;
+    expect(looksLikeMarkdown("see [the docs](https://example.com)")).to.be.true;
+    expect(looksLikeMarkdown("> a quoted line")).to.be.true;
   });
 });
 
-describe('cursor', () => {
-  it('renders no cursor part while not streaming', async () => {
-    const el = (await fixture(html`<lr-streaming-text .content=${'hi'}></lr-streaming-text>`)) as LyraStreamingText;
-    expect((el.shadowRoot!.querySelector('[part="cursor"]')) == null).to.be.true;
+describe("cursor", () => {
+  it("renders no cursor part while not streaming", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text .content=${"hi"}></lr-streaming-text>`
+    )) as LyraStreamingText;
+    expect(el.shadowRoot!.querySelector('[part="cursor"]') == null).to.be.true;
   });
 
-  it('renders a decorative (aria-hidden) cursor part while streaming', async () => {
+  it("renders a decorative (aria-hidden) cursor part while streaming", async () => {
     const el = (await fixture(
-      html`<lr-streaming-text streaming .content=${'hi'}></lr-streaming-text>`,
+      html`<lr-streaming-text streaming .content=${"hi"}></lr-streaming-text>`
     )) as LyraStreamingText;
     const cursor = el.shadowRoot!.querySelector('[part="cursor"]');
-    expect((cursor) != null).to.equal(true);
-    expect(cursor!.getAttribute('aria-hidden')).to.equal('true');
+    expect(cursor != null).to.equal(true);
+    expect(cursor!.getAttribute("aria-hidden")).to.equal("true");
   });
 
-  it('gives the cursor an ambient looping blink and renders it statically under reduced motion', async () => {
+  it("gives the cursor an ambient looping blink and renders it statically under reduced motion", async () => {
     // Regression test: this used to assert --lr-transition-base (a 180ms
     // discrete-state-flip token), which made the cursor strobe roughly every
     // 90ms instead of the calm, ambient blink lr-typing-indicator's own
     // cursor variant produces via --lr-transition-ambient.
-    await setReducedMotion('no-preference');
+    await setReducedMotion("no-preference");
     try {
       const el = (await fixture(
-        html`<lr-streaming-text streaming .content=${'hi'}></lr-streaming-text>`,
+        html`<lr-streaming-text streaming .content=${"hi"}></lr-streaming-text>`
       )) as LyraStreamingText;
-      const cursor = el.shadowRoot!.querySelector('[part="cursor"]') as HTMLElement;
+      const cursor = el.shadowRoot!.querySelector(
+        '[part="cursor"]'
+      ) as HTMLElement;
       const fullMotion = getComputedStyle(cursor);
-      expect(fullMotion.animationName).to.equal('lr-streaming-text-cursor-blink');
-      expect(fullMotion.animationDuration).to.equal('1.8s');
-      expect(fullMotion.animationIterationCount).to.equal('infinite');
+      expect(fullMotion.animationName).to.equal(
+        "lr-streaming-text-cursor-blink"
+      );
+      expect(fullMotion.animationDuration).to.equal("1.8s");
+      expect(fullMotion.animationIterationCount).to.equal("infinite");
 
-      await setReducedMotion('reduce');
-      expect(matchMedia('(prefers-reduced-motion: reduce)').matches).to.equal(true);
+      await setReducedMotion("reduce");
+      expect(matchMedia("(prefers-reduced-motion: reduce)").matches).to.equal(
+        true
+      );
       const reducedMotion = getComputedStyle(cursor);
-      expect(reducedMotion.animationName).to.equal('none');
-      expect(reducedMotion.opacity).to.equal('1');
+      expect(reducedMotion.animationName).to.equal("none");
+      expect(reducedMotion.opacity).to.equal("1");
     } finally {
-      await setReducedMotion('no-preference');
+      await setReducedMotion("no-preference");
     }
   });
 
-  it('sizes the rendered cursor from its themeable width and height properties', async () => {
+  it("sizes the rendered cursor from its themeable width and height properties", async () => {
     const el = (await fixture(html`
       <lr-streaming-text
         streaming
-        .content=${'hi'}
-        style="--lr-streaming-text-cursor-width: 7px; --lr-streaming-text-cursor-height: 19px;"
+        .content=${"hi"}
+        style="--lr-inline-cursor-width: 7px; --lr-inline-cursor-height: 19px;"
       ></lr-streaming-text>
     `)) as LyraStreamingText;
-    const cursor = el.shadowRoot!.querySelector('[part="cursor"]') as HTMLElement;
+    const cursor = el.shadowRoot!.querySelector(
+      '[part="cursor"]'
+    ) as HTMLElement;
     const computed = getComputedStyle(cursor);
-    expect(computed.inlineSize).to.equal('7px');
-    expect(computed.blockSize).to.equal('19px');
-    expect(computed.borderRadius).to.equal('7px');
+    expect(computed.inlineSize).to.equal("7px");
+    expect(computed.blockSize).to.equal("19px");
+    expect(computed.borderRadius).to.equal("7px");
+  });
+
+  it("inherits the shared inline-cursor hooks from an ancestor", async () => {
+    const wrapper = await fixture(html`
+      <div
+        style="--lr-inline-cursor-width: 6px; --lr-inline-cursor-height: 18px;"
+      >
+        <lr-streaming-text streaming content="hi"></lr-streaming-text>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-streaming-text") as LyraStreamingText;
+    const cursor = el.shadowRoot!.querySelector(
+      '[part="cursor"]'
+    ) as HTMLElement;
+    const computed = getComputedStyle(cursor);
+    expect(computed.inlineSize).to.equal("6px");
+    expect(computed.blockSize).to.equal("18px");
   });
 });
 
-it('does not dispatch any lr-* events -- purely presentational', async () => {
-  const el = (await fixture(html`<lr-streaming-text></lr-streaming-text>`)) as LyraStreamingText;
+it("does not dispatch any lr-* events -- purely presentational", async () => {
+  const el = (await fixture(
+    html`<lr-streaming-text></lr-streaming-text>`
+  )) as LyraStreamingText;
   let sawEvent = false;
   const onAny = () => (sawEvent = true);
-  el.addEventListener('lr-streaming-text-change', onAny);
-  el.content = 'hello';
+  el.addEventListener("lr-streaming-text-change", onAny);
+  el.content = "hello";
   el.streaming = true;
   await el.updateComplete;
   el.streaming = false;
@@ -499,14 +626,19 @@ it('does not dispatch any lr-* events -- purely presentational', async () => {
   expect(sawEvent).to.be.false;
 });
 
-it('is accessible in the default (empty, not streaming) state', async () => {
-  const el = (await fixture(html`<lr-streaming-text></lr-streaming-text>`)) as LyraStreamingText;
+it("is accessible in the default (empty, not streaming) state", async () => {
+  const el = (await fixture(
+    html`<lr-streaming-text></lr-streaming-text>`
+  )) as LyraStreamingText;
   await expect(el).to.be.accessible();
 });
 
-it('is accessible while streaming, populated with Markdown content and a visible cursor', async () => {
+it("is accessible while streaming, populated with Markdown content and a visible cursor", async () => {
   const el = (await fixture(
-    html`<lr-streaming-text streaming .content=${'# Heading\n\nSome **bold** text and a [link](https://example.com).'}></lr-streaming-text>`,
+    html`<lr-streaming-text
+      streaming
+      .content=${"# Heading\n\nSome **bold** text and a [link](https://example.com)."}
+    ></lr-streaming-text>`
   )) as LyraStreamingText;
   await el.updateComplete;
   await expect(el).to.be.accessible();

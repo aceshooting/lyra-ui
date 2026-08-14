@@ -12,13 +12,15 @@ async function twoFrames(): Promise<void> {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 }
 
-it('defaults to label="Thinking", expanded=false, mode="live", no duration', async () => {
+it('defaults to label="Thinking", expanded=false, mode="live", follow=true, no duration', async () => {
   const el = (await fixture(html`<lr-thinking-panel></lr-thinking-panel>`)) as LyraThinkingPanel;
   expect(el.label).to.equal('Thinking');
   expect(el.expanded).to.be.false;
   expect(el.hasAttribute('expanded')).to.be.false;
   expect(el.mode).to.equal('live');
   expect(el.getAttribute('mode')).to.equal('live');
+  expect(el.follow).to.be.true;
+  expect(el.hasAttribute('follow')).to.be.false;
   expect(el.durationMs).to.be.undefined;
 });
 
@@ -53,25 +55,48 @@ it('hides [part="body"] from the accessibility tree while collapsed, shows it wh
   expect(body.hidden).to.be.false;
 });
 
-it('toggles expanded and fires lr-toggle on header click', async () => {
+it('requests a toggle before committing expanded and lr-toggle', async () => {
   const el = (await fixture(html`<lr-thinking-panel></lr-thinking-panel>`)) as LyraThinkingPanel;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement;
 
+  const order: string[] = [];
+  el.addEventListener('lr-toggle-request', () => order.push('request'));
+  el.addEventListener('lr-toggle', () => order.push('commit'));
+  let request = oneEvent(el, 'lr-toggle-request');
   let firing = oneEvent(el, 'lr-toggle');
   header.click();
+  let requested = await request;
   let event = await firing;
   await el.updateComplete;
+  expect(requested.cancelable).to.be.true;
+  expect((requested as CustomEvent).detail).to.deep.equal({ expanded: true });
   expect(el.expanded).to.be.true;
   expect((event as CustomEvent).detail).to.deep.equal({ expanded: true });
   expect(header.getAttribute('aria-expanded')).to.equal('true');
+  expect(order).to.deep.equal(['request', 'commit']);
 
+  request = oneEvent(el, 'lr-toggle-request');
   firing = oneEvent(el, 'lr-toggle');
   header.click();
+  requested = await request;
   event = await firing;
   await el.updateComplete;
+  expect((requested as CustomEvent).detail).to.deep.equal({ expanded: false });
   expect(el.expanded).to.be.false;
   expect((event as CustomEvent).detail).to.deep.equal({ expanded: false });
   expect(header.getAttribute('aria-expanded')).to.equal('false');
+});
+
+it('honors a prevented lr-toggle-request without mutating or emitting lr-toggle', async () => {
+  const el = (await fixture(html`<lr-thinking-panel></lr-thinking-panel>`)) as LyraThinkingPanel;
+  let commits = 0;
+  el.addEventListener('lr-toggle-request', (event) => event.preventDefault());
+  el.addEventListener('lr-toggle', () => commits++);
+
+  (el.shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  expect(el.expanded).to.be.false;
+  expect(commits).to.equal(0);
 });
 
 describe('duration display', () => {
@@ -330,6 +355,43 @@ describe('live-mode auto-scroll', () => {
     expect(body.scrollTop, 'must not have been yanked back down to the bottom').to.equal(scrollTopBefore);
   });
 
+  it('emits follow transitions only for user scrolling away from and back to the tail', async () => {
+    const el = await fixture<LyraThinkingPanel>(html`
+      <lr-thinking-panel mode="live">${longText}</lr-thinking-panel>
+    `);
+    const body = await forceSmallBody(el);
+
+    let pending = oneEvent(el, 'lr-follow-change');
+    body.scrollTop = 0;
+    body.dispatchEvent(new Event('scroll'));
+    expect((await pending).detail).to.deep.equal({ following: false });
+    expect(el.follow).to.be.false;
+
+    pending = oneEvent(el, 'lr-follow-change');
+    body.scrollTop = body.scrollHeight;
+    body.dispatchEvent(new Event('scroll'));
+    expect((await pending).detail).to.deep.equal({ following: true });
+    expect(el.follow).to.be.true;
+  });
+
+  it('does not echo direct follow assignment or imperative scrollToBottom()', async () => {
+    const el = await fixture<LyraThinkingPanel>(html`
+      <lr-thinking-panel mode="live" expanded>${longText}</lr-thinking-panel>
+    `);
+    let events = 0;
+    el.addEventListener('lr-follow-change', () => events++);
+
+    el.follow = false;
+    await el.updateComplete;
+    expect(events).to.equal(0);
+
+    el.scrollToBottom();
+    await el.updateComplete;
+    await twoFrames();
+    expect(el.follow).to.be.true;
+    expect(events).to.equal(0);
+  });
+
   it('never auto-scrolls in post-hoc mode, even while expanded and anchored at the bottom', async () => {
     const el = (await fixture(
       html`<lr-thinking-panel mode="post-hoc">${longText}</lr-thinking-panel>`,
@@ -379,7 +441,7 @@ describe('live-mode auto-scroll', () => {
     // Mirrors LiveStreamingDemo's second run: `expanded` is set to `true`
     // again (a no-op -- already true, so Lit's `changed` map never contains
     // 'expanded') alongside a real `mode` transition to 'live'. Only the mode
-    // transition should be needed to reset stickToBottom and start following.
+    // transition should be needed to reset follow and start following.
     const el = (await fixture(
       html`<lr-thinking-panel mode="post-hoc" expanded>${longText}</lr-thinking-panel>`,
     )) as LyraThinkingPanel;

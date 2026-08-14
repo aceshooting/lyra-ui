@@ -22,7 +22,7 @@ export const styles = css`
      single star, say) is narrower than that floor, and the default justify-content
      (normal => flex-start) would push the stars against the leading edge of an otherwise
      centred control. A no-op once the stars already fill the floor. */
-  [part~='base'] { display: inline-flex; justify-content: center; align-items: center; gap: var(--lr-rating-gap, var(--symbol-spacing, var(--lr-space-xs))); min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); }
+  [part~='base'] { display: inline-flex; justify-content: center; align-items: center; gap: var(--lr-rating-gap, var(--symbol-spacing, var(--lr-space-xs))); min-inline-size: var(--lr-icon-button-size); max-inline-size: 100%; min-block-size: var(--lr-icon-button-size); }
   /* Pointer cursor only while the rating is actually settable -- a readonly or disabled rating is
      not editable via click/drag, so an unconditional cursor: pointer here would misleadingly cue
      an interaction that setValue() (rating.class.ts) refuses to apply. :disabled rather than
@@ -40,8 +40,10 @@ export const styles = css`
   /* Pressing commits a value, so the pressed cue is on the star the pointer is over rather than
      the whole row -- the row-wide hover cue says "settable", this says "this one". */
   :host(:not(:disabled):not([readonly])) [part~='base']:active [part='star'] { color: var(--lr-rating-active-color, color-mix(in oklab, var(--lr-rating-empty-color, var(--symbol-color, var(--lr-color-border-strong))), var(--lr-color-mix-partner) var(--lr-color-mix-active))); }
-  [part='star'] { position: relative; display: inline-flex; color: var(--lr-rating-empty-color, var(--symbol-color, var(--lr-color-border))); font-size: var(--lr-rating-size); line-height: var(--lr-line-height-none); }
-  [part='star'] svg { display: block; }
+  [part='star'] { position: relative; display: inline-flex; flex: 1 1 var(--lr-rating-size); min-inline-size: 0; max-inline-size: var(--lr-rating-size); overflow: hidden; color: var(--lr-rating-empty-color, var(--symbol-color, var(--lr-color-border))); font-size: var(--lr-rating-size); line-height: var(--lr-line-height-none); }
+  [part='star'] svg { display: block; max-inline-size: 100%; }
+  [part='star'] [aria-hidden='true'] { display: inline-flex; inline-size: 100%; max-inline-size: 100%; overflow: hidden; }
+  [part='star'] [aria-hidden='true'] > * { max-inline-size: 100%; }
   /* white-space keeps a consumer getSymbol() glyph at its natural width inside the percentage-wide
      overlay, so overflow: hidden clips it mid-symbol (the partial fill) instead of reflowing it. */
   [part='star-fill'] { position: absolute; inset-block-start: 0; inset-inline-start: 0; block-size: 100%; overflow: hidden; white-space: nowrap; color: var(--lr-rating-fill, var(--symbol-color-active, var(--lr-color-warning))); }

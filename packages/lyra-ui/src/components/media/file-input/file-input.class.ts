@@ -2,9 +2,9 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { finiteRange } from '../../../internal/numbers.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import {
@@ -27,15 +27,29 @@ import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } fr
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../attachment-chip/file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputDefaultLabel, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputDefaultLabel, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 type DragState = 'default' | 'accept' | 'reject';
+type FileInputOutcomeMessageKey =
+  | 'fileInputAcceptedOne'
+  | 'fileInputAcceptedMany'
+  | 'fileInputRejectedOne'
+  | 'fileInputRejectedMany';
 type DroppedFolderReadResult =
   | { status: 'complete'; files: File[] }
   | { status: 'cancelled' }
-  | { status: 'limit' };
+  | { status: 'limit'; name: string }
+  | { status: 'error'; name: string };
+type DroppedFileReadResult =
+  | { status: 'complete'; file: File }
+  | { status: 'cancelled' }
+  | { status: 'error' };
+type DroppedDirectoryBatchResult =
+  | { status: 'complete'; entries: FileSystemEntry[] }
+  | { status: 'cancelled' }
+  | { status: 'error' };
 export type LyraFileInputCapture = '' | 'user' | 'environment';
 
 /** What a `validators` entry may return: nothing/`true` passes, a string is the message, `false` is
@@ -62,7 +76,7 @@ export type LyraFileInputValidator =
   | { validate(value: File[], input: LyraFileInput): LyraFileInputValidatorResult }
   | LyraFileInputObjectValidator;
 
-const VALIDITY_FLAG_KEYS: ReadonlySet<string> = new Set<keyof ValidityStateFlags>([
+const VALIDITY_FLAG_KEYS: ReadonlySet<keyof ValidityStateFlags> = new Set<keyof ValidityStateFlags>([
   'badInput',
   'customError',
   'patternMismatch',
@@ -76,11 +90,32 @@ const VALIDITY_FLAG_KEYS: ReadonlySet<string> = new Set<keyof ValidityStateFlags
 ]);
 
 function isValidityFlagKey(value: unknown): value is keyof ValidityStateFlags {
-  return typeof value === 'string' && VALIDITY_FLAG_KEYS.has(value);
+  return typeof value === 'string' && VALIDITY_FLAG_KEYS.has(value as keyof ValidityStateFlags);
 }
 
 export const DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 const MAX_DROPPED_FOLDER_ENTRIES = 10_000;
+const MAX_MIME_TYPES = 10_000;
+const EMPTY_MIME_TYPES: readonly string[] = Object.freeze([]);
+
+function snapshotMimeTypes(value: unknown): readonly string[] {
+  try {
+    if (!Array.isArray(value)) return EMPTY_MIME_TYPES;
+    const count = Math.min(value.length, MAX_MIME_TYPES);
+    const values: string[] = [];
+    for (let index = 0; index < count; index++) {
+      try {
+        const candidate = value[index];
+        if (typeof candidate === 'string') values.push(candidate);
+      } catch {
+        // A hostile indexed getter invalidates only its own entry.
+      }
+    }
+    return values.length ? Object.freeze(values) : EMPTY_MIME_TYPES;
+  } catch {
+    return EMPTY_MIME_TYPES;
+  }
+}
 
 const INTERACTIVE_CONTENT_SELECTOR =
   'a[href], area[href], button, input, select, textarea, summary, ' +
@@ -107,21 +142,14 @@ function isFileValue(value: unknown): value is File {
   }
 }
 
-function isFormDataValue(value: unknown): value is FormData {
-  if (value === null || typeof value !== 'object') return false;
-  try {
-    const candidate = value as Partial<FormData>;
-    return Object.prototype.toString.call(value) === '[object FormData]'
-      && typeof candidate.append === 'function'
-      && typeof candidate.values === 'function';
-  } catch {
-    return false;
-  }
+export interface LyraFileInputRejectedFile {
+  readonly file: File;
+  readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit';
 }
 
-export interface RejectedFile {
-  file: File;
-  reason: 'type' | 'count' | 'size' | 'directory';
+export interface LyraFileInputFilesDetail {
+  readonly files: readonly File[];
+  readonly rejected: readonly LyraFileInputRejectedFile[];
 }
 
 export interface LyraFileInputEventMap {
@@ -129,8 +157,8 @@ export interface LyraFileInputEventMap {
   focus: FocusEvent;
   input: Event;
   change: Event;
-  'lr-invalid': CustomEvent<undefined>;
-  'lr-files': CustomEvent<{ files: File[]; rejected: RejectedFile[] }>;
+  'lr-invalid': CustomEvent<null>;
+  'lr-files': CustomEvent<LyraFileInputFilesDetail>;
 }
 /**
  * `<lr-file-input>` — a drag-drop + click-to-browse file dropzone. Emits
@@ -243,8 +271,10 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     fileInputDefaultLabel: LYRA_DEFAULT_fileInputDefaultLabel,
     fileInputFolderRejected: LYRA_DEFAULT_fileInputFolderRejected,
     fileInputRejectedCount: LYRA_DEFAULT_fileInputRejectedCount,
+    fileInputRejectedLimit: LYRA_DEFAULT_fileInputRejectedLimit,
     fileInputRejectedMany: LYRA_DEFAULT_fileInputRejectedMany,
     fileInputRejectedOne: LYRA_DEFAULT_fileInputRejectedOne,
+    fileInputRejectedRead: LYRA_DEFAULT_fileInputRejectedRead,
     fileInputRejectedSize: LYRA_DEFAULT_fileInputRejectedSize,
     fileInputRejectedType: LYRA_DEFAULT_fileInputRejectedType,
     fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
@@ -252,9 +282,13 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
     fileSizeUnitMb: LYRA_DEFAULT_fileSizeUnitMb,
     fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
     restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -278,8 +312,30 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   @property() accept = '';
   /** Mobile capture hint forwarded to the native file picker. */
   @property() capture: LyraFileInputCapture = '';
-  @property({ attribute: false }) allowedMimeTypes: string[] = [];
-  @property({ attribute: false }) forbiddenMimeTypes: string[] = [];
+  private _allowedMimeTypes: readonly string[] = EMPTY_MIME_TYPES;
+  /** Exact MIME allowlist. Assignment takes a bounded immutable snapshot. */
+  @property({ attribute: false })
+  get allowedMimeTypes(): readonly string[] {
+    return this._allowedMimeTypes;
+  }
+  set allowedMimeTypes(next: readonly string[]) {
+    const old = this._allowedMimeTypes;
+    this._allowedMimeTypes = snapshotMimeTypes(next);
+    this.requestUpdate('allowedMimeTypes', old);
+  }
+
+  private _forbiddenMimeTypes: readonly string[] = EMPTY_MIME_TYPES;
+  /** Exact MIME denylist, evaluated before `allowedMimeTypes`. Assignment takes a bounded
+   * immutable snapshot. */
+  @property({ attribute: false })
+  get forbiddenMimeTypes(): readonly string[] {
+    return this._forbiddenMimeTypes;
+  }
+  set forbiddenMimeTypes(next: readonly string[]) {
+    const old = this._forbiddenMimeTypes;
+    this._forbiddenMimeTypes = snapshotMimeTypes(next);
+    this.requestUpdate('forbiddenMimeTypes', old);
+  }
   /** Largest accepted file size in bytes. `0` (the default) disables the size check entirely --
    *  see `effectiveMaxFileSize` for how an invalid override is handled. */
   @property({ type: Number, attribute: 'max-file-size' }) maxFileSize = 0;
@@ -311,13 +367,15 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   @property({ attribute: false }) validators: LyraFileInputValidator[] = [];
   /** Accessible name forwarded to the semantic dropzone and native file input.
    * When unset, the effective `label` text is used. */
-  @property({ attribute: 'aria-label' }) accessibleLabel = '';
-  /** Message announced after an accepted selection; `{count}` is replaced by
-   * the number of accepted files. */
-  @property({ attribute: 'accepted-message' }) acceptedMessage = '{count} file(s) added.';
-  /** Message announced after rejected files; `{count}` is replaced by the
-   * number of rejected files. */
-  @property({ attribute: 'rejected-message' }) rejectedMessage = '{count} file(s) rejected.';
+  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  /** Message announced after an accepted selection; `{count}` is replaced by the number of
+   * accepted files. `undefined` uses the localized singular/plural default; every supplied
+   * string, including `''` and the former English default, is caller-owned. */
+  @property({ attribute: 'accepted-message' }) acceptedMessage?: string;
+  /** Message announced after rejected files; `{count}` is replaced by the number of rejected
+   * files. `undefined` uses the localized singular/plural default; every supplied string,
+   * including `''` and the former English default, is caller-owned. */
+  @property({ attribute: 'rejected-message' }) rejectedMessage?: string;
 
   @state() private dragState: DragState = 'default';
   @state() private resultStatus = '';
@@ -326,7 +384,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
    *  consequence of a user action), so the visible `[part="rejection"]` alert naturally never
    *  fires on connect and needs no `isMounting` guard. Cleared back to `[]` whenever a
   *  subsequent classification rejects nothing. */
-  @state() private rejectedFiles: RejectedFile[] = [];
+  @state() private rejectedFiles: readonly LyraFileInputRejectedFile[] = Object.freeze([]);
   @state() private touched = false;
   /** Bumped whenever an out-of-band revalidation (a validator's `observedAttributes` firing)
    *  changes published validity, so the rendered `[part="error"]` text refreshes without any
@@ -368,7 +426,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', undefined, init));
+      this.emit('lr-invalid', null, init));
     this.internals.setFormValue(null);
   }
 
@@ -413,39 +471,33 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   get files(): File[] {
     return [...this._files];
   }
-  set files(next: File[]) {
+  set files(next: readonly File[]) {
     const old = this._files;
     const valid = Array.isArray(next) ? next.filter(isFileValue) : [];
-    this._files = this.multiple ? [...valid] : valid.slice(0, 1);
-    this.fileCount = this._files.length;
+    this._files = this.effectiveMultiple ? [...valid] : valid.slice(0, 1);
+    const oldCount = this._fileCount;
+    this._fileCount = this._files.length;
     this.syncThumbnailUrls();
     this.syncFormValue();
     this.updateValidity();
     this.requestUpdate('files', old);
+    if (oldCount !== this._fileCount) this.requestUpdate('fileCount', oldCount);
   }
 
-  /** Public file-count state. Real file writes resynchronize it to `files.length`.
+  /** Readonly selected-file count derived from `files`.
    * @default 0 */
   get fileCount(): number {
     return this._fileCount;
   }
-  set fileCount(next: number) {
-    const old = this._fileCount;
-    this._fileCount = finiteCount(next, this._files.length);
-    this.requestUpdate('fileCount', old);
-  }
 
-  /** Whether a file drag session is active. A consumer write uses the accepting visual state;
-   * the next real drag event resumes ownership of the accept/reject distinction.
+  /** Readonly state derived from the current drag session.
    * @default false */
   get dragging(): boolean {
     return this.dragState !== 'default';
   }
-  set dragging(next: boolean) {
-    const active = Boolean(next);
-    if (active === this.dragging) return;
-    this.dragState = active ? 'accept' : 'default';
-    this.publishCustomStates();
+
+  private get effectiveMultiple(): boolean {
+    return this.multiple || this.directory;
   }
 
   /** Disables every interactive sub-control.
@@ -502,8 +554,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (changed.has('multiple')) {
-      if (!this.multiple && this._files.length > 1) this.files = this._files;
+    if (changed.has('multiple') || changed.has('directory')) {
+      if (!this.effectiveMultiple && this._files.length > 1) this.files = this._files;
       else this.syncFormValue();
     }
   }
@@ -554,9 +606,10 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     // The very first render is a mount, not a transition: a component appearing on the page must
     // not announce its resting state.
     if (this.announcementsArmed) {
-      if (changed.has('dragState') || changed.has('resultStatus')) {
-        this.politeSink?.announce(this.statusText());
+      if (changed.has('dragState') && this.dragState !== 'default') {
+        this.politeSink?.announce(this.dragStatusText());
       }
+      if (changed.has('resultStatus') && this.resultStatus) this.politeSink?.announce(this.resultStatus);
       if (changed.has('rejectedFiles') && this.rejectedFiles.length > 0) {
         this.assertiveSink?.announce(
           this.rejectedFiles.map((rejected) => this.rejectionMessage(rejected)).join(' '),
@@ -568,20 +621,19 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   private syncFormValue(): void {
     if (!this.name || this._files.length === 0) {
-      const state = this.multiple ? this.createFormData() : (this._files[0] ?? null);
+      const state = this.effectiveMultiple ? this.createRestorationFormData() : (this._files[0] ?? null);
       this.internals.setFormValue(null, state);
       return;
     }
-    if (this.multiple) {
+    if (this.effectiveMultiple) {
       const submitted = this.createFormData();
-      const state = this.createFormData();
+      const state = this.createRestorationFormData();
       if (!submitted || !state) {
         this.internals.setFormValue(null);
         return;
       }
       for (const file of this._files) {
         submitted.append(this.name, file);
-        state.append('file', file);
       }
       this.internals.setFormValue(submitted, state);
       return;
@@ -593,6 +645,13 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   private createFormData(): FormData | null {
     const FormDataCtor = this.ownerDocument?.defaultView?.FormData;
     return FormDataCtor ? new FormDataCtor() : null;
+  }
+
+  private createRestorationFormData(): FormData | null {
+    const state = this.createFormData();
+    if (!state) return null;
+    for (const file of this._files) state.append('file', file);
+    return state;
   }
 
   /**
@@ -611,7 +670,13 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
    *  generic localized message rather than escaping into the caller that happened to write
    *  `files`. */
   private validatorResult(): { flags?: ValidityStateFlags; message?: string } {
-    for (const validator of Array.isArray(this.validators) ? this.validators : []) {
+    let validators: LyraFileInputValidator[];
+    try {
+      validators = Array.isArray(this.validators) ? Array.from(this.validators) : [];
+    } catch {
+      return { flags: { customError: true }, message: this.localize('valueInvalid') };
+    }
+    for (const validator of validators) {
       let result: LyraFileInputValidatorResult;
       try {
         if (typeof validator === 'object' && validator !== null && 'checkValidity' in validator) {
@@ -632,14 +697,22 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
         result = typeof validator === 'function'
           ? validator(this.files, this)
           : validator?.validate(this.files, this);
+        if (result === undefined || result === true) continue;
+        if (typeof result === 'string') return { flags: { customError: true }, message: result };
+        if (result === false) {
+          return { flags: { customError: true }, message: this.localize('valueInvalid') };
+        }
+        if (result && typeof result === 'object') {
+          const flags: ValidityStateFlags = {};
+          for (const key of VALIDITY_FLAG_KEYS) {
+            if (Object.prototype.hasOwnProperty.call(result, key) && result[key]) flags[key] = true;
+          }
+          if (Object.values(flags).some(Boolean)) {
+            return { flags, message: this.localize('valueInvalid') };
+          }
+        }
       } catch {
         return { flags: { customError: true }, message: this.localize('valueInvalid') };
-      }
-      if (result === undefined || result === true) continue;
-      if (typeof result === 'string') return { flags: { customError: true }, message: result };
-      if (result === false) return { flags: { customError: true }, message: this.localize('valueInvalid') };
-      if (result && typeof result === 'object' && Object.values(result).some(Boolean)) {
-        return { flags: result, message: this.localize('valueInvalid') };
       }
     }
     return {};
@@ -655,17 +728,26 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     if (!this.isConnected || !owner || typeof MutationObserverCtor !== 'function') return;
 
     const attributes = new Set<string>();
-    for (const validator of Array.isArray(this.validators) ? this.validators : []) {
-      if (typeof validator !== 'object' || validator === null || !('checkValidity' in validator)) continue;
-      let observed: unknown;
+    let validators: LyraFileInputValidator[];
+    try {
+      validators = Array.isArray(this.validators) ? Array.from(this.validators) : [];
+    } catch {
+      return;
+    }
+    for (const validator of validators) {
       try {
-        observed = validator.observedAttributes;
+        if (typeof validator !== 'object' || validator === null || !('checkValidity' in validator)) {
+          continue;
+        }
+        const observed: unknown = validator.observedAttributes;
+        if (!Array.isArray(observed)) continue;
+        for (const name of observed) {
+          if (typeof name === 'string' && name.length > 0) attributes.add(name);
+        }
       } catch {
+        // A validator is application code. A revoked/hostile proxy must not reject this component's
+        // Lit update or prevent well-formed sibling validators from being observed.
         continue;
-      }
-      if (!Array.isArray(observed)) continue;
-      for (const name of observed) {
-        if (typeof name === 'string' && name.length > 0) attributes.add(name);
       }
     }
     if (attributes.size === 0) return;
@@ -773,11 +855,37 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
       this.files = [state];
       return;
     }
-    if (isFormDataValue(state)) {
-      this.files = [...state.values()].filter(isFileValue);
+    const restored = this.readFormDataFiles(state);
+    if (restored) {
+      this.files = restored;
       return;
     }
     this.files = [];
+  }
+
+  private readFormDataFiles(value: unknown): File[] | undefined {
+    if (value === null || typeof value !== 'object') return undefined;
+    const FormDataCtor = this.ownerDocument.defaultView?.FormData ?? globalThis.FormData;
+    try {
+      // Brand-check with an intrinsic before consulting the instance. A plain object can borrow a
+      // `values()` method, and a genuine FormData can still have a hostile/throwing instance
+      // override; neither shape may escape this restore callback or be accepted as partial state.
+      FormDataCtor.prototype.has.call(value, '__lyra_form_state_brand_probe__');
+      const values = (value as FormData).values;
+      const iterator = values.call(value);
+      const files: File[] = [];
+      let entries = 0;
+      while (entries <= MAX_DROPPED_FOLDER_ENTRIES) {
+        const next = iterator.next();
+        if (next.done) return files;
+        if (entries === MAX_DROPPED_FOLDER_ENTRIES) return undefined;
+        entries += 1;
+        if (isFileValue(next.value)) files.push(next.value);
+      }
+      return undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   formDisabledCallback(disabled: boolean): void {
@@ -802,6 +910,13 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
         this.thumbnailUrls.delete(file);
         changed = true;
       }
+    }
+    // Blob URLs are live document resources. A detached property write may update owned file
+    // state, but must not recreate resources that `disconnectedCallback()` just retired;
+    // `connectedCallback()` deterministically rebuilds them in the current owner realm.
+    if (!this.isConnected) {
+      if (changed) this.requestUpdate();
+      return;
     }
     if (canCreate) {
       for (const file of this._files) {
@@ -851,12 +966,12 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   private classify(
     fileList: File[],
     isPreview = false,
-  ): { files: File[]; rejected: RejectedFile[] } {
-    if (!this.multiple && fileList.length > 1) {
+  ): { files: File[]; rejected: LyraFileInputRejectedFile[] } {
+    if (!this.effectiveMultiple && fileList.length > 1) {
       return { files: [], rejected: fileList.map((file) => ({ file, reason: 'count' as const })) };
     }
     const files: File[] = [];
-    const rejected: RejectedFile[] = [];
+    const rejected: LyraFileInputRejectedFile[] = [];
     for (const f of fileList) {
       const reason = this.isAllowed(f, isPreview);
       if (reason === 'ok') files.push(f);
@@ -869,8 +984,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
    *  caller-supplied data interpolated via the `values` argument, never localized itself --
    *  only the surrounding copy comes from `this.localize()`. `'directory'` deliberately reuses
    *  `fileInputFolderRejected` verbatim (its template has no `{filename}` placeholder, so the
-   *  extra interpolation value is simply unused). */
-  private rejectionMessage(rejected: RejectedFile): string {
+   *  extra interpolation value is simply unused). Read and traversal-limit failures have their
+   *  own truthful terminal-outcome messages. */
+  private rejectionMessage(rejected: LyraFileInputRejectedFile): string {
     const filename = rejected.file.name;
     switch (rejected.reason) {
       case 'type':
@@ -881,41 +997,59 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
         return this.localize('fileInputRejectedCount', undefined, { filename });
       case 'directory':
         return this.localize('fileInputFolderRejected', undefined, { filename });
+      case 'read':
+        return this.localize('fileInputRejectedRead', undefined, { filename });
+      case 'limit':
+        return this.localize('fileInputRejectedLimit', undefined, { filename });
     }
   }
 
-  private emitFiles(fileList: File[], additionalRejected: RejectedFile[] = []): void {
+  private outcomeMessage(
+    key: FileInputOutcomeMessageKey,
+    override: string | undefined,
+    count: string,
+  ): string {
+    if (override == null) return this.localize(key, undefined, { count });
+    return override.replace(/\{count\}/g, count);
+  }
+
+  private emitFiles(fileList: File[], additionalRejected: readonly LyraFileInputRejectedFile[] = []): void {
     const { files, rejected } = this.classify(fileList);
     rejected.push(...additionalRejected);
-    this.rejectedFiles = rejected;
+    const rejectedSnapshot = Object.freeze(rejected.map((item) => Object.freeze({ ...item })));
+    const filesSnapshot = Object.freeze([...files]);
+    this.rejectedFiles = rejectedSnapshot;
     const messages: string[] = [];
     const numberFormat = getNumberFormat(this.effectiveLocale);
     if (files.length) {
       messages.push(
-        this.localize(
+        this.outcomeMessage(
           files.length === 1 ? 'fileInputAcceptedOne' : 'fileInputAcceptedMany',
-          this.acceptedMessage === '{count} file(s) added.' ? undefined : this.acceptedMessage,
-          { count: numberFormat.format(files.length) },
+          this.acceptedMessage,
+          numberFormat.format(files.length),
         ),
       );
     }
     if (rejected.length) {
       messages.push(
-        this.localize(
+        this.outcomeMessage(
           rejected.length === 1 ? 'fileInputRejectedOne' : 'fileInputRejectedMany',
-          this.rejectedMessage === '{count} file(s) rejected.' ? undefined : this.rejectedMessage,
-          { count: numberFormat.format(rejected.length) },
+          this.rejectedMessage,
+          numberFormat.format(rejected.length),
         ),
       );
     }
-    this.resultStatus = messages.join(' ');
-    if (files.length) {
+    this.resultStatus = messages.filter((message) => message.length > 0).join(' ');
+    if (files.length || rejected.length) {
       this.touched = true;
-      this.files = this.multiple ? [...this._files, ...files] : files;
+      this.updateValidity();
+    }
+    if (files.length) {
+      this.files = this.effectiveMultiple ? [...this._files, ...files] : files;
       dispatchNativeEvent(this, 'input');
       dispatchNativeEvent(this, 'change');
     }
-    this.emit('lr-files', { files, rejected });
+    this.emit('lr-files', Object.freeze({ files: filesSnapshot, rejected: rejectedSnapshot }));
   }
 
   /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
@@ -985,26 +1119,34 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   private readDroppedFile(
     entry: FileSystemFileEntry,
     isCurrent: () => boolean,
-  ): Promise<File | undefined> {
-    if (!isCurrent()) return Promise.resolve(undefined);
-    return new Promise<File | undefined>((resolve) => {
-      entry.file(
-        (file) => resolve(isCurrent() ? file : undefined),
-        () => resolve(undefined),
-      );
+  ): Promise<DroppedFileReadResult> {
+    if (!isCurrent()) return Promise.resolve({ status: 'cancelled' });
+    return new Promise<DroppedFileReadResult>((resolve) => {
+      try {
+        entry.file(
+          (file) => resolve(isCurrent() ? { status: 'complete', file } : { status: 'cancelled' }),
+          () => resolve(isCurrent() ? { status: 'error' } : { status: 'cancelled' }),
+        );
+      } catch {
+        resolve(isCurrent() ? { status: 'error' } : { status: 'cancelled' });
+      }
     });
   }
 
   private readDroppedDirectoryBatch(
     reader: FileSystemDirectoryReader,
     isCurrent: () => boolean,
-  ): Promise<FileSystemEntry[] | undefined> {
-    if (!isCurrent()) return Promise.resolve(undefined);
-    return new Promise<FileSystemEntry[] | undefined>((resolve) => {
-      reader.readEntries(
-        (entries) => resolve(isCurrent() ? entries : undefined),
-        () => resolve([]),
-      );
+  ): Promise<DroppedDirectoryBatchResult> {
+    if (!isCurrent()) return Promise.resolve({ status: 'cancelled' });
+    return new Promise<DroppedDirectoryBatchResult>((resolve) => {
+      try {
+        reader.readEntries(
+          (entries) => resolve(isCurrent() ? { status: 'complete', entries } : { status: 'cancelled' }),
+          () => resolve(isCurrent() ? { status: 'error' } : { status: 'cancelled' }),
+        );
+      } catch {
+        resolve(isCurrent() ? { status: 'error' } : { status: 'cancelled' });
+      }
     });
   }
 
@@ -1025,29 +1167,36 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
     for (const folder of folders) {
       if (!isCurrent()) return { status: 'cancelled' };
-      if (!enqueue(folder)) return { status: 'limit' };
+      if (!enqueue(folder)) return { status: 'limit', name: folder.name };
     }
 
     for (let index = 0; index < queue.length; index++) {
       if (!isCurrent()) return { status: 'cancelled' };
       const entry = queue[index]!;
       if (entry.isFile) {
-        const file = await this.readDroppedFile(entry as FileSystemFileEntry, isCurrent);
-        if (!isCurrent()) return { status: 'cancelled' };
-        if (file) files.push(file);
+        const result = await this.readDroppedFile(entry as FileSystemFileEntry, isCurrent);
+        if (result.status === 'cancelled' || !isCurrent()) return { status: 'cancelled' };
+        if (result.status === 'error') return { status: 'error', name: entry.name };
+        files.push(result.file);
         continue;
       }
       if (!entry.isDirectory) continue;
 
-      const reader = (entry as FileSystemDirectoryEntry).createReader();
+      let reader: FileSystemDirectoryReader;
+      try {
+        reader = (entry as FileSystemDirectoryEntry).createReader();
+      } catch {
+        return { status: 'error', name: entry.name };
+      }
       while (true) {
         if (!isCurrent()) return { status: 'cancelled' };
-        const entries = await this.readDroppedDirectoryBatch(reader, isCurrent);
-        if (!isCurrent()) return { status: 'cancelled' };
-        if (!entries?.length) break;
-        for (const child of entries) {
+        const batch = await this.readDroppedDirectoryBatch(reader, isCurrent);
+        if (batch.status === 'cancelled' || !isCurrent()) return { status: 'cancelled' };
+        if (batch.status === 'error') return { status: 'error', name: entry.name };
+        if (!batch.entries.length) break;
+        for (const child of batch.entries) {
           if (!isCurrent()) return { status: 'cancelled' };
-          if (!enqueue(child)) return { status: 'limit' };
+          if (!enqueue(child)) return { status: 'limit', name: entry.name };
         }
       }
     }
@@ -1062,25 +1211,46 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     this.resetDragSession();
     const token = ++this.dropToken;
     const files = [...(e.dataTransfer?.files ?? [])];
-    const folders = [...(e.dataTransfer?.items ?? [])]
-      .map((item) => (item as DataTransferItem & { webkitGetAsEntry?: () => FileSystemEntry | null }).webkitGetAsEntry?.())
-      .filter((entry): entry is FileSystemEntry => !!entry && entry.isDirectory);
-    if (folders.length && this.multiple) {
+    const folders: FileSystemEntry[] = [];
+    const items = e.dataTransfer?.items;
+    // Inspect at most one item beyond the traversal budget. Besides avoiding an unbounded spread,
+    // this lets an over-limit root list fail atomically before any directory reader is opened.
+    const itemCount = Math.min(items?.length ?? 0, MAX_DROPPED_FOLDER_ENTRIES + 1);
+    for (let index = 0; index < itemCount; index++) {
+      const item = items?.[index];
+      const entry = (item as DataTransferItem & {
+        webkitGetAsEntry?: () => FileSystemEntry | null;
+      } | undefined)?.webkitGetAsEntry?.();
+      if (entry?.isDirectory) folders.push(entry);
+    }
+    if ((items?.length ?? 0) > MAX_DROPPED_FOLDER_ENTRIES && this.effectiveMultiple) {
+      this.emitFiles([], [this.folderFailure(folders[0]?.name ?? '', 'limit')]);
+      return;
+    }
+    if (folders.length && this.effectiveMultiple) {
       const isCurrent = () => token === this.dropToken && this.isConnected && !this.liveDisabled;
       void this.readDroppedFolders(folders, isCurrent).then((result) => {
-        if (!isCurrent() || result.status !== 'complete') return;
+        if (!isCurrent() || result.status === 'cancelled') return;
+        if (result.status === 'error' || result.status === 'limit') {
+          this.emitFiles([], [this.folderFailure(result.name, result.status === 'limit' ? 'limit' : 'read')]);
+          return;
+        }
         const allFiles = [...files, ...result.files];
         if (allFiles.length) this.emitFiles(allFiles);
       });
       return;
     }
-    const FileCtor = this.ownerDocument.defaultView?.File ?? globalThis.File;
-    const rejectedFolders = folders.map((folder) => ({
-      file: new FileCtor([], folder.name),
-      reason: 'directory' as const,
-    }));
+    const rejectedFolders = folders.map((folder) => this.folderFailure(folder.name, 'directory'));
     if (files.length || rejectedFolders.length) this.emitFiles(files, rejectedFolders);
   };
+
+  private folderFailure(
+    name: string,
+    reason: 'directory' | 'read' | 'limit',
+  ): LyraFileInputRejectedFile {
+    const FileCtor = this.ownerDocument.defaultView?.File ?? globalThis.File;
+    return Object.freeze({ file: new FileCtor([], name), reason });
+  }
 
   private onPaste = (e: ClipboardEvent): void => {
     if (!this.paste || this.liveDisabled) return;
@@ -1089,6 +1259,10 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   };
 
   private onInputChange = (e: Event): void => {
+    // The native picker's composed `change` is an implementation detail. Publish exactly one
+    // host-owned `change` from `emitFiles()` after state/form validity have committed instead of
+    // leaking this pre-commit event across the shadow boundary as a duplicate.
+    e.stopPropagation();
     const input = e.target as HTMLInputElement;
     const files = [...(input.files ?? [])];
     input.value = '';
@@ -1143,10 +1317,31 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     this.openPicker();
   };
 
+  private onVisibleLabelClick = (event: MouseEvent): void => {
+    const label = event.currentTarget;
+    const path = event.composedPath();
+    const labelIndex = path.indexOf(label as EventTarget);
+    const contentPath = labelIndex < 0 ? path : path.slice(0, labelIndex);
+
+    // A native `for` association is inconsistent here: WebKit also activates the file input when
+    // a button projected into the label is clicked. Own the association explicitly so ordinary
+    // label text still opens the picker while rich controls retain exactly their own action.
+    if (
+      contentPath.some(
+        (node) => isElementTarget(node) && node.matches(INTERACTIVE_CONTENT_SELECTOR),
+      )
+    ) return;
+    this.openPicker();
+  };
+
   private statusText(): string {
+    return this.dragState === 'default' ? this.resultStatus : this.dragStatusText();
+  }
+
+  private dragStatusText(): string {
     if (this.dragState === 'accept') return this.localize('dropzoneReleaseToAdd');
     if (this.dragState === 'reject') return this.localize('dropzoneRejectedType');
-    return this.resultStatus;
+    return '';
   }
 
   /** Resolves `label`'s effective text: an explicit override wins verbatim; left at the
@@ -1200,8 +1395,14 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   override render(): TemplateResult {
     const label = this.effectiveLabel;
-    const accessibleLabel = this.getAttribute('aria-label') || this.accessibleLabel || label;
     const hasLabel = this.withLabel || this.slotPresence.has('label') || this.label.length > 0;
+    const explicitHostLabel = hostAriaLabel(this);
+    const explicitAccessibleLabel = this.hasAttribute('accessible-label') || this.accessibleLabel
+      ? this.accessibleLabel
+      : null;
+    const accessibleLabel = explicitHostLabel ?? explicitAccessibleLabel;
+    const labelledBy = accessibleLabel == null && hasLabel ? 'file-input-label' : undefined;
+    const fallbackAriaLabel = accessibleLabel ?? (hasLabel ? undefined : label);
     const hasHint = this.withHint || this.slotPresence.has('hint') || this.hint.length > 0;
     const renderedError = this.errorText || this.customError || (this.touched ? this.validationMessage : '');
     const hasError = this.withError || this.slotPresence.has('error') || renderedError.length > 0;
@@ -1211,7 +1412,12 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     const invalid = hasError || (this.touched && !this.internals.validity.valid);
     return html`
       <div part="form-control">
-        <label part="form-control-label label" ?hidden=${!hasLabel}>
+        <label
+          id="file-input-label"
+          part="form-control-label label"
+          ?hidden=${!hasLabel}
+          @click=${this.onVisibleLabelClick}
+        >
           <span>${this.label}<slot name="label"></slot></span>
         </label>
         <div
@@ -1230,7 +1436,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
             role="button"
             tabindex=${this.effectiveDisabled ? '-1' : '0'}
             aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
-            aria-label=${accessibleLabel}
+            aria-label=${fallbackAriaLabel ?? nothing}
+            aria-labelledby=${labelledBy ?? nothing}
             aria-describedby=${describedBy || nothing}
             aria-invalid=${invalid ? 'true' : 'false'}
             data-drag-state=${this.dragState}
@@ -1271,10 +1478,12 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
         type="file"
         tabindex="-1"
         aria-hidden="true"
-        aria-label=${accessibleLabel}
+        id="file-input-native"
+        aria-label=${fallbackAriaLabel ?? nothing}
+        aria-labelledby=${labelledBy ?? nothing}
         accept=${this.accept}
         capture=${this.capture || nothing}
-        ?multiple=${this.multiple}
+        ?multiple=${this.effectiveMultiple}
         ?webkitdirectory=${this.directory}
         ?disabled=${this.effectiveDisabled}
         @change=${this.onInputChange}

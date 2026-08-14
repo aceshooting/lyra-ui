@@ -7,6 +7,7 @@ import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './transcript-feed.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_transcriptFeedEmpty, LYRA_DEFAULT_transcriptFeedInterim, LYRA_DEFAULT_transcriptFeedLabel } from '../../../internal/default-strings.generated.js';
@@ -18,8 +19,7 @@ export interface LyraTranscriptEntry {
   speaker?: string;
   text: string;
   interim?: boolean;
-  /** Epoch milliseconds. */
-  timestamp?: number;
+  timestamp?: LyraTimestamp;
 }
 
 const NEAR_BOTTOM_PX = 48;
@@ -86,9 +86,13 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
   @property({ type: Boolean, attribute: 'show-timestamps' }) showTimestamps = false;
   /** Overrides the default `Intl.DateTimeFormat` short-time rendering. */
-  @property({ attribute: false }) formatTimestamp?: (epochMs: number) => string;
-  /** `> 0` renders only the newest N rows (host `entries` data is untouched); `0` renders all. */
-  @property({ type: Number, attribute: 'max-rendered-entries' }) maxRenderedEntries = 0;
+  @property({ attribute: false }) formatTimestamp?: (date: Date) => string;
+  /** `> 0` renders only the newest N rows (host `entries` data is untouched); `0` explicitly
+   *  opts into rendering the full history. */
+  @property({ type: Number, attribute: 'max-rendered-entries' }) maxRenderedEntries = 500;
+  /** Session identity. Changing it resets final-announcement history and treats
+   *  the new session's current entries as a silent baseline. */
+  @property({ attribute: 'session-id' }) sessionId = '';
   /** Accessible name for the `role="log"` region. Defaults to the localized `transcriptFeedLabel`. */
   @property() label = '';
   /** Overrides the log region's computed accessible name. Wins over `label` and the localized
@@ -103,22 +107,33 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   /** Ids already spoken (or recorded on the first render), so a caption announces exactly once
    *  however many later updates keep re-rendering the same row. */
   private announcedFinalIds = new Set<string>();
+  private sessionChanged = false;
 
   /** `maxRenderedEntries`, normalized to a finite non-negative integer (falling back to the
-   *  property's own default of `0`, meaning "render all") -- a raw `NaN` (e.g. an invalid
+   *  property's own default of `500`) -- a raw `NaN` (e.g. an invalid
    *  `max-rendered-entries` attribute) would otherwise make `maxRenderedEntries > 0` always
    *  false, which happens to already match the "render all" fallback, but only by the same
    *  accidental-`NaN`-comparison quirk this guard exists to remove. */
   private get effectiveMaxRenderedEntries(): number {
-    return finiteCount(this.maxRenderedEntries, 0);
+    return finiteCount(this.maxRenderedEntries, 500);
+  }
+
+  private get normalizedEntries(): LyraTranscriptEntry[] {
+    const seen = new Set<string>();
+    return this.entries.filter((entry) => {
+      if (!entry.id || seen.has(entry.id)) return false;
+      seen.add(entry.id);
+      return true;
+    });
   }
 
   private get renderedEntries(): LyraTranscriptEntry[] {
+    const entries = this.normalizedEntries;
     const maxRenderedEntries = this.effectiveMaxRenderedEntries;
-    if (maxRenderedEntries > 0 && this.entries.length > maxRenderedEntries) {
-      return this.entries.slice(-maxRenderedEntries);
+    if (maxRenderedEntries > 0 && entries.length > maxRenderedEntries) {
+      return entries.slice(-maxRenderedEntries);
     }
-    return this.entries;
+    return entries;
   }
   private get finalEntries(): LyraTranscriptEntry[] {
     return this.renderedEntries.filter((e) => !e.interim);
@@ -137,7 +152,8 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     this.releaseAnnouncementSink();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     // The sink is per-document; an element moved into another document has to stop writing into
     // the region mounted in the one the user is no longer looking at.
     this.syncAnnouncementSink();
@@ -167,6 +183,8 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
+    this.sessionChanged = changed.has('sessionId') && this.hasUpdated;
+    if (this.sessionChanged) this.announcedFinalIds.clear();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -188,15 +206,15 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
    *  announcement nor lets it be announced a second time on the way back in. */
   private announceFinalizedEntries(): void {
     const alreadyAnnounced = this.announcedFinalIds;
-    const current = new Set<string>();
     const fresh: string[] = [];
-    for (const entry of this.entries) {
+    for (const entry of this.normalizedEntries) {
       if (entry.interim) continue;
-      current.add(entry.id);
-      if (!alreadyAnnounced.has(entry.id)) fresh.push(entry.text);
+      if (!alreadyAnnounced.has(entry.id)) {
+        alreadyAnnounced.add(entry.id);
+        fresh.push(entry.text);
+      }
     }
-    this.announcedFinalIds = current;
-    if (this._isFirstUpdate) return;
+    if (this._isFirstUpdate || this.sessionChanged) return;
     const sink = this.announcementSink;
     if (!sink) return;
     for (const text of fresh) {
@@ -205,11 +223,12 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     }
   }
 
-  /** Scrolls the feed to its current bottom, instantly -- matching `lr-thinking-panel`'s and
-   *  `lr-virtual-list`'s own stick-to-bottom mechanics. New entries can arrive in rapid
-   *  succession while streaming; an animated scroll on every single one would fight itself rather
-   *  than settle cleanly, so this is a plain jump rather than a CSS-smoothed transition. */
+  /** Re-engages `follow` and scrolls the feed to its current bottom, instantly -- matching the
+   *  shared stick-to-bottom contract. New entries can arrive in rapid succession while streaming;
+   *  an animated scroll on every single one would fight itself rather than settle cleanly, so this
+   *  is a plain jump rather than a CSS-smoothed transition. */
   scrollToBottom(): void {
+    this.follow = true;
     const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
     if (!base) return;
     base.scrollTop = base.scrollHeight;
@@ -222,7 +241,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   };
 
   private onJumpClick = (): void => {
-    this.follow = true;
+    this.scrollToBottom();
   };
 
   private showSpeakerFor(list: LyraTranscriptEntry[], index: number): boolean {
@@ -231,12 +250,11 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     return !prev || prev.speaker !== current.speaker;
   }
 
-  private formatTs(epochMs: number): string | null {
-    if (!Number.isFinite(epochMs)) return null;
-    if (this.formatTimestamp) return this.formatTimestamp(epochMs);
-    return getDateTimeFormat(this.effectiveLocale, { hour: 'numeric', minute: '2-digit' }).format(
-      new Date(epochMs),
-    );
+  private formatTs(value: LyraTimestamp): string | null {
+    const date = normalizeLyraTimestamp(value);
+    if (!date) return null;
+    if (this.formatTimestamp) return this.formatTimestamp(date);
+    return getDateTimeFormat(this.effectiveLocale, { hour: 'numeric', minute: '2-digit' }).format(date);
   }
 
   private renderEntry(entry: LyraTranscriptEntry, showSpeaker: boolean, interim: boolean): TemplateResult {
@@ -264,7 +282,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
         part="base"
         role="region"
         tabindex="0"
-        aria-label=${this.accessibleLabel || this.label || this.localize('transcriptFeedLabel')}
+        aria-label=${this.accessibleLabel ?? (this.label || this.localize('transcriptFeedLabel'))}
         @scroll=${this.onScroll}
       >
         ${empty
@@ -274,7 +292,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
                 part="log"
                 role="log"
                 aria-live="off"
-                aria-label=${this.accessibleLabel || this.label || this.localize('transcriptFeedLabel')}
+                aria-label=${this.accessibleLabel ?? (this.label || this.localize('transcriptFeedLabel'))}
               >
                 ${repeat(
                   finals,

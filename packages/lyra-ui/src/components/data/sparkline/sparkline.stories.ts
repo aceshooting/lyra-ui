@@ -130,11 +130,11 @@ export const NarrowRtl: Story = {
   `,
 };
 
-/** Additive Lyra aliases retain array input, explicit ranges, and bars. */
+/** The additive Lyra surface retains property-only array input, explicit ranges, and bar marks. */
 export const ProgrammaticBarExtension: Story = {
   render: () => html`
     <lr-sparkline
-      type="bar"
+      mark="bar"
       aria-label="Programmatic values from zero to one hundred"
       .values=${[20, 40, 30, 70]}
       min="0"

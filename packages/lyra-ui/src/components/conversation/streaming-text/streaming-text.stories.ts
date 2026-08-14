@@ -13,7 +13,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A token-coalescing incremental text renderer for streaming assistant output. The host always assigns the *entire* current text to `content` on every update (never a delta); rapid updates within `coalesce-ms` collapse to a single render of the latest value. `markdown` auto-detects (via a lightweight heuristic) whether to route content through `<lr-markdown>` or render it as plain text, and can be forced either way. The plain-text path loads no optional peers; Markdown uses the composed renderer\'s lazy `marked` parser, default `dompurify` sanitizer, and optional `shiki` fenced-code highlighting. A blinking cursor (reduced-motion-aware) appears while `streaming` is `true`.',
+          'A token-coalescing incremental text renderer for streaming assistant output. The host always assigns the *entire* current text to `content` on every update (never a delta); rapid updates within `coalesce-ms` collapse to a single render of the latest value. `contentMode` defaults to auto-detection and can force `plain` or `markdown`. The plain-text path loads no optional peers; Markdown uses the composed renderer\'s lazy `marked` parser, default `dompurify` sanitizer, and optional `shiki` fenced-code highlighting. A blinking cursor (reduced-motion-aware) appears while `streaming` is `true`.',
       },
     },
   },
@@ -28,7 +28,7 @@ export const PlainTextStreaming: Story = {
   render: () =>
     html`<lr-streaming-text
       streaming
-      markdown="false"
+      content-mode="plain"
       .content=${'The quick brown fox jumps over the lazy dog'}
     ></lr-streaming-text>`,
 };
@@ -37,7 +37,7 @@ export const FinishedPlainText: Story = {
   name: 'Finished (no cursor)',
   render: () =>
     html`<lr-streaming-text
-      markdown="false"
+      content-mode="plain"
       .content=${'The quick brown fox jumps over the lazy dog.'}
     ></lr-streaming-text>`,
 };
@@ -57,15 +57,15 @@ export const MarkdownAutoDetected: Story = {
 };
 
 export const ForcedPlainText: Story = {
-  name: 'markdown="false" forces plain text even for Markdown-looking content',
-  render: () => html`<lr-streaming-text markdown="false" .content=${markdownSample}></lr-streaming-text>`,
+  name: 'content-mode="plain" forces plain text even for Markdown-looking content',
+  render: () => html`<lr-streaming-text content-mode="plain" .content=${markdownSample}></lr-streaming-text>`,
 };
 
 export const ForcedMarkdown: Story = {
-  name: 'markdown forces Markdown rendering even for plain-looking content',
+  name: 'content-mode="markdown" forces Markdown rendering even for plain-looking content',
   render: () =>
     html`<lr-streaming-text
-      markdown
+      content-mode="markdown"
       streaming
       .content=${'no special syntax in this sentence at all'}
     ></lr-streaming-text>`,
@@ -171,13 +171,13 @@ export const CoalescingComparison: Story = {
           <p style="margin:0 0 0.25rem; font-size:0.8125rem; color:var(--lr-color-text-quiet);">
             coalesce-ms="0"
           </p>
-          <lr-streaming-text markdown="false" coalesce-ms="0" ${ref(fastRef)}></lr-streaming-text>
+          <lr-streaming-text content-mode="plain" coalesce-ms="0" ${ref(fastRef)}></lr-streaming-text>
         </div>
         <div>
           <p style="margin:0 0 0.25rem; font-size:0.8125rem; color:var(--lr-color-text-quiet);">
             coalesce-ms="300"
           </p>
-          <lr-streaming-text markdown="false" coalesce-ms="300" ${ref(slowRef)}></lr-streaming-text>
+          <lr-streaming-text content-mode="plain" coalesce-ms="300" ${ref(slowRef)}></lr-streaming-text>
         </div>
         <div>
           <button style=${buttonStyle} @click=${start}>Start streaming</button>

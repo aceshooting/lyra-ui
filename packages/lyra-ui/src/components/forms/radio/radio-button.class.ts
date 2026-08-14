@@ -17,8 +17,10 @@ import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.ge
  * contract are inherited rather than reimplemented, so the two can never drift apart. Only the
  * chrome differs. A `<lr-radio-group>` accepts either tag, and the two can be mixed.
  *
- * Consecutive `<lr-radio-button>` siblings collapse their shared borders into one segmented
- * control automatically — nothing needs to be set on the group.
+ * An owning horizontal group collapses borders only for button radios whose rendered boxes are
+ * actually adjacent on the same flex line. The group's ordinary gap, a plain-radio interruption,
+ * vertical layout, or wrapping starts a new fully rounded run; live layout and membership changes
+ * are reconciled after layout in both directions.
  * A host `aria-label` is forwarded to the internal `role="radio"` by attribute presence, so an
  * explicitly empty value remains authoritative rather than restoring a label-text fallback.
  * Standalone button chrome is bounded by its allocation: unbroken labels wrap, while long
@@ -114,6 +116,7 @@ export class LyraRadioButton extends LyraRadio {
     return html`
       <span
         part=${parts}
+        data-run=${this.buttonRunPosition}
         role="radio"
         tabindex=${disabled || !this.groupTabbable ? '-1' : '0'}
         aria-checked=${this.checked ? 'true' : 'false'}

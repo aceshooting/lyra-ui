@@ -2,17 +2,19 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './skeleton.js';
 import type { LyraSkeleton } from './skeleton.js';
 
-it('defaults to a text variant with a status role', async () => {
+it('defaults to a decorative text shape like the mirrored upstream skeletons', async () => {
   const el = (await fixture(html`<lr-skeleton></lr-skeleton>`)) as LyraSkeleton;
-  expect(el.variant).to.equal('text');
+  expect(el.shape).to.equal('text');
   expect(el.effect).to.equal('none');
-  expect(el.getAttribute('role')).to.equal('status');
+  expect(el.announce).to.be.false;
+  expect(el.hasAttribute('role')).to.equal(false);
+  expect(el.shadowRoot!.querySelectorAll('.sr-only').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part~="indicator"]')).to.exist;
 });
 
 it('applies explicit width/height as inline custom properties on the host', async () => {
   const el = (await fixture(
-    html`<lr-skeleton variant="circle" width="3rem" height="3rem"></lr-skeleton>`,
+    html`<lr-skeleton shape="circle" width="3rem" height="3rem"></lr-skeleton>`,
   )) as LyraSkeleton;
   expect(el.style.getPropertyValue('--lr-skeleton-w')).to.equal('3rem');
   expect(el.style.getPropertyValue('--lr-skeleton-h')).to.equal('3rem');
@@ -43,24 +45,35 @@ it('clears the width/height custom properties when width/height are unset', asyn
   expect(rect.width).to.be.greaterThan(3 * rootFontSize);
 });
 
-it('reflects variant onto the host attribute and gives each variant a distinct border-radius', async () => {
-  const text = (await fixture(html`<lr-skeleton variant="text"></lr-skeleton>`)) as LyraSkeleton;
-  expect(text.getAttribute('variant')).to.equal('text');
+it('reflects shape onto the host attribute and gives each shape a distinct border-radius', async () => {
+  const text = (await fixture(html`<lr-skeleton shape="text"></lr-skeleton>`)) as LyraSkeleton;
+  expect(text.getAttribute('shape')).to.equal('text');
   const textRadius = getComputedStyle(text.shadowRoot!.querySelector('[part~="base"]')!).borderRadius;
 
   const circle = (await fixture(
-    html`<lr-skeleton variant="circle"></lr-skeleton>`,
+    html`<lr-skeleton shape="circle"></lr-skeleton>`,
   )) as LyraSkeleton;
-  expect(circle.getAttribute('variant')).to.equal('circle');
+  expect(circle.getAttribute('shape')).to.equal('circle');
   const circleRadius = getComputedStyle(circle.shadowRoot!.querySelector('[part~="base"]')!).borderRadius;
   expect(circleRadius).to.equal('50%');
   expect(circleRadius).to.not.equal(textRadius);
 
-  const rect = (await fixture(html`<lr-skeleton variant="rect"></lr-skeleton>`)) as LyraSkeleton;
-  expect(rect.getAttribute('variant')).to.equal('rect');
+  const rect = (await fixture(html`<lr-skeleton shape="rect"></lr-skeleton>`)) as LyraSkeleton;
+  expect(rect.getAttribute('shape')).to.equal('rect');
   const rectRadius = getComputedStyle(rect.shadowRoot!.querySelector('[part~="base"]')!).borderRadius;
   expect(rectRadius).to.equal(textRadius);
   expect(rectRadius).to.not.equal(circleRadius);
+});
+
+it('does not expose the removed variant property or let its former attribute select geometry', async () => {
+  const el = (await fixture(
+    html`<lr-skeleton variant="circle"></lr-skeleton>`,
+  )) as LyraSkeleton;
+  const indicator = el.shadowRoot!.querySelector<HTMLElement>('[part~="indicator"]')!;
+
+  expect('variant' in el).to.equal(false);
+  expect(el.shape).to.equal('text');
+  expect(getComputedStyle(indicator).borderRadius).to.not.equal('50%');
 });
 
 it('accepts the effect attribute without reflecting property writes', async () => {
@@ -177,42 +190,47 @@ it('reverses the sheen sweep under dir="rtl" so it travels in the reading direct
   expect(getComputedStyle(rtlBase).animationDirection).to.equal('reverse');
 });
 
-it('defaults the accessible name to "Loading…" and reflects a custom label', async () => {
-  const defaulted = (await fixture(html`<lr-skeleton></lr-skeleton>`)) as LyraSkeleton;
+it('defaults an opted-in accessible name to "Loading…" and reflects a custom label', async () => {
+  const defaulted = (await fixture(html`<lr-skeleton announce></lr-skeleton>`)) as LyraSkeleton;
   expect(defaulted.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Loading…');
 
   const labeled = (await fixture(
-    html`<lr-skeleton label="Loading chart"></lr-skeleton>`,
+    html`<lr-skeleton announce label="Loading chart"></lr-skeleton>`,
   )) as LyraSkeleton;
   expect(labeled.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Loading chart');
 });
 
 it('localizes the default accessible name via this.localize() when .strings overrides the shared loading key', async () => {
   const el = (await fixture(
-    html`<lr-skeleton .strings=${{ loading: 'Chargement…' }}></lr-skeleton>`,
+    html`<lr-skeleton announce .strings=${{ loading: 'Chargement…' }}></lr-skeleton>`,
   )) as LyraSkeleton;
   expect(el.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Chargement…');
 });
 
-it('can render as an unannounced decorative placeholder', async () => {
-  const el = (await fixture(
-    html`<lr-skeleton .announce=${false}></lr-skeleton>`,
-  )) as LyraSkeleton;
+it('keeps an explicit label="Loading…" ahead of a strings override', async () => {
+  const el = (await fixture(html`
+    <lr-skeleton announce label="Loading…" .strings=${{ loading: 'Chargement…' }}></lr-skeleton>
+  `)) as LyraSkeleton;
+  expect(el.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Loading…');
+});
+
+it('remains decorative after an explicit false property write', async () => {
+  const el = (await fixture(html`<lr-skeleton .announce=${false}></lr-skeleton>`)) as LyraSkeleton;
 
   expect(el.hasAttribute('role')).to.equal(false);
   expect((el.shadowRoot!.querySelector('.sr-only')) === (null)).to.equal(true);
 });
 
-it('announce="false" (plain HTML attribute) also renders as an unannounced decorative placeholder', async () => {
-  const el = (await fixture(html`<lr-skeleton announce="false"></lr-skeleton>`)) as LyraSkeleton;
+it('the announce attribute opts into status semantics and localized hidden text', async () => {
+  const el = (await fixture(html`<lr-skeleton announce></lr-skeleton>`)) as LyraSkeleton;
 
-  expect(el.announce).to.be.false;
-  expect(el.hasAttribute('role')).to.equal(false);
-  expect((el.shadowRoot!.querySelector('.sr-only')) === (null)).to.equal(true);
+  expect(el.announce).to.be.true;
+  expect(el.getAttribute('role')).to.equal('status');
+  expect(el.shadowRoot!.querySelector('.sr-only')?.textContent).to.equal('Loading…');
 });
 
 it('removes status semantics when announce is disabled after rendering', async () => {
-  const el = (await fixture(html`<lr-skeleton></lr-skeleton>`)) as LyraSkeleton;
+  const el = (await fixture(html`<lr-skeleton announce></lr-skeleton>`)) as LyraSkeleton;
   expect(el.getAttribute('role')).to.equal('status');
 
   el.announce = false;

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { BoxPlotSeries } from './box-plot.js';
+import type { LyraBoxPlotSeries } from './box-plot.js';
 
 const meta: Meta = {
   title: 'Charts/BoxPlot',
@@ -12,7 +12,7 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => {
-    const boxes: BoxPlotSeries[] = [
+    const boxes: LyraBoxPlotSeries[] = [
       {
         label: 'Loss',
         data: [
@@ -27,7 +27,7 @@ export const Default: Story = {
         height="16rem"
         style="width: 22rem"
         .labels=${['K=2', 'K=3', 'K=4']}
-        .boxes=${boxes}
+        .datasets=${boxes}
       ></lr-box-plot>
     `;
   },
@@ -40,7 +40,7 @@ export const Default: Story = {
  */
 export const ControlledLegendVisibility: Story = {
   render: () => {
-    const boxes: BoxPlotSeries[] = [
+    const boxes: LyraBoxPlotSeries[] = [
       {
         label: 'Production (vetoed)',
         data: [{ min: 100, q1: 180, median: 240, q3: 330, max: 510 }],
@@ -55,9 +55,10 @@ export const ControlledLegendVisibility: Story = {
         height="16rem"
         style="inline-size: 26rem; max-inline-size: 100%;"
         legend
+        legend-position="start"
         .hiddenDatasets=${[1]}
         .labels=${['Request latency']}
-        .boxes=${boxes}
+        .datasets=${boxes}
         @lr-before-legend-visibility-change=${(
           event: CustomEvent<{ datasetIndex: number }>,
         ) => {
@@ -77,7 +78,7 @@ export const ControlledLegendVisibility: Story = {
 export const NarrowLongContent: Story = {
   name: 'Narrow (320px) with long content',
   render: () => {
-    const boxes: BoxPlotSeries[] = [
+    const boxes: LyraBoxPlotSeries[] = [
       {
         label: 'End-to-end request latency across all production regions',
         data: [
@@ -93,7 +94,7 @@ export const NarrowLongContent: Story = {
           height="16rem"
           legend
           .labels=${['Current production cohort', 'Candidate deployment cohort']}
-          .boxes=${boxes}
+          .datasets=${boxes}
         ></lr-box-plot>
       </div>
     `;
@@ -107,7 +108,7 @@ export const NarrowLongContent: Story = {
  */
 export const ThemedTokensAndRefresh: Story = {
   render: () => {
-    const boxes: BoxPlotSeries[] = [
+    const boxes: LyraBoxPlotSeries[] = [
       { label: 'Latency', data: [{ min: 100, q1: 180, median: 240, q3: 330, max: 510 }] },
     ];
     return html`
@@ -116,7 +117,7 @@ export const ThemedTokensAndRefresh: Story = {
           height="16rem"
           style="inline-size: 22rem; --lr-chart-grid-color: var(--lr-color-danger);"
           .labels=${['Production']}
-          .boxes=${boxes}
+          .datasets=${boxes}
         ></lr-box-plot>
         <button
           type="button"
@@ -136,12 +137,12 @@ export const ThemedTokensAndRefresh: Story = {
 
 /**
  * Individual boxes are addressable. Focus the plot and walk it with Arrow/Home/End, then press
- * Enter or Space — or click a box — to emit `lr-point-click` with that box's five-number summary.
+ * Enter or Space — or click a box — to emit `lr-datum-activate` with that box's five-number summary.
  * Each keyboard move announces the box through the shared light-DOM polite live region.
  */
 export const PerBoxInteractivity: Story = {
   render: () => {
-    const boxes: BoxPlotSeries[] = [
+    const boxes: LyraBoxPlotSeries[] = [
       {
         label: 'Production',
         data: [
@@ -164,8 +165,8 @@ export const PerBoxInteractivity: Story = {
         legend
         y-label="Latency (ms)"
         .labels=${['Week 1', 'Week 2']}
-        .boxes=${boxes}
-        @lr-point-click=${(event: CustomEvent) => console.info('Box activated', event.detail)}
+        .datasets=${boxes}
+        @lr-datum-activate=${(event: CustomEvent) => console.info('Box activated', event.detail)}
       ></lr-box-plot>
     `;
   },
@@ -179,7 +180,7 @@ export const CustomDataTable: Story = {
   render: () => html`
     <lr-box-plot
       .labels=${['Production']}
-      .boxes=${[
+      .datasets=${[
         { label: 'Latency', data: [{ min: 100, q1: 180, median: 240, q3: 330, max: 510 }] },
       ]}
     >

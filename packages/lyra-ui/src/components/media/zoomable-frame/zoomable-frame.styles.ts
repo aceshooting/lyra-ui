@@ -15,6 +15,11 @@ export const styles = css`
     contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
 
+  :host(:where([data-frame-focused])) {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+
   [part='iframe'] {
     position: absolute;
     top: 0;

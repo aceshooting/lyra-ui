@@ -24,7 +24,7 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lr-result-card title="HTTP request" style="max-inline-size:20rem;">
+    <lr-result-card heading="HTTP request" style="max-inline-size:20rem;">
       <lr-result-field label="Status" value="200 OK"></lr-result-field>
       <lr-result-field label="Duration" value="340ms"></lr-result-field>
       <lr-result-field label="Size" value="12.4 KB"></lr-result-field>
@@ -44,7 +44,7 @@ export const Untitled: Story = {
 
 export const WithHeaderActions: Story = {
   render: () => html`
-    <lr-result-card title="run_query" with-actions style="max-inline-size:20rem;">
+    <lr-result-card heading="run_query" with-actions style="max-inline-size:20rem;">
       <button
         slot="actions"
         type="button"
@@ -64,7 +64,7 @@ export const WithHeaderActions: Story = {
  *  in for the plain "Status: 200 OK" text row. */
 export const RichSlottedValue: Story = {
   render: () => html`
-    <lr-result-card title="Deployment" style="max-inline-size:20rem;">
+    <lr-result-card heading="Deployment" style="max-inline-size:20rem;">
       <lr-result-field label="Status">
         <lr-chip variant="success">Live</lr-chip>
       </lr-result-field>
@@ -94,7 +94,7 @@ registerToolRenderer('run_http_request', {
   render: (result) => {
     const r = result as { status: number; statusText: string; durationMs: number; sizeKb: number };
     return html`
-      <lr-result-card title="HTTP request">
+      <lr-result-card heading="HTTP request">
         <lr-result-field label="Status" value="${r.status} ${r.statusText}"></lr-result-field>
         <lr-result-field label="Duration" value="${r.durationMs}ms"></lr-result-field>
         <lr-result-field label="Size" value="${r.sizeKb} KB"></lr-result-field>

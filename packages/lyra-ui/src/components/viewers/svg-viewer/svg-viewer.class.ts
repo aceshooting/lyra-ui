@@ -5,7 +5,6 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
-import { srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { loadSvgSanitizer } from './dompurify-loader.js';
@@ -14,6 +13,9 @@ import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-view
 import { sanitizeCssLength, sanitizePercentRect } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import type { HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
+import { sanitizePassiveMarkup } from '../passive-markup.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_svgViewerLabel } from '../../../internal/default-strings.generated.js';
@@ -31,80 +33,23 @@ function sameRegionAnchor(a: LyraAnchor, b: LyraAnchor): boolean {
   );
 }
 
-const SVG_RESOURCE_ATTRIBUTES = new Set(['href', 'xlink:href', 'src']);
-const SVG_PAINT_SERVER_ATTRIBUTES = new Set([
-  'clip-path',
-  'cursor',
-  'fill',
-  'filter',
-  'marker',
-  'marker-end',
-  'marker-mid',
-  'marker-start',
-  'mask',
-  'stroke',
-]);
-const LOCAL_SVG_PAINT_REFERENCE = /^url\(\s*(['"]?)#[^()'"\s]+\1\s*\)$/i;
-const LOCAL_SVG_RESOURCE_REFERENCE = /^#[^\s]+$/;
-const INLINE_RASTER_DATA_REFERENCE = /^data:image\/(?:gif|jpeg|png|webp);base64,[a-z\d+/=\s]+$/i;
-
-function isSafeSvgResourceReference(value: string): boolean {
-  const normalized = value.trim();
-  return LOCAL_SVG_RESOURCE_REFERENCE.test(normalized)
-    || INLINE_RASTER_DATA_REFERENCE.test(normalized);
-}
-
 /**
- * Applies Lyra's inline-SVG profile after DOMPurify's structural allowlist. DOMPurify deliberately
- * permits author styles and ordinary HTTP hrefs by default; both are unsafe for a document that is
- * inserted into the caller's shadow root because they can escape its paint box or start secondary
- * requests. Local fragment paint servers and embedded raster data remain usable.
+ * Applies the viewer family's one passive-SVG profile after DOMPurify's structural allowlist.
+ * Local fragment paint servers and embedded raster data remain usable; every network, style,
+ * animation and interaction sink is removed by the shared post-sanitization engine.
  */
 function sanitizeInlineSvg(
   sanitizer: HtmlSanitizer,
   raw: string,
   ownerDocument: Document,
 ): string {
-  const sanitized = sanitizer.sanitize(raw, {
-    USE_PROFILES: { svg: true, svgFilters: true },
-    RETURN_DOM_FRAGMENT: true,
-    FORBID_TAGS: ['style', 'animate', 'animatemotion', 'animatetransform', 'set', 'discard'],
-    FORBID_ATTR: ['style'],
-  });
-  if (
-    typeof sanitized !== 'object'
-    || sanitized === null
-    || !('nodeType' in sanitized)
-    || sanitized.nodeType !== 11
-  ) {
-    throw new Error('SVG sanitizer did not return a document fragment.');
-  }
-  const fragment = sanitized as DocumentFragment;
-  fragment.querySelectorAll('style, animate, animateMotion, animateTransform, set, discard')
-    .forEach((element) => element.remove());
-  for (const element of fragment.querySelectorAll('*')) {
-    element.removeAttribute('style');
-    for (const attribute of Array.from(element.attributes)) {
-      const name = attribute.name.toLowerCase();
-      if (
-        SVG_RESOURCE_ATTRIBUTES.has(name)
-        && !isSafeSvgResourceReference(attribute.value)
-      ) {
-        element.removeAttributeNode(attribute);
-        continue;
-      }
-      if (
-        SVG_PAINT_SERVER_ATTRIBUTES.has(name)
-        && (/url\s*\(/i.test(attribute.value) || attribute.value.includes('\\'))
-        && !LOCAL_SVG_PAINT_REFERENCE.test(attribute.value.trim())
-      ) {
-        element.removeAttributeNode(attribute);
-      }
-    }
-  }
+  const markup = sanitizePassiveMarkup(sanitizer, raw, ownerDocument, 'passive-svg');
   const template = ownerDocument.createElement('template');
-  template.content.append(fragment);
-  return template.innerHTML;
+  template.innerHTML = markup;
+  if (!template.content.querySelector('svg')) {
+    throw new Error('SVG sanitizer did not return an SVG document.');
+  }
+  return markup;
 }
 
 type SvgFetchState =
@@ -138,8 +83,8 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * @csspart base - The root container.
  * @csspart body - The wrapper around the fetched-state content.
  * @csspart svg - The sanitized SVG document, once loaded.
- * @csspart spinner - Ordinary loading content; transitions announce through the shared
- *   document-level polite region.
+ * @csspart spinner - Visible ordinary loading content with a motion-safe progress indicator;
+ *   transitions announce through the shared document-level polite region.
  * @csspart error - Visible ordinary error text; transitions announce through the shared
  *   document-level assertive region.
  * @csspart frame-viewport - Forwarded from the internal `<lr-pan-zoom>` when `zoomable`.
@@ -187,12 +132,13 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, viewerLoadingStyles];
 
   /** URL to fetch and render as sanitized inline SVG. */
   @property() src = '';
 
-  /** Accessible name for the rendered SVG. */
+  /** Accessible name for the rendered SVG surface. The surface is an image while passive and a
+   * region when zoom controls or highlight actions make it interactive. */
   @property() name = '';
 
   /** CSS length that caps the scrollable body. Invalid values are ignored. */
@@ -225,7 +171,8 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.announcements.adopted();
   }
 
@@ -281,10 +228,10 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     switch (this.fetchState.kind) {
       case 'loaded':
         return this.renderZoomableWrapper(
-          html`<div part="svg" role="img" aria-label=${this.getAttribute('aria-label') || this.name || this.localize('svgViewerLabel')}>${unsafeSVG(this.fetchState.markup)}</div>`,
+          html`<div part="svg">${unsafeSVG(this.fetchState.markup)}</div>`,
         );
       case 'loading':
-        return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+        return renderViewerLoading(this.localize('loadingDocument'));
       case 'error':
         return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle':
@@ -441,7 +388,8 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
 
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    return html`<div part="base" style=${maxHeight ? styleMap({ '--lr-svg-viewer-max-height': maxHeight }) : nothing}>
+    const surfaceRole = this.zoomable || this.regionHighlights().length > 0 ? 'region' : 'img';
+    return html`<div part="base" role=${viewerSemanticRole(this, surfaceRole) ?? nothing} aria-label=${viewerSemanticLabel(this, this.name || this.localize('svgViewerLabel')) ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'} style=${maxHeight ? styleMap({ '--lr-svg-viewer-max-height': maxHeight }) : nothing}>
       <div part="body">${this.renderBody()}</div>
       ${this.renderAnchorLiveRegion()}
     </div>`;

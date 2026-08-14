@@ -216,17 +216,20 @@ export const RichRows: Story = {
 
 /**
  * `source` replaces the light-DOM `<lr-option>` list with an async
- * `(query) => Promise<ComboboxSourceRow[]>` lookup, debounced ~200ms after
- * each keystroke. A "Loading…" row is shown while a call is in flight.
+ * `(query, { signal, limit }) => Promise<{ rows, total? }>` lookup, debounced ~200ms after
+ * each keystroke. A "Loading…" row is shown while a call is in flight; `total` keeps provider-side
+ * truncation visible in the overflow row.
  */
 export const AsyncSource: Story = {
   render: () => {
     const all = ['Apple', 'Banana', 'Cherry', 'Date', 'Elderberry', 'Fig', 'Grape'];
-    const source: ComboboxSource = async (query) => {
+    const source: ComboboxSource = async (query, { limit }) => {
       await new Promise((r) => setTimeout(r, 400));
-      return all
-        .filter((label) => label.toLowerCase().includes(query.toLowerCase()))
-        .map((label) => ({ value: label.toLowerCase(), label }));
+      const matches = all.filter((label) => label.toLowerCase().includes(query.toLowerCase()));
+      return {
+        rows: matches.slice(0, limit).map((label) => ({ value: label.toLowerCase(), label })),
+        total: matches.length,
+      };
     };
     return html`
       <lr-combobox label="Fruit (async)" placeholder="Type to search…" clearable

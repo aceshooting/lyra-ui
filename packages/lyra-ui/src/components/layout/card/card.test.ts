@@ -52,15 +52,15 @@ describe("lr-card", () => {
 
   it('does not inspect an unavailable render root during the server-side first update', () => {
     const el = document.createElement('lr-card') as LyraCard;
-    el.interactive = true;
+    el.actionable = true;
     const access = el as unknown as { willUpdate(changed: Map<PropertyKey, unknown>): void };
 
-    expect(() => access.willUpdate(new Map([['interactive', false]]))).not.to.throw();
+    expect(() => access.willUpdate(new Map([['actionable', false]]))).not.to.throw();
   });
 
   it("preserves focus across link, activation-button, and passive owner replacements", async () => {
     const el = (await fixture(
-      html`<lr-card interactive>body</lr-card>`
+      html`<lr-card actionable>body</lr-card>`
     )) as LyraCard;
     (el.shadowRoot!.querySelector('[part="activation-button"]') as HTMLElement).focus();
 
@@ -72,7 +72,7 @@ describe("lr-card", () => {
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('activation-button');
 
-    el.interactive = false;
+    el.actionable = false;
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
     expect((el.shadowRoot!.activeElement as HTMLElement | null)?.tabIndex).to.equal(-1);
@@ -82,7 +82,7 @@ describe("lr-card", () => {
     const wrapper = await fixture(html`
       <div>
         <button id="outside">Outside</button>
-        <lr-card interactive>body</lr-card>
+        <lr-card actionable>body</lr-card>
       </div>
     `);
     const el = wrapper.querySelector('lr-card') as LyraCard;
@@ -92,11 +92,11 @@ describe("lr-card", () => {
     expect(el.ownerDocument.activeElement?.id).to.equal('outside');
   });
 
-  it("defaults appearance to outlined, interactive to false", async () => {
+  it("defaults appearance to outlined, actionable to false", async () => {
     const el = (await fixture(html`<lr-card>body</lr-card>`)) as LyraCard;
     expect(el.appearance).to.equal("outlined");
-    expect(el.interactive).to.be.false;
-    expect(el.hasAttribute("interactive")).to.be.false;
+    expect(el.actionable).to.be.false;
+    expect(el.hasAttribute("actionable")).to.be.false;
   });
 
   it("rejects executable navigation schemes", async () => {
@@ -174,12 +174,12 @@ describe("lr-card", () => {
     expect(footer.hasAttribute("hidden")).to.be.true;
   });
 
-  it("reflects appearance/interactive as attributes for CSS selectors", async () => {
+  it("reflects appearance/actionable as attributes for CSS selectors", async () => {
     const el = (await fixture(
-      html`<lr-card appearance="filled" interactive>body</lr-card>`
+      html`<lr-card appearance="filled" actionable>body</lr-card>`
     )) as LyraCard;
     expect(el.getAttribute("appearance")).to.equal("filled");
-    expect(el.hasAttribute("interactive")).to.be.true;
+    expect(el.hasAttribute("actionable")).to.be.true;
   });
 
   it("wraps a long header and its actions without overflowing a narrow allocation", async () => {
@@ -370,13 +370,58 @@ describe("lr-card", () => {
     expect(anchorClicks).to.equal(1);
   });
 
+  it("replaces a proxied content click with exactly one outward native anchor click", async () => {
+    const el = (await fixture(html`
+      <lr-card href="#card-details"><span id="content">Open details</span></lr-card>
+    `)) as LyraCard;
+    const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('a[part="base"]')!;
+    const content = el.querySelector<HTMLElement>("#content")!;
+    let outwardClicks = 0;
+    let anchorClicks = 0;
+    el.addEventListener("click", () => outwardClicks += 1);
+    anchor.addEventListener("click", (event) => {
+      anchorClicks += 1;
+      event.preventDefault();
+    });
+
+    content.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+    expect(anchorClicks).to.equal(1);
+    expect(outwardClicks).to.equal(1);
+
+    content.addEventListener("click", (event) => event.preventDefault(), { once: true });
+    content.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true, cancelable: true }));
+    expect(anchorClicks).to.equal(1);
+    expect(outwardClicks).to.equal(2);
+  });
+
+  it("merges author rel tokens with the target security floor and strips opener", async () => {
+    const el = (await fixture(html`
+      <lr-card href="/report" target="_blank" rel="nofollow sponsored opener">Report</lr-card>
+    `)) as LyraCard;
+    const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('a[part="base"]')!;
+    expect(new Set(anchor.rel.split(/\s+/))).to.deep.equal(
+      new Set(["nofollow", "sponsored", "noopener", "noreferrer"])
+    );
+
+    el.target = undefined;
+    await el.updateComplete;
+    expect(anchor.rel).to.equal("nofollow sponsored");
+  });
+
+  it("gives every linked card action presentation without a redundant actionable flag", async () => {
+    const el = (await fixture(html`<lr-card href="/report">Report</lr-card>`)) as LyraCard;
+    const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('a[part="base"]')!;
+    expect(anchor.dataset.actionable).to.equal("true");
+    expect(getComputedStyle(anchor).cursor).to.equal("pointer");
+  });
+
   describe("activation without href", () => {
     // The constraint that rules out `role="button"` on `[part='base']`: a card routinely contains
     // slotted buttons/links, and axe-core's `nested-interactive` rule forbids a focusable
     // descendant of a `role="button"` ancestor. Written first, deliberately.
-    it("an interactive card containing a slotted lr-button is still accessible", async () => {
+    it("an actionable card containing a slotted lr-button is still accessible", async () => {
       const el = (await fixture(html`
-        <lr-card interactive>
+        <lr-card actionable>
           <span slot="header">Rooftop install No. 4021</span>
           <lr-button slot="actions">Edit</lr-button>
           Body content
@@ -388,7 +433,7 @@ describe("lr-card", () => {
 
     it("renders a named native sibling button and emits lr-card-activate on whole-card click", async () => {
       const el = (await fixture(
-        html`<lr-card interactive>body</lr-card>`
+        html`<lr-card actionable>body</lr-card>`
       )) as LyraCard;
       const activation = el.shadowRoot!.querySelector(
         '[part="activation-button"]'
@@ -408,7 +453,7 @@ describe("lr-card", () => {
 
     it("derives its fallback name from aria-labelledby and image alternatives", async () => {
       const el = (await fixture(html`
-        <lr-card interactive>
+        <lr-card actionable>
           <span aria-labelledby="card-semantic-name">Visible fallback</span>
           <span id="card-semantic-name" hidden><img alt="Quarterly chart" /></span>
         </lr-card>
@@ -426,7 +471,7 @@ describe("lr-card", () => {
 
     it("uses the native activation button for keyboard-equivalent activation", async () => {
       const el = (await fixture(
-        html`<lr-card interactive>body</lr-card>`
+        html`<lr-card actionable>body</lr-card>`
       )) as LyraCard;
       const activation = el.shadowRoot!.querySelector(
         '[part="activation-button"]'
@@ -438,7 +483,7 @@ describe("lr-card", () => {
 
     it("forwards host click() to the native activation button exactly once", async () => {
       const el = (await fixture(
-        html`<lr-card interactive>body</lr-card>`
+        html`<lr-card actionable>body</lr-card>`
       )) as LyraCard;
       let activations = 0;
       el.addEventListener("lr-card-activate", () => (activations += 1));
@@ -480,7 +525,7 @@ describe("lr-card", () => {
 
     it("forwards the host aria-label to the native activation owner and keeps it live", async () => {
       const el = (await fixture(
-        html`<lr-card interactive aria-label="Open project">body</lr-card>`
+        html`<lr-card actionable aria-label="Open project">body</lr-card>`
       )) as LyraCard;
       const activation = el.shadowRoot!.querySelector(
         '[part="activation-button"]'
@@ -496,7 +541,7 @@ describe("lr-card", () => {
 
     it("retains an explicit empty accessible label before falling back to card content", async () => {
       const el = (await fixture(
-        html`<lr-card interactive aria-label="">Monthly report</lr-card>`
+        html`<lr-card actionable aria-label="">Monthly report</lr-card>`
       )) as LyraCard;
       const activation = el.shadowRoot!.querySelector(
         '[part="activation-button"]'
@@ -515,7 +560,7 @@ describe("lr-card", () => {
 
     it("refreshes its content-derived activation name after detached text changes", async () => {
       const el = (await fixture(
-        html`<lr-card interactive>Original project</lr-card>`
+        html`<lr-card actionable>Original project</lr-card>`
       )) as LyraCard;
       const parent = el.parentElement!;
       el.remove();
@@ -533,7 +578,7 @@ describe("lr-card", () => {
 
     it("does not emit when the click originates in a slotted interactive control", async () => {
       const el = (await fixture(html`
-        <lr-card interactive>
+        <lr-card actionable>
           <lr-button slot="actions">Edit</lr-button>
           <a href="#x" id="deep-link">Deep link</a>
           <span id="plain">Plain text</span>
@@ -556,7 +601,7 @@ describe("lr-card", () => {
     });
 
     it("uses the adopted owner observer and recognizes a destination-realm nested control", async () => {
-      const el = (await fixture(html`<lr-card interactive>body</lr-card>`)) as LyraCard;
+      const el = (await fixture(html`<lr-card actionable>body</lr-card>`)) as LyraCard;
       await el.updateComplete;
       el.remove();
       const iframe = document.createElement("iframe");
@@ -608,7 +653,7 @@ describe("lr-card", () => {
 
     it("leaves the href path untouched: no tabindex of its own and no lr-card-activate", async () => {
       const el = (await fixture(
-        html`<lr-card interactive href="/x">body</lr-card>`
+        html`<lr-card actionable href="/x">body</lr-card>`
       )) as LyraCard;
       const anchor = base(el);
       expect(anchor.tagName.toLowerCase()).to.equal("a");
@@ -625,7 +670,7 @@ describe("lr-card", () => {
       expect(fired).to.be.false;
     });
 
-    it("without interactive, renders exactly today’s passive output and never emits", async () => {
+    it("without actionable, renders passive output and never emits", async () => {
       const el = (await fixture(html`<lr-card>body</lr-card>`)) as LyraCard;
       expect(base(el).hasAttribute("tabindex")).to.be.false;
       expect(base(el).hasAttribute("role")).to.be.false;
@@ -765,7 +810,7 @@ it('inherits independent appearance and interactive-state paint from an ancestor
       <lr-card appearance="filled">Filled</lr-card>
       <lr-card appearance="filled-outlined">Filled outlined</lr-card>
       <lr-card appearance="accent">Accent</lr-card>
-      <lr-card interactive>Interactive</lr-card>
+      <lr-card actionable>Interactive</lr-card>
     </div>
   `);
   const cards = wrapper.querySelectorAll<LyraCard>('lr-card');

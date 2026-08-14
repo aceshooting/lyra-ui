@@ -257,7 +257,7 @@ describe('lr-spreadsheet-viewer', () => {
       el.src = 'https://example.test/book.xlsx';
       await waitUntil(() => el.shadowRoot!.querySelector('lr-tab-group') !== null);
       let leaked = 0;
-      for (const name of ['lr-load-more', 'lr-visible-range-changed', 'lr-scroll']) {
+      for (const name of ['lr-load-more', 'lr-visible-range-changed', 'lr-virtual-scroll']) {
         el.addEventListener(name as never, () => { leaked++; });
         el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
       }
@@ -278,18 +278,28 @@ describe('lr-spreadsheet-viewer', () => {
     const unnamed = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
     expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Spreadsheet');
   });
-  it('lets an explicit host aria-label win over the name-derived fallback', async () => {
+  it('leaves a non-empty host aria-label on the host instead of duplicating the shadow region', async () => {
     // Regression test: render() previously checked `this.name || this.getAttribute('aria-label')`,
     // so a consumer-supplied host aria-label could never override an also-set `name` -- unlike every
     // sibling viewer (notebook-viewer, xml-viewer, pdf-viewer), which check the host attribute first.
     const overridden = (await fixture(
       html`<lr-spreadsheet-viewer name="quarterly.xlsx" aria-label="Q3 Financial Report"></lr-spreadsheet-viewer>`,
     )) as LyraSpreadsheetViewer;
-    expect(overridden.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Q3 Financial Report');
+    expect(overridden.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.be.null;
+    expect(overridden.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.be.null;
 
     const labeled = (await fixture(html`<lr-spreadsheet-viewer aria-label="Q3 Financial Report"></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
-    expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Q3 Financial Report');
-    expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('region');
+    expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.be.null;
+    expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.be.null;
+  });
+  it('preserves an explicitly empty host aria-label on the region owner', async () => {
+    const el = await fixture<LyraSpreadsheetViewer>(
+      html`<lr-spreadsheet-viewer name="quarterly.xlsx" aria-label=""></lr-spreadsheet-viewer>`,
+    );
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('region');
+    expect(base.hasAttribute('aria-label')).to.be.true;
+    expect(base.getAttribute('aria-label')).to.equal('');
   });
   it('supports a .strings override for the spreadsheetViewerLabel fallback', async () => {
     const el = (await fixture(
@@ -353,6 +363,29 @@ describe('lr-spreadsheet-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Spreadsheet preview is unavailable.');
     } finally {
       restore();
+    }
+  });
+
+  it('paints a visible busy treatment while pending and clears it on failure', async () => {
+    const original = window.fetch;
+    const responseGate = deferred<Response>();
+    window.fetch = (() => responseGate.promise) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraSpreadsheetViewer>(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`);
+      (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = async () => XLSX;
+      el.src = 'https://example.test/pending.xlsx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="spinner"]') !== null);
+      const base = el.shadowRoot!.querySelector('[part="base"]')!;
+      const label = el.shadowRoot!.querySelector<HTMLElement>('.viewer-loading-label')!;
+      expect(base.getAttribute('aria-busy')).to.equal('true');
+      expect(label.textContent).to.equal('Loading document…');
+      expect(label.getBoundingClientRect().height).to.be.greaterThan(0);
+      responseGate.reject(new Error('offline'));
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(base.getAttribute('aria-busy')).to.equal('false');
+      expect(el.shadowRoot!.querySelector('[part="spinner"]') === null).to.equal(true);
+    } finally {
+      window.fetch = original;
     }
   });
 
@@ -674,6 +707,17 @@ describe('lr-spreadsheet-viewer', () => {
         el.src = 'https://example.test/book.xlsx';
         await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
         expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'not-a-range' })).to.be.false;
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'A0' })).to.be.false;
+        expect(
+          await el.scrollToAnchor({ kind: 'cell-range', range: 'A9007199254740992' }),
+        ).to.be.false;
+        expect(
+          await el.scrollToAnchor({ kind: 'cell-range', range: `${'Z'.repeat(32)}1` }),
+        ).to.be.false;
+
+        el.highlights = [{ id: 'invalid', anchor: { kind: 'cell-range', range: 'A0' } }];
+        await el.updateComplete;
+        expect(el.shadowRoot!.querySelectorAll('[part~="cell-highlight"]').length).to.equal(0);
       } finally {
         restore();
       }

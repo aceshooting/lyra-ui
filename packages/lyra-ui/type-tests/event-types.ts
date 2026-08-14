@@ -10,7 +10,7 @@ import {
   LyraResponsivePanel,
   LyraSlider,
   LyraSourceList,
-  LyraSplit,
+  LyraMultiSplit,
   LyraSwitch,
   LyraTable,
   LyraThinkingPanel,
@@ -27,15 +27,15 @@ import type {
   LyraLiteChartLayout,
   LyraSelectSize,
   MatrixCellPos,
-  PanelConstraint,
+  LyraMultiSplitPanelConstraint,
   PromptStudioMessageReorderDetail,
-  RejectedFile,
+  LyraFileInputRejectedFile,
   StatRow,
   TimeRangePreset,
 } from '../src/lyra.js';
 import type {
   DialogCloseReason,
-  ResponsivePanelCloseReason,
+  LyraResponsivePanelCloseReason,
   ToolApprovalDialogCloseReason,
   ToolSelectDialogCloseReason,
 } from '../src/lyra.js';
@@ -45,20 +45,20 @@ import type {
   BoxPlotSeries,
   ChartPoint,
   ChipSelectDetail,
-  ChoroplethLayer,
-  GraphLink,
-  GraphNode,
+  LyraMapChoroplethLayer,
+  LyraGraphLink,
+  LyraGraphNode,
   HeatmapSelectedCell,
   KbdLocalize,
-  LegendEntry,
+  LyraMapLegendEntry,
   LyraChartType,
   LyraComboboxSelectionDirection,
-  MapMarker,
+  LyraMapMarker,
   MenuItemChangeDetail,
   MenuItemType,
   Series,
   ToolApprovalDialogWrap,
-  WidgetView,
+  LyraWidgetView,
 } from '../src/lyra.js';
 import type {
   LyraChipEventMap,
@@ -66,13 +66,14 @@ import type {
   LyraCitationBadgeEventMap,
   LyraCopyButtonEventMap,
   LyraDiffViewEventMap,
+  LyraDockPanelEventMap,
   LyraFileInputEventMap,
   LyraHeatmapEventMap,
   LyraLiteChartEventMap,
   LyraMediaCardEventMap,
   LyraSelectEventMap,
   LyraSourceCardEventMap,
-  LyraSplitEventMap,
+  LyraMultiSplitEventMap,
   LyraTimeRangeEventMap,
   LyraTreeEventMap,
 } from '../src/lyra.js';
@@ -193,7 +194,7 @@ import type {
   LyraGlobalEventMap,
   LyraNodeToggleEvent,
   LyraRailResizeEvent,
-  LyraSplitCollapseChangeEvent,
+  LyraMultiSplitCollapseChangeEvent,
   LyraTabShowEvent,
   LyraVisibleRangeChangedEvent,
 } from '../src/events.js';
@@ -201,13 +202,13 @@ import type {
 const publicTypes: [
   StatRow,
   LyraSelectSize,
-  PanelConstraint,
+  LyraMultiSplitPanelConstraint,
   TimeRangePreset,
   HeatmapAnnotation,
   MatrixCellPos,
   CalendarCellPos,
   LyraLiteChartLayout,
-  RejectedFile,
+  LyraFileInputRejectedFile,
   FormAssociatedInterface,
 ] | undefined = undefined;
 void publicTypes;
@@ -264,13 +265,14 @@ const barrelEventMapTypes: [
   LyraCitationBadgeEventMap,
   LyraCopyButtonEventMap,
   LyraDiffViewEventMap,
+  LyraDockPanelEventMap,
   LyraFileInputEventMap,
   LyraHeatmapEventMap,
   LyraLiteChartEventMap,
   LyraMediaCardEventMap,
   LyraSelectEventMap,
   LyraSourceCardEventMap,
-  LyraSplitEventMap,
+  LyraMultiSplitEventMap,
   LyraTimeRangeEventMap,
   LyraTreeEventMap,
 ] | undefined = undefined;
@@ -394,12 +396,12 @@ const barrelPublicSurfaceTypes: [
   LyraChartType,
   BoxPlotSeries,
   BoxPlotPoint,
-  GraphNode,
-  GraphLink,
-  LegendEntry,
-  ChoroplethLayer,
-  MapMarker,
-  WidgetView,
+  LyraGraphNode,
+  LyraGraphLink,
+  LyraMapLegendEntry,
+  LyraMapChoroplethLayer,
+  LyraMapMarker,
+  LyraWidgetView,
   MenuItemType,
   ToolApprovalDialogWrap,
   LyraComboboxSelectionDirection,
@@ -427,18 +429,19 @@ appRail.addEventListener('lr-rail-resize', (event) => {
 
 declare const attachmentChip: LyraAttachmentChip;
 attachmentChip.addEventListener('lr-remove', (event) => {
-  const id: string = event.detail.id;
-  void id;
+  const attachmentId: string = event.detail.attachmentId;
+  void attachmentId;
 });
-attachmentChip.addEventListener('lr-preview', (event) => {
+attachmentChip.addEventListener('lr-preview-request', (event) => {
+  const attachmentId: string = event.detail.attachmentId;
   const src: string = event.detail.src;
+  void attachmentId;
   void src;
 });
 
 declare const attachmentTrigger: LyraAttachmentTrigger;
-attachmentTrigger.addEventListener('lr-pick', (event) => {
-  // A real `FileList`, not an array -- see the `lr-pick` @event doc.
-  const files: FileList = event.detail.files;
+attachmentTrigger.addEventListener('lr-files', (event) => {
+  const files: readonly File[] = event.detail.files;
   const capability: 'files' | 'image' = event.detail.capability;
   void files;
   void capability;
@@ -475,7 +478,7 @@ toolSelect.addEventListener('lr-change', (event) => {
 
 declare const responsivePanel: LyraResponsivePanel;
 responsivePanel.addEventListener('lr-close', (event) => {
-  const reason: ResponsivePanelCloseReason = event.detail;
+  const reason: LyraResponsivePanelCloseReason = event.detail;
   void reason;
 });
 responsivePanel.addEventListener('lr-mode-change', (event) => {
@@ -484,14 +487,24 @@ responsivePanel.addEventListener('lr-mode-change', (event) => {
 });
 
 declare const dockPanel: LyraDockPanel;
-dockPanel.addEventListener('lr-resize', (event) => {
+dockPanel.addEventListener('lr-resize-input', (event) => {
   const extent: string = event.detail.extent;
   void extent;
+});
+dockPanel.addEventListener('lr-resize-change', (event) => {
+  const extent: string = event.detail.extent;
+  void extent;
+});
+dockPanel.addEventListener('lr-collapse-request', (event) => {
+  const collapsed: boolean = event.detail.collapsed;
+  void collapsed;
 });
 dockPanel.addEventListener('lr-collapse-change', (event) => {
   const collapsed: boolean = event.detail.collapsed;
   void collapsed;
 });
+// @ts-expect-error lr-resize was replaced by the explicit input/commit event pair.
+export type _RemovedDockPanelResizeEvent = LyraDockPanelEventMap['lr-resize'];
 
 declare const modelSettings: LyraModelSettingsPanel;
 modelSettings.addEventListener('lr-change', (event) => {
@@ -530,15 +543,33 @@ menuItem.addEventListener('lr-menu-item-change', (event) => {
   void value;
 });
 
-declare const split: LyraSplit;
-split.addEventListener('lr-split-collapse-change', (event) => {
+declare const multiSplit: LyraMultiSplit;
+multiSplit.addEventListener('lr-resize-request', (event) => {
+  const sizes: readonly number[] = event.detail.sizes;
+  void sizes;
+});
+multiSplit.addEventListener('lr-resize', (event) => {
+  const sizes: readonly number[] = event.detail.sizes;
+  void sizes;
+});
+multiSplit.addEventListener('lr-multi-split-collapse-change', (event) => {
   const state: 'wide' | 'rail' | 'floating' = event.detail.state;
   void state;
 });
-split.addEventListener('lr-split-constraints-invalid', (event) => {
+multiSplit.addEventListener('lr-multi-split-constraints-invalid', (event) => {
   const panelCount: number = event.detail.panelCount;
   void panelCount;
 });
+multiSplit.addEventListener('lr-multi-split-orientation-change', (event) => {
+  const orientation: 'horizontal' | 'vertical' = event.detail.orientation;
+  void orientation;
+});
+// @ts-expect-error the old component-prefixed collapse event was removed with lr-split.
+export type _RemovedSplitCollapseChangeEvent = LyraMultiSplitEventMap['lr-split-collapse-change'];
+// @ts-expect-error the old component-prefixed constraint event was removed with lr-split.
+export type _RemovedSplitConstraintsInvalidEvent = LyraMultiSplitEventMap['lr-split-constraints-invalid'];
+// @ts-expect-error the old component-prefixed orientation event was removed with lr-split.
+export type _RemovedSplitOrientationChangeEvent = LyraMultiSplitEventMap['lr-split-orientation-change'];
 
 declare const slider: LyraSlider;
 slider.addEventListener('lr-change', (event) => {
@@ -614,7 +645,7 @@ const globalEventSurfaceTypes: [
   LyraGlobalEventMap,
   LyraNodeToggleEvent,
   LyraRailResizeEvent,
-  LyraSplitCollapseChangeEvent,
+  LyraMultiSplitCollapseChangeEvent,
   LyraTabShowEvent,
   LyraVisibleRangeChangedEvent,
 ] | undefined = undefined;
@@ -637,7 +668,7 @@ delegationRoot.addEventListener('lr-rail-resize', (event) => {
   void widthPx;
 });
 
-window.addEventListener('lr-split-collapse-change', (event) => {
+window.addEventListener('lr-multi-split-collapse-change', (event) => {
   const state: 'wide' | 'rail' | 'floating' = event.detail.state;
   void state;
 });

@@ -21,10 +21,9 @@ export interface ConfirmOptions {
   tone?: 'neutral' | 'danger';
 }
 
-// Plain inline-styled <button>s, not a shared lr-button component -- none
-// exists in this library yet. Every value below is still a --lr-* token
-// reference, never a raw literal, same requirement as a component's own
-// styles.ts. Each filled tone uses its matching on-color token so standalone
+// Native buttons keep this focused helper leaf independent of the broader button registration.
+// Every value below is still a --lr-* token reference, never a raw literal, same requirement as a
+// component's own styles.ts. Each filled tone uses its matching on-color token so standalone
 // light/dark fallbacks and a consumer's Web Awesome theme stay paired.
 const BUTTON_BASE_STYLE =
   'font: inherit; font-size: var(--lr-font-size-md-sm); padding: var(--lr-space-xs) var(--lr-space-m); ' +
@@ -83,10 +82,9 @@ function createButton(label: string, style: string, onClick: () => void): HTMLBu
  *
  * Mounts a transient `<lr-dialog>` for the duration of the call and
  * removes it once settled, rather than reusing a persistent page-level
- * region (contrast `lr-toast`'s `toaster.ts`): a confirmation modal has no
- * stacking/queueing concerns -- only one is ever meant to be open at a time
- * -- so a mount-and-remove per call keeps its lifetime trivially tied to the
- * returned promise, with nothing left mounted between calls.
+ * region (contrast `lr-toast`'s `toaster.ts`). Concurrent calls remain distinct dialogs in the
+ * shared overlay stack, each with a lifetime tied to its own returned promise and nothing left
+ * mounted after that request settles.
  *
  * Every dismissal path (confirm button, cancel button, Escape, backdrop
  * click) funnels through `<lr-dialog>`'s own `close()`/`lr-dialog-close`

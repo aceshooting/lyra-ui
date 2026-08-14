@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'The same slotted content either docked inline in the page layout (desktop) or presented as a full-screen/bottom-sheet overlay (mobile), depending on viewport width. `mode="auto"` (the default) switches live via `matchMedia` against `mobile-breakpoint`; `mode="inline"`/`mode="overlay"` force a presentation regardless of viewport width.',
+          'The same slotted content either docked inline or presented as a full-screen/bottom-sheet overlay. `mode="auto"` (the default) compares the panel’s allocated inline size with `overlay-breakpoint`; `mode="inline"`/`mode="overlay"` force a presentation.',
       },
     },
   },
@@ -153,23 +153,22 @@ export const CancelableClose: Story = {
 };
 
 export const AutoModeResolvesToOverlayHere: Story = {
-  name: 'mode="auto" (resolves to overlay in this narrow canvas)',
+  name: 'mode="auto" (allocation-based)',
   parameters: {
     docs: {
       description: {
         story:
-          'A deliberately large `mobile-breakpoint` makes `mode="auto"` resolve to the overlay presentation inside Storybook’s canvas width, without needing to actually resize the browser window -- shrink the canvas panel or view this story full-screen at different widths to see it flip back to docked inline once the canvas is wider than `mobile-breakpoint`.',
+          'Resize the bounded wrapper below. The same panel switches presentation when its own allocation crosses `overlay-breakpoint`, independently of the browser viewport.',
       },
     },
   },
   render: () => html`
-    <div>
+    <div style="inline-size: min(100%, 36rem); resize: horizontal; overflow: auto;">
       <button @click=${openPanel}>Open panel</button>
-      <lr-responsive-panel mode="auto" mobile-breakpoint="1400px" label="Conversation history">
+      <lr-responsive-panel mode="auto" overlay-breakpoint="32rem" open label="Conversation history">
         <span slot="header" style="font-weight: 600;">History</span>
         <p style="margin: 0;">
-          Resize the browser window (or this canvas) past 1400px wide and this same panel switches to a
-          docked inline layout instead, with no backdrop or focus trap.
+          Resize this wrapper across 32rem. The panel follows its allocation without replacing this content.
         </p>
         <div slot="footer">
           <button
@@ -185,12 +184,12 @@ export const AutoModeResolvesToOverlayHere: Story = {
 };
 
 export const SettingsSidebarPattern: Story = {
-  name: 'Realistic pattern: docked sidebar on desktop, sheet on mobile',
+  name: 'Realistic pattern: allocation-responsive settings panel',
   parameters: {
     docs: {
       description: {
         story:
-          'A settings sidebar that stays permanently docked next to the main content above 900px, and becomes a bottom-sheet overlay triggered by a button below it -- the common responsive-panel use case this component targets.',
+          'This open panel is docked while its flex allocation is wider than 28rem and becomes a modal bottom sheet below that allocation. Resize the canvas or wrapper to exercise both states.',
       },
     },
   },
@@ -202,8 +201,9 @@ export const SettingsSidebarPattern: Story = {
       <button @click=${openPanel}>Open settings (below 900px)</button>
       <lr-responsive-panel
         mode="auto"
-        mobile-breakpoint="900px"
+        overlay-breakpoint="28rem"
         variant="bottom-sheet"
+        open
         label="Settings"
         style="min-inline-size: 16rem;"
       >

@@ -25,20 +25,20 @@ export const styles = css`
   [part='base'] {
     display: flex;
     min-inline-size: 0;
-    /* Driven by the --lr-timeline-item-direction custom property inherited from <lr-timeline>'s
+    /* Driven by the private orientation property inherited from <lr-timeline>'s
        :host across the slot boundary -- row (marker beside content) in vertical-timeline mode,
        column (marker above content) in horizontal-timeline mode. This component has no orientation
        attribute of its own; see <lr-timeline>'s styles for the source of truth. */
-    flex-direction: var(--lr-timeline-item-direction, row);
+    flex-direction: var(--_lr-timeline-item-direction, row);
     gap: var(--lr-space-s);
   }
 
   [part='track'] {
     display: flex;
     /* Always the *opposite* axis from [part='base'] -- see the class doc's rail-mechanism note.
-       Paired with --lr-timeline-item-direction at the same <lr-timeline> source, since CSS has
+       Paired with the base-direction property at the same <lr-timeline> source, since CSS has
        no way to derive "the other one of row/column" from a single custom property's value. */
-    flex-direction: var(--lr-timeline-item-track-direction, column);
+    flex-direction: var(--_lr-timeline-item-track-direction, column);
     align-items: center;
     flex: 0 0 auto;
   }
@@ -67,6 +67,12 @@ export const styles = css`
   /* The pulsing "in-progress" treatment -- same token/guard shape as lr-stream-status's
      streaming-phase dot pulse. */
   :host([active]) [part='marker'] {
+    outline: var(--lr-border-width-medium) solid
+      var(
+        --lr-timeline-active-ring-color,
+        var(--lr-timeline-marker-color, var(--_lr-timeline-marker-color-default))
+      );
+    outline-offset: var(--lr-space-2xs);
     animation: lr-timeline-item-pulse var(--lr-transition-ambient) infinite;
   }
   @keyframes lr-timeline-item-pulse {
@@ -99,7 +105,7 @@ export const styles = css`
     /* Suppressed for the last item in a <lr-timeline> via this custom property, set by
        <lr-timeline>'s own ::slotted(:last-child) rule -- visibility (not display) keeps the same
        layout box every other item's track has, so marker alignment stays consistent down the list. */
-    visibility: var(--lr-timeline-item-rail-visibility, visible);
+    visibility: var(--_lr-timeline-item-rail-visibility, visible);
   }
 
   [part='content'] {
@@ -113,8 +119,8 @@ export const styles = css`
        Exactly one of these two is non-zero at a time, set together by <lr-timeline>'s
        :host / :host([orientation='horizontal']) rules; both default to 0 when this item is used
        standalone (no <lr-timeline> ancestor). */
-    padding-block-end: var(--lr-timeline-item-gap-block-end, 0);
-    padding-inline-end: var(--lr-timeline-item-gap-inline-end, 0);
+    padding-block-end: var(--_lr-timeline-item-gap-block-end, 0);
+    padding-inline-end: var(--_lr-timeline-item-gap-inline-end, 0);
   }
 
   [part='header'] {

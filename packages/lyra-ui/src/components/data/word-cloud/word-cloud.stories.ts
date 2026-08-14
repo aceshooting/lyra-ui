@@ -35,7 +35,7 @@ export const SqrtScale: Story = {
 };
 
 export const MixedOrientation: Story = {
-  render: () => html`<lr-word-cloud .words=${WORDS} orientations="mixed" style="height: 20rem"></lr-word-cloud>`,
+  render: () => html`<lr-word-cloud .words=${WORDS} word-rotation="mixed" style="height: 20rem"></lr-word-cloud>`,
 };
 
 export const GroupedColors: Story = {
@@ -104,7 +104,7 @@ export const NarrowLegend: Story = {
     docs: {
       description: {
         story:
-          'Paired LTR/RTL allocations at the default 20rem (320px) contract combine mixed word orientations with long localized legend labels.',
+          'Paired LTR/RTL allocations at the default 20rem (320px) contract combine mixed word rotation with long localized legend labels.',
       },
     },
   },
@@ -114,7 +114,7 @@ export const NarrowLegend: Story = {
       return html`
         <lr-word-cloud
           show-legend
-          orientations="mixed"
+          word-rotation="mixed"
           style="block-size: var(--lr-size-20rem)"
           .words=${[
             { text: rtl ? 'إمكانية الوصول' : 'Barrierefreiheit', weight: 90, group: 'quality' },

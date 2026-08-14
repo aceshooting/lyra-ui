@@ -349,6 +349,7 @@ it('chains filled-content and border tokens through the matching lyra theme-inpu
   const cases: Array<[input: string, reaches: string]> = [
     ['--lr-theme-color-surface-border', '--lr-color-border'],
     ['--lr-theme-color-focus', '--lr-focus-ring-color'],
+    ['--lr-theme-color-on-strong-overlay', '--lr-color-on-strong-overlay'],
     ...(['brand', 'success', 'warning', 'danger'] as const).map(
       (tone) => [`--lr-theme-color-${tone}-on-loud`, `--lr-color-on-${tone}`] as [string, string],
     ),

@@ -80,6 +80,35 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
   }
+  .portable-node-card {
+    display: flex;
+    align-items: stretch;
+    gap: var(--lr-space-xs);
+    min-inline-size: calc(var(--lr-size-10rem) + var(--lr-size-1rem));
+    padding: var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    box-shadow: var(--lr-shadow-s);
+  }
+  .portable-node-content {
+    display: flex;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    flex-direction: column;
+    overflow-wrap: anywhere;
+  }
+  .portable-handles {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+  }
+  .portable-handles > span {
+    inline-size: var(--lr-size-0-5rem);
+    block-size: var(--lr-size-0-5rem);
+    border-radius: var(--lr-radius-pill);
+    background: var(--lr-color-border-strong);
+  }
   [part='node']:focus-within {
     z-index: var(--lr-layer-content);
   }
@@ -97,8 +126,8 @@ export const styles = css`
     pointer-events: stroke;
     cursor: pointer;
   }
-  [part='edge'][data-tone='accent'] {
-    stroke: var(--lr-flow-canvas-edge-accent-color, var(--lr-color-brand));
+  [part='edge'][data-tone='brand'] {
+    stroke: var(--lr-flow-canvas-edge-brand-color, var(--lr-color-brand));
   }
   [part='edge'][data-tone='success'] {
     stroke: var(--lr-flow-canvas-edge-success-color, var(--lr-color-success));
@@ -112,8 +141,8 @@ export const styles = css`
   [part='arrowhead'] {
     fill: var(--lr-flow-canvas-edge-neutral-color, var(--lr-color-border));
   }
-  [part='arrowhead'][data-tone='accent'] {
-    fill: var(--lr-flow-canvas-edge-accent-color, var(--lr-color-brand));
+  [part='arrowhead'][data-tone='brand'] {
+    fill: var(--lr-flow-canvas-edge-brand-color, var(--lr-color-brand));
   }
   [part='arrowhead'][data-tone='success'] {
     fill: var(--lr-flow-canvas-edge-success-color, var(--lr-color-success));
@@ -136,6 +165,20 @@ export const styles = css`
     text-anchor: middle;
     stroke: var(--lr-color-surface);
     stroke-width: var(--lr-size-3px);
+  }
+  [part='layout-limit'] {
+    position: absolute;
+    inset-inline: var(--lr-space-s);
+    inset-block-end: var(--lr-space-s);
+    z-index: var(--lr-layer-content);
+    max-inline-size: calc(100% - 2 * var(--lr-space-s));
+    padding: var(--lr-space-2xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-warning);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    font-size: var(--lr-font-size-xs);
+    overflow-wrap: anywhere;
   }
   .world {
     position: absolute;

@@ -15,17 +15,17 @@ export const styles = css`
 
   /* 'connecting' gets a dimmer, static brand dot -- present but deliberately
      quieter than 'streaming' so the two are never confused at a glance. */
-  :host([phase='connecting']) {
+  :host([connection-state='connecting']) {
     --_lr-stream-status-dot-color-default: var(--lr-color-brand);
     --_lr-stream-status-dot-opacity-default: 0.6;
   }
-  :host([phase='streaming']) {
+  :host([connection-state='streaming']:not([data-stalled])) {
     --_lr-stream-status-dot-color-default: var(--lr-color-brand);
     --_lr-stream-status-dot-opacity-default: 1;
   }
   /* Warning, not danger -- see the class doc's "Visual" section for why a
      stall defaults to the recoverable/actionable tone. */
-  :host([phase='stalled']) {
+  :host([data-stalled]) {
     --_lr-stream-status-dot-color-default: var(--lr-color-warning);
     --_lr-stream-status-dot-opacity-default: 1;
   }
@@ -46,7 +46,7 @@ export const styles = css`
   /* The one "unmistakable" treatment the spec calls for: a stall tints the
      whole row, not just the dot, so the message/actions read as one alert
      unit rather than a plain dot next to unrelated-looking text. */
-  :host([phase='stalled']) [part='base'] {
+  :host([data-stalled]) [part='base'] {
     padding: var(--lr-space-xs) var(--lr-space-s);
     background: var(--lr-stream-status-stalled-bg, var(--lr-color-warning-quiet));
     border: var(--lr-border-width-thin) solid
@@ -65,13 +65,25 @@ export const styles = css`
       opacity var(--lr-transition-base);
   }
 
+  [part='phase'] {
+    min-inline-size: 0;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-md-sm);
+    overflow-wrap: anywhere;
+  }
+
+  :host([data-stalled]) [part='phase'] {
+    color: var(--lr-stream-status-message-color, var(--lr-color-warning));
+    font-weight: var(--lr-font-weight-semibold);
+  }
+
   /* Only 'streaming' pulses -- a moving dot reads as "actively receiving
      data right now"; every other phase (including 'stalled', which wants
      steady attention via color/tint, not extra motion) stays static. Same
      token/rationale as lr-typing-indicator's pulse variant -- see that
      component's styles for the full explanation of why
      --lr-transition-ambient is the right length for an ambient loop. */
-  :host([phase='streaming']) [part='indicator'] {
+  :host([connection-state='streaming']:not([data-stalled])) [part='indicator'] {
     animation: lr-stream-status-pulse var(--lr-transition-ambient) infinite;
   }
   @keyframes lr-stream-status-pulse {

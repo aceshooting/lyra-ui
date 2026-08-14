@@ -58,6 +58,22 @@ describe('localeNativeName', () => {
     expect(localeNativeName('pt-BR')).to.contain('Brasil');
   });
 
+  it('does not mistake Unicode-extension or private-use tokens for regions', () => {
+    expect(languageToCountry('en-u-ca-gregory')).to.equal('gb');
+    expect(languageToCountry('zh-Hant-u-nu-hanidec')).to.equal('cn');
+    expect(languageToCountry('en-x-ca')).to.equal('gb');
+    expect(languageToCountry('x-ca')).to.equal(undefined);
+  });
+
+  it('supports script, explicit region, underscore, and malformed inputs deterministically', () => {
+    expect(languageToCountry('zh-Hant-TW')).to.equal('tw');
+    expect(languageToCountry('pt_BR')).to.equal('br');
+    expect(languageToCountry('sr-Cyrl')).to.equal('rs');
+    expect(languageToCountry('')).to.equal(undefined);
+    expect(languageToCountry('not a locale')).to.equal(undefined);
+    expect(languageToCountry('en-..-ca')).to.equal('gb');
+  });
+
   it('maps Persian and Hebrew base/regional tags to Iran and Israel with native endonyms', () => {
     expect(languageToCountry('fa')).to.equal('ir');
     expect(languageToCountry('fa-IR')).to.equal('ir');

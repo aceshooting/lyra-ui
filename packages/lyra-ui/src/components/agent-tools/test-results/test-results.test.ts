@@ -16,10 +16,12 @@ const suites: TestSuiteResult[] = [
 ];
 
 describe('lr-test-results', () => {
-  it('defaults to autoExpandFailures=true and empty statusFilter (show all)', async () => {
+  it('defaults to autoExpandFailures=true, an empty filter, and an idle uncorrelated run', async () => {
     const el = (await fixture(html`<lr-test-results></lr-test-results>`)) as LyraTestResults;
     expect(el.autoExpandFailures).to.be.true;
     expect(el.statusFilter).to.deep.equal([]);
+    expect(el.runId).to.equal(null);
+    expect(el.runState).to.equal('idle');
   });
 
   it('accepts auto-expand-failures="false" as a plain-HTML attribute string', async () => {
@@ -27,7 +29,7 @@ describe('lr-test-results', () => {
     expect(el.autoExpandFailures).to.be.false;
   });
 
-  it('[part="base"]\'s aria-label defaults to the localized "Test results" label but a host aria-label wins', async () => {
+  it('names the overall wrapper only when the host does not already own a non-empty name', async () => {
     const el = (await fixture(html`<lr-test-results .suites=${suites}></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Test results');
@@ -36,9 +38,17 @@ describe('lr-test-results', () => {
       html`<lr-test-results .suites=${suites} aria-label="Build test results"></lr-test-results>`,
     )) as LyraTestResults;
     await labeled.updateComplete;
-    expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
-      'Build test results',
-    );
+    const namedBase = labeled.shadowRoot!.querySelector('[part="base"]')!;
+    expect(labeled.getAttribute('aria-label')).to.equal('Build test results');
+    expect(namedBase.hasAttribute('role')).to.equal(false);
+    expect(namedBase.hasAttribute('aria-label')).to.equal(false);
+
+    const decorative = (await fixture(
+      html`<lr-test-results .suites=${suites} aria-label=""></lr-test-results>`,
+    )) as LyraTestResults;
+    const decorativeBase = decorative.shadowRoot!.querySelector('[part="base"]')!;
+    expect(decorativeBase.getAttribute('role')).to.equal('group');
+    expect(decorativeBase.getAttribute('aria-label')).to.equal('');
   });
 
   it('wires this.localize() calls for status counts, filter label, status words, toggle labels, and durations to .strings overrides', async () => {
@@ -91,16 +101,46 @@ describe('lr-test-results', () => {
     ];
     const el = (await fixture(html`
       <lr-test-results
+        run-id="run-1"
+        run-state="running"
         .suites=${runningSuites}
         .strings=${{ testResultsCompleteAnnounce: '{passed} ok, {failed} ko, {skipped} skip' }}
       ></lr-test-results>
     `)) as LyraTestResults;
     await el.updateComplete;
     el.suites = [{ id: 's1', name: 'math.test.ts', tests: [{ id: 't1', name: 'a', status: 'passed' }] }];
+    el.runState = 'complete';
     await el.updateComplete;
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     const region = el.shadowRoot!.querySelector('lr-live-region')!.shadowRoot!.querySelector('[part="region"]')!;
     expect(region.textContent).to.equal('1 ok, 0 ko, 0 skip');
+  });
+
+  it('does not announce completion when a running result list is merely cleared', async () => {
+    const el = await fixture<LyraTestResults>(html`
+      <lr-test-results
+        run-id="run-1"
+        run-state="running"
+        .suites=${[{ id: 's1', name: 'suite', tests: [{ id: 't1', name: 'test', status: 'running' }] }]}
+      ></lr-test-results>
+    `);
+    el.suites = [];
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const region = el.shadowRoot!.querySelector('lr-live-region')!.shadowRoot!.querySelector('[part="region"]')!;
+    expect(region.textContent).to.equal('');
+  });
+
+  it('does not correlate completion across a run-id replacement', async () => {
+    const el = await fixture<LyraTestResults>(html`
+      <lr-test-results run-id="run-1" run-state="running" .suites=${suites}></lr-test-results>
+    `);
+    el.runId = 'run-2';
+    el.runState = 'complete';
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const region = el.shadowRoot!.querySelector('lr-live-region')!.shadowRoot!.querySelector('[part="region"]')!;
+    expect(region.textContent).to.equal('');
   });
 
   it('renders correct per-status summary and filter counts across multiple suites (single-pass status-count regression)', async () => {
@@ -192,8 +232,8 @@ describe('lr-test-results', () => {
     ) as HTMLButtonElement;
     const listener = oneEvent(el, 'lr-toggle');
     toggleButton.click();
-    const event = (await listener) as CustomEvent<{ id: string; expanded: boolean }>;
-    expect(event.detail).to.deep.equal({ id: 't2', expanded: true });
+    const event = (await listener) as CustomEvent<{ suiteId: string; testId: string; expanded: boolean }>;
+    expect(event.detail).to.deep.equal({ suiteId: 's1', testId: 't2', expanded: true });
   });
 
   it('keys manualExpanded by test.id, not positional index, so inserting a test above a manually-collapsed one leaves it collapsed', async () => {
@@ -267,9 +307,9 @@ describe('lr-test-results', () => {
 
     const eventPromise = oneEvent(el, 'lr-toggle');
     toggles[0]!.click();
-    const event = (await eventPromise) as CustomEvent<{ id: string; suiteId?: string; expanded: boolean }>;
+    const event = (await eventPromise) as CustomEvent<{ suiteId: string; testId: string; expanded: boolean }>;
     await el.updateComplete;
-    expect(event.detail).to.deep.equal({ id: 'same', suiteId: 'unit', expanded: true });
+    expect(event.detail).to.deep.equal({ suiteId: 'unit', testId: 'same', expanded: true });
 
     const nextToggles = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="test-expand-toggle"]')];
     expect(nextToggles[0]!.getAttribute('aria-expanded')).to.equal('true');
@@ -383,7 +423,7 @@ describe('lr-test-results', () => {
     expect(assignments).to.deep.include([secondSlot, 'second malformed detail']);
   });
 
-  it('still scopes lr-toggle detail by suite only when the test id is duplicated across suites', async () => {
+  it('always emits the same suiteId/testId lr-toggle identity shape', async () => {
     const duplicateSuites: TestSuiteResult[] = [
       { id: 'suite-one', name: 'One', tests: [{ id: 'dup', name: 'first', status: 'failed', message: 'x' }] },
       { id: 'suite-two', name: 'Two', tests: [{ id: 'solo', name: 'second', status: 'failed', message: 'y' }] },
@@ -397,18 +437,79 @@ describe('lr-test-results', () => {
     const toggles = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="test-expand-toggle"]')];
     const duplicated = oneEvent(el, 'lr-toggle');
     toggles[0]!.click();
-    expect(((await duplicated) as CustomEvent<{ id: string; suiteId?: string }>).detail).to.deep.equal({
-      id: 'dup',
+    expect(((await duplicated) as CustomEvent<{ suiteId: string; testId: string; expanded: boolean }>).detail).to.deep.equal({
       suiteId: 'suite-one',
+      testId: 'dup',
       expanded: true,
     });
 
     const unique = oneEvent(el, 'lr-toggle');
     toggles[1]!.click();
-    expect(((await unique) as CustomEvent<{ id: string; suiteId?: string }>).detail).to.deep.equal({
-      id: 'solo',
+    expect(((await unique) as CustomEvent<{ suiteId: string; testId: string; expanded: boolean }>).detail).to.deep.equal({
+      suiteId: 'suite-two',
+      testId: 'solo',
       expanded: true,
     });
+  });
+
+  it('normalizes one foreign provider status once to the localized skipped fallback', async () => {
+    let statusReads = 0;
+    const foreign = {
+      id: 'foreign',
+      name: 'foreign provider result',
+      get status(): unknown {
+        statusReads++;
+        return 'provider-specific';
+      },
+    };
+    const el = await fixture<LyraTestResults>(html`
+      <lr-test-results
+        .suites=${[{ id: 'provider', name: 'Provider', tests: [foreign] }] as unknown as TestSuiteResult[]}
+        .strings=${{ statusSkipped: 'Not classified', testResultsSkipped: '{count} not classified' }}
+      ></lr-test-results>
+    `);
+
+    const row = el.shadowRoot!.querySelector<HTMLElement>('[part="test"]')!;
+    expect(statusReads).to.equal(1);
+    expect(row.dataset['status']).to.equal('skipped');
+    expect(row.querySelector('[part="test-status"]')!.textContent).to.include('Not classified');
+    expect(el.shadowRoot!.querySelector('[part="count"][data-status="skipped"]')!.textContent).to.include(
+      '1 not classified',
+    );
+  });
+
+  it('builds the light-DOM detail-slot index at most once per render', async () => {
+    const manyTests: TestSuiteResult[] = [{
+      id: 'suite',
+      name: 'Suite',
+      tests: Array.from({ length: 40 }, (_, index) => ({
+        id: `test-${index}`,
+        name: `Test ${index}`,
+        status: 'passed' as const,
+      })),
+    }];
+    const el = await fixture<LyraTestResults>(html`
+      <lr-test-results .suites=${manyTests}>
+        ${Array.from({ length: 40 }, (_, index) => html`
+          <span slot=${testResultDetailSlotName('suite', `test-${index}`)}>Detail ${index}</span>
+        `)}
+      </lr-test-results>
+    `);
+    const children = el.children;
+    let childrenReads = 0;
+    Object.defineProperty(el, 'children', {
+      configurable: true,
+      get: () => {
+        childrenReads++;
+        return children;
+      },
+    });
+
+    el.requestUpdate();
+    await el.updateComplete;
+
+    expect(childrenReads).to.be.at.most(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="test-expand-toggle"]')).to.have.length(40);
   });
 
   it('discovers detail content appended after mount for a previously non-expandable test', async () => {
@@ -481,10 +582,113 @@ describe('lr-test-results', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="test"]').length).to.equal(1);
   });
 
+  it('renders an explicit empty state when filters hide every populated result', async () => {
+    const el = await fixture<LyraTestResults>(html`
+      <lr-test-results .suites=${suites} .statusFilter=${['running']}></lr-test-results>
+    `);
+    expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
+    expect(el.shadowRoot!.querySelectorAll('[part="test"]')).to.have.length(0);
+  });
+
   it('renders lr-empty when suites is empty', async () => {
     const el = (await fixture(html`<lr-test-results></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
+  });
+
+  it('prunes removed expansion identities so a reused suite/test pair starts from defaults', async () => {
+    const failed: TestSuiteResult[] = [
+      { id: 'suite', name: 'suite', tests: [{ id: 'reused', name: 'test', status: 'failed', message: 'x' }] },
+    ];
+    const el = await fixture<LyraTestResults>(html`
+      <lr-test-results .suites=${failed} .autoExpandFailures=${false}></lr-test-results>
+    `);
+    const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="test-expand-toggle"]')!;
+    toggle.click();
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-expanded')).to.equal('true');
+
+    el.suites = [];
+    await el.updateComplete;
+    el.suites = failed.map((suite) => ({ ...suite, tests: suite.tests.map((test) => ({ ...test })) }));
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="test-expand-toggle"]')!.getAttribute('aria-expanded')).to.equal('false');
+  });
+
+  it('bounds mounted results, uses first-wins identities, and exposes localized truncation', async () => {
+    const tests = Array.from({ length: 1_001 }, (_, index) => ({
+      id: `test-${index}`,
+      name: `test ${index}`,
+      status: 'passed' as const,
+    }));
+    tests.splice(1, 0, { ...tests[0]!, name: 'duplicate must not replace first' });
+    const el = await fixture<LyraTestResults>(html`
+      <lr-test-results
+        .suites=${[{ id: 'suite', name: 'suite', tests }]}
+        .strings=${{ testResultsLimit: 'Showing the first {count} tests' }}
+      ></lr-test-results>
+    `);
+    const rows = [...el.shadowRoot!.querySelectorAll('[part="test"]')];
+    expect(rows).to.have.length(1_000);
+    expect(rows[0]!.querySelector('[part="test-name"]')!.textContent!.trim()).to.equal('test 0');
+    expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('Showing the first 1,000 tests');
+  });
+
+  it('keeps complete status counts while reserving a failed result beyond the 1,000-row boundary', async () => {
+    const tests: TestSuiteResult['tests'] = Array.from({ length: 1_001 }, (_, index) => ({
+      id: `passed-${index}`,
+      name: `passed ${index}`,
+      status: 'passed' as const,
+    }));
+    tests.push({ id: 'late-failure', name: 'late failure', status: 'failed' });
+    const el = await fixture<LyraTestResults>(html`
+      <lr-test-results .suites=${[{ id: 'suite', name: 'suite', tests }]}></lr-test-results>
+    `);
+    const count = (status: string): string =>
+      el.shadowRoot!.querySelector(`[part="count"][data-status="${status}"]`)?.textContent ?? '';
+
+    expect(el.shadowRoot!.querySelectorAll('[part="test"]')).to.have.length(1_000);
+    expect(el.shadowRoot!.querySelector('[part="test"][data-status="failed"]') !== null).to.equal(true);
+    expect(count('passed')).to.include('1,001');
+    expect(count('failed')).to.include('1');
+  });
+
+  it('preserves a manually expanded identity when later input moves it beyond the row boundary', async () => {
+    const initial: TestSuiteResult['tests'] = Array.from({ length: 1_000 }, (_, index) => ({
+      id: `test-${index}`,
+      name: `test ${index}`,
+      status: 'passed' as const,
+    }));
+    const detailSlot = testResultDetailSlotName('suite', 'test-999');
+    const el = await fixture<LyraTestResults>(html`
+      <lr-test-results .suites=${[{ id: 'suite', name: 'suite', tests: initial }]} .autoExpandFailures=${false}>
+        <span slot=${detailSlot}>Late detail</span>
+      </lr-test-results>
+    `);
+    const targetToggle = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="test-expand-toggle"]')]
+      .find((toggle) => toggle.getAttribute('aria-label')?.includes('test 999'))!;
+    targetToggle.click();
+    await el.updateComplete;
+
+    el.suites = [{
+      id: 'suite',
+      name: 'suite',
+      tests: [
+        ...Array.from({ length: 10 }, (_, index) => ({
+          id: `new-${index}`,
+          name: `new ${index}`,
+          status: 'passed' as const,
+        })),
+        ...initial,
+      ],
+    }];
+    await el.updateComplete;
+
+    const reservedToggle = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="test-expand-toggle"]')]
+      .find((toggle) => toggle.getAttribute('aria-label')?.includes('test 999'));
+    expect(reservedToggle?.getAttribute('aria-expanded')).to.equal('true');
+    expect(el.shadowRoot!.querySelectorAll('[part="test"]')).to.have.length(1_000);
   });
 
   it('slots canonical detail content after the plain message text', async () => {

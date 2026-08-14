@@ -65,11 +65,25 @@ it('applies per-instance strings to claim status', async () => {
   );
 });
 
-it('uses the host aria-label and exposes selected state without changing the controlled id', async () => {
+it('keeps exactly one overall claim owner across explicit-empty and dynamic host naming', async () => {
   const el = (await fixture(
     html`<lr-claim-evidence aria-label="Evidence audit" selected-claim-id="claim-2" .claims=${claims}></lr-claim-evidence>`,
   )) as LyraClaimEvidence;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Evidence audit');
+  const base = () => el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(el.getAttribute('aria-label')).to.equal('Evidence audit');
+  expect(base().getAttribute('aria-label')).to.equal(null);
+  expect(base().getAttribute('role')).to.equal(null);
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(el.hasAttribute('aria-label')).to.equal(true);
+  expect(el.getAttribute('aria-label')).to.equal('');
+  expect(base().getAttribute('aria-label')).to.equal('');
+  expect(base().getAttribute('role')).to.equal('region');
+  el.setAttribute('aria-label', 'Revised audit');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Revised audit');
+  expect(base().getAttribute('aria-label')).to.equal(null);
+  expect(base().getAttribute('role')).to.equal(null);
   expect(el.shadowRoot!.querySelector('[part~="claim-selected"]')!.getAttribute('aria-current')).to.equal('true');
   expect(el.selectedClaimId).to.equal('claim-2');
   await expect(el).shadowDom.to.be.accessible();

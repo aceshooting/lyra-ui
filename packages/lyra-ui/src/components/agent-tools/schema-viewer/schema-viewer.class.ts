@@ -7,6 +7,7 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './schema-viewer.styles.js';
+import { overallSemanticLabel } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_schemaViewerCircular, LYRA_DEFAULT_schemaViewerEmpty, LYRA_DEFAULT_schemaViewerIssueLimit, LYRA_DEFAULT_schemaViewerLabel, LYRA_DEFAULT_schemaViewerLimit, LYRA_DEFAULT_schemaViewerRequired, LYRA_DEFAULT_schemaViewerType } from '../../../internal/default-strings.generated.js';
@@ -47,6 +48,39 @@ interface SchemaRenderBudget {
 const MAX_RENDERED_SCHEMA_NODES = 500;
 const MAX_RENDERED_SCHEMA_ISSUES = 500;
 const MAX_SCHEMA_DEPTH = 100;
+const MAX_CONSTRAINT_VALUES = 50;
+const MAX_CONSTRAINT_VALUE_CHARACTERS = 1_000;
+const MAX_CONSTRAINT_OBJECT_NODES = 50;
+
+function constraintValue(value: unknown): string {
+  const seen = new Set<object>();
+  let remaining = MAX_CONSTRAINT_OBJECT_NODES;
+  const visit = (candidate: unknown, depth: number): string => {
+    if (remaining-- <= 0) return '…';
+    if (candidate === null) return 'null';
+    if (typeof candidate === 'string') return JSON.stringify(candidate.slice(0, MAX_CONSTRAINT_VALUE_CHARACTERS));
+    if (typeof candidate === 'number' || typeof candidate === 'boolean') return String(candidate);
+    if (typeof candidate === 'bigint') return `${candidate.toString()}n`;
+    if (candidate === undefined) return 'undefined';
+    if (typeof candidate !== 'object') return String(candidate);
+    if (seen.has(candidate)) return '[Circular]';
+    if (depth >= 3) return Array.isArray(candidate) ? '[…]' : '{…}';
+    seen.add(candidate);
+    let result: string;
+    if (Array.isArray(candidate)) {
+      const values = candidate.slice(0, MAX_CONSTRAINT_VALUES).map((item) => visit(item, depth + 1));
+      result = `[${values.join(', ')}${candidate.length > values.length ? ', …' : ''}]`;
+    } else {
+      const entries = Object.entries(candidate).slice(0, MAX_CONSTRAINT_VALUES);
+      result = `{${entries.map(([key, item]) => `${JSON.stringify(key)}: ${visit(item, depth + 1)}`).join(', ')}${
+        Object.keys(candidate).length > entries.length ? ', …' : ''
+      }}`;
+    }
+    seen.delete(candidate);
+    return result.slice(0, MAX_CONSTRAINT_VALUE_CHARACTERS);
+  };
+  return visit(value, 0);
+}
 
 /**
  * `<lr-schema-viewer>` — a recursive, selectable JSON Schema inspector with required-state,
@@ -70,6 +104,8 @@ const MAX_SCHEMA_DEPTH = 100;
  * @csspart issue-limit - Resource-ceiling status shown when additional validation issues are omitted.
  * @csspart empty - The empty state.
  * @cssprop [--lr-schema-viewer-selected-border=var(--lr-color-brand)] - Selected node branch.
+ * @cssprop [--lr-schema-viewer-max-indent=var(--lr-size-12rem)] - Maximum visual indentation;
+ *   complete JSON Pointer paths and selection semantics remain unchanged at deeper levels.
  * @cssprop [--lr-schema-viewer-error-border=var(--lr-color-danger)] - Error issue border.
  * @cssprop [--lr-schema-viewer-error-bg=var(--lr-color-danger-quiet)] - Error issue background.
  * @cssprop [--lr-schema-viewer-warning-border=var(--lr-color-warning)] - Warning issue border.
@@ -98,7 +134,9 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
 
   @property({ attribute: false }) schema: JsonSchemaNode | null = null;
   @property({ attribute: false }) issues: SchemaValidationIssue[] = [];
-  @property({ attribute: 'selected-path' }) selectedPath = '';
+  /** Controlled JSON Pointer selection. `null` means no selection; the empty
+   *  string is the valid JSON Pointer for the schema root. */
+  @property({ attribute: 'selected-path' }) selectedPath: string | null = null;
   /** Requested nesting depth, clamped to 100 to keep recursive template construction stack-safe. */
   @property({ type: Number, attribute: 'max-depth' }) maxDepth = 20;
   @property() label = '';
@@ -165,9 +203,18 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
       'minProperties',
       'maxProperties',
     ];
-    const rows = keys.flatMap((key) => (schema[key] == null ? [] : [`${key}: ${String(schema[key])}`]));
-    if (schema.enum) rows.push(`enum: ${schema.enum.map(String).join(', ')}`);
-    if (schema.$ref) rows.push(`$ref: ${schema.$ref}`);
+    const rows = keys.flatMap((key) => (schema[key] == null ? [] : [`${key}: ${constraintValue(schema[key])}`]));
+    if (schema.enum) {
+      const values = schema.enum.slice(0, MAX_CONSTRAINT_VALUES).map(constraintValue);
+      rows.push(`enum: [${values.join(', ')}${schema.enum.length > values.length ? ', …' : ''}]`);
+    }
+    if (Object.prototype.hasOwnProperty.call(schema, 'const')) rows.push(`const: ${constraintValue(schema.const)}`);
+    if (Object.prototype.hasOwnProperty.call(schema, 'default')) rows.push(`default: ${constraintValue(schema.default)}`);
+    if (schema.examples) {
+      const examples = schema.examples.slice(0, MAX_CONSTRAINT_VALUES).map(constraintValue);
+      rows.push(`examples: [${examples.join(', ')}${schema.examples.length > examples.length ? ', …' : ''}]`);
+    }
+    if (schema.$ref) rows.push(`$ref: ${schema.$ref.slice(0, MAX_CONSTRAINT_VALUE_CHARACTERS)}`);
     return rows;
   }
 
@@ -228,13 +275,18 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
           })) break;
         }
       }
-      if (schema.items && !Array.isArray(schema.items)) {
+      if (Array.isArray(schema.items)) {
+        for (let index = 0; index < schema.items.length; index++) {
+          const node = schema.items[index];
+          if (!node || !addChild({ name: `items[${index}]`, node, path: `${path}/items/${index}`, required: false })) break;
+        }
+      } else if (schema.items) {
         addChild({ name: 'items', node: schema.items, path: `${path}/items`, required: false });
       }
     }
     const nodePart = selected ? 'node node-selected' : 'node';
     return html`
-      <li part=${nodePart}>
+      <li part=${nodePart} style=${`--_lr-schema-depth:${depth}`}>
         <button
           part="node-trigger"
           type="button"
@@ -272,9 +324,9 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
   }
 
   override render(): TemplateResult {
-    const label = this.getAttribute('aria-label') || this.label || this.localize('schemaViewerLabel');
+    const label = overallSemanticLabel(this, this.label || this.localize('schemaViewerLabel'));
     if (!this.schema || typeof this.schema !== 'object') {
-      return html`<section part="base" aria-label=${label}>
+      return html`<section part="base" aria-label=${label ?? nothing}>
         <lr-empty part="empty" heading=${this.localize('schemaViewerEmpty')}></lr-empty>
       </section>`;
     }
@@ -299,7 +351,7 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
       issuesByPath,
     );
     return html`
-      <section part="base" aria-label=${label}>
+      <section part="base" aria-label=${label ?? nothing}>
         <ul part="tree">
           ${tree}
         </ul>

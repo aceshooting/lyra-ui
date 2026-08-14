@@ -8,17 +8,33 @@ export interface ParsedCellRange {
 }
 
 const CELL_REF_RE = /^\$?([A-Za-z]+)\$?(\d+)$/;
+const MAX_CELL_RANGE_INPUT_LENGTH = 1024;
+const MAX_SHEET_NAME_LENGTH = 255;
+const MAX_CELL_REFERENCE_LENGTH = 64;
+const MAX_ZERO_BASED_COORDINATE = Number.MAX_SAFE_INTEGER - 1;
 
 /** Bijective base-26 column letters ('A' = 0, 'Z' = 25, 'AA' = 26, ...) to a 0-based index. */
-function columnToIndex(letters: string): number {
+function columnToIndex(letters: string): number | null {
   let n = 0;
   for (const ch of letters.toUpperCase()) {
-    n = n * 26 + (ch.charCodeAt(0) - 64);
+    const digit = ch.charCodeAt(0) - 64;
+    if (n > Math.floor((Number.MAX_SAFE_INTEGER - digit) / 26)) return null;
+    n = n * 26 + digit;
   }
   return n - 1;
 }
 
-function indexToColumn(index: number): string {
+function isCoordinate(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isSafeInteger(value) &&
+    value >= 0 &&
+    value <= MAX_ZERO_BASED_COORDINATE
+  );
+}
+
+function indexToColumn(index: number): string | null {
+  if (!isCoordinate(index)) return null;
   let n = index + 1;
   let letters = '';
   while (n > 0) {
@@ -30,10 +46,15 @@ function indexToColumn(index: number): string {
 }
 
 function parseCellRef(ref: string): { row: number; col: number } | null {
-  const match = CELL_REF_RE.exec(ref.trim());
+  const trimmed = ref.trim();
+  if (trimmed.length === 0 || trimmed.length > MAX_CELL_REFERENCE_LENGTH) return null;
+  const match = CELL_REF_RE.exec(trimmed);
   if (!match) return null;
-  // safe: both capture groups are mandatory, so a successful match always has [1] and [2]
-  return { row: Number(match[2]) - 1, col: columnToIndex(match[1]!) };
+  const rowNumber = Number(match[2]);
+  const col = columnToIndex(match[1]!);
+  if (!Number.isSafeInteger(rowNumber) || rowNumber <= 0 || col === null) return null;
+  const row = rowNumber - 1;
+  return isCoordinate(row) && isCoordinate(col) ? { row, col } : null;
 }
 
 /**
@@ -44,6 +65,7 @@ function parseCellRef(ref: string): { row: number; col: number } | null {
  * looks like a real single-cell reference.
  */
 export function parseCellRange(input: string): ParsedCellRange | null {
+  if (typeof input !== 'string' || input.length > MAX_CELL_RANGE_INPUT_LENGTH) return null;
   const trimmed = input.trim();
   if (!trimmed) return null;
 
@@ -53,6 +75,7 @@ export function parseCellRange(input: string): ParsedCellRange | null {
   if (bangIndex !== -1) {
     const rawSheet = rest.slice(0, bangIndex).trim();
     sheet = rawSheet.startsWith("'") && rawSheet.endsWith("'") ? rawSheet.slice(1, -1) : rawSheet;
+    if (!sheet || sheet.length > MAX_SHEET_NAME_LENGTH) return null;
     rest = rest.slice(bangIndex + 1);
   }
 
@@ -72,10 +95,29 @@ export function parseCellRange(input: string): ParsedCellRange | null {
   };
 }
 
-/** Inverse of `parseCellRange()` -- builds an A1-notation string for a `LyraAnchor` of kind `cell-range`. */
-export function formatCellRange(range: ParsedCellRange): string {
-  const start = `${indexToColumn(range.startCol)}${range.startRow + 1}`;
-  const end = `${indexToColumn(range.endCol)}${range.endRow + 1}`;
+/**
+ * Inverse of `parseCellRange()` -- builds an A1-notation string for a `LyraAnchor` of kind
+ * `cell-range`. Returns `null` for non-finite, unsafe, negative, reversed, or overlong input rather
+ * than entering an unbounded column-conversion loop.
+ */
+export function formatCellRange(range: ParsedCellRange): string | null {
+  if (
+    !isCoordinate(range.startRow) ||
+    !isCoordinate(range.startCol) ||
+    !isCoordinate(range.endRow) ||
+    !isCoordinate(range.endCol) ||
+    range.startRow > range.endRow ||
+    range.startCol > range.endCol ||
+    (range.sheet !== undefined &&
+      (typeof range.sheet !== 'string' || range.sheet.length === 0 || range.sheet.length > MAX_SHEET_NAME_LENGTH))
+  ) {
+    return null;
+  }
+  const startColumn = indexToColumn(range.startCol);
+  const endColumn = indexToColumn(range.endCol);
+  if (startColumn === null || endColumn === null) return null;
+  const start = `${startColumn}${range.startRow + 1}`;
+  const end = `${endColumn}${range.endRow + 1}`;
   const body = start === end ? start : `${start}:${end}`;
   return range.sheet ? `${range.sheet}!${body}` : body;
 }

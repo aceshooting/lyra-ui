@@ -12,13 +12,12 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_randomContentPause, LYRA_DEFAULT_randomContentResume } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 export type LyraRandomContentAnimation = 'none' | 'fade' | 'fade-up' | 'fade-down' | 'fade-left' | 'fade-right';
 export type LyraRandomContentMode = 'unique' | 'random' | 'sequence';
 
 export interface LyraRandomContentEventMap {
-  'lr-content-change': CustomEvent<{ items: HTMLElement[] }>;
-  'lr-pause-change': CustomEvent<boolean>;
+  'lr-content-change': CustomEvent<{ readonly items: readonly Element[] }>;
+  'lr-pause-change': CustomEvent<{ readonly paused: boolean }>;
 }
 
 /**
@@ -64,10 +63,11 @@ export interface LyraRandomContentEventMap {
  * forwarding slot is flattened to its projected element candidates.
  * @event lr-content-change - The displayed selection changed (first render, `randomize()`,
  * a slot-change-triggered reselection, or an autoplay tick). `detail: { items }` is the exact
- * array of elements now shown, in display order. Not emitted when the eligible pool is empty.
+ * frozen snapshot of the elements now shown, in display order. Not emitted when the eligible
+ * pool is empty.
  * @event lr-pause-change - Fired when `paused` changes via the built-in pause/resume button, so a
  * host mirroring or persisting that state stays in sync. Never fired for a host's own `paused`
- * write. `detail: boolean` (the new `paused` value). Same name and shape as
+ * write. `detail: { paused: boolean }` (the new `paused` value). Same name and shape as
  * `<lr-poll-status>`'s identical affordance.
  * @csspart base - The wrapping element around the default slot.
  * @csspart pause-button - The autoplay pause/resume action.
@@ -80,6 +80,8 @@ export interface LyraRandomContentEventMap {
  * @cssprop [--lr-random-content-animation-duration=300ms] - Duration of the entrance animation.
  * @cssprop [--lr-random-content-animation-easing=ease] - Easing function for the entrance animation.
  * @cssprop [--lr-random-content-animation-translate=var(--lr-size-0-5em)] - Translation distance for directional animations.
+ * @cssprop [--lr-random-content-item-gap=var(--lr-space-s)] - Gap between simultaneously selected items.
+ * @cssprop [--lr-random-content-item-alignment=flex-start] - Cross-axis alignment of selected items.
  * @status stable
  * @since 4.0.0
  */
@@ -105,7 +107,8 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   @property({ type: Boolean, reflect: true }) paused = false;
 
   /** Milliseconds between autoplay ticks. Clamped to a 1000ms floor. */
-  @property({ type: Number, attribute: 'autoplay-interval' }) autoplayInterval = 3000;
+  @property({ type: Number, attribute: 'autoplay-interval' })
+  autoplayInterval = 3000;
 
   /** How many children are shown simultaneously -- a count, not the pool itself. NaN/negative/
    *  fractional/oversized all normalize through `finiteInteger`, clamped to at least 1 and at
@@ -122,13 +125,10 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   private reduceMotion = false;
   private mediaQuery?: MediaQueryList;
   private sequenceCursor = 0;
-  private previousSelection?: HTMLElement[];
-  private lastPool: HTMLElement[] = [];
-  private managedPool = new Set<HTMLElement>();
-  private readonly authorState = new WeakMap<
-    HTMLElement,
-    { hiddenAttribute: string | null; ariaHidden: string | null }
-  >();
+  private previousSelection?: Element[];
+  private lastPool: Element[] = [];
+  private managedPool = new Set<Element>();
+  private readonly authorState = new WeakMap<Element, { hiddenAttribute: string | null; ariaHidden: string | null }>();
   private authorStateObserver?: MutationObserver;
   private announcementContentObserver?: MutationObserver;
   private authorStateObserverPauseDepth = 0;
@@ -229,10 +229,8 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     this.restartAutoplay();
   };
 
-  private eligible(): HTMLElement[] {
-    return (this.slotEl?.assignedElements({ flatten: true }) ?? []).filter(
-      (el): el is HTMLElement => el.namespaceURI === 'http://www.w3.org/1999/xhtml',
-    );
+  private eligible(): Element[] {
+    return this.slotEl?.assignedElements({ flatten: true }) ?? [];
   }
 
   private clampedCount(poolSize: number): number {
@@ -241,12 +239,12 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     return finiteInteger(this.items, 1, 1, poolSize);
   }
 
-  private poolsEqual(a: HTMLElement[], b: HTMLElement[]): boolean {
+  private poolsEqual(a: Element[], b: Element[]): boolean {
     if (a.length !== b.length) return false;
     return a.every((el, index) => el === b[index]);
   }
 
-  private shuffledPick(pool: HTMLElement[], count: number): HTMLElement[] {
+  private shuffledPick(pool: Element[], count: number): Element[] {
     const arr = pool.slice();
     const n = Math.min(count, arr.length);
     for (let i = 0; i < n; i += 1) {
@@ -258,14 +256,14 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     return arr.slice(0, n);
   }
 
-  private sameAsPrevious(selection: HTMLElement[]): boolean {
+  private sameAsPrevious(selection: Element[]): boolean {
     const previous = this.previousSelection;
     if (!previous || previous.length !== selection.length) return false;
     const previousSet = new Set(previous);
     return selection.every((el) => previousSet.has(el));
   }
 
-  private selectUnique(pool: HTMLElement[], count: number): HTMLElement[] {
+  private selectUnique(pool: Element[], count: number): Element[] {
     let picked = this.shuffledPick(pool, count);
     if (pool.length > count) {
       let attempts = 0;
@@ -277,10 +275,10 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     return picked;
   }
 
-  private selectSequence(pool: HTMLElement[], count: number): HTMLElement[] {
+  private selectSequence(pool: Element[], count: number): Element[] {
     const total = pool.length;
     const start = this.sequenceCursor % total;
-    const picked: HTMLElement[] = [];
+    const picked: Element[] = [];
     for (let k = 0; k < count; k += 1) {
       // safe: pool is non-empty (reselect() returns early for an empty pool), so total >= 1 and (start + k) % total is in [0, total-1]
       picked.push(pool[(start + k) % total]!);
@@ -289,7 +287,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     return picked;
   }
 
-  private computeSelectionForMode(pool: HTMLElement[], count: number): HTMLElement[] {
+  private computeSelectionForMode(pool: Element[], count: number): Element[] {
     switch (this.mode) {
       case 'sequence':
         return this.selectSequence(pool, count);
@@ -301,14 +299,14 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     }
   }
 
-  private preserveFocusedSubtree(pool: HTMLElement[], selected: HTMLElement[]): HTMLElement[] {
+  private preserveFocusedSubtree(pool: Element[], selected: Element[]): Element[] {
     const active = deepActiveElement(this.ownerDocument);
     const focusedItem = pool.find((item) => composedContains(item, active));
     if (!focusedItem || selected.includes(focusedItem)) return selected;
     return [...selected.slice(0, -1), focusedItem];
   }
 
-  private reconcileManagedPool(pool: HTMLElement[]): void {
+  private reconcileManagedPool(pool: Element[]): void {
     const nextPool = new Set(pool);
     for (const item of this.managedPool) {
       if (!nextPool.has(item)) this.restoreAuthorState(item);
@@ -324,7 +322,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     this.managedPool = nextPool;
   }
 
-  private restoreAuthorState(item: HTMLElement): void {
+  private restoreAuthorState(item: Element): void {
     const original = this.authorState.get(item);
     if (!original) return;
     if (original.hiddenAttribute === null) item.removeAttribute('hidden');
@@ -342,7 +340,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     this.lastAnnouncementText = '';
   }
 
-  private applyManagedSelection(pool: HTMLElement[], selected: HTMLElement[]): void {
+  private applyManagedSelection(pool: Element[], selected: Element[]): void {
     const selectedSet = new Set(selected);
     for (const el of pool) {
       const shown = selectedSet.has(el);
@@ -351,7 +349,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     }
   }
 
-  private applySelection(pool: HTMLElement[], selected: HTMLElement[]): void {
+  private applySelection(pool: Element[], selected: Element[]): void {
     this.withAuthorStateObserverPaused(() => {
       this.reconcileManagedPool(pool);
       this.applyManagedSelection(pool, selected);
@@ -361,7 +359,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   private captureAuthorStateMutations(records: MutationRecord[]): void {
     for (const record of records) {
       if (record.type !== 'attributes') continue;
-      const item = record.target as HTMLElement;
+      const item = record.target as Element;
       if (!this.managedPool.has(item)) continue;
       const state = this.authorState.get(item);
       if (!state) continue;
@@ -426,7 +424,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     }
   }
 
-  private selectionAnnouncement(selected: HTMLElement[]): string {
+  private selectionAnnouncement(selected: readonly Element[]): string {
     const content = selected
       .map((item) => composedAccessibilityText(item).replace(/\s+/g, ' ').trim())
       .filter(Boolean)
@@ -498,14 +496,14 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     this.announceCurrentSelectionIfChanged();
   };
 
-  private reselect(options: { resetPrevious?: boolean; announce?: boolean } = {}): HTMLElement[] {
+  private reselect(options: { resetPrevious?: boolean; announce?: boolean } = {}): readonly Element[] {
     const pool = this.eligible();
     this.lastPool = pool;
     if (pool.length === 0) {
       this.withAuthorStateObserverPaused(() => this.reconcileManagedPool(pool));
       this.previousSelection = undefined;
       this.lastAnnouncementText = '';
-      return [];
+      return Object.freeze([] as Element[]);
     }
     if (options.resetPrevious) this.previousSelection = undefined;
     const count = this.clampedCount(pool.length);
@@ -517,8 +515,9 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     if (options.announce !== false) {
       this.announcementSink?.announce(announcement);
     }
-    this.emit('lr-content-change', { items: selected });
-    return selected;
+    const exposedSelection = Object.freeze([...selected]);
+    this.emit('lr-content-change', Object.freeze({ items: exposedSelection }));
+    return exposedSelection;
   }
 
   private onSlotChange = (): void => {
@@ -544,7 +543,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
    * elements now shown. The selection is announced even when `autoplay` is enabled; only the
    * timer's own selections stay silent. Does not reset or restart the autoplay timer.
    */
-  randomize(): Element[] {
+  randomize(): readonly Element[] {
     return this.reselect();
   }
 
@@ -607,14 +606,16 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   // handler serves both siblings.
   private togglePaused = (): void => {
     this.paused = !this.paused;
-    this.emit('lr-pause-change', this.paused);
+    this.emit('lr-pause-change', Object.freeze({ paused: this.paused }));
   };
 
   override render(): TemplateResult {
     const hostLabel = this.getAttribute('aria-label');
+    const multiple = finiteInteger(this.items, 1, 1, Number.MAX_SAFE_INTEGER) > 1;
     return html`
       <div
         part="base"
+        ?data-multiple=${multiple}
         role=${hostLabel === null ? nothing : 'group'}
         aria-label=${hostLabel === null ? nothing : hostLabel}
         @focusin=${this.onFocusIn}

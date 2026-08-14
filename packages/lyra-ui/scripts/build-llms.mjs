@@ -20,6 +20,7 @@ import {
   NORMALIZATION_SECTIONS,
   validateLocalMigrations,
   validateMappingNormalizations,
+  validateMethodEdgeParity,
 } from './component-inventory.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 
@@ -443,6 +444,13 @@ export function buildMigration() {
     });
     if (normalizationFindings.length > 0) {
       throw new Error(`Cannot build migration reference: ${normalizationFindings.join('; ')}`);
+    }
+    const methodEdgeFindings = validateMethodEdgeParity(mapping, {
+      upstream: upstreams.get(mapping.upstreamTag)?.surface,
+      target: components.get(mapping.targetTag)?.surface,
+    });
+    if (methodEdgeFindings.length > 0) {
+      throw new Error(`Cannot build migration reference: ${methodEdgeFindings.join('; ')}`);
     }
     seen.add(mapping.upstreamTag);
   }

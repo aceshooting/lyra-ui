@@ -33,6 +33,18 @@ it('renders content and inherits the badge variant styling contract', async () =
   expect(base?.tagName).to.equal('SPAN');
 });
 
+it('honors an inherited tag remove hook and a direct override', async () => {
+  const wrapper = await fixture(html`
+    <div style="--lr-tag-remove-radius: 7px">
+      <lr-tag with-remove>Inherited</lr-tag>
+      <lr-tag with-remove style="--lr-tag-remove-radius: 9px">Direct</lr-tag>
+    </div>
+  `);
+  const [inherited, direct] = Array.from(wrapper.querySelectorAll('lr-tag')) as LyraTag[];
+  expect(getComputedStyle(removeButton(inherited!)!).borderRadius).to.equal('7px');
+  expect(getComputedStyle(removeButton(direct!)!).borderRadius).to.equal('9px');
+});
+
 it('is accessible in its own right, not merely via lr-badge', async () => {
   const el = (await fixture(html`<lr-tag>Tag</lr-tag>`)) as LyraTag;
   expect(el.hasAttribute("role")).to.be.false;
@@ -207,11 +219,19 @@ describe('withRemove', () => {
     expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Supprimer Balise');
   });
 
-  it('lets a host aria-label win over the computed remove-button name', async () => {
+  it('keeps a host label on a group while giving the remove action a purpose-specific name', async () => {
     const el = (await fixture(
       html`<lr-tag with-remove aria-label="Remove the beta filter">beta</lr-tag>`,
     )) as LyraTag;
-    expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Remove the beta filter');
+    expect(el.getAttribute('role')).to.equal('group');
+    expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Remove beta');
+
+    el.removeAttribute('role');
+    await Promise.resolve();
+    expect(el.getAttribute('role')).to.equal('group');
+    el.setAttribute('role', 'region');
+    await Promise.resolve();
+    expect(el.getAttribute('role')).to.equal('region');
   });
 
   it('tracks a forwarded label and preserves an explicitly empty host aria-label', async () => {
@@ -236,7 +256,8 @@ describe('withRemove', () => {
     el.setAttribute('aria-label', '');
     await Promise.resolve();
     await el.updateComplete;
-    expect(removeButton(el)?.getAttribute('aria-label')).to.equal('');
+    expect(el.getAttribute('role')).to.equal('group');
+    expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Remove Gamma');
 
     el.removeAttribute('aria-label');
     const replacement = wrapper.ownerDocument.createElement('span');

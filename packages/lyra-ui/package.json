@@ -1348,8 +1348,8 @@
     "./src/translations/zh-CN.ts"
   ],
   "scripts": {
-    "build": "node scripts/build.mjs && node scripts/check-build-artifacts.mjs",
-    "check:build-artifacts": "node scripts/check-build-artifacts.mjs",
+    "build": "node scripts/build.mjs && pnpm run check:build-artifacts",
+    "check:build-artifacts": "node scripts/check-build-artifacts.mjs && node --test scripts/ai-compile-contract.test.mjs",
     "pretest": "pnpm run build",
     "test": "wtr",
     "test:ssr": "node --test scripts/ssr-fixture.test.mjs && node scripts/check-ssr.mjs",
@@ -1382,9 +1382,12 @@
     "tag-aliases": "node scripts/generate-tag-aliases.mjs",
     "check:tag-aliases": "node scripts/check-tag-aliases.mjs",
     "test:tag-aliases": "node --test scripts/generate-tag-aliases.test.mjs",
-    "registrations": "pnpm run tag-aliases && node scripts/generate-registration-artifacts.mjs",
+    "registrations": "pnpm run tag-aliases && node scripts/generate-registration-artifacts.mjs && node scripts/generate-package-exports.mjs",
     "check:registrations": "node scripts/generate-registration-artifacts.mjs --check",
     "test:registrations": "node scripts/generate-registration-artifacts.test.mjs",
+    "package-exports": "node scripts/generate-package-exports.mjs",
+    "check:package-exports": "node scripts/generate-package-exports.mjs --check",
+    "test:package-exports": "node --test scripts/generate-package-exports.test.mjs",
     "create:component": "node scripts/create-component.mjs",
     "test:create-component": "node --test scripts/create-component.test.mjs",
     "check-side-effects": "node scripts/check-side-effects.mjs",
@@ -1437,10 +1440,10 @@
     "provenance-policy": "node scripts/check-provenance.mjs",
     "contract-checklist": "node scripts/check-contract-checklist.mjs",
     "manifest": "node scripts/generate-manifest.mjs",
-    "manifest:check": "node scripts/check-manifest.mjs",
+    "manifest:check": "node --test scripts/manifest-render-reachability.test.mjs && node scripts/check-manifest.mjs",
     "manifest:coverage": "node scripts/check-manifest-coverage.mjs",
     "events": "node scripts/generate-event-types.mjs",
-    "check:event-types": "node scripts/check-event-types.mjs",
+    "check:event-types": "node --test scripts/generate-event-types.test.mjs && node scripts/check-event-types.mjs",
     "design-tokens": "node scripts/generate-design-tokens.mjs",
     "check:design-tokens": "node scripts/generate-design-tokens.mjs --check",
     "test:design-tokens": "node scripts/design-tokens.test.mjs && node scripts/design-token-editor.test.mjs && node scripts/pseudo-locales-package.test.mjs",
@@ -1450,7 +1453,7 @@
     "llms-freshness": "node scripts/check-llms-freshness.mjs",
     "migrate-wa": "node scripts/migrate-wa.mjs",
     "test:migrate-wa": "node scripts/migrate-wa.test.mjs",
-    "contract-policy": "pnpm run check:script-paths && pnpm run test:script-paths && pnpm run check:package-metadata && pnpm run test:package-metadata && pnpm run test:public-api && pnpm run style-policy && pnpm run check:source-policy && pnpm run check:lifecycle-super && pnpm run test:lifecycle-super && pnpm run check:test-assertions && pnpm run check:part-reachability && pnpm run test:part-reachability && pnpm run provenance-policy && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && node scripts/check-migration-coverage.mjs && node scripts/check-token-references.mjs && node scripts/check-contrast.mjs && pnpm run manifest:check && pnpm run manifest:coverage && pnpm run check:framework-types && pnpm run test:framework-types && pnpm run llms-freshness && pnpm run llms:check && pnpm run check:component-inventory && pnpm run test:component-inventory && pnpm run test:pinned-upstream-manifests && pnpm run check:component-metadata && pnpm run test:component-metadata && pnpm run check:autoloader-manifest && pnpm run test:autoloader-manifest && pnpm run check:tag-aliases && pnpm run test:tag-aliases && pnpm run test:architecture && pnpm run check-side-effects && pnpm run test:side-effects && pnpm run check:form-associated && pnpm run check:component-dependencies && pnpm run test:component-dependencies && pnpm run check:composed-child-contracts && pnpm run test:composed-child-contracts && pnpm run check:component-quality && pnpm run test:package-size && pnpm run check:qualification && pnpm run test:qualification && pnpm run check:event-barrel && pnpm run check:event-contracts && pnpm run test:event-contracts && pnpm run check:event-types && pnpm run check:cycles && pnpm run check:interaction-states && pnpm run check:value-named-tokens && pnpm run check:design-tokens && pnpm run test:design-tokens && pnpm run check:hit-area && pnpm run test:hit-area && pnpm run check:numeric-guards && pnpm run check:palette-freshness && pnpm run check:default-string-slices && pnpm run test:default-string-slices && pnpm run check:default-strings && pnpm run check:translations && pnpm run test:translation-reviews && pnpm run check:style-vocabulary && pnpm run test:style-vocabulary && pnpm run test:default-strings && pnpm run test:tooling && pnpm run check:llms-root-barrel && pnpm run test:llms-root-barrel && pnpm run test:llms-gaps",
+    "contract-policy": "pnpm run check:script-paths && pnpm run test:script-paths && pnpm run check:package-exports && pnpm run test:package-exports && pnpm run check:package-metadata && pnpm run test:package-metadata && pnpm run test:public-api && pnpm run style-policy && pnpm run check:source-policy && pnpm run check:lifecycle-super && pnpm run test:lifecycle-super && pnpm run check:test-assertions && pnpm run check:part-reachability && pnpm run test:part-reachability && pnpm run provenance-policy && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && node scripts/check-migration-coverage.mjs && node scripts/check-token-references.mjs && node scripts/check-contrast.mjs && pnpm run manifest:check && pnpm run manifest:coverage && pnpm run check:framework-types && pnpm run test:framework-types && pnpm run llms-freshness && pnpm run llms:check && pnpm run check:component-inventory && pnpm run test:component-inventory && pnpm run test:pinned-upstream-manifests && pnpm run check:component-metadata && pnpm run test:component-metadata && pnpm run check:autoloader-manifest && pnpm run test:autoloader-manifest && pnpm run check:tag-aliases && pnpm run test:tag-aliases && pnpm run test:architecture && pnpm run check-side-effects && pnpm run test:side-effects && pnpm run check:form-associated && pnpm run check:component-dependencies && pnpm run test:component-dependencies && pnpm run check:composed-child-contracts && pnpm run test:composed-child-contracts && pnpm run check:component-quality && pnpm run test:package-size && pnpm run check:qualification && pnpm run test:qualification && pnpm run check:event-barrel && pnpm run check:event-contracts && pnpm run test:event-contracts && pnpm run check:event-types && pnpm run check:cycles && pnpm run check:interaction-states && pnpm run check:value-named-tokens && pnpm run check:design-tokens && pnpm run test:design-tokens && pnpm run check:hit-area && pnpm run test:hit-area && pnpm run check:numeric-guards && pnpm run check:palette-freshness && pnpm run check:default-string-slices && pnpm run test:default-string-slices && pnpm run check:default-strings && pnpm run check:translations && pnpm run test:translation-reviews && pnpm run check:style-vocabulary && pnpm run test:style-vocabulary && pnpm run test:default-strings && pnpm run test:tooling && pnpm run check:llms-root-barrel && pnpm run test:llms-root-barrel && pnpm run test:llms-gaps",
     "lint": "pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types",
     "prepack": "pnpm run package-metadata && pnpm run default-string-slices && pnpm run manifest && pnpm run framework-types && pnpm run design-tokens && pnpm run build && pnpm run generate-editor-data && pnpm run llms",
     "check:translations": "node scripts/check-translations.mjs",
@@ -1481,7 +1484,6 @@
     "emoji-picker-element-data": "^1.8.0",
     "epubjs": "^0.3.93",
     "ical.js": "^2.2.1",
-    "jszip": "^3.10.1",
     "katex": "^0.18.4",
     "libphonenumber-js": ">=1.11.0 <2",
     "mammoth": "^1.12.1",
@@ -1538,9 +1540,6 @@
       "optional": true
     },
     "ical.js": {
-      "optional": true
-    },
-    "jszip": {
       "optional": true
     },
     "katex": {

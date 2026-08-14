@@ -26,8 +26,8 @@ export const styles = css`
 
   [part~='skip-to-content'] {
     position: fixed;
-    inset-block-start: var(--lr-space-s);
-    inset-inline-start: var(--lr-space-s);
+    inset-block-start: max(var(--lr-space-s), var(--lr-safe-area-top));
+    inset-inline-start: max(var(--lr-space-s), var(--lr-safe-area-inline-start));
     z-index: var(--lr-layer-toast);
     display: inline-flex;
     align-items: center;
@@ -280,7 +280,11 @@ export const styles = css`
     inline-size: min(var(--lr-size-18rem), calc(100% - var(--lr-space-l)));
     max-inline-size: 100%;
     min-inline-size: 0;
+    box-sizing: border-box;
+    padding-block-start: var(--lr-safe-area-top);
     padding-block-end: var(--lr-safe-area-bottom);
+    padding-inline-start: var(--lr-safe-area-inline-start);
+    padding-inline-end: var(--lr-safe-area-inline-end);
     background: var(--lr-page-navigation-drawer-bg, var(--lr-color-surface-overlay));
     box-shadow: var(--lr-page-navigation-drawer-shadow, var(--lr-shadow-l));
     overflow-y: auto;

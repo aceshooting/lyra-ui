@@ -15,7 +15,7 @@ const renderPromptInput = () => html`
   <lr-prompt-input
     value="Summarize the attached report for the executive team."
     .attachments=${[
-      { id: 'report', name: 'annual-report.pdf', mimeType: 'application/pdf', bytes: 2_408_448 },
+      { attachmentId: 'report', name: 'annual-report.pdf', mimeType: 'application/pdf', bytes: 2_408_448 },
     ]}
     .modelCatalog=${['fast', 'accurate']}
     model="accurate"
@@ -26,8 +26,8 @@ const renderPromptInput = () => html`
     ]}
     .selectedSourceIds=${['report']}
     .mentionItems=${[
-      { id: 'finance', label: 'Finance team' },
-      { id: 'legal', label: 'Legal team' },
+      { suggestionId: 'finance', label: 'Finance team' },
+      { suggestionId: 'legal', label: 'Legal team' },
     ]}
     .queue=${[{ id: 'follow-up', value: 'List the three largest risks.' }]}
   ></lr-prompt-input>
@@ -41,13 +41,13 @@ export const Narrow: Story = {
   render: () => html`<div style="max-width: 320px;">${renderPromptInput()}</div>`,
 };
 
-export const AdornmentSlotAliases: Story = {
-  name: 'Start/end adornment slot aliases',
+export const AdornmentSlots: Story = {
+  name: 'Start/end adornment slots',
   parameters: {
     docs: {
       description: {
         story:
-          'The canonical `start` and `end` slots coexist with the established `leading` and `trailing` aliases. Supplying any attachment-control alias replaces the generated attachment trigger; supplying either action alias replaces the built-in send/stop action.',
+          'Supplying `start` replaces the generated attachment trigger. Supplying `end` replaces the built-in send/stop action.',
       },
     },
   },
@@ -55,9 +55,7 @@ export const AdornmentSlotAliases: Story = {
     <div style="max-inline-size: var(--lr-size-32rem);">
       <lr-prompt-input placeholder="Compose a message">
         <button slot="start" type="button">Start</button>
-        <button slot="leading" type="button">Leading</button>
         <button slot="end" type="button">End</button>
-        <button slot="trailing" type="button">Trailing</button>
       </lr-prompt-input>
     </div>
   `,

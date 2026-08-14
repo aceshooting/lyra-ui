@@ -3,9 +3,10 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import { styles } from './tool-approval-dialog.styles.js';
+import type { ApprovalAction } from '../approval-state.js';
 import '../../utility/json-viewer/json-viewer.class.js';
 import '../../forms/button/button.class.js';
 import { trueDefaultBooleanConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
@@ -42,7 +43,7 @@ export type ToolApprovalDialogCloseReason =
  * present-tense `'approve'`/`'deny'` vocabulary (not `<lr-confirm-bar>`'s unrelated past-tense
  * `ConfirmBarDecision`).
  */
-export type ToolApprovalDialogPending = 'approve' | 'deny' | null;
+export type ToolApprovalDialogPending = ApprovalAction | null;
 
 export interface LyraToolApprovalDialogEventMap {
   'lr-approve': CustomEvent<{ args: unknown }>;
@@ -89,8 +90,9 @@ export interface LyraToolApprovalDialogEventMap {
  * the draft entirely and returns to the read-only view of the *original*
  * `args` — there is no separate "save" step independent of Approve itself.
  * Both `editing` and any in-progress draft reset back to the read-only view
- * every time the dialog transitions from closed to open, so a reused
- * instance never leaks one proposal's half-finished edit into the next.
+ * every time the dialog transitions from closed to open or its open proposal (`proposalKey`,
+ * `toolName`, or `args`) changes, so a reused instance never leaks one proposal's half-finished
+ * edit into the next.
  * `editable` flipping to `false` mid-edit does the same (see `willUpdate()`)
  * and, if the textarea it unmounts still held focus, `updated()` refocuses
  * Deny so the focus trap keeps engaging instead of silently letting focus
@@ -168,7 +170,7 @@ export interface LyraToolApprovalDialogEventMap {
  * @cssprop [--lr-tool-approval-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
  * @cssprop [--lr-tool-approval-dialog-mono-font=var(--lr-font-mono)] - Font family for the tool name and the raw-JSON args editor.
  * @cssprop [--lr-tool-approval-dialog-invalid-border-color=var(--lr-color-danger)] - Border color of an invalid raw-JSON editor.
- * @cssprop [--lr-tool-approval-dialog-hover-border-color=var(--lr-color-brand)] - Border color of the raw-JSON args editor on hover.
+ * @cssprop [--lr-tool-approval-dialog-hover-border-color=var(--lr-color-brand)] - Border color of a valid, editable raw-JSON args editor on hover. Invalid and pending states retain their semantic chrome.
  * @status stable
  * @since 4.0.0
  */
@@ -191,15 +193,19 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   static override styles = [LyraElement.styles, styles];
 
-  /** Whether the dialog is open. Set this (or call `close()`) — there is no separate `show()`/`hide()` pair. */
+  /** Whether the dialog is open. Set this directly or use `show()`/`hide()`/`close()`. */
   @property({ type: Boolean, reflect: true }) open = false;
+
+  /** Stable identity/generation for the proposal. Changing it while open resets draft and pending
+   *  state even when the replacement proposal happens to reuse the same visible name/arguments. */
+  @property({ attribute: 'proposal-key' }) proposalKey = '';
 
   /** The proposed tool/function's name, e.g. `web_search`. Drives the heading and the dialog's accessible name. */
   @property({ attribute: 'tool-name' }) toolName = '';
 
-  /** Overrides the dialog panel's accessible name, taking precedence over the visible heading --
-   *  mirrors `<lr-dialog>`'s/`<lr-tool-result-dialog>`'s/`<lr-tool-select-dialog>`'s own host-
-   *  `aria-label` override pattern. Fed only by a host `aria-label`. */
+  /** Accessible name for the component. When assigned directly as a property without a host
+   *  attribute it names the dialog panel; a host `aria-label` remains on the host and the panel
+   *  stays labelled by its visible heading to avoid cloning the same owner. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** The proposed call's arguments — any JSON-serializable value, rendered via `<lr-json-viewer>` (or, while editing, stringified into the textarea). */
@@ -238,6 +244,13 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   private readonly titleId = nextId('tool-approval-dialog-title');
   private readonly errorId = nextId('tool-approval-dialog-error');
 
+  private resetProposalState(): void {
+    this.editing = false;
+    this.draftText = '';
+    this.draftError = '';
+    this.pending = null;
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (
@@ -258,14 +271,15 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         // must never carry a half-finished edit (or its error state), or a
         // previous proposal's stuck pending decision, over from whatever the
         // previous proposal was.
-        this.editing = false;
-        this.draftText = '';
-        this.draftError = '';
-        this.pending = null;
+        this.resetProposalState();
       } else {
         this.overlay?.deactivate();
         this.overlay = undefined;
       }
+    }
+    const proposalChanged = changed.has('proposalKey') || changed.has('toolName') || changed.has('args');
+    if (this.hasUpdated && proposalChanged && !(changed.has('open') && this.open)) {
+      this.resetProposalState();
     }
     // A consumer flipping editable off mid-edit (e.g. a policy change
     // pushed while this dialog happens to be open) must not leave an
@@ -373,6 +387,17 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     this.emit('lr-close', reason);
   }
 
+  /** Opens the dialog. No-op when already open. */
+  show(): void {
+    if (this.open) return;
+    this.open = true;
+  }
+
+  /** Closes the dialog through the same reasoned lifecycle as `close()`. */
+  hide(reason: ToolApprovalDialogCloseReason = 'api'): void {
+    this.close(reason);
+  }
+
   private onBackdropClick = (): void => {
     this.overlay?.dismissBackdrop();
   };
@@ -458,14 +483,15 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     const headingParts = resolveLocalizedParts(headingTemplate, (marker) =>
       this.localize('toolApprovalHeading', undefined, { tool: marker }),
     );
+    const panelLabel = hostAriaLabel(this) === null && this.accessibleLabel ? this.accessibleLabel : null;
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
         part="panel"
         role=${this.open ? 'dialog' : nothing}
         aria-modal=${this.open ? 'true' : nothing}
-        aria-label=${this.accessibleLabel || nothing}
-        aria-labelledby=${this.accessibleLabel ? nothing : this.titleId}
+        aria-label=${panelLabel ?? nothing}
+        aria-labelledby=${panelLabel === null ? this.titleId : nothing}
         tabindex="-1"
       >
         <div part="header">

@@ -6,6 +6,7 @@ export const styles = css`
     aspect-ratio: var(--lr-flag-aspect-ratio, 4 / 3);
     block-size: var(--lr-size-1em);
     line-height: 0;
+    max-inline-size: 100%;
     vertical-align: middle;
   }
   [part='image'] {
@@ -21,14 +22,34 @@ export const styles = css`
     color: var(--lr-color-danger);
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-normal);
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
-  :host([round]) {
+  :host([data-error]) {
+    aspect-ratio: auto;
+    block-size: auto;
+    inline-size: auto;
+    line-height: var(--lr-line-height-normal);
+    vertical-align: baseline;
+  }
+  :host([shape='circle']) {
     block-size: var(--lr-size-1em);
     inline-size: var(--lr-size-1em);
   }
-  :host([round]) [part='image'] {
+  :host([shape='circle']) [part='image'] {
     inline-size: 100%;
     block-size: 100%;
     border-radius: 50%;
+  }
+
+  @media (forced-colors: active) {
+    [part='image'] {
+      box-shadow: 0 0 0 var(--lr-size-1px) CanvasText inset;
+    }
+    [part='error'] {
+      color: Mark;
+      text-decoration: underline;
+      text-decoration-style: wavy;
+    }
   }
 `;

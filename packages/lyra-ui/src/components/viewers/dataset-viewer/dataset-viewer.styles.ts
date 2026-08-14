@@ -62,5 +62,4 @@ export const styles = css`
   lr-virtual-list { --lr-virtual-list-height: var(--lr-size-20rem); min-inline-size: max-content; }
   .empty-note, [part='error'] { margin: 0; padding: var(--lr-space-m); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); }
   [part='error'] { padding: var(--lr-space-l); color: var(--lr-color-danger); text-align: center; }
-  [part='spinner'] { display: flex; justify-content: center; padding: var(--lr-space-l); }
 `;

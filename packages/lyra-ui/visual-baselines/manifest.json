@@ -260,9 +260,12 @@
       "comparisonReason": "The decorative navigation-toggle-icon replacement changes the current mobile-drawer capture, which awaits human visual review."
     },
     { "id": "layout-split-panel--default", "profile": "standard" },
-    { "id": "responsivepanel--forced-overlay-bottom-sheet", "profile": "standard" },
     {
-      "id": "split--default",
+      "id": "responsivepanel--forced-overlay-bottom-sheet",
+      "profile": "standard"
+    },
+    {
+      "id": "multi-split--default",
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
@@ -277,7 +280,10 @@
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
     { "id": "disclosure-accordion--default", "profile": "standard" },
-    { "id": "styles-native-and-utilities--layout-and-prose", "profile": "standard" },
+    {
+      "id": "styles-native-and-utilities--layout-and-prose",
+      "profile": "standard"
+    },
     { "id": "utility-visually-hidden--skip-link", "profile": "standard" }
   ],
   "tagCoverage": {
@@ -297,7 +303,10 @@
     "lr-checkbox": ["checkbox--default"],
     "lr-chunk-inspector": ["chunk-inspector--default"],
     "lr-code-block": ["codeblock--default"],
-    "lr-color-picker": ["form-color-picker--open", "form-color-picker--inline-compatibility"],
+    "lr-color-picker": [
+      "form-color-picker--open",
+      "form-color-picker--inline-compatibility"
+    ],
     "lr-combobox": ["combobox--default"],
     "lr-csv-viewer": ["documentviewer-csvviewer--quoted-fields"],
     "lr-dataset-viewer": ["documentviewer-datasetviewer--default"],
@@ -325,7 +334,10 @@
     "lr-otp-input": ["forms-otp-input--appearances-and-sizes"],
     "lr-page": ["layout-page--desktop", "layout-page--mobile-drawer"],
     "lr-page-rail": ["documentviewer-pagerail--mediated"],
-    "lr-pagination": ["pagination--appearance", "pagination--narrow-allocation"],
+    "lr-pagination": [
+      "pagination--appearance",
+      "pagination--narrow-allocation"
+    ],
     "lr-pan-zoom": ["media-pan-zoom--slotted-content"],
     "lr-pdf-viewer": ["documentviewer-pdfviewer--default"],
     "lr-phone-input": ["forms-phoneinput--default"],
@@ -344,7 +356,7 @@
     "lr-select": ["select--default"],
     "lr-slider": ["slider--default"],
     "lr-sparkline": ["data-sparkline--line"],
-    "lr-split": ["split--default"],
+    "lr-multi-split": ["multi-split--default"],
     "lr-split-panel": ["layout-split-panel--default"],
     "lr-switch": ["switch--default"],
     "lr-tab-group": ["tabs--default", "tabs--element-model"],

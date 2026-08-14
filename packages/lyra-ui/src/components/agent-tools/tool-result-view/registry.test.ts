@@ -34,6 +34,15 @@ describe('registerToolRenderer / getDefaultToolRendererRegistry', () => {
 
     expect(def.render!('weather', 'Brussels')).to.equal('weather:Brussels');
   });
+
+  it('rejects empty and ambiguous definitions at the JavaScript registration boundary', () => {
+    expect(() => registerToolRenderer('empty', {} as ToolRendererDefinition)).to.throw(TypeError);
+    expect(() => registerToolRenderer('ambiguous', {
+      render: () => 'x',
+      load: () => Promise.resolve({ render: () => 'y' }),
+    } as unknown as ToolRendererDefinition)).to.throw(TypeError);
+    expect(getDefaultToolRendererRegistry().size).to.equal(0);
+  });
 });
 
 describe('clearToolRenderers', () => {
@@ -82,6 +91,11 @@ describe('findToolRenderer', () => {
 
     expect(findToolRenderer('get_weather', {}, custom)).to.equal(def);
     expect(getDefaultToolRendererRegistry().size, 'the default registry must be untouched').to.equal(0);
+  });
+
+  it('validates definitions inserted directly into a custom JavaScript registry', () => {
+    const custom = new Map([['get_weather', {}]]) as unknown as Map<string, ToolRendererDefinition>;
+    expect(() => findToolRenderer('get_weather', {}, custom)).to.throw(TypeError);
   });
 });
 
@@ -156,5 +170,41 @@ describe('loadToolRenderer', () => {
     const resolved = await loadToolRenderer(def);
     expect(resolved).to.equal(real);
     expect(calls).to.equal(2);
+  });
+
+  it('rejects an invalid loaded shape and evicts that failed validation from the cache', async () => {
+    let calls = 0;
+    const def: ToolRendererDefinition = {
+      load: () => {
+        calls++;
+        return Promise.resolve(
+          calls === 1 ? ({} as never) : { render: () => 'recovered' },
+        );
+      },
+    };
+
+    let firstError: unknown;
+    try {
+      await loadToolRenderer(def);
+    } catch (error) {
+      firstError = error;
+    }
+    expect(firstError).to.be.instanceOf(TypeError);
+    expect((await loadToolRenderer(def)).render({}, undefined)).to.equal('recovered');
+    expect(calls).to.equal(2);
+  });
+
+  it('rejects a lazy definition returned by a lazy loader instead of recursing indefinitely', async () => {
+    const def = {
+      load: () => Promise.resolve({ load: () => Promise.resolve({ render: () => 'nested' }) }),
+    } as unknown as ToolRendererDefinition;
+
+    let error: unknown;
+    try {
+      await loadToolRenderer(def);
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error).to.be.instanceOf(TypeError);
   });
 });

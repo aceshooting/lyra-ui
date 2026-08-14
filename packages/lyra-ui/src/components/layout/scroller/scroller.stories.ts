@@ -31,7 +31,7 @@ export const WithoutScrollbarOrShadows: Story = {
     docs: {
       description: {
         story:
-          '`without-scrollbar` is the upstream spelling of Lyra\'s retained `hide-scrollbar` alias. `without-shadow` removes both overflow cues while leaving native scrolling and optional controls intact.',
+          '`without-scrollbar` hides the native scrollbar while preserving scrolling. `without-shadow` removes both overflow cues while leaving native scrolling and optional controls intact.',
       },
     },
   },

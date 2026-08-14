@@ -86,15 +86,25 @@ export function isTimeInRange(value: string, min: string, max: string): boolean 
   return true;
 }
 
+/** HTML time's step base: valid `min`, otherwise the valid content/reset value, otherwise midnight. */
+export function timeStepBaseMilliseconds(min: string, defaultValue = ''): number {
+  return parseTimeValue(min)?.milliseconds ?? parseTimeValue(defaultValue)?.milliseconds ?? 0;
+}
+
 /** Checks the HTML time step grid using pure milliseconds since local midnight. */
-export function hasTimeStepMismatch(value: string, step: number | 'any', min: string): boolean {
+export function hasTimeStepMismatch(
+  value: string,
+  step: number | 'any',
+  min: string,
+  defaultValue = '',
+): boolean {
   if (step === 'any') return false;
   const parsedValue = parseTimeValue(value);
   if (!parsedValue) return false;
 
   const numericStep = Number(step);
   const stepMilliseconds = (Number.isFinite(numericStep) && numericStep > 0 ? numericStep : 60) * 1000;
-  const stepBase = parseTimeValue(min)?.milliseconds ?? 0;
+  const stepBase = timeStepBaseMilliseconds(min, defaultValue);
   const remainder = ((parsedValue.milliseconds - stepBase) % stepMilliseconds + stepMilliseconds) % stepMilliseconds;
   return remainder > 0.000_001 && stepMilliseconds - remainder > 0.000_001;
 }

@@ -15,6 +15,7 @@ import {
   dispatchNativeInputEvent,
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
+import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_otpInputIncomplete, LYRA_DEFAULT_otpInputLabel } from '../../../internal/default-strings.generated.js';
@@ -39,6 +40,8 @@ const DEFAULT_LENGTH = 6;
 // A guard, not a design limit: `length` reaches a template repeat and a `maxlength`, so an absurd
 // value from an attribute would render an absurd number of nodes.
 const MAX_LENGTH = 32;
+const MAX_FORMAT_SOURCE_LENGTH = 4_096;
+const MAX_VALUE_SOURCE_LENGTH = 4_096;
 
 /** One rendered cell: either an entry segment or a literal separator from `format`. */
 type Cell = { kind: 'segment' } | { kind: 'separator'; text: string };
@@ -179,6 +182,10 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  /** Public WA-compatible intrinsic validator catalog. */
+  static get validators(): LyraFormValidator<LyraOtpInput>[] {
+    return [currentValidityValidator('required', 'disabled', 'readonly', 'value', 'length', 'pattern')];
+  }
   /** Visible label. When nonempty, it takes precedence over rich `label`-slot content. */
   @property() label = '';
   /** Supporting text below the field. When nonempty, it takes precedence over the `hint` slot. */
@@ -202,7 +209,9 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   /**
    * Segment layout with literal separators — `#` marks a segment, any other character becomes a
    * separator. `format="###-###"` renders two groups of three joined by a dash. Overrides `length`
-   * when it contains at least one `#`; a malformed literal-only format falls back to `length`.
+   * when its bounded parsed prefix contains at least one `#`; a literal-only parsed prefix falls
+   * back to `length`. Only the first 4,096 UTF-16 code units are parsed, and no more than 32
+   * segments are retained.
    */
   @property() format = '';
   /** Which characters are accepted; also drives the mobile keyboard through `inputmode`. */
@@ -252,7 +261,8 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     return this.control ?? null;
   }
 
-  /** Live value normalized through the same character/length contract as native editing. */
+  /** Live value normalized through the same character/length contract as native editing. At most
+   * the first 4,096 UTF-16 code units are inspected, stopping earlier once every segment is full. */
   override get value(): string {
     return super.value;
   }
@@ -275,8 +285,8 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     super.defaultValue = next;
   }
 
-  /** Parses at most 32 segments and coalesces every literal run into one cell, so even an
-   * adversarially long format cannot manufacture an unbounded number of template nodes. */
+  /** Parses a bounded source prefix, at most 32 segments, and coalesces every literal run into one
+   * cell, so an adversarial format cannot cause unbounded preprocessing or template output. */
   private get formattedCells(): Cell[] | null {
     if (this.parsedFormatSource === this.format) return this.parsedFormatCells ?? null;
     this.parsedFormatSource = this.format;
@@ -293,7 +303,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
       cells.push({ kind: 'separator', text: literal });
       literal = '';
     };
-    for (const char of this.format) {
+    for (const char of this.format.slice(0, MAX_FORMAT_SOURCE_LENGTH)) {
       if (char !== '#') {
         literal += char;
         continue;
@@ -309,7 +319,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   /** Segment count actually rendered: a valid `format`'s `#` count, else `length`. */
-  get segmentCount(): number {
+  private get renderedSegmentCount(): number {
     const formatted = this.formattedCells;
     if (formatted) return formatted.filter((cell) => cell.kind === 'segment').length;
     return Math.min(MAX_LENGTH, Math.max(1, finiteInteger(this.length, DEFAULT_LENGTH)));
@@ -317,28 +327,32 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
 
   /** Mapped read-only name for the number of segments derived from `format` or `length`. */
   get effectiveLength(): number {
-    return this.segmentCount;
+    return this.renderedSegmentCount;
   }
 
   private get cells(): Cell[] {
-    return this.formattedCells ?? Array.from({ length: this.segmentCount }, () => ({ kind: 'segment' as const }));
+    return this.formattedCells ?? Array.from({ length: this.renderedSegmentCount }, () => ({ kind: 'segment' as const }));
   }
 
-  /** Drops characters the current `type` rejects, applies `case`, and truncates to the segment
-   *  count — the single funnel every live path (native editing, programmatic value/default writes,
-   *  reset, and browser restoration) goes through. */
+  /** Scans a bounded source prefix, drops characters the current `type` rejects, applies `case`,
+   * and truncates to the rendered count — the single funnel every live path goes through. */
   private sanitize(raw: string): string {
     const accepted = ACCEPTED[this.type] ?? ACCEPTED.numeric;
-    let out = [...(raw ?? '')].filter((char) => accepted.test(char)).join('');
+    const limit = this.renderedSegmentCount;
+    let out = '';
+    for (const char of (raw ?? '').slice(0, MAX_VALUE_SOURCE_LENGTH)) {
+      if (accepted.test(char)) out += char;
+      if (out.length >= limit) break;
+    }
     // The declared alpha vocabulary is ASCII. Locale-sensitive Turkish casing would turn i/I into
     // İ/ı, producing characters the same sanitizer says are not accepted.
     if (this.case === 'upper') out = out.toUpperCase();
     else if (this.case === 'lower') out = out.toLowerCase();
-    return out.slice(0, this.segmentCount);
+    return out.slice(0, limit);
   }
 
   private packSegmentValues(value: string): void {
-    const count = this.segmentCount;
+    const count = this.renderedSegmentCount;
     this.segmentValues = Array.from({ length: count }, (_, index) => value[index] ?? '');
     this.activeSegmentIndex = Math.min(value.length, count - 1);
   }
@@ -349,11 +363,11 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   private normalizedSegmentValues(values = this.segmentValues): string[] {
-    return Array.from({ length: this.segmentCount }, (_, index) => values[index] ?? '');
+    return Array.from({ length: this.renderedSegmentCount }, (_, index) => values[index] ?? '');
   }
 
   private setActiveSegment(index: number): void {
-    const next = Math.min(this.segmentCount - 1, Math.max(0, index));
+    const next = Math.min(this.renderedSegmentCount - 1, Math.max(0, index));
     this.activeSegmentIndex = next;
     const caret = this.normalizedSegmentValues().slice(0, next).filter(Boolean).length;
     this.control?.setSelectionRange(caret, caret);
@@ -385,7 +399,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   private completeIfTransition(previousFilled: number): void {
-    if (previousFilled >= this.segmentCount || this.filledSegmentCount !== this.segmentCount) return;
+    if (previousFilled >= this.renderedSegmentCount || this.filledSegmentCount !== this.renderedSegmentCount) return;
     const completionValue = this.value;
     const token = this.autosubmitToken;
     const completeEvent = this.emit('lr-complete', { value: completionValue }, { cancelable: true });
@@ -397,7 +411,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     setTimeout(() => {
       if (token !== this.autosubmitToken || completeEvent.defaultPrevented) return;
       if (!this.isConnected || !this.autosubmit) return;
-      if (this.value !== completionValue || this.filledSegmentCount !== this.segmentCount) return;
+      if (this.value !== completionValue || this.filledSegmentCount !== this.renderedSegmentCount) return;
       this.submitOwningForm();
     });
   }
@@ -508,22 +522,44 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
   /**
    * Applies a silent native range edit to the compact code, then normalizes the result through the
-   * same sanitizer as typing and synchronizes visual cells, form value, and validity.
+   * same sanitizer as typing and synchronizes visual cells, form value, and validity. Both the
+   * existing native value and replacement are bounded before reaching the native editing method.
    */
   setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
     const control = this.control;
     if (!control) return;
+    const selectionPrefixLength = (value: string, offset: number | null): number | null => {
+      if (offset === null) return null;
+      const boundedOffset = Math.min(MAX_VALUE_SOURCE_LENGTH, Math.max(0, offset));
+      return this.sanitize(value.slice(0, boundedOffset)).length;
+    };
+
+    const currentRaw = control.value;
+    const currentSelectionStart = selectionPrefixLength(currentRaw, control.selectionStart);
+    const currentSelectionEnd = selectionPrefixLength(currentRaw, control.selectionEnd);
+    const currentSelectionDirection = control.selectionDirection;
+    const boundedCurrent = this.sanitize(currentRaw);
+    if (currentRaw !== boundedCurrent) {
+      control.value = boundedCurrent;
+      if (currentSelectionStart !== null && currentSelectionEnd !== null) {
+        control.setSelectionRange(
+          currentSelectionStart,
+          currentSelectionEnd,
+          currentSelectionDirection ?? undefined,
+        );
+      }
+    }
+
+    const boundedReplacement = this.sanitize(replacement);
     if (start === undefined || end === undefined) {
-      control.setRangeText(replacement);
+      control.setRangeText(boundedReplacement);
     } else {
-      control.setRangeText(replacement, start, end, selectMode);
+      control.setRangeText(boundedReplacement, start, end, selectMode);
     }
 
     const raw = control.value;
-    const selectionStart =
-      control.selectionStart === null ? null : this.sanitize(raw.slice(0, control.selectionStart)).length;
-    const selectionEnd =
-      control.selectionEnd === null ? null : this.sanitize(raw.slice(0, control.selectionEnd)).length;
+    const selectionStart = selectionPrefixLength(raw, control.selectionStart);
+    const selectionEnd = selectionPrefixLength(raw, control.selectionEnd);
     const selectionDirection = control.selectionDirection;
     const normalized = this.sanitize(raw);
 
@@ -599,7 +635,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
 
   private syncOtpStates(): void {
     setCustomState(this.internals, '--blank', this.value.length === 0);
-    setCustomState(this.internals, '--filled', this.filledSegmentCount === this.segmentCount);
+    setCustomState(this.internals, '--filled', this.filledSegmentCount === this.renderedSegmentCount);
     setCustomState(this.internals, 'disabled', this.effectiveDisabled);
     setCustomState(this.internals, 'readonly', this.readonly);
   }
@@ -616,7 +652,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
       this[SET_ANCHORED_VALIDITY]({});
       return;
     }
-    const total = this.segmentCount;
+    const total = this.renderedSegmentCount;
     const filled = this.filledSegmentCount;
     const complete = filled === total;
     if (this.required && filled === 0) {
@@ -639,7 +675,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     const next = this.sanitize(raw);
     const previous = this.value;
     const previousFilled = this.filledSegmentCount;
-    const packed = Array.from({ length: this.segmentCount }, (_, index) => next[index] ?? '');
+    const packed = Array.from({ length: this.renderedSegmentCount }, (_, index) => next[index] ?? '');
     const layoutChanged = packed.some((value, index) => value !== this.segmentValues[index]);
     // Keep the real input in step even when sanitizing rejected characters, or the caret walks
     // past text that was never accepted.
@@ -713,9 +749,9 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     const pasted = this.sanitize(event.clipboardData?.getData('text') ?? '');
     event.preventDefault();
     if (!pasted) return;
-    const values = Array.from({ length: this.segmentCount }, (_, index) => pasted[index] ?? '');
+    const values = Array.from({ length: this.renderedSegmentCount }, (_, index) => pasted[index] ?? '');
     this.commitSegmentEdit(values, 'insertFromPaste', pasted);
-    this.setActiveSegment(Math.min(pasted.length, this.segmentCount - 1));
+    this.setActiveSegment(Math.min(pasted.length, this.renderedSegmentCount - 1));
   };
 
   private onChange = (event: Event): void => {
@@ -798,7 +834,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
             id="control"
             type="text"
             .value=${this.value}
-            maxlength=${this.segmentCount}
+            maxlength=${this.renderedSegmentCount}
             inputmode=${this.type === 'numeric' ? 'numeric' : 'text'}
             autocomplete=${this.autocomplete}
             ?autofocus=${this.autofocus}
@@ -815,6 +851,9 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
             @input=${this.onInput}
             @change=${this.onChange}
             @keydown=${this.onKeyDown}
+            @click=${this.syncActiveSegmentFromSelection}
+            @keyup=${this.syncActiveSegmentFromSelection}
+            @select=${this.syncActiveSegmentFromSelection}
             @paste=${this.onPaste}
             @focus=${this.onFocus}
             @blur=${this.onBlur}

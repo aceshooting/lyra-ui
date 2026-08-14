@@ -41,7 +41,7 @@ export const ringStyles = css`
   [part='track'] { stroke: var(--lr-progress-ring-track-color, var(--track-color, var(--lr-color-brand-quiet))); stroke-width: var(--lr-progress-ring-track-width, var(--track-width, var(--lr-size-4px))); }
   [part='indicator'] { stroke: var(--lr-progress-ring-indicator-color, var(--indicator-color, var(--lr-color-brand))); stroke-width: var(--lr-progress-ring-indicator-width, var(--indicator-width, var(--lr-progress-ring-track-width, var(--track-width, var(--lr-size-4px))))); transition: stroke-dashoffset var(--lr-progress-ring-indicator-transition-duration, var(--indicator-transition-duration, var(--lr-transition-base))); }
   :host([indeterminate]) [part='indicator'] { transform-box: fill-box; transform-origin: center; animation: lr-progress-ring-spin var(--lr-progress-duration, var(--lr-transition-ambient)) infinite; }
-  [part='label'] { position: absolute; color: var(--lr-color-text); font-size: var(--lr-font-size-sm); }
+  [part='label'] { position: absolute; inset-inline: 0; padding-inline: var(--lr-space-2xs); overflow: hidden; text-align: center; text-overflow: ellipsis; white-space: nowrap; color: var(--lr-color-text); font-size: var(--lr-font-size-sm); }
   @keyframes lr-progress-ring-spin { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { [part='indicator'] { transition: none; animation: none !important; } }
 `;

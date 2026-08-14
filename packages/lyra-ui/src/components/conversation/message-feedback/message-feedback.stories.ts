@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Thumbs up/down for one assistant message, with an optional inline detail step (reason chips + comment). Emits; never persists.',
+          'Thumbs up/down for one assistant message, with an optional inline detail step (reason chips + comment) and one cancelable terminal persistence transaction.',
       },
     },
   },
@@ -25,12 +25,14 @@ export const ThumbsOnly: Story = {
 export const WithReasonsAndComment: Story = {
   render: () => html`
     <lr-message-feedback
-      .reasons=${[
-        { id: 'wrong', label: 'Factually wrong' },
-        { id: 'unhelpful', label: 'Not helpful' },
-        { id: 'unsafe', label: 'Unsafe or harmful' },
-      ]}
-      commentable
+      .detail=${{
+        reasons: [
+          { id: 'wrong', label: 'Factually wrong' },
+          { id: 'unhelpful', label: 'Not helpful' },
+          { id: 'unsafe', label: 'Unsafe or harmful' },
+        ],
+        commentable: true,
+      }}
     ></lr-message-feedback>
   `,
 };
@@ -40,15 +42,14 @@ export const AsyncPersistenceHold: Story = {
     docs: {
       description: {
         story:
-          'This listener prevents `lr-submit`, placing the component in its reflected pending state without closing or announcing success. A real host calls `finalizePendingSubmit()` after persistence succeeds or `revertPendingSubmit()` after it fails.',
+          'This listener prevents `lr-feedback-submit`, placing the component in its reflected pending state without closing or announcing success. A real host calls `finalizePendingSubmit()` after persistence succeeds or `revertPendingSubmit()` after it fails.',
       },
     },
   },
   render: () => html`
     <lr-message-feedback
-      .reasons=${reasonsForStory}
-      commentable
-      @lr-submit=${(event: Event) => event.preventDefault()}
+      .detail=${{ reasons: reasonsForStory, commentable: true }}
+      @lr-feedback-submit=${(event: Event) => event.preventDefault()}
     ></lr-message-feedback>
   `,
 };
@@ -58,18 +59,20 @@ export const DetailOnBothThumbs: Story = {
   render: () => html`
     <lr-message-feedback
       detail-for="both"
-      .reasons=${[
-        { id: 'accurate', label: 'Accurate' },
-        { id: 'creative', label: 'Creative' },
-      ]}
-      commentable
+      .detail=${{
+        reasons: [
+          { id: 'accurate', label: 'Accurate' },
+          { id: 'creative', label: 'Creative' },
+        ],
+        commentable: true,
+      }}
     ></lr-message-feedback>
   `,
 };
 
-/** A host reflecting a previously-recorded rating back read-only: `value` set, `disabled` set. */
+/** A host reflecting a previously-recorded `rating` back read-only with `disabled`. */
 export const RecordedReadOnly: Story = {
-  render: () => html`<lr-message-feedback value="up" disabled></lr-message-feedback>`,
+  render: () => html`<lr-message-feedback rating="up" disabled></lr-message-feedback>`,
 };
 
 /** 320px container — the panel already stacks in a flex column and the comment field is
@@ -78,11 +81,13 @@ export const Narrow320px: Story = {
   render: () => html`
     <div style="max-width:320px;border:1px dashed var(--lr-color-border);padding:8px;">
       <lr-message-feedback
-        .reasons=${[
-          { id: 'wrong', label: 'Factually wrong' },
-          { id: 'unhelpful', label: 'Not helpful' },
-        ]}
-        commentable
+        .detail=${{
+          reasons: [
+            { id: 'wrong', label: 'Factually wrong' },
+            { id: 'unhelpful', label: 'Not helpful' },
+          ],
+          commentable: true,
+        }}
       ></lr-message-feedback>
     </div>
   `,

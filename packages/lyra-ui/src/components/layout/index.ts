@@ -26,7 +26,7 @@ export * from './responsive-panel/responsive-panel.js';
 export * from './scroller/scroller.js';
 export * from './segmented/segmented.js';
 export * from './split-panel/split-panel.js';
-export * from './split/split.js';
+export * from './multi-split/multi-split.js';
 export * from './stepper/stepper.js';
 export * from './tab-group/tab-group.js';
 export * from './tab-group/tab-panel.js';

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { parseSync } from 'oxc-parser';
 
 import {
   QUALIFICATION_DIMENSIONS,
@@ -120,6 +121,284 @@ function sourceDimension({ applicable, signal, kind, limitation }) {
   };
 }
 
+function walkSyntax(node, visit) {
+  if (!node || typeof node !== 'object') return;
+  visit(node);
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'parent' || key === 'type' || key === 'start' || key === 'end') continue;
+    if (Array.isArray(value)) {
+      for (const child of value) walkSyntax(child, visit);
+    } else if (value && typeof value === 'object') {
+      walkSyntax(value, visit);
+    }
+  }
+}
+
+function syntax(file) {
+  const parsed = parseSync(file.file, file.source, { lang: 'ts', sourceType: 'module' });
+  if (parsed.errors.length > 0) {
+    throw new SyntaxError(
+      `${file.file}: qualification evidence parser failed: ${parsed.errors[0].message}`,
+    );
+  }
+  return parsed.program;
+}
+
+function sourceSignal(file, index, packageDir) {
+  return {
+    file: relative(packageDir, file.file),
+    line: file.source.slice(0, index).split('\n').length,
+  };
+}
+
+function unwrapExpression(node) {
+  while (
+    node &&
+    ['TSAsExpression', 'TSSatisfiesExpression', 'TSNonNullExpression', 'ChainExpression'].includes(
+      node.type,
+    )
+  ) {
+    node = node.expression;
+  }
+  return node;
+}
+
+function literalString(node) {
+  node = unwrapExpression(node);
+  return node?.type === 'Literal' && typeof node.value === 'string' ? node.value : undefined;
+}
+
+function templateHasRenderedInteraction(node) {
+  if (node.type !== 'TaggedTemplateExpression' || node.tag?.name !== 'html') return false;
+  const raw = node.quasi.quasis.map((quasi) => quasi.value.raw).join(' ');
+  return /<(?:button|input|select|textarea|summary)\b|<a\b[^>]*\bhref\s*=|\brole\s*=\s*["']?(?:button|menu|tab|tree|grid|listbox|slider|switch)\b|\btabindex\s*=|@(?:click|keydown|keyup)\s*=/i.test(
+    raw,
+  );
+}
+
+function implementationInteractionSignal(files, packageDir) {
+  for (const file of files) {
+    let found;
+    walkSyntax(syntax(file), (node) => {
+      if (found) return;
+      if (templateHasRenderedInteraction(node)) found = sourceSignal(file, node.start, packageDir);
+      if (
+        node.type === 'CallExpression' &&
+        node.callee?.type === 'MemberExpression' &&
+        ['click', 'keydown', 'keyup'].includes(literalString(node.arguments?.[0]) ?? '') &&
+        node.callee.property?.name === 'addEventListener'
+      ) {
+        found = sourceSignal(file, node.start, packageDir);
+      }
+    });
+    if (found) return found;
+  }
+  return null;
+}
+
+function keyboardTestSignal(files, packageDir) {
+  for (const file of files) {
+    let found;
+    walkSyntax(syntax(file), (node) => {
+      if (found || node.type !== 'Identifier') return;
+      if (/^(?:KeyboardEvent|sendKeys|pressTab)$/.test(node.name)) {
+        found = sourceSignal(file, node.start, packageDir);
+      }
+    });
+    if (found) return found;
+  }
+  return null;
+}
+
+function finiteDirectionArrays(program) {
+  const values = new Map();
+  walkSyntax(program, (node) => {
+    if (node.type !== 'VariableDeclarator' || node.id?.type !== 'Identifier') return;
+    const expression = unwrapExpression(node.init);
+    if (expression?.type !== 'ArrayExpression') return;
+    const directions = new Set(expression.elements.map(literalString).filter(Boolean));
+    if (directions.has('ltr') && directions.has('rtl')) values.set(node.id.name, directions);
+  });
+  return values;
+}
+
+function templateBindsDirection(node, identifier) {
+  if (node.type !== 'TemplateLiteral') return false;
+  return node.expressions.some(
+    (expression, index) =>
+      unwrapExpression(expression)?.type === 'Identifier' &&
+      unwrapExpression(expression).name === identifier &&
+      /\bdir\s*=\s*$/.test(node.quasis[index]?.value.raw ?? ''),
+  );
+}
+
+function rtlTestSignal(files, packageDir) {
+  for (const file of files) {
+    const program = syntax(file);
+    const directionArrays = finiteDirectionArrays(program);
+    let found;
+    walkSyntax(program, (node) => {
+      if (found) return;
+      if (node.type === 'TemplateElement' && /\bdir\s*=\s*["']rtl["']/.test(node.value.raw)) {
+        found = sourceSignal(file, node.start, packageDir);
+        return;
+      }
+      if (
+        node.type === 'AssignmentExpression' &&
+        node.left?.type === 'MemberExpression' &&
+        node.left.property?.name === 'dir' &&
+        literalString(node.right) === 'rtl'
+      ) {
+        found = sourceSignal(file, node.start, packageDir);
+        return;
+      }
+      if (
+        node.type === 'CallExpression' &&
+        node.callee?.type === 'MemberExpression' &&
+        node.callee.property?.name === 'setAttribute' &&
+        literalString(node.arguments?.[0]) === 'dir' &&
+        literalString(node.arguments?.[1]) === 'rtl'
+      ) {
+        found = sourceSignal(file, node.start, packageDir);
+        return;
+      }
+      if (
+        node.type === 'BinaryExpression' &&
+        ['==', '==='].includes(node.operator) &&
+        (literalString(node.left) === 'rtl' || literalString(node.right) === 'rtl')
+      ) {
+        const compared = literalString(node.left) === 'rtl' ? node.right : node.left;
+        if (
+          compared?.type === 'MemberExpression' &&
+          ['dir', 'effectiveDirection'].includes(compared.property?.name)
+        ) {
+          found = sourceSignal(file, node.start, packageDir);
+          return;
+        }
+      }
+      if (node.type !== 'ForOfStatement') return;
+      const declaration = node.left?.type === 'VariableDeclaration' ? node.left.declarations[0] : null;
+      const identifier = declaration?.id?.type === 'Identifier' ? declaration.id.name : undefined;
+      const right = unwrapExpression(node.right);
+      const inlineDirections = right?.type === 'ArrayExpression'
+        ? new Set(right.elements.map(literalString).filter(Boolean))
+        : right?.type === 'Identifier'
+          ? directionArrays.get(right.name)
+          : undefined;
+      if (!identifier || !inlineDirections?.has('ltr') || !inlineDirections.has('rtl')) return;
+      let bindsDirection = false;
+      walkSyntax(node.body, (child) => {
+        if (templateBindsDirection(child, identifier)) bindsDirection = true;
+      });
+      if (bindsDirection) found = sourceSignal(file, node.start, packageDir);
+    });
+    if (found) return found;
+  }
+  return null;
+}
+
+function stripCssNonCode(css) {
+  return css
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, ' ');
+}
+
+function motionImplementationSignal(files, packageDir) {
+  for (const file of files) {
+    let found;
+    walkSyntax(syntax(file), (node) => {
+      if (found) return;
+      if (node.type === 'TaggedTemplateExpression' && node.tag?.name === 'css') {
+        const css = stripCssNonCode(node.quasi.quasis.map((quasi) => quasi.value.raw).join(' '));
+        if (/(?:^|[;{])\s*(?:transition(?:-[\w-]+)?|animation(?:-[\w-]+)?)\s*:/i.test(css)) {
+          // CSS template evidence is reported in the template's own virtual line space; unlike a
+          // TypeScript call-site line, leading wrapper whitespace is not part of the stylesheet.
+          found = { file: relative(packageDir, file.file), line: 1 };
+        }
+      }
+      if (
+        node.type === 'CallExpression' &&
+        node.callee?.type === 'MemberExpression' &&
+        node.callee.property?.name === 'animate'
+      ) {
+        found = sourceSignal(file, node.start, packageDir);
+      }
+    });
+    if (found) return found;
+  }
+  return null;
+}
+
+function motionTestSignal(files, packageDir) {
+  for (const file of files) {
+    let found;
+    walkSyntax(syntax(file), (node) => {
+      if (found) return;
+      if (
+        node.type === 'Identifier' &&
+        /^(?:stubReducedMotion|motionPreference|prefersReducedMotion)$/.test(node.name)
+      ) {
+        found = sourceSignal(file, node.start, packageDir);
+      } else if (
+        node.type === 'Literal' &&
+        typeof node.value === 'string' &&
+        /\(prefers-reduced-motion:\s*(?:reduce|no-preference)\)/.test(node.value)
+      ) {
+        found = sourceSignal(file, node.start, packageDir);
+      }
+    });
+    if (found) return found;
+  }
+  return null;
+}
+
+/** Parsed/structured applicability signals used by the generated qualification ledger. */
+export function qualificationApplicabilitySignals({
+  component,
+  packageDir,
+  sources,
+  styles,
+  tests,
+  interactiveTags,
+}) {
+  const allImplementation = [...sources, ...styles];
+  let interactiveSignal = implementationInteractionSignal(allImplementation, packageDir);
+  if (!interactiveSignal && (component.optionalPeers ?? []).includes('maplibre-gl')) {
+    interactiveSignal = { file: component.classModule, line: 1 };
+  }
+  if (
+    !interactiveSignal &&
+    [...(component.dependencies?.direct ?? []), ...(component.dependencies?.transitive ?? [])].some(
+      (tag) => interactiveTags.has(tag),
+    )
+  ) {
+    interactiveSignal = { file: component.classModule, line: 1 };
+  }
+
+  return {
+    keyboardSignal: keyboardTestSignal(tests, packageDir),
+    interactiveSignal,
+    rtlSignal: rtlTestSignal(tests, packageDir),
+    motionImplementation: motionImplementationSignal(allImplementation, packageDir),
+    motionSignal: motionTestSignal(tests, packageDir),
+    narrowSignal: firstSignal(
+      tests,
+      /(?:inline-size|width)\s*[:=]\s*['"]?320px|\b320px\b|narrow allocation|narrow layout/i,
+      packageDir,
+    ),
+    peerSignal: firstSignal(
+      tests,
+      /(?:peer|loader).*(?:fail|reject|null)|(?:fail|reject).*(?:peer|loader)|role=['"]alert['"]/i,
+      packageDir,
+    ),
+    securitySignal: firstSignal(
+      [...allImplementation, ...tests],
+      /safeFetchUrl|readResponse(?:ArrayBuffer|Text)|DOMPurify|sanitize\s*\(|unsafeHTML|unsafeSVG|LyraResourceLimitError|generation\s*!==/,
+      packageDir,
+    ),
+  };
+}
+
 export function parseSsrSource(source, tags) {
   const inventoryTags = new Set(tags);
   const clientReasons = new Map();
@@ -225,35 +504,31 @@ function accessibilityFor(component, tests, packageDir, exemption) {
   };
 }
 
-function componentRecord({ component, packageDir, exemptions, visualManifest, ssr }) {
+function componentRecord({ component, packageDir, exemptions, visualManifest, ssr, interactiveTags }) {
   const directory = path.join(packageDir, path.dirname(component.classModule));
   const tests = readComponentTestFiles(directory);
   const sources = readSourceFiles(component, packageDir);
   const styles = readStyleFiles(component, packageDir);
-  const allImplementation = [...sources, ...styles];
   const exemption = exemptions.get(`${component.tag}\0accessibility`);
   const accessibility = accessibilityFor(component, tests, packageDir, exemption);
 
-  const keyboardSignal = firstSignal(
+  const {
+    keyboardSignal,
+    interactiveSignal,
+    rtlSignal,
+    motionImplementation,
+    motionSignal,
+    narrowSignal,
+    peerSignal,
+    securitySignal,
+  } = qualificationApplicabilitySignals({
+    component,
+    packageDir,
+    sources,
+    styles,
     tests,
-    /KeyboardEvent|sendKeys|keydown|keyup|Arrow(?:Left|Right|Up|Down)|\b(?:Enter|Escape|Home|End|PageUp|PageDown)\b|pressTab\s*\(/,
-    packageDir,
-  );
-  const interactiveSignal = firstSignal(
-    allImplementation,
-    /@(?:click|keydown|keyup)=|addEventListener\(['"](?:click|keydown|keyup)|tabindex|role=['"](?:button|menu|tab|tree|grid|listbox|slider|switch)/,
-    packageDir,
-  );
-  const rtlSignal = firstSignal(tests, /dir\s*=\s*['"]rtl['"]|dir="rtl"|effectiveDirection\s*===?\s*['"]rtl['"]/, packageDir);
-  const motionImplementation = firstSignal(allImplementation, /prefers-reduced-motion|\banimation\s*:|\btransition\s*:|\.animate\s*\(/, packageDir);
-  const motionSignal = firstSignal(tests, /prefers-reduced-motion|reduced[ -]motion|stubReducedMotion|motionPreference/, packageDir);
-  const narrowSignal = firstSignal(tests, /(?:inline-size|width)\s*[:=]\s*['"]?320px|\b320px\b|narrow allocation|narrow layout/i, packageDir);
-  const peerSignal = firstSignal(tests, /(?:peer|loader).*(?:fail|reject|null)|(?:fail|reject).*(?:peer|loader)|role=['"]alert['"]/i, packageDir);
-  const securitySignal = firstSignal(
-    [...allImplementation, ...tests],
-    /safeFetchUrl|readResponse(?:ArrayBuffer|Text)|DOMPurify|sanitize\s*\(|unsafeHTML|unsafeSVG|LyraResourceLimitError|generation\s*!==/,
-    packageDir,
-  );
+    interactiveTags,
+  });
   const visual = visualForTag(component.tag, visualManifest);
   const peerApplicable = (component.optionalPeers ?? []).length > 0;
   const securityApplicable = peerApplicable || Boolean(securitySignal);
@@ -395,11 +670,44 @@ function componentRecord({ component, packageDir, exemptions, visualManifest, ss
   };
 }
 
+function interactiveInventoryTags(inventory, packageDir) {
+  const interactiveTags = new Set();
+  for (const component of inventory.components ?? []) {
+    const implementation = [
+      ...readSourceFiles(component, packageDir),
+      ...readStyleFiles(component, packageDir),
+    ];
+    if (
+      implementationInteractionSignal(implementation, packageDir) ||
+      (component.optionalPeers ?? []).includes('maplibre-gl')
+    ) {
+      interactiveTags.add(component.tag);
+    }
+  }
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const component of inventory.components ?? []) {
+      if (interactiveTags.has(component.tag)) continue;
+      const dependencies = [
+        ...(component.dependencies?.direct ?? []),
+        ...(component.dependencies?.transitive ?? []),
+      ];
+      if (dependencies.some((tag) => interactiveTags.has(tag))) {
+        interactiveTags.add(component.tag);
+        changed = true;
+      }
+    }
+  }
+  return interactiveTags;
+}
+
 export function buildQualificationLedger({ packageDir, inventory, exemptions, visualManifest, ssrSource }) {
   const normalized = normalizeExemptions(exemptions);
   if (normalized.problems.length > 0) throw new Error(normalized.problems.join('\n'));
   const tags = inventory.components.map((component) => component.tag);
   const ssr = parseSsrSource(ssrSource, tags);
+  const interactiveTags = interactiveInventoryTags(inventory, packageDir);
   const components = inventory.components
     .map((component) => componentRecord({
       component,
@@ -407,6 +715,7 @@ export function buildQualificationLedger({ packageDir, inventory, exemptions, vi
       exemptions: normalized.byKey,
       visualManifest,
       ssr,
+      interactiveTags,
     }))
     .sort((a, b) => a.tag.localeCompare(b.tag));
   const count = (dimension, status) => components.filter((component) => component.dimensions[dimension].status === status).length;

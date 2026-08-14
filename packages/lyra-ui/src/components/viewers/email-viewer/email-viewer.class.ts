@@ -19,10 +19,12 @@ import { styles } from './email-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+import { sanitizePassiveMarkup } from '../passive-markup.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewGenericFile, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerHideQuoted, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerShowQuoted, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewGenericFile, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_download, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerHideQuoted, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerShowQuoted, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -136,7 +138,7 @@ function isQuoteToggleElement(target: EventTarget): target is Element {
  * @event {CustomEvent<TextSelectDetail>} lr-text-select - Fired after a selection ends inside the
  *   rendered message. `detail: { text: string; anchor: LyraAnchor | null; rects: DOMRect[] }`.
  *   Bubbling, composed, and non-cancelable.
- * @csspart base - The root container.
+ * @csspart base - The root container with explicit `aria-busy` loading state.
  * @csspart headers - Message metadata.
  * @csspart from-label - The localized sender label.
  * @csspart from - The sender address.
@@ -159,7 +161,7 @@ function isQuoteToggleElement(target: EventTarget): target is Element {
  * @csspart quoted - A folded quoted-text block (hidden until expanded).
  * @csspart quote-toggle - The show/hide-quoted-text toggle button.
  * @csspart error - The error region.
- * @csspart spinner - The loading region.
+ * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
  * @cssprop [--lr-email-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  * @status stable
@@ -182,6 +184,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     documentPreviewTypeEmail: LYRA_DEFAULT_documentPreviewTypeEmail,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
     documentViewerMissingSanitizer: LYRA_DEFAULT_documentViewerMissingSanitizer,
+    download: LYRA_DEFAULT_download,
     emailViewerAttachments: LYRA_DEFAULT_emailViewerAttachments,
     emailViewerDate: LYRA_DEFAULT_emailViewerDate,
     emailViewerFrom: LYRA_DEFAULT_emailViewerFrom,
@@ -201,11 +204,16 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
     loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    popover: LYRA_DEFAULT_popover,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
   /** URL to fetch and parse as an RFC 822 message. */
   @property() src = '';
   /** Display name associated with the message. Used as the accessible name
@@ -301,7 +309,8 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.announcements.adopted();
   }
 
@@ -372,7 +381,10 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     if (!PostalMime) throw new LyraUserFacingError(this.localize('emailViewerMissingParser'));
     const parsed = await PostalMime.parse(buffer);
     if (!this.isConnected || generation !== this.generation) return null;
-    const bodyHtml = parsed.html && DOMPurify ? (DOMPurify.sanitize(parsed.html) as string) : null;
+    const bodyHtml = parsed.html && DOMPurify
+      ? sanitizePassiveMarkup(DOMPurify, parsed.html, this.ownerDocument, 'passive-document')
+      : null;
+    if (!this.isConnected || generation !== this.generation) return null;
     if (parsed.html && !DOMPurify && !parsed.text) {
       // An HTML-only message (no text/plain alternative) with the optional
       // `dompurify` peer unavailable would otherwise fall through to an empty
@@ -525,7 +537,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
       case 'loaded': return html`<div data-email-text-content>${this.renderHeaders(this.fetchState.email, this.fetchState.fromAddress, this.fetchState.toAddresses)}<div part="body">${this.fetchState.email.bodyHtml !== null ? html`<div part="body-html" @click=${this.onBodyClick}>${unsafeHTML(this.foldQuotes ? this.getFoldedHtml(this.fetchState.email.bodyHtml) : this.fetchState.email.bodyHtml)}</div>` : this.renderTextBody(this.fetchState.email.bodyText ?? '')}</div></div>${this.renderAttachments(this.fetchState.email.attachments)}`;
-      case 'loading': return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+      case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeEmail') })}</p>`;
     }
@@ -533,7 +545,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
 
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-email-viewer-max-height': maxHeight }) : nothing} aria-label=${hostAriaLabel(this) ?? (this.name || this.localize('emailViewerLabel'))}>${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-email-viewer-max-height': maxHeight }) : nothing} aria-label=${hostAriaLabel(this) ?? (this.name || this.localize('emailViewerLabel'))} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'}>${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

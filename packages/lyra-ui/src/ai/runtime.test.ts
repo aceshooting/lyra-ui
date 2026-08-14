@@ -10,14 +10,18 @@ import {
 it('reduces an interleaved streaming message without mutating prior state', () => {
   const initial = createAgentStreamState();
   const events: AgentStreamEvent[] = [
-    { type: 'run-start', eventId: '1', runId: 'run-1' },
+    { type: 'run-start', generation: 1, sequence: 1, eventId: '1', runId: 'run-1' },
     {
       type: 'message-start',
+      generation: 1,
+      sequence: 2,
       eventId: '2',
       message: { id: 'message-1', role: 'assistant', parts: [] },
     },
     {
       type: 'message-part-delta',
+      generation: 1,
+      sequence: 3,
       eventId: '3',
       messageId: 'message-1',
       partId: 'text-1',
@@ -26,13 +30,15 @@ it('reduces an interleaved streaming message without mutating prior state', () =
     },
     {
       type: 'message-part-delta',
+      generation: 1,
+      sequence: 4,
       eventId: '4',
       messageId: 'message-1',
       partId: 'text-1',
       partType: 'text',
       delta: ' world',
     },
-    { type: 'message-complete', eventId: '5', messageId: 'message-1' },
+    { type: 'message-complete', generation: 1, sequence: 5, eventId: '5', messageId: 'message-1' },
   ];
 
   const result = reduceAgentStreamEvents(initial, events);
@@ -47,9 +53,11 @@ it('reduces an interleaved streaming message without mutating prior state', () =
   });
 });
 
-it('accepts an out-of-order delta and ignores a duplicated event id', () => {
+it('accepts a delta before message start and ignores a replayed generation cursor', () => {
   const delta: AgentStreamEvent = {
     type: 'message-part-delta',
+    generation: 0,
+    sequence: 1,
     eventId: 'same-event',
     messageId: 'late-message',
     role: 'assistant',
@@ -74,11 +82,15 @@ it('upserts tools by invocation id', () => {
   const args = { q: 'Lyra' };
   const running = reduceAgentStream(initial, {
     type: 'tool-upsert',
+    generation: 0,
+    sequence: 1,
     invocation: { id: 'call-1', name: 'search', args, status: 'running' },
   });
   args.q = 'Mutated by caller';
   const complete = reduceAgentStream(running, {
     type: 'tool-upsert',
+    generation: 0,
+    sequence: 2,
     invocation: {
       id: 'call-1',
       name: 'search',
@@ -97,19 +109,30 @@ it('upserts tools by invocation id', () => {
 it('applies safe immutable shared-state patches and rejects prototype paths', () => {
   const snapshot = reduceAgentStream(createAgentStreamState(), {
     type: 'state-snapshot',
+    generation: 0,
+    sequence: 1,
     snapshot: { filters: { year: 2025 }, selected: [] },
   });
   const patched = reduceAgentStream(snapshot, {
     type: 'state-delta',
+    generation: 0,
+    sequence: 2,
     patch: [
       { op: 'replace', path: '/filters/year', value: 2026 },
       { op: 'add', path: '/selected/0', value: 'doc-1' },
-      { op: 'add', path: '/__proto__/polluted', value: true },
     ],
+  });
+  const forbidden = reduceAgentStream(patched, {
+    type: 'state-delta',
+    generation: 0,
+    sequence: 3,
+    patch: [{ op: 'add', path: '/__proto__/polluted', value: true }],
   });
 
   expect(snapshot.sharedState).to.deep.equal({ filters: { year: 2025 }, selected: [] });
   expect(patched.sharedState).to.deep.equal({ filters: { year: 2026 }, selected: ['doc-1'] });
+  expect(forbidden.sharedState).to.deep.equal(patched.sharedState);
+  expect(forbidden.error?.code).to.equal('invalid_stream_event');
   expect(({} as Record<string, unknown>)['polluted']).to.equal(undefined);
 });
 
@@ -174,6 +197,8 @@ it('decodes escaped JSON Pointer segments and safely rejects non-cloneable value
 
   const state = reduceAgentStream(createAgentStreamState(), {
     type: 'state-snapshot',
+    generation: 0,
+    sequence: 1,
     snapshot: () => 'not cloneable',
   });
   expect(state.sharedState).to.equal(null);
@@ -188,6 +213,8 @@ it('handles snapshots, status updates, message replacement, and part upserts imm
   };
   const snapshotted = reduceAgentStream(createAgentStreamState(), {
     type: 'messages-snapshot',
+    generation: 0,
+    sequence: 1,
     messages: [snapshotMessage],
   });
   snapshotMessage.parts[0]!.text = 'Mutated by caller';
@@ -195,13 +222,15 @@ it('handles snapshots, status updates, message replacement, and part upserts imm
 
   const status = reduceAgentStream(
     { ...snapshotted, runId: 'existing-run' },
-    { type: 'run-status', status: { kind: 'done' } },
+    { type: 'run-status', generation: 0, sequence: 2, status: { kind: 'done' } },
   );
   expect(status.runId).to.equal('existing-run');
   expect(status.status.kind).to.equal('done');
 
   const replaced = reduceAgentStream(status, {
     type: 'message-start',
+    generation: 0,
+    sequence: 3,
     message: { id: 'message-1', role: 'assistant' },
   });
   expect(replaced.messages).to.have.lengthOf(1);
@@ -211,6 +240,8 @@ it('handles snapshots, status updates, message replacement, and part upserts imm
   const incomingPart = { id: 'part-2', type: 'text' as const, text: 'Created', state: 'streaming' as const };
   const addedPart = reduceAgentStream(replaced, {
     type: 'message-part-upsert',
+    generation: 0,
+    sequence: 4,
     messageId: 'message-2',
     role: 'system',
     part: incomingPart,
@@ -219,6 +250,8 @@ it('handles snapshots, status updates, message replacement, and part upserts imm
   expect(addedPart.messages[1]?.parts?.[0]).to.deep.include({ text: 'Created' });
   const updatedPart = reduceAgentStream(addedPart, {
     type: 'message-part-upsert',
+    generation: 0,
+    sequence: 5,
     messageId: 'message-2',
     part: { id: 'part-2', type: 'text', text: 'Updated', state: 'complete' },
   });
@@ -230,9 +263,11 @@ it('handles snapshots, status updates, message replacement, and part upserts imm
   expect(updatedPart.messages[1]?.parts?.[0]).to.deep.include({ text: 'Updated', state: 'complete' });
 });
 
-it('preserves errored parts while completing a message', () => {
+it('completes transport progress while failures remain explicit error parts', () => {
   const state = reduceAgentStream(createAgentStreamState(), {
     type: 'messages-snapshot',
+    generation: 0,
+    sequence: 1,
     messages: [
       {
         id: 'target',
@@ -240,56 +275,281 @@ it('preserves errored parts while completing a message', () => {
         status: 'streaming',
         parts: [
           { id: 'ok', type: 'text', text: 'Ready', state: 'streaming' },
-          { id: 'bad', type: 'text', text: 'Failed', state: 'error' },
+          { id: 'bad', type: 'error', message: 'Failed' },
         ],
       },
       { id: 'other', role: 'user', status: 'sent', parts: [] },
     ],
   });
-  const complete = reduceAgentStream(state, { type: 'message-complete', messageId: 'target' });
+  const complete = reduceAgentStream(state, {
+    type: 'message-complete',
+    generation: 0,
+    sequence: 2,
+    messageId: 'target',
+  });
 
   expect(complete.messages[0]?.status).to.equal('sent');
-  expect(complete.messages[0]?.parts?.map((part) => part.state)).to.deep.equal(['complete', 'error']);
+  expect(complete.messages[0]?.parts?.map((part) => part.state)).to.deep.equal(['complete', 'complete']);
   expect(complete.messages[1]).to.equal(state.messages[1]);
 });
 
 it('reduces reset and error events, including optional error codes', () => {
   const running = reduceAgentStream(createAgentStreamState(), {
     type: 'run-start',
+    generation: 1,
+    sequence: 1,
     runId: 'run-1',
   });
   const failed = reduceAgentStream(running, {
     type: 'error',
+    generation: 1,
+    sequence: 2,
     eventId: 'error-1',
     message: 'Provider failed',
     code: 'provider_error',
   });
   expect(failed.status).to.deep.equal({ kind: 'error', message: 'Provider failed' });
   expect(failed.error).to.deep.equal({ message: 'Provider failed', code: 'provider_error' });
-  expect(failed.seenEventIds).to.deep.equal(['error-1']);
+  expect(failed.cursor).to.equal(2);
 
   const failedWithoutCode = reduceAgentStream(running, {
     type: 'error',
+    generation: 1,
+    sequence: 2,
     message: 'Unknown failure',
   });
   expect(failedWithoutCode.error).to.deep.equal({ message: 'Unknown failure' });
 
-  const reset = reduceAgentStream(failed, { type: 'reset', eventId: 'reset-1' });
-  expect(reset).to.deep.equal({
-    ...createAgentStreamState(),
-    seenEventIds: ['reset-1'],
-  });
+  const reset = reduceAgentStream(failed, { type: 'reset', generation: 2, sequence: 1, eventId: 'reset-1' });
+  expect(reset.generation).to.equal(2);
+  expect(reset.cursor).to.equal(1);
+  expect(reset.messages).to.deep.equal([]);
+  expect(reset.tools).to.deep.equal([]);
+  expect(reset.status).to.deep.equal({ kind: 'idle' });
 });
 
-it('bounds replay history to the most recent transport event ids', () => {
-  const events: AgentStreamEvent[] = Array.from({ length: 2050 }, (_, index) => ({
-    type: 'run-status',
-    eventId: `event-${index}`,
-    status: { kind: 'running' },
-  }));
-  const state = reduceAgentStreamEvents(createAgentStreamState(), events);
+it('uses a generation cursor so replay stays idempotent without an opaque history window', () => {
+  const firstRun = reduceAgentStreamEvents(createAgentStreamState(), [
+    { type: 'run-start', generation: 1, sequence: 1, runId: 'run-1' },
+    {
+      type: 'message-part-delta',
+      generation: 1,
+      sequence: 2,
+      messageId: 'message-1',
+      partId: 'text-1',
+      partType: 'text',
+      delta: 'first',
+    },
+  ] as AgentStreamEvent[]);
+  const replayed = reduceAgentStream(firstRun, {
+    type: 'message-part-delta',
+    generation: 1,
+    sequence: 2,
+    messageId: 'message-1',
+    partId: 'text-1',
+    partType: 'text',
+    delta: ' duplicate',
+  } as AgentStreamEvent);
 
-  expect(state.seenEventIds).to.have.lengthOf(2048);
-  expect(state.seenEventIds[0]).to.equal('event-2');
-  expect(state.seenEventIds.at(-1)).to.equal('event-2049');
+  expect(replayed).to.equal(firstRun);
+  expect(replayed.generation).to.equal(1);
+  expect(replayed.cursor).to.equal(2);
+  expect(replayed.messages[0]?.parts?.[0]).to.deep.include({ text: 'first' });
+  expect(replayed).not.to.have.property('seenEventIds');
+});
+
+it('makes a newer run generation an atomic state and replay boundary', () => {
+  const oldRun = reduceAgentStreamEvents(createAgentStreamState(), [
+    { type: 'run-start', generation: 1, sequence: 1, runId: 'run-1' },
+    {
+      type: 'messages-snapshot',
+      generation: 1,
+      sequence: 2,
+      messages: [{ id: 'old-message', role: 'assistant', text: 'old' }],
+    },
+    {
+      type: 'tool-upsert',
+      generation: 1,
+      sequence: 3,
+      invocation: { id: 'old-tool', name: 'search', args: {}, status: 'success' },
+    },
+    { type: 'state-snapshot', generation: 1, sequence: 4, snapshot: { old: true } },
+  ] as AgentStreamEvent[]);
+  const newRun = reduceAgentStream(oldRun, {
+    type: 'run-start',
+    generation: 2,
+    sequence: 1,
+    runId: 'run-2',
+  } as AgentStreamEvent);
+  const stale = reduceAgentStream(newRun, {
+    type: 'message-part-delta',
+    generation: 1,
+    sequence: 99,
+    messageId: 'old-message',
+    partId: 'text',
+    partType: 'text',
+    delta: 'stale',
+  } as AgentStreamEvent);
+
+  expect(newRun.runId).to.equal('run-2');
+  expect(newRun.messages).to.deep.equal([]);
+  expect(newRun.tools).to.deep.equal([]);
+  expect(newRun.sharedState).to.equal(null);
+  expect(newRun.error).to.equal(undefined);
+  expect(stale).to.equal(newRun);
+});
+
+it('rejects malformed patch operations without throwing or partially applying the patch', () => {
+  const original = { count: 1 };
+  const malformed = [
+    null,
+    {},
+    { op: 'move', path: '/count', from: '/other' },
+    { op: 'replace' },
+    { op: 'remove', path: '/count', value: 2 },
+  ] as unknown as Parameters<typeof applySharedStatePatch>[1];
+
+  expect(() => applySharedStatePatch(original, malformed)).not.to.throw();
+  expect(applySharedStatePatch(original, malformed)).to.deep.equal(original);
+});
+
+it('accepts only canonical decimal array indices and valid append operations', () => {
+  const original = { list: ['first', 'second'] };
+  for (const path of ['/list/', '/list/00', '/list/+0', '/list/0x0', '/list/0.0']) {
+    expect(applySharedStatePatch(original, [{ op: 'replace', path, value: 'changed' }])).to.deep.equal(original);
+  }
+  expect(applySharedStatePatch(original, [{ op: 'add', path: '/list/-', value: 'third' }])).to.deep.equal({
+    list: ['first', 'second', 'third'],
+  });
+  expect(applySharedStatePatch(original, [{ op: 'replace', path: '/list/-', value: 'changed' }])).to.deep.equal(original);
+});
+
+it('fails closed when a provider record cannot be recursively snapshotted', () => {
+  const metadata = { nested: { value: 'original' }, callback: () => 'unsafe' };
+  const rejected = reduceAgentStream(createAgentStreamState(), {
+    type: 'message-start',
+    generation: 0,
+    sequence: 1,
+    message: { id: 'message-1', role: 'assistant', metadata },
+  } as AgentStreamEvent);
+  expect(rejected.messages).to.deep.equal([]);
+  expect(rejected.error?.code).to.equal('invalid_stream_event');
+
+  const accepted = reduceAgentStream(createAgentStreamState(), {
+    type: 'message-start',
+    generation: 0,
+    sequence: 1,
+    message: { id: 'message-2', role: 'assistant', metadata: { nested: { value: 'original' } } },
+  } as AgentStreamEvent);
+  const incoming = { nested: { value: 'original' } };
+  const immutable = reduceAgentStream(createAgentStreamState(), {
+    type: 'message-start',
+    generation: 0,
+    sequence: 1,
+    message: { id: 'message-3', role: 'assistant', metadata: incoming },
+  } as AgentStreamEvent);
+  incoming.nested.value = 'mutated';
+  expect(accepted.messages).to.have.lengthOf(1);
+  expect(immutable.messages[0]?.metadata).to.deep.equal({ nested: { value: 'original' } });
+});
+
+it('reports configured resource-limit failures without truncating retained history', () => {
+  const initial = createAgentStreamState({ maxDeltaCharacters: 5, maxMessages: 1 });
+  const retained = reduceAgentStream(initial, {
+    type: 'message-start',
+    generation: 0,
+    sequence: 1,
+    message: { id: 'kept', role: 'assistant', text: 'kept' },
+  } as AgentStreamEvent);
+  const tooMany = reduceAgentStream(retained, {
+    type: 'message-start',
+    generation: 0,
+    sequence: 2,
+    message: { id: 'rejected', role: 'assistant' },
+  } as AgentStreamEvent);
+  const oversized = reduceAgentStream(retained, {
+    type: 'message-part-delta',
+    generation: 0,
+    sequence: 2,
+    messageId: 'kept',
+    partId: 'text',
+    partType: 'text',
+    delta: '123456',
+  } as AgentStreamEvent);
+
+  expect(tooMany.messages.map((message) => message.id)).to.deep.equal(['kept']);
+  expect(tooMany.error?.code).to.equal('stream_limit_exceeded');
+  expect(oversized.messages[0]?.parts).to.equal(undefined);
+  expect(oversized.error?.code).to.equal('stream_limit_exceeded');
+});
+
+it('enforces the aggregate retained-byte budget while preserving the accepted prefix', () => {
+  let state = createAgentStreamState({
+    maxMessages: 10,
+    maxSnapshotBytes: 400,
+    maxRetainedBytes: 400,
+  });
+  for (let index = 0; index < 2; index += 1) {
+    state = reduceAgentStream(state, {
+      type: 'message-start',
+      generation: 0,
+      sequence: index + 1,
+      message: { id: `message-${index}`, role: 'assistant', text: 'x'.repeat(100) },
+    } as AgentStreamEvent);
+  }
+  expect(state.messages).to.have.lengthOf(2);
+  const rejected = reduceAgentStream(state, {
+    type: 'message-start',
+    generation: 0,
+    sequence: 3,
+    message: { id: 'message-2', role: 'assistant', text: 'x'.repeat(100) },
+  } as AgentStreamEvent);
+  expect(rejected.messages.map((message) => message.id)).to.deep.equal(['message-0', 'message-1']);
+  expect(rejected.error?.code).to.equal('stream_limit_exceeded');
+});
+
+it('keeps run status and error recovery coherent for every non-error transition', () => {
+  const failed = reduceAgentStream(createAgentStreamState(), {
+    type: 'error',
+    generation: 0,
+    sequence: 1,
+    message: 'failed',
+    code: 'provider_error',
+  } as AgentStreamEvent);
+  const recoveryKinds = [
+    'idle',
+    'running',
+    'queued',
+    'collecting',
+    'waiting-input',
+    'waiting-approval',
+    'done',
+    'cancelled',
+    'provider-specific',
+  ];
+  const reaffirmed = reduceAgentStream(failed, {
+    type: 'run-status',
+    generation: 0,
+    sequence: 2,
+    status: { kind: 'error', message: 'failed' },
+  } as AgentStreamEvent);
+  expect(reaffirmed.error).to.deep.equal({ message: 'failed', code: 'provider_error' });
+  for (const [index, kind] of recoveryKinds.entries()) {
+    const recovered = reduceAgentStream(failed, {
+      type: 'run-status',
+      generation: 0,
+      sequence: index + 2,
+      status: { kind },
+    } as AgentStreamEvent);
+    expect(recovered.status.kind).to.equal(kind);
+    expect(recovered.error).to.equal(undefined);
+  }
+
+  const statusError = reduceAgentStream(createAgentStreamState(), {
+    type: 'run-status',
+    generation: 0,
+    sequence: 1,
+    status: { kind: 'error', message: 'status failed' },
+  } as AgentStreamEvent);
+  expect(statusError.error).to.deep.equal({ message: 'status failed' });
 });

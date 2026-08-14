@@ -6,13 +6,17 @@ import './menu-item.js';
 it('renders a presentational heading that is not a focus stop', async () => {
   const el = await fixture(html`<lr-menu-label>Recently used</lr-menu-label>`);
   expect(el.getAttribute('role')).to.equal('presentation');
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.textContent).to.equal('');
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.textContent).to.equal(
+    ''
+  );
   expect(el.hasAttribute('tabindex')).to.equal(false);
   await expect(el).to.be.accessible();
 });
 
 it('leaves an author-supplied role alone', async () => {
-  const el = await fixture(html`<lr-menu-label role="none">Recently used</lr-menu-label>`);
+  const el = await fixture(
+    html`<lr-menu-label role="none">Recently used</lr-menu-label>`
+  );
   expect(el.getAttribute('role')).to.equal('none');
 });
 

@@ -1,7 +1,14 @@
-## `lr-split`
+## `lr-multi-split`
 
 Resizable panels for dashboard layouts. Direct **light-DOM children are the panels**; a divider is
 auto-inserted between each adjacent pair.
+
+Granular import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.js`.
+The Lyra-original v9 identity migration is mechanical: `lr-split` → `lr-multi-split`,
+`LyraSplit` → `LyraMultiSplit`, generic container authoring types → the corresponding
+`LyraMultiSplit*` names, identity-specific `lr-split-*` events → `lr-multi-split-*`, and
+`--lr-split-*` hooks/storage keys → `--lr-multi-split-*`/`lr-multi-split:*`. The separate mirrored
+`lr-split-panel`, its `LyraSplitPanel` class, `SnapFunction`, and `SNAP_NONE` are unchanged.
 
 With a definite block size, each direct panel owns a native `overflow: auto` scroll surface and has
 `min-block-size: 0`, so long content stays inside the split rather than escaping into following
@@ -9,6 +16,7 @@ content. Set `overflow` directly on an individual panel when its content needs a
 surface.
 
 **Properties:**
+
 - `sizes: number[] = []` (attribute: false — percentages per panel, auto-computed equally if
   omitted/mismatched)
 - `defaultSizes: (number | string)[] = []` (attribute: false) — initialization-only fallback: a
@@ -19,10 +27,11 @@ surface.
   set it once, at mount. Each entry is either a plain **number** (percent-of-container, validated unchanged: a
   pure-number array that does not sum to ~100, e.g. `[30, 60]`, is still rejected and falls through
   to the equal split) or a CSS **length string** (`'200px'`, `'20%'`, `'3rem'`). When at least one
-  entry is a length string, every entry is resolved against the measured container (numbers as
-  percent-of-container, `%` as-is, `px`/`rem`/`em` via the shared length resolver) and then
-  normalized to percentages before the same validation applies — so `['200px', '300px']` on a 500px
-  container initializes to `[40, 60]`.
+  entry is a length string, every entry is resolved through the public contextual
+  `resolveCssLength()` utility (`%` against the measured container, `rem`/`em` against the
+  owner-document/host, and `vw`/`vh` against the owner window), then normalized to percentages
+  before the same validation applies — so `['200px', '300px']` on a 500px container initializes to
+  `[40, 60]`.
 - `min: number = 10` (min % per panel)
 - `orientation: 'horizontal'|'vertical' = 'horizontal'` (reflected) — the axis used at/above
   `orientationBreakpoint` (or always, when that's unset).
@@ -48,7 +57,7 @@ surface.
   because that is what native `max-width` means — deliberate, so the crossing point matches a CSS
   `@media` rule authored with the same length exactly.
   **`rem`/`em` mean different things under the two bases, and this is the reason `'viewport'` exists.**
-  Inside a media query, relative units resolve against the browser's *initial* font size and ignore
+  Inside a media query, relative units resolve against the browser's _initial_ font size and ignore
   any `html { font-size }` override; under `'container'` they resolve against live computed font
   sizes. The two agree unless an app re-points the root font size. So when the breakpoint must stay
   in lockstep with a CSS `@media` rule, `'viewport'` is the exact match — the browser evaluates the
@@ -59,10 +68,10 @@ surface.
   doesn't resolve to a length. Also reflected as `data-effective-orientation` (only present while
   `orientationBreakpoint` resolves to a usable length).
 - `storageKey?: string` (attribute `storage-key` — persists sizes to `localStorage` under
-  `` `lr-split:${key}:${panelCount}` ``, scoped by panel count so a stale layout for a different
+  `` `lr-multi-split:${key}:${panelCount}` ``, scoped by panel count so a stale layout for a different
   panel count is ignored)
-- `panelConstraints: (PanelConstraint | null)[] = []` (attribute: false) — `PanelConstraint { minPx?:
-  number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-aligned with `sizes`; a
+- `panelConstraints: (LyraMultiSplitPanelConstraint | null)[] = []` (attribute: false) — `LyraMultiSplitPanelConstraint { minPx?:
+number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-aligned with `sizes`; a
   `null`/missing entry (or an omitted bound within an entry) leaves that side of that panel purely
   percent-based (the existing `min`-only behavior). Combining a px and a percent bound on the same
   side resolves to the stricter one (larger for min, smaller for max) via a native CSS `max()`/`min()`
@@ -71,8 +80,8 @@ surface.
   `flex-basis`, via a native CSS `clamp()` so a constrained panel stays pinned between its bounds
   across container resizes with no extra `ResizeObserver`) change for a constrained panel.
 - `collapse: 'start'|'end'|'none' = 'none'` (reflected) — opt-in responsive collapse for one panel:
-  `'start'`/`'end'` is a *logical* position (RTL-aware, matching CSS logical properties — the panel at
-  the document's visual leading/trailing edge, not a raw array index). `lr-split` only owns the
+  `'start'`/`'end'` is a _logical_ position (RTL-aware, matching CSS logical properties — the panel at
+  the document's visual leading/trailing edge, not a raw array index). `lr-multi-split` only owns the
   width-collapse mechanics/state signaling below; it renders no icon-only UI itself — the collapsing
   panel's own slotted content is expected to adapt itself (e.g. via its own `@container` query reading
   the panel's clamped width or `data-collapse-state`, see below).
@@ -106,10 +115,10 @@ surface.
   matches a CSS `@media` rule authored with the same length exactly. Use `'viewport'` to collapse in
   step with a page-level responsive layout (a shell whose own `@media` rules restack at the same
   width) rather than with this split's own allocation; it is also what lets the browser resolve a
-  `rem` breakpoint with real `@media` semantics (against the *initial* font size, ignoring an
+  `rem` breakpoint with real `@media` semantics (against the _initial_ font size, ignoring an
   `html { font-size }` override). Both bands are classified from both queries together on every
   change, so a fast resize crossing both thresholds at once still lands on one correct state and
-  fires `lr-split-collapse-change` once; under `'viewport'` the first paint is already correct — no
+  fires `lr-multi-split-collapse-change` once; under `'viewport'` the first paint is already correct — no
   `ResizeObserver` round-trip — and that initial state is not announced as a transition.
 - `collapseState: 'wide'|'rail'|'floating'` (reflected, attribute `collapse-state`) — a public
   accessor with force/auto semantics mirroring `<lr-app-rail>`'s `mode`: normally derived
@@ -117,7 +126,11 @@ surface.
   (stopping automatic breakpoint tracking) — useful for a consumer-driven toggle (e.g. a button that
   forces `'floating'` regardless of width). Assigning the write-only `'auto'` sentinel releases the
   pin and immediately re-derives the state from the current measured width; the getter never returns
-  `'auto'`.
+  `'auto'`. This is an **effective** state: while `collapse='none'` or fewer than two panels exist,
+  the getter/reflected attribute stays `'wide'` and forced rail/floating intent produces no event,
+  marker, backdrop, focus trap, or scroll lock. Enabling an eligible pane can make retained forced
+  intent effective; disabling/removing it transitions back to `'wide'`, closes `open`, releases
+  overlay ownership, and restores focus.
 - `open: boolean = false` (reflected) — whether the `'floating'` collapse state's drawer is shown.
   While `collapseState` is `'floating'` and `open` is `false` (the default), the collapsing panel
   renders nothing (`hidden`, out of the accessibility tree) instead of the always-visible overlay
@@ -128,7 +141,7 @@ surface.
 
 `collapse`'s three resulting states — `'wide'` (default, today's plain layout) / `'rail'` / `'floating'`
 — are exposed as: a `data-collapse-state` attribute on both the host and the collapsing panel element
-itself (absent for `'wide'`/`collapse="none"`); and the `lr-split-collapse-change` event below. The
+itself (absent for `'wide'`/`collapse="none"`); and the `lr-multi-split-collapse-change` event below. The
 divider adjacent to the collapsed panel is drag/keyboard-disabled (`aria-disabled="true"`) while
 collapsed. `collapse="none"` (the default) is byte-for-byte identical to pre-collapse-feature behavior.
 
@@ -137,15 +150,17 @@ localized accessible label generated for each auto-inserted divider.
 
 **Events:** `lr-resize-request` (cancelable; `detail: { sizes }` is the proposed constrained size
 array from a divider drag or keyboard step. Call `preventDefault()` to leave `sizes` and its
-persisted layout unchanged. It is not emitted when a consumer assigns `sizes` directly),
+persisted layout unchanged. It is not emitted when a consumer assigns `sizes` directly or a
+keyboard/pointer proposal clamps to the already-current sizes),
 `lr-resize` (non-cancelable; the same `detail: { sizes }`, emitted after an accepted drag movement
-or keyboard step commits. Pointer release persists the settled sizes but emits no additional event;
-direct `sizes` assignments stay silent),
-`lr-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
+or keyboard step commits. A genuine pointer gesture has one terminal persistence write on
+`pointerup`; no-move, fully clamped, vetoed, canceled, and lost-capture gestures have none. Pointer
+release emits no additional event; direct `sizes` assignments stay silent),
+`lr-multi-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
 on a real `collapse`-state transition, never on every resize/render),
-`lr-split-constraints-invalid` (`detail: SplitConstraintIssueDetail`, fired once when the configured
+`lr-multi-split-constraints-invalid` (`detail: LyraMultiSplitConstraintIssueDetail`, fired once when the configured
 panel minimums/maximums cannot fit the track; the infeasible set is rejected for interaction and a
-normalized percent minimum is used instead), `lr-split-orientation-change` (`detail: { orientation }`,
+normalized percent minimum is used instead), `lr-multi-split-orientation-change` (`detail: { orientation }`,
 fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`)
 
 **Slots:** default (each direct child element is one panel).
@@ -155,26 +170,23 @@ fired only when an enabled `orientationBreakpoint` actually changes `effectiveOr
 `backdrop` (the `'floating'` drawer's scrim — only rendered while `collapseState === 'floating'` and
 `open`)
 
-**Themeable custom properties:** `--lr-split-overlay-color` (default `var(--lr-color-overlay)`) —
+**Themeable custom properties:** `--lr-multi-split-overlay-color` (default `var(--lr-color-overlay)`) —
 the `'floating'` drawer's `[part='backdrop']` scrim; scoped to `[part='base']`, not the viewport.
-`--lr-split-divider-hit-slop` (default `calc((var(--lr-size-3px) - var(--lr-icon-button-size)) / 2)`,
-i.e. `-18.5px` at the shipped token values) — the per-side inset of `[part='divider']`'s invisible
-`::before` hit area along the resize axis. It is negative on purpose: the `::before` box extends past
-the divider's own edges so the *effective* pointer/touch target reaches the shared
-`--lr-icon-button-size` WCAG 2.5.8 floor (40px) while the divider anyone can see stays 3px. Unlike
-most properties here it is **declared on `:host`**, so an override has to target the element itself —
-an ancestor rule is shadowed. Overriding it directly is rarely the right move: retheme
-`--lr-size-3px` or `--lr-icon-button-size` and the slop recomputes to keep exactly closing the gap.
+`--lr-multi-split-divider-target-size` (default
+`max(var(--lr-icon-button-size), var(--lr-size-3px))`) — the real flex track/gutter reserved for the
+divider along the resize axis. The 3px visual rule is painted in its center; no pseudo-element
+extends into either adjacent panel, so slotted controls retain pointer ownership up to their edge.
+It is declared on `:host`, so an override targets the component itself.
 Otherwise shared tokens only.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-split storage-key="dashboard-main" min="15">
+<lr-multi-split storage-key="dashboard-main" min="15">
   <div>Panel A</div>
   <div>Panel B</div>
   <div>Panel C</div>
-</lr-split>
+</lr-multi-split>
 ```
 
 Keyboard: focus a divider (`Tab`), then `ArrowRight`/`ArrowLeft` (horizontal) or
@@ -183,17 +195,20 @@ Keyboard: focus a divider (`Tab`), then `ArrowRight`/`ArrowLeft` (horizontal) or
 the visually-adjacent panel).
 
 **Known gotchas:**
-- `panelCount` now reacts to `slotchange` (not just the initial `connectedCallback()` read), and
-  `ensureSizes()` rebalances existing sizes proportionally when a panel is added or removed after
-  mount instead of discarding the whole layout — a conditionally-shown side panel no longer leaves
-  `panelCount`/`sizes`/divider count stale.
+
+- Panel membership tracks the complete ordered direct-child identity sequence, not just its count.
+  Same-count `replaceWith()` and DOM reorder immediately reconcile visual order with DOM/AX order
+  while preserving positional sizes; count changes rebalance proportionally. Every temporary
+  inline layout/collapse declaration, `hidden`, and `data-collapse-state` value is
+  snapshot/adopt/restore-owned, so late author writes survive removal, disconnect/adoption, reuse,
+  and reconnect without stale multi-split state.
 - divider `aria-valuemin`/`aria-valuemax` are computed per adjacent pair from the same resolved
   `panelConstraints` bounds used by pointer and keyboard resizing, rather than a blanket
   `100 - min`. They therefore remain accurate for 3+-panel layouts and for px/percent constraints.
   Each divider also has its own `aria-label` ("Resize divider between panel N and panel N+1")
   distinguishing it from any other divider in a multi-divider layout.
 - infeasible aggregate constraints (for example, three panels with `min=40`) are reported through
-  `lr-split-constraints-invalid`; interaction rejects that set and uses a normalized percent minimum
+  `lr-multi-split-constraints-invalid`; interaction rejects that set and uses a normalized percent minimum
   with aggregate slack, so the divider remains operable instead of silently freezing.
 - concurrent drags are tracked per `pointerId` (not a single scalar), so a multi-touch drag on two
   different dividers moves both independently instead of the second pointer clobbering the first's
@@ -216,7 +231,7 @@ the visually-adjacent panel).
 - `collapseBreakpointBasis='viewport'` does **not** drop the `ResizeObserver` the way the
   orientation feature's viewport basis does. The measured width it feeds is still read by a
   container-basis `orientationBreakpoint` and by the `collapseState = 'auto'` release path, which
-  re-derives from the current measured width. Collapse's basis changes only *which values* the
+  re-derives from the current measured width. Collapse's basis changes only _which values_ the
   classification consults, never whether the split measures itself.
 - `railBreakpoint`/`floatBreakpoint` are typed `number | string`. Authored as attributes they read
   back as **strings** (`el.railBreakpoint === '640'`, not `640`) — the same value, a different type.
@@ -227,7 +242,7 @@ the visually-adjacent panel).
   the container being measured. It does **not** fit a component sitting beside a fixed-width sibling
   in a row that stacks via a CSS `@media` rule: while the row is a row, this element's width shrinks
   with the viewport; the instant the row stacks (a pure-CSS event no component can observe) it jumps
-  to the *full* row width — wider than it was just before the transition. Because the measured width
+  to the _full_ row width — wider than it was just before the transition. Because the measured width
   is not monotonic across that transition, no single container threshold both stays wide while the
   row is a row and goes narrow exactly when it stacks. A fixed-width sibling is worse still: its own
   width never changes with the viewport at all, so no container breakpoint on it can react to the
@@ -236,9 +251,21 @@ the visually-adjacent panel).
   `orientation-breakpoint` and `orientation-breakpoint-basis='viewport'` and they flip together, in
   lockstep with the CSS rule that stacks the row:
   ```html
-  <lr-stepper orientation-breakpoint="56.25rem" orientation-breakpoint-basis="viewport"></lr-stepper>
-  <lr-split   orientation-breakpoint="56.25rem" orientation-breakpoint-basis="viewport"></lr-split>
-  <style>@media (max-width: 56.25rem) { .shell { flex-direction: column; } }</style>
+  <lr-stepper
+    orientation-breakpoint="56.25rem"
+    orientation-breakpoint-basis="viewport"
+  ></lr-stepper>
+  <lr-multi-split
+    orientation-breakpoint="56.25rem"
+    orientation-breakpoint-basis="viewport"
+  ></lr-multi-split>
+  <style>
+    @media (max-width: 56.25rem) {
+      .shell {
+        flex-direction: column;
+      }
+    }
+  </style>
   ```
   A consumer-side `matchMedia()` controller driving the `orientation` attribute directly is still
   supported and still correct — it is simply no longer required for this case.
@@ -248,11 +275,12 @@ the visually-adjacent panel).
 ## `lr-split-panel`
 
 Accessible two-pane resizing with the public `wa-split-panel` / `sl-split-panel` contract. Use this
-component when migrated markup has named `start` and `end` panes. The separate `<lr-split>` is
+component when migrated markup has named `start` and `end` panes. The separate `<lr-multi-split>` is
 Lyra's multi-panel layout: its direct default-slot children, responsive collapse modes, and
 multi-divider events are intentionally a different API.
 
 **Properties:**
+
 - `position: number = 50` (reflected) — divider position from the selected `primary` pane's edge,
   as a percentage from 0–100. With no `primary`, the logical `start` pane is the reference.
 - `positionInPixels: number` (attribute `position-in-pixels`) — the same position in pixels.
@@ -269,7 +297,8 @@ multi-divider events are intentionally a different API.
   resize. Position values are always measured from the selected primary edge.
 - `snap: string | SnapFunction = ''` — pointer-drag snap behavior. A string accepts space-separated
   pixels, percentages, and repeat expressions (`'160px 50% repeat(100px)'`) and reflects to the
-  `snap` attribute. A property-bound
+  `snap` attribute. It parses and caches the numeric value/unit projection from at most the first
+  16,384 UTF-16 code units and 256 finite valid tokens; later source text cannot affect snapping. A property-bound
   `SnapFunction` receives `{ pos, size, snapThreshold }` in pixels and returns the desired pixel
   position; callback code decides how to use the supplied threshold. The setter also accepts
   `undefined` for mapped source compatibility, clearing the configuration to the canonical `''`
@@ -311,7 +340,7 @@ cleans up on pointer up, cancellation, capture loss, disconnect, and orientation
 **Optional peer deps:** none.
 
 ```js
-import '@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js';
+import "@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js";
 ```
 
 ```html
@@ -344,6 +373,7 @@ place (a CSS state, not a clone/portal), so slotted content (a chart, a running 
 position) survives the transition.
 
 **Properties:**
+
 - `label: string = ''`
 - `sublabel: string = ''`
 - `collapsible: boolean = false` (reflected — shows the collapse/expand chevron button)
@@ -351,21 +381,23 @@ position) survives the transition.
 - `expandable: boolean = false` (reflected — shows the fullscreen toggle button)
 - `fullscreen: boolean = false` (reflected)
 - `fullscreenInset: string = ''` (attribute `fullscreen-inset`) — CSS `inset` shorthand applied to
-  `[part="base"]` and `[part="backdrop"]` while fullscreen instead of the default per-side
+  `[part="base"]` while fullscreen instead of the default per-side
   `max(var(--lr-space-l), <safe-area inset>)`, e.g. `"0 0 0 240px"` to leave a 240px persistent
   sidebar/toolbar visible during fullscreen. Invalid values, declaration-breaking input, and
   `url()` are ignored.
 - `compact: boolean = false` (reflected) — tighter header/body padding, same convention as
   `lr-empty`'s `compact`
 - `backdropInset: string = ''` (attribute `backdrop-inset`) — overrides the fullscreen backdrop's
-  CSS `inset` independently from `fullscreenInset`; when empty or invalid, it follows a valid
+  CSS `inset`; when empty or invalid, the backdrop remains viewport-filling (`0`) independently of
   `fullscreenInset`
-- `views: WidgetView[] = []` (attribute: false) — named alternate views for the panel body, e.g. a
-  chart/table toggle inside the same card chrome; `WidgetView { id: string; label?: string; icon?:
-  TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
+- `views: readonly LyraWidgetView[] = []` (attribute: false) — named alternate views for the panel body, e.g. a
+  chart/table toggle inside the same card chrome; `LyraWidgetView { id: string; label?: string; icon?:
+TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   (`[part='view-toggle']`) and a `<slot name="view-${id}">`. An icon-only view should set
   `ariaLabel`; if both labels are omitted, the button uses `id` as a last-resort accessible name.
   Empty (the default) renders today's single unnamed default slot as the sole view, unchanged.
+  Up to 256 valid records are snapshotted; IDs must be unique, nonempty, and whitespace-stable.
+  Malformed/hostile entries are ignored without rejecting the component update.
 - `activeView: string = ''` (attribute: false) — the currently active view's `id`; defaults to the
   first entry of `views` (or `''` when `views` is empty). Settable directly to control the active
   view externally; also updated internally when a view toggle is clicked.
@@ -400,7 +432,7 @@ rendered before the collapse/expand buttons), `collapse-icon` (replaces the buil
 collapse toggle via native slot fallback; its assigned content is decorative, inert, and aria-hidden
 so the outer toggle remains the only action; only meaningful while `collapsible`),
 `fullscreen-icon` (replaces the built-in glyph in the fullscreen toggle — the override replaces
-*both* the "expand" and "exit fullscreen" defaults, so the consumer owns that distinction, e.g. by
+_both_ the "expand" and "exit fullscreen" defaults, so the consumer owns that distinction, e.g. by
 reading the `fullscreen` attribute; its assigned content is decorative, inert, and aria-hidden so
 the outer toggle remains the only action; only meaningful while `expandable`), and one `view-{id}`
 slot per `views` entry, used instead of the default slot
@@ -416,12 +448,15 @@ Both header rows (`actions` and `view-toggles`) scroll horizontally on their own
 too narrow for them, and each independently paints a `--lr-scroll-fade-size` edge fade while — and
 only while — it actually overflows, so a clipped row reads as scrollable rather than truncated. The
 overflow is measured, not assumed: a row that fits is left unmasked.
+Forced-colors mode disables those decorative masks while retaining the native scroll owners. The
+body is the block-axis scroll owner whenever the widget receives a constrained height, so the
+header remains fixed while deep body content scrolls.
 
 **Themeable custom properties:** `--lr-widget-overlay-color` (default `var(--lr-color-overlay)` —
 the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default per side
 `max(var(--lr-space-l), <safe-area inset>)` — the fullscreen `[part="base"]` inset; the
-`fullscreen-inset` attribute overrides it), and `--lr-widget-backdrop-inset` (defaults to
-`var(--lr-widget-fullscreen-inset)`; the `backdrop-inset` attribute overrides it), plus shared
+`fullscreen-inset` attribute overrides it), and `--lr-widget-backdrop-inset` (defaults to `0` so
+the modal backdrop covers the viewport; the `backdrop-inset` attribute overrides it), plus shared
 tokens (`--lr-space-*`, `--lr-color-border/-surface/-text-quiet`,
 `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`, `--lr-focus-ring-*`).
 
@@ -430,7 +465,7 @@ Three properties style the pressed view toggle: `--lr-widget-view-toggle-active-
 `var(--lr-color-brand)`), plus `--lr-widget-view-toggle-active-border-color` (default
 `transparent`) — the background, text, and border color of the `aria-pressed="true"` toggle. All three
 are **state hooks**: declared as inline `var()` fallbacks at the point of use and never on `:host`,
-so setting any of them on the element *or on any ancestor* reaches the toggle. That shape exists because
+so setting any of them on the element _or on any ancestor_ reaches the toggle. That shape exists because
 `::part(view-toggle)[aria-pressed='true']` is not valid CSS — Shadow Parts forbids an attribute
 selector after `::part()` — so before these hooks the only way to recolor an active toggle was to
 override the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens, repainting every other
@@ -439,7 +474,7 @@ rendering is unchanged.
 
 `--lr-widget-view-toggle-hover-bg` (default `var(--lr-color-brand-quiet)`) and
 `--lr-widget-view-toggle-hover-color` (default `var(--lr-color-text)`) are the same shape for the
-*hover* state, and the `:hover` rule wraps its selector in `:where()` so a consumer's own
+_hover_ state, and the `:hover` rule wraps its selector in `:where()` so a consumer's own
 `::part(view-toggle):hover` override wins without `!important`.
 
 **Optional peer deps:** none.
@@ -460,14 +495,15 @@ matching visual tab order — resolved shadow-piercingly, so a slotted custom el
 focusable target inside its own shadow root is found too) so keyboard focus can't escape to page
 content hidden behind the backdrop. Escape or clicking the backdrop exits fullscreen and returns
 focus to whichever button triggered it. Set `fullscreen-inset` (e.g. `"0 0 0 240px"`) to reserve
-space for a persistent sidebar/toolbar that should stay visible instead of being covered by the
-fullscreen panel/backdrop — it overrides the default `var(--lr-space-l)` inset on every side for
-both `[part="base"]` and `[part="backdrop"]`. Set `compact` for tighter header/body padding.
+panel space for a persistent sidebar/toolbar while the default backdrop still covers the complete
+viewport. Set `backdrop-inset` explicitly only when the scrim should leave the same frame open. Set
+`compact` for tighter header/body padding.
 
 The collapse-button `aria-label` is localized via its own `widgetCollapse` (default `'Collapse
 panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
 
 **Known gotchas:**
+
 - a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
   shared overlay registration and re-acquires the scroll lock if `fullscreen` was still `true`
   across the move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in
@@ -501,10 +537,10 @@ temporarily makes off-page slides inert and aria-hidden, then restores their ret
 when they become visible, are removed, or the carousel disconnects.
 
 **Properties:**
+
 - `currentSlide: number = 0` (attribute `current-slide`, reflected) — zero-based index of the first
-  slide in the active page. `index: number = 0` (attribute `index`, reflected) is the established
-  Lyra alias; setting either name updates and reflects both through one clamped state value. The
-  pinned Web Awesome markup spelling `currentSlide` is also accepted through HTML's normalized
+  slide in the active page. The pinned Web Awesome markup spelling `currentSlide` is also accepted
+  through HTML's normalized
   `currentslide` attribute as a permanent compatibility alias. When both spellings are present on
   initial markup, canonical `current-slide` wins.
 - `loop: boolean = false` (attribute `loop`, reflected) — wraps navigation at either end
@@ -515,8 +551,6 @@ when they become visible, are removed, or the carousel disconnects.
 - `navigation: boolean = false` (attribute `navigation`, reflected) — renders previous and next
   buttons
 - `pagination: boolean = false` (attribute `pagination`, reflected) — renders page indicators.
-  `showIndicators: boolean = false` (attribute `show-indicators`) is the synchronized Lyra alias;
-  its legacy literal `show-indicators="false"` spelling remains understood.
 - `slidesPerPage: number = 1` (attribute `slides-per-page`) — number of simultaneously operable
   slides. Values used for layout are finite integers clamped to at least one and at most the live
   slide count.
@@ -527,32 +561,35 @@ when they become visible, are removed, or the carousel disconnects.
 - `mouseDragging: boolean = false` (attribute `mouse-dragging`, reflected) — adds desktop
   click-and-drag scrolling without replacing native touch and trackpad scrolling. Pointer
   cancellation releases capture, removes drag state, and returns to the active snap position.
-- `slides: number = 0` (attribute `slides`, reflected) — live assigned-slide count; updated after
-  dynamic child changes
+  Gestures begin only for a primary left-mouse pointer on noninteractive slide content; native,
+  custom, shadow-wrapped, labelled, disabled, and editable controls retain their own pointer input.
+- `slides: number` (read-only) — live assigned-slide count, updated after dynamic child changes.
 - `accessibleLabel: string = ''` (attribute `accessible-label`) — fallback landmark name; a host
   `aria-label` takes precedence by presence, including an explicitly empty value
 
-**8.0 default migration:** navigation and pagination now match the mapped opt-in defaults. Markup
-that relied on Lyra's former always-present arrow row or `showIndicators = true` must add
-`navigation` and/or `pagination`; the `showIndicators` property/attribute remains an alias but now
-defaults to `false`. The autoplay interval also changes from Lyra's former 5000ms to the mapped
-3000ms default. Existing explicit values continue to win.
+**9.0 cleanup:** the redundant Lyra-only `index`, `showIndicators`, and `goTo()` aliases were
+removed. Use mapped `currentSlide`, `pagination`, and `goToSlide()`. The writable/reflected
+`slides` readout also became a readonly composition-derived property. Navigation and pagination
+retain their mapped opt-in defaults, and the autoplay interval remains 3000ms.
 
 **Methods:**
+
 - `next(behavior: ScrollBehavior = 'smooth')` and
   `previous(behavior: ScrollBehavior = 'smooth')` move by `slidesPerMove`
-- `goToSlide(index, behavior: ScrollBehavior = 'smooth')` moves to a specific slide;
-  `goTo(index, behavior)` is the Lyra compatibility alias
+- `goToSlide(index, behavior: ScrollBehavior = 'smooth')` moves to a specific slide
 - `addSlide(slide: LyraCarouselItem)` appends a slide and `removeSlide(index)` removes one; page
-  count, reflected `slides`, active range, inertness, eligible loop snapshots, and pagination reconcile
+  count, active range, inertness, eligible loop snapshots, and pagination reconcile
   automatically
 
 **Events:** `lr-slide-change` (`detail: { index, slide }`) — emitted after the active slide changes
 from a method, button, key, pagination item, autoplay tick, or settled user scroll. `slide` is the
 original assigned element at `index`, never a loop endcap.
 
-**Paging and scrolling.** The page count is the set of reachable starts from zero to
-`slideCount - slidesPerPage`, stepping by `slidesPerMove` and always including the final start. All
+**Paging and scrolling.** In non-loop mode the page count is the set of reachable starts from zero
+to `slideCount - slidesPerPage`, stepping by `slidesPerMove` and always including the final start.
+Loop pagination exposes every slide as an exact valid start, so the current loop start always has
+one and only one current indicator. Multi-slide basis conserves the allocation as
+`(100% - (slidesPerPage - 1) * gap) / slidesPerPage`, including final partial pages. All
 slides in the active page are restored to their authored `inert`/`aria-hidden` state; every other
 slide keeps its layout box but becomes `inert` and `aria-hidden="true"`, so visible multi-slide
 pages remain fully operable while off-page links are unreachable. Native mandatory scroll snap
@@ -568,7 +605,7 @@ lifecycle, network/playback, and state owners even when the physical wrap cannot
 the requested direction.
 
 Manual active-page changes after mount are appended to Lyra's shared light-DOM polite
-announcement sink. The focusable `scroll-container viewport` is not itself a shadow-root live
+announcement sink. The focusable `scroll-container` is not itself a shadow-root live
 region. Initial connection and reconnection stay silent. Timer-driven autoplay advances also stay
 silent, while click, keyboard, method, scroll-gesture, and property changes are announced even
 when `autoplay` remains enabled. A change made while the carousel or a composed ancestor is
@@ -587,20 +624,19 @@ summaries. A registered locale or the instance's `strings` override can customiz
 Horizontal Left/Right keys follow logical direction and swap under RTL; vertical carousels use
 Up/Down without an RTL inversion. Home and End move to the first and final reachable start. The
 populated multi-slide state remains accessible at a 320px allocation.
-If a controlled page/index/page-size change or slide removal would make the currently focused slide
-inert or disconnected, focus moves to the stable `scroll-container viewport` before exclusion. A
+If a controlled page/page-size change or slide removal would make the currently focused slide
+inert or disconnected, focus moves to the stable `scroll-container` before exclusion. A
 newer external focus destination is never reclaimed.
 
 **Slots:** default slides, `previous-icon`, and `next-icon`. Named icon slots replace only the
 decorative glyph content; their flattened subtrees remain visible but are inert and aria-hidden.
 Lyra retains the localized native-button names, actions, and minimum hit areas.
 
-**CSS parts:** `base carousel` (same region node), `scroll-container viewport` (same focusable
-scroll port), `navigation`, `navigation-button`, `navigation-button-previous` /
+**CSS parts:** `base carousel` (same region node), `scroll-container` (focusable scroll port),
+`navigation`, `navigation-button`, `navigation-button-previous` /
 `navigation-button-next`, Shoelace aliases `navigation-button--previous` /
-`navigation-button--next`, and Lyra aliases `previous-button` / `next-button` plus
-`previous-glyph` / `next-glyph`; `pagination indicators`, `pagination-item indicator`, active
-aliases `pagination-item-active` / `pagination-item--active`, and `indicator-dot`. `track` and
+`navigation-button--next`, plus `previous-glyph` / `next-glyph`; `pagination`, `pagination-item`,
+active aliases `pagination-item-active` / `pagination-item--active`, and `indicator-dot`. `track` and
 `controls` are Lyra extensions.
 
 **Themeable custom properties:** mapped `--aspect-ratio` (default `16/9`), `--scroll-hint`
@@ -620,8 +656,12 @@ brand/active-mix rendering when unset.
 
 ```html
 <lr-carousel navigation pagination aria-label="Screenshots">
-  <lr-carousel-item><img alt="Dashboard overview" src="overview.png"></lr-carousel-item>
-  <lr-carousel-item><img alt="Dashboard details" src="details.png"></lr-carousel-item>
+  <lr-carousel-item
+    ><img alt="Dashboard overview" src="overview.png"
+  /></lr-carousel-item>
+  <lr-carousel-item
+    ><img alt="Dashboard details" src="details.png"
+  /></lr-carousel-item>
 </lr-carousel>
 ```
 
@@ -676,6 +716,7 @@ Responsive semantic grouping primitive for related action controls. It preserves
 controls and exposes `role="group"` on its internal wrapper.
 
 **Properties:**
+
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected)
 - `label: string = ''` — accessible group-name fallback; a host `aria-label`, when present, wins
   including an explicitly empty value
@@ -688,7 +729,7 @@ container inline-size).
 **Themeable custom properties:** `--lr-button-group-gap` (default `var(--lr-space-2xs)`) — gap
 between slotted controls on both axes.
 
-**Sizing gotcha — give it an explicit width.** `:host` is `display: inline-flex` *and* declares
+**Sizing gotcha — give it an explicit width.** `:host` is `display: inline-flex` _and_ declares
 `container-type: inline-size` unconditionally (that is what makes the 20rem `@container` rule above
 fire at all). Inline-size containment means the box's own content can no longer contribute to its
 width, so in any context where the host would otherwise be shrink-to-fit — plain block flow, an
@@ -708,11 +749,11 @@ consumer's content, and the viewport is a native scroll container that works in 
 well as full-width layouts.
 
 **Properties:**
+
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected)
 - `controls: boolean = false` (reflected) — show previous/next controls
-- `hideScrollbar: boolean = false` (attribute `hide-scrollbar`, reflected) and
-  `withoutScrollbar: boolean = false` (attribute `without-scrollbar`, reflected) — retained Lyra
-  and upstream spellings of the same native-scrollbar opt-out; either one hides it
+- `withoutScrollbar: boolean = false` (attribute `without-scrollbar`, reflected) — hides the
+  native scrollbar while preserving scrolling
 - `withoutShadow: boolean = false` (attribute `without-shadow`, reflected) — suppresses both
   logical edge cues without changing native scrolling or the optional controls
 - `scrollStep: number = 0` (attribute `scroll-step`) — custom step; zero uses 80% of the viewport
@@ -730,7 +771,8 @@ for scroll-linked layout work.
 `control` (shared by `previous` and `next`), and `previous-glyph`/`next-glyph` (the chevron inside
 each, mirrored under RTL). Each shadow is hidden at its corresponding measured edge and uses
 logical positioning, so both cues and gradients mirror under RTL and rotate to the block axis in a
-vertical scroller.
+vertical scroller. Before the first client measurement, both cues are hidden and both optional
+controls are disabled, so server-rendered markup never advertises a false scroll direction.
 
 **Themeable custom properties:** `--lr-scroller-control-size` (default `var(--lr-size-2rem)`) — the
 previous/next control's box size; the interactive target never shrinks below `--lr-icon-button-size`
@@ -762,28 +804,28 @@ three fail silently: `<lr-tabs>` is an unknown element that renders its children
 change. The rename is what lets `<lr-tab>` and `<lr-tab-panel>` (below) exist as a family, which is
 what makes migrating from either upstream a pure tag rename.
 
-**Two child models are accepted**, and a group is read as one or the other — never a mix.
+**Canonical child model:** direct `<lr-tab panel="x">` + `<lr-tab-panel name="x">` pairs. This is
+the single shape shared with both upstreams, so markup renames mechanically. The pre-9.0
+`<div slot="x" label="…">` data/attribute model is removed; migrate each former child into one
+descriptor and one matching panel. An unpaired panel never creates a tab.
 
-*Element model* (`<lr-tab panel="x">` + `<lr-tab-panel name="x">`) mirrors both upstreams, so that
-markup renames mechanically. The group assigns the `slot` attributes itself; you never write them.
+The group assigns private projection `slot` values itself; consumers do not need to write them.
+Those writes are temporary ownership, not destructive normalization: when a descriptor or panel is
+removed, moved to another group, disconnected/reconnected, or adopted into another document, the
+group restores that element's latest author-owned `slot` value. An author write made while the group
+owns the projection is remembered and then reprojected until release.
+
 Each `<lr-tab>`'s content is projected into the real `role="tab"` button, so a tab can carry an icon
-or a badge while the button's accessible name stays exactly its accessibility-exposed flattened text.
-Direct default-slot element roots in that visual label become inert while projected, and regain their author-owned
-inert state when the tab is removed, reassigned, or the group disconnects; use text/glyph markup,
-not an independent action. Only accessibility-exposed default-slot text contributes: author
-`aria-hidden`, hidden, inert, and CSS-hidden branches are excluded, and direct-label text or
-visibility changes refresh the real button's name. A group containing any `<lr-tab>` child is read
-purely as this model. `active` on a tab/panel pair is an SSR hint: the group reads an initially
-active tab and then keeps both child attributes synchronized with its own `active` selection after
-hydration.
-
-*Attribute model* — this library's own original shape, fully supported: panels are direct light-DOM
-children carrying `slot="<id>"` (the panel's stable id) and `label="<text>"` (the tab button's text).
-One named `<slot>` is rendered per distinct `slot` name found among the current children; a child
-with no `label`, or a name with no matching child, simply never produces a tab.
+or badge while the button's accessible name stays exactly its accessibility-exposed flattened text.
+Direct default-slot element roots in that visual label become inert while projected and regain
+their latest author-owned inert state when released; use text/glyph markup, not an independent
+action. Author `aria-hidden`, hidden, inert, and CSS-hidden branches are excluded from the name, and
+direct-label text or visibility changes refresh it. `active` on a tab/panel pair is an SSR hint: the
+group reads an initially active tab and then keeps both child attributes synchronized with its own
+selection after hydration.
 
 Implements the WAI-ARIA APG tabs pattern. With the default `activation="auto"`, Left/Right (swapped
-under RTL, or Up/Down when `placement` is `start`/`end`) move focus *and* selection together; with
+under RTL, or Up/Down when `placement` is `start`/`end`) move focus _and_ selection together; with
 `activation="manual"` they move focus only and Enter/Space commits. Home/End jump to the first/last
 enabled tab, and a roving `tabindex` follows the focused tab.
 Keyboard handling starts from the real event-target tab (then actual shadow focus), so a controlled
@@ -792,30 +834,22 @@ An enabled `closable` `<lr-tab>` also puts `aria-keyshortcuts="Delete"` on its r
 Delete emits that descriptor's `lr-close` request without creating a second tab stop or changing
 selection.
 
-A tab button's *visible* content can carry a leading icon without ever changing its *accessible
-name* (always exactly `label`'s text): give a tab an extra direct-child sibling of `<lr-tab-group>`
-carrying `slot="<id>-icon"` (that sibling's own content — inline SVG, emoji span, a custom icon
-element, anything — is entirely up to the consumer). It renders ahead of the label inside that tab's
-button, wrapped in an `aria-hidden="true"` `[part="tab-icon"]`; the assigned source is inert
-while projected and restores its author-owned inert state when reassigned or disconnected. A tab
-with no matching `<id>-icon` sibling renders no icon wrapper at all, so existing text-only tabs are
-unaffected.
-
 **Properties:**
-- `active: string = ''` (reflected) — the active tab's `slot`/id; falls back to the first enabled
+
+- `active: string = ''` (reflected) — the active tab's panel name; falls back to the first enabled
   tab whenever the current value doesn't resolve to one (including on every children/attribute
   change, tracked via a `MutationObserver`)
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
   `role="tablist"` strip; attribute-reflects from a host-level `aria-label`. `null` omits the
   attribute; an explicitly empty value is preserved (there is no localized default name).
 - `placement: 'top' | 'bottom' | 'start' | 'end' = 'top'` (attribute `placement`, reflected) — which
-  edge the strip sits on. `start`/`end` are *logical*, so they mirror under RTL with no `:dir()`
+  edge the strip sits on. `start`/`end` are _logical_, so they mirror under RTL with no `:dir()`
   rule of your own; either turns the tablist vertical, which sets `aria-orientation="vertical"` and
   switches the navigation keys to Up/Down per the APG.
 - `activation: 'auto' | 'manual' = 'auto'` (reflected) — `auto` moves selection with focus; `manual`
   moves focus only and waits for Enter or Space. Use `manual` whenever revealing a panel is
   expensive: automatic activation would reveal every panel the user arrows past. Under `manual` the
-  roving `tabindex="0"` sits on the *focused* tab, which may differ from the selected one.
+  roving `tabindex="0"` sits on the _focused_ tab, which may differ from the selected one.
 - `withoutScrollControls: boolean = false` (reflected, attribute `without-scroll-controls`) and
   `noScrollControls: boolean = false` (reflected, attribute `no-scroll-controls`) — the same opt-out
   under Web Awesome's spelling and Shoelace's. Both are read, either one suppresses the overflow
@@ -823,16 +857,10 @@ unaffected.
   upstream finds their own attribute working. Left unset, an overflowing horizontal strip gets the
   controls.
 - `fixedScrollControls: boolean = false` (reflected, attribute `fixed-scroll-controls`) —
-  `sl-tab-group` parity flag, accepted and reflected but **inert**. Upstream it means "prevent the
-  scroll buttons from being hidden when *inactive*": Shoelace tracks scroll position and hides an
-  individual control once that direction has nothing left to scroll to, and this flag opts out of
-  that per-edge hiding. It never makes controls appear on a row that fits — that stays gated on the
-  overflow measurement in both libraries. Lyra implements no per-edge hiding at all: both controls
-  stay present for the whole overflowing range, which is exactly upstream's
-  `fixed-scroll-controls="true"` rendering, so setting the flag changes nothing. It exists so a
-  mechanical `sl-` → `lr-` rename does not drop an attribute. **Corrected in 9.0.0:** the previous
-  wording implied Shoelace's flag governed whether controls appear at all; it governs only
-  hide-when-inactive.
+  keeps both controls laid out across an overflowing range. Without it, the start control is hidden
+  at the logical start and the end control is hidden at the logical end; an exhausted control is a
+  no-op in either mode. The flag never makes controls appear on a row that fits, which remains gated
+  on real overflow.
 - `defaultSlot: HTMLSlotElement` (property only) — the real unnamed shadow slot expected by mapped
   integrations. Lyra exposes it for slot observation but keeps it hidden because every accepted
   tab and panel is projected through a deterministic named slot.
@@ -841,17 +869,20 @@ unaffected.
 `lr-tab-hide` then `lr-tab-show` sequence as pointer/keyboard selection. Unknown, disabled, and
 already-active names are no-ops.
 
-**Overflow and scrolling.** The tablist is a native scroll container (`overflow-x: auto`) — there is
-no scroll listener and no scroll-position state anywhere in this component. A horizontal row that
-does not fit additionally gets **two scroll-control buttons flanking it inside `[part="nav"]`**,
-mirroring both upstreams, plus a fade at each edge. Both affordances are gated on the same
-measurement of the tablist's real overflow, so a row that fits is never flanked by two dead buttons
-and never dimmed. The controls are rendered only for a horizontal `placement`: a `start`/`end` strip
-scrolls in the block direction, which these controls do not address (the same restriction both
-upstreams apply), and the edge fade is switched off there too because it measures the inline axis.
-One press travels 80% of the visible row — short of a full viewport on purpose, so something that
-was on screen before the press is still on screen after it — smoothly, or instantly under
-`prefers-reduced-motion`. Under RTL the whole row mirrors and the step direction inverts with it.
+**Overflow and scrolling.** The tablist is a native scroll container (`overflow-x: auto`). A
+horizontal row that does not fit additionally gets two pointer scroll controls flanking it inside
+`[part="nav"]`. Logical edge state drives both controls and the mask: at the initial edge only the
+inline-end fade/control appears, in the middle both appear, and at the final edge only inline-start
+appears. Native scroll plus a `ResizeObserver` on the strip and its rendered tabs refresh that state,
+so intrinsic label/font geometry changes cannot leave stale controls. The same contract works under
+RTL, and forced-colors mode removes the alpha mask entirely instead of obscuring text. A row that
+fits gets neither affordance.
+
+Controls are rendered only for horizontal placement. A `start`/`end` strip scrolls natively in the
+block direction, and in a fixed block allocation the vertical nav, tablist, and panel body stay
+within the group: the tablist and body become their own scroll containers rather than expanding the
+host. One horizontal control press travels 80% of the visible row smoothly, or instantly under
+`prefers-reduced-motion`; under RTL the physical delta mirrors.
 
 The controls are `aria-hidden="true"` and `tabindex="-1"`: a pointer affordance only, matching
 upstream. The strip is already fully keyboard-scrollable without them — the roving `tabindex` puts
@@ -861,20 +892,17 @@ is there for automation and for a consumer that chooses to expose them. Pressing
 focus off the tab the user was on.
 
 **Events:**
-- `lr-tab-show` (`detail: { name: string, tabId: string }`) — a tab became active via click,
-  keyboard, or `show()`. `name` is the upstream spelling and `tabId` is Lyra's retained alias; both
-  contain the same panel name. Not fired
+
+- `lr-tab-show` (`detail: { name: string }`) — a tab became active via click, keyboard, or `show()`.
+  Not fired
   when `active` self-corrects to a valid tab (initial default, or a tab disappearing/becoming
   disabled underneath the current selection).
-- `lr-tab-hide` (`detail: { name: string, tabId: string }`) — the outgoing tab, emitted immediately *before* the
+- `lr-tab-hide` (`detail: { name: string }`) — the outgoing tab, emitted immediately _before_ the
   matching `lr-tab-show`, so a listener that tears down the old panel always runs before the one
   that builds the new one. Not fired when there was no previous selection.
 
-**Slots:** default — either `<lr-tab>`/`<lr-tab-panel>` pairs, or direct children with
-`slot="<id>" label="<text>"` (and optionally `disabled`), one becoming each tab's panel. `<id>-icon`
-— optional inert sibling direct child supplying a tab's leading icon content, in the attribute model
-only; excluded from the tab button's accessible name. `nav` is the upstream-compatible projection
-slot used by `<lr-tab>` descriptors before the hydrated group assigns its per-tab internal slot.
+**Slots:** default — canonical `<lr-tab>`/`<lr-tab-panel>` pairs. `nav` is the upstream-compatible
+projection slot a standalone `<lr-tab>` uses before a hydrated group assigns its private slot.
 
 ```html
 <!-- element model: renames straight across from wa-/sl- -->
@@ -895,15 +923,12 @@ both overflow controls), `scroll-button-start`/`scroll-button--start` and
 `scroll-button-end`/`scroll-button--end` (aliases on the individual
 controls that scroll the tabs toward their inline start and end — under RTL "start" is the
 right-hand one), `scroll-button-glyph` (the chevron wrapper inside a control; this wrapper is what
-mirrors under RTL, never the icon), `tab` (a single tab button), `tab-icon` (the optional
-`aria-hidden` leading-icon wrapper around its inert assigned source inside a tab button; only
-rendered when that tab has a matching
-`<id>-icon` sibling), `active-tab-indicator` (the selected tab's directional indicator), and `panel`
+mirrors under RTL, never the icon), `tab` (a single tab button), `active-tab-indicator` (the selected
+tab's directional indicator), and `panel`
 (a single `role="tabpanel"` wrapper, one per tab, hidden unless active).
 The two controls exist in the DOM whenever the group can have them at all (horizontal `placement`,
-no opt-out) and are taken out of layout while the tablist is not overflowing — the qualifier that
-hides them is wrapped in `:where()`, so a consumer's own `::part(scroll-button)` rule outranks it
-without `!important`.
+no opt-out). Non-overflow and inactive-edge qualifiers are wrapped in `:where()`, so a consumer's
+own `::part(scroll-button)` rule can override presentation without `!important`.
 
 **Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade
 at each inline scroll edge of the tablist, painted only while the tablist actually overflows and
@@ -914,7 +939,7 @@ so it never repaints a hovered unselected tab. `--lr-tab-group-indicator-color` 
 color (an underline on a `top`/`bottom` strip, an inline edge on a vertical one).
 `--lr-tab-group-hover-color` (default `var(--lr-color-text)`) — text color of a hovered, non-disabled
 tab, independent of the two selected-state hooks. All three are declared as inline `var()` fallbacks
-at the point of use rather than on `:host`, so each can be set on the element *or on any ancestor* —
+at the point of use rather than on `:host`, so each can be set on the element _or on any ancestor_ —
 the pattern exists because `::part(tab)[aria-selected='true']` is invalid CSS (Shadow Parts forbids
 an attribute selector after `::part()`), which previously left overriding the library-wide
 `--lr-color-brand`/`--lr-color-text` tokens as the only way to restyle a selected or hovered tab,
@@ -947,17 +972,20 @@ Otherwise shared tokens — `--lr-space-xs/-s/-m`,
 
 ```html
 <lr-tab-group active="general">
-  <div slot="general" label="General">General settings…</div>
-  <div slot="advanced" label="Advanced" disabled>Advanced settings…</div>
+  <lr-tab panel="general">General</lr-tab>
+  <lr-tab panel="advanced" disabled>Advanced</lr-tab>
+  <lr-tab-panel name="general">General settings…</lr-tab-panel>
+  <lr-tab-panel name="advanced">Advanced settings…</lr-tab-panel>
 </lr-tab-group>
 <script type="module">
-  const group = document.querySelector('lr-tab-group');
-  group.addEventListener('lr-tab-show', (e) => console.log(e.detail.name, e.detail.tabId));
-  group.show('general');
+  const group = document.querySelector("lr-tab-group");
+  group.addEventListener("lr-tab-show", (e) => console.log(e.detail.name));
+  group.show("general");
 </script>
 ```
 
 **Known gotchas:**
+
 - **`inert` on a child excludes its tab from arrow-key navigation, exactly as `disabled` does.** An
   inert element refuses focus outright, so a roving `tabindex` that stepped onto one would leave
   `focus()` a silent no-op and strand the arrow key with focus back on `<body>`. The tab button
@@ -969,17 +997,16 @@ Otherwise shared tokens — `--lr-space-xs/-s/-m`,
 - Tabs are rebuilt from direct children via a `MutationObserver` — not `slotchange` — because a
   brand-new tab's `slot` name has no matching `<slot>` to fire `slotchange` on until this component
   has already rendered one for it, and neither `slotchange` nor any Lit lifecycle hook observes a
-  plain attribute edit on a light-DOM child at all. Text/content and relevant accessibility/visibility
-  mutations below a direct `<lr-tab>` refresh that button's flattened name; arbitrary nested
-  mutations inside attribute-model panels remain ignored.
-- If two children share the same `slot` name, the *first* one wins for the tab button's label
-  (matches native slot assignment: both would render into the one panel, but only one label can back
-  the button).
+  plain attribute edit on a light-DOM child at all. Text/content and relevant
+  accessibility/visibility mutations below a direct `<lr-tab>` refresh that button's flattened
+  name; arbitrary nested mutations inside panels remain ignored.
+- If two `<lr-tab>` descriptors share the same panel name, the first wins. A second matching panel
+  is likewise ignored for projection, keeping selection, focus, events, and ARIA idrefs unambiguous.
 - The navigation keys follow `placement`, not the writing mode: a `top`/`bottom` strip uses
   Left/Right (swapped under RTL via `internal/rtl.ts`'s `isRtl()`), and a `start`/`end` strip uses
   Up/Down with no RTL swap, because block flow does not reverse. Only one pair is live at a time —
   there is no set of keys that works for both placements.
-- The two overflow controls are `aria-hidden`, so an automated check that looks for a *focusable*
+- The two overflow controls are `aria-hidden`, so an automated check that looks for a _focusable_
   "scroll tabs" button will not find one. Assert on `[part~="scroll-button"]` (and on the tablist's
   `scrollLeft` moving) instead.
 
@@ -987,21 +1014,28 @@ Otherwise shared tokens — `--lr-space-xs/-s/-m`,
 
 ## `lr-stepper`
 
-Ordered multi-step wizard/form navigation: an index/label per step, `current`/`completed`/`disabled`/
-`error` state, and click-to-jump. First-party invention (no `wa-*`/`sl-*` counterpart). Fully
+Ordered multi-step wizard/form navigation: an index/label per step, independent
+`pending`/`current`/`completed`/`error` progress plus disabled availability, and click-to-jump.
+First-party invention (no `wa-*`/`sl-*` counterpart). Fully
 data-driven and controlled, like `lr-table`'s `columns`/`rows` — it never mutates `steps` itself; a
 click, or Enter/Space on a non-disabled step, fires a non-cancelable `lr-step-select`, and the host
 decides whether/how `steps` changes in response.
 
 **Properties:**
-- `steps: StepItem[] = []` (attribute: false) — `StepItem { id: string; label: string; state:
-  'pending' | 'current' | 'completed' | 'disabled' | 'error'; title?: string; icon?: unknown }`;
+
+- `steps: readonly LyraStepItem[] = []` (attribute: false) — `LyraStepItem { id: string; label:
+string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown }`, where
+  `LyraStepState` is `'pending' | 'current' | 'completed' | 'error'`. `disabled` independently gates
+  activation and roving focus, so locking a current/completed/error step does not erase its progress.
   `title` is an optional native tooltip for the step's button (e.g. explaining why a `disabled` step
   is locked) — omit it for no `title` attribute at all, not an empty string. `icon` is an optional
   leading topic glyph (a `TemplateResult`, an emoji string, etc. — not restricted to a square icon)
   rendered as inert, `aria-hidden` decoration in the `step-icon` part, additionally to — never
   instead of — the state-driven `step-index`/`step-check` glyph. It provides no independent action
-  or accessible name. Never mutated by this component. Empty (the default) renders nothing.
+  or accessible name. Input is read through a realm-neutral bounded schema snapshot (at most 256
+  positions); malformed/hostile entries are skipped while valid neighbors survive, and the frozen
+  returned array/records never alias caller-owned objects. Duplicate ids are supported as ordered
+  occurrences because selection detail always includes `index`. Empty (the default) renders nothing.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — `'horizontal'` (the default)
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
   navigate instead, no RTL swap needed). The axis used at/above `orientationBreakpoint` (or always,
@@ -1018,7 +1052,7 @@ decides whether/how `steps` changes in response.
   behaves exactly as unset (no observation, no `data-effective-orientation`): `''`, `'auto'`,
   garbage, a non-finite number, and deliberately `%`, `vw`/`vh` and `calc()` — a viewport-relative
   threshold would mix reference boxes against a measurement of the element's own allocation. Mirrors
-  `<lr-split>`'s identically-named contract, unit handling included.
+  `<lr-multi-split>`'s identically-named contract, unit handling included.
 - `orientationBreakpointBasis: 'container'|'viewport' = 'container'` (reflected, attribute
   `orientation-breakpoint-basis`) — which box `orientationBreakpoint` is compared against. Unset,
   behavior is identical to before this property existed. `'container'` measures the stepper's own
@@ -1027,8 +1061,8 @@ decides whether/how `steps` changes in response.
   (`<=`) per native `max-width` semantics. **A stepper given a fixed width in a row layout cannot
   react to that row stacking by measuring itself — its own width never changes — so that case
   requires `'viewport'`.** Relative units also differ by basis: inside a media query they resolve
-  against the browser's *initial* font size, ignoring `html { font-size }`, which is precisely why
-  `'viewport'` matches a CSS `@media` rule authored with the same length. Mirrors `<lr-split>`'s
+  against the browser's _initial_ font size, ignoring `html { font-size }`, which is precisely why
+  `'viewport'` matches a CSS `@media` rule authored with the same length. Mirrors `<lr-multi-split>`'s
   identically-named contract.
 - `narrowOrientation: 'horizontal' | 'vertical' = 'vertical'` (reflected, attribute
   `narrow-orientation`)
@@ -1042,7 +1076,8 @@ decides whether/how `steps` changes in response.
   `orientationBreakpoint` resolves to a usable length).
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
   `role="list"` step strip; attribute-reflects from a host-level `aria-label`. Unset, the list
-  renders without an `aria-label` (there is no localized default name).
+  renders without an `aria-label` (there is no localized default name); an explicitly empty
+  attribute remains empty rather than being treated as absent.
 
 **Events:** `lr-step-select` (`detail: { index, id }`) — fired on click, or Enter/Space while
 focused, on a non-`disabled` step. It is non-cancelable because the component takes no default
@@ -1080,7 +1115,9 @@ scoped to its own `data-state`, so recoloring the current step leaves `pending`/
 steps alone. The hooks exist because `::part(step)[data-state='current']` is invalid CSS — Shadow
 Parts forbids an attribute selector after `::part()` — so state-specific theming previously meant
 overriding a library-wide `--lr-color-*` token and repainting everything else that read it. Unset,
-each falls back to the token its rule used before. Otherwise shared tokens —
+each falls back to the token its rule used before.
+`--lr-scroll-fade-size` (default `2rem`) controls the decorative horizontal overflow fade, which is
+disabled under forced-colors while the native scroll owner remains available. Otherwise shared tokens —
 `--lr-space-m`/`-xs`/`-2xs`,
 `--lr-color-text-quiet`/`-text`/`-danger`/`-brand`/`-on-brand`, `--lr-radius`/`-pill`,
 `--lr-font-size-xs`, `--lr-font-weight-semibold`, `--lr-opacity-disabled`,
@@ -1091,24 +1128,27 @@ each falls back to the token its rule used before. Otherwise shared tokens —
 ```html
 <lr-stepper></lr-stepper>
 <script type="module">
-  const stepper = document.querySelector('lr-stepper');
+  const stepper = document.querySelector("lr-stepper");
   stepper.steps = [
-    { id: 'account', label: 'Account', state: 'completed' },
-    { id: 'billing', label: 'Billing', state: 'current' },
-    { id: 'review', label: 'Review', state: 'pending' },
+    { id: "account", label: "Account", state: "completed" },
+    { id: "billing", label: "Billing", state: "current" },
+    { id: "review", label: "Review", state: "pending" },
   ];
-  stepper.addEventListener('lr-step-select', (e) => console.log(e.detail.index, e.detail.id));
+  stepper.addEventListener("lr-step-select", (e) =>
+    console.log(e.detail.index, e.detail.id)
+  );
 </script>
 ```
 
 **Known gotchas:**
+
 - `orientationBreakpointBasis='container'` (the default) observes **the stepper's own allocated
   inline size**, so it fits a stepper that is the sole flex/grid item in its measured container. In
   a row where the stepper is a fixed-width sidebar beside another element, its own width never
   changes with the viewport at all, so no container breakpoint can react to that row stacking via a
   CSS `@media` rule. Use `orientationBreakpointBasis='viewport'` for that layout — give the stepper
   and its sibling the same `orientation-breakpoint` and both flip in lockstep with the CSS rule. See
-  `<lr-split>`'s own note above for the full explanation of why a shared row can't be inferred from
+  `<lr-multi-split>`'s own note above for the full explanation of why a shared row can't be inferred from
   one element's measurement, and for a worked example.
 - there's no built-in "step forward/back" method — advancing the wizard is entirely the host's job:
   react to `lr-step-select` (or its own Next/Back buttons) and reassign `steps` with updated
@@ -1118,8 +1158,6 @@ each falls back to the token its rule used before. Otherwise shared tokens —
   navigation remain available independently of those semantics.
 - Left/Right (horizontal) and Up/Down (vertical) are mutually exclusive per `orientation` — there's
   no single set of keys that works in both.
-
-
 
 ---
 
@@ -1155,7 +1193,7 @@ group's `tab` part for the real interactive tab button.
 this tab is projected into lives in `<lr-tab-group>`'s shadow root, so it inherits
 `--lr-tab-group-selected-color`, `--lr-tab-group-indicator-color` and `--lr-tab-group-hover-color`
 from the group host or an ancestor of it. Declaring one on the `<lr-tab>` itself does nothing: this
-element is *inside* that button in the flattened tree, and inheritance only runs the other way.
+element is _inside_ that button in the flattened tree, and inheritance only runs the other way.
 
 Before group hydration, an unassigned tab places itself in the public `nav` slot. The group then
 writes its internal per-tab `slot` attribute itself. A tab with no `panel` still gets a stable
@@ -1180,8 +1218,8 @@ press Delete, advertised through `aria-keyshortcuts`. Remove the corresponding `
 ```
 
 ```js
-const group = document.querySelector('#documents');
-group.addEventListener('lr-close', (event) => {
+const group = document.querySelector("#documents");
+group.addEventListener("lr-close", (event) => {
   const tab = event.target;
   const name = tab.panel;
   tab.remove();
@@ -1205,6 +1243,7 @@ it; `active: boolean = false` (reflected) — SSR visibility hint, synchronized 
 after hydration. **Events:** none. **Slots:** default (the panel's content). **CSS parts:** `base`
 (the content wrapper); the owning group also exposes its outer `panel` wrapper. **Themeable custom
 properties:** `--padding` (default `0`) — inner padding on the panel's own `base` wrapper.
+
 ---
 
 ---
@@ -1216,6 +1255,7 @@ inline-flex row and centers children with different intrinsic heights. Use it fo
 toolbars that combine segmented controls, selects, buttons, and other interactive elements.
 
 **Properties:**
+
 - `label: string = ''` — accessible-name fallback for the internal `role="group"`; a host
   `aria-label`, when present, wins including an explicitly empty value.
 - `responsive: boolean = false` (reflected) — opts into a `@container` narrow-allocation breakpoint
@@ -1242,6 +1282,7 @@ between grouped controls; shared spacing and layout tokens apply as well.
 ```
 
 **Known gotchas:**
+
 - This is a layout and semantics primitive; it does not coordinate child values or emit a group
   change event.
 - Children wrap according to the group's own allocated inline size, not the viewport width.
@@ -1267,16 +1308,21 @@ the move open (mirroring `lr-confirm-bar`'s cancelable approve/deny pattern) unt
 ### `lr-reorder-list`
 
 **Properties:**
+
 - `label: string = ''` — accessible name for the internal `role="list"`; when empty, a host
   `aria-label` is forwarded as a fallback.
 - `disabled: boolean = false` (reflected) — disables every item's move buttons and the Ctrl/Cmd+
   Arrow shortcut, without mutating any item's own `disabled` attribute.
 
-**Events:** `lr-reorder` (`detail: { order: string[], fromIndex: number, toIndex: number }`,
-cancelable — fired before a move is applied; `order` is every item's `value` (or its
-DOM-position-index fallback) in the order the move WOULD produce. Uncanceled, the move applies
-synchronously right after. `preventDefault()` holds the move instead: the affected item reflects
-`pending`, and no other move can start until the host resolves it — see **Methods** below.
+**Events:** `lr-reorder`
+(`detail: LyraReorderDetail { readonly order: readonly string[], readonly fromIndex: number,
+readonly toIndex: number }`, cancelable) — fired before a move is applied; `order` is an immutable
+snapshot of every valid item's stable `value` in the order the move WOULD produce. Uncanceled, the
+move applies synchronously only if the exact mover, target, membership, order, identities, and
+availability remain valid after dispatch. `preventDefault()` holds the move instead: the internal
+list exposes `aria-busy="true"`, every move action is disabled, the affected item exposes
+`:state(pending)`, and no other move can start until the host resolves it — see **Methods** below.
+Synchronous finalize/revert calls from the canceling listener are supported.
 
 **Methods:** `finalizePendingMove()` — applies a move held via `preventDefault()`.
 `revertPendingMove()` — discards a held move, restoring the prior order. Both no-op when nothing
@@ -1298,9 +1344,13 @@ between rows.
 ```
 
 **Known gotchas:**
-- Boundary-disabled state (`atStart`/`atEnd`) and the `listDisabled` cascade are computed and
-  pushed onto each `<lr-reorder-item>` by this list, on every slot change and every move — an item
-  alone can't know its own position.
+
+- Boundary-disabled state (`atStart`/`atEnd`), `listDisabled`, and `pending` are readonly effective
+  state computed by the owning list and exposed through item custom states.
+- Every item requires a unique, nonempty stable `value`. Missing, whitespace-only, and later
+  duplicate identities remain visible but their move actions are unavailable until corrected.
+- Ctrl/Cmd+Arrow is consumed only for a valid owned move. A boundary/no-op gesture or one from a
+  nested input, select, link, button, editable region, or custom control retains its native action.
 - No pointer drag-and-drop; move-up/move-down buttons and the keyboard shortcut only.
 
 ---
@@ -1308,16 +1358,17 @@ between rows.
 ### `lr-reorder-item`
 
 **Properties:**
-- `value?: string` — stable identifier included in the parent's `lr-reorder` order array; falls
-  back to this item's live DOM-position index when unset.
+
+- `value: string = ''` — required unique, nonempty stable identifier included in the parent's
+  `lr-reorder` order array.
+- `accessibleLabel?: string` (attribute `accessible-label`) — explicit row identity appended to
+  each repeated move action's accessible name; otherwise the item derives a bounded accessible
+  text projection from its row content.
 - `disabled: boolean = false` (reflected) — disables this row's own move buttons only; does not
   hide its slotted content.
-- `atStart: boolean = false`, `atEnd: boolean = false`, `listDisabled: boolean = false`
-  (attribute: false) — pushed down by the parent `<lr-reorder-list>`; normally set internally, not
-  by consumers.
-- `pending: boolean = false` (reflected) — set while this item's move is held via the parent's
-  `lr-reorder` `preventDefault()`. Informational only (doesn't itself disable the item's buttons);
-  style via `lr-reorder-item[pending]`. Pushed down by the parent; normally set internally.
+- `atStart: boolean`, `atEnd: boolean`, `listDisabled: boolean`, `pending: boolean` (readonly) —
+  effective owner state. Corresponding custom states include `:state(at-start)`, `:state(at-end)`,
+  `:state(list-disabled)`, `:state(pending)`, and `:state(busy)`.
 
 **Events:** `lr-move-request` (`detail: { direction: 'up' | 'down' }` — a move button was activated
 while not disabled; handled by the parent `<lr-reorder-list>`, which performs the actual move)
@@ -1349,10 +1400,14 @@ Navigation starts from the segment that actually received the keyboard event, ev
 controlled `value` write changed the selected or remembered roving item first.
 
 **Properties:**
-- `items: SegmentedItem[] = []` (attribute: false) — `SegmentedItem { value: string; label: string;
-  icon?: unknown; disabled?: boolean }`; `icon` renders as an inert, `aria-hidden` decorative leading
+
+- `items: readonly LyraSegmentedItem[] = []` (attribute: false) — `LyraSegmentedItem { value:
+string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as an inert,
+  `aria-hidden` decorative leading
   visual inside `segment-icon`. It does not replace the required text label or provide an independent
-  action or accessible name.
+  action or accessible name. Input is read through a realm-neutral bounded schema snapshot (at most
+  256 positions); malformed/hostile entries are skipped, later duplicate values use
+  first-valid-value-wins, and the frozen returned array/records never alias caller-owned objects.
 - `value: string = ''` — the currently selected item's `value`.
 - `label: string = ''` — accessible-name fallback copied to the internal `role="radiogroup"`. A
   host-level `aria-label` wins by attribute presence, including an explicitly empty value.
@@ -1369,6 +1424,7 @@ controlled `value` write changed the selected or remembered roving item first.
 keyboard.
 
 **Methods:**
+
 - `scrollToValue(value: string): void` — scroll the segment with the given `value` into view within
   the (possibly overflowing) track, without changing the selection. Honors
   `prefers-reduced-motion` (falls back to `behavior: 'auto'`). This runs automatically when `value`
@@ -1383,7 +1439,8 @@ segment's label text).
 
 **Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade
 at each horizontal scroll edge of the track, painted only while the track actually overflows (a row
-that fits is never dimmed). `--lr-segmented-track-min-height` (default
+that fits is never dimmed). Forced-colors mode removes the decorative mask while preserving the
+native horizontal scroll owner. `--lr-segmented-track-min-height` (default
 `var(--lr-form-control-height)`), `--lr-segmented-segment-padding` (default
 `var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`), and
 `--lr-segmented-font-size` (default `var(--lr-form-control-font-size)`) are the three knobs the
@@ -1399,7 +1456,7 @@ exact-height hatch only works as an undeclared sentinel, because `auto` is itsel
 would always win and would silently turn every tier's `--lr-segmented-track-min-height` floor into
 dead code. While it is unset, each tier keeps its own floor and the track grows with its content.
 The floor at the two compact tiers is the ladder's own (20px at `2xs`, 24px at `xs`), but every
-`2xs`/`xs` *segment* separately carries a 24×24px minimum box, so the tappable target holds even
+`2xs`/`xs` _segment_ separately carries a 24×24px minimum box, so the tappable target holds even
 when a label is a single character and the track ends up taller than its nominal floor.
 
 `--lr-segmented-selected-bg` (default `var(--lr-color-surface)`), `--lr-segmented-selected-color`
@@ -1410,8 +1467,8 @@ thumb lifted a hair off its own track) style the checked segment's pill;
 `--lr-segmented-hover-color` (default `var(--lr-color-text)`) styles a hovered segment that is
 neither checked nor disabled, independently of the four above — so recoloring the checked pill never
 bleeds onto hover. These five existing state hooks are inline `var()` fallbacks at the
-point of use rather than `:host` declarations, so each can be set on the element *or on any
-ancestor*; unset, each falls back to the token its rule used before. They exist because
+point of use rather than `:host` declarations, so each can be set on the element _or on any
+ancestor_; unset, each falls back to the token its rule used before. They exist because
 `::part(segment)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
 after `::part()` — which previously left hijacking the library-wide
 `--lr-color-surface`/`--lr-color-text` tokens as the only way to restyle a selected segment,
@@ -1434,18 +1491,19 @@ resolves.
 ```html
 <lr-segmented></lr-segmented>
 <script type="module">
-  const seg = document.querySelector('lr-segmented');
+  const seg = document.querySelector("lr-segmented");
   seg.items = [
-    { value: 'day', label: 'Day', icon: '☀' },
-    { value: 'week', label: 'Week', icon: '▦' },
-    { value: 'month', label: 'Month' },
+    { value: "day", label: "Day", icon: "☀" },
+    { value: "week", label: "Week", icon: "▦" },
+    { value: "month", label: "Month" },
   ];
-  seg.value = 'week';
-  seg.addEventListener('lr-change', (e) => console.log(e.detail.value));
+  seg.value = "week";
+  seg.addEventListener("lr-change", (e) => console.log(e.detail.value));
 </script>
 ```
 
 **Known gotchas:**
+
 - arrow-key navigation cycles (past the last non-disabled item wraps to the first, and vice versa)
   rather than clamping at the first/last item, unlike `lr-stepper`'s clamped Left/Right.
 - this component self-selects on navigation: clicking or arrow-navigating to an item immediately
@@ -1466,7 +1524,7 @@ resolves.
 ## `lr-virtual-list`
 
 A generic windowed/virtualized list host. Renders only the items within the current viewport (plus
-`overscan` padding rows on each side) as real DOM, regardless of how large `items` is, so a
+`overscan` padding rows on each side) as real DOM, regardless of how large its source is, so a
 multi-thousand-row chat-history sidebar (or a long message thread) stays cheap to scroll. Content is
 entirely caller-supplied: `renderItem(item, index)` returns whatever `lit-html` value should represent
 that row, and `keyFunction(item, index)` gives it a stable identity for DOM reconciliation. First-party
@@ -1479,8 +1537,18 @@ viewport; an ordinary browser-only mount retains the established empty-until-mea
 contract.
 
 **Properties:**
+
 - `items: unknown[] = []` (attribute: false) — the full, non-windowed item collection. JS-only; set via
-  a property/lit-html binding (`.items=`), not an HTML attribute.
+  a property/lit-html binding (`.items=`), not an HTML attribute. This remains the compatibility
+  source whenever `source` is unset.
+- `source?: VirtualListSource` (attribute: false) — a readonly array or a count/index-backed
+  `{ readonly count: number; itemAt(index): unknown; keyAt?(index): string | number;
+indexOfKey?(key): number }`. When set it takes precedence over `items`. The indexed form performs
+  bounded random access for only the rendered window instead of allocating `0…count`; invalid counts
+  normalize to zero. Prefer a stable object identity and stable `keyAt`/`indexOfKey` implementations
+  for synthetic, paged, or remote collections. `indexOfKey` is required when `active-id` should
+  target an indexed source: the list never performs a count-sized fallback scan; invalid or
+  out-of-range results mean no match.
 - `renderItem: (item: unknown, index: number) => unknown = () => nothing` (attribute: false) — renders
   one row's content, typically returning a `lit-html` `TemplateResult`. JS-only.
 
@@ -1491,14 +1559,16 @@ intentionally preserve an unbroken row, set `white-space: nowrap` on the caller-
 list's `base` scroll container exposes horizontal scrolling for that explicit opt-out.
 
 - `keyFunction?: (item: unknown, index: number) => string | number` (attribute: false) — derives a
-  row's stable reconciliation key. JS-only. Falls back to the item's index in `items` when omitted,
-  which is only a safe identity while `items` never reorders/inserts/removes — provide this whenever
-  possible, or scroll position and per-row DOM state (e.g. an `<audio>` element's playback position)
-  can attach to the wrong row across a mutation.
+  row's stable reconciliation key. JS-only. Falls back to the effective source index when omitted,
+  which is only a safe identity while a collection never reorders/inserts/removes — provide this
+  whenever possible, or scroll position and per-row DOM state (e.g. an `<audio>` element's playback
+  position) can attach to the wrong row across a mutation.
 - `groups?: VirtualListGroup[]` (attribute: false) — renders a labeled marker at each group's
-  `startIndex`, positioned independently of the row window (so it stays in place as its rows scroll
-  past). Groups are sorted by `startIndex`; a `startIndex` that's non-integer, out of range, or a
-  duplicate of an earlier group's is silently dropped rather than rendered wrong. An entry whose
+  `startIndex` as a measured virtual entry immediately before that row. Its live block size
+  contributes to every following offset, so a variable-height or late-resizing marker never covers
+  the group's first row. Markers remain windowed with their rows. Groups are sorted by `startIndex`;
+  a `startIndex` that's non-integer, out of range, or a duplicate of an earlier group's is silently
+  dropped rather than rendered wrong. An entry whose
   `label` is the **empty string** renders no marker at all — it is a pure position anchor, for a host
   that renders its own group header as an ordinary row (and would otherwise end up with two stacked
   headers) but still needs this component to know where each group starts, e.g. to drive
@@ -1510,27 +1580,29 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   the rows or markers themselves cannot do this: every row is absolutely positioned and
   transform-offset by the windowing math, which makes sticky structurally inert. Unset (the default)
   renders no overlay element whatsoever and changes nothing about the list's output. The overlay is a
-  *visual copy* of content that already exists in the list, which fixes its contract:
-  - it is `aria-hidden`, and ordinary focusable HTML inside it is forced to `tabindex="-1"`, so the
-    real row keeps sole ownership of the heading semantics and of the tab order (a focus-delegating
-    custom element rendered into the copy needs its own `tabindex="-1"`; `inert` is deliberately not
-    used, because it would also block the pointer opt-in below);
-  - it is `pointer-events: none` by default — opt back in with
-    `lr-virtual-list::part(sticky-group) { pointer-events: auto; }` when the copied header content is
-    interactive;
+  _visual copy_ of content that already exists in the list, which fixes its contract:
+
+  - it is `aria-hidden` and `inert`, so the real row keeps sole ownership of heading semantics,
+    focus and activation. The component never traverses or rewrites callback-owned descendants,
+    including open custom-element shadow roots;
+  - it is pointer-transparent and deliberately cannot become a mouse-only action. Put interactive
+    group actions in the real row;
   - it is never measured as a row, so a group header that is also a real row is not double-counted in
     `row-height="auto"` mode;
   - its measured height is applied as `scroll-padding-block-start` on the scroll container and
     subtracted from top-aligned scroll targets, so `active-id`, `scrollToIndex({ align: 'start' })`
-    and native keyboard scrolling all stop *below* the band instead of parking the row behind it.
+    and native keyboard scrolling all stop _below_ the band instead of parking the row behind it.
 
   The callback runs on every scroll-driven update, so keep it cheap and side-effect free. While the
   viewport is above the first group there is nothing to pin: the band shows nothing, but it stays
   mounted (called with the first group, rendered hidden) so its height is known before the first
   programmatic jump rather than only after it.
-- `rowHeight: string = 'auto'` (attribute `row-height`) — `'auto'` measures each row's real height via
-  `ResizeObserver`; a numeric string (e.g. `"56"`) fixes every row to that many pixels. Anything else
-  (non-numeric, zero, negative, non-finite) silently falls back to `'auto'` rather than throwing.
+
+- `rowHeight: number | 'auto' = 'auto'` (attribute `row-height`) — `'auto'` measures each row's real
+  height via `ResizeObserver`; a numeric markup value (for example `row-height="56"`) parses to the
+  number `56` and fixes every row to that many pixels. Property callers assign a number, not a
+  numeric string. Anything else (non-numeric, zero, negative, non-finite) safely canonicalizes to
+  `'auto'` rather than throwing.
 - `itemRole: 'listitem' | 'row' = 'listitem'` (attribute `item-role`) — `'listitem'` (default)
   preserves the plain `role="list"`/`role="listitem"` mapping with `aria-setsize`/`aria-posinset`.
   `'row'` additionally maps `[part="base"]` to `role="rowgroup"`, `[part="spacer"]` to
@@ -1539,7 +1611,9 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   `lr-dataset-viewer`).
 - `rowIndexOffset: number = 0` (attribute `row-index-offset`) — added to a row's 1-based index to
   compute `aria-rowindex` in `item-role="row"` mode (e.g. `1` when a consumer renders its own header
-  row occupying `aria-rowindex="1"` outside this component). No effect in `'listitem'` mode.
+  row occupying `aria-rowindex="1"` outside this component). Negative and non-finite values become
+  zero, fractions are truncated, and the final positive ARIA integer saturates safely. No effect in
+  `'listitem'` mode.
 - `overscan: number = 6` — extra rows rendered beyond the visible viewport on each side; finite
   values are floored and clamped to 0–100, while non-finite values use the default 6, so an invalid
   runtime value cannot disable windowing and render the entire collection.
@@ -1548,43 +1622,50 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   assign the property directly for a numeric key), that row is smoothly scrolled into view whenever
   this changes, and rendered with `aria-current="true"`.
 - `loading: boolean = false` (reflected) — sets `aria-busy` on the scroll container and a `cursor:
-  progress` style, and gates `lr-load-more` while a consumer's fetch is in flight.
+progress` style, and gates `lr-load-more` while a consumer's fetch is in flight.
 - `hasMore: boolean = false` (attribute `has-more`, reflected) — when true, scrolling near the bottom
   fires `lr-load-more` (gated by `loading`).
 
-**Exported types:** `VirtualListRange { start: number; end: number }` (the `lr-visible-range-changed`
+**Exported types:** `VirtualListRowHeight = number | 'auto'`;
+`VirtualListSource<T> = readonly T[] | VirtualListIndexedSource<T>` and
+`VirtualListIndexedSource<T> { readonly count: number; itemAt(index): T; keyAt?(index): string |
+number; indexOfKey?(key: string | number): number }`; `VirtualListRange { start: number; end: number }` (the `lr-visible-range-changed`
 detail shape); `VirtualListGroup { key: string | number; label?: string; startIndex: number }` — the
 shape consumed by `groups` above; `VirtualListScroll { scrollTop: number; viewportHeight: number }` —
-the `lr-scroll` detail shape.
+the `lr-virtual-scroll` detail shape.
 `groupByRecency(items, options?)` is a DOM-free helper that returns non-empty
 Today/Yesterday/Previous 7 Days/Older buckets, preserves input order within each bucket, and accepts
 a timestamp extractor, reference date, and label overrides. Import it from its granular subpath —
 the package root re-exports it too, but that entry pulls in the eager registration barrel:
 
 ```ts
-import { groupByRecency } from '@aceshooting/lyra-ui/utilities/group-by-recency.js';
+import { groupByRecency } from "@aceshooting/lyra-ui/utilities/group-by-recency.js";
 ```
 
 **Methods:** `scrollToIndex(index, options?)` — the programmatic counterpart to `active-id`'s
 automatic scroll-into-view, for a host that needs to scroll to a specific row without changing which
 row is "active." `options.align` is `'start'`, `'end'`, or `'auto'` (default — no scroll at all when
 already fully visible); `options.behavior` (default `'smooth'`) is forced to `'auto'` under
-`prefers-reduced-motion: reduce`. `index` is clamped to `0…items.length-1`.
+`prefers-reduced-motion: reduce`. `index` is clamped to the effective source's `0…count-1` range.
+In auto-height mode, estimate-based jumps are corrected as row and group-marker measurements arrive.
+That correction is bound to the source, key function, and target identity and is canceled on a new
+target, data replacement, manual scroll intent, or disconnect, so late observations cannot pull a
+newer view back to stale content.
 `offsetForIndex(index)` returns the pixel top row `index` renders at, in the same coordinate space as
-the scroll container's `scrollTop`; it is clamped to `0…items.length`, so `offsetForIndex(items.length)`
+the scroll container's `scrollTop`; it is clamped to `0…count`, so `offsetForIndex(count)`
 is the total content height and an empty list is always `0`. `indexAtOffset(px)` is its inverse — the
 row whose box contains that offset, clamped at both ends, `-1` for an empty list — so
 `indexAtOffset(offsetForIndex(i)) === i` and `indexAtOffset(scrollContainer.scrollTop)` is the row at
 the top of the viewport. In `row-height="auto"` mode both are estimate-based for any row that (or
 above which) has not been measured yet, and converge as those `ResizeObserver` measurements land;
 fixed numeric `row-height` offsets are exact from the first render. Both read the most recent render,
-so `await el.updateComplete` after assigning `items` before querying.
+so `await el.updateComplete` after assigning `items` or `source` before querying.
 
 **Getters:** `scrollContainer: HTMLElement | undefined` — the real scroll container (`[part="base"]`),
 `undefined` before the first render; for a host that needs the live scroll position or wants to scroll
 the list itself without reaching into the shadow root. `renderedRows: HTMLElement[]` — the row
 wrappers (`[part="row"]`) that currently exist as real DOM, in item order (the current window, not the
-whole collection; empty before the first render). It exists for hosts that must *reach* a rendered row
+whole collection; empty before the first render). It exists for hosts that must _reach_ a rendered row
 rather than style it — keyboard focus management across a windowed list, where the row to focus may
 not have existed a frame earlier, and which `exportparts` cannot serve since it forwards styling, not
 element references. Treat both as read-only: positioning, keys, and lifetime belong to the windowing
@@ -1594,11 +1675,12 @@ math, and any row element can be recycled or removed on the next update.
 `has-more` is true and `loading` is false; does not refire on every scroll tick while still near the
 bottom — scrolling back away from the bottom and returning, or `items` growing enough to move the
 window away from the end, re-arms it), `lr-visible-range-changed` (`detail: VirtualListRange`, the
-current visible, non-overscanned item index range — fired only when it actually changes), `lr-scroll`
+current visible, non-overscanned item index range — fired only when it actually changes),
+`lr-virtual-scroll`
 (`detail: VirtualListScroll` — the scroll container moved; emitted from the same animation frame that
 already coalesces native `scroll` events, so a fling produces at most one per frame and none at all
 when the position did not change. Unlike `lr-visible-range-changed`, which only fires on index-range
-changes, this reports *sub-row* movement, which is what scroll-linked layout needs)
+changes, this reports _sub-row_ movement, which is what scroll-linked layout needs)
 
 **Slots:** none — all content comes from `renderItem`.
 
@@ -1608,9 +1690,8 @@ establishing true scroll extent; `role="presentation"` in `item-role="row"` mode
 rendered row's absolutely-positioned wrapper, `role="listitem"` — or `role="row"` with
 `aria-rowindex` in `item-role="row"` mode), `group` (a `groups` entry's positioned marker; not
 rendered for an entry whose `label` is the empty string), `sticky-group` (the pinned copy of the
-current group, present only while `renderStickyGroup` is set — `aria-hidden` and
-`pointer-events: none` by default; style it with `pointer-events: auto` to make copied interactive
-content clickable, and it shows nothing while the viewport is above the first group)
+current group, present only while `renderStickyGroup` is set — `aria-hidden`, `inert`, and
+pointer-transparent, and it shows nothing while the viewport is above the first group)
 
 **Themeable custom properties:** `--lr-virtual-list-height` (default `24rem` — the host's bounded
 scroll extent; component-specific since a virtualized list is meaningless without a sized viewport),
@@ -1646,39 +1727,49 @@ activation target.
   ?loading=${isLoadingMore}
   @lr-load-more=${() => loadNextPage()}
   @lr-visible-range-changed=${(e) => console.log('visible', e.detail.start, e.detail.end)}
+  @lr-virtual-scroll=${(e) => console.log('scroll top', e.detail.scrollTop)}
 ></lr-virtual-list>
+```
+
+```ts
+// No count-sized array: only the current window is read.
+const syntheticRows = {
+  count: 100_000,
+  itemAt: (index: number) => ({ page: index + 1 }),
+  keyAt: (index: number) => index + 1,
+  indexOfKey: (key: string | number) =>
+    typeof key === "number" ? key - 1 : -1,
+};
+
+html`<lr-virtual-list
+  row-height="72"
+  .source=${syntheticRows}
+  .renderItem=${(row) => html`Page ${row.page}`}
+></lr-virtual-list>`;
 ```
 
 ```html
 <!-- Sticky group headers: the header is a real row, so the `groups` entries are position anchors
-     only (`label: ''`), and the pinned copy opts back into pointer events for its own toggle. -->
+     only (`label: ''`); the pinned copy remains strictly presentational. -->
 <lr-virtual-list
   .items=${rows}
   .groups=${groupStarts /* [{ key: 'Today', label: '', startIndex: 0 }, …] */}
   .renderItem=${(item, index) => (item.isHeader ? headerTemplate(item) : rowTemplate(item))}
   .renderStickyGroup=${(group) => headerTemplate(group)}
 ></lr-virtual-list>
-<style>
-  lr-virtual-list::part(sticky-group) { pointer-events: auto; }
-</style>
 ```
 
-Every row — in both `row-height` modes — is positioned by a `transform: translateY(offset)` computed
-from a single cumulative offsets array, rather than by page flow; this is what lets a small DOM window
-exist while the scrollbar still reflects the true total content height. That array is rebuilt only
-when `items`, `row-height`, or `keyFunction` change, or a row's measured height changes — **not** on
-every update, so a pure scroll-position tick (potentially every `rAF` while scrolling) only re-runs the
-cheap range/visibility math, never the `O(n)` offsets rebuild (which, in `row-height="auto"` mode, also
-means a `keyFunction` call per item). In `row-height="auto"` mode, unmeasured rows contribute a fixed
-estimate to that array until their real `ResizeObserver`-reported height lands, so only rows after a
-newly-measured one shift on each measurement rather than the whole list reflowing. The offsets rebuild,
-when it does run, is an `O(n)` loop appropriate for hundreds to a few thousand rows (a scrollable
-history sidebar); it is not the right approach for a hundred-thousand-row list without further work
-(e.g. a Fenwick/segment tree for `O(log n)` offset queries+updates).
+Every row is positioned by a `transform: translateY(offset)`, rather than page flow, so only a small
+DOM window exists while the scrollbar still reflects the full collection. Array sources retain their
+cumulative-offset cache, rebuilt only when the collection/height/key inputs or a measurement change —
+never on a pure scroll tick. Indexed sources never synthesize count-sized item, key, identity, or
+offset arrays: fixed-height offsets are direct count arithmetic, while auto-height offsets combine the
+default estimate with sparse `ResizeObserver` measurements for rows that have actually mounted.
 
 **Known gotchas:**
-- `items`, `renderItem`, `keyFunction`, and `groups` are all `attribute: false` — they must be set as
-  JS properties (`.items=`, `.renderItem=`, …), never as HTML attribute strings.
+
+- `items`, `source`, `renderItem`, `keyFunction`, and `groups` are all `attribute: false` — they must
+  be set as JS properties (`.source=`, `.items=`, `.renderItem=`, …), never as HTML attribute strings.
 - The container is `role="list"` with rows `role="listitem"`, deliberately not `listbox`/`option` —
   this component only provides windowing, not the roving-tabindex/`aria-activedescendant`
   keyboard-interaction contract a real `listbox` requires. `active-id` only scrolls a row into view and
@@ -1693,12 +1784,13 @@ history sidebar); it is not the right approach for a hundred-thousand-row list w
 - `aria-setsize`/`aria-posinset` are computed from a row's real index in the full `items` array, not its
   position among the currently-rendered DOM window, so assistive tech still announces e.g. "item 12 of
   340" correctly even though only a handful of rows exist in the DOM at a time.
-- `groups`, `renderStickyGroup`, `offsetForIndex()`/`indexAtOffset()` and the `lr-scroll` event are
-  all expressed against the *same* windowing math, so they agree with each other — but that math is
+- `groups`, `renderStickyGroup`, `offsetForIndex()`/`indexAtOffset()` and the `lr-virtual-scroll`
+  event are
+  all expressed against the _same_ windowing math, so they agree with each other — but that math is
   estimate-based in `row-height="auto"` mode until the rows involved have been measured. Read a
   position after `await el.updateComplete`, and expect the value to converge rather than be final on
   the first frame.
-- A sticky band only appears when `renderStickyGroup` *and* at least one valid `groups` entry are
+- A sticky band only appears when `renderStickyGroup` _and_ at least one valid `groups` entry are
   both present; `groups` alone renders positioned markers with nothing pinned, and
   `renderStickyGroup` alone renders no overlay element at all.
 - **A row that renders a popup needs the active-row lift, and this is why `[part='row']` has one.**
@@ -1706,12 +1798,12 @@ history sidebar); it is not the right approach for a hundred-thousand-row list w
   makes every row its own stacking context. Rows otherwise carry no `z-index`, so they paint in DOM
   order and each one paints over the previous. Anything a row renders that overflows its own box —
   an `<lr-menu>` popup in a row-action menu, a tooltip, an outward focus ring — is therefore painted
-  *underneath* every following row, no matter how high its own `z-index` is: that `z-index` only
+  _underneath_ every following row, no matter how high its own `z-index` is: that `z-index` only
   orders siblings inside the row's own context. The last row always looks correct, which is exactly
   why the failure tends to hide in short lists. A row lifts to `--lr-layer-content` while something
   inside it holds focus or while it contains an open `lr-menu`. The explicit menu-open branch covers
   imperative opening and virtual measurement/render cycles, where focus can temporarily return to
-  the document while the popup remains visible. The value deliberately *matches*
+  the document while the popup remains visible. The value deliberately _matches_
   `[part='group']`'s rather than exceeding it, so the two land on the same layer and DOM order
   decides: groups render before the rows, so an active row wins while (and only while) it needs to,
   which is right — a group header is a non-interactive `pointer-events: none` label.
@@ -1720,7 +1812,7 @@ history sidebar); it is not the right approach for a hundred-thousand-row list w
 
 ## `lr-app-rail`
 
-A responsive navigation rail that adapts across three presentations as the *viewport* narrows (not
+A responsive navigation rail that adapts across three presentations as the _viewport_ narrows (not
 this element's own inline size): `'full'` (nav items show icon + label, inline), `'icon-only'` (a
 narrower inline rail, icons only), and `'mobile'` (hidden behind a toggle button; opening it shows a
 focus-trapped floating overlay over the page). First-party invention (no `wa-*`/`sl-*` counterpart).
@@ -1728,7 +1820,7 @@ Breakpoints are viewport-width `matchMedia()` queries against `icon-only-breakpo
 `mobile-breakpoint`, not a `ResizeObserver` on this element — presentation tracks the actual device/
 window width the way a native OS shell's navigation does, not however much horizontal space a
 particular layout happens to give it. `[part="base"]` (the inline `'full'`/`'icon-only'`
-presentation) and `[part="panel"]` (the mobile overlay) are the *same* element promoted in place
+presentation) and `[part="panel"]` (the mobile overlay) are the _same_ element promoted in place
 across modes (mirrors `<lr-widget>`'s fullscreen mode) — never both at once, and slotted nav
 content is never duplicated.
 
@@ -1736,7 +1828,7 @@ Opting in to `resizable` adds a continuously draggable width for the `'full'` st
 `[part="resizer"]` handle (pointer-drag and Left/Right-arrow keyboard stepping, RTL-aware) clamped to
 `[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` (attribute `storage-key`) to persist the fields
 selected by `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restore them on the
-next mount (mirrors `lr-split`'s `storage-key`; effective `mode` is breakpoint-derived and never
+next mount (mirrors `lr-multi-split`'s `storage-key`; effective `mode` is breakpoint-derived and never
 persisted). The backward-compatible allowlist is `open width`; use
 `persist="width preferred-mode"` for durable layout preference without restoring the transient
 mobile overlay. Without a `storageKey` there is no persistence — listen for `lr-rail-resize` and
@@ -1748,6 +1840,7 @@ automatically regardless — it's only consulted while `mode` isn't force-pinned
 accessor itself, which still takes full priority.
 
 **Properties:**
+
 - `mode: AppRailMode` (custom accessor, reflected) — the getter always returns one of the three real
   modes (`'full'|'icon-only'|'mobile'`), never `'auto'`. The setter accepts
   `AppRailModeInput` (`AppRailMode | 'auto'`): assigning `'full'`/`'icon-only'`/`'mobile'` forces
@@ -1765,9 +1858,10 @@ accessor itself, which still takes full priority.
   while `mode` is `'mobile'` — the value is preserved (not reset) while another mode is active, but
   no overlay chrome renders until `mode` is `'mobile'` again. Set this directly, or use the built-in
   toggle button — there is no separate `show()`/`hide()` pair.
-- `label: string = 'Navigation'` — accessible name for the rail's navigation landmark, and for its
-  dialog role while the mobile overlay is open. A host-level `aria-label` attribute (see below)
-  takes precedence over this when both are set.
+- `label?: string` — optional accessible name for the rail's navigation landmark and mobile dialog.
+  Every nonempty supplied string is honored literally; only absence/empty uses the localized
+  navigation fallback. A host-level `aria-label` attribute (including an explicit empty value)
+  takes precedence.
 - `preferredMode?: 'full' | 'icon-only' | null` (attribute `preferred-mode`) — manually prefers
   `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while `mobile-breakpoint` continues to
   be tracked automatically regardless — e.g. a user's manual collapse toggle that should still yield
@@ -1821,8 +1915,9 @@ vetoing that one would leave `open` stuck `true` in a mode where it's meaningles
 proposed width from drag or keyboard stepping, emitted before the component assigns
 `railWidthPx` — call `preventDefault()` to keep the current width. It is not fired when a consumer
 sets `railWidthPx` directly), and `lr-rail-resize` (`detail: AppRailResizeDetail` =
-`{ widthPx: number }`; non-cancelable committed width, emitted after the component assigns
-`railWidthPx`, for the same accepted gesture paths only).
+`{ widthPx: number }`; non-cancelable committed width, emitted immediately for a genuine keyboard
+step and once at pointerup for a genuine drag. Clamped/no-op steps, canceled/lost gestures, and
+consumer property writes emit no committed event).
 
 **Slots:** default (nav items — generic slotted content, e.g. `<a>`/`<button>` elements the consumer
 builds with its own icon+label structure; clicking anywhere in this slot closes the mobile overlay if
@@ -1853,25 +1948,35 @@ fallback at its exact state rule and preserves the previous brand or active-mix 
 **Optional peer deps:** none.
 
 ```html
-<lr-app-rail label="Main navigation" icon-only-breakpoint="960px" mobile-breakpoint="600px" resizable>
+<lr-app-rail
+  label="Main navigation"
+  icon-only-breakpoint="960px"
+  mobile-breakpoint="600px"
+  resizable
+>
   <span slot="header"><img src="/logo.svg" alt="Acme" /></span>
-  <a href="/inbox" aria-label="Inbox"><svg aria-hidden="true">...</svg><span>Inbox</span></a>
-  <a href="/settings" aria-label="Settings"><svg aria-hidden="true">...</svg><span>Settings</span></a>
+  <a href="/inbox" aria-label="Inbox"
+    ><svg aria-hidden="true">...</svg><span>Inbox</span></a
+  >
+  <a href="/settings" aria-label="Settings"
+    ><svg aria-hidden="true">...</svg><span>Settings</span></a
+  >
   <span slot="footer"><button>Profile</button></span>
 </lr-app-rail>
 <script type="module">
-  const rail = document.querySelector('lr-app-rail');
-  rail.addEventListener('lr-rail-resize-request', (e) => {
+  const rail = document.querySelector("lr-app-rail");
+  rail.addEventListener("lr-rail-resize-request", (e) => {
     if (e.detail.widthPx > 360) e.preventDefault();
   });
-  rail.addEventListener('lr-rail-resize', (e) =>
-    localStorage.setItem('railWidthPx', String(e.detail.widthPx)),
+  rail.addEventListener("lr-rail-resize", (e) =>
+    localStorage.setItem("railWidthPx", String(e.detail.widthPx))
   );
 </script>
 ```
+
 ```ts
-rail.mode = 'icon-only'; // force a presentation regardless of viewport width
-rail.mode = 'auto';      // release the force, resume live breakpoint tracking
+rail.mode = "icon-only"; // force a presentation regardless of viewport width
+rail.mode = "auto"; // release the force, resume live breakpoint tracking
 ```
 
 The package root also exports a pure `computeAppRailMode(iconOnlyMatches: boolean, mobileMatches:
@@ -1892,6 +1997,7 @@ real accessible name (`aria-label`, visually hidden text, or `title`) regardless
 component only lays out whatever is slotted and can't inspect or fix up a consumer's own markup.
 
 **Known gotchas:**
+
 - `mode`'s setter accepts the wider `AppRailModeInput` (including the `'auto'` sentinel) but the
   getter's return type is the narrower `AppRailMode` — assigning `'auto'` is a one-way instruction,
   not a value read back later; there is no `isForced`-style property to check whether the rail is
@@ -1932,11 +2038,12 @@ set and enabled, otherwise a button; the rail can add its `icon-only` presentati
 removing the label from the accessibility tree.
 
 **Properties:**
+
 - `href: string = ''` — optional destination. Without it, the item renders as a button.
 - `target: string = ''` — optional link target.
 - `disabled: boolean = false` (reflected) — prevents activation while retaining the item in the rail.
-- `active: boolean = false` (reflected) — marks this as the destination for the current page/view;
-  reflects `aria-current="page"` on `[part='base']` and drives the active visual treatment. The rail
+- `current: boolean = false` (reflected) — marks this as the destination for the current page/view;
+  reflects `aria-current="page"` on `[part='base']` and drives the current visual treatment. The rail
   has no built-in routing, so the consumer sets this per item (e.g. by comparing `href` against the
   current location).
 - `tooltip: boolean = false` (reflected) — opt-in hover/focus flyout (`[part='tooltip']`) showing
@@ -1966,10 +2073,10 @@ names the native control, which remains the sole action).
 
 **Themeable custom properties:** `--lr-app-rail-item-current-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-app-rail-item-current-color` (default
-`var(--lr-color-brand)`) — background and text/icon color of the `active` (`aria-current="page"`)
+`var(--lr-color-brand)`) — background and text/icon color of the `current` (`aria-current="page"`)
 item. Both are scoped to `[aria-current='page']` only and declared as inline `var()` fallbacks at
-the point of use, never on `:host`, so either can be set on the item itself *or on any ancestor* —
-including on `<lr-app-rail>` or a wrapper above it, to tint every item's active state at once.
+the point of use, never on `:host`, so either can be set on the item itself _or on any ancestor_ —
+including on `<lr-app-rail>` or a wrapper above it, to tint every item's current state at once.
 `::part(base)[aria-current='page']` is invalid CSS (Shadow Parts forbids an attribute selector after
 `::part()`), so before these hooks the only lever was overriding the library-wide
 `--lr-color-brand-quiet`/`--lr-color-brand` tokens, which repainted every other element reading
@@ -1985,19 +2092,21 @@ brand/active-mix values as fallbacks.
 
 ## `lr-responsive-panel`
 
-The same slotted content either docked inline in the page's normal layout flow (desktop) or
-presented as a full-screen/bottom-sheet overlay (mobile), depending on viewport width. First-party
-invention (no `wa-*`/`sl-*` counterpart). Typical uses: a settings panel or a conversation-history
-sidebar that's a permanent docked pane on a wide screen but a modal on a phone.
+The same slotted content either docked inline in its containing layout or presented as a
+full-screen/bottom-sheet overlay, depending on the panel's allocated inline size. First-party
+invention (no `wa-*`/`sl-*` counterpart).
 
 **Properties:**
+
 - `open: boolean = false` (reflected) — in the inline presentation this just means visible/mounted;
   in the overlay presentation this is the actual modal open/closed state.
-- `mode: ResponsivePanelMode = 'auto'` (reflected) — `'auto'` tracks `mobile-breakpoint` live;
-  `'inline'`/`'overlay'` force that presentation regardless of viewport width.
-- `variant: ResponsivePanelVariant = 'fullscreen'` (reflected) — only affects the overlay
-  presentation's visual treatment: `'fullscreen'` covers the whole viewport; `'bottom-sheet'` slides
-  up from the bottom and doesn't cover the full height. Has no visual effect while the effective
+- `mode: LyraResponsivePanelMode = 'auto'` (reflected) — `'auto'` tracks `overlay-breakpoint`
+  against the component's allocation; `'inline'`/`'overlay'` force that presentation.
+- `effectiveMode: LyraResponsivePanelEffectiveMode` (readonly) — the currently resolved
+  `'inline'|'overlay'` presentation.
+- `variant: LyraResponsivePanelVariant = 'fullscreen'` (reflected) — only affects the overlay
+  presentation's visual treatment: `'fullscreen'` covers the whole viewport; `'bottom-sheet'`
+  anchors to its block-end edge and does not cover the full height. Has no visual effect while the effective
   presentation resolves to `'inline'`.
 - `label: string = ''` — accessible name for the overlay presentation's `role="dialog"`, used
   verbatim when set. When empty, falls back to the `header` slot's content: a heading element
@@ -2007,25 +2116,25 @@ sidebar that's a permanent docked pane on a wide screen but a modal on a phone.
   `[part="panel"]` is in shadow DOM). A panel opened with neither `label` nor header content uses
   the localized `responsivePanel` fallback (`"Panel"` in the default locale), so its dialog is
   never unnamed. Unused in the inline presentation, which has no dialog semantics to name.
-- `mobileBreakpoint: string = '768px'` (attribute `mobile-breakpoint`) — CSS length passed to
-  `matchMedia` as `(max-width: <this>)` to decide, in `mode="auto"`, whether the effective
-  presentation is `'overlay'` (below/at this width) or `'inline'` (above it).
+- `overlayBreakpoint: string = '768px'` (attribute `overlay-breakpoint`) — CSS length compared with
+  the component's allocated inline size in `mode="auto"`; at or below it, the effective presentation
+  is `'overlay'`.
 
-**Methods:** `close(reason: ResponsivePanelCloseReason = 'api'): void` — requests a close by
+**Methods:** `close(reason: LyraResponsivePanelCloseReason = 'api'): void` — requests a close by
 emitting `lr-close` with `reason` before changing `open`. A listener can call `preventDefault()` to
 keep the panel open; otherwise it sets `open = false` and — only in the overlay presentation —
 returns focus to whichever element triggered the open. No-op if already closed. Built-in overlay
 triggers call this with `'escape'`/`'backdrop'`; a consumer's own close affordance (a footer button,
 a docked panel's own toggle) should call it directly with its own reason string.
 
-**Events:** `lr-close` (`detail: ResponsivePanelCloseReason` = `'escape'|'backdrop'|'api'|string`;
+**Events:** `lr-close` (`detail: LyraResponsivePanelCloseReason` = `'escape'|'backdrop'|'api'|string`;
 cancelable pre-close veto, fired by the overlay presentation's built-in dismiss triggers — Escape,
 backdrop click — and by any `close()` call, in either presentation; calling `preventDefault()` keeps
 the panel open and leaves active overlay chrome/focus trapping intact. A plain `open = false`
 property write does **not** fire it, only going through `close()` counts as a dismissal),
 `lr-mode-change`
-(`detail: ResponsivePanelModeChangeDetail` = `{ mode: ResponsivePanelEffectiveMode }`; fired whenever
-the *effective* mode — not the `mode` prop's possibly-`'auto'` literal value — changes between
+(`detail: LyraResponsivePanelModeChangeDetail` = `{ mode: LyraResponsivePanelEffectiveMode }`; fired whenever
+the _effective_ mode — not the `mode` prop's possibly-`'auto'` literal value — changes between
 `'inline'` and `'overlay'`; never fired on the initial render, only for a live change thereafter).
 
 **Slots:** default (the panel body), `header` (optional header content, rendered above the body),
@@ -2049,16 +2158,25 @@ they do not affect inline panels. Plus shared tokens (`--lr-color-border`, `--lr
 **Optional peer deps:** none.
 
 ```html
-<lr-responsive-panel id="settings-panel" label="Settings" variant="bottom-sheet" mobile-breakpoint="768px">
+<lr-responsive-panel
+  id="settings-panel"
+  label="Settings"
+  variant="bottom-sheet"
+  overlay-breakpoint="48rem"
+>
   <span slot="header"><h2>Settings</h2></span>
   <div>Panel body content — a form, a list, anything.</div>
-  <span slot="footer"><button onclick="document.getElementById('settings-panel').close()">Done</button></span>
+  <span slot="footer"
+    ><button onclick="document.getElementById('settings-panel').close()">
+      Done
+    </button></span
+  >
 </lr-responsive-panel>
 ```
 
-Breakpoint detection uses `matchMedia('(max-width: ' + mobileBreakpoint + ')')`, re-evaluated live
-while connected — resizing/rotating a device that crosses the breakpoint while `mode="auto"` (the
-default) updates the effective presentation without unmounting or re-creating the slotted content.
+Breakpoint detection uses `ResizeObserver` on the component allocation. Resizing a parent layout
+across `overlayBreakpoint` while `mode="auto"` updates the effective presentation without
+unmounting or re-creating the slotted content.
 Inline and overlay presentations share the same shadow DOM, so slotted content and scroll position
 survive the transition. Focus already inside the panel is preserved. If focus is outside when an
 open inline panel becomes an overlay, focus moves to the first composed focus target (falling back
@@ -2066,17 +2184,18 @@ to the panel), so it cannot remain behind `aria-modal="true"`. An allowed close 
 captured when the panel originally opened, even when that original open happened inline. The overlay
 presentation participates in the shared modal stack rather than nesting a `<lr-dialog>`.
 
-The package root also exports the pure `resolveEffectiveMode(mode: ResponsivePanelMode,
-belowBreakpoint: boolean): ResponsivePanelEffectiveMode` resolver — renamed on export to
-`resolveResponsivePanelEffectiveMode` to avoid a name collision — alongside the
-`ResponsivePanelMode`/`ResponsivePanelEffectiveMode`/`ResponsivePanelVariant`/
-`ResponsivePanelCloseReason`/`ResponsivePanelModeChangeDetail` types. It's the same logic the
-element's internal `matchMedia` listener calls: `'inline'`/`'overlay'` pass straight through
+The granular route exports the pure
+`resolveResponsivePanelEffectiveMode(mode: LyraResponsivePanelMode,
+belowBreakpoint: boolean): LyraResponsivePanelEffectiveMode` resolver alongside the
+`LyraResponsivePanelMode`/`LyraResponsivePanelEffectiveMode`/`LyraResponsivePanelVariant`/
+`LyraResponsivePanelCloseReason`/`LyraResponsivePanelModeChangeDetail` types. It's the same logic
+the element's allocation observer calls: `'inline'`/`'overlay'` pass straight through
 unchanged; `'auto'` resolves to `'overlay'` when `belowBreakpoint` is true, `'inline'` otherwise —
 exposed standalone so a consumer can compute or unit-test the same resolution without a real browser
 window.
 
 **Known gotchas:**
+
 - assigning `open` directly still does not emit `lr-close` and therefore cannot be vetoed; use
   `close()` when the dismissal event/reason or a close guard is required. While overlay chrome is
   active, however, the `true` → `false` state transition restores opener focus regardless of
@@ -2089,9 +2208,8 @@ window.
   shared overlay registration and re-acquires the scroll lock if overlay chrome was still active
   across the move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in
   between, so `willUpdate()` alone wouldn't otherwise notice.
-- the exported pure function is named `resolveEffectiveMode` in the component module but re-exported
-  from the package root as `resolveResponsivePanelEffectiveMode` — importing the un-prefixed name
-  from `@aceshooting/lyra-ui` will fail.
+- `overlay-breakpoint` follows allocation, not the viewport. Use `mode="overlay"` for a deliberate
+  viewport-modal policy independent of the component's containing layout.
 
 ---
 
@@ -2105,7 +2223,7 @@ already set a `role`, which is left alone. `<lr-menu>` enumerates its items by `
 LyraMenuItem`, so a label is never enrolled in the roving tabindex and can never become a focus
 stop; nothing on `<lr-menu>` has to know this element exists.
 
-To announce a *named group* rather than a caption, wrap the labelled items in an element with
+To announce a _named group_ rather than a caption, wrap the labelled items in an element with
 `role="group"` and give it a matching `aria-label`. `aria-labelledby` pointing at this element's
 internals would not resolve — idrefs do not cross a shadow boundary.
 
@@ -2126,369 +2244,134 @@ internals would not resolve — idrefs do not cross a shadow boundary.
 
 ## `lr-menu` / `lr-menu-item`
 
-An action menu that becomes an anchored dropdown when a consumer-supplied trigger element
-(typically an icon button) is assigned to the `trigger` slot. With no trigger or `anchor`, the
-exact mapped `<sl-menu>` authoring shape renders inline and always visible, with one roving
-keyboard entry point; adding a trigger switches it to the closed-by-default popup presentation.
-The pair mirrors `sl-menu` / `sl-menu-item`, and `<lr-dropdown-item>` below is the
-`wa-dropdown-item`-compatible name for the same item element. Web Awesome's `wa-dropdown` maps to
-`<lr-dropdown>` in the overlays family; that
-component keeps the distinct trigger/popup host while containing this same menu interaction engine,
-and accepts direct mapped items or a consumer-supplied `lr-menu`. Either way it is a close,
-drop-in-shaped replacement for reaching outside this library for a
-third-party dropdown to build a gear menu, an avatar menu, or a history row's overflow menu. Uses
-the WAI-ARIA "menu button" pattern —
-`role="menu"`/`role="menuitem"` with real roving DOM focus moving between actual focusable
-`<lr-menu-item>` rows — deliberately not a `role="listbox"`/`aria-activedescendant` shape (that's
-`<lr-select>`'s pattern instead).
+The inline semantic menu mapped from Shoelace's `sl-menu`, plus its action-row element. A root
+`<lr-menu>` is always visible and owns the named `role="menu"` list, real roving DOM focus,
+wrapping keyboard navigation, type-ahead, and one canonical selection event. It deliberately has no
+trigger, positioned popup, root open state, placement API, or overlay lifecycle.
+
+For a menu button or other anchored overlay, compose the semantic controller inside
+`<lr-dropdown>`:
+
+```html
+<lr-dropdown label="Row actions">
+  <button slot="trigger" aria-label="Row actions">⋮</button>
+  <lr-menu>
+    <lr-menu-item value="edit">Edit</lr-menu-item>
+    <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
+  </lr-menu>
+</lr-dropdown>
+```
+
+The dropdown shell owns trigger relationships, positioning, opening/closing, outside dismissal,
+focus return, and lifecycle events. The contained menu remains the sole semantic owner: its
+`header`/default/`footer` regions and named `role="menu"` list are preserved, while the outer popup
+is neutral. This is also the composition used for direct `<lr-dropdown-item>` children.
 
 ### `lr-menu`
 
 **Properties:**
-- `open: boolean = false` (reflected) — controls the anchored/trigger-owned popup. A triggerless,
-  unanchored standalone menu remains visible so an exact `sl-menu` → `lr-menu` tag rename keeps its
-  presentation. Every post-mount property or attribute write runs the same synchronous,
-  cancelable preflight as `show()`/`hide()`; a veto leaves open state, focus, roving state, and the
-  type-ahead session untouched. Initial open markup remains silent
-- `placement?: Placement` (reflected — resolved through `rtlAwarePlacement()` (`internal/rtl.ts`),
-  then forwarded to `place()`; defaults to whatever `place()` itself defaults to. A `left`/`right`
-  side is mirrored under `dir="rtl"`, so e.g. `placement="left-start"` still anchors to the menu's
-  trailing edge instead of pinning to the physical left)
-- `label: string = 'Menu'` — accessible name for the `role="menu"` popup; override with something
-  specific (e.g. "Row actions") when a page has more than one menu. A host-level `aria-label`
-  attribute takes precedence over both this prop and the localized default (unset by default, so
-  a no-op for existing consumers), matching `lr-select`/`lr-model-select`'s presence-based
-  precedence; an explicit `aria-label=""` is therefore authoritative
 
-- `closeOnEscapeAnywhere: boolean = false` (attribute `close-on-escape-anywhere`) — lets Escape
-  close the menu when focus is on non-menu-item content slotted into the **default** slot, i.e.
-  rendered inside `[part="list"]`; item activation remains scoped to actual menu items. It has no
-  bearing on the `header`/`footer` slots, which sit outside the `role="menu"` list and always close
-  on Escape — so a menu that keeps its composed controls there never needs this property
-- `anchor: HTMLElement | null = null` (property only — an element reference has no attribute form;
-  new in 8.0.0) — positions the popup against this element instead of the `trigger` slot's assigned
-  element, and, when no `trigger` element is slotted, becomes the element
-  `hide({ focusTrigger: true })` returns focus to (a slotted trigger still wins for focus). An
-  `<lr-menu-item>` sets it to itself on the menu assigned to its `submenu` slot, which is what turns
-  that instance into a submenu: the anchor also switches the default placement from below the
-  trigger to beside the anchoring row, and keeps a pointerdown on that row from reading as an
-  outside click. Set it by hand to anchor a menu to a trigger this component cannot slot — a canvas
-  hit region, a table cell
+- `label: string = 'Menu'` — accessible name for the `role="menu"` list. A host `aria-label`
+  attribute is authoritative, including `aria-label=""`; an explicit non-default `label` follows,
+  then a containing dropdown's supplied fallback, then the localized menu label.
 
-**Methods:** `show(focus: 'first' | 'last' | 'none' = 'first')` opens the menu and moves roving focus
-to the first (or, with `'last'`, the last) non-disabled item; `'none'` opens without moving DOM focus
-at all, which is what pointer-driven opening needs. On an already-open menu it applies the focus
-target and nothing else, so an arrow key can step into a submenu the pointer opened a moment earlier.
-`hide(options?: { focusTrigger?: boolean })` closes it; a no-op when already closed. They are the
-imperative pair for the cases the slotted trigger can't express — a "Done"/"Apply" button *inside*
-the menu, a keyboard shortcut, a parent restoring UI state — without hand-reproducing the
-pending-focus bookkeeping. Both are deliberately thin: positioning, the outside-click listener, the
-`lr-show`/`lr-hide` events, and the initial focus move all stay in one place, so **writing `open`
-directly is fully supported and equivalent apart from the focus moves**. In particular the
-roving-tabindex reset is centralized, so a bare `el.open = false` also clears `activeIndex` and
-never leaves a stale `tabindex="0"` tab stop on the last active item. `hide()` never refocuses
-unless you ask: pass `{ focusTrigger: true }` for a dismissal with nowhere else for focus to land,
-and leave it off when the interaction that closed the menu already put focus somewhere the user
-chose (an outside click, a Tab out). Focus restoration lives in `hide()` rather than in the
-close branch precisely so teardown — disconnecting an open menu — can't steal focus.
+**Events:**
 
-**Events:** `lr-show` (no detail — fires only when `open` transitions to `true`, not for markup
-that renders `open` true from the start), `lr-hide` (same first-render guard, opposite
-transition), `lr-menu-select` (`detail: { value }` — a consolidated re-fire of the activated
-`<lr-menu-item>`'s own `lr-menu-item-select`; retained for Lyra compatibility), and `lr-select`
-(`detail: { item }` — the complete activated item; cancelable). Unless `lr-select` is prevented,
-selection closes the menu and returns focus to the trigger. A selection made inside a submenu
-arrives as the same single `lr-select` event — it is never translated or re-emitted by ancestors —
-while the legacy `lr-menu-select` likewise bubbles once to the outermost menu. There is no separate
-nested-selection name. A non-vetoed selection closes the whole chain behind it. A submenu's own
-`lr-show`/`lr-hide` deliberately stop at the row that owns it, so they are never mistaken for this
-menu opening or closing; listen on the nested `<lr-menu>` element itself for those.
-`lr-show` is cancelable. `lr-hide` is cancelable while the menu is connected and non-cancelable
-only for the disconnect-driven close, where the removed menu cannot honour a veto.
+- `lr-select` — cancelable, with `detail: { item }`. It originates exactly once at the menu that
+  owns the activated item, then bubbles unchanged through ancestor menus and a containing dropdown.
+  Preventing it anywhere keeps the current menu/submenu chain open. There are no
+  `lr-menu-select`, `lr-menu-item-select`, or nested-selection aliases.
 
-**Slots:** `trigger` (the consumer's own trigger element — first assigned element wins if several
-are assigned. `aria-haspopup="menu"`, `aria-expanded`, and the controls relationship are owned on
-both that public element and the composed descendant that actually receives focus, so a generic
-custom wrapper works without forwarding host attributes. The component supplies its real popup to
-the shared ownership controller; current browsers expose the `lr-menu` host for the inward
-light-DOM-to-shadow relationship. Authored relationship tokens compose, generated whole-value
-attributes stay authoritative while assigned, and exact late-authored baselines return on
-replacement or disconnect), default
-(`<lr-menu-item>` elements, plus optionally plain `<hr>` dividers — native `<hr>` already carries
-an implicit `separator` role),
-`header` and `footer` (composed, deliberately non-menu-item content — a filter/search field, a
-section title, an "Apply"/"Done" button, a count — rendered above/below the items inside
-`[part="popup"]` but **outside** the `role="menu"` list. Both collapse to no box at all while
-unfilled, so a menu that uses neither renders exactly as it did before they existed)
+**Slots:** default (`<lr-menu-item>`/`<lr-dropdown-item>` plus semantic separators), `header`, and
+`footer`. Header and footer are composed controls or explanatory regions outside the
+`role="menu"` list, so filters, counts, or footer actions do not violate the menu required-child
+contract. Arbitrary non-item content in the default slot still renders, but is not enrolled as a
+menu item.
 
-Put composed controls in `header`/`footer` rather than the default slot. Non-item content in the
-default slot still works and is not deprecated at runtime (no warning is emitted), but it sits
-inside `role="menu"`, where ARIA permits only
-`menuitem`/`menuitemradio`/`menuitemcheckbox`/`group`/`separator` children — anything else is an
-`aria-required-children` violation. It is also not Tab-reachable from an item, and needs
-`closeOnEscapeAnywhere` before Escape will close the menu. The named regions have none of those
-problems.
+**CSS parts:** `header`, `list`, and `footer`. Root `trigger` and `popup` parts do not exist;
+style those on `<lr-dropdown>` when using the overlay composition.
 
-**CSS parts:** `trigger` (wrapper around the `trigger` slot — the positioning anchor), `popup` (the
-positioned floating panel), `header` (wrapper around the `header` slot, above the list and outside
-`role="menu"`; `display: none` while that slot is unfilled), `list` (the `role="menu"` container
-wrapping the default slot), `footer` (wrapper around the `footer` slot, below the list and outside
-`role="menu"`; `display: none` while that slot is unfilled)
+**Themeable custom properties:** shared surface, border, radius, spacing, and motion tokens. Row
+chrome is controlled through the menu-item properties listed below.
 
-**Themeable custom properties:** shared tokens only (`--lr-color-surface`, `--lr-color-border`,
-`--lr-radius`, `--lr-shadow`, `--lr-space-xs`, `--lr-transition-fast`).
+**Methods:** no menu-specific public overlay methods. Use `<lr-dropdown>`'s `show()`/`hide()` and
+`open` state for an overlay. Menu-item submenu methods remain public because they drive a row's
+nested disclosure.
 
-**Optional peer deps:** none.
-
-**Which items arrow keys reach.** An item is navigable unless it is `disabled` (or `loading`),
-`hidden`, `aria-hidden="true"`, **`inert`, or has an `inert` ancestor** — the last two alongside the
-rest because an inert element *refuses* focus: stepping the roving `tabindex` onto one leaves
-`focus()` a silent no-op, so roving focus stays wherever it was (or falls to `<body>`) and every
-later arrow press dies. The state is observed live —
-`attributeFilter: ['disabled', 'hidden', 'aria-hidden', 'inert']` on every item — so marking the
-*currently active* item inert rehomes roving focus to the next reachable one instead of leaving a
-stale `tabindex="0"` on an unfocusable row. `lr-tab-group`, `lr-tree` and `lr-video-playlist` mirror
-the same rule for their own roving navigation, with one deliberate difference: those three read only
-a child's **own** inertness (plus, in `lr-tree`, an inert ancestor *inside* the tree), because a list
-inerted wholesale by an open modal must not lose its selection and its tab stop for as long as the
-dialog is up — focus cannot be inside it anyway. A menu is itself the overlay, so it takes the
-simpler ancestor-inclusive read.
+**Keyboard and focus:** exactly one navigable row has `tabindex="0"`. ArrowDown/ArrowUp wrap;
+Home/End move to the first/last navigable row; Enter/Space activate; printable input performs
+locale-aware type-ahead. Rows that are disabled, loading, hidden, `aria-hidden`, inert, or inside an
+inert subtree are skipped. Navigation is repaired live when those states or light-DOM membership
+change. A root inline menu does not consume Escape or turn Tab into overlay dismissal; a containing
+dropdown owns those root-level behaviors.
 
 ### `lr-menu-item`
 
-Not meaningful standalone — it exists purely as `<lr-menu>`'s light-DOM child, the same
-relationship `<lr-option>` has to `<lr-combobox>`/`<lr-select>`. `role="menuitem"` and the
-roving `tabindex` both live on the host element itself (mirroring `<lr-tree-item>`), not an
-internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tabIndex`.
+A focusable action row owned by `<lr-menu>`. The host itself carries `role="menuitem"` (or
+`menuitemcheckbox`) and roving `tabindex`; `[part="base"]` is only the visual row.
 
 **Properties:**
-- `value: string = ''` — an id/value echoed back in the parent `<lr-menu>`'s `lr-menu-select`
-  detail
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected, new
-  in 8.0.0) — row density on the library's shared size ladder, the same one `<lr-input>`/
-  `<lr-select>`/`<lr-button>` use, so a menu sitting under a compact toolbar can match it. It scales
-  the row's height, inline/block padding, font size and corner radius together; both spellings of
-  every tier are accepted. Every tier still floors the row at the shared 24px pointer-target
-  minimum, so even `2xs` stays tappable. The size lives on the **item**, not on `<lr-menu>`, so a
-  single compact row inside an otherwise default menu needs no wrapper — and, conversely, sizing a
-  whole menu means setting it on every item
-- `disabled: boolean = false` (reflected — disables selection and excludes this item from
-  `<lr-menu>`'s roving-tabindex navigation entirely; the native `inert` attribute, `hidden`, and
-  `aria-hidden="true"` exclude it the same way — see "Which items arrow keys reach" above)
-- `destructive: boolean = false` (reflected — gives the row the dangerous treatment for an action
-  like "Delete"; its foreground defaults to `--lr-color-danger`; retained as a behavior-identical
-  alias)
-- `variant: LyraVariant | 'default' = 'default'` (reflected) — `danger` is the mapped dangerous
-  treatment; `default` is the WA spelling of Lyra's neutral item treatment
-- `type: 'normal' | 'checkbox' = 'normal'` — `'checkbox'` (mirroring `wa-dropdown-item`'s identical
-  `type` option) renders `role="menuitemcheckbox"` in place of `role="menuitem"`, with `aria-checked`
-  reflecting `checked` and a checkmark glyph shown once `checked` is `true`. `'normal'` (the default)
-  renders and behaves exactly as before this option existed.
-- `checked: boolean = false` (reflected) — whether a `type="checkbox"` item is checked; meaningless
-  (ignored) for `type="normal"`
-- `loading: boolean = false` (reflected) — renders the spinner parts, announces the row as
-  `aria-disabled="true"`, and excludes it from activation/roving focus until loading clears
-- `hasSubmenu: boolean` (read-only, new in 8.0.0) — whether an `<lr-menu>` or direct mapped items are
-  currently assigned to this item's `submenu` slot, making the row a submenu parent
-- `submenuOpen: boolean = false` (new in 8.0.0) — whether that submenu is open right now. Assigning
-  it drives the same panel as `openSubmenu('none')` / `closeSubmenu()` without moving focus, and is
-  a no-op until submenu content is connected. It also tracks the panel's own state however it
-  changed: the parent menu's keyboard or pointer handling, a dismissal, an ancestor closing, or a
-  direct `panel.open = false`. Transient, like every other open-state in this library — it resets
-  to `false` when the item is disconnected
 
-**Methods:** `click(): void` forwards a programmatic host click to the visual row, preserving the
-same normal, checkbox, and submenu behavior as pointer activation; it is a no-op while `disabled`
-or `loading`. `select(): void` fires `lr-menu-item-select` (also a no-op while `disabled` or
-`loading`). `<lr-menu>` calls `select()` from its Enter/Space keydown handling of the roving-focused
-item. For `type="checkbox"`, either activation path first emits a cancelable
-`lr-menu-item-change` with the proposed next `checked` value; the value commits only if no listener
-prevents that event, while `lr-menu-item-select` and ordinary parent-menu closing still follow.
-On a submenu parent it opens the submenu instead and fires neither event — see below.
+- `value: string = ''` — identifier available as `event.detail.item.value` on `lr-select`
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'`
+- `disabled: boolean = false`
+- `variant: 'default' | 'danger' = 'default'`
+- `type: 'normal' | 'checkbox' = 'normal'`
+- `checked: boolean = false` — meaningful only for `type="checkbox"`
+- `loading: boolean = false`
+- `hasSubmenu: boolean` (read-only)
+- `submenuOpen: boolean = false` — transient live state; assigning it drives an existing submenu
+  without moving focus and disconnect resets it
 
-`openSubmenu(focus: 'first' | 'last' | 'none' = 'first'): Promise<void>` and
-`closeSubmenu(): Promise<void>` drive the assigned/generated panel and resolve after its matching
-state and update settle. `openSubmenu()` is a resolved no-op without a `submenu` slot or while
-`disabled`/`loading`; it uses the same focus vocabulary as `<lr-menu>`'s own `show()` — `'first'`
-for keyboard activation, `'none'` for pointer intent, which must not pull focus out from under the
-keyboard.
-Re-opening an already-open submenu still applies the focus target, so the into-submenu arrow key
-moves into a submenu the pointer opened a moment earlier. `closeSubmenu()` closes the panel and,
-through it, everything below it; it leaves focus alone, because the caller that moved focus knows
-where it belongs. The parent `<lr-menu>` owns the interaction policy (arrow keys, pointer intent,
-one-submenu-per-level) and drives it through exactly these two methods, so calling them by hand
-behaves identically.
-`getTextLabel(): string` returns the visible label used by Shoelace-compatible integrations and
-computed submenu fallbacks, without including nested submenu text. Direct and flattened, forwarded
-default-slot labels are observed live: in-place text edits, forwarding-slot reassignments, and
-relevant visibility changes update type-ahead, the computed submenu-parent name, and the computed
-submenu-panel name together. Accessibility-hidden branches do not contribute. A real forwarding
-assignment stays authoritative even while hidden and therefore does not expose slot fallback;
-fallback contributes after the assignment is removed. A consumer-authored `aria-label` or
-same-root `aria-labelledby` on the item remains authoritative for its host name and the parent
-menu's type-ahead; image alternatives, flattened slots, and open shadow content participate in
-that match through the same bounded composed accessible-text traversal. `label`/`aria-label` on the
-submenu itself also wins.
-An explicitly empty item `aria-label` and a value supplied after Lyra initially computed the name
-both remain authoritative.
+**Methods:**
 
-**Events:** `lr-menu-item-select` (no detail payload — `this.emit('lr-menu-item-select')` is
-called with no second argument, so `event.detail` is `null`, not `undefined`; fires on click, or
-when the parent `<lr-menu>`'s own Enter/Space keydown handling calls `select()` on the currently
-roving-focused item; never fired by a submenu parent, which is a disclosure rather than an action),
-`lr-menu-item-change` (cancelable; `detail: { value, checked }` carries the proposed next value
-when a `type="checkbox"` item is activated. `preventDefault()` retains the current checked state,
-but does not suppress the usual `lr-menu-item-select` or parent-menu close. It is never fired for
-`type="normal"` or by a submenu parent, whose activation opens the panel instead of toggling
-`checked`),
-`lr-menu-item-state-change` (`detail: { disabled, hidden }` — emitted when either navigability
-state changes so the parent menu can repair its roving-tabindex state immediately)
+- `click(): void` forwards programmatic activation through the visual-row path
+- `select(): void` activates through the current owning menu; it is inert while disabled/loading
+- `openSubmenu(focus: 'first' | 'last' | 'none' = 'first'): Promise<void>`
+- `closeSubmenu(): Promise<void>`
+- `getTextLabel(): string` returns the accessibility-visible label used by type-ahead
 
-**Slots:** default (the visual label), `icon` and Shoelace-compatible `prefix` (leading content),
-`details` (WA secondary text), `suffix` (Shoelace trailing content), and `submenu` (either a nested
-`<lr-menu>` or direct mapped menu items). The five display slots — default, `icon`, `prefix`,
-`details`, and `suffix` — are visual-only: their flattened content is inert and hidden from
-assistive technology, so it cannot create a second action inside the focusable menu item. The
-default slot's accessibility-visible text is mirrored to the host's accessible name and type-ahead
-label. Use ordinary text/glyph markup in display slots; use the dedicated `submenu` slot for nested
-interactive menu content.
+A checkbox activation first emits cancelable `lr-menu-item-change` with the proposed
+`detail: { value, checked }`. Preventing that event retains the current checked state; the owning
+menu's canonical `lr-select` still follows. A submenu parent is a disclosure instead of an action:
+activation opens its submenu and emits neither checkbox-change nor selection.
 
-**CSS parts:** `base`; `icon` and `prefix`; `label`; `details`; `suffix`; `checkmark` and its
-Shoelace-compatible `checked-icon` wrapper; `spinner spinner__base`; `submenu-icon`; and `submenu`.
-The role remains on the host, not `base`; the submenu chevron mirrors under RTL through its wrapper.
+**Events:**
 
-**Themeable custom properties:** `--lr-menu-item-gap` (default `var(--lr-space-xs)`) is the gap
-between the visual row's leading content, label, details, and state glyphs. `--lr-menu-item-radius`
-(default `var(--lr-form-control-radius)`) is its corner radius; its fallback follows the item's
-active size tier. Both are inline fallbacks rather than values declared on `:host`, so setting either
-on an item or any ancestor retunes the row without a `::part(base)` rule; `<lr-dropdown-item>`
-inherits both hooks. The same shape applies to a dangerous row's local state palette:
-`--lr-menu-item-danger-color` (default `var(--lr-color-danger)`) controls its foreground,
-`--lr-menu-item-danger-hover-bg` (default `var(--lr-color-danger-quiet)`) its hover background, and
-`--lr-menu-item-danger-active-bg` (default
-`color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
-its pressed background. Set those hooks on a destructive or `variant="danger"` item, or on a menu
-ancestor, to retheme only danger rows without replacing the shared danger palette. `--submenu-offset`
-(default `-2px`) is the final signed distance between a submenu and its parent row: negative values
-overlap the parent menu and positive values add separation. It updates live, mirrors along with the
-submenu under RTL, and applies to both the Shoelace-style nested-menu shape and Lyra's generated
-panel for direct mapped items. Shared tokens also include `--lr-radius`, `--lr-focus-ring-width`,
-`--lr-focus-ring-color`, `--lr-space-xs`, `--lr-space-s`, `--lr-color-brand-quiet`,
-`--lr-opacity-disabled`, `--lr-color-danger`, and `--lr-color-danger-quiet`.
+- `lr-menu-item-change` — cancelable checkbox-state proposal
+- `lr-menu-item-state-change` — internal navigation repair signal with
+  `detail: { disabled, hidden, inert }`
 
-**Optional peer deps:** none.
+Item activation itself is private owner plumbing, not a public child event. Listen for `lr-select`
+on the owning menu.
 
-### `lr-dropdown-item`
+**Slots:** default label, `icon`, `prefix`, `details`, `suffix`, and `submenu`. Display slots are
+inert visual content; their accessibility-visible default-slot text names the focusable host. The
+submenu slot accepts either one nested `<lr-menu>` or direct mapped items.
 
-Compatibility naming alias for `<lr-menu-item>`, mirroring `wa-dropdown-item`. It is a subclass of
-the same implementation, so `value`, `size` (including the `small`/`medium`/`large` spellings),
-`disabled`, `loading`, `variant="danger"`/`destructive`, `type`, `checked`, `click()`, `select()`,
-`getTextLabel()`, `hasSubmenu`/`submenuOpen`, async `openSubmenu()`/`closeSubmenu()`, checkbox events,
-and menu roving focus behave identically.
+**CSS parts:** `base`, `icon`, `prefix`, `label`, `details`, `suffix`, `checkmark`,
+`checked-icon`, `spinner`, `spinner__base`, `submenu-icon`, and `submenu`.
 
-On this mapped tag, `submenuOpen: boolean = false` also reflects to `submenu-open`, and changing the
-attribute drives the same submenu state as assigning the property. Web Awesome's published
-mixed-case `submenuOpen` attribute is normalized by HTML to `submenuopen`; that lowercase token is
-a permanent compatibility alias. It works in initial markup even when the submenu connects after
-the attribute callback. Removing `submenuopen` closes the submenu and clears the canonical
-reflection; removing only `submenu-open` while the upstream alias remains restores the canonical
-reflection because the authored upstream input still requests the open state. `openSubmenu()`
-defaults to focusing the first item; Lyra's optional `'first' | 'last' | 'none'` argument remains
-available, with `'none'` appropriate for pointer or declarative control that must not steal focus.
+**Themeable custom properties:** `--lr-menu-item-gap`, `--lr-menu-item-radius`,
+`--lr-menu-item-danger-color`, `--lr-menu-item-danger-hover-bg`,
+`--lr-menu-item-danger-active-bg`, and `--submenu-offset`, plus shared size/focus/color/spacing
+tokens.
 
-**Events:** the focusable host emits the platform's native `focus` and `blur` `FocusEvent`s. They
-are non-bubbling, composed, and non-cancelable, with no prefixed duplicates. The inherited
-`lr-menu-item-select`, `lr-menu-item-change`, and `lr-menu-item-state-change` contracts are described
-under `<lr-menu-item>` above.
+### Nested submenus
 
-**Slots:** default, `icon`, `prefix`, `details`, `suffix`, and `submenu` — including WA's direct-item
-submenu shape and Shoelace's nested-menu shape. Default, `icon`, `prefix`, `details`, and `suffix`
-are visual-only inert, assistive-technology-hidden display slots; default-slot text still names the
-focusable host and drives type-ahead. Use `submenu`, rather than a display slot, for nested
-interactive menu content.
-
-**CSS parts:** identical to `<lr-menu-item>`'s, including all compatibility aliases above.
-
-**Themeable custom properties:** identical to `<lr-menu-item>`'s, including
-`--lr-menu-item-gap`, `--lr-menu-item-radius`, `--lr-menu-item-danger-color`,
-`--lr-menu-item-danger-hover-bg`, `--lr-menu-item-danger-active-bg`, and `--submenu-offset`.
+Both supported authoring shapes use the `submenu` slot:
 
 ```html
-<lr-menu>
-  <button slot="trigger">Actions</button>
-  <lr-dropdown-item value="archive">Archive</lr-dropdown-item>
-</lr-menu>
-```
-
-```html
-<lr-menu label="Row actions">
-  <button slot="trigger" aria-label="More actions">⋮</button>
-  <lr-menu-item value="edit">Edit</lr-menu-item>
-  <lr-menu-item value="duplicate">Duplicate</lr-menu-item>
-  <hr />
-  <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
-</lr-menu>
-<script type="module">
-  document.querySelector('lr-menu').addEventListener('lr-select', (e) => console.log(e.detail.item.value));
-</script>
-```
-
-The popup is always rendered in the DOM (never `display:none`) so `.focus()` calls on its content
-work synchronously the instant it opens — closed state is conveyed via `visibility`/`opacity`
-instead. `visibility` is an inherited CSS property that pierces the `<slot>` projection boundary, so
-every closed-state `<lr-menu-item>` is automatically excluded from sequential (Tab-key)
-navigation with no separate JS bookkeeping. ArrowDown/ArrowUp *on the trigger while closed* also
-opens the menu, focusing the first/last non-disabled item respectively (mirrors native `<select>`).
-Once open, ArrowDown/ArrowUp move the roving focus among non-disabled items and wrap past either end
-(unlike `<lr-select>`'s clamped listbox nav); Home/End jump to the first/last non-disabled item;
-Enter/Space activate the focused item; Escape closes and refocuses the trigger. The arrow keys,
-Home/End, Enter/Space and type-ahead only respond when the triggering keydown event's own target is
-an actual `<lr-menu-item>` element; a keydown bubbling up from any other node inside the popup is
-ignored rather than misread as list navigation. Escape and Tab are the two deliberate exceptions.
-Escape from `header`/`footer` content always closes the menu and refocuses the trigger (mirroring
-`lr-popover`'s handling of arbitrary popup content), while Escape from non-item content in the
-*default* slot closes it only with `closeOnEscapeAnywhere` set. Tab never traps focus and never
-calls `preventDefault()` — the browser's own Tab navigation always proceeds untouched — and closes
-the menu only when focus is on its way *out* of `[part="popup"]`: with a focusable in the
-`header`/`footer` region on the far side of the keypress the menu stays open so native Tab can carry
-focus there, and with neither region filled Tab closes exactly as it always has. Tabbing past the
-popup's last focusable in either direction closes the menu, including from slotted non-item content
-— which previously left the menu open while focus walked out of the popup entirely. A printable
-keypress runs type-ahead: roving focus jumps to the next non-disabled item whose text starts with the
-accumulated buffer (cycling from just after the active item, buffer resets ~500ms after the last
-keystroke) — mirrors `<lr-select>`'s identical listbox type-ahead. A click outside both the trigger
-and the open popup also closes it, but deliberately does *not* refocus the trigger — the outside
-click itself already moved focus somewhere the user chose.
-
-### Nested submenus (new in 8.0.0)
-
-Both upstream shapes use the same slot assignment. Shoelace-style markup puts an `<lr-menu>` inside
-an item with `slot="submenu"`; that nested menu needs no trigger because the row becomes its anchor.
-Web Awesome-style markup assigns one or more direct mapped items to `slot="submenu"`; Lyra creates
-the contained submenu panel around them. Both reach the same keyboard/pointer engine, and nesting is
-unbounded.
-
-```html
-<lr-menu label="Row actions">
-  <button slot="trigger" aria-label="More actions">⋮</button>
-  <lr-menu-item value="rename">Rename</lr-menu-item>
+<lr-menu label="Share actions">
   <lr-menu-item value="share">
     Share
-    <lr-menu slot="submenu">
+    <lr-menu slot="submenu" label="Share options">
       <lr-menu-item value="email">Email</lr-menu-item>
       <lr-menu-item value="link">Copy link</lr-menu-item>
     </lr-menu>
   </lr-menu-item>
 </lr-menu>
-<script type="module">
-  // One cancelable event for the whole tree, submenu selections included.
-  document
-    .querySelector('lr-menu')
-    .addEventListener('lr-select', (e) => console.log(e.detail.item.value));
-</script>
 ```
-
-The equivalent direct-item branch is:
 
 ```html
 <lr-dropdown-item>
@@ -2498,104 +2381,64 @@ The equivalent direct-item branch is:
 </lr-dropdown-item>
 ```
 
-**Semantics.** A row with a `submenu` slot gains `aria-haspopup="menu"` and an `aria-expanded` that
-renders `"true"` *and* `"false"` — never omitted, since the attribute is part of the role's state.
-The open state also reflects as `submenu-open`, and the chevron renders in
-`[part="submenu-icon"]`. Because such a row is a disclosure rather than an
-action, activating it opens the submenu and fires no `lr-menu-item-select`; activating one also
-never toggles `checked` or fires `lr-menu-item-change`, so `type="checkbox"` still renders
-`role="menuitemcheckbox"` (and a checkmark for a `checked` row) but nothing ever moves that state. The submenu's `role="menu"` is named from the row's own label text, and so is the row
-itself — otherwise name-from-content would walk into the open submenu and announce "Share Email Copy
-link". A host `aria-label` on the row, or a `label`/`aria-label` on the nested `<lr-menu>`, wins over
-both computed names.
+The submenu presentation is private to the parent row, not a second root-menu API. A submenu parent
+has `aria-haspopup="menu"`, explicit `aria-expanded="true|false"`, the transient
+`submenu-open` state, and a logical-direction chevron. Its submenu is named from the parent's
+accessible label unless the submenu supplies its own `aria-label` or non-default `label`.
 
-**Keyboard.** The into-submenu and back-out keys are inline-direction moves, so **both swap under
-RTL**: ArrowRight opens the submenu and focuses its first item under LTR while ArrowLeft closes it
-and returns focus to the parent row, and under `dir="rtl"` those two keys trade places exactly —
-ArrowRight then opens nothing at all on a submenu parent. Enter/Space open a submenu parent too,
-landing on the same first item. The back-out key acts only in a menu that has an `anchor` — a
-submenu always does; an ordinary trigger-slotted menu does not, and there the key is left untouched
-for the browser's own handling. Escape inside a submenu closes only that submenu and
-returns focus to its parent row — the innermost open menu is the one holding focus, so it handles
-the key and every ancestor declines; a second Escape then closes the level above it. ArrowUp/
-ArrowDown, Home/End and type-ahead inside a submenu stay inside that submenu and never disturb the
-outer menu's roving highlight. A selection anywhere in the chain closes every level and returns
-focus to the outermost trigger.
+The into-branch and back-out arrow keys swap under RTL. Enter/Space and the into key open and focus
+the first child; the back-out key and Escape close only the innermost branch and return focus to its
+parent row. Pointer hover uses an intent delay, outside pointer dismissal closes the branch, and at
+most one branch per level is open. Selection bubbles as the same single `lr-select`; a non-vetoed
+selection closes the full nested chain.
 
-**Pointer.** Hovering a submenu parent opens its submenu after a short intent delay (150 ms), so
-sweeping the cursor down a list opens nothing; leaving closes it after a deliberately longer one
-(300 ms), which is the tolerance that lets the cursor cut diagonally across the rows in between on
-its way to the panel — and, because the close delay outlasts the open delay, crossing a *sibling*
-submenu parent in transit neither dismisses the open submenu nor opens the sibling's. Hover never
-moves focus — the pointer opens a submenu, it does not claim the keyboard. A pointerdown on the row
-that owns an open submenu is not treated as an outside click. In a test, wait past both delays with
-real timers rather than stubbing them.
+### `lr-dropdown-item`
 
-**Placement and lifecycle.** A submenu prefers the inline-end side of its row, mirrored under RTL
-and flipped to the other side by the positioner when the preferred one would overflow. At most one
-submenu per level is open at a time — moving the roving highlight or the pointer to another row
-closes what the previous one had open — and closing a menu closes everything below it. A disabled
-row never opens its submenu, by keyboard or by pointer.
+The Web Awesome-compatible name for the same item implementation. It shares all menu-item
+properties, slots, parts, methods, checkbox/state events, roving focus, and canonical parent
+`lr-select` behavior. Its host also exposes native, non-bubbling, composed `focus` and `blur`
+events.
 
-**Known gotchas:**
-- A supporting browser reports `trigger.shadowRoot`'s focused control
-  `getAttribute('aria-controls') === ''` after the element-reference relationship is assigned.
-  Inspect `ariaControlsElements` instead. This is the platform's reflected-element-reference
-  contract, not a missing menu id; setting the string again would discard the cross-shadow
-  relationship. Browsers without that API keep the string fallback, and `aria-controls` itself is
-  optional for the menu-button pattern.
-- `.click()` on an `<lr-menu-item>` or `<lr-dropdown-item>` host forwards to its inner visual
-  `[part="base"]`, preserving the same selection, checkbox, and submenu behavior as a pointer
-  activation. Prefer the host `click()` or `select()` in tests and automation rather than reaching
-  into shadow DOM.
-- `lr-show`/`lr-hide` are suppressed on the very first render even if `open` is already `true`
-  in markup — only later `open` transitions fire them.
-- `lr-menu-item-select` carries no detail payload (`event.detail === null`); read
-  `event.target.value` instead. `<lr-menu>`'s own re-fired `lr-menu-select` is the one that
-  carries `detail: { value }`.
-- Tab never calls `preventDefault()` and never traps focus — the browser's own default Tab
-  navigation always proceeds untouched. It closes the menu only when Tab would leave
-  `[part="popup"]` entirely; when the `header`/`footer` region holds a focusable on the far side of
-  the keypress, the menu stays open instead and native Tab moves focus into it. With neither region
-  filled, Tab closes exactly as before.
-- Non-item content in the *default* slot is not Tab-reachable from an item — Tab from an
-  `<lr-menu-item>` still closes the menu when there is no `header`/`footer` focusable to move to,
-  even if a `<button>` is slotted alongside the items. Move such controls to `header`/`footer`.
-- `header`/`footer` emptiness is tracked from each slot's own `slotchange` and reflected on the host
-  as `data-has-header` / `data-has-footer` (plus `data-list-empty`, which suppresses the region
-  divider next to an empty list). They are internal styling hooks, not public API — don't set them
-  by hand — but they are why `[part="header"]`/`[part="footer"]` collapse cleanly: a
-  `[part]:empty` rule can never match a part that contains a slot, since Chromium counts the
-  whitespace-only text nodes Lit leaves there.
-- Only Escape and a committed selection refocus the trigger on close; a click outside does not.
-- A submenu's own `lr-show`/`lr-hide` stop at the `<lr-menu-item>` that owns it and never reach the
-  ancestor menu, where a listener would read them as *that* menu opening or closing. Add the
-  listener to the nested `<lr-menu>` element itself.
-- There is no nested-selection event. `lr-select` and the retained `lr-menu-select` each originate
-  once at the owning menu and bubble through ancestors; listening for a second, deeper name will
-  never fire. Preventing `lr-select` leaves the full chain open.
-- `submenuOpen` is transient state, not persisted: disconnecting an `<lr-menu-item>` (a drag-and-drop
-  reparent, a list re-render) resets it to `false`, so a reconnect never comes back already expanded.
-- The `submenu` slot confers submenu semantics on either one nested `<lr-menu>` or direct
-  `lr-menu-item`/`lr-dropdown-item` children. Other content still renders but gets no submenu
-  semantics.
+`submenuOpen` reflects to canonical `submenu-open`. HTML normalizes Web Awesome's documented
+mixed-case spelling to `submenuopen`, so that lowercase token is a permanent compatibility alias.
+Adding either spelling opens the submenu and synchronizes the other; removing either closes it and
+removes both. Internal close paths — `closeSubmenu()`, Escape, outside dismissal, selection,
+replacement, and disconnect — clear both spellings, preventing a persistent alias from reopening a
+dismissed branch. An authored initial open request remains pending until submenu content connects.
+
+### 9.0 migration
+
+Root overlay behavior moved from `<lr-menu>` to `<lr-dropdown>`. Migrate mechanically:
+
+- Move a former menu `trigger` slot and menu `open`, `placement`, `anchor`, or
+  `close-on-escape-anywhere` policy to an enclosing `<lr-dropdown>`.
+- Replace `menu.show()`/`menu.hide()` and menu `lr-show`/`lr-hide` listeners with the equivalent
+  dropdown APIs/events.
+- Replace `lr-menu-select` (`detail.value`) and `lr-menu-item-select` listeners with one
+  `lr-select` listener on the menu or dropdown and read `event.detail.item`.
+- Replace menu `::part(trigger)`/`::part(popup)` rules with dropdown part styling. Menu
+  `header`/`list`/`footer` parts remain on the semantic controller.
+
+Standalone mapped `<sl-menu>` markup needs no wrapper: the mechanical `sl-` → `lr-` tag rename
+continues to produce an inline menu.
 
 ---
 
 ## `lr-dock-panel`
 
 A single panel docked to one edge of whatever contains it, resizable by dragging its inner edge.
-First-party invention (no `wa-*`/`sl-*` counterpart). Unlike `lr-split` (which owns and lays out N
+First-party invention (no `wa-*`/`sl-*` counterpart). Unlike `lr-multi-split` (which owns and lays out N
 sibling panels, and requires restructuring a layout so every panel becomes its direct child), this is
 one self-contained element you drop next to your existing content — typically as an absolutely-
 positioned child of a `position: relative` parent, or as a flex item alongside a main-content sibling.
 It deliberately imposes no `position`/`inset` of its own: it only manages its own size along the
 resize axis (`inline-size` for `start`/`end`, `block-size` for `top`/`bottom`) and fills 100% of the
-cross axis, leaving where it sits in the page entirely up to the consumer's own layout. `lr-split`
+cross axis, leaving where it sits in the page entirely up to the consumer's own layout. `lr-multi-split`
 stays the right primitive for the multi-sibling-panel case; this is the primitive for the single-edge-
 docked case.
 
 **Properties:**
+
 - `edge: 'start' | 'end' | 'top' | 'bottom' = 'end'` (reflected) — which edge of the panel's own
   container it's docked to. `start`/`end` are logical-inline (mirror left/right depending on writing
   direction); `top`/`bottom` are block-direction and unaffected by RTL.
@@ -2603,8 +2446,9 @@ docked case.
 - `minExtent: string = '160px'` (attribute `min-extent`) — minimum resize bound, as a CSS length.
 - `maxExtent: string = ''` (attribute `max-extent`) — maximum resize bound. Empty means "no explicit
   cap": the live extent of the containing element is used instead (falling back to the viewport if
-  there's no parent, e.g. not yet connected), so the panel still can't be dragged wider/taller than
-  its container.
+  there's no parent, e.g. not yet connected). An explicit maximum is still capped to that live
+  containing extent, and an effective minimum above the maximum is reduced to the maximum, so the
+  separator always exposes `min <= now <= max`.
 - `collapsible: boolean = false` (reflected)
 - `collapsed: boolean = false` (reflected)
 - `resizable: boolean = true` (reflected) — when `false`, no drag handle renders at all and the panel
@@ -2614,31 +2458,35 @@ docked case.
   a true-defaulting property.
 
 **Renamed in 8.0.0: `size`/`min-size`/`max-size` are now `extent`/`min-extent`/`max-extent`**, and
-`lr-resize`'s detail key moved with them (`{ size }` → `{ extent }`). Everywhere else in the library
+the then-current resize detail key moved with them (`{ size }` → `{ extent }`). Everywhere else in the library
 `size` names a tier on the shared six-step ladder; here it was an arbitrary CSS length, which is the
 collision the rename resolves. It is a clean rename with no alias, and it fails quietly in both
 directions: `size="320px"` is now an unknown attribute the browser ignores, so the panel silently
-renders at the `280px` default, and `event.detail.size` reads `undefined`. Rename the attributes and
-the detail key in the same change.
+renders at the `280px` default, and `event.detail.size` reads `undefined`.
 
-**Exported helper:** `parseLengthPx(length: string, containerPx: number, fontSizeEl: Element =
-document.documentElement): number | undefined` — resolves an arbitrary CSS length (`px`, `rem`, `em`,
-`vw`, `vh`, `%`, or a bare/unitless number treated as `px`) to a live pixel value without a DOM-probe
-measurement, since `min-extent`/`max-extent` are pure constraints that are never themselves rendered
-anywhere. `rem` resolves against the document root's font size; `em` resolves against `fontSizeEl`'s
-own computed font size; `%` resolves against `containerPx`. Returns `undefined` for an
-empty/unparseable string. Used internally to resolve `min-extent`/`max-extent`; the panel's
-*current* extent is instead always read back live from `getBoundingClientRect()`, which handles any
-unit for free.
+**Exported types:** `LyraDockPanelEdge = 'start' | 'end' | 'top' | 'bottom'`, readonly
+`LyraDockPanelResizeDetail = { extent: string }`, readonly
+`LyraDockPanelCollapseChangeDetail = { collapsed: boolean }`, and `LyraDockPanelEventMap`.
+The former dock-specific `parseLengthPx()` export is removed; dock length resolution is now a
+private adapter over the library's canonical CSS-length resolver, with container/viewport units
+resolved in the host's owner realm.
 
 **Events:**
-- `lr-resize` — `detail: { extent }` (a `px` CSS length string), fired on every drag step, drag
-  release, and keyboard step.
+
+- `lr-resize-input` — frozen `detail: { extent }` (a `px` CSS length string), fired for each genuine
+  pointer or keyboard value transition. Fully clamped/no-op attempts emit nothing.
+- `lr-resize-change` — a fresh frozen detail snapshot, fired exactly once on genuine `pointerup`
+  after at least one value transition, and after each genuine keyboard step. `pointercancel`, lost
+  capture, disconnect/adoption, live policy/geometry mutation, and no-op attempts emit nothing.
 - `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the built-in
   collapse toggle. Call `preventDefault()` to leave `collapsed` unchanged. Not fired when a
   consumer assigns `collapsed` directly), `lr-collapse-change` (non-cancelable; `detail: {
-  collapsed }` is the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed`
-  directly).
+collapsed }` is the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed`
+  directly). Both details are fresh readonly/frozen snapshots.
+
+The Lyra-original v9 event migration is mechanical: listen for `lr-resize-input` for live layout
+feedback and `lr-resize-change` for persistence/telemetry instead of the removed `lr-resize` name.
+Type imports likewise move from `DockPanel*` to `LyraDockPanel*`.
 
 **Slots:** default — the panel's own content.
 
@@ -2673,7 +2521,8 @@ being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`, `--
     min-extent="200px"
     max-extent="480px"
     collapsible
-    @lr-resize=${(e) => console.log(e.detail.extent)}
+    @lr-resize-input=${(e) => updateLayoutPreview(e.detail.extent)}
+    @lr-resize-change=${(e) => persistExtent(e.detail.extent)}
     @lr-collapse-change=${(e) => console.log(e.detail.collapsed)}
   >
     <div>Sidebar content — a chat thread list, an inspector, anything.</div>
@@ -2681,18 +2530,24 @@ being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`, `--
 </div>
 ```
 
-Pointer-drag-resize mirrors `lr-split`'s pointer-capture technique (`pointerdown` captures the
-pointer on the handle; `pointermove` computes a new size; `pointerup`/`pointercancel`/
-`lostpointercapture` all release it, since a drag can end without a clean `pointerup`) but reasons in
-raw pixels throughout rather than percent. Every resize — drag step, drag release, or a keyboard step
+Pointer-drag-resize admits only a primary pointer using its primary button, then mirrors
+`lr-multi-split`'s pointer-capture technique (`pointerdown` captures the pointer on the handle;
+`pointermove` computes a new size; `pointerup`/`pointercancel`/`lostpointercapture` all release it,
+since a drag can end without a clean `pointerup`) but reasons in raw pixels throughout rather than
+percent. A genuine interaction — pointer movement or a keyboard step
 (<kbd>ArrowLeft</kbd>/<kbd>ArrowRight</kbd> for the inline axis, <kbd>ArrowUp</kbd>/<kbd>ArrowDown</kbd>
-for the block axis, 16px per step) — always commits `extent` as a rounded `px` string regardless of
-what unit `extent`/`min-extent`/`max-extent` were originally expressed in.
+for the block axis, 16px per step) — commits `extent` as a rounded `px` string regardless of what
+unit `extent`/`min-extent`/`max-extent` were originally expressed in. Passive container/bounds
+reconciliation emits neither resize event and preserves an in-range authored relative unit.
 
 **Known gotchas:**
+
 - `collapsed` doesn't zero the panel's box — it shrinks to the persistent rail size
   (`--lr-dock-panel-collapsed-size`). `extent` itself is left untouched while collapsed, so
-  re-expanding restores exactly what it was.
+  re-expanding restores what it was unless the current bounds require a valid clamp.
+- Parent or flex allocation shrink, direct out-of-range property writes, and live min/max changes
+  reconcile atomically. A later container grow does not silently restore an extent that was clamped
+  during shrink.
 - `handle` only renders while `resizable && !collapsed`; `collapse-toggle` only renders while
   `collapsible` — a panel with both `false` renders neither control, just fixed-size slotted content.
   `resizable` and `collapsed` interact: dragging is disabled whenever `collapsed` is `true`, even if
@@ -2711,6 +2566,7 @@ to hero highlights, clickable grid tiles, and management-list items. A direct `<
 to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where they overlap.
 
 **Properties:**
+
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
   (reflected) — `'outlined'` (the default) is a plain bordered surface; `'filled'` swaps the border
   for a quiet brand-tinted background; `'filled-outlined'` keeps the border and adds that same tinted
@@ -2724,14 +2580,15 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   reflected as `with-header`, `with-header-actions`, `with-media`, `with-footer`, and
   `with-footer-actions`) — SSR presence hints. They expose an otherwise-empty section wrapper before
   slot assignment can be measured; populated slots are still detected automatically after hydration.
-- `interactive: boolean = false` (reflected) — opt-in clickable-tile behavior: the hover/focus-visible
+- `actionable: boolean = false` (reflected) — opt-in no-link whole-card action behavior: the hover/focus-visible
   treatment (border-color shift, `cursor: pointer`) plus, when `href` is **not** also set, real
   activation semantics. Those come from a real native `<button part="activation-button">` stretched
   across the card, not from making `[part='base']` itself focusable: it is the keyboard tab stop,
   it answers Enter and Space natively, and activating it emits `lr-card-activate`. With `href` set,
   a stretched sibling native `<a>` owns navigation, no activation button renders, and
   `lr-card-activate` never fires. Consumer slots stay outside that link, so their controls remain
-  independent. `false` (the default) reproduces a plain static card: no button, no listeners, no
+  independent. A valid `href` is inherently actionable and receives the same interaction paint
+  without this flag. `false` (the default) leaves a no-link card static: no button, listeners, or
   events.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the accessible name of the
   native whole-card owner: the activation button without `href`, or the stretched link with it.
@@ -2742,21 +2599,21 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   link, while slotted controls keep their own native or Lyra behavior. Unset (the default) renders
   a plain `<div>`.
 - `target?: string` — native anchor target, applied only while `href` resolves to a link. Setting it
-  to `'_blank'` (or any other target) automatically derives `rel="noopener noreferrer"` on the
-  rendered anchor; there is deliberately **no** separately-settable `rel` property, so a consumer
-  can't forget it and leave the opened page holding a `window.opener` back-reference
-  (reverse-tabnabbing). Unset (the default) emits neither `target` nor `rel`.
+  to `'_blank'` (or any other target) forces `noopener noreferrer` on the rendered anchor.
+- `rel?: string` — author relationship tokens such as `nofollow`, `sponsored`, `me`, or `license`.
+  `opener` is always stripped, other tokens are preserved, and any set `target` force-adds the
+  non-negotiable `noopener noreferrer` floor. With no target, safe author tokens render unchanged.
 
 **Events:** `lr-card-activate` (no detail) — the whole card was activated, by a click anywhere on it
-or by Enter/Space on `[part='activation-button']`. Only fired while `interactive` is set **without**
+or by Enter/Space on `[part='activation-button']`. Only fired while `actionable` is set **without**
 `href`. Never fired for an interaction that originated in a slotted control, so a card can keep its
 own action buttons (see the gotchas below).
 
 **Methods:** `click(): void` activates the native whole-card owner: the linked anchor when `href` is
-safe, or the activation button while `interactive` is set without a link. Passive cards remain
+safe, or the activation button while `actionable` is set without a link. Passive cards remain
 inert.
 
-Changing `href` or `interactive` while the whole-card owner has focus transfers focus across the
+Changing `href` or `actionable` while the whole-card owner has focus transfers focus across the
 link, activation button, and a programmatically focusable passive base. It never overrides a newer
 external focus destination.
 
@@ -2767,7 +2624,7 @@ content), `header-actions` and `footer-actions` (controls aligned with those ver
 
 **CSS parts:** `base` (the outer container — a `<div>`, or a stretched `<a>` behind consumer slots
 when `href` is set),
-`activation-button` (the native whole-card action, rendered only while `interactive` without `href`;
+`activation-button` (the native whole-card action, rendered only while `actionable` without `href`;
 it is absolutely positioned across the card, `pointer-events: none` so it never intercepts a click
 meant for slotted content, and it owns the card's `:focus-visible` ring), `media` and `image`
 (aliases on the wrapper around both media slots, hidden entirely when empty), `header` (wrapper around the `header` slot and
@@ -2790,7 +2647,7 @@ former brand and active-mix values when unset.
 **Optional peer deps:** none.
 
 ```html
-<lr-card appearance="outlined" interactive href="/reports/42" with-media with-header>
+<lr-card appearance="outlined" href="/reports/42" with-media with-header>
   <img slot="image" src="/thumb.png" alt="" />
   <span slot="header">Q3 Report</span>
   <span slot="header-actions"><lr-chip tone="success">Ready</lr-chip></span>
@@ -2801,7 +2658,8 @@ former brand and active-mix values when unset.
 ```
 
 **Known gotchas:**
-- every `appearance` renders on the *same* `[part="base"]` element — there's no separate element per
+
+- every `appearance` renders on the _same_ `[part="base"]` element — there's no separate element per
   variant, so a `::part(base)` override applies uniformly regardless of `appearance`.
 - slot-presence (`header`/`media`/`image`/`footer`/`actions`/`header-actions`/`footer-actions`) is
   tracked in JS, not via CSS `:empty` (a
@@ -2815,10 +2673,10 @@ former brand and active-mix values when unset.
   not a viewport media query, so the same card can be horizontal in a wide region and stacked in a
   narrow sidebar on one page.
 - **`[part='base']` itself deliberately carries no `role="button"` and is not focusable.** A card is
-  a *container* — it routinely holds slotted buttons and links — and `role="button"` around
+  a _container_ — it routinely holds slotted buttons and links — and `role="button"` around
   focusable descendants is the `nested-interactive` accessibility violation this library's own a11y
-  gate enforces. (`lr-chip`'s `toggleable` mode *can* carry `role="button"` because it forbids
-  focusable children outright.) The whole-card action is therefore a *sibling* of the slotted
+  gate enforces. (`lr-chip`'s `toggleable` mode _can_ carry `role="button"` because it forbids
+  focusable children outright.) The whole-card action is therefore a _sibling_ of the slotted
   content — `[part='activation-button']` — so the actionable roles are never nested inside one
   another, and the card still announces as a real button rather than as an unnamed focusable region.
 - because the base element carries no `role="button"` to disambiguate, "did the user aim at the card
@@ -2827,12 +2685,12 @@ former brand and active-mix values when unset.
   itself a control (a link, `button`, `input`, `select`, `textarea`, `label`, `summary`,
   `contenteditable`, anything carrying a `tabindex` other than `-1`, or an ARIA widget role such as
   `button`/`link`/`checkbox`/`switch`/`radio`/`menuitem`/`option`/`tab`/`textbox`/`slider`/
-  `spinbutton`). Using the *composed*
+  `spinbutton`). Using the _composed_
   path is what makes this work through a slotted component's own shadow root — a click on
   `<lr-button>` retargets to the host, but its composed path still contains the internal native
   `<button>`.
 - a click whose composed path starts on `[part='activation-button']` skips that walk entirely and
-  always activates — it *is* the whole-card action, so there is nothing to disambiguate.
+  always activates — it _is_ the whole-card action, so there is nothing to disambiguate.
 - with `href`, `[part='base']` is a stretched real anchor sibling behind the visible content rather
   than an ancestor of it. Clicks from noninteractive slotted content are delegated to that anchor;
   composed-path arbitration leaves native and Lyra buttons, links, and fields independent. The
@@ -2847,19 +2705,22 @@ overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, bac
 dismissal, ref-counted document scroll lock).
 
 **Properties:**
+
 - `open: boolean = false` (reflected) — after the initial silent render, property and attribute
   writes use the same synchronous cancelable transaction as `openPalette()`/`close()`; a veto
   restores reflection and prevents query/active-row opening side effects
 - `commands: LyraCommand[] = []` (attribute: false) — `{ id, label, description?, group?, shortcut?,
-  keywords?, disabled?, icon?, onSelect? }`. `icon` is an optional leading glyph (a `TemplateResult`,
+keywords?, disabled?, icon?, onSelect? }`. `icon` is an optional leading glyph (a `TemplateResult`,
   an emoji string, etc. — not restricted to a square icon) rendered in the `icon` part before the
   label; a command with no `icon` renders no `icon` part at all. Filtering is case-insensitive
   substring matching over `label` + `description` + `group` + `keywords` joined together (not
   fuzzy/subsequence), memoized per `commands` array identity — reassign the array, never mutate it
   in place. Consecutive commands sharing a `group` render one `[part='group']` heading, so pre-sort
   by group yourself.
-- `shortcut: string = 'mod+k'` — global toggle chord parsed as `+`-separated parts; `mod` resolves to
-  Cmd on Mac and Ctrl elsewhere. The listener is on `window`, added in `connectedCallback`.
+- `hotkey: string = 'mod+k'` — exact global activation chord parsed as `+`-separated parts; `mod`
+  resolves to Cmd on Mac and Ctrl elsewhere. Repeats, composition keys, and extra modifiers do not
+  match. If several connected palettes use the same chord, the last connected palette owns it;
+  activation is idempotently open rather than a toggle.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the localized dialog name
 
 **Methods:** `openPalette()` (after an accepted open, clears the query and resets the active row;
@@ -2890,7 +2751,7 @@ heading), `command-group` (a labeled ARIA group of commands), `command` (a `role
 `--lr-command-palette-list-max-block-size` (default `50vh` — the scrolling result list), and
 `--lr-command-palette-active-bg` (default `var(--lr-color-brand-quiet)` — the background of the
 active, keyboard-highlighted command row). That last one is an inline `var()` fallback at the point
-of use rather than a `:host` declaration, so it can be set on the element *or on any ancestor*:
+of use rather than a `:host` declaration, so it can be set on the element _or on any ancestor_:
 `::part(command)[data-active='true']` is invalid CSS (Shadow Parts forbids an attribute selector
 after `::part()`), so highlighting the active row previously required hijacking the library-wide
 `--lr-color-brand-quiet` token and repainting everything else that read it. Unset, it falls back to
@@ -2912,28 +2773,24 @@ that token, so rendering is unchanged.
 `lr-details` is a native-semantics disclosure panel; it mirrors `wa-details` / `sl-details`.
 `lr-accordion` and `lr-accordion-item` mirror `wa-accordion` / `wa-accordion-item`: the group owns
 mode, presentation, lifecycle events, and roving focus, while each item renders a heading button
-and animated panel. An item also retains the previous Details vocabulary as aliases (`open`,
-`summary`, the `summary` slot, `show()`/`hide()`), so migrating markup keeps working.
+and animated panel. The two components intentionally keep distinct vocabularies: accordion items
+use `expanded`, `label`, and `expand()`/`collapse()`/`toggle()`, while `open`, `summary`, and
+`show()`/`hide()` belong only to Details.
 
 **Breaking in 9.0.0:** an accordion coordinates direct `lr-accordion-item` children only. Direct
 `lr-details` panels used to be accepted as well; they are not any more. A `lr-details` slotted into
 an accordion today is ordinary content owning its own disclosure lifecycle — the group applies
 neither its presentation, nor its single-panel invariant, nor its roving keyboard model, nor its
-`lr-expand`/`lr-collapse` lifecycle to it, and `expandAll()`/`collapseAll()` skip it. Migrate by
-renaming the tag: `<lr-details summary="...">` → `<lr-accordion-item summary="...">`, which accepts
-the same `summary` text and `open` state. `lr-details` on its own, outside an accordion, is
-unchanged.
+`lr-expand`/`lr-collapse` lifecycle to it, and `expandAll()`/`collapseAll()` skip it. Migrate both
+the tag and its member vocabulary: `<lr-details summary="..." open>` becomes
+`<lr-accordion-item label="..." expanded>`, and `show()`/`hide()` become
+`expand()`/`collapse()`. `lr-details` on its own, outside an accordion, is unchanged.
 
 **Accordion properties:**
 
 - `mode: 'single' | 'single-collapsible' | 'multiple' = 'multiple'` (reflected). `multiple` allows
   any number of expanded items. `single` permits at most one and activating the expanded item is a
   no-op. `single-collapsible` permits at most one but allows zero.
-- `multiple: boolean = true` (reflected compatibility alias). `true` selects `mode="multiple"`;
-  `false` selects `mode="single-collapsible"`. The true default stays absent while false serializes
-  as `multiple="false"`, so declarative false is unambiguous. When both attributes occur in initial
-  markup, the explicit `mode` value wins, so their interpretation does not depend on attribute
-  order.
 - `iconPlacement: 'start' | 'end' = 'end'` (attribute `icon-placement`, reflected),
   `headingLevel: string = '3'` (attribute `heading-level`, reflected; `1`–`6` select that heading,
   `none` omits it, and every other value renders the documented h3 fallback), and
@@ -2943,9 +2800,11 @@ unchanged.
 
 **Accordion-item properties:** `label: string = ''`, `expanded: boolean = false` (reflected),
 `disabled: boolean = false` (reflected), plus the same `iconPlacement`, `headingLevel`, and
-`appearance` properties listed above. `open` is a synchronized reflected alias for `expanded`, and
-`summary` is a text alias for `label`; the canonical value wins when both text properties are set.
-Items also retain the Details `size` property.
+`appearance` properties listed above. **Removed in 9.0.0:** inherited Details members `open`,
+`summary`, `name`, `size`, `show()`, and `hide()`; use the canonical accordion-item members or use
+`lr-details` when the Details contract is required. Accordion expansion policy likewise has one
+authority: migrate `multiple` to `mode="multiple"`, and `multiple="false"` to the intended
+`mode="single"` or `mode="single-collapsible"` behavior.
 
 **Details properties:** `open: boolean = false` (reflected), `disabled: boolean = false`
 (reflected), `summary: string = ''`, `name: string = ''` (reflected — disclosures with the same
@@ -2957,9 +2816,9 @@ non-empty name in one document or shadow root are mutually exclusive),
 A host `aria-label`, when present, names the actual Details summary or accordion-item trigger;
 it wins over summary/label content even when explicitly empty. When the host attribute is absent,
 Details and accordion-item property/localized fallbacks keep their native name-from-content
-behavior. An active accordion-item `label` or compatibility `summary` slot instead contributes its
-normalized accessibility-visible text as the trigger's explicit name; its rendered subtree is inert
-and hidden from assistive technology so the trigger remains the sole action.
+behavior. An active accordion-item `label` slot contributes its normalized
+accessibility-visible text as the trigger's explicit name; its rendered subtree is inert and hidden
+from assistive technology so the trigger remains the sole action.
 
 `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected, new
 in 8.0.0) is the library's shared size ladder, so a disclosure scales with the controls around it
@@ -2973,26 +2832,23 @@ the ladder doesn't cover is a two-line override rather than a fork.
 
 - Accordion: `expandAll()` expands every direct enabled item only in `multiple` mode;
   `collapseAll()` collapses every direct expanded item. Nested accordion items are never included.
-- Accordion item: `expand()`, `collapse()`, and `toggle()` initiate the corresponding transition and
-  return `void`; observe `lr-after-expand` / `lr-after-collapse` on the owning accordion (or the
-  retained Details after-events on the item) for completion. Disabled items are unchanged.
-  `focus()`, `blur()`, and `click()` forward to the trigger button.
-- Details and compatibility aliases on accordion item: `show(): Promise<void>` expands and
-  `hide(): Promise<void>` collapses. Each promise settles after its matching `lr-after-show` or
-  `lr-after-hide`; a vetoed, disabled, or already-satisfied request resolves without changing state.
-  Assigning `open` runs the same Details lifecycle. `show()` is a no-op while disabled; `hide()`
-  can still close a disabled Details panel. On an item, prefer `expand()` / `collapse()` when the
-  disabled guard and canonical accordion vocabulary matter.
+- Accordion item: `expand(): Promise<void>`, `collapse(): Promise<void>`, and
+  `toggle(): Promise<void>` initiate the corresponding transition and settle after its rendered
+  motion. Disabled items are unchanged. `focus()` and the host's `click()` target the trigger.
+- Details: `show(): Promise<void>` expands and `hide(): Promise<void>` collapses. Each promise
+  settles after its matching `lr-after-show` or `lr-after-hide`; a vetoed, disabled, or
+  already-satisfied request resolves without changing state. Assigning `open` runs the same
+  Details lifecycle. `show()` is a no-op while disabled; `hide()` can still close a disabled
+  Details panel.
 
 **Events:**
 
 - `lr-expand`, `lr-collapse`, `lr-after-expand`, `lr-after-collapse` — accordion group lifecycle.
-- `lr-show`, `lr-hide`, `lr-toggle`, `lr-after-show`, `lr-after-hide` — Details lifecycle, also
-  retained by accordion items.
+- `lr-show`, `lr-hide`, `lr-toggle`, `lr-after-show`, `lr-after-hide` — Details lifecycle only.
 
 On the accordion, `lr-expand` and `lr-collapse` fire before a direct item changes, are cancelable,
-and carry `detail: { item }`. **Changed in 9.0.0:** `item` is now always an `LyraAccordionItem` —
-it could previously also be an `LyraDetails`. The exported `LyraAccordionPanel` union that spelled
+and carry `detail: { item }`. **Changed in 9.0.0:** `item` is now always a `LyraAccordionItem` —
+it could previously also be a `LyraDetails`. The exported `LyraAccordionPanel` union that spelled
 that has been removed; use `LyraAccordionItem`. An accepted transition finishes with the
 non-cancelable
 `lr-after-expand` or `lr-after-collapse`, carrying the same item. In `single` mode, activating the
@@ -3021,18 +2877,17 @@ skipped. Enter and Space use the native button activation contract. Focus and ke
 inside the nearest nested accordion.
 
 **Slots:** accordion has a default slot for direct items. Accordion item has default panel content,
-`label`, `icon`, and the compatibility `summary` slot; `label` slot → `summary` slot → `label`
-property → `summary` property → localized `"Details"` is the precedence order. The two label-slot
-aliases accept rich visible markup, but their flattened subtrees are inert and hidden from
-assistive technology: do not place independent links, buttons, inputs, form state, or focus targets
-there. The accordion-item `icon` slot follows the same flattened-tree inert and aria-hidden visual
-contract, while the trigger button remains the sole action. Details has `summary`, `expand-icon`,
-`collapse-icon`, plus default content.
+`label`, and `icon`; `label` slot → `label` property → localized `"Details"` is the precedence
+order. The label slot accepts rich visible markup, but its flattened subtree is inert and hidden
+from assistive technology: do not place independent links, buttons, inputs, form state, or focus
+targets there. The accordion-item `icon` slot follows the same flattened-tree inert and aria-hidden
+visual contract, while the trigger button remains the sole action. Details has `summary`,
+`expand-icon`, `collapse-icon`, plus default content.
 
 **CSS parts:** accordion exposes `base`. Accordion item exposes `base` and `accordion-item` on the
-same outer wrapper; `button` and the Details-compatible `summary` name are on the same trigger; and
-it also exposes `heading`, `label`, `icon`, `panel`, and `content`. Details exposes `base` and
-`details` on the same native `<details>` wrapper, plus `header`, `summary`, `icon`, and `content`.
+same outer wrapper, plus `heading`, `button`, `label`, `icon`, `panel`, and `content`. Details
+exposes `base` and `details` on the same native `<details>` wrapper, plus `header`, `summary`,
+`icon`, and `content`.
 The Details icon wrapper also carries Shoelace's `summary-icon` alias, so either part name styles
 the same node.
 
@@ -3041,9 +2896,7 @@ the same node.
 `--lr-accordion-item-hide-duration` (both default `var(--lr-duration-base)`), and
 `--lr-accordion-item-easing` (default `var(--lr-easing-standard)`). The mapped unprefixed names
 `--spacing`, `--show-duration`, `--hide-duration`, and `--easing` remain accepted aliases and win
-when set. The Details compatibility hooks `--lr-details-font-size` and `--lr-details-spacing` also
-continue to affect an accordion item. Panel and icon transitions stop under
-`prefers-reduced-motion: reduce`.
+when set. Panel and icon transitions stop under `prefers-reduced-motion: reduce`.
 
 Accordion appearance paint is independently inheritable: `--lr-accordion-outlined-bg` (default
 `var(--lr-color-surface)`) and `--lr-accordion-outlined-border-color` (default
@@ -3063,7 +2916,7 @@ Details exposes `--lr-details-font-size` (default
 summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads
 evenly. Each `size` tier sets both from the shared ladder, and both are declared on `:host`, so an
 override has to target the element itself — an ancestor rule is shadowed. Note that the spacing knob
-deliberately reads the ladder's *inline*-padding value: a stacked panel wants generous block rhythm,
+deliberately reads the ladder's _inline_-padding value: a stacked panel wants generous block rhythm,
 whereas the ladder's own block padding exists to fit text inside a fixed control height and would
 collapse the summary row. `--spacing` aliases the Details rhythm, while `--show-duration` and
 `--hide-duration` (both default `var(--lr-duration-base)`) tune its icon transitions. Motion stops
@@ -3083,29 +2936,37 @@ theme without requiring shared-token changes or shadow-part selectors.
 ```html
 <lr-details summary="Advanced options">Panel content</lr-details>
 <script type="module">
-  const panel = document.querySelector('lr-details');
+  const panel = document.querySelector("lr-details");
   let ready = false;
   // Cancelable: veto the open until some precondition is met.
-  panel.addEventListener('lr-show', (e) => {
+  panel.addEventListener("lr-show", (e) => {
     if (!ready) e.preventDefault();
   });
-  panel.addEventListener('lr-after-show', () => panel.querySelector('input')?.focus());
+  panel.addEventListener("lr-after-show", () =>
+    panel.querySelector("input")?.focus()
+  );
   ready = true;
   await panel.show();
 </script>
 ```
 
 ```html
-<lr-accordion mode="single-collapsible" icon-placement="start" heading-level="2">
-  <lr-accordion-item label="Account" expanded>Profile settings</lr-accordion-item>
+<lr-accordion
+  mode="single-collapsible"
+  icon-placement="start"
+  heading-level="2"
+>
+  <lr-accordion-item label="Account" expanded
+    >Profile settings</lr-accordion-item
+  >
   <lr-accordion-item>
     <strong slot="label">Notifications</strong>
     Notification settings
   </lr-accordion-item>
 </lr-accordion>
 <script type="module">
-  const accordion = document.querySelector('lr-accordion');
-  accordion.addEventListener('lr-expand', (event) => {
+  const accordion = document.querySelector("lr-accordion");
+  accordion.addEventListener("lr-expand", (event) => {
     if (event.detail.item.disabled) event.preventDefault();
   });
 </script>
@@ -3127,7 +2988,8 @@ explicitly empty `aria-label=""`, which stays empty rather than falling back).
 non-link form; assigning `undefined` clears it and reads back as the canonical `''`),
 `target?: string`, and `current: boolean = false` (reflected — renders a
 `<span aria-current="page">` instead of an `<a>`, even when `href` is set). A target derives
-`rel="noopener noreferrer"`; there is intentionally no independently settable `rel`. Each item
+the mandatory `noopener noreferrer` floor. `rel: string = 'noreferrer noopener'` is independently
+settable: author tokens are preserved, `opener` is stripped, and any target force-adds the floor. Each item
 sets `role="listitem"` on itself. A non-current item without `href` renders a native button. A host
 `aria-label` is forwarded to either non-current native owner by attribute presence, including an
 explicitly empty value; when absent, the default slot supplies its name.
@@ -3142,7 +3004,10 @@ button, and programmatically focusable current-page label. External focus is pre
 copied to every item without an item-level override. Both breadcrumb and item `separator` slots are
 decorative-only: their rendered content is inert and hidden from assistive technology, so it must not
 provide interactive behavior, a focus target, or form state. Generated shared copies omit identifiers,
-ID-reference relationships, form associations, and submission attributes. An item's default slot is
+ID-reference relationships, form associations, and submission attributes. Source text, attributes,
+and compatible subtrees update live; identity-compatible clone nodes are patched in place instead of
+being disconnected and recreated. The first owned breadcrumb item is determined independently of
+separator sources or other auxiliary siblings, so it never renders a leading separator. An item's default slot is
 its label; `start`/`prefix` and `end`/`suffix` are the two upstream adornment vocabularies, and
 `separator` overrides the `/` fallback.
 
@@ -3170,7 +3035,7 @@ unset, it retains the former transparent active mix.
 Responsive, keyboard-accessible controlled widget grid. It positions layout entries and emits
 move, resize, collision, and layout-change requests; the host owns persistence and applies updates.
 
-**Properties:** `layout: DashboardCell[] = []` (attribute: false, never mutated by the component),
+**Properties:** `layout: readonly LyraDashboardCell[] = []` (attribute: false, never mutated by the component),
 `columns: number = 12`, `rowHeight: number = 80` (px, also the row snap pitch), `gap: number = 8`
 (px, both axes), `collision: 'reject' | 'push' | 'overlap' = 'reject'`, `cellsDraggable: boolean = false`
 (attribute `cells-draggable` — pointer drag plus Ctrl/Cmd+Arrow), `cellsResizable: boolean = false`
@@ -3186,6 +3051,21 @@ sink only while the grid and its composed ancestors remain exposed to the access
 **Slots:** `cell-{id}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
 `aria-hidden` shadow mirror of the latest spoken message).
 
+`layout` is normalized into an immutable snapshot before rendering. Reads are bounded to the first
+1,000 positions; foreign-realm arrays are accepted; malformed records, hostile accessors, and later
+duplicate ids are skipped without discarding valid neighbors. Geometry and min/max constraints are
+finite and consistent, and neither the returned array nor its cells alias caller-owned objects.
+Direct light-DOM children with `cell-id` remain the authored source of truth across insertion,
+removal, id retargeting, reconnect, and document adoption. The first authored child for an id wins;
+when it disappears, the default cell is restored without mistaking a forged marker attribute for a
+library-owned node.
+
+The default content assigns a version-two document created from `cell.widget` to
+`<lr-widget-renderer>.document`; it never uses the legacy `tree` input. Pointer gestures admit only
+the primary button/pointer and ignore controls, links, labels, editable content, and interactive
+roles in the composed path. Keyboard resizing uses physical directions in both LTR and RTL:
+Right/Down grow and Left/Up shrink, while pointer resizing retains the logical inline-end handle.
+
 In the narrow stacked layout, a cell that currently owns a resize handle keeps at least the shared
 interactive-action block-size (`--lr-icon-button-size`). The handle is absolutely positioned and
 cannot contribute intrinsic size itself; the state-aware floor prevents it from overlapping the
@@ -3197,32 +3077,86 @@ stack. This does not seize overflow from child-owned widgets: custom content can
 
 **Themeable custom properties:** `--lr-dashboard-grid-columns`, `--lr-dashboard-grid-row-height`,
 and `--lr-dashboard-grid-gap` back the CSS Grid's `grid-template-columns`/`grid-auto-rows`/`gap`.
-The `columns`/`rowHeight`/`gap` properties write them inline on `[part='base']` on every render, so
-overriding them from a stylesheet has no effect — set the properties instead. `--lr-dashboard-grid-cell-hover-outline-color`
+They are real cascade-authoritative public hooks: the `columns`/`rowHeight`/`gap` properties supply
+private computed fallbacks rather than overwriting these public variables inline.
+`--lr-dashboard-grid-cell-hover-outline-color`
 (default `var(--lr-color-border-strong)`) retints the mouse-hover outline on `[part='cell']` — a
 preview of its own `:focus-visible` ring, shown because every cell is a real focusable,
 draggable/resizable target; set it to `transparent` to opt out of the hover treatment entirely.
 
 **Additional API surface:**
 
+- `LyraDashboardCell`, `LyraDashboardCollisionPolicy`, and
+  `LyraDashboardPlacementResult` — readonly public authoring/result types.
+- `resolveLyraDashboardPlacement(layout, candidateId, requested, columns, policy)` — the only public
+  runtime layout utility. It returns an immutable normalized result; collision indexing,
+  clamping, sorting, and push-cascade helpers are intentionally implementation-private.
+- `LyraDashboardCellMoveDetail`, `LyraDashboardCellResizeDetail`,
+  `LyraDashboardCollisionDetail`, and `LyraDashboardLayoutChangeDetail` — readonly event-detail
+  interfaces used by `LyraDashboardGridEventMap`.
 - `--lr-dashboard-grid-collision-outline-color` — Outline color of a cell whose current drag/resize preview collides with another cell. Default: `var(--lr-color-danger)`.
 - `--lr-dashboard-grid-interaction-shadow` — Box shadow applied during a cell drag or resize. Default: `var(--lr-shadow)`.
 
 ## `lr-drilldown-panel`
 
 Controlled navigation shell from a chart or table datum to related evidence, documents, entities,
-or agent runs. It renders a breadcrumb path and delegates category content to existing primitives.
+or agent runs. It renders a breadcrumb path and delegates the effective category to existing
+source-card, document-preview, and entity-card primitives.
 
-**Properties:** `path: DrilldownNode[] = []` and `types: NodeTypeStyle[] = []` (both attribute:
-false), `accessibleLabel: string | null = null` (attribute `aria-label` — names the current
-category owner: the nested `lr-tab-group` with multiple categories or the sole `role="region"`
-otherwise. `null` leaves the tab strip unnamed and falls back to the category label for a sole
-region; an explicit empty string is preserved),
-`communityLabel: string = ''` (attribute `community-label`), `showFocusButton: boolean = true`
-(attribute `show-focus-button`). **Events:**
-`lr-drilldown-navigate` (`detail: { id, index }`). **Slots:** `runs`. **CSS parts:** `base`,
-`breadcrumb`, `breadcrumb-item`, `breadcrumb-button`, `tabs`, `category`, `content`, `evidence-item`,
-`document-item`, `entity-item`, `empty`.
+**Properties:**
+
+- `path: readonly LyraDrilldownNode[] = []` (attribute: false) — host-owned breadcrumb trail. Each
+  node uses `nodeId` and may carry readonly `evidence`, `documents`, and `entities` collections.
+  Evidence records use `evidenceId`, documents use `documentId`, and entities use `entityId`.
+- `activeCategory: LyraDrilldownCategory | '' = ''` (attribute `active-category`, reflected) —
+  controlled category authority. Empty or unavailable values resolve to the first populated
+  category without mutating the property. A tab interaction emits a change request; the host
+  accepts it by assigning `event.detail.category`.
+- `types: readonly LyraNodeTypeStyle[] = []` (attribute: false) — shared node-type badge styles
+  forwarded to composed entity cards. The shape is structurally identical to the graph/entity
+  node-style vocabulary.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — names the nested tab group or
+  sole category region. `null` leaves a tab strip unnamed and falls back to the sole category
+  label; an explicit empty string is preserved.
+- `communityLabel: string = ''` (attribute `community-label`) and
+  `showFocusButton: boolean = true` (attribute `show-focus-button`) — forwarded to active entity
+  cards.
+
+Structured inputs cross a realm-neutral schema boundary. The component clones and freezes all
+accepted records, nested arrays, and entity property maps; ignores accessors, malformed records,
+whitespace-unstable identities, and later duplicate IDs; and bounds the retained model to 256 path
+nodes, 1,000 records per category, 256 type styles, and 128 entity properties. A localized range
+under `limit` truthfully reports source input omitted by a ceiling.
+
+Only the effective category's child components are mounted. Each category is paged eight records
+at a time, with a localized `start–end of total` summary and Previous/Next controls. Consequently an
+active document category owns at most eight simultaneous `lr-document-preview` lifecycles (and at
+most eight of that viewer's individually byte-capped text resources); hidden categories own no
+preview fetches. Paging, path replacement, category changes, and disconnect remove obsolete
+previews, which abort their owner-realm requests. The embedded tab group uses manual activation so
+arrowing across tabs does not request expensive categories until Enter/Space commits.
+
+**Events:**
+
+- `lr-drilldown-navigate` — frozen `{ nodeId, index }`; a request only, never a `path` mutation.
+- `lr-drilldown-category-change` — frozen `{ nodeId, category, previousCategory }`; a controlled
+  request only.
+- `lr-drilldown-evidence-expand`, `lr-drilldown-evidence-open`,
+  `lr-drilldown-document-download`, `lr-drilldown-document-render-error`,
+  `lr-drilldown-document-highlight-activate`, and `lr-drilldown-entity-activate` — correlated
+  wrapper events carrying the current `nodeId` and the relevant `evidenceId`, `documentId`, or
+  `entityId`. Raw events from owned source cards, previews, entity cards, and tabs are contained;
+  events from consumer-owned `runs` slot content continue bubbling normally.
+
+**Slots:** `runs`. **CSS parts:** `base`, `breadcrumb`, `breadcrumb-item`, `breadcrumb-button`,
+`tabs`, `category`, `content`, `evidence-item`, `document-item`, `entity-item`, `pagination`,
+`pagination-summary`, `previous-button`, `next-button`, `limit`, `empty`.
+
+**9.0 migration:** the generic `Drilldown*` authoring types are now `LyraDrilldown*`. Replace node
+`id` with `nodeId`, evidence `id` with `evidenceId`, document `id` with `documentId`, entity `id`
+with `entityId`, and read `lr-drilldown-navigate.detail.nodeId`. Hidden category DOM is no longer
+eagerly present; query the source data or accept `lr-drilldown-category-change` before accessing
+that category's composed children.
 
 ## `lr-filter-bar`
 
@@ -3230,16 +3164,21 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 
 **Properties:**
 
-- `filters: FilterBarFilterDefinition[] = []` (attribute: false) — filter schema in render order.
-- `value: FilterBarValue = {}` (attribute: false) — current values keyed by filter id; reads and
-  writes clone the object and each string-array field independently.
+- `filters: readonly LyraFilterBarFilterDefinition[] = []` (attribute: false) — filter schema in
+  render order. Invalid definitions and later duplicate ids are ignored deterministically. Writing
+  `null` or `undefined` clears the schema; reads remain the canonical non-null empty array.
+- `value: LyraFilterBarValue = {}` (attribute: false) — sparse current values keyed by filter id.
+  Cleared fields are omitted. Reads, writes, event details, and string-array fields are immutable
+  snapshots rather than references to caller-owned data. Writing `null` or `undefined` clears the
+  value; reads remain the canonical non-null empty record.
 - `label: string = ''` — accessible-name fallback for the internal `role="group"`. A host
   `aria-label` wins by attribute presence, including an explicitly empty value.
 - `disabled: boolean = false` (reflected) — disables every filter control and reset action.
 - `loading: boolean = false` (reflected) — shows the status spinner and disables reset while leaving
   filters editable.
 - `hasActiveFilters: boolean` (read-only) — whether any configured filter currently has a value.
-- `invalidFilterIds: string[]` (read-only) — ids of required filters whose values are unset.
+- `invalidFilterIds: readonly string[]` (read-only) — immutable ids of required filters whose
+  values are unset.
 
 The composed reset action uses `lr-button`'s default `m` size tier, matching the default rendered
 height of adjacent select, combobox, input, and date fields instead of introducing a shorter action
@@ -3274,16 +3213,21 @@ filters. This lets a consumer theme the composed tier from `lr-filter-bar::part(
 depending on the built-in control type selected by a filter definition. Custom renderers retain
 ownership of their own part forwarding.
 
-A `'select'`/`'combobox'` filter's `options` entries are `FilterBarOption { value, label, icon? }`.
+A `'select'`/`'combobox'` filter's required `options` entries are
+`LyraFilterBarOption { value, label, icon? }`.
 `icon` is optional Lit content — a status dot, a type glyph, a flag — rendered into the composed
 `<lr-option>`'s own `start` slot as inert, `aria-hidden` chrome, so it never joins the option's
 accessible name:
 
 ```ts
 options: [
-  { value: 'open', label: 'Open', icon: html`<lr-icon name="circle"></lr-icon>` },
-  { value: 'closed', label: 'Closed' },
-]
+  {
+    value: "open",
+    label: "Open",
+    icon: html`<lr-icon name="circle"></lr-icon>`,
+  },
+  { value: "closed", label: "Closed" },
+];
 ```
 
 Each filter definition's `type` selects which existing Lyra input renders it — this component
@@ -3294,10 +3238,11 @@ to `<lr-input>` for an open-ended free-text query rather than a closed choice se
 filter's value is the raw query string, verbatim, and its chip shows exactly that string — the same
 text the user typed, not a truncated or normalized form.
 
-Date and date-range chips localize only round-trip-valid ISO `YYYY-MM-DD` segments. Four-digit
+Date chips localize exactly one round-trip-valid ISO `YYYY-MM-DD` segment; date-range chips require
+exactly two slash-separated segments. Four-digit
 years `0000`–`0099` retain those literal years rather than inheriting JavaScript's 1900 offset;
-impossible days/months, malformed values, and a range with either invalid endpoint stay verbatim
-instead of silently rolling into another date.
+impossible days/months, extra/missing segments, inverted ranges, and a range with either invalid
+endpoint stay verbatim instead of silently rolling into another date or discarding data.
 
 A `'text'` filter is the one control that is **not** a fully controlled `.value=` binding.
 Re-rendering a text field from `value` mid-typing would push a stale value back in and drop the
@@ -3322,26 +3267,30 @@ markup and should bind the context's `value`, `disabled`, `required`, and `error
 `context.onValueChange` (or its `onInput`/`onChange` aliases) reads the event through
 `adapter.valueFromEvent` and commits it to the filter bar. `context.setValue(value)` is available for
 controls that expose a value without an event payload, and `context.onFocusout` marks the filter
-touched for required validation.
+touched for required validation. Every context also carries a monotonic `generation` and an
+`AbortSignal`; replacement/removal of the schema, disconnection, and reconnect abort stale
+contexts, whose callbacks become inert.
 
-The adapter's optional `emptyValue` is used when the active chip is removed, and its optional
-`formatValue` controls the chip's display text. Custom values may be strings, string arrays,
-booleans, or `undefined`, so controls such as `lr-time-range`, `lr-checkbox`, and an async-backed
-`lr-combobox` can participate in the same controlled `value`, active-chip, reset, disabled, and
-validation contract:
+The adapter's required `clearValue` is used when the active chip is removed. Its optional
+`isEmpty(value)` defines domain emptiness; without one, the bar compares against `clearValue`
+(including shallow string-array equality). Its optional `formatValue` controls chip display.
+Consequently `false` remains a meaningful active value unless the adapter explicitly declares it
+empty. Custom values may be strings, string arrays, booleans, or `undefined`, so controls such as
+`lr-time-range`, `lr-checkbox`, and an async-backed `lr-combobox` can participate in the same
+controlled value, active-chip, reset, disabled, and validation contract:
 
 ```ts
-const filters: FilterBarFilterDefinition[] = [
+const filters: LyraFilterBarFilterDefinition[] = [
   {
-    id: 'archived',
-    label: 'Include archived',
-    type: 'custom',
+    id: "archived",
+    label: "Include archived",
+    type: "custom",
     custom: {
       adapter: {
         valueFromEvent: (event) =>
           (event as CustomEvent<{ checked: boolean }>).detail.checked,
-        emptyValue: false,
-        formatValue: (value) => value === true ? 'Enabled' : 'Disabled',
+        clearValue: false,
+        formatValue: (value) => (value === true ? "Enabled" : "Disabled"),
       },
       render: (context) => html`
         <lr-checkbox
@@ -3349,7 +3298,8 @@ const filters: FilterBarFilterDefinition[] = [
           ?disabled=${context.disabled}
           @lr-change=${context.onValueChange}
           @focusout=${context.onFocusout}
-        >${context.label}</lr-checkbox>
+          >${context.label}</lr-checkbox
+        >
       `,
     },
   },
@@ -3385,15 +3335,18 @@ and event listeners survive every breakpoint crossing.
 - `navigationPlacement: 'start' | 'end' = 'start'` (attribute `navigation-placement`, reflected) —
   a logical placement: `start` is left in LTR and right in RTL; `end` is the reverse.
 - `disableNavigationToggle: boolean = false` (attribute `disable-navigation-toggle`, reflected) —
-  hides the built-in mobile toggle. A custom `navigation-toggle` slot or a slotted control carrying
-  `data-toggle-nav` can still own the action.
+  hides the built-in mobile toggle. One or more custom controls assigned to `navigation-toggle`, or
+  a slotted control carrying `data-toggle-nav`, can still own the action.
 - `strings`/`locale` and host `aria-label` follow the shared localization contract. `aria-label`
   overrides the localized name of the internal navigation landmark.
 
 **Methods:** `showNavigation(): void`, `hideNavigation(): void`, and
 `toggleNavigation(): void` update `navOpen`. `visiblePixelsInViewport(element: HTMLElement | null):
 number` returns the element's finite, viewport-clamped vertical intersection in CSS pixels (`0` for
-`null`, invalid geometry, or no intersection).
+`null`, invalid geometry, no intersection, or an element in a detached document with no viewport).
+This is a deliberate owner-realm safety divergence from Web Awesome 3.11, whose method returns
+`null` for a null input and measures detached-document geometry against the ambient page viewport;
+code migrating from `wa-page` should treat Lyra's always-finite `number` result as canonical.
 
 **Events:** `lr-nav-toggle` (cancelable; `detail: { open }` is the `navOpen` state proposed by
 `showNavigation()`/`hideNavigation()`/`toggleNavigation()` or a built-in dismissal — backdrop
@@ -3406,14 +3359,16 @@ Page's unique drawer. Opening
 uses Lyra's shared modal overlay stack for inerting, scroll lock, Escape/backdrop dismissal, focus
 trapping, stacking, reconnect suspension, and focus return. Modal inerting is scoped to the live
 drawer root, so header/main/footer siblings inside the Page become inert without inerting the
-drawer itself. A custom `navigation-toggle` and the composed descendant that actually receives
+drawer itself. Every custom `navigation-toggle` and the composed descendant that actually receives
 focus are wired to the same state with `aria-haspopup="dialog"`, synchronized `aria-expanded`, and
-a localized label when unnamed. The component supplies the real drawer to the shared controls
-owner; current browsers normalize that inward private relationship to the public Page host.
-Generated whole-value state remains authoritative while assigned, authored relationship tokens
-compose, and exact initial or late-authored baselines return when the toggle is replaced, removed,
-or the Page disconnects. If the opening toggle is replaced while the drawer is open, both the ARIA
-owner and eventual focus-return target retarget to the replacement's real composed control.
+a localized label when unnamed; any available assigned control opens the same Page-owned drawer,
+while disabled, `aria-disabled`, hidden, and inert controls remain non-actions. The component
+supplies the real drawer to the shared controls owner; current browsers normalize that inward
+private relationship to the public Page host. Generated whole-value state remains authoritative
+while assigned, authored relationship tokens compose, and exact initial or late-authored baselines
+return when a toggle is replaced, removed, or the Page disconnects. If the opening toggle is
+replaced while the drawer is open, both the ARIA owner and eventual focus-return target retarget to
+the next available assigned toggle's real composed control.
 
 `navigation-toggle-icon` is decorative visual content: its assigned subtree is inert and hidden
 from assistive technology, while the native toggle retains the sole action and localized name.
@@ -3468,7 +3423,7 @@ allocation, and long localized or consumer-provided text cannot widen the Page.
 Import only the Page registration when it is the only layout component this bundle needs:
 
 ```js
-import '@aceshooting/lyra-ui/components/layout/page/page.js';
+import "@aceshooting/lyra-ui/components/layout/page/page.js";
 ```
 
 ```html

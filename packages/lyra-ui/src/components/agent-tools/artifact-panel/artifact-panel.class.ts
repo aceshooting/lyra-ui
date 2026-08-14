@@ -4,11 +4,17 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
+import {
+  writeClipboardText,
+  type LyraClipboardWriteFailure,
+  type LyraClipboardWriteSuccess,
+} from '../../../internal/clipboard.js';
 import { styles } from './artifact-panel.styles.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
+import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_artifactPanelCode, LYRA_DEFAULT_artifactPanelGenerating, LYRA_DEFAULT_artifactPanelLabel, LYRA_DEFAULT_artifactPanelNextVersion, LYRA_DEFAULT_artifactPanelPreview, LYRA_DEFAULT_artifactPanelPreviousVersion, LYRA_DEFAULT_artifactPanelRestore, LYRA_DEFAULT_artifactPanelVersionPosition, LYRA_DEFAULT_copy, LYRA_DEFAULT_download } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_artifactPanelCode, LYRA_DEFAULT_artifactPanelGenerating, LYRA_DEFAULT_artifactPanelLabel, LYRA_DEFAULT_artifactPanelNextVersion, LYRA_DEFAULT_artifactPanelPreview, LYRA_DEFAULT_artifactPanelPreviousVersion, LYRA_DEFAULT_artifactPanelRestore, LYRA_DEFAULT_artifactPanelVersionPosition, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_download } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -24,15 +30,18 @@ export interface LyraArtifactPanelEventMap {
   'lr-view-change': CustomEvent<{ view: ArtifactPanelView }>;
   'lr-version-change': CustomEvent<{ versionId: string }>;
   'lr-restore': CustomEvent<{ versionId: string }>;
-  'lr-copy': CustomEvent<{ text: string }>;
-  'lr-download': CustomEvent<{ filename: string; src?: string }>;
+  'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
+  'lr-error': CustomEvent<undefined>;
+  'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
+  'lr-download': CustomEvent<{ filename: string; src: string }>;
 }
 
 /**
  * `<lr-artifact-panel>` — shell around one agent-generated artifact: a
  * title/kind header, a preview<->code toggle, version navigation with
  * restore, a streaming indicator, and built-in copy/download actions.
- * Renders none of the artifact itself — content is slotted.
+ * Renders none of the artifact itself — content is slotted. Version ids are stable identities;
+ * duplicate ids normalize before navigation, labels, restore actions, and counts, first-wins.
  *
  * @customElement lr-artifact-panel
  * @event lr-view-change - `detail: { view }`. Fired when the preview/code toggle changes.
@@ -40,8 +49,10 @@ export interface LyraArtifactPanelEventMap {
  *   navigation moves to a different version.
  * @event lr-restore - `detail: { versionId }`. Fired by the restore-this-version button;
  *   mutates nothing itself — `versions` and the resulting content stay host-owned state.
- * @event lr-copy - `detail: { text }`. Fired after a best-effort clipboard write.
- * @event lr-download - `detail: { filename, src? }`. Fired with the sanitized download URL.
+ * @event lr-copy - `detail: { ok: true, text }`. Fired after the clipboard write fulfills.
+ * @event lr-error - The clipboard write failed; generic no-detail notification.
+ * @event lr-copy-error - `detail: { ok: false, text, reason, error }` — typed clipboard failure.
+ * @event lr-download - `detail: { filename, src }`. Fired with the sanitized download URL.
  * @slot - Preview-view content.
  * @slot code - Code-view content (typically a `<lr-code-block>`). The preview/code toggle
  *   only renders once this slot has assigned content.
@@ -60,6 +71,7 @@ export interface LyraArtifactPanelEventMap {
  * @csspart version-next - The next-version button.
  * @csspart version-next-glyph - The chevron glyph inside `version-next`, mirrored under RTL.
  * @csspart version-position - The "Version N of M" text.
+ * @csspart version-label - The active `ArtifactVersion.label`, when supplied.
  * @csspart restore-button - The restore-this-version button, rendered only while the active
  *   version isn't the latest one.
  * @csspart actions - The `actions` slot wrapper.
@@ -88,7 +100,9 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     artifactPanelPreviousVersion: LYRA_DEFAULT_artifactPanelPreviousVersion,
     artifactPanelRestore: LYRA_DEFAULT_artifactPanelRestore,
     artifactPanelVersionPosition: LYRA_DEFAULT_artifactPanelVersionPosition,
+    copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
+    copyFailed: LYRA_DEFAULT_copyFailed,
     download: LYRA_DEFAULT_download,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -104,7 +118,8 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   /** Which slot is currently visible. */
   @property({ reflect: true }) view: ArtifactPanelView = 'preview';
 
-  /** The artifact's version history, oldest first. The last entry is the latest version. */
+  /** The artifact's version history, oldest first. The last entry is the latest version. Duplicate
+   *  ids normalize first-wins before navigation, position counts, and restore events. */
   @property({ attribute: false }) versions: ArtifactVersion[] = [];
 
   /** The currently viewed version's id, or `null` to mean "the latest version". */
@@ -125,11 +140,30 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
 
   @state() private hasCodeSlot = false;
 
+  private copyGeneration = 0;
+
+  private get normalizedVersions(): ArtifactVersion[] {
+    return firstByIdentity(Array.isArray(this.versions) ? this.versions : [], (version) => version.id);
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.copyGeneration += 1;
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasCodeSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'code');
-      if (!this.hasCodeSlot && this.view === 'code') this.view = 'preview';
+    }
+    if (!this.hasCodeSlot && this.view === 'code') this.view = 'preview';
+    if (
+      this.activeVersionId !== null &&
+      (changed.has('versions') || changed.has('activeVersionId')) &&
+      !this.normalizedVersions.some((version) => version.id === this.activeVersionId)
+    ) {
+      this.activeVersionId = null;
+      this.removeAttribute('active-version-id');
     }
   }
 
@@ -139,7 +173,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   };
 
   private get accessibleLabel(): string {
-    return this.getAttribute('aria-label')?.trim() || this.label || this.localize('artifactPanelLabel');
+    return this.label || this.localize('artifactPanelLabel');
   }
 
   private setView(view: ArtifactPanelView): void {
@@ -148,37 +182,47 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   }
 
   private get currentIndex(): number {
-    if (this.activeVersionId === null) return this.versions.length - 1;
-    const index = this.versions.findIndex((v) => v.id === this.activeVersionId);
-    return index >= 0 ? index : this.versions.length - 1;
+    const versions = this.normalizedVersions;
+    if (this.activeVersionId === null) return versions.length - 1;
+    const index = versions.findIndex((v) => v.id === this.activeVersionId);
+    return index >= 0 ? index : versions.length - 1;
   }
 
   private goToVersion(index: number): void {
-    const version = this.versions[index];
+    const versions = this.normalizedVersions;
+    const version = versions[index];
     if (!version) return;
-    const isLatest = index === this.versions.length - 1;
+    const isLatest = index === versions.length - 1;
     this.activeVersionId = isLatest ? null : version.id;
     this.emit('lr-version-change', { versionId: version.id });
     (this.renderRoot.querySelector('lr-live-region') as LyraLiveRegion | null)?.announce(
       this.localize('artifactPanelVersionPosition', undefined, {
         index: this.formatCount(index + 1),
-        count: this.formatCount(this.versions.length),
+        count: this.formatCount(versions.length),
       }),
     );
   }
 
-  private onCopy = (): void => {
+  private onCopy = async (): Promise<void> => {
     const text = this.copyText;
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
-    try {
-      // navigator.clipboard is absent in insecure contexts / older browsers, and some engines
-      // throw synchronously rather than rejecting -- either way this is best-effort; lr-copy
-      // fires regardless of whether the OS clipboard was actually reached.
-      void owner?.navigator.clipboard?.writeText(text)?.catch(() => {});
-    } catch {
-      // see above
+    const generation = ++this.copyGeneration;
+    const outcome = await writeClipboardText(owner, text);
+    if (
+      !owner ||
+      !this.isConnected ||
+      this.ownerDocument.defaultView !== owner ||
+      generation !== this.copyGeneration
+    ) return;
+    const liveRegion = this.renderRoot.querySelector('lr-live-region') as LyraLiveRegion | null;
+    if (outcome.ok) {
+      liveRegion?.announce(this.localize('copied'));
+      this.emit('lr-copy', outcome);
+      return;
     }
-    this.emit('lr-copy', { text });
+    liveRegion?.announce(this.localize('copyFailed'));
+    this.emit('lr-error');
+    this.emit('lr-copy-error', outcome);
   };
 
   private onDownload = (): void => {
@@ -188,9 +232,11 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   };
 
   override render(): TemplateResult {
-    const hasVersions = this.versions.length > 0;
+    const versions = this.normalizedVersions;
+    const hasVersions = versions.length > 0;
     const index = this.currentIndex;
-    const isLatest = this.activeVersionId === null || index === this.versions.length - 1;
+    const currentVersion = versions[index];
+    const isLatest = this.activeVersionId === null || index === versions.length - 1;
     return html`
       <div part="base">
         <lr-live-region mode="polite"></lr-live-region>
@@ -236,14 +282,17 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                   <span part="version-position"
                     >${this.localize('artifactPanelVersionPosition', undefined, {
                       index: this.formatCount(index + 1),
-                      count: this.formatCount(this.versions.length),
+                      count: this.formatCount(versions.length),
                     })}</span
                   >
+                  ${currentVersion?.label
+                    ? html`<span part="version-label">${currentVersion.label}</span>`
+                    : nothing}
                   <button
                     part="version-next"
                     type="button"
                     aria-label=${this.localize('artifactPanelNextVersion')}
-                    ?disabled=${index >= this.versions.length - 1}
+                    ?disabled=${index >= versions.length - 1}
                     @click=${() => this.goToVersion(index + 1)}
                   >
                     <span part="version-next-glyph" aria-hidden="true">›</span>
@@ -254,7 +303,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                         type="button"
                         @click=${() =>
                           // safe: inside the hasVersions branch, `index` is an in-bounds version index
-                          this.emit('lr-restore', { versionId: this.versions[index]!.id })}
+                          this.emit('lr-restore', { versionId: versions[index]!.id })}
                       >
                         ${this.localize('artifactPanelRestore')}
                       </button>`

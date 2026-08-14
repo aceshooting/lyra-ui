@@ -145,4 +145,10 @@ export const styles = css`
     overflow-wrap: anywhere;
     color: var(--lr-test-results-failed-color, var(--lr-color-danger));
   }
+
+  [part='limit'] {
+    margin-block: var(--lr-space-s) 0;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
 `;

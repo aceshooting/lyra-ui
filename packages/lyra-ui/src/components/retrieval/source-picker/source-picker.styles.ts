@@ -1,53 +1,43 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     display: block;
   }
-  [part='base'] {
+  [part="base"] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-s);
     min-inline-size: 0;
   }
-  [part='select-all'] {
+  [part="select-all"] {
     display: flex;
     align-items: center;
     gap: var(--lr-space-xs);
     padding-block: var(--lr-space-xs);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  [part='select-all'] [role='checkbox'] {
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-xs);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
-    padding: var(--lr-size-2px) var(--lr-space-xs);
-    cursor: pointer;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+  [part="select-all-control"] {
+    --lr-checkbox-checked-bg: var(
+      --lr-source-picker-checked-bg,
+      var(--lr-color-brand-quiet)
+    );
+    --lr-checkbox-checked-border: var(
+      --lr-source-picker-checked-border,
+      var(--lr-color-brand)
+    );
   }
-  [part='select-all'] [role='checkbox']:hover {
-    background: color-mix(in srgb, var(--lr-color-text) 6%, var(--lr-color-surface));
+  [part="select-all-control"][indeterminate] {
+    --lr-checkbox-checked-bg: var(
+      --lr-source-picker-mixed-bg,
+      color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))
+    );
   }
-  [part='select-all'] [role='checkbox']:active {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-  }
-  [part='select-all'] [role='checkbox']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
-  }
-  [part='select-all'] [role='checkbox'][aria-checked='true'],
-  [part='select-all'] [role='checkbox'][aria-checked='mixed'] {
-    background: var(--lr-source-picker-checked-bg, var(--lr-color-brand-quiet));
-    border-color: var(--lr-source-picker-checked-border, var(--lr-color-brand));
-  }
-  [part='summary'] {
+  [part="summary"] {
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
   }
-  [part='item'] {
+  [part="item"] {
     display: flex;
     align-items: center;
     gap: var(--lr-space-xs);
@@ -62,14 +52,15 @@ export const styles = css`
     padding-inline-start: calc(
       var(--lr-space-xs) +
         min(
-          var(--lr-source-picker-depth, 0) * var(--lr-source-picker-indent-size, var(--lr-size-1-25rem)),
+          var(--lr-source-picker-depth, 0) *
+            var(--lr-source-picker-indent-size, var(--lr-size-1-25rem)),
           var(--lr-size-8rem)
         )
     );
     border-radius: var(--lr-radius-xs);
     cursor: pointer;
   }
-  [part='disclosure'] {
+  [part="disclosure"] {
     display: inline-grid;
     place-items: center;
     flex: 0 0 auto;
@@ -83,26 +74,34 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  [part='disclosure']:hover {
+  [part="disclosure"]:hover {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
   }
-  [part='disclosure']:active {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part="disclosure"]:active {
+    background: color-mix(
+      in oklab,
+      transparent,
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='item']:hover {
+  [part="item"]:hover {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
   }
   /* The row itself is the control here -- clicking anywhere in it toggles the source (the
      [part='checkbox'] box inside is a painted div, not a focusable target), so the row earns a
      pressed state of its own rather than deferring to something nested. */
-  [part='item']:active {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part="item"]:active {
+    background: color-mix(
+      in oklab,
+      transparent,
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='item']:focus-visible {
+  [part="item"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
-  [part='checkbox'] {
+  [part="checkbox"] {
     flex: 0 0 auto;
     inline-size: var(--lr-size-1rem);
     block-size: var(--lr-size-1rem);
@@ -110,22 +109,29 @@ export const styles = css`
     border-radius: var(--lr-radius-xs);
     background: var(--lr-color-surface);
   }
-  [part='checkbox'][data-state='true'] {
+  [part="checkbox"][data-state="true"] {
     background: var(--lr-source-picker-checked-bg, var(--lr-color-brand));
     border-color: var(--lr-source-picker-checked-border, var(--lr-color-brand));
   }
-  [part='checkbox'][data-state='mixed'] {
-    background: var(--lr-source-picker-mixed-bg, color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface)));
+  [part="checkbox"][data-state="mixed"] {
+    background: var(
+      --lr-source-picker-mixed-bg,
+      color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))
+    );
     border-color: var(--lr-source-picker-checked-border, var(--lr-color-brand));
   }
-  [part='label'] {
+  [part="label"] {
     min-inline-size: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  [part='empty'] {
+  [part="empty"] {
     color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
+  [part="limit"] {
+    color: var(--lr-color-danger);
     font-size: var(--lr-font-size-sm);
   }
 `;

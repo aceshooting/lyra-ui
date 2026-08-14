@@ -38,6 +38,20 @@ it('emits lifecycle events and uses the assertive sink for danger', async () => 
   expect(el.isConnected).to.be.false;
 });
 
+it('exposes the live toast item surface across state updates and reconnects', async () => {
+  const el = (await fixture(html`<lr-toast-item duration="0">Message</lr-toast-item>`)) as LyraToastItem;
+  const surface = el.toastItemElement;
+  expect(surface === el.shadowRoot!.querySelector('[part="toast-item"]')).to.equal(true);
+  el.variant = 'danger';
+  await el.updateComplete;
+  expect(el.toastItemElement === surface).to.equal(true);
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  expect(el.toastItemElement === surface).to.equal(true);
+});
+
 it('uses the polite sink for neutral/brand/success', async () => {
   const before = announcementTexts('polite');
   const el = (await fixture(

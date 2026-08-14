@@ -67,10 +67,18 @@ it('drops non-finite samples instead of throwing', () => {
   expect(buckets.reduce((sum, b) => sum + b.count, 0)).to.equal(3);
 });
 
-it('spreads constant data across the full bucket range instead of collapsing it into the last bucket alone', () => {
+it('represents a constant domain as one truthful bucket', () => {
   const buckets = binValues([5, 5, 5, 5], 4);
+  expect(buckets).to.have.length(1);
   expect(buckets[0].count).to.equal(4);
-  expect(buckets.slice(1).every((b) => b.count === 0)).to.be.true;
+  expect(buckets[0].label).to.contain('5.0');
+});
+
+it('does not fabricate repeated zero-width ranges for an extreme constant domain', () => {
+  const buckets = binValues([Number.MAX_VALUE, Number.MAX_VALUE], 1_000);
+  expect(buckets).to.have.length(1);
+  expect(buckets[0].count).to.equal(2);
+  expect(buckets[0].label).to.not.contain('–');
 });
 
 it('formats bucket ranges with the requested locale', () => {

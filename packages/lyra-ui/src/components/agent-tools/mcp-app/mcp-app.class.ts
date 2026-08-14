@@ -4,9 +4,11 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { safeLinkHref, safeMediaSrc } from '../../../internal/safe-url.js';
+import { safeLinkHref } from '../../../internal/safe-url.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { styles } from './mcp-app.styles.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
+import { purposeAccessibleLabel } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_mcpAppLabel, LYRA_DEFAULT_mcpAppLoading, LYRA_DEFAULT_mcpAppUnavailable } from '../../../internal/default-strings.generated.js';
@@ -27,28 +29,42 @@ export interface McpAppCsp {
   frameDomains?: string[];
 }
 
-export interface McpAppResource {
+interface McpAppResourceBase {
   uri: string;
   title?: string;
-  /** Executable app document. It is assigned only to a uniquely-origin sandboxed iframe. */
-  html?: string;
-  /** Resolved app URL when the host serves the UI as a separate resource. */
-  src?: string;
   csp?: McpAppCsp;
   permissions?: McpAppPermissions;
   metadata?: Record<string, unknown>;
 }
+
+/** An executable app resource with exactly one document source. */
+export type McpAppResource = McpAppResourceBase & (
+  | {
+      /** Executable app document. It is assigned only to a uniquely-origin sandboxed iframe. */
+      html: string;
+      src?: never;
+    }
+  | {
+      /** HTTP(S) or relative app URL served as a separate resource. */
+      src: string;
+      html?: never;
+    }
+);
 
 export interface McpAppToolCallDetail {
   requestId?: string;
   name: string;
   args: unknown;
   /** Opaque, monotonically increasing id of the frame generation that raised this request. Every
-   *  valid `resource` replacement tears down the iframe and starts a fresh generation, so a host
-   *  that hands this value back to `postToolResult()` has its (necessarily asynchronous) reply
-   *  dropped instead of delivered into whatever unrelated app is mounted by the time it resolves. */
+   *  valid `resource` replacement, adoption, or reconnect starts a fresh generation, so a host
+   *  that hands this value back to `postToolResult()` has its asynchronous reply dropped instead
+   *  of delivered into whatever unrelated app is mounted by the time it resolves. */
   frameGeneration: number;
 }
+
+export type McpAppToolResultOptions =
+  | { frameGeneration: number; result: unknown; error?: never }
+  | { frameGeneration: number; error: string; result?: never };
 
 export interface LyraMcpAppEventMap {
   'lr-mcp-ready': CustomEvent<{ uri: string }>;
@@ -61,12 +77,59 @@ export interface LyraMcpAppEventMap {
 
 type HostMessage =
   | { channel: 'lyra-mcp-app'; version: 1; type: 'host-context'; context: unknown }
-  | { channel: 'lyra-mcp-app'; version: 1; type: 'tool-result'; requestId: string; result?: unknown; error?: string };
+  | {
+      channel: 'lyra-mcp-app';
+      version: 1;
+      type: 'tool-result';
+      requestId: string;
+      result?: unknown;
+      error?: string;
+    };
+
+interface ResolvedMcpAppResource {
+  resource: McpAppResource;
+  uri: string;
+  html?: string;
+  src?: string;
+}
 
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : null;
+}
+
+const FRAME_URL_BASE = 'https://lyra.invalid/';
+
+function safeFrameSrc(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const protocol = new URL(trimmed, FRAME_URL_BASE).protocol;
+    return protocol === 'https:' || protocol === 'http:' ? trimmed : null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveResource(resource: McpAppResource | null | undefined): ResolvedMcpAppResource | null {
+  const value = record(resource);
+  if (!value || typeof value['uri'] !== 'string') return null;
+  const uri = value['uri'].trim();
+  if (!uri) return null;
+
+  const ownsHtml = Object.prototype.hasOwnProperty.call(value, 'html');
+  const ownsSrc = Object.prototype.hasOwnProperty.call(value, 'src');
+  if (ownsHtml === ownsSrc) return null;
+
+  if (ownsHtml) {
+    if (typeof value['html'] !== 'string' || value['html'].length === 0) return null;
+    return { resource: resource!, uri, html: value['html'] };
+  }
+
+  const src = safeFrameSrc(value['src']);
+  return src ? { resource: resource!, uri, src } : null;
 }
 
 function cspSources(values: readonly string[] | undefined): string[] {
@@ -122,6 +185,7 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
  * `<lr-mcp-app>` — hosts an MCP App-style executable UI resource in a uniquely-origin sandbox.
  * Inline resources receive a trusted leading CSP meta before any caller-controlled HTML token, so
  * comments or script strings cannot redirect policy insertion away from the parsed document head.
+ * Remote resources accept only relative and HTTP(S) document URLs and never send a referrer.
  * The frame can request tools, messages, links, logs, and resizing only through typed events;
  * the component never performs those external actions itself.
  *
@@ -129,9 +193,9 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
  * @event lr-mcp-ready - The frame loaded. `detail: { uri }`.
  * @event lr-mcp-tool-call - The frame requested a tool.
  *   `detail: { requestId?, name, args, frameGeneration }`. `frameGeneration` is an opaque id for
- *   the frame that raised the request; hand it back to `postToolResult()` so an asynchronous reply
- *   arriving after `resource` was replaced is dropped rather than delivered into the unrelated app
- *   now mounted.
+ *   the frame that raised the request; hand it back in `postToolResult()`'s options so an
+ *   asynchronous reply arriving after the frame changes is dropped rather than delivered into the
+ *   unrelated app now mounted.
  * @event lr-mcp-send-message - The frame requested a conversation message.
  * @event lr-mcp-open-link - The frame requested navigation; the host decides whether to honor it.
  * @event lr-mcp-log - The frame sent a diagnostic value.
@@ -171,7 +235,13 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   private messageWindow?: Window;
 
   private resourceAvailable(resource: McpAppResource | null | undefined): boolean {
-    return Boolean(resource && (resource.html || safeMediaSrc(resource.src)));
+    return resolveResource(resource) !== null;
+  }
+
+  private invalidateFrame(): void {
+    this.loaded = false;
+    this.frameGeneration++;
+    this.requestUpdate();
   }
 
   private syncAnnouncementSinks(): void {
@@ -207,7 +277,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
 
   override disconnectedCallback(): void {
     this.unbindMessageWindow();
-    this.loaded = false;
+    this.invalidateFrame();
     this.loadingAnnouncementSink?.release();
     this.errorAnnouncementSink?.release();
     this.loadingAnnouncementSink = undefined;
@@ -216,7 +286,9 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.invalidateFrame();
     this.syncAnnouncementSinks();
     this.bindMessageWindow();
   }
@@ -238,7 +310,9 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     super.willUpdate(changed);
     if (changed.has('resource')) {
       if (this.hasUpdated && !this.suppressNextResourceAnnouncement) {
-        const wasAvailable = this.resourceAvailable(changed.get('resource') as McpAppResource | null | undefined);
+        const wasAvailable = this.resourceAvailable(
+          changed.get('resource') as McpAppResource | null | undefined,
+        );
         const isAvailable = this.resourceAvailable(this.resource);
         // Every valid resource replacement starts a fresh frame load. An unavailable transition is
         // assertive, while the ordinary loading state is polite; neither resting state announces on
@@ -265,22 +339,31 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   }
 
   private expectedOrigin(): 'null' | null {
-    if (this.resource?.html) return 'null';
-    const src = safeMediaSrc(this.resource?.src);
-    if (!src) return null;
+    if (!resolveResource(this.resource)) return null;
     // The frame intentionally omits allow-same-origin. Both srcdoc and network documents
     // therefore have an opaque origin serialized as "null"; the contentWindow identity is
     // the authentication boundary that distinguishes this frame from every other opaque frame.
     return 'null';
   }
 
-  private onLoad(): void {
+  private onLoad(
+    event: Event,
+    frameGeneration: number,
+    resource: ResolvedMcpAppResource,
+  ): void {
+    if (
+      !this.isConnected ||
+      frameGeneration !== this.frameGeneration ||
+      event.currentTarget !== this.frame
+    ) return;
+    const currentResource = resolveResource(this.resource);
+    if (!currentResource || currentResource.resource !== resource.resource) return;
     this.loaded = true;
-    this.emit('lr-mcp-ready', { uri: this.resource?.uri ?? '' });
+    this.emit('lr-mcp-ready', { uri: resource.uri });
     this.postHostContext({
       resource: {
-        uri: this.resource?.uri,
-        metadata: this.resource?.metadata,
+        uri: resource.uri,
+        metadata: resource.resource.metadata,
       },
       locale: this.effectiveLocale,
       direction: this.effectiveDirection,
@@ -341,45 +424,54 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     this.post({ channel: 'lyra-mcp-app', version: 1, type: 'host-context', context });
   }
 
-  /** Resolves a prior `lr-mcp-tool-call`. Pass that request's `detail.frameGeneration` as the
-   *  fourth argument to correlate the reply with the frame that asked for it: a tool call is
-   *  inherently asynchronous, and `resource` can be replaced (tearing the iframe down and mounting
-   *  an unrelated app) while the host is still doing the work. A mismatched generation is dropped
-   *  rather than posted into that unrelated frame. Omitting the argument keeps the pre-existing
-   *  behavior -- no correlation available, so the reply goes to whichever frame is mounted. */
-  postToolResult(requestId: string, result?: unknown, error?: string, frameGeneration?: number): void {
-    if (frameGeneration !== undefined && frameGeneration !== this.frameGeneration) return;
+  /** Resolves a prior `lr-mcp-tool-call`. The required frame generation binds the asynchronous
+   * reply to the frame that requested it; stale, uncorrelated, and ambiguous replies fail closed. */
+  postToolResult(requestId: string, options: McpAppToolResultOptions): void {
+    const value = record(options);
+    if (typeof requestId !== 'string' || !requestId.trim() || !value) return;
+    const frameGeneration = value['frameGeneration'];
+    if (
+      typeof frameGeneration !== 'number' ||
+      !Number.isSafeInteger(frameGeneration) ||
+      frameGeneration !== this.frameGeneration
+    ) return;
+    const hasResult = Object.prototype.hasOwnProperty.call(value, 'result');
+    const hasError = Object.prototype.hasOwnProperty.call(value, 'error');
+    if (hasResult === hasError) return;
+    if (hasError && (typeof value['error'] !== 'string' || !value['error'].trim())) return;
     this.post({
       channel: 'lyra-mcp-app',
       version: 1,
       type: 'tool-result',
       requestId,
-      ...(result !== undefined ? { result } : {}),
-      ...(error ? { error } : {}),
+      ...(hasResult ? { result: value['result'] } : {}),
+      ...(hasError ? { error: value['error'] as string } : {}),
     });
   }
 
   override render(): TemplateResult {
-    const resource = this.resource;
-    const src = safeMediaSrc(resource?.src);
-    const valid = Boolean(resource && (resource.html || src));
-    const label = this.accessibleLabel || this.label || resource?.title || this.localize('mcpAppLabel');
-    if (!valid) {
+    const resource = resolveResource(this.resource);
+    if (!resource) {
       return html`<div part="base"><p part="error">${this.localize('mcpAppUnavailable')}</p></div>`;
     }
+    const fallbackLabel = (hostAriaLabel(this) === null ? this.accessibleLabel : '') || this.label ||
+      resource.resource.title || this.localize('mcpAppLabel');
+    const label = purposeAccessibleLabel(this, fallbackLabel, { allowExplicitEmpty: true });
+    const frameGeneration = this.frameGeneration;
     return html`<div part="base">
       ${this.loaded ? nothing : html`<p part="loading">${this.localize('mcpAppLoading')}</p>`}
       ${keyed(
-        this.frameGeneration,
+        frameGeneration,
         html`<iframe
           part="frame"
           title=${label}
           sandbox="allow-forms allow-scripts"
-          allow=${permissionPolicy(resource?.permissions)}
-          src=${resource?.html ? nothing : src ?? nothing}
-          .srcdoc=${resource?.html ? withCsp(resource.html, resource.csp) : nothing}
+          referrerpolicy="no-referrer"
+          allow=${permissionPolicy(resource.resource.permissions)}
+          src=${resource.src ?? nothing}
+          .srcdoc=${resource.html ? withCsp(resource.html, resource.resource.csp) : nothing}
           style=${styleMap({ height: `${this.frameHeight}px` })}
-          @load=${this.onLoad}
+          @load=${(event: Event) => this.onLoad(event, frameGeneration, resource)}
         ></iframe>`,
       )}
     </div>`;

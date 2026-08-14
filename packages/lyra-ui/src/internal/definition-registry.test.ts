@@ -80,6 +80,43 @@ describe('registryForRoot', () => {
     }
   });
 
+  it('fails closed when a consumer-owned getRootNode getter or function throws', () => {
+    for (const descriptor of [
+      {
+        configurable: true,
+        get(): never {
+          throw new Error('hostile getter');
+        },
+      },
+      {
+        configurable: true,
+        value(): never {
+          throw new Error('hostile function');
+        },
+      },
+    ]) {
+      const element = document.createElement('div');
+      Object.defineProperty(element, 'getRootNode', descriptor);
+      expect(() => registryForRoot(element)).to.not.throw();
+      expect(registryForRoot(element)).to.equal(undefined);
+    }
+  });
+
+  it('fails closed when a scoped-registry accessor throws', () => {
+    const element = document.createElement('div');
+    const restore = stubGetRootNode(element, {
+      get customElementRegistry(): never {
+        throw new Error('hostile scoped registry');
+      },
+    });
+    try {
+      expect(() => registryForRoot(element)).to.not.throw();
+      expect(registryForRoot(element)).to.equal(undefined);
+    } finally {
+      restore();
+    }
+  });
+
   it('returns undefined when the owner document has no defaultView', () => {
     const detachedDocument = document.implementation.createHTMLDocument('detached');
     const el = detachedDocument.createElement('div');

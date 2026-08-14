@@ -19,6 +19,10 @@ const items: PromptQueueItem[] = [
   {
     id: 'risks',
     value: 'List the three largest risks and cite the supporting passages.',
+    attachments: [
+      { id: 'report', name: 'annual-report.pdf' },
+      { id: 'notes', name: 'review-notes.txt' },
+    ],
   },
   {
     id: 'comparison',

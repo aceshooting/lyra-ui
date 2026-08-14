@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Scrollable pan-and-zoom surface for slotted content or an image source. Viewport focus transitions relay exactly one native `FocusEvent` plus the `lr-focus`/`lr-blur` alias.',
+          'Scrollable pan-and-zoom surface for slotted content or a safe image source. Scaling participates in layout so the entire painted footprint remains reachable; rejected sources fall back to the slot. Viewport focus transitions relay exactly one native `FocusEvent` plus the `lr-focus`/`lr-blur` alias.',
       },
     },
   },
@@ -35,6 +35,26 @@ export const ImageSource: Story = {
     alt="Preview"
     aria-label="Image preview"
   ></lr-pan-zoom>`,
+};
+
+/** The 2× surface expands native scroll geometry rather than painting beyond its reachable layout
+ * box. Switch this story to RTL to inspect the opposite logical edge. */
+export const ScaledFootprint: Story = {
+  render: () => html`<div style="inline-size: 320px; max-inline-size: 100%;">
+    <lr-pan-zoom zoom="2" aria-label="Scaled diagram">
+      <div style="inline-size: 36rem; block-size: 14rem; background: var(--lr-color-brand-quiet);">
+        Both ends remain scrollable at 2×
+      </div>
+    </lr-pan-zoom>
+  </div>`,
+};
+
+/** An unsafe/rejected image source is absent; it never replaces useful fallback content with an
+ * empty broken image. */
+export const RejectedImageFallsBackToSlot: Story = {
+  render: () => html`<lr-pan-zoom src="javascript:alert(1)" aria-label="Fallback preview">
+    <div>Safe slotted fallback</div>
+  </lr-pan-zoom>`,
 };
 
 export const Narrow320LocalizedReset: Story = {

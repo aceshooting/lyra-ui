@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Audio/video player built on a native media element with a cue transcript synced to playback, time-range anchor/highlight support, an optional dependency-free waveform, and playback-rate control. Self-registers into the document-viewer registry for common audio/video MIME types. Media focus transitions relay exactly one native `FocusEvent` plus the `lr-focus`/`lr-blur` alias.',
+          'Audio/video player built on a native media element with bounded readonly cue/track collections whose retained records are cloned and frozen, a uniquely identified cue transcript synced to playback, time-range anchor/highlight actions, a bounded dependency-free waveform, and two-way volume/mute/rate state. Cue changes carry a frozen readonly `{ cueId, index }`; marker buttons are siblings of the slider rather than nested controls. Self-registers into the document-viewer registry for common audio/video MIME types.',
       },
     },
   },
@@ -59,7 +59,7 @@ export const UnsafeSourceError: Story = {
     docs: {
       description: {
         story:
-          'An unsafe source fails closed while preserving the player\'s named `role="region"`; the localized visible error remains ordinary text because post-mount failures announce through the shared light-DOM sink.',
+          'An unsafe source fails closed while retaining the authored aggregate name on the host. The localized visible error remains ordinary text; post-mount failures also emit `lr-render-error` and announce through the shared light-DOM sink.',
       },
     },
   },

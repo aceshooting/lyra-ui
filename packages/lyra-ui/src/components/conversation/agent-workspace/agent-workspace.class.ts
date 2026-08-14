@@ -31,7 +31,7 @@ const MAX_RENDERED_MESSAGES = 500;
 export interface LyraAgentWorkspaceEventMap {
   'lr-input': CustomEvent<{ value: string }>;
   'lr-submit': CustomEvent<{ value: string }>;
-  'lr-stop': CustomEvent<undefined>;
+  'lr-stop': CustomEvent<null>;
   'lr-message-retry': CustomEvent<{ messageId: string }>;
   'lr-follow-change': CustomEvent<{ following: boolean }>;
   'lr-retrieval-select': CustomEvent<RetrievalResultsSelectDetail>;
@@ -41,7 +41,7 @@ export interface LyraAgentWorkspaceEventMap {
   // that element's own detail type -- `lr-cancel` is emitted there as `emit('lr-cancel', {})`,
   // i.e. always a real `CancelEventDetail` object, never `undefined`.
   'lr-cancel': CustomEvent<CancelEventDetail>;
-  'lr-retry': CustomEvent<RetryEventDetail>;
+  'lr-run-retry': CustomEvent<RetryEventDetail>;
 }
 
 /**
@@ -57,6 +57,9 @@ export interface LyraAgentWorkspaceEventMap {
  * the responsive shell. To keep the data-driven fallback bounded, at most the latest 500 messages
  * are materialized; applications needing a larger retained transcript can supply a virtualized
  * `messages` slot.
+ * Composer value, follow state, and retrieval selection are request-only:
+ * child events are forwarded, but the workspace never writes those public
+ * properties. The host applies accepted state back to the component.
  *
  * @customElement lr-agent-workspace
  * @slot messages - Replaces the data-driven transcript message list.
@@ -72,7 +75,7 @@ export interface LyraAgentWorkspaceEventMap {
  * @event lr-citation-select - Forwarded from the built-in grounding summary. `detail: { citation }`.
  * @event lr-tool-approval-decide - Forwarded from the built-in tool timeline.
  * @event lr-cancel - Forwarded from the built-in agent run.
- * @event lr-retry - Forwarded from the built-in agent run.
+ * @event lr-run-retry - Forwarded from the built-in agent run.
  * @csspart base - The root workspace wrapper.
  * @csspart header - The workspace heading and header-actions slot.
  * @csspart heading - The visible workspace heading.
@@ -80,7 +83,8 @@ export interface LyraAgentWorkspaceEventMap {
  * @csspart body - The main conversation/details layout.
  * @csspart conversation - The main transcript pane.
  * @csspart viewport - The composed `<lr-chat-viewport>`.
- * @csspart messages - The transcript message wrapper.
+ * @csspart messages - Each data-driven transcript message (also exposed as `message`).
+ * @csspart message - Each data-driven transcript message.
  * @csspart messages-empty - The empty transcript state.
  * @csspart details - The responsive details pane.
  * @csspart details-content - The built-in details content wrapper.
@@ -117,7 +121,8 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   /** Host-level accessible-name override for the internal `role="region"` root. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  /** Conversation messages. The host owns ordering, updates, and persistence. */
+  /** Conversation messages. The host owns ordering, updates, and persistence.
+   *  Ids are unique occurrence identities; later duplicates are ignored. */
   @property({ attribute: false }) messages: ChatMessage[] = [];
 
   /** Current agent run, rendered in the details pane when set. */
@@ -142,7 +147,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   @property({ type: Boolean, attribute: 'retrieval-has-more' }) retrievalHasMore = false;
 
   /** Caller-supplied retrieval error text. */
-  @property({ attribute: 'retrieval-error' }) retrievalError = '';
+  @property({ attribute: 'retrieval-error-text' }) retrievalErrorText = '';
 
   /** Grounding assessment for the current assistant answer. */
   @property({ attribute: false }) groundingAssessment: GroundingAssessment | null = null;
@@ -206,20 +211,11 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     return Math.max(this.safeComposerMinRows, finiteCount(this.composerMaxRows, 8));
   }
 
-  private onComposerInput = (event: CustomEvent<{ value: string }>): void => {
-    this.composerValue = event.detail.value;
-  };
-
-  private onFollowChange = (event: CustomEvent<{ following: boolean }>): void => {
-    this.follow = event.detail.following;
-  };
-
   private onRetrievalSelect = (event: CustomEvent<RetrievalResultsSelectDetail>): void => {
     // `<lr-retrieval-results>`'s own `lr-select` bubbles/composes (LyraElement.emit()'s defaults),
     // so without stopping it here it would keep bubbling straight through this component under the
     // wrong, undocumented name -- this component's own contract is `lr-retrieval-select` below.
     event.stopPropagation();
-    this.selectedRetrievalIds = event.detail.ids;
     this.emit('lr-retrieval-select', event.detail);
   };
 
@@ -231,11 +227,12 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   private renderMessage(message: ChatMessage): TemplateResult {
     return html`
       <lr-chat-message
-        .role=${message.role}
+        part="messages message"
+        .messageRole=${message.role}
         .messageId=${message.id}
         .status=${message.status ?? 'sent'}
         .timestamp=${message.timestamp}
-        @lr-retry=${this.onMessageRetry}
+        @lr-message-retry=${this.onMessageRetry}
       >
         ${message.parts?.length
           ? html`<lr-message-parts .parts=${message.parts}></lr-message-parts>`
@@ -248,7 +245,12 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     if (this.messages.length === 0) {
       return html`<lr-empty part="messages-empty" heading=${this.localize('agentWorkspaceEmpty')}></lr-empty>`;
     }
-    const messages = this.messages.slice(this.messageWindowOffset);
+    const seen = new Set<string>();
+    const messages = this.messages.slice(this.messageWindowOffset).filter((message) => {
+      if (seen.has(message.id)) return false;
+      seen.add(message.id);
+      return true;
+    });
     return html`${repeat(messages, (message) => message.id, (message) => this.renderMessage(message))}`;
   }
 
@@ -275,7 +277,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
               <lr-tool-timeline .entries=${this.tools}></lr-tool-timeline>
             </section>`
           : nothing}
-        ${this.retrievalChunks.length > 0 || this.retrievalLoading || this.retrievalError
+        ${this.retrievalChunks.length > 0 || this.retrievalLoading || this.retrievalErrorText
           ? html`<section part="section">
               <h3 part="section-heading">${this.localize('agentWorkspaceRetrieval')}</h3>
               <lr-retrieval-results
@@ -283,7 +285,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
                 .selectedIds=${this.selectedRetrievalIds}
                 .loading=${this.retrievalLoading}
                 .hasMore=${this.retrievalHasMore}
-                .errorText=${this.retrievalError}
+                .errorText=${this.retrievalErrorText}
                 @lr-select=${this.onRetrievalSelect}
               ></lr-retrieval-results>
             </section>`
@@ -316,7 +318,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
         this.tools.length > 0 ||
         this.retrievalChunks.length > 0 ||
         this.retrievalLoading ||
-        this.retrievalError ||
+        this.retrievalErrorText ||
         this.groundingAssessment ||
         this.citations.length > 0 ||
         this.contextSegments.length > 0,
@@ -324,7 +326,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   }
 
   override render(): TemplateResult {
-    const label = this.accessibleLabel || this.label || this.localize('agentWorkspaceLabel');
+    const label = this.accessibleLabel ?? (this.label || this.localize('agentWorkspaceLabel'));
     const heading = this.label || this.localize('agentWorkspaceLabel');
     const hasSlottedDetails = this.hasSlotted('details');
     const hasDetails = hasSlottedDetails || (this.showDetails && this.hasBuiltInDetails);
@@ -342,11 +344,8 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
               .follow=${this.follow}
               .unreadStartIndex=${this.safeUnreadStartIndex}
               aria-label=${this.localize('agentWorkspaceConversation')}
-              @lr-follow-change=${this.onFollowChange}
             >
-              <div part="messages">
-                <slot name="messages">${this.renderMessages()}</slot>
-              </div>
+              <slot name="messages">${this.renderMessages()}</slot>
             </lr-chat-viewport>
           </section>
           <aside
@@ -370,7 +369,6 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
                   .minRows=${this.safeComposerMinRows}
                   .maxRows=${this.safeComposerMaxRows}
                   placeholder=${this.composerPlaceholder || this.localize('composerPlaceholder')}
-                  @lr-input=${this.onComposerInput}
                 ></lr-chat-composer>`
               : nothing}
           </slot>

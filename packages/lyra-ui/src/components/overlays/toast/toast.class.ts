@@ -1,4 +1,4 @@
-import { html, type TemplateResult } from 'lit';
+import { html, render, type TemplateResult } from 'lit';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { property } from 'lit/decorators.js';
@@ -34,13 +34,28 @@ export type ToastPlacement =
   | 'bottom-center'
   | 'bottom-end';
 
-export interface ToastCreateOptions {
+export type LyraToastIconContent = string | Node | TemplateResult;
+export type LyraToastIcon = LyraToastIconContent | ((ownerDocument: Document) => LyraToastIconContent);
+
+/** Canonical options shared by the imperative helper and a toast region's object-form `create()`. */
+export interface LyraToastOptions {
+  message: string;
+  placement?: ToastPlacement;
+  ownerDocument?: Document;
   variant?: ToastVariant;
   duration?: number;
   /** Item size. Long upstream spellings remain observable on the created item. */
   size?: LyraSize;
   withIcon?: boolean;
+  /** Safe icon content. Strings are text, nodes are appended/imported, and factories may return a
+   * Lit template for the target document; no branch interprets a string as HTML. */
+  icon?: LyraToastIcon;
+  /** Optional action button rendered after the message. */
+  action?: { label: string; onClick: (item: LyraToastItem) => void };
 }
+
+/** Options accepted beside the legacy string-form `create(message, options)`. */
+export type ToastCreateOptions = Omit<LyraToastOptions, 'message' | 'placement'>;
 
 export interface ToastOverflowDetail {
   /** Number of queued notifications discarded in the coalesced admission burst. */
@@ -52,8 +67,9 @@ export interface LyraToastEventMap {
 }
 
 /**
- * `<lr-toast>` — the stacking toast region. One per page is recommended. It keeps at most three
- * items active and twenty more in a hidden, inert FIFO queue. Further admissions discard the
+ * `<lr-toast>` — one placement-specific stacking toast region. The `toast()` helper maintains one
+ * region per owner document and placement. Each keeps at most three items active and twenty more
+ * in a hidden, inert FIFO queue. Further admissions discard the
  * oldest queued work and report the coalesced loss through an event and polite announcement.
  * Membership is reconciled before every admission and reasserted after reconnect/reparent; a
  * lasting region disconnect discards managed work instead of retaining nodes that could resurrect.
@@ -109,6 +125,11 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
   private overflowSink?: AnnouncementSink;
   private pendingOverflowCount = 0;
   private overflowNotificationScheduled = false;
+
+  /** Live stack element, or `null` before the render root is populated. */
+  get stack(): HTMLElement | null {
+    return this.renderRoot.querySelector<HTMLElement>('[part="stack"]');
+  }
 
   private syncVisibleState = (): void => {
     const hasToast =
@@ -295,9 +316,25 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
     else queueMicrotask(notify);
   }
 
-  /** Create and append a toast item programmatically; resolves to the item. Long size aliases in
-   * `options` remain observable just like declarative toast-item attributes. */
-  async create(message: string, options: ToastCreateOptions = {}): Promise<LyraToastItem> {
+  /** Create and append a toast item programmatically. The object form shares the canonical
+   * `LyraToastOptions` contract with `toast()`; the legacy string form remains supported. A
+   * detached region rejects immediately rather than returning an update promise that cannot run. */
+  create(options: LyraToastOptions): Promise<LyraToastItem>;
+  create(message: string, options?: ToastCreateOptions): Promise<LyraToastItem>;
+  async create(
+    messageOrOptions: string | LyraToastOptions,
+    legacyOptions: ToastCreateOptions = {},
+  ): Promise<LyraToastItem> {
+    if (!this.isConnected) throw new TypeError('A toast region must be connected before create().');
+    const options: LyraToastOptions = typeof messageOrOptions === 'string'
+      ? { ...legacyOptions, message: messageOrOptions }
+      : messageOrOptions;
+    if (options.ownerDocument && options.ownerDocument !== this.ownerDocument) {
+      throw new TypeError('Toast ownerDocument must match the region owner document.');
+    }
+    if (options.placement && options.placement !== this.placement) {
+      throw new TypeError('Toast placement must match the region placement.');
+    }
     const itemTag = tag('toast-item');
     const ownerRegistry = this.ownerDocument.defaultView?.customElements;
     if (!ownerRegistry?.get(itemTag)) {
@@ -316,7 +353,34 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
     if (options.duration !== undefined) item.duration = options.duration;
     if (options.size !== undefined) item.size = options.size;
     if (options.withIcon !== undefined) item.withIcon = options.withIcon;
-    item.textContent = message;
+    item.textContent = options.message;
+    if (options.icon !== undefined) {
+      item.withIcon = true;
+      const iconHost = this.ownerDocument.createElement('span');
+      iconHost.slot = 'icon';
+      iconHost.setAttribute('aria-hidden', 'true');
+      const content = typeof options.icon === 'function'
+        ? options.icon(this.ownerDocument)
+        : options.icon;
+      if (typeof content === 'string') {
+        iconHost.textContent = content;
+      } else if (content && typeof content === 'object' && 'nodeType' in content) {
+        const node = content as Node;
+        iconHost.append(node.ownerDocument === this.ownerDocument
+          ? node
+          : this.ownerDocument.importNode(node, true));
+      } else {
+        render(content, iconHost);
+      }
+      item.append(iconHost);
+    }
+    if (options.action) {
+      const action = this.ownerDocument.createElement('button');
+      action.type = 'button';
+      action.textContent = options.action.label;
+      action.addEventListener('click', () => options.action?.onClick(item));
+      item.append(action);
+    }
     if (!isToastRegionEntry(item)) {
       throw new TypeError(`${itemTag} does not expose the bounded toast-region protocol.`);
     }

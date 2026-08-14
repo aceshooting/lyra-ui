@@ -321,6 +321,97 @@ describe('lr-graph-query-builder', () => {
     setTimeout(() => run.click());
     const ev = await oneEvent(el, 'lr-query-run');
     expect(ev.detail.query.startId).to.equal('node-1');
+    expect(Object.isFrozen(ev.detail)).to.equal(true);
+    expect(Object.isFrozen(ev.detail.query)).to.equal(true);
+    expect(Object.isFrozen(ev.detail.query.relationshipTypes)).to.equal(true);
+  });
+
+  it('emits one cancelable before phase followed by one noncancelable accepted event for every query action', async () => {
+    const saved: GraphQuerySavedItem[] = [
+      { id: 'saved-1', name: 'Saved traversal', query: query({ startId: 'saved-node' }) },
+    ];
+    const el = (await fixture(html`
+      <lr-graph-query-builder
+        .value=${query({ startId: 'current-node' })}
+        .savedQueries=${saved}
+      ></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+
+    const order: string[] = [];
+    const events: Event[] = [];
+    const names = [
+      'lr-before-query-run',
+      'lr-query-run',
+      'lr-before-query-save',
+      'lr-query-save',
+      'lr-before-query-load',
+      'lr-query-load',
+      'lr-before-query-delete',
+      'lr-query-delete',
+    ] as const;
+    for (const name of names) {
+      el.addEventListener(name, (event) => {
+        order.push(name);
+        events.push(event);
+      });
+    }
+
+    (el.shadowRoot!.querySelector('[part="run-button"]') as HTMLButtonElement).click();
+    const nameInput = el.shadowRoot!.querySelector('[part="save-name-input"]') as HTMLElement;
+    nameInput.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'Snapshot' } }));
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('[part="save-button"]') as HTMLButtonElement).click();
+    (el.shadowRoot!.querySelector('[part="saved-load-button"]') as HTMLButtonElement).click();
+    (el.shadowRoot!.querySelector('[part="saved-delete-button"]') as HTMLButtonElement).click();
+
+    expect(order).to.deep.equal(names);
+    expect(events.filter((event) => event.type.startsWith('lr-before-')).every((event) => event.cancelable)).to.equal(
+      true
+    );
+    expect(events.filter((event) => !event.type.startsWith('lr-before-')).every((event) => !event.cancelable)).to.equal(
+      true
+    );
+    expect(events.every((event) => Object.isFrozen((event as CustomEvent).detail))).to.equal(true);
+    for (let index = 0; index < events.length; index += 2) {
+      expect(
+        (events[index] as CustomEvent).detail === (events[index + 1] as CustomEvent).detail,
+        names[index]
+      ).to.equal(true);
+    }
+  });
+
+  it('lets every before-query phase veto its action without an accepted event or local mutation', async () => {
+    const saved: GraphQuerySavedItem[] = [
+      { id: 'saved-1', name: 'Saved traversal', query: query({ startId: 'saved-node' }) },
+    ];
+    const el = (await fixture(html`
+      <lr-graph-query-builder
+        .value=${query({ startId: 'current-node' })}
+        .savedQueries=${saved}
+      ></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+
+    const accepted = new Map<string, number>();
+    for (const action of ['run', 'save', 'load', 'delete'] as const) {
+      el.addEventListener(`lr-before-query-${action}`, (event) => event.preventDefault());
+      el.addEventListener(`lr-query-${action}`, () => accepted.set(action, (accepted.get(action) ?? 0) + 1));
+    }
+
+    (el.shadowRoot!.querySelector('[part="run-button"]') as HTMLButtonElement).click();
+    const nameInput = el.shadowRoot!.querySelector('[part="save-name-input"]') as HTMLElement & { value: string };
+    nameInput.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'Needs approval' } }));
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('[part="save-button"]') as HTMLButtonElement).click();
+    (el.shadowRoot!.querySelector('[part="saved-load-button"]') as HTMLButtonElement).click();
+    (el.shadowRoot!.querySelector('[part="saved-delete-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+
+    expect([...accepted.values()].reduce((sum, count) => sum + count, 0)).to.equal(0);
+    expect(el.value.startId).to.equal('current-node');
+    expect(nameInput.value).to.equal('Needs approval');
+    expect(el.savedQueries.map((item) => item.id)).to.deep.equal(['saved-1']);
   });
 
   it('disables the save button until a name is entered, then emits lr-query-save and clears the name field', async () => {
@@ -338,12 +429,58 @@ describe('lr-graph-query-builder', () => {
 
     setTimeout(() => saveButton.click());
     const ev = await oneEvent(el, 'lr-query-save');
+    expect(ev.cancelable).to.equal(false);
     expect(ev.detail.name).to.equal('My saved search');
     expect(ev.detail.query.startId).to.equal('node-1');
     await el.updateComplete;
     expect(
       (el.shadowRoot!.querySelector('[part="save-name-input"]') as HTMLElement & { value: string }).value
     ).to.equal('');
+  });
+
+  it('keeps the save-name draft when the cancelable save request is vetoed', async () => {
+    const el = (await fixture(
+      html`<lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>`
+    )) as LyraGraphQueryBuilder;
+    const nameInput = el.shadowRoot!.querySelector('[part="save-name-input"]') as HTMLElement & { value: string };
+    nameInput.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'Needs approval' } }));
+    await el.updateComplete;
+    el.addEventListener('lr-before-query-save', (event) => event.preventDefault());
+    const requested = oneEvent(el, 'lr-before-query-save');
+
+    (el.shadowRoot!.querySelector('[part="save-button"]') as HTMLButtonElement).click();
+    const event = await requested;
+    await el.updateComplete;
+    expect(event.defaultPrevented).to.equal(true);
+    expect((el.shadowRoot!.querySelector('[part="save-name-input"]') as HTMLElement & { value: string }).value)
+      .to.equal('Needs approval');
+  });
+
+  it('clone-owns and freezes model, option, and saved-query inputs with unique actionable ids', async () => {
+    const model = query({ relationshipTypes: ['works_for'], nodeTypes: ['person'] });
+    const options: GraphQueryTypeOption[] = [{ value: 'person', label: 'Person' }];
+    const saved: GraphQuerySavedItem[] = [
+      { id: 'same', name: 'First', query: model },
+      { id: 'same', name: 'Duplicate', query: query({ startId: 'other' }) },
+    ];
+    const el = (await fixture(html`
+      <lr-graph-query-builder
+        .value=${model}
+        .nodeTypeOptions=${options}
+        .savedQueries=${saved}
+      ></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+
+    (model.relationshipTypes as string[]).push('mutated');
+    (options[0] as { label?: string }).label = 'Mutated';
+    saved.push({ id: 'later', name: 'Later', query: query() });
+    expect(el.value.relationshipTypes).to.deep.equal(['works_for']);
+    expect(el.nodeTypeOptions[0]!.label).to.equal('Person');
+    expect(el.savedQueries).to.have.length(1);
+    expect(Object.isFrozen(el.value)).to.equal(true);
+    expect(Object.isFrozen(el.nodeTypeOptions)).to.equal(true);
+    expect(Object.isFrozen(el.nodeTypeOptions[0]!)).to.equal(true);
+    expect(Object.isFrozen(el.savedQueries[0]!.query)).to.equal(true);
   });
 
   it('renders saved queries and loads one on click, replacing the current value', async () => {
@@ -389,7 +526,8 @@ describe('lr-graph-query-builder', () => {
     setTimeout(() => deleteButton.click());
     const ev = await oneEvent(el, 'lr-query-delete');
     expect(ev.detail.id).to.equal('s1');
-    expect(el.savedQueries).to.equal(saved);
+    expect(el.savedQueries).to.not.equal(saved);
+    expect(el.savedQueries).to.deep.equal(saved);
     expect(el.savedQueries.length).to.equal(1);
   });
 
@@ -862,6 +1000,21 @@ describe('lr-graph-query-builder', () => {
     expect(getComputedStyle(button).opacity).to.equal('0.25');
   });
 
+  it('keeps every text action at the shared minimum hit-target height', async () => {
+    const saved: GraphQuerySavedItem[] = [{ id: 's1', name: 'Coworkers', query: query() }];
+    const el = (await fixture(html`
+      <lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    const nameInput = el.shadowRoot!.querySelector('[part="save-name-input"]') as HTMLElement;
+    nameInput.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'Saved' } }));
+    await el.updateComplete;
+
+    for (const part of ['run-button', 'save-button', 'saved-load-button'] as const) {
+      const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      expect(button.getBoundingClientRect().height, part).to.be.at.least(40);
+    }
+  });
+
   it('reveals the max-hops error text after reportValidity when minHops exceeds maxHops', async () => {
     const el = (await fixture(
       html`<lr-graph-query-builder
@@ -1030,12 +1183,15 @@ describe('lr-graph-query-builder', () => {
     });
   }
 
-  it('names the role="group" region with the localized default when unset', async () => {
+  it('names the role="group" region from its visible localized label when unset', async () => {
     const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
     expect(base.getAttribute('role')).to.equal('group');
-    expect(base.getAttribute('aria-label')).to.equal('Graph query builder');
+    expect(base.hasAttribute('aria-label')).to.equal(false);
+    expect(base.getAttribute('aria-labelledby')).to.equal(label.id);
+    expect(label.textContent!.trim()).to.equal('Graph query builder');
   });
 
   it('names the region from the label property when set and no host aria-label is present', async () => {
@@ -1044,7 +1200,23 @@ describe('lr-graph-query-builder', () => {
     )) as LyraGraphQueryBuilder;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('aria-label')).to.equal('Path filter');
+    const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    expect(base.hasAttribute('aria-label')).to.equal(false);
+    expect(base.getAttribute('aria-labelledby')).to.equal(label.id);
+    expect(label.textContent!.trim()).to.equal('Path filter');
+  });
+
+  it('uses slotted visible label content as the group name when no host aria-label exists', async () => {
+    const el = (await fixture(html`
+      <lr-graph-query-builder><span slot="label">Find related accounts</span></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    const slot = label.querySelector('slot') as HTMLSlotElement;
+    expect(base.hasAttribute('aria-label')).to.equal(false);
+    expect(base.getAttribute('aria-labelledby')).to.equal(label.id);
+    expect(slot.assignedNodes({ flatten: true }).map((node) => node.textContent).join('').trim())
+      .to.equal('Find related accounts');
   });
 
   it('a host-level aria-label attribute wins over both the label property and the localized default', async () => {
@@ -1319,6 +1491,41 @@ describe('setCustomValidity()', () => {
     expect(el.validationMessage).to.equal('');
     form.requestSubmit();
     expect(submits, 'submission is unblocked once the custom error is cleared').to.equal(1);
+  });
+
+  it('publishes effective custom and disabled validity as frozen deduplicated snapshots', async () => {
+    const el = (await fixture(html`
+      <lr-graph-query-builder .value=${query({ startId: 'node-1' })}></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    const customEvent = oneEvent(el, 'lr-validity-change');
+    el.setCustomValidity('Rejected by policy.');
+    const custom = await customEvent;
+    expect(custom.detail.valid).to.equal(false);
+    expect(custom.detail.errors).to.deep.equal({ base: 'Rejected by policy.' });
+    expect(Object.isFrozen(custom.detail)).to.equal(true);
+    expect(Object.isFrozen(custom.detail.errors)).to.equal(true);
+    expect(el.errors).to.deep.equal({ base: 'Rejected by policy.' });
+
+    const barredEvent = oneEvent(el, 'lr-validity-change');
+    el.disabled = true;
+    const barred = await barredEvent;
+    expect(barred.detail).to.deep.equal({ valid: true, errors: {} });
+    expect(el.willValidate).to.equal(false);
+  });
+
+  it('emits a cancelable lr-invalid alias and forwards its veto to the native invalid event', async () => {
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    let alias: CustomEvent | undefined;
+    el.addEventListener('lr-invalid', (event) => {
+      alias = event;
+      event.preventDefault();
+    });
+    const native = new Event('invalid', { cancelable: true });
+
+    expect(el.dispatchEvent(native)).to.equal(false);
+    expect(alias?.cancelable).to.equal(true);
+    expect(alias?.defaultPrevented).to.equal(true);
+    expect(native.defaultPrevented).to.equal(true);
   });
 
   it('treats an undefined runtime custom-validity message as clearing the prior error', async () => {

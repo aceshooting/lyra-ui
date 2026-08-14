@@ -62,6 +62,29 @@ function keydown(el: LyraWordCloud, key: string): void {
   svgEl(el).dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true }));
 }
 
+function wordClientPoint(el: LyraWordCloud, text: string): { clientX: number; clientY: number } {
+  const word = Array.from(el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="word"]')).find(
+    (candidate) => candidate.textContent === text,
+  );
+  if (!word) throw new Error(`Missing rendered word: ${text}`);
+  const matrix = svgEl(el).getScreenCTM();
+  if (!matrix) throw new Error('Missing SVG screen transform');
+  const point = new DOMPoint(Number(word.getAttribute('x')), Number(word.getAttribute('y'))).matrixTransform(matrix);
+  return { clientX: point.x, clientY: point.y };
+}
+
+function clickWord(el: LyraWordCloud, text: string): void {
+  const point = wordClientPoint(el, text);
+  svgEl(el).dispatchEvent(new MouseEvent('click', { ...point, bubbles: true, composed: true }));
+}
+
+function pointerDownWord(el: LyraWordCloud, text: string): void {
+  const point = wordClientPoint(el, text);
+  svgEl(el).dispatchEvent(
+    new PointerEvent('pointerdown', { ...point, pointerId: 1, bubbles: true, composed: true, buttons: 1 }),
+  );
+}
+
 async function captureWarnings(work: () => Promise<void>): Promise<string[]> {
   const originalWarn = console.warn;
   const warnings: string[] = [];
@@ -87,11 +110,11 @@ it('renders one labeled [part="word"] per word, as a single tab stop on [part="s
     expect(node.getAttribute('tabindex')).to.be.null;
   }
   expect(svgEl(el).getAttribute('tabindex')).to.equal('0');
-  expect(svgEl(el).getAttribute('role')).to.be.null;
-  expect(svgEl(el).getAttribute('aria-label')).to.be.null;
+  expect(svgEl(el).getAttribute('role')).to.equal('application');
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('Word cloud of 3 words');
   expect(svgEl(el).getAttribute('aria-describedby')).to.equal(null);
-  expect(el.getAttribute('role')).to.equal('group');
-  expect(el.getAttribute('aria-label')).to.equal('Word cloud of 3 words');
+  expect(el.getAttribute('role')).to.be.null;
+  expect(el.getAttribute('aria-label')).to.be.null;
 });
 
 it('renders named color overrides in an optional legend', async () => {
@@ -252,28 +275,33 @@ it('shows a "No data" placeholder and no word nodes when words is empty', async 
   expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
 });
 
-it('reflects word count via role=group and aria-label on the host', async () => {
+it('puts the composite role and generated word count on the focusable SVG only', async () => {
   const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
   await el.updateComplete;
-  expect(el.getAttribute('role')).to.equal('group');
-  expect(el.getAttribute('aria-label')).to.equal('Word cloud of 3 words');
+  expect(el.getAttribute('role')).to.be.null;
+  expect(el.getAttribute('aria-label')).to.be.null;
+  expect(svgEl(el).getAttribute('role')).to.equal('application');
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('Word cloud of 3 words');
 });
 
-it('does not overwrite an author-supplied role/aria-label, including on a later words update', async () => {
+it('keeps author host semantics on the host without copying the same name to the SVG', async () => {
   const el = (await fixture(
     html`<lr-word-cloud role="img" aria-label="Custom" .words=${WORDS}></lr-word-cloud>`
   )) as LyraWordCloud;
   await el.updateComplete;
   expect(el.getAttribute('role')).to.equal('img');
   expect(el.getAttribute('aria-label')).to.equal('Custom');
+  expect(svgEl(el).getAttribute('role')).to.equal('application');
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('Word cloud of 3 words');
 
   el.words = [{ text: 'fresh', weight: 1 }];
   await el.updateComplete;
   expect(el.getAttribute('role')).to.equal('img');
   expect(el.getAttribute('aria-label')).to.equal('Custom');
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('Word cloud of 1 word');
 });
 
-it('honors late host role/aria-label changes and restores generated defaults after removal', async () => {
+it('honors late host role/aria-label changes while SVG ownership stays generated and distinct', async () => {
   const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
   await el.updateComplete;
 
@@ -288,10 +316,10 @@ it('honors late host role/aria-label changes and restores generated defaults aft
   el.removeAttribute('role');
   el.removeAttribute('aria-label');
   await el.updateComplete;
-  expect(el.getAttribute('role')).to.equal('group');
-  expect(el.getAttribute('aria-label')).to.equal('Word cloud of 1 word');
-  expect(svgEl(el).getAttribute('role')).to.be.null;
-  expect(svgEl(el).getAttribute('aria-label')).to.be.null;
+  expect(el.getAttribute('role')).to.be.null;
+  expect(el.getAttribute('aria-label')).to.be.null;
+  expect(svgEl(el).getAttribute('role')).to.equal('application');
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('Word cloud of 1 word');
 });
 
 it('singularizes the aria-label for exactly one word', async () => {
@@ -299,35 +327,34 @@ it('singularizes the aria-label for exactly one word', async () => {
     html`<lr-word-cloud .words=${[{ text: 'solo', weight: 1 }]}></lr-word-cloud>`
   )) as LyraWordCloud;
   await el.updateComplete;
-  expect(el.getAttribute('aria-label')).to.equal('Word cloud of 1 word');
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('Word cloud of 1 word');
 });
 
-it("fires lr-word-click with the word's text/weight/group on click", async () => {
+it("fires lr-word-activate with the word's text/weight/group on click", async () => {
   const el = (await fixture(
     html`<lr-word-cloud .words=${[{ text: 'clickme', weight: 5, group: 'g1' }]}></lr-word-cloud>`
   )) as LyraWordCloud;
   await el.updateComplete;
-  const node = el.shadowRoot!.querySelector('[part="word"]') as unknown as HTMLElement;
-
-  const eventPromise = oneEvent(el, 'lr-word-click');
-  node.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  const eventPromise = oneEvent(el, 'lr-word-activate');
+  clickWord(el, 'clickme');
   const event = await eventPromise;
 
   expect((event as CustomEvent).detail).to.deep.equal({ text: 'clickme', weight: 5, group: 'g1' });
 });
 
-it('echoes back the original (unclamped) weight, not an internally-clamped value', async () => {
+it('uses one normalized nonnegative weight for layout, activation and announcements', async () => {
   const el = (await fixture(
     html`<lr-word-cloud .words=${[{ text: 'negative', weight: -5 }]}></lr-word-cloud>`
   )) as LyraWordCloud;
   await el.updateComplete;
-  const node = el.shadowRoot!.querySelector('[part="word"]') as unknown as HTMLElement;
+  expect(el.words[0]!.weight).to.equal(0);
 
-  const eventPromise = oneEvent(el, 'lr-word-click');
-  node.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  const eventPromise = oneEvent(el, 'lr-word-activate');
+  clickWord(el, 'negative');
   const event = await eventPromise;
 
-  expect((event as CustomEvent).detail.weight).to.equal(-5);
+  expect((event as CustomEvent).detail.weight).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.equal('negative, 0');
 });
 
 it('moves roving focus with arrow keys, wraps at neither end, and Home/End jump to the ends', async () => {
@@ -342,14 +369,14 @@ it('moves roving focus with arrow keys, wraps at neither end, and Home/End jump 
 
   keydown(el, 'End');
   await el.updateComplete;
-  const eventPromise = oneEvent(el, 'lr-word-click');
+  const eventPromise = oneEvent(el, 'lr-word-activate');
   keydown(el, 'Enter');
   const event = await eventPromise;
   expect((event as CustomEvent).detail.text).to.equal('gamma'); // last in declaration order
 
   keydown(el, 'Home');
   await el.updateComplete;
-  const eventPromise2 = oneEvent(el, 'lr-word-click');
+  const eventPromise2 = oneEvent(el, 'lr-word-activate');
   keydown(el, ' ');
   const event2 = await eventPromise2;
   expect((event2 as CustomEvent).detail.text).to.equal('alpha'); // first in declaration order
@@ -402,30 +429,45 @@ it('swaps which arrow key advances/retreats roving focus under dir="rtl"', async
   // First arrow press (either key) just lands on the first word, same as LTR.
   keydown(el, 'ArrowLeft');
   await el.updateComplete;
-  const eventPromise1 = oneEvent(el, 'lr-word-click');
+  const eventPromise1 = oneEvent(el, 'lr-word-activate');
   keydown(el, 'Enter');
   expect((await eventPromise1).detail.text).to.equal('alpha');
 
   // Under RTL, ArrowLeft is the mirrored "forward" key -- advances to the next word.
   keydown(el, 'ArrowLeft');
   await el.updateComplete;
-  const eventPromise2 = oneEvent(el, 'lr-word-click');
+  const eventPromise2 = oneEvent(el, 'lr-word-activate');
   keydown(el, 'Enter');
   expect((await eventPromise2).detail.text).to.equal('beta');
 
   // ArrowRight is the mirrored "backward" key under RTL -- retreats to the previous word.
   keydown(el, 'ArrowRight');
   await el.updateComplete;
-  const eventPromise3 = oneEvent(el, 'lr-word-click');
+  const eventPromise3 = oneEvent(el, 'lr-word-activate');
   keydown(el, 'Enter');
   expect((await eventPromise3).detail.text).to.equal('alpha');
 });
 
-it('does not fire lr-word-click on Enter/Space before any word is focused', async () => {
+it('establishes the first word silently on Tab focus so immediate Enter activates it', async () => {
+  const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
+  await el.updateComplete;
+  expect(sinkTexts()).to.deep.equal([]);
+
+  svgEl(el).focus();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="focus-ring"]')).to.exist;
+  expect(sinkTexts()).to.deep.equal([]);
+
+  const eventPromise = oneEvent(el, 'lr-word-activate');
+  keydown(el, 'Enter');
+  expect((await eventPromise).detail.text).to.equal('alpha');
+});
+
+it('ignores synthetic Enter dispatched while its SVG does not own focus', async () => {
   const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
   await el.updateComplete;
   let fired = false;
-  el.addEventListener('lr-word-click', () => (fired = true), { once: true });
+  el.addEventListener('lr-word-activate', () => (fired = true), { once: true });
   keydown(el, 'Enter');
   expect(fired).to.be.false;
 });
@@ -436,23 +478,62 @@ it('fresh End focuses the last word before Enter activates it', async () => {
 
   keydown(el, 'End');
   await el.updateComplete;
-  const eventPromise = oneEvent(el, 'lr-word-click');
+  const eventPromise = oneEvent(el, 'lr-word-activate');
   keydown(el, 'Enter');
   expect((await eventPromise).detail.text).to.equal('gamma');
 });
 
-it('clicking a word sets it as the roving-focus cursor for subsequent keyboard nav', async () => {
+it('activating the nearest word through the SVG surface sets the keyboard cursor', async () => {
   const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
   await el.updateComplete;
-  const nodes = Array.from(el.shadowRoot!.querySelectorAll('[part="word"]'));
-  const beta = nodes.find((n) => n.textContent === 'beta') as unknown as HTMLElement;
-  beta.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  clickWord(el, 'beta');
   await el.updateComplete;
 
-  const eventPromise = oneEvent(el, 'lr-word-click');
+  const eventPromise = oneEvent(el, 'lr-word-activate');
   keydown(el, 'Enter');
   const event = await eventPromise;
   expect((event as CustomEvent).detail.text).to.equal('beta');
+});
+
+it('uses one adequately sized SVG hit surface instead of tiny per-word pointer targets', async () => {
+  const el = (await fixture(
+    html`<lr-word-cloud style="inline-size: 320px; block-size: 192px" .words=${WORDS}></lr-word-cloud>`
+  )) as LyraWordCloud;
+  await el.updateComplete;
+
+  const surface = svgEl(el);
+  const rect = surface.getBoundingClientRect();
+  expect(rect.width).to.be.at.least(24);
+  expect(rect.height).to.be.at.least(24);
+  for (const word of el.shadowRoot!.querySelectorAll('[part="word"]')) {
+    expect(getComputedStyle(word).pointerEvents).to.equal('none');
+  }
+
+  const eventPromise = oneEvent(el, 'lr-word-activate');
+  clickWord(el, 'gamma');
+  expect((await eventPromise).detail.text).to.equal('gamma');
+});
+
+it('paints a computed SVG-native pressed cue for the pointer-down frame', async () => {
+  const el = (await fixture(
+    html`<lr-word-cloud style="inline-size: 320px; block-size: 192px" .words=${WORDS}></lr-word-cloud>`
+  )) as LyraWordCloud;
+  await el.updateComplete;
+  svgEl(el).focus();
+  await el.updateComplete;
+  const normalRing = el.shadowRoot!.querySelector('[part="focus-ring"]') as SVGRectElement;
+  const normalDash = getComputedStyle(normalRing).strokeDasharray;
+
+  pointerDownWord(el, 'beta');
+  await el.updateComplete;
+  const pressedRing = el.shadowRoot!.querySelector('[part="focus-ring"]') as SVGRectElement;
+  expect(pressedRing.hasAttribute('data-pressed')).to.be.true;
+  expect(getComputedStyle(pressedRing).strokeDasharray).to.not.equal(normalDash);
+
+  svgEl(el).dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect((el.shadowRoot!.querySelector('[part="focus-ring"]') as SVGRectElement).hasAttribute('data-pressed')).to.be
+    .false;
 });
 
 it('resets the roving-focus cursor when words changes', async () => {
@@ -502,7 +583,7 @@ it('honors an explicit per-word color over the palette', async () => {
   expect(node.getAttribute('fill')).to.equal('rgb(1, 2, 3)');
 });
 
-it('never sets a rotate transform with the default horizontal orientation', async () => {
+it('never sets a rotate transform with the default no-rotation mode', async () => {
   const words = Array.from({ length: 15 }, (_, i) => ({ text: `w${i}`, weight: i + 1 }));
   const el = (await fixture(html`<lr-word-cloud .words=${words}></lr-word-cloud>`)) as LyraWordCloud;
   await el.updateComplete;
@@ -512,12 +593,12 @@ it('never sets a rotate transform with the default horizontal orientation', asyn
   }
 });
 
-it('renders a rotate transform on [part="word"] when orientations is "mixed" and the word was placed rotated', async () => {
+it('renders a rotate transform when wordRotation is "mixed" and the word was placed rotated', async () => {
   const originalRandom = Math.random;
   try {
     Math.random = () => 0; // clears ROTATE_PROBABILITY's threshold every time -- forces rotated=true
     const el = (await fixture(
-      html`<lr-word-cloud orientations="mixed" .words=${[{ text: 'spin', weight: 1 }]}></lr-word-cloud>`
+      html`<lr-word-cloud word-rotation="mixed" .words=${[{ text: 'spin', weight: 1 }]}></lr-word-cloud>`
     )) as LyraWordCloud;
     await el.updateComplete;
     const node = el.shadowRoot!.querySelector('[part="word"]')!;
@@ -536,6 +617,83 @@ it('renders at most MAX_WORDS words even when given more', async () => {
   });
   expect(warnings.join('\n')).to.include('10 word(s)');
   expect(el.shadowRoot!.querySelectorAll('[part="word"]')).to.have.length(MAX_WORDS);
+});
+
+it('clone-owns and freezes readonly word, palette and legend snapshots', async () => {
+  const sourceWord = { text: 'original', weight: 3, group: 'group' };
+  const sourceWords = [sourceWord];
+  const sourcePalette = ['rgb(1, 2, 3)'];
+  const sourceLegend = [{ label: 'Original legend', color: 'rgb(1, 2, 3)' }];
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud></lr-word-cloud>`);
+  el.words = sourceWords;
+  el.palette = sourcePalette;
+  el.legend = sourceLegend;
+
+  sourceWord.text = 'mutated';
+  sourceWords.push({ text: 'late', weight: 1, group: 'group' });
+  sourcePalette[0] = 'red';
+  sourceLegend[0]!.label = 'mutated';
+  await el.updateComplete;
+
+  expect(el.words.map((word) => word.text)).to.deep.equal(['original']);
+  expect(el.palette).to.deep.equal(['rgb(1, 2, 3)']);
+  expect(el.legend.map((item) => item.label)).to.deep.equal(['Original legend']);
+  expect(Object.isFrozen(el.words)).to.be.true;
+  expect(Object.isFrozen(el.words[0]!)).to.be.true;
+  expect(Object.isFrozen(el.palette!)).to.be.true;
+  expect(Object.isFrozen(el.legend)).to.be.true;
+  expect(Object.isFrozen(el.legend[0]!)).to.be.true;
+});
+
+it('retains valid partial data while rejecting malformed records and hostile getters', async () => {
+  const hostileWord = { text: 'hostile' } as { text: string; weight?: number };
+  Object.defineProperty(hostileWord, 'weight', { get: () => { throw new Error('hostile weight'); } });
+  const hostileLegend = { label: 'hostile' } as { label: string; color?: string };
+  Object.defineProperty(hostileLegend, 'color', { get: () => { throw new Error('hostile color'); } });
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend></lr-word-cloud>`);
+
+  el.words = [null, 'not-a-record', hostileWord, { text: 'valid', weight: 2 }, { text: 'finite', weight: Infinity }] as never;
+  el.legend = [null, hostileLegend, { label: 'Valid legend', color: '#123456' }] as never;
+  await el.updateComplete;
+
+  expect(el.words.map((word) => word.text)).to.deep.equal(['valid', 'finite']);
+  expect(el.words.map((word) => word.weight)).to.deep.equal([2, 0]);
+  expect(el.legend.map((item) => item.label)).to.deep.equal(['Valid legend']);
+  expect(el.shadowRoot!.querySelector('[part="word"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="legend-label"]')!.textContent).to.equal('Valid legend');
+
+  const { proxy, revoke } = Proxy.revocable([], {});
+  revoke();
+  el.words = proxy as never;
+  el.legend = { length: 1 } as never;
+  await el.updateComplete;
+  expect(el.words).to.deep.equal([]);
+  expect(el.legend).to.deep.equal([]);
+  expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
+});
+
+it('bounds per-item text and explicit legend nodes with visible localized disclosures', async () => {
+  const hugeText = 'x'.repeat(1_000_000);
+  const legend = Array.from({ length: 10_000 }, (_, index) => ({
+    label: `${index}-${'l'.repeat(400)}`,
+    color: '#123456',
+  }));
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend></lr-word-cloud>`);
+  el.words = [{ text: hugeText, weight: 1 }];
+  el.legend = legend;
+  await el.updateComplete;
+
+  const wordText = el.shadowRoot!.querySelector('[part="word"]')!.textContent!;
+  const legendLabels = Array.from(el.shadowRoot!.querySelectorAll('[part="legend-label"]'));
+  expect(wordText.length).to.be.at.most(256);
+  expect(wordText.endsWith('…')).to.be.true;
+  expect(legendLabels.length).to.be.at.most(100);
+  expect(legendLabels.every((label) => (label.textContent?.length ?? 0) <= 256)).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="limit"]')).to.exist;
+  expect(svgEl(el).getAttribute('aria-describedby')).to.equal('word-limit');
+  const legendLimit = el.shadowRoot!.querySelector('[part="legend-limit"]')!;
+  expect(legendLimit.textContent).to.include('10,000');
+  expect(el.shadowRoot!.querySelector('[part="legend"]')!.getAttribute('aria-describedby')).to.equal('legend-limit');
 });
 
 it('is accessible with words rendered', async () => {
@@ -633,7 +791,8 @@ it('announces the count of words actually rendered, not the raw input count', as
     await el.updateComplete;
   });
   expect(warnings.join('\n')).to.include('1 word(s)');
-  expect(el.getAttribute('aria-label')).to.include('1 word');
+  expect(svgEl(el).getAttribute('aria-label')).to.include('1 word');
+  expect(svgEl(el).getAttribute('aria-describedby')).to.equal('word-limit');
 });
 
 it('keeps the palette on theme tokens so explicit dark themes are not overridden by the OS preference', async () => {
@@ -667,7 +826,7 @@ it("localizes the wordCloud aria-label's pluralized noun via this.localize()", a
   const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
   el.strings = { wordCloudWords: 'mots' };
   await el.updateComplete;
-  expect(el.getAttribute('aria-label')).to.equal(`Word cloud of ${WORDS.length} mots`);
+  expect(svgEl(el).getAttribute('aria-label')).to.equal(`Word cloud of ${WORDS.length} mots`);
 });
 
 it('localizes the whole focused-word announcement and formats its weight with the effective locale', async () => {
@@ -686,5 +845,5 @@ it('localizes the whole focused-word announcement and formats its weight with th
 it('defaults to English "word"/"words" when no strings override is set', async () => {
   const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
   await el.updateComplete;
-  expect(el.getAttribute('aria-label')).to.equal(`Word cloud of ${WORDS.length} words`);
+  expect(svgEl(el).getAttribute('aria-label')).to.equal(`Word cloud of ${WORDS.length} words`);
 });

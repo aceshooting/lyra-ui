@@ -1,12 +1,12 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
-import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { sizes } from '../../../internal/sizes.styles.js';
+import { DisclosureMotionController } from './disclosure-motion.js';
 import { styles } from './details.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -29,10 +29,10 @@ export interface LyraDetailsToggleDetail {
 }
 
 export interface LyraDetailsEventMap {
-  'lr-show': CustomEvent<undefined>;
-  'lr-after-show': CustomEvent<undefined>;
-  'lr-hide': CustomEvent<undefined>;
-  'lr-after-hide': CustomEvent<undefined>;
+  'lr-show': CustomEvent<null>;
+  'lr-after-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
+  'lr-after-hide': CustomEvent<null>;
   'lr-toggle': CustomEvent<LyraDetailsToggleDetail>;
 }
 
@@ -110,8 +110,13 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
 
   static override styles = [LyraElement.styles, sizes, styles];
 
-  /** Shared with subclasses so one host never calls `attachInternals()` twice. */
-  protected readonly detailsInternals = attachInternalsSafely(this);
+  private readonly detailsInternals = attachInternalsSafely(this);
+  private readonly disclosureMotion = new DisclosureMotionController(
+    this,
+    this.detailsInternals,
+    () => this.renderRoot,
+    '[part~="base"]',
+  );
   private _open = false;
 
   /** Whether the panel is expanded. Assigning it runs the full `lr-show`/`lr-hide` lifecycle and
@@ -160,21 +165,31 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   // even with a `slot="summary"` child present).
   @state() private hasSummarySlot = false;
 
-  /** Invalidates an in-flight `lr-after-*` wait when the opposite transition interrupts it. */
-  private transitionToken = 0;
-
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed); // no-op today, but keeps any future LyraElement/mixin willUpdate logic wired in
     if (!this.hasUpdated) {
       this.hasSummarySlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'summary');
     }
+    if (this.hasUpdated && changed.has('name') && this._open && !this.closeNamedPeers()) {
+      // A live rename has the same winner semantics as opening the renamed disclosure: this
+      // disclosure wins only when every conflicting peer accepts its close. A veto rejects the
+      // rename so the root never contains two open members of one named group.
+      this.name = changed.get('name') ?? '';
+    }
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (!this.hasUpdated || !this._open) return;
+    queueMicrotask(() => {
+      if (this.isConnected && this._open) this.closeNamedPeers();
+    });
   }
 
   override disconnectedCallback(): void {
     // A pending after-event must not announce a transition the detached element is no longer
     // part of.
-    this.transitionToken++;
-    setCustomState(this.detailsInternals, 'animating', false);
+    this.disclosureMotion.cancel();
     super.disconnectedCallback();
   }
 
@@ -191,9 +206,9 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     await this.showWithSource('programmatic');
   }
 
-  private async showWithSource(source: LyraDetailsToggleSource): Promise<void> {
+  protected async showWithSource(source: LyraDetailsToggleSource): Promise<void> {
     if (this._open || this.disabled) return;
-    if (this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented) {
+    if (this.emit('lr-show', null, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
       return;
     }
@@ -211,9 +226,9 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     await this.hideWithSource('programmatic');
   }
 
-  private async hideWithSource(source: LyraDetailsToggleSource): Promise<void> {
+  protected async hideWithSource(source: LyraDetailsToggleSource): Promise<void> {
     if (!this._open) return;
-    if (this.emit('lr-hide', undefined, { cancelable: true }).defaultPrevented) {
+    if (this.emit('lr-hide', null, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
       return;
     }
@@ -262,11 +277,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     event: 'lr-after-show' | 'lr-after-hide',
     source: LyraDetailsToggleSource,
   ): Promise<void> {
-    const token = ++this.transitionToken;
-    setCustomState(this.detailsInternals, 'animating', true);
-    try {
-      await this.updateComplete;
-      if (this.transitionToken !== token) return;
+    const settled = await this.disclosureMotion.settle(() => {
       // `lr-toggle` is deliberately emitted here rather than synchronously from show()/hide(): a
       // consumer that binds `.open` from its own template writes this property from inside its own
       // render, and a synchronous listener that then mutates that consumer's state schedules an
@@ -274,22 +285,8 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
       // timing (it used to ride the native <details> toggle event) while preserving the documented
       // lr-show -> lr-toggle -> lr-after-show ordering.
       this.emit('lr-toggle', { open: this._open, source });
-      if (this.isConnected) {
-        const view = this.ownerDocument.defaultView;
-        if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
-        if (this.transitionToken !== token) return;
-        const base = (this.renderRoot as ShadowRoot).querySelector('[part~="base"]');
-        // subtree: true so the disclosure marker's own transition (declared on a pseudo-element of a
-        // descendant) is waited on too. It resolves through --lr-transition-fast, which the token
-        // layer flattens under prefers-reduced-motion, so this settles in that branch as well.
-        const animations = base?.getAnimations({ subtree: true }) ?? [];
-        await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
-        if (this.transitionToken !== token) return;
-      }
-      this.emit(event);
-    } finally {
-      if (this.transitionToken === token) setCustomState(this.detailsInternals, 'animating', false);
-    }
+    });
+    if (settled) this.emit(event, null);
   }
 
   // The native <details> toggle is a click default action, so cancelling the click is the only way
@@ -361,7 +358,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
               >${this.summary}</slot
             ></span
           >
-          <span part="icon summary-icon" aria-hidden="true">
+          <span part="icon summary-icon" aria-hidden="true" inert>
             <slot name=${this.open ? 'collapse-icon' : 'expand-icon'}
               ><span class="icon-fallback">${chevronIcon()}</span></slot
             >

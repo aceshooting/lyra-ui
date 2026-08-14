@@ -163,7 +163,11 @@ export interface AnnouncementSink {
   /** Sweep delay for nodes this handle appends; see `AnnouncementSinkOptions.messageTtlMs`. */
   messageTtlMs: number;
   /** Append `text` as a new child node — an *addition*, which is what assistive tech is asked to
-   *  read. Empty text is ignored. No-op once `release()` has been called. */
+   *  read. Empty text is ignored. No-op once `release()` has been called. A handle retains only
+   *  its latest 32 pending additions, and the shared region retains only the latest 128 across all
+   *  handles; older nodes have already been exposed as additions and are removed without
+   *  fabricating or concatenating announcement text. All pending nodes share one batched sweep
+   *  timer per document/politeness region. */
   announce(text: string): void;
   /** Drop this handle: its still-pending nodes are removed, their sweeps canceled, and the shared
    *  region is unmounted once the last handle releases. Idempotent. */
@@ -179,6 +183,8 @@ export interface AnnouncementSink {
 export const ANNOUNCEMENT_SINK_ATTRIBUTE = `data-${tag('live-region')}`;
 
 const DEFAULT_MESSAGE_TTL_MS = 5000;
+const MAX_PENDING_MESSAGES_PER_HANDLE = 32;
+const MAX_PENDING_MESSAGES_PER_SINK = 128;
 
 // The standard visually-hidden algorithm, identical to `internal/a11y.ts`'s shared `srOnly` class.
 // These are algorithm literals (a 1px clipped box), not themeable design values, and they are set
@@ -189,14 +195,68 @@ const SINK_HIDDEN_CSS_TEXT =
   'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;' +
   'clip-path:inset(50%);white-space:nowrap;border:0;';
 
+interface PendingAnnouncement {
+  element: HTMLElement;
+  owner: Set<HTMLElement>;
+  deadline: number;
+}
+
 interface SinkRecord {
   element: HTMLElement;
   refs: number;
+  timerHost: AnnouncerTimerHost;
+  pending: Map<HTMLElement, PendingAnnouncement>;
+  sweepTimer?: number;
+  sweepDeadline?: number;
 }
 
 // Per-document so an element adopted into an iframe announces in the document the user is actually
 // looking at; weakly keyed so a torn-down document is never retained by this module.
 const sinksByDocument = new WeakMap<Document, Map<AnnouncementPoliteness, SinkRecord>>();
+
+function removePendingAnnouncement(record: SinkRecord, pending: PendingAnnouncement): void {
+  record.pending.delete(pending.element);
+  pending.owner.delete(pending.element);
+  pending.element.remove();
+}
+
+function scheduleSinkSweep(record: SinkRecord): void {
+  let earliest = Number.POSITIVE_INFINITY;
+  for (const pending of record.pending.values()) {
+    earliest = Math.min(earliest, pending.deadline);
+  }
+
+  if (!Number.isFinite(earliest)) {
+    if (record.sweepTimer !== undefined) {
+      record.timerHost.clearTimeout(record.sweepTimer);
+      record.sweepTimer = undefined;
+      record.sweepDeadline = undefined;
+    }
+    return;
+  }
+
+  // An already scheduled earlier wake-up is safe: it will perform one bounded scan and schedule
+  // the next true deadline. Only a newly earlier deadline needs to replace the timer.
+  if (record.sweepTimer !== undefined && record.sweepDeadline !== undefined && record.sweepDeadline <= earliest) {
+    return;
+  }
+  if (record.sweepTimer !== undefined) {
+    record.timerHost.clearTimeout(record.sweepTimer);
+  }
+
+  record.sweepDeadline = earliest;
+  const scheduledDeadline = earliest;
+  record.sweepTimer = record.timerHost.setTimeout(() => {
+    record.sweepTimer = undefined;
+    record.sweepDeadline = undefined;
+    for (const pending of [...record.pending.values()]) {
+      if (pending.deadline <= scheduledDeadline) {
+        removePendingAnnouncement(record, pending);
+      }
+    }
+    scheduleSinkSweep(record);
+  }, Math.max(0, earliest - Date.now()));
+}
 
 function mountSink(doc: Document, record: SinkRecord): void {
   const parent = doc.body ?? doc.documentElement;
@@ -228,7 +288,19 @@ function sinkRecord(doc: Document, politeness: AnnouncementPoliteness): SinkReco
   element.setAttribute('aria-atomic', 'false');
   element.setAttribute('aria-relevant', 'additions');
   element.style.cssText = SINK_HIDDEN_CSS_TEXT;
-  const record: SinkRecord = { element, refs: 0 };
+  const ownerWindow = doc.defaultView;
+  const timerHost: AnnouncerTimerHost = ownerWindow
+    ? {
+        setTimeout: (handler, timeout) => ownerWindow.setTimeout(handler, timeout),
+        clearTimeout: (handle) => ownerWindow.clearTimeout(handle),
+      }
+    : ambientTimerHost;
+  const record: SinkRecord = {
+    element,
+    refs: 0,
+    timerHost,
+    pending: new Map(),
+  };
   mountSink(doc, record);
   byPoliteness.set(politeness, record);
   return record;
@@ -262,14 +334,7 @@ export function acquireAnnouncementSink(
 
   const record = sinkRecord(doc, politeness);
   record.refs += 1;
-  const ownerWindow = doc.defaultView;
-  const timerHost: AnnouncerTimerHost = ownerWindow
-    ? {
-        setTimeout: (handler, timeout) => ownerWindow.setTimeout(handler, timeout),
-        clearTimeout: (handle) => ownerWindow.clearTimeout(handle),
-      }
-    : ambientTimerHost;
-  const sweeps = new Map<HTMLElement, number>();
+  const ownMessages = new Set<HTMLElement>();
   let released = false;
 
   const sink: AnnouncementSink = {
@@ -280,8 +345,7 @@ export function acquireAnnouncementSink(
       if (
         released ||
         text === '' ||
-        (options.source &&
-          (options.source.ownerDocument !== doc || !isAccessibilityVisible(options.source)))
+        (options.source && (options.source.ownerDocument !== doc || !isAccessibilityVisible(options.source)))
       ) {
         return;
       }
@@ -292,24 +356,49 @@ export function acquireAnnouncementSink(
       message.textContent = text;
       record.element.appendChild(message);
       const ttl = finiteDuration(sink.messageTtlMs, DEFAULT_MESSAGE_TTL_MS);
-      sweeps.set(
-        message,
-        timerHost.setTimeout(() => {
-          sweeps.delete(message);
-          message.remove();
-        }, ttl),
-      );
+      const pending: PendingAnnouncement = {
+        element: message,
+        owner: ownMessages,
+        deadline: Date.now() + ttl,
+      };
+      ownMessages.add(message);
+      record.pending.set(message, pending);
+
+      // A live-region addition is observable when it arrives; retaining every old addition in the
+      // DOM does not make it more truthful. Under a hostile burst, keep the latest bounded window
+      // for this producer and then the latest bounded window across all producers. Never synthesize
+      // or concatenate text: every retained node is exactly a message a caller supplied.
+      while (ownMessages.size > MAX_PENDING_MESSAGES_PER_HANDLE) {
+        const oldest = ownMessages.values().next().value;
+        if (!oldest) break;
+        const entry = record.pending.get(oldest);
+        if (entry) removePendingAnnouncement(record, entry);
+        else ownMessages.delete(oldest);
+      }
+      while (record.pending.size > MAX_PENDING_MESSAGES_PER_SINK) {
+        const oldest = record.pending.values().next().value;
+        if (!oldest) break;
+        removePendingAnnouncement(record, oldest);
+      }
+      scheduleSinkSweep(record);
     },
     release(): void {
       if (released) return;
       released = true;
-      for (const [message, sweep] of sweeps) {
-        timerHost.clearTimeout(sweep);
-        message.remove();
+      for (const message of [...ownMessages]) {
+        const pending = record.pending.get(message);
+        if (pending) removePendingAnnouncement(record, pending);
+        else ownMessages.delete(message);
       }
-      sweeps.clear();
+      scheduleSinkSweep(record);
       record.refs -= 1;
       if (record.refs > 0) return;
+      if (record.sweepTimer !== undefined) {
+        record.timerHost.clearTimeout(record.sweepTimer);
+        record.sweepTimer = undefined;
+        record.sweepDeadline = undefined;
+      }
+      record.pending.clear();
       record.element.remove();
       const byPoliteness = sinksByDocument.get(doc);
       // Only retract the entry this handle actually held: a record replaced in the meantime

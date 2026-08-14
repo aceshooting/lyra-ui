@@ -23,11 +23,16 @@ import type {
   MessageFeedbackValue,
 } from '../src/components/conversation/message-feedback/message-feedback.js';
 import type { LyraModelSelectSize } from '../src/components/conversation/model-select/model-select.js';
-import type { ChatSuggestion as GranularChatSuggestion } from '../src/components/conversation/suggestion-chips/suggestion-chips.js';
-import type { ChatSuggestion as RootChatSuggestion } from '../src/lyra.js';
+import type { LyraChatSuggestion as GranularChatSuggestion } from '../src/components/conversation/suggestion-chips/suggestion-chips.js';
+import type { LyraChatSuggestion as RootChatSuggestion } from '../src/lyra.js';
+// @ts-expect-error ChatSuggestion was replaced by the canonical LyraChatSuggestion in v9.
+import type { ChatSuggestion as RemovedGranularChatSuggestion } from '../src/components/conversation/suggestion-chips/suggestion-chips.js';
+// @ts-expect-error ChatSuggestion is not retained as a root compatibility alias.
+import type { ChatSuggestion as RemovedRootChatSuggestion } from '../src/lyra.js';
 
-const rootSuggestion: RootChatSuggestion = { id: 'inspect', label: 'Inspect', icon: '🔎' };
+const rootSuggestion: RootChatSuggestion = { suggestionId: 'inspect', label: 'Inspect', icon: '🔎' };
 const granularSuggestion: GranularChatSuggestion = rootSuggestion;
+declare const removedSuggestions: [RemovedGranularChatSuggestion, RemovedRootChatSuggestion];
 
 const conversationPublicTypes: [
   FullMarkedParser,
@@ -54,3 +59,4 @@ const codeBlockPublicTypes: [
 void conversationPublicTypes;
 void codeBlockPublicTypes;
 void granularSuggestion;
+void removedSuggestions;

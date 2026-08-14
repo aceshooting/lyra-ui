@@ -577,7 +577,6 @@ describe('lr-rubric-form', () => {
       >
         <span slot="label">for this response</span>
         <span slot="hint">before submitting</span>
-        <span slot="help-text">with supporting context</span>
         <span slot="error">Try again</span>
       </lr-rubric-form>
     `)) as LyraRubricForm;
@@ -592,9 +591,6 @@ describe('lr-rubric-form', () => {
     expect(hint.querySelector('slot[name="hint"]')!.assignedElements()[0]?.textContent).to.contain(
       'before submitting',
     );
-    expect(
-      hint.querySelector('slot[name="help-text"]')!.assignedElements()[0]?.textContent,
-    ).to.contain('with supporting context');
     expect(error.textContent).to.contain('Review could not be saved');
     expect(error.querySelector('slot')!.assignedElements()[0]?.textContent).to.contain('Try again');
     expect(group.getAttribute('aria-labelledby')).to.equal(label.id);
@@ -625,9 +621,9 @@ describe('lr-rubric-form', () => {
     expect(group.hasAttribute('aria-describedby')).to.equal(false);
   });
 
-  it('honors and can unset aggregate label/hint SSR presence hints and the help-text alias', async () => {
+  it('honors and can unset aggregate label/hint SSR presence hints', async () => {
     const el = (await fixture(html`
-      <lr-rubric-form with-label with-hint help-text="Supporting context"></lr-rubric-form>
+      <lr-rubric-form with-label with-hint hint="Supporting context"></lr-rubric-form>
     `)) as LyraRubricForm;
     const label = el.shadowRoot!.querySelector('[part~="aggregate-label"]') as HTMLElement;
     const hint = el.shadowRoot!.querySelector('[part~="aggregate-hint"]') as HTMLElement;
@@ -637,7 +633,7 @@ describe('lr-rubric-form', () => {
 
     el.withLabel = false;
     el.withHint = false;
-    el.helpText = '';
+    el.hint = '';
     await el.updateComplete;
     expect(label.hidden).to.equal(true);
     expect(hint.hidden).to.equal(true);
@@ -804,7 +800,7 @@ describe('lr-rubric-form', () => {
     expect(textarea.value).to.equal('Looks correct.');
   });
 
-  it('falls back to a null form value when the current value cannot be JSON-stringified (regression)', async () => {
+  it('drops undeclared circular data before the canonical value reaches FormData', async () => {
     const form = (await fixture(html`
       <form>
         <lr-rubric-form name="rubric" .keys=${KEYS}></lr-rubric-form>
@@ -819,14 +815,14 @@ describe('lr-rubric-form', () => {
     }).to.not.throw();
     await el.updateComplete;
     const data = new FormData(form);
-    expect(data.get('rubric')).to.equal(null);
+    expect(data.get('rubric')).to.equal('{}');
   });
 
   it('resets value and touched/error-reveal state when the owning form is reset (formResetCallback)', async () => {
     const initialValue = { accuracy: 5 };
     const form = (await fixture(html`
       <form>
-        <lr-rubric-form name="rubric" .keys=${KEYS} .value=${initialValue}></lr-rubric-form>
+        <lr-rubric-form name="rubric" .keys=${KEYS} .defaultValue=${initialValue}></lr-rubric-form>
       </form>
     `)) as HTMLFormElement;
     const el = form.querySelector('lr-rubric-form') as LyraRubricForm;
@@ -848,8 +844,8 @@ describe('lr-rubric-form', () => {
     expect(el.value).to.deep.equal({ accuracy: 5 });
   });
 
-  it('formStateRestoreCallback restores a valid JSON object state, and falls back to {} for invalid JSON, an array, or a non-string state', async () => {
-    const el = (await fixture(html`<lr-rubric-form></lr-rubric-form>`)) as LyraRubricForm;
+  it('formStateRestoreCallback canonicalizes a valid JSON object, and falls back to {} for malformed state', async () => {
+    const el = (await fixture(html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`)) as LyraRubricForm;
     await el.updateComplete;
     el.formStateRestoreCallback('{"accuracy":4}', 'restore');
     expect(el.value).to.deep.equal({ accuracy: 4 });
@@ -1472,5 +1468,101 @@ describe('lr-rubric-form setCustomValidity()', () => {
     expect(el.matches(':state(valid)')).to.be.false;
     el.setCustomValidity('');
     expect(el.matches(':state(valid)'), 'valid again once cleared').to.be.true;
+  });
+});
+
+describe('canonical rubric schema/value model', () => {
+  const canonicalKeys: RubricKey[] = [
+    { key: 'bounded', type: 'score', min: 0, max: 100, step: 5, required: true },
+    { key: 'nonfinite', type: 'score', min: 0, max: 10, required: true },
+    {
+      key: 'category',
+      type: 'category',
+      required: true,
+      options: [{ value: 'known' }, { value: 'other' }],
+    },
+    {
+      key: 'tags',
+      type: 'category',
+      multiple: true,
+      options: [{ value: 'a' }, { value: 'b' }],
+    },
+    { key: 'comment', type: 'comment' },
+  ];
+
+  it('normalizes every external write once before render, validity, readout, and FormData', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-rubric-form
+          name="rubric"
+          .keys=${canonicalKeys}
+          .value=${{
+            bounded: 999,
+            nonfinite: Infinity,
+            category: 'unknown',
+            tags: ['a', 'unknown', 'b', 'a'],
+            comment: 42,
+            undeclared: 'drop me',
+          } as unknown as Record<string, unknown>}
+        ></lr-rubric-form>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-rubric-form') as LyraRubricForm;
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal({ bounded: 100, tags: ['a', 'b'] });
+    expect(el.validity.valueMissing).to.equal(true);
+    const slider = el.shadowRoot!.querySelector<HTMLElement & { value: number }>('[data-key="bounded"] lr-slider')!;
+    const select = el.shadowRoot!.querySelector<HTMLElement & { value: string }>('[data-key="category"] lr-select')!;
+    expect(slider.value).to.equal(100);
+    expect(select.value).to.equal('');
+    expect(new FormData(form).get('rubric')).to.equal('{"bounded":100,"tags":["a","b"]}');
+
+    const snapshot = el.value;
+    (snapshot.tags as string[]).push('mutated');
+    expect(el.value).to.deep.equal({ bounded: 100, tags: ['a', 'b'] });
+  });
+
+  it('renormalizes live/default/restored values when the schema changes and resets explicitly', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-rubric-form
+          name="rubric"
+          .keys=${canonicalKeys}
+          .defaultValue=${{ bounded: 24, nonfinite: 3, category: 'known' }}
+        ></lr-rubric-form>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-rubric-form') as LyraRubricForm;
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({ bounded: 25, nonfinite: 3, category: 'known' });
+
+    el.value = { bounded: 73, nonfinite: 8, category: 'other', undeclared: 'drop' } as never;
+    expect(el.value).to.deep.equal({ bounded: 75, nonfinite: 8, category: 'other' });
+    el.keys = [
+      { key: 'bounded', type: 'score', min: 0, max: 50, step: 10, required: true },
+      { key: 'category', type: 'category', options: [{ value: 'known' }] },
+    ];
+    expect(el.value).to.deep.equal({ bounded: 50 });
+
+    el.formStateRestoreCallback('{"bounded":37,"category":"unknown","extra":1}', 'restore');
+    expect(el.value).to.deep.equal({ bounded: 40 });
+    form.reset();
+    expect(el.value).to.deep.equal({ bounded: 30, category: 'known' });
+    expect(el.defaultValue).to.deep.equal({ bounded: 30, category: 'known' });
+  });
+
+  it('republishes user validity atomically when item identity clears interaction', async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const el = (await fixture(html`
+      <lr-rubric-form item-id="first" .keys=${canonicalKeys}></lr-rubric-form>
+    `)) as LyraRubricForm;
+    await el.updateComplete;
+    el.reportValidity();
+    expect(el.matches(':state(user-invalid)')).to.equal(true);
+
+    el.itemId = 'second';
+    expect(el.matches(':state(user-invalid)'), 'new item is pristine synchronously').to.equal(false);
+    expect(el.matches(':state(invalid)'), 'intrinsic requiredness remains').to.equal(true);
   });
 });

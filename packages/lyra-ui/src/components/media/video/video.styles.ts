@@ -3,7 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    color: var(--controls-color, var(--lr-color-text));
+    color: var(--controls-color, var(--lr-color-on-strong-overlay));
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
@@ -59,7 +59,7 @@ export const styles = css`
     position: relative;
     display: inline-grid;
     place-items: center;
-    color: var(--controls-color, var(--lr-color-text));
+    color: var(--controls-color, var(--lr-color-on-strong-overlay));
   }
 
   .icon-button-stack > button,
@@ -84,7 +84,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-pill);
     background: var(--poster-play-button-background, var(--lr-color-surface-overlay));
-    color: var(--controls-color, var(--lr-color-text));
+    color: var(--controls-color, var(--lr-color-on-strong-overlay));
     box-shadow: var(--lr-shadow-m);
     cursor: pointer;
     pointer-events: auto;
@@ -127,7 +127,7 @@ export const styles = css`
     z-index: var(--lr-layer-content);
     padding: var(--lr-space-m);
     overflow: hidden;
-    color: var(--controls-color, var(--lr-color-text));
+    color: var(--controls-color, var(--lr-color-on-strong-overlay));
     font-size: var(--lr-font-size-sm);
     font-weight: var(--lr-font-weight-semibold);
     text-overflow: ellipsis;
@@ -156,7 +156,7 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-radius: var(--lr-radius-xs);
     background: var(--controls-background, var(--lr-color-overlay-strong));
-    color: var(--controls-color, var(--lr-color-text));
+    color: var(--controls-color, var(--lr-color-on-strong-overlay));
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-1-4);
     text-align: center;
@@ -180,7 +180,7 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: center;
     gap: var(--lr-space-xs);
-    color: var(--controls-color, var(--lr-color-text));
+    color: var(--controls-color, var(--lr-color-on-strong-overlay));
   }
 
   [part='controls'] button,
@@ -221,7 +221,7 @@ export const styles = css`
 
   .select-control > select option {
     background: var(--controls-background, var(--lr-color-overlay-strong));
-    color: var(--controls-color, var(--lr-color-text));
+    color: var(--controls-color, var(--lr-color-on-strong-overlay));
   }
 
   [data-control='volume'] {
@@ -299,6 +299,10 @@ export const styles = css`
     margin: 0;
     opacity: 0.001;
     cursor: pointer;
+  }
+
+  [part='progress']:disabled {
+    cursor: not-allowed;
   }
 
   [part='progress']:hover ~ [part='timeline-track'],

@@ -41,6 +41,21 @@ it('renders historical explanations without mounting live status or alert roles'
   expect(explanations.every((node) => !node.shadowRoot?.querySelector('[role="status"],[role="alert"]'))).to.be.true;
 });
 
+it('normalizes duplicate decision ids first-wins before counts and disclosure rows', async () => {
+  const el = await fixture<LyraPolicySummary>(html`
+    <lr-policy-summary .decisions=${[
+      { id: 'same', category: 'tool', label: 'First decision', state: 'allow', explanation: 'first' },
+      { id: 'same', category: 'tool', label: 'Later decision', state: 'deny', explanation: 'later' },
+    ]}></lr-policy-summary>
+  `);
+  const rows = el.shadowRoot!.querySelectorAll('[part="decision"]');
+  expect(rows).to.have.length(1);
+  expect(rows[0]!.textContent).to.contain('First decision');
+  expect(rows[0]!.textContent).not.to.contain('Later decision');
+  expect(el.shadowRoot!.querySelector('[part="count"][data-state="allow"]')!.textContent).to.contain('1');
+  expect(el.shadowRoot!.querySelector('[part="count"][data-state="deny"]')!.textContent).to.contain('0');
+});
+
 describe('lr-policy-summary', () => {
   it('renders lr-empty when decisions is empty', async () => {
     const el = (await fixture(html`<lr-policy-summary></lr-policy-summary>`)) as LyraPolicySummary;
@@ -215,13 +230,18 @@ describe('lr-policy-summary', () => {
     });
   });
 
-  it('lets a host-level aria-label win over the localized policySummaryLabel default', async () => {
+  it('keeps the nested decision list purpose-named under non-empty and empty host labels', async () => {
     const el = (await fixture(
       html`<lr-policy-summary aria-label="Eval run 12 decisions" .decisions=${decisions}></lr-policy-summary>`,
     )) as LyraPolicySummary;
     await el.updateComplete;
     const list = el.shadowRoot!.querySelector('[part="list"]')!;
-    expect(list.getAttribute('aria-label')).to.equal('Eval run 12 decisions');
+    expect(el.getAttribute('aria-label')).to.equal('Eval run 12 decisions');
+    expect(list.getAttribute('aria-label')).to.equal('Policy decisions');
+
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(list.getAttribute('aria-label')).to.equal('Policy decisions');
   });
 
   describe('per-state count color cssprops', () => {

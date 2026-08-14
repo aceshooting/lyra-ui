@@ -5,11 +5,11 @@ import {
   createStringArrayFormDataState,
   FormAssociated,
   isBarredFromValidation,
-  isEmptyFormValue,
   readStringArrayFormDataState,
   stringFormValueAdapter,
   type FormValueAdapter,
 } from './form-associated.js';
+import { isEmptyFormValue } from '../utilities/form-associated.js';
 import { syncValidityStates } from './custom-states.js';
 import { attachLegacyNoopInternalsSafely } from './legacy-noop-internals.js';
 import { SET_ANCHORED_VALIDITY } from './anchored-validity.js';
@@ -147,6 +147,20 @@ class TagsCtl extends FormAssociated(LyraElement, tagListAdapter) {
   }
 }
 customElements.define(tag('demo-tags-ctl'), TagsCtl);
+
+const objectValueAdapter: FormValueAdapter<object> = {
+  empty: Object.freeze({}),
+  toFormValue: () => 'object',
+  fromAttribute: () => Object.freeze({}),
+  toAttribute: () => null,
+};
+
+class ObjectCtl extends FormAssociated(LyraElement, objectValueAdapter) {
+  render() {
+    return html``;
+  }
+}
+customElements.define(tag('demo-object-ctl'), ObjectCtl);
 
 it('submits its value via the form and restores the constructed default value on reset', async () => {
   const form = await fixture<HTMLFormElement>(html`
@@ -382,10 +396,7 @@ it('accepts a string form-owner assignment while keeping reads element-valued', 
     </div>
   `);
   const form = wrapper.querySelector('form')!;
-  const ctl = wrapper.querySelector('lr-demo-ctl') as unknown as Ctl & {
-    form: string | HTMLFormElement | null;
-    getForm(): HTMLFormElement | null;
-  };
+  const ctl = wrapper.querySelector('lr-demo-ctl') as Ctl;
 
   ctl.form = 'external-owner';
 
@@ -1385,5 +1396,57 @@ describe('isEmptyFormValue()', () => {
     } finally {
       frame.remove();
     }
+  });
+
+  it('treats values with hostile array-length, prototype, or own-key reflection as non-empty', () => {
+    const hostileArray = new Proxy([], {
+      get(target, property, receiver) {
+        if (property === 'length') throw new Error('length trap');
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const hostilePrototype = new Proxy(
+      {},
+      {
+        getPrototypeOf() {
+          throw new Error('prototype trap');
+        },
+      },
+    );
+    const hostileOwnKeys = new Proxy(
+      {},
+      {
+        ownKeys() {
+          throw new Error('ownKeys trap');
+        },
+      },
+    );
+
+    expect(() => isEmptyFormValue(hostileArray)).to.not.throw();
+    expect(() => isEmptyFormValue(hostilePrototype)).to.not.throw();
+    expect(() => isEmptyFormValue(hostileOwnKeys)).to.not.throw();
+    expect(isEmptyFormValue(hostileArray), 'uninspectable array').to.be.false;
+    expect(isEmptyFormValue(hostilePrototype), 'uninspectable prototype').to.be.false;
+    expect(isEmptyFormValue(hostileOwnKeys), 'uninspectable own keys').to.be.false;
+  });
+
+  it('keeps required mixin validity operational when its default emptiness adapter sees a hostile value', async () => {
+    const control = (await fixture(
+      html`<lr-demo-object-ctl required></lr-demo-object-ctl>`,
+    )) as unknown as ObjectCtl;
+    const hostile = new Proxy(
+      {},
+      {
+        getPrototypeOf() {
+          throw new Error('prototype trap');
+        },
+      },
+    );
+
+    expect(() => {
+      control.value = hostile;
+    }).to.not.throw();
+    expect(control.validity.valueMissing).to.be.false;
+    expect(control.checkValidity()).to.be.true;
   });
 });

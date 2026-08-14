@@ -13,8 +13,7 @@ const meta: Meta = {
       description: {
         component:
           'A build-lean variant of `lr-markdown` for a consumer whose `languages` map already ' +
-          "covers every language it renders. Unlike `lr-markdown`'s runtime `languagesOnly` flag " +
-          "-- a check a bundler can't prove always-true -- this component's own module never " +
+          "covers every language it renders. This component's own module never " +
           "references shiki's full ~200-language default entry point at all, so importing it gives " +
           'a genuine compile-time exclusion of that table from the build output. A fenced-block ' +
           'language absent from `languages` always renders the plain-text fallback. A reconnect ' +
@@ -84,13 +83,13 @@ export const LeadingTabParsing: Story = {
   `,
 };
 
-export const SharedParserRefresh: Story = {
-  name: 'Shared parser refresh',
+export const InstanceParserRefresh: Story = {
+  name: 'Instance parser refresh',
   parameters: {
     docs: {
       description: {
         story:
-          'The button temporarily configures the parser shared by both Markdown variants, calls the public `renderMarkdown()` refresh method, and restores the defaults immediately afterward.',
+          'The button temporarily configures this element’s isolated `marked` parser, calls the public `renderMarkdown()` refresh method, and restores that instance’s defaults immediately afterward.',
       },
     },
   },

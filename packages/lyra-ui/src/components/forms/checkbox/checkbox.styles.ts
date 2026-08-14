@@ -24,24 +24,28 @@ export const styles = css`
        themselves from --lr-theme-icon-button-size and --lr-theme-space-s. */
     --lr-checkbox-label-indent: calc(var(--lr-checkbox-box-size) + var(--lr-space-s));
   }
-  [part~='base'] {
+  .checkbox-layout {
+    display: inline-flex;
+    align-items: center;
+    /* Derived from the published indent rather than repeating --lr-space-s, so the advertised
+       value and the rendered label offset cannot drift: the label always starts exactly
+       --lr-checkbox-label-indent from the base's inline start. Resolves to --lr-space-s by default. */
+    gap: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .checkbox-owner {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
-    /* Derived from the published indent rather than repeating --lr-space-s, so the advertised
-       value and the rendered label offset cannot drift: the label always starts exactly
-       --lr-checkbox-label-indent from the base's inline start. Resolves to --lr-space-s by default. */
-    gap: calc(var(--lr-checkbox-label-indent) - var(--lr-checkbox-box-size));
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
   }
-  [part~='base']:focus-visible {
+  .checkbox-owner:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  :host(:disabled) [part~='base'] {
+  :host(:disabled) .checkbox-layout {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
@@ -71,7 +75,7 @@ export const styles = css`
       background-color var(--lr-transition-fast),
       border-color var(--lr-transition-fast);
   }
-  :host(:not(:disabled)) [part~='base']:hover [part~='box'] {
+  :host(:not(:disabled)) .checkbox-layout:hover [part~='box'] {
     border-color: var(--lr-checkbox-hover-border, var(--lr-color-brand));
   }
   /* Pressed. Expressed as a ring around the box rather than as a fill, because the box's own fill
@@ -79,7 +83,7 @@ export const styles = css`
      tinting it under the thumb would either wash out the checkmark or read as a half-toggled box.
      A ring is unambiguous in both states, and is visibly more than the hover's border-colour step
      -- same soft-ring pressed vocabulary <lr-slider>'s thumb uses. */
-  :host(:not(:disabled)) [part~='base']:active [part~='box'] {
+  :host(:not(:disabled)) .checkbox-layout:active [part~='box'] {
     border-color: var(--lr-checkbox-active-border, var(--lr-color-brand));
     box-shadow: 0 0 0 var(--lr-border-width-medium) var(--lr-checkbox-active-ring, var(--lr-color-brand-quiet));
   }
@@ -111,6 +115,9 @@ export const styles = css`
      "[hidden] { display: none }" rule needs no author-side override to
      take effect when hasLabelSlot is false. */
   [part='label'] {
+    margin-inline-start: calc(
+      var(--lr-checkbox-label-indent) - max(var(--lr-icon-button-size), var(--lr-checkbox-box-size))
+    );
     font-size: var(--lr-font-size-md-sm);
     color: var(--lr-color-text);
   }

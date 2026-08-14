@@ -15,7 +15,6 @@ export type {
   LyraPluralMessage,
 } from './localization-types.js';
 
-
 const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   noData: 'No data',
   graphLegendLabel: 'Graph legend',
@@ -27,10 +26,26 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   terminalDownload: 'Download log',
   terminalHighlightLine: 'Line {line}',
   schemaViewerIssueLimit: 'Only the first {count} validation issues are shown.',
-  toolParamMissingProperty: 'Required key “{key}” has no matching schema property.',
+  toolParamMissingProperty:
+    'Required key “{key}” has no matching schema property.',
+  toolParamBooleanUnset: 'Not set',
+  toolParamBooleanTrue: 'True',
+  toolParamBooleanFalse: 'False',
+  toolParamSchemaLimit:
+    'Tool parameter schemas support at most {fields} fields and {options} choices per field.',
+  testResultsLimit: 'Only the first {count} test results are shown.',
+  toolTimelineLimit: 'At most {count} tool calls are shown.',
+  toolSelectLimit: 'Only the first {count} tools are shown.',
   sequenceStripEmpty: 'No items',
   sequenceStripCategoryCount: '{label}: {count}',
   noColumns: 'No columns configured',
+  dataGridColumnMenu: 'Options for {label}',
+  dataGridPinStart: 'Pin {label} to start',
+  dataGridPinEnd: 'Pin {label} to end',
+  dataGridUnpin: 'Unpin {label}',
+  dataGridRowsPerPage: 'Rows per page',
+  dataGridTreeLimitReached:
+    'Additional nested rows were omitted because the data-grid tree limit was reached.',
   loadMore: 'Load more',
   viewerSearchMatchCount: { one: '{count} match', other: '{count} matches' },
   viewerSearchNoMatches: 'No matches',
@@ -137,6 +152,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   chartPrimaryAxis: 'Primary axis',
   chartSecondaryAxis: 'Secondary axis',
   chartPointLabel: 'Point {n}',
+  chartPointCoordinates: 'x {x}, y {y}',
+  chartBubblePointCoordinates: 'x {x}, y {y}, radius {radius}',
+  chartLabeledPoint: '{label}: {coordinates}',
   resetZoom: 'Reset zoom',
   chatSending: 'Sending…',
   chatResponding: 'Responding…',
@@ -154,7 +172,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   copyDiff: 'Copy diff',
   diffViewOldLabel: 'Original',
   diffViewNewLabel: 'Modified',
-  diffViewHiddenLines: { one: '{count} unchanged line', other: '{count} unchanged lines' },
+  diffViewHiddenLines: {
+    one: '{count} unchanged line',
+    other: '{count} unchanged lines',
+  },
   diffViewTooLarge: 'Diff is too large to display.',
   jsonArray: 'array',
   jsonObject: 'object',
@@ -164,7 +185,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   jsonCollapseLabel: 'Collapse {label}',
   jsonItemCount: { one: '{count} item', other: '{count} items' },
   jsonKeyCount: { one: '{count} key', other: '{count} keys' },
-  jsonViewerLimit: 'Only the first {count} JSON nodes and {depth} nesting levels are shown and searched.',
+  jsonViewerLimit:
+    'Only the first {count} JSON nodes and {depth} nesting levels are shown and searched.',
   untitledSource: 'Untitled source',
   sourcePageSuffix: '{base} — p. {page}',
   toolCall: 'Tool call',
@@ -256,12 +278,15 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   documentViewerLabel: 'Document viewer',
   attachmentPreviewName: 'Preview {name}',
   attachmentPreviewFile: 'Preview file',
-  documentViewerMissingSanitizer: 'This viewer needs the optional "dompurify" package installed to render safely.',
+  documentViewerMissingSanitizer:
+    'This viewer needs the optional "dompurify" package installed to render safely.',
   docxViewerLabel: 'Word document',
-  docxViewerMissingConverter: 'This viewer needs the optional "mammoth" package installed to convert this document.',
+  docxViewerMissingConverter:
+    'This viewer needs the optional "mammoth" package installed to convert this document.',
   svgViewerLabel: 'SVG image',
   htmlViewerLabel: 'HTML document',
-  datasetViewerMissingParser: 'This viewer needs the optional "papaparse" package installed to parse this file.',
+  datasetViewerMissingParser:
+    'This viewer needs the optional "papaparse" package installed to parse this file.',
   datasetViewerEmpty: 'This dataset has no rows.',
   datasetViewerCaption: '{count} rows',
   datasetViewerCaptionNamed: '{name}: {count} rows',
@@ -305,10 +330,14 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   chartSummaryEmpty: '{type} chart with no data.',
   chartSummarySeparator: '. ',
   chartData: 'Chart data',
-  chartDataSampled: 'The generated data table shows a sample of up to 1,000 records. Provide a custom data table to access all chart data.',
-  chartZoomUnavailable: 'Zoom is unavailable, but the core chart remains available.',
-  chartDataLabelsUnavailable: 'Data labels are unavailable, but the core chart remains available.',
-  chartStackTotalsUnavailable: 'Stack totals are unavailable, but the core chart remains available.',
+  chartDataSampled:
+    'The generated data table shows a sample of up to 1,000 records. Provide a custom data table to access all chart data.',
+  chartZoomUnavailable:
+    'Zoom is unavailable, but the core chart remains available.',
+  chartDataLabelsUnavailable:
+    'Data labels are unavailable, but the core chart remains available.',
+  chartStackTotalsUnavailable:
+    'Stack totals are unavailable, but the core chart remains available.',
   chart: 'Chart',
   chartTypeLine: 'Line',
   chartTypeBar: 'Bar',
@@ -318,7 +347,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   chartTypeRadar: 'Radar',
   chartTypePolarArea: 'Polar area',
   chartTypeBubble: 'Bubble',
-  boxPlotSeriesSummary: '{label}: {count} distributions, median range {min} to {max}, {trend} median trend',
+  boxPlotSeriesSummary:
+    '{label}: {count} distributions, median range {min} to {max}, {trend} median trend',
   boxPlotSummaryWithData: 'Box plot. {summaries}.',
   boxPlotSummaryEmpty: 'Box plot with no data.',
   boxPlotData: 'Box plot data',
@@ -366,7 +396,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   timeInputInvalid: 'Enter a complete time.',
   timeInputMinMessage: 'Time must be at or after {min}.',
   timeInputMaxMessage: 'Time must be at or before {max}.',
-  timeInputRangeMessage: 'Time must be between {min} and {max} across midnight.',
+  timeInputRangeMessage:
+    'Time must be between {min} and {max} across midnight.',
   timeInputStepMessage: 'Enter a time matching the required interval.',
   documentPreviewEmpty: 'No {type} to display.',
   convertingDocument: 'Converting document…',
@@ -376,7 +407,6 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   documentPreviewTypeImage: 'image',
   documentPreviewTypeEmail: 'email',
   documentPreviewTypeCalendar: 'calendar',
-  archiveViewerUnavailable: 'Archive preview is unavailable.',
   archiveViewerEmpty: 'This archive is empty.',
   archiveViewerFolder: 'Folder',
   archiveViewerFile: 'File',
@@ -399,11 +429,15 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   fileInputFolderRejected: 'Folders are not accepted here.',
   fileInputRejectedType: '{filename}: this file type is not accepted.',
   fileInputRejectedSize: '{filename}: this file is too large.',
-  fileInputRejectedCount: '{filename}: only one file can be selected at a time.',
+  fileInputRejectedCount:
+    '{filename}: only one file can be selected at a time.',
+  fileInputRejectedRead: '{filename}: the file could not be read.',
+  fileInputRejectedLimit: '{filename}: the folder contains too many entries.',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   graphNode: 'Node {label}',
   graphLink: 'Link from {source} to {target}',
-  graphDiagram: 'Node-link diagram with {nodeCount} nodes and {linkCount} links',
+  graphDiagram:
+    'Node-link diagram with {nodeCount} nodes and {linkCount} links',
   graphTypedNode: '{label} ({type})',
   graphExpandableItem: '{item}, expandable',
   graphNodeFocused: 'Centered on {label}',
@@ -412,13 +446,17 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   graphCommunity: 'Community {label}, {count} nodes',
   heatmapValueLabel: 'value',
   heatmapMatrixCellLabel: 'Row {row}, Col {col}: {value}',
-  heatmapCalendarLabel: 'Calendar heatmap of {days} days, {label} range {range}',
+  heatmapCalendarLabel:
+    'Calendar heatmap of {days} days, {label} range {range}',
   heatmapMatrixLabel: 'Heatmap of {rows} × {cols} cells, {label} range {range}',
   heatmapCalendarCellLabel: '{date}: {value}',
   heatmapNoDataValue: 'no data',
   heatmapDefaultRowLabel: 'row {n}',
   heatmapDefaultColLabel: 'col {n}',
   heatmapSelectedCellLabel: 'Selected: {cell}.',
+  heatmapProjectionLimit: 'Only the first {count} heatmap cells are shown.',
+  heatmapDecorationLimit:
+    'Only the first {count} heatmap colors, legend stops, and annotations are shown.',
   inputLabel: 'Text',
   showPassword: 'Show password',
   hidePassword: 'Hide password',
@@ -489,7 +527,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   unarchiveConversation: 'Unarchive conversation',
   deleteConversation: 'Delete conversation',
   searchThreads: 'Search conversations',
-  threadListMatchAnnounce: { one: '{count} conversation found', other: '{count} conversations found' },
+  threadListMatchAnnounce: {
+    one: '{count} conversation found',
+    other: '{count} conversations found',
+  },
   threadListEmpty: 'No conversations yet',
   agentWorkspaceLabel: 'Agent workspace',
   agentWorkspaceConversation: 'Conversation',
@@ -609,11 +650,18 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   otpInputLabel: 'Verification code',
   numberInputIncrease: 'Increase',
   numberInputDecrease: 'Decrease',
-  textareaCharacterCount: { one: '{count} character', other: '{count} characters' },
-  textareaCharactersRemaining: { one: '{count} character remaining', other: '{count} characters remaining' },
+  textareaCharacterCount: {
+    one: '{count} character',
+    other: '{count} characters',
+  },
+  textareaCharactersRemaining: {
+    one: '{count} character remaining',
+    other: '{count} characters remaining',
+  },
   copyFailed: 'Copy failed',
   colorPickerSaturationBrightness: 'Saturation and brightness',
-  colorPickerSaturationBrightnessValue: 'Saturation {saturation}%, brightness {brightness}%',
+  colorPickerSaturationBrightnessValue:
+    'Saturation {saturation}%, brightness {brightness}%',
   colorPickerHue: 'Hue',
   colorPickerHueValue: '{hue} degrees',
   colorPickerOpacity: 'Opacity',
@@ -627,7 +675,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   selectSelectedOverflow: '+{n} more',
   iconLoadError: 'The icon failed to load.',
   iconTooLarge: 'The icon file is too large to display.',
-  iconSanitizerMissing: 'This icon needs the optional "dompurify" package installed to render safely.',
+  iconSanitizerMissing:
+    'This icon needs the optional "dompurify" package installed to render safely.',
   paginationFirstPage: 'First page',
   paginationLastPage: 'Last page',
   accessibleLabelSeparator: ' — ',
@@ -677,7 +726,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Shift',
   emailViewerLabel: 'Email viewer',
-  emailViewerMissingParser: 'This viewer needs the optional "postal-mime" package installed to parse this message.',
+  emailViewerMissingParser:
+    'This viewer needs the optional "postal-mime" package installed to parse this message.',
   emailViewerFrom: 'From',
   emailViewerTo: 'To',
   emailViewerSubject: 'Subject',
@@ -689,17 +739,29 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   emailViewerHideQuoted: 'Hide quoted text',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Calendar viewer',
-  calendarViewerMissingParser: 'This viewer needs the optional "ical.js" package installed to parse this calendar.',
+  calendarViewerMissingParser:
+    'This viewer needs the optional "ical.js" package installed to parse this calendar.',
   calendarViewerEmpty: 'This calendar has no events.',
   calendarViewerNoSummary: '(no title)',
   pdfViewerLabel: 'PDF document',
-  pdfViewerMissingLibrary: 'This viewer needs the optional "pdfjs-dist" package installed to render PDF files.',
-  qrCodeMissingLibrary: 'This component needs the optional "qrcode" package installed to render QR codes.',
+  pdfViewerMissingLibrary:
+    'This viewer needs the optional "pdfjs-dist" package installed to render PDF files.',
+  qrCodeMissingLibrary:
+    'This component needs the optional "qrcode" package installed to render QR codes.',
   qrCodeGenerationFailed: 'This value could not be encoded as a QR code.',
-  mapMissingLibrary: 'This component needs the optional "maplibre-gl" package installed to render the map.',
-  chartMissingLibrary: 'This component needs the optional "chart.js" package installed to render charts.',
-  boxPlotMissingLibrary: 'This component needs the optional box-plot chart package installed to render box plots.',
-  graphMissingLibrary: 'This component needs the optional "d3" package installed to render the graph.',
+  mapMissingLibrary:
+    'This component needs the optional "maplibre-gl" package installed to render the map.',
+  mapStyleRequired: 'Provide a map style to render the map.',
+  mapWebglUnavailable:
+    'This browser cannot provide the graphics support needed to render the map.',
+  mapInitializationFailed: 'The map could not be initialized.',
+  mapLegend: 'Map legend',
+  chartMissingLibrary:
+    'This component needs the optional "chart.js" package installed to render charts.',
+  boxPlotMissingLibrary:
+    'This component needs the optional box-plot chart package installed to render box plots.',
+  graphMissingLibrary:
+    'This component needs the optional "d3" package installed to render the graph.',
   pdfViewerPageOf: 'Page {page} of {total}',
   pdfViewerZoomIn: 'Zoom in',
   pdfViewerZoomOut: 'Zoom out',
@@ -715,7 +777,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   highlightOfTotal: 'Highlight {index} of {total}',
   pageRailLabel: 'Page thumbnails',
   pageRailPage: 'Page {page}',
-  pageRailPageHighlighted: { one: 'Page {page}, {count} highlighted passage', other: 'Page {page}, {count} highlighted passages' },
+  pageRailPageHighlighted: {
+    one: 'Page {page}, {count} highlighted passage',
+    other: 'Page {page}, {count} highlighted passages',
+  },
   skipToContent: 'Skip to content',
   tourSkip: 'Skip',
   tourDone: 'Done',
@@ -750,6 +815,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   traceTree: 'Trace tree',
   traceTreeSpanStatus: '{name} — {status}',
   traceTreeMetricLabel: '{label}: {value}',
+  spanProjectionLimit: 'Only the first {count} spans are shown.',
   agentTraceFilterLabel: 'Trace span kinds',
   spanKindAgent: 'Agent',
   spanKindLlm: 'LLM',
@@ -799,8 +865,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   imageViewerAnnotate: 'Annotate',
   imageViewerHighlightsLabel: 'Highlighted regions',
   imageViewerUnlabeledHighlight: 'Highlight {index}',
-  imageViewerAnnotationHint: 'Annotation mode on. Press Enter to place a region, then use arrow keys to move it, Shift plus arrow keys to resize it, Enter to save, or Escape to cancel.',
-  imageViewerAnnotationBoxPosition: 'Region at {x} percent, {y} percent, {width} by {height} percent.',
+  imageViewerAnnotationHint:
+    'Annotation mode on. Press Enter to place a region, then use arrow keys to move it, Shift plus arrow keys to resize it, Enter to save, or Escape to cancel.',
+  imageViewerAnnotationBoxPosition:
+    'Region at {x} percent, {y} percent, {width} by {height} percent.',
   imageViewerAnnotationAdded: 'Region added.',
   imageViewerAnnotationCancelled: 'Region cancelled.',
   transcriptFeedLabel: 'Transcript',
@@ -812,6 +880,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   commitCardShowFiles: 'Show {count} changed files',
   commitCardHideFiles: 'Hide {count} changed files',
   stackTraceLabel: 'Stack trace',
+  stackTraceLimit:
+    'Some stack-trace content was omitted because the display limit was reached.',
   stackTraceShowFrames: 'Show {count} internal frames',
   stackTraceHideFrames: 'Hide {count} internal frames',
   statusSkipped: 'Skipped',
@@ -821,7 +891,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   testResultsSkipped: '{count} skipped',
   testResultsRunning: '{count} running',
   testResultsFilterLabel: 'Filter by status',
-  testResultsCompleteAnnounce: '{passed} passed, {failed} failed, {skipped} skipped',
+  testResultsCompleteAnnounce:
+    '{passed} passed, {failed} failed, {skipped} skipped',
   testResultsExpandTest: 'Expand {name}',
   testResultsCollapseTest: 'Collapse {name}',
   envListLabel: 'Environment variables',
@@ -857,7 +928,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   browserFrameControllerUser: 'User',
   notebookViewerLabel: 'Notebook viewer',
   notebookViewerInvalid: 'This file is not a valid Jupyter notebook.',
-  notebookViewerUnsupportedVersion: 'Notebook format {version} is not supported.',
+  notebookViewerUnsupportedVersion:
+    'Notebook format {version} is not supported.',
   notebookViewerTooManyCells: 'This notebook has too many cells to display.',
   notebookViewerInPrompt: 'In [{count}]',
   notebookViewerInPromptEmpty: 'In [ ]',
@@ -887,8 +959,12 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   resultFieldLabel: '{label}:',
   geojsonViewLabel: 'Map',
   geojsonViewInvalid: 'This file is not valid GeoJSON.',
-  geojsonViewFeatureCount: { one: '{count} feature', other: '{count} features' },
-  geojsonViewMissingMapLibrary: 'Install the optional maplibre-gl peer to render this file on a map. Showing the raw GeoJSON instead.',
+  geojsonViewFeatureCount: {
+    one: '{count} feature',
+    other: '{count} features',
+  },
+  geojsonViewMissingMapLibrary:
+    'Install the optional maplibre-gl peer to render this file on a map. Showing the raw GeoJSON instead.',
   mindMapLabel: 'Mind map',
   mindMapTopicStatus: '{label}, level {level}, {count} subtopics',
   mindMapLeafStatus: '{label}, level {level}',
@@ -916,13 +992,16 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   scoreTierLow: 'Low relevance',
   chunkInspectorEmpty: 'No chunks retrieved',
   flowCanvasLabel: 'Workflow canvas',
+  flowCanvasLayoutLimit:
+    'Some edge-ordering detail was omitted because the flow layout work limit was reached.',
   flowCanvasSummary: 'Workflow with {nodeCount} nodes and {edgeCount} edges',
   flowNode: 'Node {label}',
   flowEdge: 'Edge from {source} to {target}',
   flowEdgeWithLabel: '{label}, edge from {source} to {target}',
   flowItemAnnouncement: '{item} ({index} of {total})',
   dashboardGridLabel: 'Dashboard grid',
-  dashboardCellCollisionRejected: '{label} cannot be placed there because it overlaps another cell.',
+  dashboardCellCollisionRejected:
+    '{label} cannot be placed there because it overlaps another cell.',
   dashboardCellMoved: '{label} moved to column {x}, row {y}.',
   dashboardCellResized: '{label} resized to width {w}, height {h}.',
   flowEdgeList: 'Workflow edges',
@@ -940,7 +1019,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   flowControlsLabel: 'Canvas controls',
   flowMinimapLabel: 'Workflow overview',
   flowMinimapViewport: 'Visible area',
-  flowMinimapInstructions: 'Arrow keys pan. Plus and minus zoom. Enter or Home fits the workflow.',
+  flowMinimapInstructions:
+    'Arrow keys pan. Plus and minus zoom. Enter or Home fits the workflow.',
   flowMinimapViewportChanged: 'Position {x}, {y}. Zoom {zoom}.',
   nodePaletteLabel: 'Node palette',
   nodePalettePlaceholder: 'Search nodes…',
@@ -963,7 +1043,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   neighborExpand: 'Expand {label} in graph',
   neighborListEmpty: 'No relationships',
   neighborGroupHeader: '{relation} ({count})',
-  flowRunOverlayLabel: 'Run status',
+  flowRunStatusLabel: 'Run status',
   flowRunSummary: '{done} of {total} steps complete',
   flowRunStepStatus: '{label}: {status}',
   flowRunStatusCount: '{status}: {count}',
@@ -1032,7 +1112,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   memoryPanelConfirmAddHeading: 'Add this to long-term memory?',
   memoryPanelConfirmRemoveHeading: 'Remove this item?',
   memoryPanelConfirmForgetHeading: 'Forget all long-term memories?',
-  memoryPanelConfirmForgetBody: 'This permanently forgets all {count} long-term memories.',
+  memoryPanelConfirmForgetBody:
+    'This permanently forgets all {count} long-term memories.',
   graphExplorerLabel: 'Knowledge graph explorer',
   graphExplorerSearchPlaceholder: 'Search entities…',
   graphExplorerSearchResultsLabel: 'Search results',
@@ -1065,7 +1146,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   claimEvidenceConfidence: '{percent} confidence',
   retrievalCompareLabel: 'Retrieval comparison',
   retrievalCompareEmpty: 'No retrieval result sets to compare',
-  retrievalCompareOverlap: 'Top-k overlap between {left} and {right}: {percent}',
+  retrievalCompareOverlap:
+    'Top-k overlap between {left} and {right}: {percent}',
   retrievalCompareRank: 'Rank {rank}',
   retrievalCompareDenseScore: 'Dense',
   retrievalCompareSparseScore: 'Sparse',
@@ -1076,7 +1158,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   ragEvalDashboardRuns: 'Evaluation runs',
   ragEvalDashboardSlices: 'Evaluation slices',
   ragEvalDashboardAllSlices: 'All',
-  ragEvalDashboardSliceUnavailable: 'No evaluation runs are available for {slice}.',
+  ragEvalDashboardSliceUnavailable:
+    'No evaluation runs are available for {slice}.',
   promptStudioLabel: 'Prompt studio',
   promptStudioMessages: 'Prompt messages',
   promptStudioVariables: 'Variables',
@@ -1261,6 +1344,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   flagLoadError: 'Flag unavailable',
   moveUp: 'Move up',
   moveDown: 'Move down',
+  reorderMovePending: 'Reorder pending.',
+  reorderMoveCancelled: 'Reorder cancelled.',
   reorderItemMoved: 'Moved to position {index} of {total}',
 };
 
@@ -1289,10 +1374,16 @@ export function resolveLyraString(
   key: string,
   overrides?: LyraLocaleStrings,
   fallback?: string,
-  values?: Record<string, string | number>,
+  values?: Record<string, string | number>
 ): string {
-  return resolveRuntimeLyraString(host, key, overrides, fallback, values, DEFAULT_STRINGS);
+  return resolveRuntimeLyraString(
+    host,
+    key,
+    overrides,
+    fallback,
+    values,
+    DEFAULT_STRINGS
+  );
 }
-
 
 export const LYRA_DEFAULT_STRINGS = DEFAULT_STRINGS;

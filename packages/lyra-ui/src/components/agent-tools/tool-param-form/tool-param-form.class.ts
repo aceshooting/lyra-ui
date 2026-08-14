@@ -12,8 +12,7 @@ import { styles } from './tool-param-form.styles.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
 import '../../forms/select/select.class.js';
 import '../../forms/combobox/option.class.js';
-import '../../forms/checkbox/checkbox.class.js';
-import { getListFormat } from '../../../internal/intl-cache.js';
+import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   attachInternalsSafely,
   getFormOwner,
@@ -24,9 +23,10 @@ import {
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldMustBeBoolean, LYRA_DEFAULT_fieldMustBeInteger, LYRA_DEFAULT_fieldMustBeNumber, LYRA_DEFAULT_fieldMustBeOneOf, LYRA_DEFAULT_fieldMustBeString, LYRA_DEFAULT_fieldMustEqual, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_schemaMustBeObject, LYRA_DEFAULT_schemaPropertiesMustBeFlat, LYRA_DEFAULT_toolParamMissingProperty, LYRA_DEFAULT_unsupportedFieldType, LYRA_DEFAULT_valueMustBeSerializable } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldMustBeBoolean, LYRA_DEFAULT_fieldMustBeInteger, LYRA_DEFAULT_fieldMustBeNumber, LYRA_DEFAULT_fieldMustBeOneOf, LYRA_DEFAULT_fieldMustBeString, LYRA_DEFAULT_fieldMustEqual, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_schemaMustBeObject, LYRA_DEFAULT_schemaPropertiesMustBeFlat, LYRA_DEFAULT_toolParamBooleanFalse, LYRA_DEFAULT_toolParamBooleanTrue, LYRA_DEFAULT_toolParamBooleanUnset, LYRA_DEFAULT_toolParamMissingProperty, LYRA_DEFAULT_toolParamSchemaLimit, LYRA_DEFAULT_unsupportedFieldType, LYRA_DEFAULT_valueMustBeSerializable } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -54,9 +54,9 @@ export interface ToolParamFormProperty {
   autocomplete?: string;
   spellcheck?: boolean;
   autocapitalize?: string;
-  autocorrect?: string;
-  inputmode?: string;
-  enterkeyhint?: string;
+  autoCorrect?: string;
+  inputMode?: string;
+  enterKeyHint?: string;
 }
 
 /**
@@ -64,13 +64,15 @@ export interface ToolParamFormProperty {
  * a plain object whose every property is a string, number/integer, boolean,
  * or string enum. See the class doc for what's out of scope.
  */
-export interface ToolParamFormSchema {
+export interface FlatToolParamSchema {
   type: 'object';
   properties: Record<string, ToolParamFormProperty>;
   required?: string[];
 }
 
-const EMPTY_SCHEMA: ToolParamFormSchema = { type: 'object', properties: {} };
+const EMPTY_SCHEMA: FlatToolParamSchema = { type: 'object', properties: {} };
+const MAX_SCHEMA_FIELDS = 100;
+const MAX_ENUM_OPTIONS = 500;
 
 function cloneFormValue(
   value: Record<string, unknown>,
@@ -108,13 +110,18 @@ export interface LyraToolParamFormEventMap {
  * out of scope for this component; a property whose `type` isn't one of the
  * four above renders a visible "Unsupported field type" note and marks the
  * form invalid instead of silently dropping it or throwing.
+ * A schema is additionally bounded to 100 fields and 500 enum choices per field. Exceeding either
+ * ceiling fails the form closed with a localized form-wide error while the bounded prefix remains
+ * available for inspection; malformed null/array property definitions fail as schema errors rather
+ * than being misreported as value-serialization failures.
  *
  * Fields render in `Object.keys(schema.properties)` order (insertion order,
  * which is reliable for a plain object's string keys). A field's label is
  * `title ?? ` the property key; `description` renders as helper text below
- * the control; a key listed in `required` gets a visible `*`. The outer
- * component owns validation because JSON Schema `required` means property
- * presence, unlike HTML controls' nonempty/must-check semantics.
+ * the control; a key listed in `required` gets a visible `*`. The outer component owns validation
+ * because JSON Schema `required` means property presence, unlike HTML controls' nonempty/must-check
+ * semantics. Boolean fields therefore expose explicit unset/true/false values instead of
+ * conflating an absent property with `false`.
  *
  * Deliberately no top-level `label`/`hint`/`errorText` chrome (unlike
  * `<lr-checkbox-group>`'s own trio, despite both being compound, multi-item
@@ -125,9 +132,10 @@ export interface LyraToolParamFormEventMap {
  * context — a second, redundant outer label here would just repeat it. A
  * form-wide validation summary is still available via the `error` part
  * (`class="form-error"`), driven by `reportValidity()`.
- * The `base` wrapper is nevertheless one accessible `role="group"`: a host `aria-label` or native
- * external `<label for>` names the aggregate without adding duplicate visible chrome, while every
- * generated field retains its own more specific name.
+ * When the host has no name, the `base` wrapper is the accessible `role="group"`; a native external
+ * `<label for>` can name the form-associated host. A non-empty host `aria-label` stays on that host
+ * as the sole aggregate semantic owner, so the nested wrapper omits its duplicate role/name. Every
+ * generated field retains its own more specific name either way.
  *
  * This component owns no Submit/Cancel/Approve chrome — a consumer composes
  * it inside their own dialog (e.g. a tool-approval dialog) and reads
@@ -165,15 +173,15 @@ export interface LyraToolParamFormEventMap {
  * @event lr-validity-change - Overall validity or field errors changed.
  * `detail: { valid: boolean; errors: Record<string, string> }`.
  * @event focus - Re-dispatched when a generated native text/number input receives focus. Composed
- * controls (`<lr-select>`/`<lr-checkbox>`) already expose their own bubbling, composed bridge.
+ * controls (`<lr-select>`) already expose their own bubbling, composed bridge.
  * @event blur - Re-dispatched when a generated native text/number input loses focus.
  * @event lr-invalid - The complete parameter form failed a validity check.
  * @csspart base - The outer wrapper around all fields.
  * @csspart field - One property's wrapper (label + control + description + error).
  * @csspart label - A field's label.
  * @csspart control - The native `<input>` for a `'string'` (non-enum) or `'number'`/`'integer'`
- * field. Shared part on both the text and number inputs; not present on the `'boolean'`
- * (`<lr-checkbox>`), enum (`<lr-select>`), or unsupported-type fallback branches.
+ * field. Shared part on both the text and number inputs; not present on the `'boolean'`/enum
+ * (`<lr-select>`) or unsupported-type fallback branches.
  * @csspart description - A field's helper text, from `schema.description`.
  * @csspart error - A field-level or form-level validation message.
  * @csspart unsupported - The fallback note rendered in place of a control for
@@ -221,7 +229,11 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     noData: LYRA_DEFAULT_noData,
     schemaMustBeObject: LYRA_DEFAULT_schemaMustBeObject,
     schemaPropertiesMustBeFlat: LYRA_DEFAULT_schemaPropertiesMustBeFlat,
+    toolParamBooleanFalse: LYRA_DEFAULT_toolParamBooleanFalse,
+    toolParamBooleanTrue: LYRA_DEFAULT_toolParamBooleanTrue,
+    toolParamBooleanUnset: LYRA_DEFAULT_toolParamBooleanUnset,
     toolParamMissingProperty: LYRA_DEFAULT_toolParamMissingProperty,
+    toolParamSchemaLimit: LYRA_DEFAULT_toolParamSchemaLimit,
     unsupportedFieldType: LYRA_DEFAULT_unsupportedFieldType,
     valueMustBeSerializable: LYRA_DEFAULT_valueMustBeSerializable,
   };
@@ -259,7 +271,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   private baseId = nextId('tool-param-form');
   private _fieldsetDisabled = false;
   private _name = '';
-  private _schema: ToolParamFormSchema = EMPTY_SCHEMA;
+  private _schema: FlatToolParamSchema = EMPTY_SCHEMA;
   private _value: Record<string, unknown> = {};
   private defaultValueSnapshot: Record<string, unknown> = {};
   private defaultValueCaptured = false;
@@ -359,13 +371,15 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   private focusFirstControl(): void {
     if (!this.renderRoot) return;
-    const firstField = this.renderRoot.querySelector<HTMLElement>('[part="field"]');
-    if (!firstField) return;
-    const control =
-      firstField.querySelector<HTMLElement>('input.control') ||
-      firstField.querySelector<HTMLElement>('lr-select') ||
-      firstField.querySelector<HTMLElement>('lr-checkbox');
-    control?.focus();
+    const controls = this.renderRoot.querySelectorAll<HTMLElement>('input.control, lr-select');
+    for (const control of controls) {
+      const disabled = (control as HTMLElement & { disabled?: boolean }).disabled
+        || control.getAttribute('aria-disabled') === 'true';
+      if (!disabled) {
+        control.focus();
+        return;
+      }
+    }
   }
 
   /** Forwards host clicks to the first rendered form field so the component behaves like a regular
@@ -415,14 +429,26 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   private get schemaProperties(): Record<string, ToolParamFormProperty> {
     const properties = (this.schema as unknown as { properties?: unknown })?.properties;
-    return properties !== null && typeof properties === 'object' && !Array.isArray(properties)
-      ? (properties as Record<string, ToolParamFormProperty>)
-      : {};
+    if (properties === null || typeof properties !== 'object' || Array.isArray(properties)) return {};
+    const normalized = Object.create(null) as Record<string, ToolParamFormProperty>;
+    let count = 0;
+    for (const [key, value] of Object.entries(properties)) {
+      if (count >= MAX_SCHEMA_FIELDS) break;
+      if (value === null || typeof value !== 'object' || Array.isArray(value)) continue;
+      const property = value as ToolParamFormProperty;
+      normalized[key] = Array.isArray(property.enum) && property.enum.length > MAX_ENUM_OPTIONS
+        ? { ...property, enum: property.enum.slice(0, MAX_ENUM_OPTIONS) }
+        : property;
+      count++;
+    }
+    return normalized;
   }
 
   private get requiredKeys(): string[] {
     const required = (this.schema as unknown as { required?: unknown })?.required;
-    return Array.isArray(required) ? required.filter((key): key is string => typeof key === 'string') : [];
+    return Array.isArray(required)
+      ? required.filter((key): key is string => typeof key === 'string').slice(0, MAX_SCHEMA_FIELDS)
+      : [];
   }
 
   private resolveEffectiveValue(): Record<string, unknown> {
@@ -448,10 +474,10 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     return out;
   }
 
-  get schema(): ToolParamFormSchema {
+  get schema(): FlatToolParamSchema {
     return this._schema;
   }
-  set schema(next: ToolParamFormSchema) {
+  set schema(next: FlatToolParamSchema) {
     const old = this._schema;
     this._schema = next ?? EMPTY_SCHEMA;
     this.syncFormState();
@@ -705,6 +731,24 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     if (properties === null || typeof properties !== 'object' || Array.isArray(properties)) {
       return this.localize('schemaPropertiesMustBeFlat');
     }
+    const propertyValues = Object.values(properties);
+    if (propertyValues.some((value) => value === null || typeof value !== 'object' || Array.isArray(value))) {
+      return this.localize('schemaPropertiesMustBeFlat');
+    }
+    const required = (schema as { required?: unknown }).required;
+    if (
+      propertyValues.length > MAX_SCHEMA_FIELDS
+      || (Array.isArray(required) && required.length > MAX_SCHEMA_FIELDS)
+      || propertyValues.some((value) => {
+        const choices = (value as { enum?: unknown }).enum;
+        return Array.isArray(choices) && choices.length > MAX_ENUM_OPTIONS;
+      })
+    ) {
+      return this.localize('toolParamSchemaLimit', undefined, {
+        fields: getNumberFormat(this.effectiveLocale).format(MAX_SCHEMA_FIELDS),
+        options: getNumberFormat(this.effectiveLocale).format(MAX_ENUM_OPTIONS),
+      });
+    }
     return '';
   }
 
@@ -871,9 +915,19 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     this.setFieldValue(key, (e.target as LyraSelect).value);
   }
 
-  private onCheckboxChange(key: string, e: CustomEvent<{ checked: boolean }>): void {
+  private onBooleanSelectChange(key: string, e: Event): void {
     e.stopPropagation();
-    this.setFieldValue(key, e.detail.checked);
+    const value = (e.target as LyraSelect).value;
+    if (value === '') {
+      if (this.effectiveDisabled) return;
+      this.hasInteracted = true;
+      const next = { ...this.value };
+      Reflect.deleteProperty(next, key);
+      this.value = next;
+      this.emit('lr-input', { value: this.effectiveValue });
+      return;
+    }
+    this.setFieldValue(key, value === 'true');
   }
 
   private stopNestedControlEvent = (e: Event): void => {
@@ -907,7 +961,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         .label=${label}
         .hint=${prop.description ?? ''}
         .errorText=${errorMessage}
-        .required=${required}
+        .required=${false}
+        aria-required=${required ? 'true' : nothing}
         .value=${typeof effective === 'string' ? effective : ''}
         ?disabled=${this.effectiveDisabled}
         @input=${this.stopNestedControlEvent}
@@ -933,9 +988,9 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         autocomplete=${prop.autocomplete || nothing}
         .spellcheck=${prop.spellcheck ?? true}
         autocapitalize=${prop.autocapitalize || nothing}
-        autocorrect=${prop.autocorrect || nothing}
-        inputmode=${prop.inputmode || nothing}
-        enterkeyhint=${prop.enterkeyhint || nothing}
+        autocorrect=${prop.autoCorrect || nothing}
+        inputmode=${prop.inputMode || nothing}
+        enterkeyhint=${prop.enterKeyHint || nothing}
         .value=${typeof effective === 'string' ? effective : ''}
         ?disabled=${this.effectiveDisabled}
         @input=${(e: Event) => this.onTextInput(key, e)}
@@ -962,32 +1017,32 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       />`;
     }
     if (prop.type === 'boolean') {
-      // The label lives inside the slot rather than as a sibling <label> --
-      // that slot *is* lr-checkbox's documented way to give it an
-      // accessible name. The child's documented aria-describedby bridge
-      // resolves this form's adjacent description/error nodes onto its
-      // internal role="checkbox", so supporting text remains description
-      // semantics and is never folded into the accessible name.
-      return html`<lr-checkbox
+      const selected = effective === true ? 'true' : effective === false ? 'false' : '';
+      return html`<lr-select
         id=${fieldId}
-        aria-describedby=${describedBy || nothing}
-        .required=${required && prop.const === true}
-        ?checked=${effective === true}
+        .label=${label}
+        .hint=${prop.description ?? ''}
+        .errorText=${errorMessage}
+        .required=${false}
+        aria-required=${required ? 'true' : nothing}
+        .value=${selected}
         ?disabled=${this.effectiveDisabled}
         @input=${this.stopNestedControlEvent}
         @lr-input=${this.stopNestedControlEvent}
         @change=${this.stopNestedControlEvent}
-        @lr-change=${(e: CustomEvent<{ checked: boolean }>) => this.onCheckboxChange(key, e)}
+        @lr-change=${(e: Event) => this.onBooleanSelectChange(key, e)}
       >
-        <span part="label">${label}</span>
-      </lr-checkbox>`;
+        <lr-option value="">${this.localize('toolParamBooleanUnset')}</lr-option>
+        <lr-option value="true">${this.localize('toolParamBooleanTrue')}</lr-option>
+        <lr-option value="false">${this.localize('toolParamBooleanFalse')}</lr-option>
+      </lr-select>`;
     }
     // Defensive fallback for a schema property outside this renderer's scope
     // (see the class doc) — render a visible note instead of silently
     // dropping the field or throwing. Still carries id=fieldId like every
     // other control-slot render, since renderField's shared, non-boolean
     // branch above always renders a <label for=fieldId> pointing at it.
-    return html`<p part="unsupported" class="unsupported" id=${fieldId}>${this.localize('unsupportedFieldType', undefined, { type: (prop as { type: string }).type })}</p>`;
+    return html`<p part="unsupported" class="unsupported" id=${fieldId}>${this.localize('unsupportedFieldType', undefined, { type: String((prop as { type?: unknown }).type) })}</p>`;
   }
 
   private renderField(key: string, prop: ToolParamFormProperty, index: number): TemplateResult {
@@ -1027,8 +1082,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     const missingRequiredKeys = this.missingRequiredKeys.filter((key) => this.touchedFields.has(key));
     return html`<div
       part="base"
-      role="group"
-      aria-label=${this.getAttribute('aria-label') || nothing}
+      role=${overallSemanticRole(this, 'group') ?? nothing}
+      aria-label=${overallSemanticLabel(this) ?? nothing}
     >
       ${entries.length === 0
         ? html`<p part="empty">${this.localize('noData')}</p>`

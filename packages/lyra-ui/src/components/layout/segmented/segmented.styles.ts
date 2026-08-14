@@ -139,4 +139,10 @@ export const styles = css`
        the shallowest piece of resting chrome the library has. */
     box-shadow: var(--lr-segmented-selected-shadow, var(--lr-shadow-xs));
   }
+  @media (forced-colors: active) {
+    [part="base"][data-scroll-overflow] {
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+  }
 `;

@@ -20,6 +20,7 @@ import {
 } from './include-resource.js';
 import { styles } from './include.styles.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+import { sanitizePassiveMarkup } from '../passive-markup.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound } from '../../../internal/default-strings.generated.js';
@@ -330,7 +331,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
       this.fail(0, 'missing-sanitizer');
       return null;
     }
-    return String(sanitizer.sanitize(markup));
+    return sanitizePassiveMarkup(sanitizer, markup, this.ownerDocument, 'transclusion');
   }
 
   private fragmentFromSanitized(markup: string, fragmentId: string): DocumentFragment | null {
@@ -368,26 +369,30 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
       for (const attribute of ID_REFERENCE_ATTRIBUTES) {
         if (!element.hasAttribute(attribute)) continue;
         const tokens = element.getAttribute(attribute)!.split(/\s+/).filter(Boolean);
-        element.setAttribute(
-          attribute,
-          tokens.map((token) => idMap.get(token) ?? token).join(' '),
-        );
+        const replacements = tokens
+          .map((token) => idMap.get(token))
+          .filter((token): token is string => Boolean(token));
+        if (replacements.length > 0) element.setAttribute(attribute, replacements.join(' '));
+        else element.removeAttribute(attribute);
       }
       for (const attribute of ['href', 'xlink:href'] as const) {
         const value = element.getAttribute(attribute);
-        if (!value?.startsWith('#')) continue;
+        if (!value) continue;
+        if (!value.startsWith('#')) {
+          element.removeAttribute(attribute);
+          continue;
+        }
         const replacement = idMap.get(decodedFragment(value));
         if (replacement) element.setAttribute(attribute, `#${replacement}`);
+        else element.removeAttribute(attribute);
       }
       for (const attribute of element.getAttributeNames()) {
-        const value = element.getAttribute(attribute);
-        if (!value?.includes('url(#')) continue;
-        element.setAttribute(
-          attribute,
-          value.replace(/url\(#([^)]+)\)/g, (match, id: string) =>
-            idMap.has(id) ? `url(#${idMap.get(id)})` : match,
-          ),
-        );
+        const value = element.getAttribute(attribute) ?? '';
+        if (!/url\s*\(/i.test(value)) continue;
+        const match = /^\s*url\(\s*(['"]?)#([A-Za-z_][\w:.-]*)\1\s*\)\s*$/i.exec(value);
+        const replacement = match ? idMap.get(match[2]!) : undefined;
+        if (replacement) element.setAttribute(attribute, `url(#${replacement})`);
+        else element.removeAttribute(attribute);
       }
     }
   }

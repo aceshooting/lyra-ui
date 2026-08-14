@@ -117,7 +117,11 @@ export const styles = css`
     color: var(--lr-color-brand);
   }
   :where([part='toggle']):active:where(:not([hidden])) {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
     color: var(--lr-color-brand);
   }
   [part='toggle']:focus-visible,
@@ -212,7 +216,11 @@ export const styles = css`
      the button in when its row is hovered, it is not itself a hover treatment on the button, and the
      button's own held state belongs here next to its hover. */
   [part='copy-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
     color: var(--lr-color-brand);
   }
   /* Per-node copy buttons stay out of the way until the row is actually
@@ -223,6 +231,11 @@ export const styles = css`
   }
   .row [part='copy-button']:focus-visible {
     opacity: 1;
+  }
+  @media (hover: none), (pointer: coarse) {
+    .row [part='copy-button'] {
+      opacity: 1;
+    }
   }
   @media (prefers-reduced-motion: reduce) {
     [part='toggle'] .chevron {

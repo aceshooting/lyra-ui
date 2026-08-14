@@ -399,6 +399,29 @@ describe('length constraints', () => {
     expect(el.validity.tooShort).to.equal(false);
     expect(el.validationMessage).to.equal('');
   });
+
+  it('uses one native-effective limit for negative and fractional maxlength values', async () => {
+    const el = (await fixture(html`
+      <lr-textarea with-count value="abc" aria-label="Notes"></lr-textarea>
+    `)) as LyraTextarea;
+    const native = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    el.strings = {
+      textareaCharacterCount: '{count} chars',
+      textareaCharactersRemaining: '{count} left',
+    };
+
+    el.maxlength = -1;
+    await el.updateComplete;
+    expect(native.maxLength).to.equal(-1);
+    expect(el.validity.tooLong).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="count"]')!.textContent!.trim()).to.equal('3 chars');
+
+    el.maxlength = 2.5;
+    await el.updateComplete;
+    expect(native.maxLength).to.equal(2);
+    expect(el.validity.tooLong).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="count"]')!.textContent!.trim()).to.equal('0 left');
+  });
 });
 
 it('is accessible', async () => {

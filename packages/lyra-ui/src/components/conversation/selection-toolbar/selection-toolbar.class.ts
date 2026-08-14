@@ -1,10 +1,10 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, query } from 'lit/decorators.js';
-import { styleMap } from 'lit/directives/style-map.js';
-import type { DocumentLocator } from '../../../ai/types.js';
-import { deepActiveElementIn } from '../../../internal/active-element.js';
-import { resolveCssLength } from '../../../internal/css-length.js';
-import { composedParentElement } from '../../../internal/active-element.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
+import { property, query, state } from "lit/decorators.js";
+import { styleMap } from "lit/directives/style-map.js";
+import type { DocumentLocator } from "../../../ai/types.js";
+import { deepActiveElementIn } from "../../../internal/active-element.js";
+import { resolveCssLength } from "../../../internal/css-length.js";
+import { composedParentElement } from "../../../internal/active-element.js";
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
@@ -12,22 +12,33 @@ import {
   isActionableElement,
   isSemanticActionElement,
   type ComposedFocusRepairSnapshot,
-} from '../../../internal/focus-navigation.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
+} from "../../../internal/focus-navigation.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { finiteNumber, finiteRange } from "../../../internal/numbers.js";
+import {
+  writeClipboardText,
+  type LyraClipboardWriteFailure,
+  type LyraClipboardWriteSuccess,
+} from "../../../internal/clipboard.js";
 import {
   activateOverlay,
   composedContains,
   type OverlayHandle,
-} from '../../../internal/overlay-manager.js';
-import { styles } from './selection-toolbar.styles.js';
+} from "../../../internal/overlay-manager.js";
+import { styles } from "./selection-toolbar.styles.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_copy, LYRA_DEFAULT_open, LYRA_DEFAULT_selectionAsk, LYRA_DEFAULT_selectionCite, LYRA_DEFAULT_selectionQuote, LYRA_DEFAULT_selectionToolbarLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_selectionAsk, LYRA_DEFAULT_selectionCite, LYRA_DEFAULT_selectionQuote, LYRA_DEFAULT_selectionToolbarLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export type SelectionAction = "ask" | "quote" | "cite" | "copy";
 
-export type SelectionAction = 'ask' | 'quote' | 'cite' | 'copy';
+const SELECTION_ACTIONS: readonly SelectionAction[] = [
+  "ask",
+  "quote",
+  "cite",
+  "copy",
+];
 
 export interface SelectionActionDetail {
   action: SelectionAction;
@@ -36,17 +47,12 @@ export interface SelectionActionDetail {
 }
 
 export interface LyraSelectionToolbarEventMap {
-  'lr-selection-action': CustomEvent<SelectionActionDetail>;
-  'lr-dismiss': CustomEvent<undefined>;
-  'lr-copy-error': CustomEvent<{ error: unknown }>;
+  "lr-selection-action": CustomEvent<SelectionActionDetail>;
+  "lr-dismiss": CustomEvent<null>;
+  "lr-copy": CustomEvent<LyraClipboardWriteSuccess>;
+  "lr-error": CustomEvent<null>;
+  "lr-copy-error": CustomEvent<LyraClipboardWriteFailure>;
 }
-
-const ACTION_KEYS: Record<SelectionAction, string> = {
-  ask: 'selectionAsk',
-  quote: 'selectionQuote',
-  cite: 'selectionCite',
-  copy: 'copy',
-};
 
 const DEFAULT_PLACEMENT_GAP_PX = 8;
 
@@ -79,17 +85,16 @@ interface ActionFocusRepair {
  *   the same `role="toolbar"` element and roving-tabindex group.
  * @event lr-selection-action - An action was chosen. `detail: { action, text, anchor }`.
  * @event lr-dismiss - The toolbar was dismissed with Escape.
- * @event lr-copy-error - Clipboard writing failed. `detail: { error }`.
+ * @event lr-copy - Clipboard writing fulfilled. Frozen `detail: { ok: true, text }`.
+ * @event lr-error - Clipboard writing failed; generic no-detail notification.
+ * @event lr-copy-error - Clipboard writing failed. Frozen
+ *   `detail: { ok: false, text, reason, error }`.
  * @csspart toolbar - The floating `role="toolbar"` surface.
  * @csspart action - Every action button.
  * @csspart action-ask - The ask action.
  * @csspart action-quote - The quote action.
  * @csspart action-cite - The cite action.
  * @csspart action-copy - The copy action.
- * @cssprop --lr-selection-toolbar-inline-start - Computed logical inline anchor position.
- * @cssprop --lr-selection-toolbar-block-start - Computed logical block anchor position.
- * @cssprop --lr-selection-toolbar-inline-shift - Computed inline collision-avoidance offset.
- * @cssprop --lr-selection-toolbar-block-shift - Computed block collision-avoidance offset.
  * @cssprop [--lr-selection-toolbar-placement-gap=var(--lr-space-s)] - Non-negative distance
  *   between the selection and toolbar, and between the toolbar and viewport during collision
  *   avoidance. Unitless pixel values and `px`, `rem`, and `em` values are resolved live; invalid values
@@ -103,7 +108,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     copy: LYRA_DEFAULT_copy,
-    open: LYRA_DEFAULT_open,
+    copyFailed: LYRA_DEFAULT_copyFailed,
     selectionAsk: LYRA_DEFAULT_selectionAsk,
     selectionCite: LYRA_DEFAULT_selectionCite,
     selectionQuote: LYRA_DEFAULT_selectionQuote,
@@ -114,16 +119,22 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   static override styles = [LyraElement.styles, styles];
 
   @property({ type: Boolean, reflect: true }) open = false;
-  @property() text = '';
+  @property() text = "";
   @property({ attribute: false }) anchor: DocumentLocator | null = null;
   @property({ attribute: false }) rect: DOMRectReadOnly | null = null;
   /**
    * Controlled action set. A focused action survives reordering by id; if it is removed, focus
    * moves to the nearest action or the stable toolbar when the set becomes empty.
    */
-  @property({ attribute: false }) actions: SelectionAction[] = ['ask', 'quote', 'cite', 'copy'];
-  @property() label = '';
-  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  @property({ attribute: false }) actions: SelectionAction[] = [
+    "ask",
+    "quote",
+    "cite",
+    "copy",
+  ];
+  @property() label = "";
+  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
+  @state() private copyFailed = false;
 
   @query('[part="toolbar"]') private toolbar?: HTMLElement;
   private overlay?: OverlayHandle;
@@ -163,7 +174,8 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     // Adoption can happen after a node was already disconnected, so independently invalidate
     // every continuation and exact owner-window subscription retained by the old document.
     this.lifecycleGeneration++;
@@ -177,7 +189,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!changed.has('actions')) return;
+    if (!changed.has("actions")) return;
     const active = deepActiveElementIn(this.ownerDocument);
     const toolbar = this.toolbar;
     if (!active || !toolbar) return;
@@ -195,12 +207,22 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('open') || changed.has('text')) this.syncOpenLifecycle();
-    if (this.open && this.text && (changed.has('rect') || changed.has('actions'))) {
+    if (changed.has("open") || changed.has("text")) this.syncOpenLifecycle();
+    if (
+      this.open &&
+      this.text &&
+      (changed.has("rect") || changed.has("actions"))
+    ) {
       this.updateToolbarPosition();
     }
-    if (this.open && this.text && (changed.has('open') || changed.has('text') || changed.has('actions'))) {
-      const pending = changed.has('actions') ? this.pendingActionFocus : undefined;
+    if (
+      this.open &&
+      this.text &&
+      (changed.has("open") || changed.has("text") || changed.has("actions"))
+    ) {
+      const pending = changed.has("actions")
+        ? this.pendingActionFocus
+        : undefined;
       this.pendingActionFocus = undefined;
       if (!pending) {
         void this.syncRovingStops();
@@ -244,7 +266,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   private dismiss(): void {
     if (!this.open) return;
     this.open = false;
-    this.emit('lr-dismiss');
+    this.emit("lr-dismiss", null);
   }
 
   private async activate(action: SelectionAction): Promise<void> {
@@ -252,23 +274,30 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     const anchor = this.anchor;
     const generation = this.lifecycleGeneration;
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
-    if (action === 'copy' && owner?.navigator.clipboard?.writeText) {
-      try {
-        await owner.navigator.clipboard.writeText(text);
-      } catch (error) {
-        if (!this.isCurrentLifecycle(generation, owner)) return;
-        this.emit('lr-copy-error', { error });
+    this.copyFailed = false;
+    if (action === "copy") {
+      const outcome = await writeClipboardText(owner, text);
+      if (!this.isCurrentLifecycle(generation, owner)) return;
+      if (!outcome.ok) {
+        this.copyFailed = true;
+        this.emit("lr-error", null);
+        this.emit("lr-copy-error", outcome);
+        return;
       }
+      this.emit("lr-copy", outcome);
     }
     if (!this.isCurrentLifecycle(generation, owner)) return;
-    this.emit('lr-selection-action', { action, text, anchor });
+    this.emit("lr-selection-action", { action, text, anchor });
   }
 
-  private isCurrentLifecycle(generation: number, owner: Window | null): boolean {
+  private isCurrentLifecycle(
+    generation: number,
+    owner: Window | null
+  ): boolean {
     return (
-      generation === this.lifecycleGeneration
-      && this.isConnected
-      && this.ownerDocument.defaultView === owner
+      generation === this.lifecycleGeneration &&
+      this.isConnected &&
+      this.ownerDocument.defaultView === owner
     );
   }
 
@@ -279,26 +308,39 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     const toolbar = this.toolbar;
     if (!toolbar) return [];
     return collectComposedFocusTargets(toolbar, {
-      mode: 'programmatic',
+      mode: "programmatic",
       includeRoot: false,
-    }).elements.filter((button) =>
-      Boolean(isSemanticActionElement(button))
-      || (this.authoredActionTabIndex.has(button)
-        ? this.authoredActionTabIndex.get(button) !== null
-        : button.hasAttribute('tabindex')));
+    }).elements.filter(
+      (button) =>
+        Boolean(isSemanticActionElement(button)) ||
+        (this.authoredActionTabIndex.has(button)
+          ? this.authoredActionTabIndex.get(button) !== null
+          : button.hasAttribute("tabindex"))
+    );
   }
 
   private actionRoots(): Element[] {
-    const builtIn = [...this.renderRoot.querySelectorAll<HTMLElement>('lr-button[data-action]')];
-    const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="actions"]');
+    const builtIn = [
+      ...this.renderRoot.querySelectorAll<HTMLElement>(
+        "lr-button[data-action]"
+      ),
+    ];
+    const slot = this.renderRoot.querySelector<HTMLSlotElement>(
+      'slot[name="actions"]'
+    );
     return [...builtIn, ...(slot?.assignedElements({ flatten: true }) ?? [])];
   }
 
   private actionForStop(stop: Element): SelectionAction | undefined {
-    const owner = [...this.renderRoot.querySelectorAll<HTMLElement>('lr-button[data-action]')]
-      .find((button) => composedContains(button, stop));
-    const action = owner?.getAttribute('data-action');
-    return action && action in ACTION_KEYS ? action as SelectionAction : undefined;
+    const owner = [
+      ...this.renderRoot.querySelectorAll<HTMLElement>(
+        "lr-button[data-action]"
+      ),
+    ].find((button) => composedContains(button, stop));
+    const action = owner?.getAttribute("data-action");
+    return action && SELECTION_ACTIONS.includes(action as SelectionAction)
+      ? (action as SelectionAction)
+      : undefined;
   }
 
   /** Whether `button` is still one of this toolbar's own stops -- rendered inside the shadow root,
@@ -315,7 +357,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   private async syncRovingStops(
     preferredIndex = this.activeActionIndex,
-    requestedRepair?: ActionFocusRepair,
+    requestedRepair?: ActionFocusRepair
   ): Promise<HTMLElement | undefined> {
     const generation = this.lifecycleGeneration;
     const owner = this.ownerDocument.defaultView;
@@ -323,32 +365,44 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     if (!owner || !this.isConnected) return undefined;
     const roots = this.actionRoots();
     await Promise.all(
-      roots.map((root) => (root as Element & { updateComplete?: Promise<unknown> }).updateComplete),
+      roots.map(
+        (root) =>
+          (root as Element & { updateComplete?: Promise<unknown> })
+            .updateComplete
+      )
     );
     await Promise.resolve();
     const buttons = this.actionButtons();
     if (
-      request !== this.rovingGeneration
-      || !this.isCurrentLifecycle(generation, owner)
-      || buttons.some(
+      request !== this.rovingGeneration ||
+      !this.isCurrentLifecycle(generation, owner) ||
+      buttons.some(
         (button) =>
-          !button.isConnected
-          || button.ownerDocument !== this.ownerDocument
-          || !this.ownsActionButton(button),
+          !button.isConnected ||
+          button.ownerDocument !== this.ownerDocument ||
+          !this.ownsActionButton(button)
       )
-    ) return undefined;
+    )
+      return undefined;
     const focused = requestedRepair ?? this.focusedAction;
     const exactIndex = focused ? buttons.indexOf(focused.stop) : -1;
-    const retainedIndex = exactIndex >= 0
-      ? exactIndex
-      : focused?.action
-        ? buttons.findIndex((button) => this.actionForStop(button) === focused.action)
+    const retainedIndex =
+      exactIndex >= 0
+        ? exactIndex
+        : focused?.action
+        ? buttons.findIndex(
+            (button) => this.actionForStop(button) === focused.action
+          )
         : -1;
-    const targetIndex = retainedIndex >= 0
-      ? retainedIndex
-      : focused
+    const targetIndex =
+      retainedIndex >= 0
+        ? retainedIndex
+        : focused
         ? Math.min(Math.max(0, focused.index), Math.max(0, buttons.length - 1))
-        : Math.min(Math.max(0, preferredIndex), Math.max(0, buttons.length - 1));
+        : Math.min(
+            Math.max(0, preferredIndex),
+            Math.max(0, buttons.length - 1)
+          );
     this.setRovingStops(buttons, targetIndex);
     const target = buttons[targetIndex];
     if (focused && target !== focused.stop) {
@@ -362,17 +416,25 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     this.actionObserver?.disconnect();
     for (const button of buttons) {
       if (!this.authoredActionTabIndex.has(button)) {
-        this.authoredActionTabIndex.set(button, button.getAttribute('tabindex'));
+        this.authoredActionTabIndex.set(
+          button,
+          button.getAttribute("tabindex")
+        );
       }
     }
     for (const previous of this.managedActionStops) {
-      if (!buttons.includes(previous) && (previous.hasAttribute('tabindex') || Boolean(isActionableElement(previous)))) {
+      if (
+        !buttons.includes(previous) &&
+        (previous.hasAttribute("tabindex") ||
+          Boolean(isActionableElement(previous)))
+      ) {
         previous.tabIndex = -1;
       }
     }
-    this.activeActionIndex = buttons.length === 0
-      ? 0
-      : Math.min(Math.max(0, index), buttons.length - 1);
+    this.activeActionIndex =
+      buttons.length === 0
+        ? 0
+        : Math.min(Math.max(0, index), buttons.length - 1);
     buttons.forEach((button, buttonIndex) => {
       button.tabIndex = buttonIndex === this.activeActionIndex ? 0 : -1;
     });
@@ -394,7 +456,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       let current: Element | null = button;
       while (current && current !== this) {
         const root = current.getRootNode();
-        if (root.nodeType === 11 && 'host' in root) roots.add(root);
+        if (root.nodeType === 11 && "host" in root) roots.add(root);
         current = composedParentElement(current);
       }
     }
@@ -402,18 +464,18 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       attributes: true,
       attributeOldValue: true,
       attributeFilter: [
-        'aria-disabled',
-        'aria-hidden',
-        'contenteditable',
-        'controls',
-        'disabled',
-        'hidden',
-        'href',
-        'inert',
-        'open',
-        'role',
-        'tabindex',
-        'type',
+        "aria-disabled",
+        "aria-hidden",
+        "contenteditable",
+        "controls",
+        "disabled",
+        "hidden",
+        "href",
+        "inert",
+        "open",
+        "role",
+        "tabindex",
+        "type",
       ],
       childList: true,
       subtree: true,
@@ -424,10 +486,14 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   private onActionMutations = (records: MutationRecord[]): void => {
     for (const record of records) {
-      if (record.type !== 'attributes' || record.attributeName !== 'tabindex') continue;
+      if (record.type !== "attributes" || record.attributeName !== "tabindex")
+        continue;
       const target = record.target as HTMLElement;
       if (this.authoredActionTabIndex.has(target)) {
-        this.authoredActionTabIndex.set(target, target.getAttribute('tabindex'));
+        this.authoredActionTabIndex.set(
+          target,
+          target.getAttribute("tabindex")
+        );
       }
     }
     void this.syncRovingStops();
@@ -442,23 +508,26 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       return;
     }
     const origin = path[0] as Partial<HTMLElement> | undefined;
-    const stop = origin?.nodeType === 1 && typeof origin.focus === 'function'
-      ? origin as HTMLElement
-      : buttons[index];
+    const stop =
+      origin?.nodeType === 1 && typeof origin.focus === "function"
+        ? (origin as HTMLElement)
+        : buttons[index];
     const toolbar = this.toolbar;
-    const repair = stop && toolbar ? captureComposedFocusRepair(stop, toolbar) : null;
-    this.focusedAction = stop && repair
-      ? { action: this.actionForStop(stop), index, repair, stop }
-      : undefined;
+    const repair =
+      stop && toolbar ? captureComposedFocusRepair(stop, toolbar) : null;
+    this.focusedAction =
+      stop && repair
+        ? { action: this.actionForStop(stop), index, repair, stop }
+        : undefined;
     void this.syncRovingStops(index);
   };
 
   private onToolbarFocusOut = (event: FocusEvent): void => {
     const destination = event.relatedTarget;
     if (
-      destination
-      && (destination as Node).nodeType === 1
-      && !composedContains(this, destination as Element)
+      destination &&
+      (destination as Node).nodeType === 1 &&
+      !composedContains(this, destination as Element)
     ) {
       this.focusedAction = undefined;
     }
@@ -467,15 +536,21 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   private onToolbarKeyDown = (event: KeyboardEvent): void => {
     const buttons = this.actionButtons();
     if (buttons.length === 0) return;
-    const originIndex = buttons.findIndex((button) => event.composedPath().includes(button));
-    const currentIndex = originIndex >= 0 ? originIndex : this.activeActionIndex;
-    const forward = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
-    const backward = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+    const originIndex = buttons.findIndex((button) =>
+      event.composedPath().includes(button)
+    );
+    const currentIndex =
+      originIndex >= 0 ? originIndex : this.activeActionIndex;
+    const forward =
+      this.effectiveDirection === "rtl" ? "ArrowLeft" : "ArrowRight";
+    const backward =
+      this.effectiveDirection === "rtl" ? "ArrowRight" : "ArrowLeft";
     let next: number;
     if (event.key === forward) next = (currentIndex + 1) % buttons.length;
-    else if (event.key === backward) next = (currentIndex - 1 + buttons.length) % buttons.length;
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = buttons.length - 1;
+    else if (event.key === backward)
+      next = (currentIndex - 1 + buttons.length) % buttons.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = buttons.length - 1;
     else return;
     event.preventDefault();
     // Arrow/Home/End is an intentional move away from the currently focused stop, so the live
@@ -485,40 +560,59 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     const owner = this.ownerDocument.defaultView;
     void this.syncRovingStops(next).then((button) => {
       if (
-        !button
-        || !this.isCurrentLifecycle(generation, owner)
-        || !button.isConnected
-        || button.ownerDocument !== this.ownerDocument
-        || !this.ownsActionButton(button)
-      ) return;
+        !button ||
+        !this.isCurrentLifecycle(generation, owner) ||
+        !button.isConnected ||
+        button.ownerDocument !== this.ownerDocument ||
+        !this.ownsActionButton(button)
+      )
+        return;
       button.focus();
     });
   };
 
   private actionPartNames(action: SelectionAction): string {
-    const parts = ['action'];
+    const parts = ["action"];
     switch (action) {
-      case 'ask':
-        parts.push('action-ask');
+      case "ask":
+        parts.push("action-ask");
         break;
-      case 'quote':
-        parts.push('action-quote');
+      case "quote":
+        parts.push("action-quote");
         break;
-      case 'cite':
-        parts.push('action-cite');
+      case "cite":
+        parts.push("action-cite");
         break;
-      case 'copy':
-        parts.push('action-copy');
+      case "copy":
+        parts.push("action-copy");
         break;
     }
-    return parts.join(' ');
+    return parts.join(" ");
+  }
+
+  private actionLabel(action: SelectionAction): string {
+    switch (action) {
+      case "ask":
+        return this.localize("selectionAsk");
+      case "quote":
+        return this.localize("selectionQuote");
+      case "cite":
+        return this.localize("selectionCite");
+      case "copy":
+        return this.localize(this.copyFailed ? "copyFailed" : "copy");
+    }
   }
 
   /** Coerces a caller-supplied `rect` to finite geometry before it reaches any style sink --
    *  `rect` is typed `DOMRectReadOnly`, but TS cannot enforce that across the property boundary,
    *  and `coordinates()` feeds a `styleMap()` whose first commit serializes the whole `style`
    *  value as one string (see `sanitizeSwatchColor`'s doc comment for why that matters). */
-  private safeRect(rect: DOMRectReadOnly): { left: number; top: number; width: number; bottom: number } {
+  private safeRect(rect: DOMRectReadOnly): {
+    left: number;
+    top: number;
+    width: number;
+    bottom: number;
+  } {
     return {
       left: finiteNumber(rect.left, 0),
       top: finiteNumber(rect.top, 0),
@@ -527,16 +621,64 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     };
   }
 
-  private coordinates(): Record<string, string> {
-    const viewportWidth = this.ownerDocument.defaultView?.innerWidth ?? 0;
-    const rect = this.rect ? this.safeRect(this.rect) : undefined;
-    const desiredInline = rect ? rect.left + rect.width / 2 : viewportWidth / 2;
-    const block = rect?.top ?? 0;
+  private viewportBounds(view: Window): {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    right: number;
+    bottom: number;
+    layoutWidth: number;
+  } {
+    const layoutWidth = Math.max(0, finiteNumber(view.innerWidth, 0));
+    const layoutHeight = Math.max(0, finiteNumber(view.innerHeight, 0));
+    const viewport = view.visualViewport;
+    const left = Math.max(0, finiteNumber(viewport?.offsetLeft ?? 0, 0));
+    const top = Math.max(0, finiteNumber(viewport?.offsetTop ?? 0, 0));
+    const width = Math.max(
+      0,
+      finiteNumber(viewport?.width ?? layoutWidth, layoutWidth)
+    );
+    const height = Math.max(
+      0,
+      finiteNumber(viewport?.height ?? layoutHeight, layoutHeight)
+    );
     return {
-      '--lr-selection-toolbar-inline-start': `${this.effectiveDirection === 'rtl'
-        ? viewportWidth - desiredInline
-        : desiredInline}px`,
-      '--lr-selection-toolbar-block-start': `${block}px`,
+      left,
+      top,
+      width,
+      height,
+      right: left + width,
+      bottom: top + height,
+      layoutWidth,
+    };
+  }
+
+  private coordinates(): Record<string, string> {
+    const view = this.ownerDocument.defaultView;
+    const viewport = view
+      ? this.viewportBounds(view)
+      : {
+          left: 0,
+          top: 0,
+          width: 0,
+          height: 0,
+          right: 0,
+          bottom: 0,
+          layoutWidth: 0,
+        };
+    const rect = this.rect ? this.safeRect(this.rect) : undefined;
+    const desiredInline = rect
+      ? rect.left + rect.width / 2
+      : viewport.left + viewport.width / 2;
+    const block = rect?.top ?? viewport.top;
+    return {
+      "--_lr-selection-toolbar-inline-start": `${
+        this.effectiveDirection === "rtl"
+          ? viewport.layoutWidth - desiredInline
+          : desiredInline
+      }px`,
+      "--_lr-selection-toolbar-block-start": `${block}px`,
     };
   }
 
@@ -544,14 +686,15 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
    *  custom property. Placement works in viewport pixels, so it must not pass an unresolved CSS
    *  expression into geometry math; unsupported values retain the historical 8px fallback. */
   private placementGapPx(): number {
-    const raw = this.ownerDocument.defaultView
-      ?.getComputedStyle(this)
-      .getPropertyValue('--lr-selection-toolbar-placement-gap')
-      .trim() ?? '';
+    const raw =
+      this.ownerDocument.defaultView
+        ?.getComputedStyle(this)
+        .getPropertyValue("--lr-selection-toolbar-placement-gap")
+        .trim() ?? "";
     return finiteRange(
-      resolveCssLength(raw, this) ?? DEFAULT_PLACEMENT_GAP_PX,
+      resolveCssLength(raw, { host: this }) ?? DEFAULT_PLACEMENT_GAP_PX,
       DEFAULT_PLACEMENT_GAP_PX,
-      0,
+      0
     );
   }
 
@@ -561,31 +704,53 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     if (!toolbar || !view) return;
     const gap = this.placementGapPx();
     const edge = gap;
-    const rect = this.safeRect(this.rect ?? new view.DOMRect(view.innerWidth / 2, 0, 0, 0));
+    const viewport = this.viewportBounds(view);
+    const rect = this.safeRect(
+      this.rect ??
+        new view.DOMRect(viewport.left + viewport.width / 2, viewport.top, 0, 0)
+    );
+    toolbar.style.setProperty(
+      "--_lr-selection-toolbar-max-inline-size",
+      `${Math.max(0, viewport.width - edge * 2)}px`
+    );
+    toolbar.style.setProperty(
+      "--_lr-selection-toolbar-max-block-size",
+      `${Math.max(0, viewport.height - edge * 2)}px`
+    );
     const width = toolbar.offsetWidth;
     const height = toolbar.offsetHeight;
     const desiredInline = rect.left + rect.width / 2;
     const desiredLeft = desiredInline - width / 2;
-    const maxLeft = Math.max(edge, view.innerWidth - width - edge);
-    const left = Math.min(maxLeft, Math.max(edge, desiredLeft));
+    const minLeft = viewport.left + edge;
+    const maxLeft = Math.max(minLeft, viewport.right - width - edge);
+    const left = Math.min(maxLeft, Math.max(minLeft, desiredLeft));
     const above = rect.top - height - gap;
     const below = rect.bottom + gap;
-    const desiredTop = above >= edge ? above : below;
-    const maxTop = Math.max(edge, view.innerHeight - height - edge);
-    const top = Math.min(maxTop, Math.max(edge, desiredTop));
+    const minTop = viewport.top + edge;
+    const desiredTop = above >= minTop ? above : below;
+    const maxTop = Math.max(minTop, viewport.bottom - height - edge);
+    const top = Math.min(maxTop, Math.max(minTop, desiredTop));
     const logicalInline =
-      this.effectiveDirection === 'rtl' ? view.innerWidth - desiredInline : desiredInline;
-    toolbar.style.setProperty('--lr-selection-toolbar-inline-start', `${logicalInline}px`);
-    toolbar.style.setProperty('--lr-selection-toolbar-block-start', `${rect.top}px`);
+      this.effectiveDirection === "rtl"
+        ? viewport.layoutWidth - desiredInline
+        : desiredInline;
     toolbar.style.setProperty(
-      '--lr-selection-toolbar-inline-shift',
-      `${left - (desiredInline - width / 2)}px`,
+      "--_lr-selection-toolbar-inline-start",
+      `${logicalInline}px`
     );
     toolbar.style.setProperty(
-      '--lr-selection-toolbar-block-shift',
-      `${top - (rect.top - height)}px`,
+      "--_lr-selection-toolbar-block-start",
+      `${rect.top}px`
     );
-    toolbar.toggleAttribute('data-positioned', true);
+    toolbar.style.setProperty(
+      "--_lr-selection-toolbar-inline-shift",
+      `${left - (desiredInline - width / 2)}px`
+    );
+    toolbar.style.setProperty(
+      "--_lr-selection-toolbar-block-shift",
+      `${top - (rect.top - height)}px`
+    );
+    toolbar.toggleAttribute("data-positioned", true);
   };
 
   private startPositioning(): void {
@@ -596,27 +761,38 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     const generation = this.positioningGeneration;
     const update = (): void => {
       if (
-        generation !== this.positioningGeneration
-        || !this.isConnected
-        || this.ownerDocument.defaultView !== view
-        || this.toolbar !== toolbar
-      ) return;
+        generation !== this.positioningGeneration ||
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== view ||
+        this.toolbar !== toolbar
+      )
+        return;
       this.updateToolbarPosition();
     };
+    let resizeFrame: number | undefined;
+    const scheduleResizeUpdate = (): void => {
+      if (resizeFrame !== undefined) return;
+      resizeFrame = view.requestAnimationFrame(() => {
+        resizeFrame = undefined;
+        update();
+      });
+    };
     const observer =
-      typeof view.ResizeObserver === 'undefined'
+      typeof view.ResizeObserver === "undefined"
         ? undefined
-        : new view.ResizeObserver(update);
+        : new view.ResizeObserver(scheduleResizeUpdate);
     observer?.observe(toolbar);
-    view.addEventListener('resize', update);
-    view.visualViewport?.addEventListener('resize', update);
-    view.visualViewport?.addEventListener('scroll', update);
+    view.addEventListener("resize", update);
+    view.visualViewport?.addEventListener("resize", update);
+    view.visualViewport?.addEventListener("scroll", update);
     update();
     this.stopPositioning = () => {
       observer?.disconnect();
-      view.removeEventListener('resize', update);
-      view.visualViewport?.removeEventListener('resize', update);
-      view.visualViewport?.removeEventListener('scroll', update);
+      if (resizeFrame !== undefined) view.cancelAnimationFrame(resizeFrame);
+      resizeFrame = undefined;
+      view.removeEventListener("resize", update);
+      view.visualViewport?.removeEventListener("resize", update);
+      view.visualViewport?.removeEventListener("scroll", update);
     };
   }
 
@@ -629,7 +805,9 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   override render(): TemplateResult {
     if (!this.open || !this.text) return html`${nothing}`;
-    const label = this.accessibleLabel || this.label || this.localize('selectionToolbarLabel');
+    const label =
+      this.accessibleLabel ??
+      (this.label || this.localize("selectionToolbarLabel"));
     return html`<div
       part="toolbar"
       role="toolbar"
@@ -639,21 +817,23 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       @focusin=${this.onToolbarFocusIn}
       @focusout=${this.onToolbarFocusOut}
       @keydown=${this.onToolbarKeyDown}
-    >${this.actions.map((action) => html`<lr-button
-        part=${this.actionPartNames(action)}
-        data-action=${action}
-        size="xs"
-        appearance="plain"
-        @click=${() => void this.activate(action)}
-      >${this.localize(ACTION_KEYS[action])}</lr-button>`)}<slot
-        name="actions"
-        @slotchange=${this.onActionsSlotChange}
-      ></slot></div>`;
+    >
+      ${this.actions.map(
+        (action) => html`<lr-button
+          part=${this.actionPartNames(action)}
+          data-action=${action}
+          size="xs"
+          appearance="plain"
+          @click=${() => void this.activate(action)}
+          >${this.actionLabel(action)}</lr-button
+        >`
+      )}<slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
+    </div>`;
   }
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-selection-toolbar': LyraSelectionToolbar;
+    "lr-selection-toolbar": LyraSelectionToolbar;
   }
 }

@@ -23,7 +23,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_next, LYRA_DEFAULT_previous, LYRA_DEFAULT_tourDone, LYRA_DEFAULT_tourSkip, LYRA_DEFAULT_tourStepOf } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 /** Default distance (px) between the target and the popover -- see `LyraTour.distance`. */
 const DEFAULT_DISTANCE = 12;
 /** Default extra px between a target's own box and the spotlight cutout/ring -- see
@@ -42,38 +41,39 @@ const DEFAULT_SPOTLIGHT_PADDING = 4;
  * resolvers, non-`HTMLElement` results, and detached elements all follow the documented
  * target-missing path instead of rejecting the component update.
  */
-export type TourTarget = string | HTMLElement | (() => HTMLElement | null);
+export type LyraTourTarget = string | HTMLElement | (() => HTMLElement | null);
 
-export interface TourStep {
-  /** Stable id for this step. Used in event details/DOM bookkeeping, never shown to the user. */
-  id: string;
+export interface LyraTourStep {
+  /** Stable business id for this step, never shown to the user. Collection occurrences remain
+   *  unambiguous through the public `index`/`activeIndex` contract even when ids repeat. */
+  readonly stepId: string;
   /** The element this step spotlights and anchors its popover to. */
-  target: TourTarget;
+  readonly target: LyraTourTarget;
   /** Visible step heading -- becomes the popover panel's accessible name via `aria-labelledby`.
-   *  Required: every step always has a name, so `<lr-tour>` never needs a generic fallback
-   *  label of its own. Plain text; not localized by this component (caller-supplied data, per
-   *  the library's i18n exception for app content). */
-  heading: string;
+   *  Plain text; not localized by this component (caller-supplied data, per the library's i18n
+   *  exception for app content). A blank/whitespace heading is tolerated defensively and falls
+   *  back to the localized step-progress text for the dialog name. */
+  readonly heading: string;
   /** Visible step body copy. Rendered as plain text (Lit auto-escapes -- no HTML/markdown
    *  parsing). Ignored for the currently active step if the default slot carries real content
    *  (see the class doc's Slots section) -- the slot wins when both are present. */
-  content?: string;
+  readonly content?: string;
   /** Per-step Floating UI placement override. Falls back to the tour-level `placement` prop
    *  (`'bottom'`) when omitted. Resolved through `rtlAwarePlacement()` before being passed to
    *  `place()`, same as `lr-menu`/`lr-popover`. */
-  placement?: Placement;
+  readonly placement?: Placement;
   /** Per-step override of the tour-level `spotlightPadding` prop (`4`). Extra px between the
    *  target's own box and the spotlight cutout/ring. `distance` (the offset between the target
    *  and the popover itself) is a tour-level-only setting -- it has no per-step override. */
-  spotlightPadding?: number;
+  readonly spotlightPadding?: number;
   /** Opts this step's target OUT of the tour's default non-interactive-spotlight behavior --
    *  see the class doc's "Target interactivity" section. Defaults to `false`. */
-  interactiveTarget?: boolean;
+  readonly interactiveTarget?: boolean;
   /** Hides the Previous control outright (not just disables it) for this step -- e.g. a step
    *  reached only via a side effect that can't be cleanly reversed. Defaults to `false`; compare
    *  with the first step, whose Previous control is disabled-but-visible instead, for a stable
    *  footer layout across steps. */
-  hidePrevious?: boolean;
+  readonly hidePrevious?: boolean;
 }
 
 /**
@@ -83,7 +83,7 @@ export interface TourStep {
  * other than its own `end()` (mirrors `lr-dialog`'s identical `'unmount'` case); any other
  * string is whatever a caller passes to `end()` directly.
  */
-export type TourEndReason =
+export type LyraTourEndReason =
   | 'completed'
   | 'skip'
   | 'escape'
@@ -92,15 +92,18 @@ export type TourEndReason =
   | (string & Record<never, never>);
 
 export interface LyraTourEventMap {
-  'lr-tour-start': CustomEvent<{ index: number }>;
+  'lr-tour-start': CustomEvent<{ readonly index: number }>;
   'lr-tour-step-change': CustomEvent<{
-    index: number;
-    previousIndex: number;
-    step: TourStep;
-    via: 'next' | 'back' | 'goto';
+    readonly index: number;
+    readonly previousIndex: number;
+    readonly step: Readonly<LyraTourStep>;
+    readonly via: 'next' | 'back' | 'goto';
   }>;
-  'lr-tour-end': CustomEvent<TourEndReason>;
-  'lr-tour-target-missing': CustomEvent<{ index: number; step: TourStep }>;
+  'lr-tour-end': CustomEvent<LyraTourEndReason>;
+  'lr-tour-target-missing': CustomEvent<{
+    readonly index: number;
+    readonly step: Readonly<LyraTourStep>;
+  }>;
 }
 
 // Punches a rectangular hole (viewport minus the padded target rect) into the backdrop's own
@@ -164,11 +167,13 @@ function isHtmlElementNode(value: unknown): value is HTMLElement {
  * **Focus management.** Default steps exclusively own interaction: the shared overlay manager
  * marks outside content inert, traps Tab, and the panel reports `aria-modal="true"`.
  * `interactiveTarget` steps instead use a nonmodal overlay, report `aria-modal="false"`, and
- * explicitly route Tab between the panel and the external target.
+ * treat the panel plus the external target's live composed focusables as one bounded Tab scope.
  *
- * Each step transition mounts a genuinely new popover DOM node (keyed on the step's `id`) so
- * focus reliably re-enters the panel every time, even though the Previous/Next button that
- * triggered the transition lives inside that same persistent-looking region.
+ * Each step transition mounts a genuinely new popover DOM node (keyed on occurrence index plus
+ * the step's `stepId`) so duplicate business ids cannot collapse distinct occurrences and focus
+ * reliably re-enters the panel every time, even though the Previous/Next button that triggered
+ * the transition lives inside that same persistent-looking region. Every step-related event
+ * exposes the occurrence index; it is the authoritative collection identity.
  *
  * No `Home`/`End` jump-to-first/last-step shortcut and no click-to-jump progress dots, unlike
  * `lr-stepper` -- a tour's steps are tied to live DOM targets that may not exist until an
@@ -191,7 +196,7 @@ function isHtmlElementNode(value: unknown): value is HTMLElement {
  *   skip past it). This is a deliberate departure from `lr-carousel`'s non-cancelable
  *   `lr-slide-change`.
  * @event lr-tour-end - Fired by `end()` (and by `next()` on the last step, with reason
- *   `'completed'`). `detail: TourEndReason`. Conditionally cancelable: every ordinary end can be
+ *   `'completed'`). `detail: LyraTourEndReason`. Conditionally cancelable: every ordinary end can be
  *   vetoed, while `'unmount'` cannot because the element is already being removed -- mirrors
  *   `lr-dialog-close` exactly.
  * @event lr-tour-target-missing - The active step's `target` did not resolve to a connected
@@ -241,21 +246,37 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  static override properties = {
+    steps: { attribute: false, noAccessor: true },
+  };
+
   /** Whether the tour is open. Set this (or call `start()`/`end()`) -- there is no separate
    *  `show()`/`hide()` pair. */
   @property({ type: Boolean, reflect: true }) open = false;
 
-  /** Ordered step data. Never mutated by this component -- see the class doc's controlled-
-   *  component contract. Empty (the default) renders nothing. */
-  @property({ attribute: false }) steps: TourStep[] = [];
+  private _steps: readonly Readonly<LyraTourStep>[] = Object.freeze([]);
+
+  /** Ordered step data. Assignment takes a shallow frozen snapshot, so later caller mutation
+   *  cannot silently change rendering or an emitted event. Empty (the default) renders nothing. */
+  get steps(): readonly Readonly<LyraTourStep>[] {
+    return this._steps;
+  }
+
+  set steps(next: readonly LyraTourStep[]) {
+    const previous = this._steps;
+    const source = Array.isArray(next) ? next : [];
+    this._steps = Object.freeze(source.map((step) => Object.freeze({ ...step })));
+    this.requestUpdate('steps', previous);
+  }
 
   /** Index of the currently active step, clamped to `[0, steps.length - 1]` by `goToStep()` --
    *  and, for a direct property/attribute assignment that bypasses that method (e.g. two-way
    *  binding an external store, or a bad `active-index` attribute), normalized the same way in
    *  `willUpdate()` below. */
-  @property({ type: Number, reflect: true, attribute: 'active-index' }) activeIndex = 0;
+  @property({ type: Number, reflect: true, attribute: 'active-index' })
+  activeIndex = 0;
 
-  /** Tour-level default Floating UI placement, overridable per step via `TourStep.placement`. */
+  /** Tour-level default Floating UI placement, overridable per step via `LyraTourStep.placement`. */
   @property({ reflect: true }) placement: Placement = 'bottom';
 
   /** Distance (px) between the target and the popover, passed straight to Floating UI's
@@ -264,7 +285,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   @property({ type: Number }) distance = DEFAULT_DISTANCE;
 
   /** Tour-level default extra px between a target's own box and the spotlight cutout/ring,
-   *  overridable per step via `TourStep.spotlightPadding`. Non-negative. */
+   *  overridable per step via `LyraTourStep.spotlightPadding`. Non-negative. */
   @property({ type: Number, attribute: 'spotlight-padding' }) spotlightPadding = DEFAULT_SPOTLIGHT_PADDING;
 
   /** Whether a backdrop click dismisses the tour (`end('skip')`). Defaults to `false`, matching
@@ -273,7 +294,12 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   @property({ type: Boolean, attribute: 'light-dismiss' }) lightDismiss = false;
 
   /** Whether the built-in "Step X of Y" progress indicator (dots + text) renders in the footer. */
-  @property({ type: Boolean, attribute: 'show-progress', converter: trueDefaultBooleanConverter }) showProgress = true;
+  @property({
+    type: Boolean,
+    attribute: 'show-progress',
+    converter: trueDefaultBooleanConverter,
+  })
+  showProgress = true;
 
   /** Host-level `aria-label` override for every step popover's accessible name -- wins over each
    *  step's own `heading`, matching `lr-dialog`'s `accessibleLabel` pattern. Most consumers
@@ -289,8 +315,10 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   private placeCleanup?: () => void;
   private spotlightCleanup?: () => void;
   private interactiveKeyboardTarget?: HTMLElement;
+  private interactiveKeyboardDocument?: Document;
   private overlayInteractive?: boolean;
   private activeTargetSnapshot: HTMLElement | null = null;
+  private focusReturnTarget: HTMLElement | null = null;
 
   private readonly maskId = nextId('tour-mask');
   private readonly headingId = nextId('tour-heading');
@@ -318,6 +346,8 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       this.deactivateOverlayInternal();
     } else if (changed.has('open')) {
       if (this.open) {
+        const active = deepActiveElement(this.ownerDocument);
+        this.focusReturnTarget = isHtmlElementNode(active) ? active : null;
         this.activateOverlayInternal();
       } else {
         this.deactivateOverlayInternal();
@@ -339,13 +369,9 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const activationChanged = changed.has('open') || changed.has('activeIndex') || changed.has('steps');
-    const geometryChanged =
-      changed.has('placement') ||
-      changed.has('distance') ||
-      changed.has('spotlightPadding');
+    const geometryChanged = changed.has('placement') || changed.has('distance') || changed.has('spotlightPadding');
     if (this.open && (activationChanged || geometryChanged)) {
-      const preserveInteractiveTargetFocus =
-        changed.has('steps') && this.canPreserveInteractiveTargetFocus();
+      const preserveInteractiveTargetFocus = changed.has('steps') && this.canPreserveInteractiveTargetFocus();
       const overlayChanged = this.activateOverlayInternal();
       if (
         changed.has('open') ||
@@ -412,7 +438,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     if (this.steps.length === 0) return;
     this.activeIndex = this.clampIndex(index);
     this.open = true;
-    this.emit('lr-tour-start', { index: this.activeIndex });
+    this.emit('lr-tour-start', Object.freeze({ index: this.activeIndex }));
   }
 
   /** Advances to the next step. On the last step, ends the tour instead (`end('completed')`) --
@@ -450,7 +476,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   /** Ends the tour. `reason` is forwarded as the `lr-tour-end` detail. Cancelable (except in
    *  practice for `'unmount'`) -- mirrors `LyraDialog.close(reason)` exactly. */
-  end(reason: TourEndReason = 'api'): void {
+  end(reason: LyraTourEndReason = 'api'): void {
     if (!this.open) return;
     const event = this.emit('lr-tour-end', reason, { cancelable: true });
     if (event.defaultPrevented) return;
@@ -469,25 +495,23 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     if (!step) return;
     const event = this.emit(
       'lr-tour-step-change',
-      { index, previousIndex, step, via },
+      Object.freeze({ index, previousIndex, step, via }),
       { cancelable: true },
     );
     if (event.defaultPrevented) return;
     this.activeIndex = index;
   }
 
-  private resolveTarget(step: TourStep): HTMLElement | null {
+  private resolveTarget(step: LyraTourStep): HTMLElement | null {
     try {
       const { target } = step;
       const resolved =
         typeof target === 'string'
           ? this.ownerDocument.querySelector(target)
           : typeof target === 'function'
-            ? target()
-            : target;
-      return isHtmlElementNode(resolved) &&
-        resolved.isConnected &&
-        resolved.ownerDocument === this.ownerDocument
+          ? target()
+          : target;
+      return isHtmlElementNode(resolved) && resolved.isConnected && resolved.ownerDocument === this.ownerDocument
         ? resolved
         : null;
     } catch {
@@ -500,10 +524,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     const step = this.steps[this.activeIndex];
     if (!previousTarget?.isConnected || !step?.interactiveTarget) return false;
     const currentTarget = this.activeTargetSnapshot;
-    return (
-      currentTarget === previousTarget &&
-      composedContains(previousTarget, deepActiveElement(this.ownerDocument))
-    );
+    return currentTarget === previousTarget && composedContains(previousTarget, deepActiveElement(this.ownerDocument));
   }
 
   // Uses the activation's normalized target snapshot, scrolls it into view, and (re)wires the shared
@@ -520,10 +541,13 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
     if (!target?.isConnected) {
       if (options.announceMissing) {
-        this.emit('lr-tour-target-missing', {
-          index: this.activeIndex,
-          step,
-        });
+        this.emit(
+          'lr-tour-target-missing',
+          Object.freeze({
+            index: this.activeIndex,
+            step,
+          }),
+        );
       }
       return;
     }
@@ -547,15 +571,12 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       offset: finiteNumber(this.distance, DEFAULT_DISTANCE),
     });
 
-    const padding = finiteRange(
-      step.spotlightPadding ?? this.spotlightPadding,
-      DEFAULT_SPOTLIGHT_PADDING,
-      0,
-    );
+    const padding = finiteRange(step.spotlightPadding ?? this.spotlightPadding, DEFAULT_SPOTLIGHT_PADDING, 0);
     const interactive = !!step.interactiveTarget;
     if (interactive) {
       this.interactiveKeyboardTarget = target;
-      target.addEventListener('keydown', this.onInteractiveTargetKeyDown);
+      this.interactiveKeyboardDocument = target.ownerDocument;
+      this.interactiveKeyboardDocument.addEventListener('keydown', this.onInteractiveScopeKeyDown, true);
     }
     this.spotlightCleanup = trackRect(target, (rect) => this.paintSpotlight(rect, padding, interactive));
   }
@@ -592,7 +613,8 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.placeCleanup = undefined;
     this.spotlightCleanup?.();
     this.spotlightCleanup = undefined;
-    this.interactiveKeyboardTarget?.removeEventListener('keydown', this.onInteractiveTargetKeyDown);
+    this.interactiveKeyboardDocument?.removeEventListener('keydown', this.onInteractiveScopeKeyDown, true);
+    this.interactiveKeyboardDocument = undefined;
     this.interactiveKeyboardTarget = undefined;
   }
 
@@ -613,6 +635,10 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       onEscape: () => this.end('escape'),
       onBackdrop: () => this.end('skip'),
       preferredInitialFocus: () => this.renderRoot.querySelector<HTMLElement>('[part="popover"]'),
+      restoreFocusTo: () => {
+        const target = this.focusReturnTarget;
+        return target?.isConnected && target.ownerDocument === this.ownerDocument ? target : null;
+      },
       modal: !interactive,
       trapFocus: !interactive,
       lockScroll: true,
@@ -628,6 +654,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.overlay?.deactivate();
     this.overlay = undefined;
     this.overlayInteractive = undefined;
+    this.focusReturnTarget = null;
   }
 
   private onBackdropClick = (): void => {
@@ -640,27 +667,56 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   };
 
   private ownsDirectionalKeys(event: KeyboardEvent): boolean {
-    return event.composedPath().some(
-      (node) =>
-        isElementNode(node) &&
-        node.matches(
-          'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="combobox"], [role="grid"], [role="gridcell"], [role="listbox"], [role="menu"], [role="menuitem"], [role="radio"], [role="radiogroup"], [role="scrollbar"], [role="slider"], [role="spinbutton"], [role="tab"], [role="tablist"], [role="tree"], [role="treeitem"]',
-        ),
-    );
+    return event
+      .composedPath()
+      .some(
+        (node) =>
+          isElementNode(node) &&
+          node.matches(
+            'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="combobox"], [role="grid"], [role="gridcell"], [role="listbox"], [role="menu"], [role="menuitem"], [role="radio"], [role="radiogroup"], [role="scrollbar"], [role="slider"], [role="spinbutton"], [role="tab"], [role="tablist"], [role="tree"], [role="treeitem"]',
+          ),
+      );
   }
 
-  private onInteractiveTargetKeyDown = (event: KeyboardEvent): void => {
-    if (event.key !== 'Tab' || event.defaultPrevented) return;
+  private onInteractiveScopeKeyDown = (event: KeyboardEvent): void => {
+    if (event.key !== 'Tab' || event.defaultPrevented || !this.open) return;
     const popover = this.renderRoot.querySelector<HTMLElement>('[part="popover"]');
     if (!popover) return;
     const target = this.interactiveKeyboardTarget;
     if (!target) return;
-    const targetFocusable = collectFocusableElements(target);
-    const current = event.composedPath()[0];
-    const boundary = event.shiftKey ? targetFocusable[0] : targetFocusable.at(-1);
-    if (current !== boundary) return;
     const panelFocusable = collectFocusableElements(popover);
-    const destination = event.shiftKey ? panelFocusable.at(-1) : panelFocusable[0];
+    const targetFocusable = collectFocusableElements(target);
+    if (panelFocusable.length === 0 && targetFocusable.length === 0) {
+      event.preventDefault();
+      popover.focus();
+      return;
+    }
+
+    const active = deepActiveElement(this.ownerDocument);
+    const panelIndex = panelFocusable.findIndex(
+      (candidate) => active === candidate || composedContains(candidate, active),
+    );
+    const targetIndex = targetFocusable.findIndex(
+      (candidate) => active === candidate || composedContains(candidate, active),
+    );
+    const destination =
+      panelIndex >= 0
+        ? event.shiftKey && panelIndex === 0
+          ? targetFocusable.at(-1) ?? panelFocusable.at(-1)
+          : !event.shiftKey && panelIndex === panelFocusable.length - 1
+          ? targetFocusable[0] ?? panelFocusable[0]
+          : undefined
+        : targetIndex >= 0
+        ? event.shiftKey && targetIndex === 0
+          ? panelFocusable.at(-1) ?? targetFocusable.at(-1)
+          : !event.shiftKey && targetIndex === targetFocusable.length - 1
+          ? panelFocusable[0] ?? targetFocusable[0]
+          : undefined
+        : active === popover && !event.shiftKey
+        ? undefined
+        : event.shiftKey
+        ? targetFocusable.at(-1) ?? panelFocusable.at(-1)
+        : panelFocusable[0] ?? targetFocusable[0];
     if (!destination) return;
     event.preventDefault();
     destination.focus();
@@ -668,24 +724,6 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   private onPopoverKeyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented) return;
-    const step = this.steps[this.activeIndex];
-    if (event.key === 'Tab' && step?.interactiveTarget) {
-      const target = this.interactiveKeyboardTarget;
-      const popover = this.renderRoot.querySelector<HTMLElement>('[part="popover"]');
-      if (target && popover) {
-        const panelFocusable = collectFocusableElements(popover);
-        const current = event.composedPath()[0];
-        const boundary = event.shiftKey ? panelFocusable[0] : panelFocusable.at(-1);
-        if (current === boundary || (event.shiftKey && current === popover)) {
-          const targetFocusable = collectFocusableElements(target);
-          const destination = event.shiftKey ? targetFocusable.at(-1) : targetFocusable[0];
-          if (!destination) return;
-          event.preventDefault();
-          destination.focus();
-          return;
-        }
-      }
-    }
     if (this.ownsDirectionalKeys(event)) return;
 
     const rtl = this.effectiveDirection === 'rtl';
@@ -714,6 +752,12 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
     const total = this.steps.length;
     const isLastStep = this.activeIndex >= total - 1;
+    const headingName = (step.heading ?? '').trim();
+    const suppliedName = this.accessibleLabel?.trim() ?? '';
+    const fallbackName = this.localize('tourStepOf', undefined, {
+      current: this.formatProgressNumber(this.activeIndex + 1),
+      total: this.formatProgressNumber(total),
+    });
     const hasBodyContent = this.hasSlotContent || !!step.content;
     const describedBy = [hasBodyContent ? this.bodyId : '', this.showProgress ? this.progressTextId : '']
       .filter((id) => id.length > 0)
@@ -735,20 +779,20 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       </svg>
       <div part="spotlight" aria-hidden="true" ?hidden=${this.unanchored}></div>
       ${keyed(
-        step.id,
+        JSON.stringify([this.activeIndex, step.stepId]),
         html`
           <div
             part="popover"
             role="dialog"
             aria-modal=${step.interactiveTarget ? 'false' : 'true'}
             tabindex="-1"
-            aria-label=${this.accessibleLabel ?? nothing}
-            aria-labelledby=${this.accessibleLabel ? nothing : this.headingId}
+            aria-label=${suppliedName || !headingName ? suppliedName || fallbackName : nothing}
+            aria-labelledby=${suppliedName || !headingName ? nothing : this.headingId}
             aria-describedby=${describedBy || nothing}
             ?data-unanchored=${this.unanchored}
             @keydown=${this.onPopoverKeyDown}
           >
-            <span id=${this.headingId} part="heading">${step.heading}</span>
+            <span id=${this.headingId} part="heading">${step.heading ?? ''}</span>
             <div id=${this.bodyId} part="body">
               <slot @slotchange=${this.onDefaultSlotChange}></slot>${this.hasSlotContent ? nothing : step.content ?? ''}
             </div>
@@ -764,7 +808,11 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
                     <span class="dots">
                       ${this.steps.map(
                         (_s, index) =>
-                          html`<span part="progress-dot" aria-hidden="true" ?data-current=${index === this.activeIndex}></span>`,
+                          html`<span
+                            part="progress-dot"
+                            aria-hidden="true"
+                            ?data-current=${index === this.activeIndex}
+                          ></span>`,
                       )}
                     </span>
                   </div>

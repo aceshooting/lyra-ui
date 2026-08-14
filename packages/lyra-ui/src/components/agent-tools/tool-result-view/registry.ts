@@ -43,22 +43,13 @@ export interface ToolRenderContext {
   reportStatus: (status: ToolResultStatus) => void;
 }
 
-/**
- * One registered renderer. Either `render` is present directly, or `load` is
- * -- a definition registered purely as `{ load }` is expected to resolve (via
- * dynamic `import()`, typically) to the real `render`/`matches` pair on
- * first use, so a host app can code-split a rarely-used or heavy renderer
- * (e.g. one pulling in a charting library) instead of paying for it on every
- * page that merely registers it.
- *
- * `matches` is only ever consulted *before* `load` resolves when it's
- * supplied inline at registration time -- a definition that needs
- * shape-based dispatch and also wants to lazy-load its `render` should
- * register a lightweight synchronous `matches` up front alongside `load`;
- * one that dispatches purely by exact tool-name key doesn't need `matches`
- * at all, loaded or not.
- */
-export interface ToolRendererDefinition {
+interface ToolRendererDefinitionBase {
+  /** Facade/shape-based dispatch predicate -- see the module doc's dispatch order. */
+  matches?: (payload: unknown) => boolean;
+}
+
+/** A renderer whose implementation is already available synchronously. */
+export interface DirectToolRendererDefinition extends ToolRendererDefinitionBase {
   /**
    * Renders `result` (and the tool-call `args` that produced it, when
    * available) as UI. Typed loosely as `unknown` rather than Lit's
@@ -73,17 +64,31 @@ export interface ToolRendererDefinition {
    * failure (or any other `ToolResultStatus`) while still rendering real content, instead of
    * throwing and losing that content to the `<lr-json-viewer>` fallback.
    */
-  render?: (result: unknown, args: unknown, context?: ToolRenderContext) => unknown;
-  /** Facade/shape-based dispatch predicate -- see the module doc's dispatch order. */
-  matches?: (payload: unknown) => boolean;
+  render: (result: unknown, args: unknown, context?: ToolRenderContext) => unknown;
+  /** Direct definitions cannot also declare a lazy loader. */
+  load?: never;
+}
+
+/** A code-split renderer definition. Its loader must resolve to a direct renderer. */
+export interface LazyToolRendererDefinition extends ToolRendererDefinitionBase {
+  /** Lazy definitions cannot ambiguously carry a direct renderer too. */
+  render?: never;
   /**
    * Lazy loader for a code-split renderer. Resolves to either a definition
    * directly, or a `{ default }`-shaped module namespace object (so
    * `load: () => import('./my-renderer.js')` works unmodified when that
    * module's default export is itself a `ToolRendererDefinition`).
    */
-  load?: () => Promise<ToolRendererDefinition | { default: ToolRendererDefinition }>;
+  load: () => Promise<DirectToolRendererDefinition | { default: DirectToolRendererDefinition }>;
 }
+
+/**
+ * One registered renderer, expressed as an exclusive direct-or-lazy union. Runtime registry
+ * boundaries validate the same contract, including registries assembled from plain JavaScript.
+ * A lazy definition supplies its lightweight `matches` predicate before loading and resolves to a
+ * direct definition carrying `render`; `{}`, `{ render, load }`, and nested lazy results are invalid.
+ */
+export type ToolRendererDefinition = DirectToolRendererDefinition | LazyToolRendererDefinition;
 
 /** A tool-name -> renderer-definition registry, as consulted by `findToolRenderer()`. */
 export type ToolRendererRegistry = Map<string, ToolRendererDefinition>;
@@ -100,10 +105,34 @@ const defaultRegistry: ToolRendererRegistry = new Map();
  * definition the "call `load()` at most once" behavior a repeatedly-dispatched
  * lazy renderer needs.
  */
-let loadCache = new WeakMap<ToolRendererDefinition, Promise<ToolRendererDefinition>>();
+let loadCache = new WeakMap<LazyToolRendererDefinition, Promise<DirectToolRendererDefinition>>();
+
+function rendererShape(def: unknown): 'direct' | 'lazy' | undefined {
+  if (def === null || typeof def !== 'object' || Array.isArray(def)) return undefined;
+  const candidate = def as { render?: unknown; load?: unknown; matches?: unknown };
+  if (candidate.matches !== undefined && typeof candidate.matches !== 'function') return undefined;
+  const hasRender = typeof candidate.render === 'function';
+  const hasLoad = typeof candidate.load === 'function';
+  if (hasRender === hasLoad) return undefined;
+  return hasRender ? 'direct' : 'lazy';
+}
+
+function assertRendererDefinition(def: unknown): asserts def is ToolRendererDefinition {
+  const shape = rendererShape(def);
+  if (!shape) {
+    throw new TypeError('<lr-tool-result-view>: renderer must provide exactly one of render() or load()');
+  }
+}
+
+function assertDirectRendererDefinition(def: unknown): asserts def is DirectToolRendererDefinition {
+  if (rendererShape(def) !== 'direct') {
+    throw new TypeError('<lr-tool-result-view>: a loaded renderer must provide render() and no load()');
+  }
+}
 
 /** Registers (or overwrites) the renderer for `name` in the default registry. */
 export function registerToolRenderer(name: string, def: ToolRendererDefinition): void {
+  assertRendererDefinition(def);
   defaultRegistry.set(name, def);
 }
 
@@ -126,17 +155,22 @@ export function findToolRenderer(
   registry: ToolRendererRegistry = defaultRegistry,
 ): ToolRendererDefinition | undefined {
   const exact = registry.get(toolName);
-  if (exact) return exact;
+  if (exact) {
+    assertRendererDefinition(exact);
+    return exact;
+  }
   for (const def of registry.values()) {
+    assertRendererDefinition(def);
     if (def.matches?.(payload)) return def;
   }
   return undefined;
 }
 
-function isModuleWrapper(
-  mod: ToolRendererDefinition | { default: ToolRendererDefinition },
-): mod is { default: ToolRendererDefinition } {
-  return 'default' in mod && typeof mod.default === 'object' && mod.default !== null;
+function unwrapLoadedRenderer(mod: unknown): unknown {
+  if (mod !== null && typeof mod === 'object' && !Array.isArray(mod) && 'default' in mod) {
+    return (mod as { default?: unknown }).default;
+  }
+  return mod;
 }
 
 /**
@@ -149,11 +183,16 @@ function isModuleWrapper(
  * failure) gets a fresh `load()` call rather than being stuck replaying one
  * failed promise forever.
  */
-export function loadToolRenderer(def: ToolRendererDefinition): Promise<ToolRendererDefinition> {
+export function loadToolRenderer(def: ToolRendererDefinition): Promise<DirectToolRendererDefinition> {
+  assertRendererDefinition(def);
   if (!def.load) return Promise.resolve(def);
   const cached = loadCache.get(def);
   if (cached) return cached;
-  const promise = def.load().then((mod) => (isModuleWrapper(mod) ? mod.default : mod));
+  const promise = def.load().then((mod): DirectToolRendererDefinition => {
+    const resolved = unwrapLoadedRenderer(mod);
+    assertDirectRendererDefinition(resolved);
+    return resolved;
+  });
   loadCache.set(def, promise);
   promise.catch(() => loadCache.delete(def));
   return promise;

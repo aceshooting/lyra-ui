@@ -21,11 +21,28 @@ const strings: LyraLocaleStrings = {
   terminalLabel: 'خروجی ترمینال',
   terminalDownload: 'دانلود گزارش',
   terminalHighlightLine: 'خط {line}',
-  schemaViewerIssueLimit: 'فقط {count} مشکل نخستِ اعتبارسنجی نمایش داده می‌شود.',
-  toolParamMissingProperty: 'کلید الزامی «{key}» ویژگی متناظری در طرح‌واره ندارد.',
+  schemaViewerIssueLimit:
+    'فقط {count} مشکل نخستِ اعتبارسنجی نمایش داده می‌شود.',
+  toolParamMissingProperty:
+    'کلید الزامی «{key}» ویژگی متناظری در طرح‌واره ندارد.',
+  toolParamBooleanUnset: 'تنظیم نشده',
+  toolParamBooleanTrue: 'درست',
+  toolParamBooleanFalse: 'نادرست',
+  toolParamSchemaLimit:
+    'طرح‌واره‌های پارامتر ابزار حداکثر از {fields} فیلد و {options} گزینه برای هر فیلد پشتیبانی می‌کنند.',
+  testResultsLimit: 'فقط {count} نتیجهٔ آزمون نخست نمایش داده می‌شود.',
+  toolTimelineLimit: 'حداکثر {count} فراخوانی ابزار نمایش داده می‌شود.',
+  toolSelectLimit: 'فقط {count} ابزار نخست نمایش داده می‌شود.',
   sequenceStripEmpty: 'موردی وجود ندارد',
   sequenceStripCategoryCount: '{label}: {count}',
   noColumns: 'هیچ ستونی پیکربندی نشده است',
+  dataGridColumnMenu: 'گزینه‌های {label}',
+  dataGridPinStart: 'سنجاق کردن {label} به ابتدا',
+  dataGridPinEnd: 'سنجاق کردن {label} به انتها',
+  dataGridUnpin: 'برداشتن سنجاق {label}',
+  dataGridRowsPerPage: 'تعداد ردیف در هر صفحه',
+  dataGridTreeLimitReached:
+    'از نمایش ردیف‌های تودرتوی بیشتر صرف‌نظر شد، زیرا به حد درخت شبکهٔ داده رسید.',
   loadMore: 'بارگیری بیشتر',
   viewerSearchMatchCount: {
     one: '{count} تطابق',
@@ -135,6 +152,9 @@ const strings: LyraLocaleStrings = {
   chartPrimaryAxis: 'محور اصلی',
   chartSecondaryAxis: 'محور ثانویه',
   chartPointLabel: 'نقطه {n}',
+  chartPointCoordinates: 'مختصات x: {x}، مختصات y: {y}',
+  chartBubblePointCoordinates: 'مختصات x: {x}، مختصات y: {y}، شعاع: {radius}',
+  chartLabeledPoint: '{label} — {coordinates}',
   resetZoom: 'بازنشانی بزرگ‌نمایی',
   chatSending: 'در حال ارسال…',
   chatResponding: 'در حال پاسخ‌گویی…',
@@ -171,7 +191,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} کلید',
     other: '{count} کلید',
   },
-  jsonViewerLimit: 'فقط {count} گرهٔ نخست JSON و {depth} سطح تودرتو نمایش داده و جست‌وجو می‌شوند.',
+  jsonViewerLimit:
+    'فقط {count} گرهٔ نخست JSON و {depth} سطح تودرتو نمایش داده و جست‌وجو می‌شوند.',
   untitledSource: 'منبع بدون عنوان',
   sourcePageSuffix: '{base} - ص. {page}',
   toolCall: 'فراخوانی ابزار',
@@ -187,7 +208,8 @@ const strings: LyraLocaleStrings = {
   promptStudioVariableName: 'نام متغیر {index}',
   promptStudioVariableValue: 'مقدار متغیر {index}',
   schemaViewerLimit: 'فقط {count} گرهٔ نخست طرح‌واره نمایش داده می‌شود.',
-  subagentPanelLimit: 'فقط {count} اجرای نخستِ عامل‌های فرعی نمایش داده می‌شود.',
+  subagentPanelLimit:
+    'فقط {count} اجرای نخستِ عامل‌های فرعی نمایش داده می‌شود.',
   pollPause: 'مکث',
   pollResume: 'ادامه',
   pollInactive: 'غیرفعال',
@@ -263,12 +285,15 @@ const strings: LyraLocaleStrings = {
   documentViewerLabel: 'نمایشگر سند',
   attachmentPreviewName: 'پیش‌نمایش {name}',
   attachmentPreviewFile: 'پیش‌نمایش فایل',
-  documentViewerMissingSanitizer: 'برای نمایش ایمن، باید بستهٔ اختیاری «dompurify» نصب باشد.',
+  documentViewerMissingSanitizer:
+    'برای نمایش ایمن، باید بستهٔ اختیاری «dompurify» نصب باشد.',
   docxViewerLabel: 'سند ورد',
-  docxViewerMissingConverter: 'برای تبدیل این سند، باید بستهٔ اختیاری «mammoth» نصب باشد.',
+  docxViewerMissingConverter:
+    'برای تبدیل این سند، باید بستهٔ اختیاری «mammoth» نصب باشد.',
   svgViewerLabel: 'تصویر SVG',
   htmlViewerLabel: 'سند HTML',
-  datasetViewerMissingParser: 'برای تجزیهٔ این فایل، باید بستهٔ اختیاری «papaparse» نصب باشد.',
+  datasetViewerMissingParser:
+    'برای تجزیهٔ این فایل، باید بستهٔ اختیاری «papaparse» نصب باشد.',
   datasetViewerEmpty: 'این مجموعه داده هیچ ردیفی ندارد.',
   datasetViewerCaption: '{count} ردیف',
   datasetViewerCaptionNamed: '{name}: {count} ردیف',
@@ -280,7 +305,8 @@ const strings: LyraLocaleStrings = {
   contactViewerAddressLabel: 'آدرس',
   contactViewerOrganization: 'سازمان: {value}',
   contactViewerTypedValue: '{value} ({types})',
-  contactViewerAddressFormat: '{poBox}\n{extendedAddress}\n{streetAddress}\n{locality} {region} {postalCode}\n{country}',
+  contactViewerAddressFormat:
+    '{poBox}\n{extendedAddress}\n{streetAddress}\n{locality} {region} {postalCode}\n{country}',
   contactViewerTypeHome: 'خانه',
   contactViewerTypeWork: 'محل کار',
   contactViewerTypeCell: 'موبایل',
@@ -311,10 +337,14 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'نمودار {type} بدون داده.',
   chartSummarySeparator: '. ',
   chartData: 'داده‌های نمودار',
-  chartDataSampled: 'جدول دادهٔ تولیدشده نمونه‌ای شامل حداکثر ۱٬۰۰۰ رکورد را نشان می‌دهد. برای دسترسی به همهٔ داده‌های نمودار، یک جدول دادهٔ سفارشی فراهم کنید.',
-  chartZoomUnavailable: 'بزرگ‌نمایی در دسترس نیست، اما نمودار اصلی همچنان در دسترس است.',
-  chartDataLabelsUnavailable: 'برچسب‌های داده در دسترس نیستند، اما نمودار اصلی همچنان در دسترس است.',
-  chartStackTotalsUnavailable: 'جمع‌های پشته‌ای در دسترس نیستند، اما نمودار اصلی همچنان در دسترس است.',
+  chartDataSampled:
+    'جدول دادهٔ تولیدشده نمونه‌ای شامل حداکثر ۱٬۰۰۰ رکورد را نشان می‌دهد. برای دسترسی به همهٔ داده‌های نمودار، یک جدول دادهٔ سفارشی فراهم کنید.',
+  chartZoomUnavailable:
+    'بزرگ‌نمایی در دسترس نیست، اما نمودار اصلی همچنان در دسترس است.',
+  chartDataLabelsUnavailable:
+    'برچسب‌های داده در دسترس نیستند، اما نمودار اصلی همچنان در دسترس است.',
+  chartStackTotalsUnavailable:
+    'جمع‌های پشته‌ای در دسترس نیستند، اما نمودار اصلی همچنان در دسترس است.',
   chart: 'نمودار',
   chartTypeLine: 'خطی',
   chartTypeBar: 'میله‌ای',
@@ -324,7 +354,8 @@ const strings: LyraLocaleStrings = {
   chartTypeRadar: 'رادار',
   chartTypePolarArea: 'ناحیهٔ قطبی',
   chartTypeBubble: 'حباب',
-  boxPlotSeriesSummary: '{label}: {count} توزیع، بازهٔ میانه از {min} تا {max}، روند میانهٔ {trend}',
+  boxPlotSeriesSummary:
+    '{label}: {count} توزیع، بازهٔ میانه از {min} تا {max}، روند میانهٔ {trend}',
   boxPlotSummaryWithData: 'نمودار جعبه‌ای. {summaries}.',
   boxPlotSummaryEmpty: 'نمودار جعبه‌ای بدون داده.',
   boxPlotData: 'داده‌های نمودار جعبه‌ای',
@@ -372,7 +403,8 @@ const strings: LyraLocaleStrings = {
   timeInputInvalid: 'زمان را به‌طور کامل وارد کنید.',
   timeInputMinMessage: 'زمان باید در {min} یا پس از آن باشد.',
   timeInputMaxMessage: 'زمان باید در {max} یا قبل از آن باشد.',
-  timeInputRangeMessage: 'زمان باید در بازهٔ {min} تا {max} که از نیمه‌شب می‌گذرد باشد.',
+  timeInputRangeMessage:
+    'زمان باید در بازهٔ {min} تا {max} که از نیمه‌شب می‌گذرد باشد.',
   timeInputStepMessage: 'زمانی منطبق با فاصلهٔ زمانی لازم وارد کنید.',
   documentPreviewEmpty: 'برای نمایش {type} وجود ندارد.',
   convertingDocument: 'در حال تبدیل سند…',
@@ -382,7 +414,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeImage: 'تصویر',
   documentPreviewTypeEmail: 'ایمیل',
   documentPreviewTypeCalendar: 'تقویم',
-  archiveViewerUnavailable: 'پیش‌نمایش بایگانی در دسترس نیست.',
   archiveViewerEmpty: 'این آرشیو خالی است',
   archiveViewerFolder: 'پوشه',
   archiveViewerFile: 'فایل',
@@ -405,7 +436,10 @@ const strings: LyraLocaleStrings = {
   fileInputFolderRejected: 'پوشه‌ها در اینجا پذیرفته نمی‌شوند.',
   fileInputRejectedType: '{filename}: این نوع فایل پذیرفته نیست.',
   fileInputRejectedSize: '{filename}: این فایل خیلی بزرگ است.',
-  fileInputRejectedCount: '{filename}: در هر بار فقط یک فایل را می‌توان انتخاب کرد.',
+  fileInputRejectedCount:
+    '{filename}: در هر بار فقط یک فایل را می‌توان انتخاب کرد.',
+  fileInputRejectedRead: '{filename}: فایل خوانده نشد.',
+  fileInputRejectedLimit: '{filename}: پوشه دارای ورودی‌های بیش از حد است.',
   elapsedMinutesSecondsTemplate: '{minutes} دقیقه {seconds} ثانیه',
   graphNode: 'گره {label}',
   graphLink: 'پیوند از {source} به {target}',
@@ -418,13 +452,19 @@ const strings: LyraLocaleStrings = {
   graphCommunity: 'انجمن {label}، {count} گره',
   heatmapValueLabel: 'مقدار',
   heatmapMatrixCellLabel: 'ردیف {row}، ستون {col}: {value}',
-  heatmapCalendarLabel: 'نقشهٔ حرارتی تقویمی برای {days} روز، بازهٔ {label}: {range}',
-  heatmapMatrixLabel: 'نقشهٔ حرارتی با {rows} × {cols} سلول، بازهٔ {label}: {range}',
+  heatmapCalendarLabel:
+    'نقشهٔ حرارتی تقویمی برای {days} روز، بازهٔ {label}: {range}',
+  heatmapMatrixLabel:
+    'نقشهٔ حرارتی با {rows} × {cols} سلول، بازهٔ {label}: {range}',
   heatmapCalendarCellLabel: '{date}: {value}',
   heatmapNoDataValue: 'بدون داده',
   heatmapDefaultRowLabel: 'ردیف {n}',
   heatmapDefaultColLabel: 'ستون {n}',
   heatmapSelectedCellLabel: 'انتخاب شده: {cell}.',
+  heatmapProjectionLimit:
+    'فقط {count} سلول نخست نقشهٔ حرارتی نمایش داده می‌شود.',
+  heatmapDecorationLimit:
+    'در نقشهٔ حرارتی، فقط {count} مورد نخست از هر دستهٔ رنگ، نقطهٔ راهنما و حاشیه‌نویسی نمایش داده می‌شود.',
   inputLabel: 'متن',
   showPassword: 'نمایش رمز عبور',
   hidePassword: 'پنهان کردن رمز عبور',
@@ -628,7 +668,8 @@ const strings: LyraLocaleStrings = {
   },
   copyFailed: 'کپی ناموفق بود',
   colorPickerSaturationBrightness: 'اشباع و روشنایی',
-  colorPickerSaturationBrightnessValue: 'اشباع {saturation}٪، روشنایی {brightness}٪',
+  colorPickerSaturationBrightnessValue:
+    'اشباع {saturation}٪، روشنایی {brightness}٪',
   colorPickerHue: 'فام',
   colorPickerHueValue: '{hue} درجه',
   colorPickerOpacity: 'کدورت',
@@ -642,7 +683,8 @@ const strings: LyraLocaleStrings = {
   selectSelectedOverflow: '+{n} بیشتر',
   iconLoadError: 'نماد بارگیری نشد.',
   iconTooLarge: 'فایل نماد برای نمایش خیلی بزرگ است.',
-  iconSanitizerMissing: 'برای نمایش ایمن این نماد، باید بستهٔ اختیاری «dompurify» نصب باشد.',
+  iconSanitizerMissing:
+    'برای نمایش ایمن این نماد، باید بستهٔ اختیاری «dompurify» نصب باشد.',
   paginationFirstPage: 'صفحه اول',
   paginationLastPage: 'صفحه آخر',
   accessibleLabelSeparator: ' — ',
@@ -695,7 +737,8 @@ const strings: LyraLocaleStrings = {
   kbdAltWord: 'دگرساز',
   kbdShiftWord: 'شیفت',
   emailViewerLabel: 'نمایشگر ایمیل',
-  emailViewerMissingParser: 'برای تجزیهٔ این پیام، باید بستهٔ اختیاری «postal-mime» را نصب کنید.',
+  emailViewerMissingParser:
+    'برای تجزیهٔ این پیام، باید بستهٔ اختیاری «postal-mime» را نصب کنید.',
   emailViewerFrom: 'از',
   emailViewerTo: 'به',
   emailViewerSubject: 'موضوع',
@@ -707,16 +750,27 @@ const strings: LyraLocaleStrings = {
   emailViewerHideQuoted: 'پنهان کردن متن نقل‌قول‌شده',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'نمایشگر تقویم',
-  calendarViewerMissingParser: 'برای تجزیهٔ این تقویم، باید بستهٔ اختیاری «ical.js» را نصب کنید.',
+  calendarViewerMissingParser:
+    'برای تجزیهٔ این تقویم، باید بستهٔ اختیاری «ical.js» را نصب کنید.',
   calendarViewerEmpty: 'این تقویم هیچ رویدادی ندارد.',
   calendarViewerNoSummary: '(بدون عنوان)',
   pdfViewerLabel: 'سند PDF',
-  pdfViewerMissingLibrary: 'برای نمایش فایل‌های PDF، باید بستهٔ اختیاری «pdfjs-dist» را نصب کنید.',
-  qrCodeMissingLibrary: 'برای نمایش کدهای QR، باید بستهٔ اختیاری «qrcode» را نصب کنید.',
+  pdfViewerMissingLibrary:
+    'برای نمایش فایل‌های PDF، باید بستهٔ اختیاری «pdfjs-dist» را نصب کنید.',
+  qrCodeMissingLibrary:
+    'برای نمایش کدهای QR، باید بستهٔ اختیاری «qrcode» را نصب کنید.',
   qrCodeGenerationFailed: 'این مقدار را نمی‌توان به‌صورت کد QR رمزگذاری کرد.',
-  mapMissingLibrary: 'برای نمایش نقشه، باید بستهٔ اختیاری «maplibre-gl» را نصب کنید.',
-  chartMissingLibrary: 'برای نمایش نمودارها، باید بستهٔ اختیاری «chart.js» را نصب کنید.',
-  boxPlotMissingLibrary: 'برای نمایش نمودارهای جعبه‌ای، باید بستهٔ اختیاری نمودار جعبه‌ای را نصب کنید.',
+  mapMissingLibrary:
+    'برای نمایش نقشه، باید بستهٔ اختیاری «maplibre-gl» را نصب کنید.',
+  mapStyleRequired: 'برای نمایش نقشه، یک سبک نقشه ارائه کنید.',
+  mapWebglUnavailable:
+    'این مرورگر نمی‌تواند پشتیبانی گرافیکی لازم برای نمایش نقشه را فراهم کند.',
+  mapInitializationFailed: 'نقشه راه‌اندازی نشد.',
+  mapLegend: 'راهنمای نقشه',
+  chartMissingLibrary:
+    'برای نمایش نمودارها، باید بستهٔ اختیاری «chart.js» را نصب کنید.',
+  boxPlotMissingLibrary:
+    'برای نمایش نمودارهای جعبه‌ای، باید بستهٔ اختیاری نمودار جعبه‌ای را نصب کنید.',
   graphMissingLibrary: 'برای نمایش گراف، باید بستهٔ اختیاری «d3» را نصب کنید.',
   pdfViewerPageOf: 'صفحه {page} از {total}',
   pdfViewerZoomIn: 'بزرگ‌نمایی',
@@ -768,6 +822,7 @@ const strings: LyraLocaleStrings = {
   traceTree: 'درخت ردیابی',
   traceTreeSpanStatus: '{name} — {status}',
   traceTreeMetricLabel: '{label}: {value}',
+  spanProjectionLimit: 'فقط {count} بازهٔ نخست نمایش داده می‌شود.',
   agentTraceFilterLabel: 'انواع بازه‌های رهگیری',
   spanKindAgent: 'عامل',
   spanKindLlm: 'LLM',
@@ -817,8 +872,10 @@ const strings: LyraLocaleStrings = {
   imageViewerAnnotate: 'حاشیه‌نویسی',
   imageViewerHighlightsLabel: 'ناحیه‌های برجسته‌شده',
   imageViewerUnlabeledHighlight: 'ناحیهٔ برجستهٔ {index}',
-  imageViewerAnnotationHint: 'حالت حاشیه‌نویسی فعال است. برای ایجاد یک ناحیه Enter را فشار دهید؛ سپس برای جابه‌جایی آن از کلیدهای جهت، برای تغییر اندازه از Shift همراه کلیدهای جهت، برای ذخیره از Enter و برای لغو از Escape استفاده کنید.',
-  imageViewerAnnotationBoxPosition: 'ناحیه در مختصات {x} و {y} درصد، با ابعاد {width} در {height} درصد.',
+  imageViewerAnnotationHint:
+    'حالت حاشیه‌نویسی فعال است. برای ایجاد یک ناحیه Enter را فشار دهید؛ سپس برای جابه‌جایی آن از کلیدهای جهت، برای تغییر اندازه از Shift همراه کلیدهای جهت، برای ذخیره از Enter و برای لغو از Escape استفاده کنید.',
+  imageViewerAnnotationBoxPosition:
+    'ناحیه در مختصات {x} و {y} درصد، با ابعاد {width} در {height} درصد.',
   imageViewerAnnotationAdded: 'ناحیه اضافه شد.',
   imageViewerAnnotationCancelled: 'ایجاد ناحیه لغو شد.',
   transcriptFeedLabel: 'رونوشت',
@@ -830,6 +887,8 @@ const strings: LyraLocaleStrings = {
   commitCardShowFiles: 'نمایش {count} فایل تغییریافته',
   commitCardHideFiles: 'پنهان کردن {count} فایل تغییریافته',
   stackTraceLabel: 'ردیابی پشته',
+  stackTraceLimit:
+    'بخشی از محتوای ردیابی پشته به‌دلیل رسیدن به محدودیت نمایش حذف شد.',
   stackTraceShowFrames: 'نمایش {count} فریم داخلی',
   stackTraceHideFrames: 'پنهان کردن {count} فریم داخلی',
   statusSkipped: 'ردشده',
@@ -839,7 +898,8 @@ const strings: LyraLocaleStrings = {
   testResultsSkipped: '{count} ردشده',
   testResultsRunning: '{count} در حال اجرا',
   testResultsFilterLabel: 'فیلتر بر اساس وضعیت',
-  testResultsCompleteAnnounce: '{passed} موفق، {failed} ناموفق، {skipped} ردشده',
+  testResultsCompleteAnnounce:
+    '{passed} موفق، {failed} ناموفق، {skipped} ردشده',
   testResultsExpandTest: 'گسترش {name}',
   testResultsCollapseTest: 'جمع کردن {name}',
   envListLabel: 'متغیرهای محیطی',
@@ -876,7 +936,8 @@ const strings: LyraLocaleStrings = {
   notebookViewerLabel: 'نمایشگر نوت‌بوک',
   notebookViewerInvalid: 'این فایل یک نوت‌بوک معتبر Jupyter نیست.',
   notebookViewerUnsupportedVersion: 'قالب نوت‌بوک {version} پشتیبانی نمی‌شود.',
-  notebookViewerTooManyCells: 'این نوت‌بوک برای نمایش سلول‌های بیش از حدی دارد.',
+  notebookViewerTooManyCells:
+    'این نوت‌بوک برای نمایش سلول‌های بیش از حدی دارد.',
   notebookViewerInPrompt: 'ورودی [{count}]',
   notebookViewerInPromptEmpty: 'ورودی [ ]',
   notebookViewerCodeCell: 'سلول کد {index}',
@@ -912,7 +973,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} عارضه',
     other: '{count} عارضه',
   },
-  geojsonViewMissingMapLibrary: 'برای نمایش این فایل روی نقشه، وابستگی اختیاری maplibre-gl را نصب کنید. در غیر این صورت GeoJSON خام نمایش داده می‌شود.',
+  geojsonViewMissingMapLibrary:
+    'برای نمایش این فایل روی نقشه، وابستگی اختیاری maplibre-gl را نصب کنید. در غیر این صورت GeoJSON خام نمایش داده می‌شود.',
   mindMapLabel: 'نقشهٔ ذهنی',
   mindMapTopicStatus: '{label}، سطح {level}، {count} زیرموضوع',
   mindMapLeafStatus: '{label}، سطح {level}',
@@ -940,13 +1002,16 @@ const strings: LyraLocaleStrings = {
   scoreTierLow: 'ارتباط کم',
   chunkInspectorEmpty: 'هیچ قطعه‌ای بازیابی نشد',
   flowCanvasLabel: 'بوم گردش‌کار',
+  flowCanvasLayoutLimit:
+    'بخشی از جزئیات ترتیب یال‌ها نمایش داده نشد، زیرا به حد پردازش چیدمان گردش‌کار رسید.',
   flowCanvasSummary: 'گردش‌کار با {nodeCount} گره و {edgeCount} یال',
   flowNode: 'گره {label}',
   flowEdge: 'یال از {source} به {target}',
   flowEdgeWithLabel: '{label}، یال از {source} به {target}',
   flowItemAnnouncement: '{item} ({index} از {total})',
   dashboardGridLabel: 'شبکهٔ داشبورد',
-  dashboardCellCollisionRejected: '{label} را نمی‌توان در آنجا قرار داد، زیرا با سلول دیگری هم‌پوشانی دارد.',
+  dashboardCellCollisionRejected:
+    '{label} را نمی‌توان در آنجا قرار داد، زیرا با سلول دیگری هم‌پوشانی دارد.',
   dashboardCellMoved: '{label} به ستون {x}، ردیف {y} منتقل شد.',
   dashboardCellResized: 'اندازهٔ {label} به عرض {w} و ارتفاع {h} تغییر کرد.',
   flowEdgeList: 'یال‌های گردش‌کار',
@@ -954,7 +1019,8 @@ const strings: LyraLocaleStrings = {
   flowNodeDeselected: 'انتخاب {label} لغو شد',
   flowSelectionCleared: 'انتخاب‌ها پاک شدند',
   flowNodeMoved: '{label} به {x}، {y} منتقل شد',
-  flowConnectStarted: 'اتصال از {label} آغاز شد. با کلیدهای جهت یک مقصد انتخاب کنید؛ برای اتصال Enter و برای لغو Escape را فشار دهید.',
+  flowConnectStarted:
+    'اتصال از {label} آغاز شد. با کلیدهای جهت یک مقصد انتخاب کنید؛ برای اتصال Enter و برای لغو Escape را فشار دهید.',
   flowConnectTarget: 'در حال اتصال {source} به {target} ({index} از {total})',
   flowConnectCommitted: '{source} به {target} متصل شد',
   flowConnectCancelled: 'اتصال لغو شد',
@@ -963,7 +1029,8 @@ const strings: LyraLocaleStrings = {
   flowControlsLabel: 'کنترل‌های بوم',
   flowMinimapLabel: 'مروری بر گردش کار',
   flowMinimapViewport: 'ناحیهٔ قابل مشاهده',
-  flowMinimapInstructions: 'کلیدهای جهت، نما را جابه‌جا می‌کنند. کلیدهای مثبت و منفی بزرگ‌نمایی را تغییر می‌دهند. Enter یا Home گردش‌کار را در نما جا می‌دهد.',
+  flowMinimapInstructions:
+    'کلیدهای جهت، نما را جابه‌جا می‌کنند. کلیدهای مثبت و منفی بزرگ‌نمایی را تغییر می‌دهند. Enter یا Home گردش‌کار را در نما جا می‌دهد.',
   flowMinimapViewportChanged: 'موقعیت {x}، {y}. بزرگ‌نمایی {zoom}.',
   nodePaletteLabel: 'پالت گره',
   nodePalettePlaceholder: 'جست‌وجوی گره‌ها…',
@@ -989,7 +1056,7 @@ const strings: LyraLocaleStrings = {
   neighborExpand: 'گسترش {label} در گراف',
   neighborListEmpty: 'رابطه‌ای وجود ندارد',
   neighborGroupHeader: '{relation} ({count})',
-  flowRunOverlayLabel: 'وضعیت اجرا',
+  flowRunStatusLabel: 'وضعیت اجرا',
   flowRunSummary: '{done} مرحله از {total} مرحله تکمیل شده است',
   flowRunStepStatus: '{label}: {status}',
   flowRunStatusCount: '{status}: {count}',
@@ -1058,7 +1125,8 @@ const strings: LyraLocaleStrings = {
   memoryPanelConfirmAddHeading: 'این مورد به حافظهٔ بلندمدت افزوده شود؟',
   memoryPanelConfirmRemoveHeading: 'این مورد حذف شود؟',
   memoryPanelConfirmForgetHeading: 'همهٔ خاطره‌های بلندمدت فراموش شوند؟',
-  memoryPanelConfirmForgetBody: 'با این کار، همهٔ {count} خاطرهٔ بلندمدت برای همیشه فراموش می‌شوند.',
+  memoryPanelConfirmForgetBody:
+    'با این کار، همهٔ {count} خاطرهٔ بلندمدت برای همیشه فراموش می‌شوند.',
   graphExplorerLabel: 'کاوشگر گراف دانش',
   graphExplorerSearchPlaceholder: 'جست‌وجوی موجودیت‌ها…',
   graphExplorerSearchResultsLabel: 'نتایج جست‌وجو',
@@ -1090,7 +1158,8 @@ const strings: LyraLocaleStrings = {
   claimEvidenceContradicted: 'نقض‌شده',
   claimEvidenceConfidence: 'اطمینان {percent}',
   retrievalCompareLabel: 'مقایسهٔ بازیابی',
-  retrievalCompareEmpty: 'هیچ مجموعه‌ای از نتایج بازیابی برای مقایسه وجود ندارد',
+  retrievalCompareEmpty:
+    'هیچ مجموعه‌ای از نتایج بازیابی برای مقایسه وجود ندارد',
   retrievalCompareOverlap: 'هم‌پوشانی Top-k بین {left} و {right}: {percent}',
   retrievalCompareRank: 'رتبه {rank}',
   retrievalCompareDenseScore: 'چگال',
@@ -1102,7 +1171,8 @@ const strings: LyraLocaleStrings = {
   ragEvalDashboardRuns: 'اجراهای ارزیابی',
   ragEvalDashboardSlices: 'بخش‌های ارزیابی',
   ragEvalDashboardAllSlices: 'همه',
-  ragEvalDashboardSliceUnavailable: 'هیچ اجرای ارزیابی برای {slice} در دسترس نیست.',
+  ragEvalDashboardSliceUnavailable:
+    'هیچ اجرای ارزیابی برای {slice} در دسترس نیست.',
   promptStudioLabel: 'استودیوی درخواست',
   promptStudioMessages: 'پیام‌های درخواست',
   promptStudioVariables: 'متغیرها',
@@ -1208,7 +1278,8 @@ const strings: LyraLocaleStrings = {
   documentCompareNoVersion: 'نسخه‌ای ارائه نشده است.',
   documentCompareLabel: 'مقایسه اسناد',
   agentRunCurrentStepLabel: 'مرحله فعلی',
-  graphQueryHopRangeInvalid: 'حداکثر تعداد گام‌ها باید دست‌کم برابر حداقل باشد.',
+  graphQueryHopRangeInvalid:
+    'حداکثر تعداد گام‌ها باید دست‌کم برابر حداقل باشد.',
   graphQueryRelationshipTypeLabel: 'نوع رابطه',
   graphQueryNodeTypeLabel: 'نوع گره',
   graphQueryBuilderLabel: 'سازندهٔ پرس‌وجوی گراف',
@@ -1238,13 +1309,15 @@ const strings: LyraLocaleStrings = {
   evaluationRunLabel: 'اجرای ارزیابی',
   evaluationRunProgressLabel: 'پیشرفت دسته‌ای ارزیابی',
   retrievalFilterChipLabel: '{key}: {value}',
-  retrievalSearchEmptyDescription: 'عبارت جست‌وجو یا فیلترهای دیگری را امتحان کنید.',
+  retrievalSearchEmptyDescription:
+    'عبارت جست‌وجو یا فیلترهای دیگری را امتحان کنید.',
   groundingSummaryEvidenceSpan: 'نویسه‌های {start}–{end}',
   contextInspectorTruncatedCount: 'کوتاه‌شده — {count} توکن حذف شده است',
   contextInspectorSegmentTokens: '{tokens} توکن',
   knowledgeBaseDocumentCount: '{count} مورد نمایه‌شده',
   knowledgeBaseRowActionsLabel: 'اقدامات برای {name}',
-  knowledgeBaseEmptyDescription: 'برای آغاز نمایه‌سازی محتوا، یک منبع اضافه کنید.',
+  knowledgeBaseEmptyDescription:
+    'برای آغاز نمایه‌سازی محتوا، یک منبع اضافه کنید.',
   ingestionChunkCount: {
     one: '{count} قطعه',
     other: '{count} قطعه',
@@ -1264,7 +1337,8 @@ const strings: LyraLocaleStrings = {
   evaluationRunExampleCancelledAnnounce: '{label} لغو شد',
   evaluationRunExampleWaitingInputAnnounce: '{label} به ورودی نیاز دارد',
   evaluationRunExampleWaitingApprovalAnnounce: '{label} به تأیید نیاز دارد',
-  evaluationRunProgressSummary: '{completed} نمونه از {total} نمونه تکمیل شده است',
+  evaluationRunProgressSummary:
+    '{completed} نمونه از {total} نمونه تکمیل شده است',
   evaluationRunRunningCount: '{count} در حال اجرا',
   evaluationRunFailedCount: '{count} ناموفق',
   retrievalStageQueryRewrite: 'بازنویسی پرس‌وجو',
@@ -1287,6 +1361,8 @@ const strings: LyraLocaleStrings = {
   flagLoadError: 'پرچم در دسترس نیست',
   moveUp: 'حرکت به بالا',
   moveDown: 'حرکت به پایین',
+  reorderMovePending: 'مرتب‌سازی مجدد در انتظار است.',
+  reorderMoveCancelled: 'مرتب‌سازی مجدد لغو شد.',
   reorderItemMoved: 'به موقعیت {index} از {total} منتقل شد',
 };
 

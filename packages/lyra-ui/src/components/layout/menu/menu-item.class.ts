@@ -1,4 +1,11 @@
-import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
+import {
+  html,
+  nothing,
+  svg,
+  type PropertyValues,
+  type SVGTemplateResult,
+  type TemplateResult,
+} from 'lit';
 import { html as staticHtml, unsafeStatic } from 'lit/static-html.js';
 import { property, state } from 'lit/decorators.js';
 import {
@@ -10,16 +17,20 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon, spinnerIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
-import type { MenuFocusTarget, SubmenuPanel } from './menu-shared.js';
+import type { LyraSize } from '../../../internal/variants.js';
+import {
+  menuItemOwner,
+  submenuPanelController,
+  type MenuFocusTarget,
+  type MenuItemOwner,
+  type SubmenuPanel,
+} from './menu-shared.js';
 import { styles } from './menu-item.styles.js';
 
 export type MenuItemType = 'normal' | 'checkbox';
-export type MenuItemVariant = LyraVariant | 'default';
+export type MenuItemVariant = 'default' | 'danger';
 
 const menuTag = unsafeStatic(tag('menu'));
-const SUBMENU_TRANSLATE = 'var(--_lr-menu-item-submenu-translation) 0';
-
 export interface MenuItemChangeDetail {
   value: string;
   checked: boolean;
@@ -63,7 +74,6 @@ export interface MenuItemStateChangeDetail {
 
 export interface LyraMenuItemEventMap {
   'lr-menu-item-state-change': CustomEvent<MenuItemStateChangeDetail>;
-  'lr-menu-item-select': CustomEvent<undefined>;
   'lr-menu-item-change': CustomEvent<MenuItemChangeDetail>;
 }
 /**
@@ -100,12 +110,9 @@ export interface LyraMenuItemEventMap {
  * one-submenu-per-level rule — and drives it through `openSubmenu()` /
  * `closeSubmenu()`; this element owns the ARIA, the naming, and the panel
  * wiring. Because a submenu parent is a disclosure rather than an action, it
- * never fires `lr-menu-item-select`, and `type="checkbox"` has no effect on
- * one. The submenu's own selections travel up as the *outer* menu's single
- * consolidated `lr-menu-select` — there is no separate nested-selection
- * event. The panel's `lr-show`/`lr-hide` stop here rather than surfacing on
- * the ancestor menu, where a consumer would read them as that menu closing;
- * listen on the submenu element itself for those.
+ * never activates the menu, and `type="checkbox"` has no effect on one. A submenu selection is
+ * the same single `lr-select` event bubbling through the outer menu — there is no separate nested
+ * selection event or public child-to-menu event.
  *
  * The default label slot's flattened subtree is visual-only: it is inert and
  * hidden from assistive technology so the focusable host remains the row's
@@ -127,9 +134,7 @@ export interface LyraMenuItemEventMap {
  * parent's Enter/Space handling via `select()`) first fires a cancelable
  * `lr-menu-item-change` with the proposed next `checked` value, then mutates
  * `checked` unless a listener prevents that event. It fires
- * `lr-menu-item-select` afterwards either way, so a parent `<lr-menu>` still
- * closes and re-fires its consolidated `lr-menu-select` exactly as it does
- * for a `type="normal"` item. `type="normal"` (the default) renders and
+ * the owning menu's canonical `lr-select` afterwards either way. `type="normal"` (the default) renders and
  * behaves exactly as before this option existed — no role, rendering, or
  * event differences.
  *
@@ -145,19 +150,11 @@ export interface LyraMenuItemEventMap {
  * @slot suffix - Shoelace-compatible decorative trailing content. Its flattened subtree is inert and
  *   hidden from assistive technology.
  * @slot submenu - A nested `<lr-menu>` or direct mapped menu items that open beside this row.
- * @event lr-menu-item-select - This item was activated (click, or the
- * parent `<lr-menu>`'s own Enter/Space handling of the roving-focused
- * item). No detail payload — a listener already has `event.target` (this
- * element) to read `value` off of, and `<lr-menu>` itself consumes this
- * event to close and re-fire it as its own consolidated `lr-menu-select`
- * (`detail: { value }`) rather than requiring a consumer to listen on every
- * individual item — listen there instead unless you specifically need a
- * per-item handler.
  * @event lr-menu-item-change - A `type="checkbox"` item was activated.
  * `detail: { value, checked }` contains the item's own `value` and the
  * proposed next `checked` value, before the property mutates. Cancelable:
  * prevent it to retain the current `checked` value. The usual
- * `lr-menu-item-select` still follows, so parent-menu selection and close
+ * the parent menu's `lr-select` still follows, so selection and close
  * behavior are unchanged. Never fired for `type="normal"`.
  * @event lr-menu-item-state-change - Something that decides whether this item is navigable changed:
  *   `disabled`, `loading`, `hidden`, `inert`, or `aria-hidden`. `detail: { disabled, hidden, inert }`,
@@ -187,9 +184,9 @@ export interface LyraMenuItemEventMap {
  * and focusable host. Its fallback follows the active shared size tier. Declared as an inline
  * `var()` fallback (never on `:host`), so an item or any ancestor can retune it without a
  * `::part(base)` rule.
- * Danger-state hooks are also inline fallbacks, so a menu can retheme only its destructive rows
+ * Danger-state hooks are also inline fallbacks, so a menu can retheme only its dangerous rows
  * without replacing the shared danger palette elsewhere.
- * @cssprop [--lr-menu-item-danger-color=var(--lr-color-danger)] - Foreground of a `destructive` or
+ * @cssprop [--lr-menu-item-danger-color=var(--lr-color-danger)] - Foreground of a
  * `variant="danger"` row.
  * @cssprop [--lr-menu-item-danger-hover-bg=var(--lr-color-danger-quiet)] - Background of an enabled
  * danger row while hovered.
@@ -208,7 +205,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   // knobs are already declared by the time `[part='base']` reads them.
   static override styles = [LyraElement.styles, sizes, styles];
 
-  /** An id/value the parent `<lr-menu>`'s `lr-menu-select` detail keys off of. */
+  /** An id/value available on the item carried by the parent `<lr-menu>`'s `lr-select` detail. */
   @property() value = '';
 
   /** Row density, on the library's shared six-step ladder — `'m'` by default. Scales the row's
@@ -222,11 +219,8 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   /** Disables selection and excludes this item from `<lr-menu>`'s roving-tabindex nav entirely. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
-  /** Visual treatment for a dangerous action (e.g. "Delete") — tints the row with `--lr-color-danger`. */
-  @property({ type: Boolean, reflect: true }) destructive = false;
-
-  /** Semantic treatment. `default` is the WA spelling of Lyra's neutral tone; `danger` is the
-   * mapped dangerous-action treatment and is equivalent to the legacy `destructive` boolean. */
+  /** Semantic treatment. `default` is the WA spelling of a normal action and `danger` is its
+   * mapped dangerous-action treatment. */
   @property({ reflect: true }) variant: MenuItemVariant = 'default';
 
   /** `'checkbox'` renders `role="menuitemcheckbox"` with a toggleable `checked` state and a
@@ -254,6 +248,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   @state() private slottedLabel = '';
 
   private submenuPanel: SubmenuPanel | null = null;
+  private submenuPanelAttached = false;
   /** Increments whenever the owned submenu identity becomes stale, so async show/hide continuations
    * cannot write disclosure state or popup ownership back onto a replacement panel. */
   private submenuPanelGeneration = 0;
@@ -266,9 +261,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   private labelObserver?: MutationObserver;
   private labelObservationGeneration = 0;
   private announcedNativeState = '';
-  private offsetPopup: HTMLElement | null = null;
-  private previousPopupTranslate = '';
-  private previousPopupTranslatePriority = '';
+  private owningMenu: MenuItemOwner | null = null;
   // A consumer-authored name always wins; these record that the computed one was ours to update.
   private ownsAriaLabel = false;
   private ownedAriaLabelValue: string | null = null;
@@ -285,6 +278,17 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
    *  changed — the parent menu's keyboard/pointer handling, a dismissal, or a direct write. */
   get submenuOpen(): boolean {
     return this.submenuExpanded;
+  }
+
+  /** @internal Installs the private item-to-menu activation bridge. A stale former owner can only
+   * release its own lease, so same-task reparenting cannot disconnect the new menu. */
+  [menuItemOwner](
+    owner: MenuItemOwner | null,
+    expectedOwner?: MenuItemOwner
+  ): void {
+    if (owner === null && expectedOwner && this.owningMenu !== expectedOwner)
+      return;
+    this.owningMenu = owner;
   }
   set submenuOpen(next: boolean) {
     if (Boolean(next) === this.submenuExpanded) return;
@@ -311,9 +315,12 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     // this property -- see the class doc.
     if (this.tabIndex !== 0) this.tabIndex = -1;
     this.announcedNativeState = this.nativeStateSignature();
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    const MutationObserverCtor =
+      this.ownerDocument.defaultView?.MutationObserver;
     if (MutationObserverCtor) {
-      this.nativeStateObserver = new MutationObserverCtor(this.onNativeStateMutation);
+      this.nativeStateObserver = new MutationObserverCtor(
+        this.onNativeStateMutation
+      );
       this.nativeStateObserver.observe(this, {
         attributes: true,
         attributeFilter: ['hidden', 'inert', 'aria-hidden'],
@@ -327,16 +334,17 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     this.addEventListener('slotchange', this.onForwardedLabelSlotChange);
     const labelGeneration = ++this.labelObservationGeneration;
     void this.updateComplete.then(() => {
-      if (!this.isConnected || labelGeneration !== this.labelObservationGeneration) return;
+      if (
+        !this.isConnected ||
+        labelGeneration !== this.labelObservationGeneration
+      )
+        return;
       this.observeLabelContent();
       this.syncSlottedLabel();
-    });
-    // A reconnect follows disconnectedCallback()'s restoration of the nested
-    // popup's authored inline style. The panel itself is retained, so reapply
-    // our live custom-property bridge once the current microtask's upgrades and
-    // child renders have settled.
-    queueMicrotask(() => {
-      if (this.isConnected) this.applySubmenuOffset();
+      const submenuSlot = this.renderRoot.querySelector<HTMLSlotElement>(
+        'slot[name="submenu"]'
+      );
+      if (submenuSlot) this.syncSubmenuSlot(submenuSlot);
     });
   }
 
@@ -352,7 +360,10 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     this.removeEventListener('slotchange', this.onForwardedLabelSlotChange);
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
-    this.releaseSubmenuOffset();
+    if (this.submenuPanel && this.submenuPanelAttached) {
+      this.submenuPanel[submenuPanelController].detach(this);
+      this.submenuPanelAttached = false;
+    }
   }
 
   /** Every flag a parent's navigability predicate reads, in one comparable string. */
@@ -384,7 +395,9 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     // so they're plain imperative attribute writes here rather than part of
     // render()'s shadow-DOM template -- mirrors lr-tree-item's identical
     // willUpdate.
-    const isCheckbox = this.type === 'checkbox';
+    // A submenu parent is a disclosure, never simultaneously a checked action. Keep the author
+    // property intact so removing the submenu restores its requested checkbox mode.
+    const isCheckbox = this.type === 'checkbox' && !this.submenuAssigned;
     this.setAttribute('role', isCheckbox ? 'menuitemcheckbox' : 'menuitem');
     if (isCheckbox) {
       this.setAttribute('aria-checked', this.checked ? 'true' : 'false');
@@ -397,7 +410,10 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       this.setAttribute('aria-haspopup', 'menu');
       // Both states render: an omitted aria-expanded is a different, weaker statement than
       // aria-expanded="false", and this role is stateful.
-      this.setAttribute('aria-expanded', this.submenuExpanded ? 'true' : 'false');
+      this.setAttribute(
+        'aria-expanded',
+        this.submenuExpanded ? 'true' : 'false'
+      );
     } else {
       this.removeAttribute('aria-haspopup');
       this.removeAttribute('aria-expanded');
@@ -432,8 +448,8 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     this.renderRoot.querySelector<HTMLElement>('[part~="base"]')?.click();
   }
 
-  /** Fires `lr-menu-item-select` (no-op while `disabled` or `loading`). Called by this element's own
-   *  click handler, and by `<lr-menu>`'s Enter/Space keydown handling of the active item.
+  /** Activates this item through its owning menu (no-op while `disabled` or `loading`). Called by
+   *  this element's own click handler, and by `<lr-menu>`'s Enter/Space keydown handling.
    *  For `type="checkbox"`, first emits the cancelable proposed `lr-menu-item-change`; it commits
    *  that proposed `checked` state only when the event is not prevented, then fires selection --
    *  see the class doc.
@@ -452,35 +468,38 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       const changeEvent = this.emit(
         'lr-menu-item-change',
         { value: this.value, checked },
-        { cancelable: true },
+        { cancelable: true }
       );
       if (!changeEvent.defaultPrevented) this.checked = checked;
     }
-    this.emit('lr-menu-item-select');
+    this.owningMenu?.activate(this);
   }
 
-  /** Opens this item's submenu. A no-op without one, or while `disabled`/`loading`. `focus` follows
-   *  `<lr-menu>`'s own `show()` vocabulary — `'first'` for keyboard activation, `'none'` for
+  /** Opens this item's submenu. A no-op without one, or while `disabled`/`loading`. `focus` uses
+   *  `'first'` for keyboard activation and `'none'` for
    *  pointer intent, which must not pull focus out from under the keyboard. Re-opening an
    *  already-open submenu still applies the focus target, so ArrowRight moves into a submenu the
    *  pointer opened a moment earlier. */
   async openSubmenu(focus: MenuFocusTarget = 'first'): Promise<void> {
     const panel = this.submenuPanel;
     const generation = this.submenuPanelGeneration;
-    if (!panel || this.interactionDisabled || !this.isCurrentSubmenuPanel(panel, generation)) return;
-    this.applySubmenuOffset(panel);
-    panel.anchor = this;
-    const shown = panel.show(focus);
+    if (
+      !panel ||
+      this.interactionDisabled ||
+      !this.isCurrentSubmenuPanel(panel, generation)
+    )
+      return;
+    const controller = panel[submenuPanelController];
+    const shown = controller.show(focus);
     // Read back rather than assume: `open` settles synchronously, so `aria-expanded` lands in
-    // this same update instead of one tick behind the panel's own `lr-show`.
+    // this same update instead of one tick behind the panel render.
     if (!this.isCurrentSubmenuPanel(panel, generation)) return;
-    this.submenuExpanded = panel.open;
+    this.submenuExpanded = controller.open;
     await shown;
     if (!this.isCurrentSubmenuPanel(panel, generation)) return;
     if (panel.updateComplete) await panel.updateComplete;
     if (!this.isCurrentSubmenuPanel(panel, generation)) return;
-    this.applySubmenuOffset(panel);
-    this.submenuExpanded = panel.open;
+    this.submenuExpanded = controller.open;
     await this.updateComplete;
   }
 
@@ -490,50 +509,64 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     const panel = this.submenuPanel;
     const generation = this.submenuPanelGeneration;
     if (!panel || !this.isCurrentSubmenuPanel(panel, generation)) return;
-    const hidden = panel.hide();
+    const controller = panel[submenuPanelController];
+    const hidden = controller.hide();
     if (!this.isCurrentSubmenuPanel(panel, generation)) return;
-    this.submenuExpanded = panel.open;
+    this.submenuExpanded = controller.open;
     await hidden;
     if (!this.isCurrentSubmenuPanel(panel, generation)) return;
     if (panel.updateComplete) await panel.updateComplete;
     if (!this.isCurrentSubmenuPanel(panel, generation)) return;
-    this.submenuExpanded = panel.open;
+    this.submenuExpanded = controller.open;
     await this.updateComplete;
   }
 
   private onIconSlotChange = (): void => {
-    this.hasIconSlot = [...this.renderRoot.querySelectorAll<HTMLSlotElement>('slot[name="icon"], slot[name="prefix"]')]
-      .some((slot) => slot.assignedElements({ flatten: true }).length > 0);
+    this.hasIconSlot = [
+      ...this.renderRoot.querySelectorAll<HTMLSlotElement>(
+        'slot[name="icon"], slot[name="prefix"]'
+      ),
+    ].some((slot) => slot.assignedElements({ flatten: true }).length > 0);
   };
 
   private onDetailsSlotChange = (e: Event): void => {
-    this.hasDetailsSlot = (e.target as HTMLSlotElement).assignedNodes({ flatten: true })
+    this.hasDetailsSlot = (e.target as HTMLSlotElement)
+      .assignedNodes({ flatten: true })
       .some((node) => (node.textContent ?? '').trim() !== '');
   };
 
   private onSuffixSlotChange = (e: Event): void => {
-    this.hasSuffixSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasSuffixSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
 
   private defaultLabelSlot(): HTMLSlotElement | null {
     const renderRoot = this.renderRoot as ParentNode | undefined;
-    return renderRoot?.querySelector<HTMLSlotElement>('slot:not([name])') ?? null;
+    return (
+      renderRoot?.querySelector<HTMLSlotElement>('slot:not([name])') ?? null
+    );
   }
 
   private isDefaultLabelBranch(node: Node): boolean {
     let top = node;
     while (top.parentNode && top.parentNode !== this) top = top.parentNode;
     if (top.parentNode !== this) return false;
-    return top.nodeType !== 1 || ((top as Element).getAttribute('slot') ?? '') === '';
+    return (
+      top.nodeType !== 1 || ((top as Element).getAttribute('slot') ?? '') === ''
+    );
   }
 
   private labelForwardingSlots(): HTMLSlotElement[] {
-    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter((slot) =>
-      this.isDefaultLabelBranch(slot));
+    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter(
+      (slot) => this.isDefaultLabelBranch(slot)
+    );
   }
 
   private composedParentForNode(node: Node): Element | null {
-    const assignedSlot = (node as Node & { assignedSlot?: HTMLSlotElement | null }).assignedSlot;
+    const assignedSlot = (
+      node as Node & { assignedSlot?: HTMLSlotElement | null }
+    ).assignedSlot;
     if (assignedSlot) return assignedSlot;
     if (node.parentElement) return node.parentElement;
     const root = node.getRootNode() as Document | ShadowRoot;
@@ -543,14 +576,20 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   private isLabelSubtreeExcluded(element: Element): boolean {
     const presentationFence =
       element.getRootNode() === this.renderRoot &&
-      element.matches('[part~="label"][aria-hidden="true"][inert]:not([hidden])');
+      element.matches(
+        '[part~="label"][aria-hidden="true"][inert]:not([hidden])'
+      );
     return !presentationFence && isAccessibilitySubtreeExcluded(element);
   }
 
-  private readSlottedLabel(slot: HTMLSlotElement | null = this.defaultLabelSlot()): string {
+  private readSlottedLabel(
+    slot: HTMLSlotElement | null = this.defaultLabelSlot()
+  ): string {
     const nodes = slot
       ? slot.assignedNodes({ flatten: true })
-      : Array.from(this.childNodes).filter((node) => this.isDefaultLabelBranch(node));
+      : Array.from(this.childNodes).filter((node) =>
+          this.isDefaultLabelBranch(node)
+        );
     return composedAccessibilityText(nodes, {
       ancestorBoundary: this,
       isSubtreeExcluded: (element) => this.isLabelSubtreeExcluded(element),
@@ -559,14 +598,18 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       .trim();
   }
 
-  private observeLabelAncestors(node: Node, options: MutationObserverInit): void {
+  private observeLabelAncestors(
+    node: Node,
+    options: MutationObserverInit
+  ): void {
     const observer = this.labelObserver;
     if (!observer) return;
     let current = this.composedParentForNode(node);
     while (current) {
       // The full subtree observation below already owns this target. Calling observe() again with
       // attribute-only options would replace that registration instead of adding another one.
-      if (current !== this && !this.contains(current)) observer.observe(current, options);
+      if (current !== this && !this.contains(current))
+        observer.observe(current, options);
       current = composedParentElement(current);
     }
   }
@@ -606,7 +649,9 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     }
   }
 
-  private syncSlottedLabel(slot: HTMLSlotElement | null = this.defaultLabelSlot()): void {
+  private syncSlottedLabel(
+    slot: HTMLSlotElement | null = this.defaultLabelSlot()
+  ): void {
     const next = this.readSlottedLabel(slot);
     if (next !== this.slottedLabel) this.slottedLabel = next;
     this.applyComputedName();
@@ -626,65 +671,76 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   };
 
   private onSubmenuSlotChange = (e: Event): void => {
-    const submenuSlot = e.target as HTMLSlotElement;
+    this.syncSubmenuSlot(e.target as HTMLSlotElement);
+  };
+
+  private syncSubmenuSlot(submenuSlot: HTMLSlotElement): void {
     // Switching from the initial bare slot to the panel/items wrapper removes the old slot.
     // Chromium can deliver that retired slot's final empty `slotchange` after the replacement is
     // already live; treating it as authored removal disconnects and reconnects the same panel and
     // loses ownership of the computed panel name.
-    if (!submenuSlot.isConnected || submenuSlot.getRootNode() !== this.renderRoot) return;
+    if (
+      !submenuSlot.isConnected ||
+      submenuSlot.getRootNode() !== this.renderRoot
+    )
+      return;
     // Matched by tag name rather than `instanceof`: importing the class here would close an
     // import cycle with menu.class.ts (see menu-shared.ts).
     const assigned = submenuSlot.assignedElements({ flatten: true });
-    const authoredPanel = assigned.find((element) => element.localName === tag('menu')) as
-      | SubmenuPanel
-      | undefined;
-    const hasDirectItems = assigned.some((element) =>
-      element.localName === tag('menu-item') || element.localName === tag('dropdown-item'));
+    const authoredPanel = assigned.find(
+      (element) => element.localName === tag('menu')
+    ) as SubmenuPanel | undefined;
+    const hasDirectItems = assigned.some(
+      (element) =>
+        element.localName === tag('menu-item') ||
+        element.localName === tag('dropdown-item')
+    );
     const kind = authoredPanel ? 'panel' : hasDirectItems ? 'items' : undefined;
     this.submenuKind = kind;
     this.submenuAssigned = kind !== undefined;
     if (kind === 'items') {
-      // The generated panel is part of the next render; updated() connects it once it exists.
+      // On first assignment the generated panel arrives in the next render; on reconnect it
+      // already exists and must reacquire its private controller even when no slotchange fires.
+      const generated = this.renderRoot.querySelector(
+        `[data-generated-submenu]`
+      ) as SubmenuPanel | null;
+      if (generated) this.connectSubmenuPanel(generated);
       return;
     }
     this.connectSubmenuPanel(authoredPanel ?? null);
-  };
+  }
 
   private connectSubmenuPanel(next: SubmenuPanel | null): void {
-    if (next === this.submenuPanel) return;
+    const samePanel = next === this.submenuPanel;
+    if (samePanel && (next === null || this.submenuPanelAttached)) return;
     const previous = this.submenuPanel;
-    const generation = ++this.submenuPanelGeneration;
-    this.releaseSubmenuOffset();
-    previous?.removeEventListener('lr-show', this.onPanelShow);
-    previous?.removeEventListener('lr-hide', this.onPanelHide);
-    if (previous) {
-      void previous.hide({ focusTrigger: false });
-      if (previous.anchor === this) previous.anchor = null;
+    ++this.submenuPanelGeneration;
+    if (previous && this.submenuPanelAttached) {
+      previous[submenuPanelController].detach(this);
     }
-    this.submenuPanel = next;
-    this.ownsPanelAriaLabel = false;
-    this.ownedPanelAriaLabelValue = null;
+    this.submenuPanelAttached = false;
+    if (!samePanel) {
+      this.submenuPanel = next;
+      this.ownsPanelAriaLabel = false;
+      this.ownedPanelAriaLabelValue = null;
+    }
     if (!this.submenuPanel) {
       this.submenuExpanded = false;
       return;
     }
     const panel = this.submenuPanel;
-    panel.anchor = this;
-    panel.addEventListener('lr-show', this.onPanelShow);
-    panel.addEventListener('lr-hide', this.onPanelHide);
-    this.submenuExpanded = panel.open;
+    const controller = panel[submenuPanelController];
+    controller.attach(this, this.onPanelStateChange);
+    this.submenuPanelAttached = true;
+    this.submenuExpanded = controller.open;
     this.applyPanelName();
-    this.applySubmenuOffset(panel);
-    // A generated menu can still be awaiting its first render during the
-    // parent's updated() callback. Its update is already queued, so this runs
-    // after it without creating an unhandled promise branch under strict WTR.
-    queueMicrotask(() => {
-      if (this.isCurrentSubmenuPanel(panel, generation)) this.applySubmenuOffset(panel);
-    });
   }
 
   /** Whether an async submenu operation still owns this item after an awaited panel transition. */
-  private isCurrentSubmenuPanel(panel: SubmenuPanel, generation: number): boolean {
+  private isCurrentSubmenuPanel(
+    panel: SubmenuPanel,
+    generation: number
+  ): boolean {
     return (
       this.isConnected &&
       this.submenuPanel === panel &&
@@ -692,64 +748,20 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     );
   }
 
-  /** Bridges this item's inherited public CSS property into the actual floating
-   * popup. The nested menu owns that node in its shadow root, so a selector in
-   * menu-item.styles.ts cannot reach the authored `submenu` slot across both
-   * shadow boundaries; the value itself remains live CSS and needs no JS
-   * parsing, unit conversion, or property-change observer. */
-  private applySubmenuOffset(panel: SubmenuPanel | null = this.submenuPanel): void {
-    const popup = panel?.shadowRoot?.querySelector<HTMLElement>('[part~="popup"]') ?? null;
-    if (!popup || popup === this.offsetPopup) return;
-    this.releaseSubmenuOffset();
-    this.offsetPopup = popup;
-    this.previousPopupTranslate = popup.style.getPropertyValue('translate');
-    this.previousPopupTranslatePriority = popup.style.getPropertyPriority('translate');
-    popup.style.setProperty('translate', SUBMENU_TRANSLATE);
-  }
-
-  /** Restores any inline translate the nested menu's popup carried before this
-   * item adopted it, but leaves a later consumer write alone. */
-  private releaseSubmenuOffset(): void {
-    const popup = this.offsetPopup;
-    if (!popup) return;
-    if (popup.style.getPropertyValue('translate') === SUBMENU_TRANSLATE) {
-      if (this.previousPopupTranslate) {
-        popup.style.setProperty(
-          'translate',
-          this.previousPopupTranslate,
-          this.previousPopupTranslatePriority,
-        );
-      } else {
-        popup.style.removeProperty('translate');
-      }
-    }
-    this.offsetPopup = null;
-    this.previousPopupTranslate = '';
-    this.previousPopupTranslatePriority = '';
-  }
-
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('submenuKind') && this.submenuKind === 'items') {
-      const generated = this.renderRoot.querySelector(`[data-generated-submenu]`) as SubmenuPanel | null;
+      const generated = this.renderRoot.querySelector(
+        `[data-generated-submenu]`
+      ) as SubmenuPanel | null;
       this.connectSubmenuPanel(generated);
     }
   }
 
-  /** Tracking the panel's own events (rather than only the calls this element makes) keeps
-   *  `aria-expanded` right however the submenu closed — Escape, an outside click, a selection,
-   *  an ancestor closing, or a direct `panel.open = false`. Both stop here: on the ancestor
-   *  `<lr-menu>` they read as *that* menu showing/hiding, which it is not. */
-  private onPanelShow = (e: Event): void => {
-    e.stopPropagation();
-    if (e.currentTarget !== this.submenuPanel) return;
-    this.submenuExpanded = true;
-  };
-
-  private onPanelHide = (e: Event): void => {
-    e.stopPropagation();
-    if (e.currentTarget !== this.submenuPanel) return;
-    this.submenuExpanded = false;
+  /** The private submenu controller reports every state transition, including Escape, outside
+   * dismissal, selection, ancestor teardown, and panel replacement. */
+  private onPanelStateChange = (open: boolean): void => {
+    this.submenuExpanded = open;
   };
 
   /** Names the focusable host from its visual-only label text. This also prevents a submenu from
@@ -812,40 +824,62 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       <span part="base" @click=${() => this.select()}>
         <span part="icon" aria-hidden="true" inert ?hidden=${!this.hasIconSlot}>
           <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
-          <span part="prefix"><slot name="prefix" @slotchange=${this.onIconSlotChange}></slot></span>
+          <span part="prefix"
+            ><slot name="prefix" @slotchange=${this.onIconSlotChange}></slot
+          ></span>
         </span>
-        <span part="label" aria-hidden="true" inert><slot @slotchange=${this.onLabelSlotChange}></slot></span>
-        <span part="details" aria-hidden="true" inert ?hidden=${!this.hasDetailsSlot}>
+        <span part="label" aria-hidden="true" inert
+          ><slot @slotchange=${this.onLabelSlotChange}></slot
+        ></span>
+        <span
+          part="details"
+          aria-hidden="true"
+          inert
+          ?hidden=${!this.hasDetailsSlot}
+        >
           <slot name="details" @slotchange=${this.onDetailsSlotChange}></slot>
         </span>
-        <span part="suffix" aria-hidden="true" inert ?hidden=${!this.hasSuffixSlot}>
+        <span
+          part="suffix"
+          aria-hidden="true"
+          inert
+          ?hidden=${!this.hasSuffixSlot}
+        >
           <slot name="suffix" @slotchange=${this.onSuffixSlotChange}></slot>
         </span>
         ${this.loading
-          ? html`<span part="spinner spinner__base" aria-hidden="true">${spinnerIcon()}</span>`
+          ? html`<span part="spinner spinner__base" aria-hidden="true"
+              >${spinnerIcon()}</span
+            >`
           : nothing}
         ${this.type === 'checkbox' && this.checked
           ? html`<span part="checked-icon">${checkmarkGlyph()}</span>`
           : nothing}
         ${this.submenuAssigned
-          ? html`<span part="submenu-icon" aria-hidden="true">${chevronIcon()}</span>`
+          ? html`<span part="submenu-icon" aria-hidden="true"
+              >${chevronIcon()}</span
+            >`
           : nothing}
       </span>
       <!-- Outside [part='base'] on purpose: a click inside the submenu must not read as an
            activation of the row that owns it. -->
       ${this.submenuKind === 'items'
         ? staticHtml`
-            <${menuTag} part="submenu" data-generated-submenu .anchor=${this}>
+            <${menuTag} part="submenu" data-generated-submenu>
               <slot name="submenu" @slotchange=${this.onSubmenuSlotChange}></slot>
             </${menuTag}>
           `
         : this.submenuKind === 'panel'
-          ? html`<span part="submenu"><slot name="submenu" @slotchange=${this.onSubmenuSlotChange}></slot></span>`
-          : html`<slot name="submenu" @slotchange=${this.onSubmenuSlotChange}></slot>`}
+        ? html`<span part="submenu"
+            ><slot name="submenu" @slotchange=${this.onSubmenuSlotChange}></slot
+          ></span>`
+        : html`<slot
+            name="submenu"
+            @slotchange=${this.onSubmenuSlotChange}
+          ></slot>`}
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

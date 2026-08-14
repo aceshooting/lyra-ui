@@ -20,7 +20,7 @@ export const Streaming: Story = {
     <lr-browser-frame
       style="max-width:36rem"
       url="https://example.com/dashboard"
-      status="streaming"
+      phase="streaming"
       frame-src="https://placehold.co/800x450"
       .pings=${pings}
     ></lr-browser-frame>
@@ -28,7 +28,7 @@ export const Streaming: Story = {
 };
 
 export const Connecting: Story = {
-  render: () => html`<lr-browser-frame style="max-width:36rem" status="connecting"></lr-browser-frame>`,
+  render: () => html`<lr-browser-frame style="max-width:36rem" phase="connecting"></lr-browser-frame>`,
 };
 
 export const Stalled: Story = {
@@ -36,7 +36,7 @@ export const Stalled: Story = {
     <lr-browser-frame
       style="max-width:36rem"
       url="https://example.com/dashboard"
-      status="stalled"
+      phase="stalled"
     ></lr-browser-frame>
   `,
 };
@@ -46,7 +46,7 @@ export const UserControlled: Story = {
     <lr-browser-frame
       style="max-width:36rem"
       url="https://example.com"
-      status="streaming"
+      phase="streaming"
       controller="user"
     ></lr-browser-frame>
   `,
@@ -57,7 +57,7 @@ export const NoControls: Story = {
     <lr-browser-frame
       style="max-width:36rem"
       url="https://example.com"
-      status="streaming"
+      phase="streaming"
       .controls=${false}
     ></lr-browser-frame>
   `,
@@ -68,7 +68,7 @@ export const Narrow320: Story = {
     <div style="max-width:320px">
       <lr-browser-frame
         url="https://example.com/dashboard"
-        status="streaming"
+        phase="streaming"
         frame-src="https://placehold.co/800x450"
         .pings=${pings}
       ></lr-browser-frame>

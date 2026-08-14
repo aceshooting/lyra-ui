@@ -10,13 +10,18 @@ import '../../utility/live-region/live-region.class.js';
 import '../../forms/button/button.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './confirm-bar.styles.js';
+import {
+  approvalAction,
+  type ApprovalAction,
+  type ApprovalDecision,
+} from '../approval-state.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmApprovedAnnounce, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_confirmDeniedAnnounce, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmApprovedAnnounce, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_confirmDeniedAnnounce, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type ConfirmBarDecision = 'approved' | 'denied' | null;
+export type ConfirmBarDecision = ApprovalDecision | null;
 
 /** A genuine two-member subset of the shared `LyraVariant` vocabulary: a confirmation is either
  *  routine or destructive, and `brand`/`success`/`warning` have no meaning for a proposal awaiting
@@ -92,7 +97,7 @@ function deniedIcon(): SVGTemplateResult {
  * `{deny,approve}-button-{base,label,start,end,spinner}` so `--lr-button-*` theming and a consumer's
  * existing `lr-button` style fragments reach them like every other button in an app. An
  * `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while its own
- * async work (e.g. a network call) is in flight: `pending` is set to the decision being made, showing
+ * async work (e.g. a network call) is in flight: `pending` is set to the action being persisted, showing
  * `loading` on that button and `disabled` on the other, until the host finalizes by setting `.decision`
  * or bounces back by clearing `.pending` to `null`.
  *
@@ -103,7 +108,7 @@ function deniedIcon(): SVGTemplateResult {
  *   checkbox), mirroring `lr-tool-approval-dialog`'s own `footer` slot.
  * @event lr-approve - `detail: { args }` (the `args` prop as-is; no editing in the bar) — identical
  *   shape to `lr-tool-approval-dialog`. Cancelable: a listener calling `preventDefault()` sets
- *   `pending` to `'approved'` instead of finalizing synchronously; set `.decision` (or clear
+ *   `pending` to `'approve'` instead of finalizing synchronously; set `.decision` (or clear
  *   `.pending` back to `null`) once your async work settles.
  * @event lr-deny - No detail, identical to the dialog. Cancelable, same `pending` mechanism as
  *   `lr-approve`.
@@ -121,7 +126,7 @@ function deniedIcon(): SVGTemplateResult {
  * @csspart deny-button-start - Forwarded from the internal Deny `<lr-button>`'s own `start` part.
  * @csspart deny-button-end - Forwarded from the internal Deny `<lr-button>`'s own `end` part.
  * @csspart deny-button-spinner - Forwarded from the internal Deny `<lr-button>`'s own `spinner`
- *   part, present only while `pending` is `'denied'`.
+ *   part, present only while `pending` is `'deny'`.
  * @csspart approve-button - The built-in Approve `<lr-button>`. Named identically to the dialog's
  *   part.
  * @csspart approve-button-base - Forwarded from the internal Approve `<lr-button>`'s same-node
@@ -132,7 +137,7 @@ function deniedIcon(): SVGTemplateResult {
  *   part.
  * @csspart approve-button-end - Forwarded from the internal Approve `<lr-button>`'s own `end` part.
  * @csspart approve-button-spinner - Forwarded from the internal Approve `<lr-button>`'s own
- *   `spinner` part, present only while `pending` is `'approved'`.
+ *   `spinner` part, present only while `pending` is `'approve'`.
  * @csspart status - The decided-state text. Always present in the DOM (`tabindex="-1"`) so focus has
  *   a stable, synchronous landing spot on activation.
  * @cssprop [--lr-confirm-bar-compact-padding=var(--lr-space-s)] - Padding of `[part='base']` while
@@ -160,8 +165,12 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     deny: LYRA_DEFAULT_deny,
     details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     toolApprovalArgsLabel: LYRA_DEFAULT_toolApprovalArgsLabel,
     toolApprovalGenericTool: LYRA_DEFAULT_toolApprovalGenericTool,
     toolApprovalHeading: LYRA_DEFAULT_toolApprovalHeading,
@@ -183,10 +192,10 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
    *  decision -- timeout, another reviewer -- renders identically but emits nothing). */
   @property({ reflect: true }) decision: ConfirmBarDecision = null;
 
-  /** Which decision is awaiting host resolution, while an lr-approve/lr-deny listener has called
+  /** Which action is awaiting host resolution, while an lr-approve/lr-deny listener has called
    *  preventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.
    *  on failure, so the user can retry), or set `decision` to finalize. */
-  @property({ reflect: true }) pending: ConfirmBarDecision = null;
+  @property({ reflect: true }) pending: ApprovalAction | null = null;
 
   /** Token-mapped emphasis for destructive proposals. */
   @property({ reflect: true }) variant: ConfirmBarVariant = 'neutral';
@@ -260,7 +269,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
       // <body> for the whole duration of the host's async work. Ordered before the `pending` write
       // so the button is still focusable when focus leaves it.
       this.statusEl?.focus();
-      this.pending = next;
+      this.pending = approvalAction(next);
       return;
     }
     // Synchronous, before the property set below triggers the re-render that removes the
@@ -297,14 +306,23 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     return this.decision === 'approved' ? this.localize('confirmApproved') : this.localize('confirmDenied');
   }
 
+  private stopNestedLifecycle(event: Event): void {
+    event.stopPropagation();
+  }
+
   override render(): TemplateResult {
     const decided = this.decision != null;
     return html`
-      <div part="base" role="group" aria-label=${this.getAttribute('aria-label') || nothing} aria-labelledby=${this.getAttribute('aria-label') ? nothing : this.headingId}>
+      <div part="base" role="group" aria-labelledby=${this.headingId}>
         <div part="heading" id=${this.headingId}>${this.renderHeading()}</div>
         <div part="body" ?hidden=${!this.hasBodySlot}><slot @slotchange=${this.onBodySlotChange}></slot></div>
         ${this.args !== undefined
-          ? html`<lr-details part="args" summary=${this.localize('toolApprovalArgsLabel')}>
+          ? html`<lr-details part="args" summary=${this.localize('toolApprovalArgsLabel')}
+              @lr-toggle=${this.stopNestedLifecycle}
+              @lr-show=${this.stopNestedLifecycle}
+              @lr-after-show=${this.stopNestedLifecycle}
+              @lr-hide=${this.stopNestedLifecycle}
+              @lr-after-hide=${this.stopNestedLifecycle}>
               <lr-json-viewer .data=${this.args}></lr-json-viewer>
             </lr-details>`
           : nothing}
@@ -318,8 +336,8 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
                   variant="neutral"
                   appearance="outlined"
                   type="button"
-                  ?loading=${this.pending === 'denied'}
-                  ?disabled=${this.pending === 'approved'}
+                  ?loading=${this.pending === 'deny'}
+                  ?disabled=${this.pending === 'approve'}
                   exportparts="base:deny-button-base, button:deny-button-base, label:deny-button-label, start:deny-button-start, end:deny-button-end, spinner:deny-button-spinner"
                   @click=${() => this.decide('denied')}
                 >${this.localize('deny')}</lr-button>
@@ -327,8 +345,8 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
                   part="approve-button"
                   variant=${this.variant === 'danger' ? 'danger' : 'brand'}
                   type="button"
-                  ?loading=${this.pending === 'approved'}
-                  ?disabled=${this.pending === 'denied'}
+                  ?loading=${this.pending === 'approve'}
+                  ?disabled=${this.pending === 'deny'}
                   exportparts="base:approve-button-base, button:approve-button-base, label:approve-button-label, start:approve-button-start, end:approve-button-end, spinner:approve-button-spinner"
                   @click=${() => this.decide('approved')}
                 >${this.localize('approve')}</lr-button>

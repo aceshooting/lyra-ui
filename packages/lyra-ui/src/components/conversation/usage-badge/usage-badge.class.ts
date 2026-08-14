@@ -1,39 +1,17 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { nextId } from '../../../internal/a11y.js';
+import { nextId, srOnly } from '../../../internal/a11y.js';
 import { place } from '../../../internal/positioner.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './usage-badge.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { durationMessageValue } from '../../../internal/duration.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_open, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_usageBadgeCostLabel, LYRA_DEFAULT_usageBadgeLabel, LYRA_DEFAULT_usageBadgeLatencyLabel, LYRA_DEFAULT_usageBadgeTokensIn, LYRA_DEFAULT_usageBadgeTokensInLabel, LYRA_DEFAULT_usageBadgeTokensOut, LYRA_DEFAULT_usageBadgeTokensOutLabel, LYRA_DEFAULT_usageBadgeTotalTokensLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_usageBadgeCostLabel, LYRA_DEFAULT_usageBadgeLabel, LYRA_DEFAULT_usageBadgeLatencyLabel, LYRA_DEFAULT_usageBadgeTokensIn, LYRA_DEFAULT_usageBadgeTokensInLabel, LYRA_DEFAULT_usageBadgeTokensOut, LYRA_DEFAULT_usageBadgeTokensOutLabel, LYRA_DEFAULT_usageBadgeTotalTokensLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
-interface FormattedDuration {
-  key: 'durationMilliseconds' | 'durationSeconds';
-  value: string;
-}
-
-/** `820` -> `"820ms"`; `1500` -> `"1.5s"`; `2000` -> `"2s"`. Identical algorithm to
- *  `<lr-tool-call-chip>`'s own `formatDuration`, duplicated locally -- two independent,
- *  separately-consumable components. */
-function formatDuration(ms: number, locale: string): FormattedDuration {
-  if (!Number.isFinite(ms) || ms < 1000) {
-    return {
-      key: 'durationMilliseconds',
-      value: getNumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.round(Math.max(0, ms))),
-    };
-  }
-  const seconds = ms / 1000;
-  const rounded = Math.round(seconds * 10) / 10;
-  return {
-    key: 'durationSeconds',
-    value: getNumberFormat(locale, { maximumFractionDigits: 1 }).format(rounded),
-  };
-}
 
 /**
  * `<lr-usage-badge>` — a compact, static resource strip for one message or run: tokens in/out,
@@ -59,10 +37,14 @@ function formatDuration(ms: number, locale: string): FormattedDuration {
  * actually does. A stale `compact` attribute is inert.
  *
  * @customElement lr-usage-badge
- * @slot - Extra rows appended below the built-in tooltip breakdown (e.g. cache-read tokens). The
- *   visible strip itself is prop-driven only.
+ * @slot summary - Visible summary shown when no built-in segment is set. The `summary` property is
+ *   its text fallback. A details-only badge without either form of summary remains non-focusable.
+ * @slot details - Extra rows appended below the built-in tooltip breakdown (e.g. cache-read
+ *   tokens). Interactive descendants are intentionally inert because this is a tooltip, not a
+ *   dialog; their accessible text is mirrored into the trigger's tooltip description.
  * @csspart base - The root inline strip (a focusable non-button `role="group"`, only while at
- *   least one segment or the default slot has content).
+ *   least one segment, or a visible summary with details, has content).
+ * @csspart summary - The visible fallback shown when no built-in segment is set.
  * @csspart tokens-in - The `'{count} in'` segment. Only rendered when `tokensIn` is a finite
  *   number.
  * @csspart tokens-out - The `'{count} out'` segment. Only rendered when `tokensOut` is a finite
@@ -82,7 +64,11 @@ export class LyraUsageBadge extends LyraElement {
     details: LYRA_DEFAULT_details,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     durationSeconds: LYRA_DEFAULT_durationSeconds,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     tokensIn: LYRA_DEFAULT_tokensIn,
     tokensOut: LYRA_DEFAULT_tokensOut,
     usageBadgeCostLabel: LYRA_DEFAULT_usageBadgeCostLabel,
@@ -96,7 +82,7 @@ export class LyraUsageBadge extends LyraElement {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Input tokens. Normalized to a non-negative integer, locale-formatted. Segment omitted
    *  entirely while unset or non-finite. */
@@ -112,7 +98,11 @@ export class LyraUsageBadge extends LyraElement {
    *  when set). */
   @property({ type: Number, attribute: 'latency-ms' }) latencyMs?: number;
 
-  /** Overrides the default `formatDuration()` rendering of `latencyMs` (`'{ms}ms'`, or one-decimal
+  /** Visible text used when there are no built-in token/cost/latency segments. Required to make a
+   *  details-only badge into a discoverable tooltip trigger; the `summary` slot takes precedence. */
+  @property() summary = '';
+
+  /** Overrides the shared short-duration rendering of `latencyMs` (`'{ms}ms'`, or one-decimal
    *  seconds above 1000ms — no minutes/hours tier) in both the visible strip and the tooltip row.
    *  Mirrors `<lr-activity-feed>`'s `formatTimestamp` convention. */
   @property({ attribute: false }) formatLatency?: (ms: number) => string;
@@ -124,7 +114,9 @@ export class LyraUsageBadge extends LyraElement {
   @property({ type: Boolean, reflect: true }) abbreviate = false;
 
   @state() private tooltipOpen = false;
-  @state() private hasDefaultSlot = false;
+  @state() private hasDetailsSlot = false;
+  @state() private hasSummarySlot = false;
+  @state() private detailsText = '';
 
   private readonly tooltipId = nextId('usage-badge-tooltip');
   private cleanupPositioner?: () => void;
@@ -136,15 +128,18 @@ export class LyraUsageBadge extends LyraElement {
     // A server render sees no light-DOM children at all, so a hydrating badge reproduces the
     // server's slot-less rendering first and picks the slotted content up one update later.
     this.seedFirstRenderState(() => {
-      this.hasDefaultSlot = Array.from(this.children).length > 0;
+      const children = Array.from(this.children);
+      this.hasDetailsSlot = children.some((child) => child.getAttribute('slot') === 'details');
+      this.hasSummarySlot = children.some((child) => child.getAttribute('slot') === 'summary');
     });
     if (
       this.hasUpdated &&
       (changed.has('tokensIn') ||
         changed.has('tokensOut') ||
         changed.has('costText') ||
-        changed.has('latencyMs')) &&
-      !this.hasTooltipContent
+        changed.has('latencyMs') ||
+        changed.has('summary')) &&
+      !this.hasInteractiveTooltip
     ) {
       this.closeTooltipLifecycle();
     }
@@ -178,9 +173,28 @@ export class LyraUsageBadge extends LyraElement {
     this.focused = false;
   }
 
-  private onDefaultSlotChange = (e: Event): void => {
-    this.hasDefaultSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-    if (!this.hasDefaultSlot && !this.hasVisibleContent) this.closeTooltipLifecycle();
+  private onDetailsSlotChange = (e: Event): void => {
+    const assigned = (e.target as HTMLSlotElement).assignedElements({ flatten: true });
+    this.hasDetailsSlot = assigned.length > 0;
+    // `innerText` mirrors the rendered detail rows (omitting display:none descendants) even though
+    // their wrapper is deliberately inert. Bound both breadth and output so arbitrary light-DOM
+    // content cannot turn a compact badge update into unbounded accessibility work.
+    this.detailsText = assigned
+      .slice(0, 64)
+      .map((element) => {
+        const renderedText = (element as Element & { innerText?: unknown }).innerText;
+        return typeof renderedText === 'string' ? renderedText : (element.textContent ?? '');
+      })
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 4096);
+    if (!this.hasInteractiveTooltip) this.closeTooltipLifecycle();
+  };
+
+  private onSummarySlotChange = (e: Event): void => {
+    this.hasSummarySlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    if (!this.hasInteractiveTooltip) this.closeTooltipLifecycle();
   };
 
   private get hasTokensIn(): boolean {
@@ -193,9 +207,7 @@ export class LyraUsageBadge extends LyraElement {
     return this.costText.length > 0;
   }
   /** `latencyMs` normalized to a finite, non-negative duration -- `undefined` while unset or
-   *  non-finite (the `latency` segment/tooltip row is omitted entirely). `formatDuration()`
-   *  already tolerates a non-finite/negative input defensively, but this is the single source of
-   *  truth that decides whether the segment renders at all. */
+   *  non-finite (the `latency` segment/tooltip row is omitted entirely). */
   private get validLatencyMs(): number | undefined {
     if (this.latencyMs == null || !Number.isFinite(this.latencyMs)) return undefined;
     return finiteRange(this.latencyMs, this.latencyMs, 0);
@@ -207,8 +219,17 @@ export class LyraUsageBadge extends LyraElement {
   private get hasVisibleContent(): boolean {
     return this.hasTokensIn || this.hasTokensOut || this.hasCost || this.hasLatency;
   }
+  private get hasVisibleSummary(): boolean {
+    return this.summary.length > 0 || this.hasSummarySlot;
+  }
+  private get hasDisplayContent(): boolean {
+    return this.hasVisibleContent || this.hasVisibleSummary;
+  }
   private get hasTooltipContent(): boolean {
-    return this.hasVisibleContent || this.hasDefaultSlot;
+    return this.hasVisibleContent || this.hasDetailsSlot;
+  }
+  private get hasInteractiveTooltip(): boolean {
+    return this.hasDisplayContent && this.hasTooltipContent;
   }
 
   private formatTokenCount(n: number): string {
@@ -219,12 +240,15 @@ export class LyraUsageBadge extends LyraElement {
   }
   private localizedDuration(ms: number): string {
     if (this.formatLatency) return this.formatLatency(ms);
-    const d = formatDuration(ms, this.effectiveLocale);
-    return this.localize(d.key, undefined, { value: d.value });
+    const duration = durationMessageValue(ms);
+    const value = getNumberFormat(this.effectiveLocale, {
+      maximumFractionDigits: duration.key === 'durationMilliseconds' ? 0 : 1,
+    }).format(duration.value);
+    return this.localize(duration.key, undefined, { value });
   }
 
   private showTooltip(): void {
-    if (!this.hasTooltipContent || this.tooltipOpen) return;
+    if (!this.hasInteractiveTooltip || this.tooltipOpen) return;
     this.tooltipOpen = true;
   }
   private hideTooltip(): void {
@@ -266,13 +290,10 @@ export class LyraUsageBadge extends LyraElement {
   };
 
   override render(): TemplateResult {
-    // Nothing to show and nothing to describe -- an inert shell (no tabindex, no role/aria-label)
-    // rather than a pointless, empty focus stop. The default slot's own slotchange handler still
-    // needs a live <slot> to observe, so it stays in the template. It is a branch *inside* the
-    // shared [part="base"] element, not a separate top-level template: a server renderer cannot see
-    // slotted content, so a hydrating badge starts inert and fills itself in on the next update,
-    // and swapping the outer template would throw the server's markup away instead of reusing it.
-    const inert = !this.hasVisibleContent && !this.hasDefaultSlot;
+    // Nothing to show or describe remains an inert shell (no tabindex, role, or aria-label), while
+    // the named slots remain mounted so later light-DOM additions are observed. A details-only
+    // badge also stays out of the tab order until the host supplies its required visible summary.
+    const interactive = this.hasInteractiveTooltip;
     const tokensIn = this.hasTokensIn ? finiteCount(this.tokensIn!) : undefined;
     const tokensOut = this.hasTokensOut ? finiteCount(this.tokensOut!) : undefined;
     const hasBoth = tokensIn !== undefined && tokensOut !== undefined;
@@ -280,21 +301,19 @@ export class LyraUsageBadge extends LyraElement {
     return html`
       <div
         part="base"
-        role=${inert ? nothing : 'group'}
-        tabindex=${inert ? nothing : '0'}
-        aria-label=${inert
+        role=${interactive ? 'group' : nothing}
+        tabindex=${interactive ? '0' : nothing}
+        aria-label=${!interactive
           ? nothing
-          : this.getAttribute('aria-label') || this.localize('usageBadgeLabel')}
-        aria-describedby=${!inert && this.tooltipOpen ? this.tooltipId : nothing}
+          : this.getAttribute('aria-label') ?? this.localize('usageBadgeLabel')}
+        aria-describedby=${interactive && this.tooltipOpen ? this.tooltipId : nothing}
         @mouseenter=${this.onMouseEnter}
         @mouseleave=${this.onMouseLeave}
         @focus=${this.onFocus}
         @blur=${this.onBlur}
         @keydown=${this.onKeyDown}
       >
-        ${inert
-          ? html`<slot @slotchange=${this.onDefaultSlotChange}></slot>`
-          : this.renderBadgeContent(tokensIn, tokensOut, hasBoth)}
+        ${this.renderBadgeContent(tokensIn, tokensOut, hasBoth)}
       </div>
     `;
   }
@@ -313,7 +332,11 @@ export class LyraUsageBadge extends LyraElement {
           : nothing}
         ${this.hasCost ? html`<span part="cost">${this.costText}</span>` : nothing}
         ${this.hasLatency ? html`<span part="latency">${this.localizedDuration(this.validLatencyMs!)}</span>` : nothing}
-        <div part="tooltip" id=${this.tooltipId} role="tooltip" ?hidden=${!this.tooltipOpen}>
+        <span part="summary" ?hidden=${this.hasVisibleContent}>
+          <slot name="summary" @slotchange=${this.onSummarySlotChange}>${this.summary}</slot>
+        </span>
+        ${this.hasTooltipContent
+          ? html`<div part="tooltip" id=${this.tooltipId} role="tooltip" ?hidden=${!this.tooltipOpen}>
           ${tokensIn !== undefined
             ? html`<div class="row"><span>${this.localize('usageBadgeTokensInLabel')}</span><span>${this.formatTokenCountFull(tokensIn)}</span></div>`
             : nothing}
@@ -330,9 +353,11 @@ export class LyraUsageBadge extends LyraElement {
             ? html`<div class="row"><span>${this.localize('usageBadgeLatencyLabel')}</span><span>${this.localizedDuration(this.validLatencyMs!)}</span></div>`
             : nothing}
           <span class="slot-content" inert>
-            <slot @slotchange=${this.onDefaultSlotChange}></slot>
+            <slot name="details" @slotchange=${this.onDetailsSlotChange}></slot>
           </span>
-        </div>
+          ${this.detailsText ? html`<span class="sr-only">${this.detailsText}</span>` : nothing}
+        </div>`
+          : html`<span hidden><slot name="details" @slotchange=${this.onDetailsSlotChange}></slot></span>`}
     `;
   }
 }

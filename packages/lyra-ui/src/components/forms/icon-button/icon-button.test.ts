@@ -297,66 +297,21 @@ it('never forwards host click() while disabled (native disabled button semantics
   expect(calls).to.equal(0);
 });
 
-it('is form-associated, participating in an ancestor form.elements', async () => {
-  const form = await fixture(html`
-    <form><lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button></form>
-  `) as HTMLFormElement;
-  const el = form.querySelector('lr-icon-button')!;
-  expect(Array.from(form.elements)).to.include(el);
-});
-
-it('type="submit" requests submit on the closest ancestor form via host click()', async () => {
-  const form = await fixture(html`
-    <form><lr-icon-button icon="close" aria-label="Save" type="submit"></lr-icon-button></form>
-  `) as HTMLFormElement;
-  const el = form.querySelector('lr-icon-button')!;
-  let submitted = false;
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    submitted = true;
-  });
-  el.click();
-  expect(submitted).to.be.true;
-});
-
-it('type="reset" resets the closest ancestor form via host click()', async () => {
-  const form = await fixture(html`
-    <form>
-      <input name="field" />
-      <lr-icon-button icon="close" aria-label="Reset" type="reset"></lr-icon-button>
-    </form>
-  `) as HTMLFormElement;
-  const input = form.querySelector('input') as HTMLInputElement;
-  input.value = 'changed';
-  const el = form.querySelector('lr-icon-button')!;
-  el.click();
-  expect(input.value).to.equal('');
-});
-
-it('submits and resets through an external form owner', async () => {
-  const wrapper = await fixture<HTMLDivElement>(html`
-    <div>
-      <form id="external-icon-owner"><input name="draft" value="initial"></form>
-      <lr-icon-button form="external-icon-owner" icon="close" aria-label="Act" type="submit"></lr-icon-button>
-    </div>
-  `);
-  const form = wrapper.querySelector('form')!;
-  const input = form.querySelector('input')!;
-  const el = wrapper.querySelector('lr-icon-button') as LyraIconButton;
+it('is a pure icon action/link rather than a partial form submitter', async () => {
+  const form = (await fixture(html`
+    <form><lr-icon-button icon="close" aria-label="Dismiss" type="submit"></lr-icon-button></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-icon-button') as LyraIconButton;
   let submits = 0;
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     submits++;
   });
 
+  expect(Array.from(form.elements)).to.not.include(el);
+  expect((el as unknown as { type?: unknown }).type).to.be.undefined;
   el.click();
-  expect(submits).to.equal(1);
-
-  input.value = 'changed';
-  el.type = 'reset';
-  await el.updateComplete;
-  el.click();
-  expect(input.value).to.equal('initial');
+  expect(submits).to.equal(0);
 });
 
 it('honours --lr-icon-button-background and --lr-icon-button-color on the native button', async () => {
@@ -505,46 +460,6 @@ it('is accessible while disabled', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('inherits fieldset disabled state and cannot submit while effectively disabled', async () => {
-  const form = (await fixture(html`
-    <form>
-      <fieldset>
-        <lr-icon-button icon="close" aria-label="Save" type="submit"></lr-icon-button>
-      </fieldset>
-    </form>
-  `)) as HTMLFormElement;
-  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
-  const el = form.querySelector('lr-icon-button') as LyraIconButton;
-  const button = el.shadowRoot!.querySelector('button') as HTMLButtonElement;
-  let submits = 0;
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    submits++;
-  });
-
-  fieldset.disabled = true;
-  await el.updateComplete;
-  expect(button.disabled).to.be.true;
-  el.click();
-  expect(submits).to.equal(0);
-
-  fieldset.disabled = false;
-  await el.updateComplete;
-  el.click();
-  expect(submits).to.equal(1);
-});
-
-it('remains constructible when attachInternals is unavailable', () => {
-  const original = HTMLElement.prototype.attachInternals;
-  // @ts-expect-error simulates an SSR/test DOM without ElementInternals.
-  delete HTMLElement.prototype.attachInternals;
-  try {
-    expect(() => document.createElement('lr-icon-button')).to.not.throw();
-  } finally {
-    HTMLElement.prototype.attachInternals = original;
-  }
-});
-
 it('is accessible with slotted content instead of a named glyph', async () => {
   const el = await fixture(html`
     <lr-icon-button aria-label="Français"><lr-flag src=${TEST_FLAG_SRC} label=""></lr-flag></lr-icon-button>
@@ -616,6 +531,38 @@ describe('lr-icon-button — mapped Shoelace surface', () => {
     expect(anchor.rel).to.equal('noopener noreferrer');
     expect(anchor.download).to.equal('icon.svg');
     await expect(el).to.be.accessible();
+  });
+
+  it('preserves an empty download attribute and rejects non-downloadable schemes', async () => {
+    const downloadable = (await fixture(html`
+      <lr-icon-button
+        name="close"
+        label="Download"
+        href="https://example.com/icon.svg"
+        download
+      ></lr-icon-button>
+    `)) as LyraIconButton;
+    const anchor = downloadable.shadowRoot!.querySelector('a')!;
+    expect(anchor.hasAttribute('download')).to.be.true;
+    expect(anchor.getAttribute('download')).to.equal('');
+
+    const mail = (await fixture(html`
+      <lr-icon-button
+        name="close"
+        label="Email"
+        href="mailto:hello@example.com"
+        download
+      ></lr-icon-button>
+    `)) as LyraIconButton;
+    expect(mail.shadowRoot!.querySelector('a') === null).to.be.true;
+    expect(mail.shadowRoot!.querySelector('button')).to.exist;
+
+    mail.download = undefined;
+    await mail.updateComplete;
+    expect(mail.shadowRoot!.querySelector('a')!.getAttribute('href')).to.equal(
+      'mailto:hello@example.com',
+    );
+    expect(mail.shadowRoot!.querySelector('a')!.hasAttribute('download')).to.be.false;
   });
 
   it('makes disabled link mode inert and restores its href when re-enabled', async () => {

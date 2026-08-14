@@ -14,14 +14,36 @@ export interface StackGroup {
 
 /** File-path substrings/patterns that mark a frame as framework/runtime noise by default --
  *  common Node/V8, browser, and Python standard-library/dependency locations. */
-export const DEFAULT_INTERNAL_PATTERNS: (string | RegExp)[] = [
+export const DEFAULT_INTERNAL_PATTERNS: readonly (string | RegExp)[] = Object.freeze([
   'node_modules/',
   'node:internal',
   '(native)',
   'site-packages/',
   'dist-packages/',
   '/usr/lib/python',
-];
+]);
+
+/** Hard ceilings applied before parsing or rendering untrusted trace text. */
+export const STACK_TRACE_LIMITS = Object.freeze({
+  bytes: 256 * 1024,
+  lines: 4_000,
+  groups: 64,
+  frames: 2_000,
+  lineCharacters: 8_192,
+});
+
+export interface StackTraceParseOptions {
+  /** File-path substrings or patterns classified as framework/runtime frames. */
+  internalPatterns?: readonly (string | RegExp)[];
+}
+
+export interface StackTraceParseResult {
+  groups: StackGroup[];
+  /** True when any byte, line, group, frame, or per-line ceiling omitted input. */
+  truncated: boolean;
+  /** The bounded source projection suitable for the raw-rendering fallback. */
+  source: string;
+}
 
 // Only strips the leading "at [async] [new] " tokens -- deliberately has no way to fail once "at"
 // is found (everything after is optional/zero-width), so `\s+` always commits to its greedy match
@@ -44,7 +66,6 @@ const PYTHON_FRAME = /^\s*File "([^"]+)", line ([^,]*), in (.+)$/;
 // Keep language detection strict. PYTHON_FRAME intentionally recognizes malformed coordinate
 // candidates after a traceback has already been identified, but prose resembling such a line must
 // not make a JavaScript trace skip its valid V8/Firefox frames.
-const PYTHON_FRAME_DETECTOR = /^\s*File "[^"]+", line \d+, in .+$/;
 const PYTHON_CHAIN_SEPARATOR = /direct cause|During handling/;
 // Equivalent to the original `\S+(\.\S+)*:\s` -- `\S` already matches `.`, so the `(\.\S+)*`
 // group added no coverage, only exponential backtracking (CodeQL js/redos) on input like many
@@ -145,16 +166,13 @@ function matchFirefoxFrame(line: string): FirefoxFrame | null {
   };
 }
 
-function isInternal(file: string | undefined, patterns: (string | RegExp)[]): boolean {
+function isInternal(file: string | undefined, patterns: readonly (string | RegExp)[]): boolean {
   if (!file) return false;
   return patterns.some((pattern) => {
     if (typeof pattern === 'string') return file.includes(pattern);
-    // RegExp instances with `g`/`y` mutate lastIndex on test(). A caller-provided stateful pattern
-    // must classify every frame independently rather than alternating based on prior frames.
-    pattern.lastIndex = 0;
-    const matches = pattern.test(file);
-    pattern.lastIndex = 0;
-    return matches;
+    // Test a clone without the stateful flags. Besides keeping classification deterministic, this
+    // preserves the caller's lastIndex even when RegExp.prototype.test throws.
+    return new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, '')).test(file);
   });
 }
 
@@ -167,7 +185,7 @@ function makeFrame(
   lineToken: string,
   columnToken: string | undefined,
   functionName: string | undefined,
-  internalPatterns: (string | RegExp)[],
+  internalPatterns: readonly (string | RegExp)[],
 ): StackFrame {
   const location = parseSafeLocation(lineToken, columnToken);
   if (!location) return { internal: false, raw };
@@ -180,7 +198,7 @@ function makeFrame(
   };
 }
 
-function parseJs(lines: string[], internalPatterns: (string | RegExp)[]): StackGroup[] {
+function parseJs(lines: string[], internalPatterns: readonly (string | RegExp)[]): StackGroup[] {
   const groups: StackGroup[] = [];
   let current: StackGroup = { message: '', frames: [] };
   let messageLines: string[] = [];
@@ -225,7 +243,7 @@ function parseJs(lines: string[], internalPatterns: (string | RegExp)[]): StackG
   return structuredCount > 0 ? groups : [];
 }
 
-function parsePython(lines: string[], internalPatterns: (string | RegExp)[]): StackGroup[] {
+function parsePython(lines: string[], internalPatterns: readonly (string | RegExp)[]): StackGroup[] {
   const groups: { frames: StackFrame[]; trailerLines: string[] }[] = [];
   let current: { frames: StackFrame[]; trailerLines: string[] } | null = null;
   let i = 0;
@@ -276,13 +294,74 @@ function parsePython(lines: string[], internalPatterns: (string | RegExp)[]): St
   return structuredCount > 0 ? parsedGroups : [];
 }
 
+function utf8Prefix(value: string, byteLimit: number): { source: string; truncated: boolean } {
+  let bytes = 0;
+  let index = 0;
+  while (index < value.length) {
+    const first = value.charCodeAt(index);
+    let width = first < 0x80 ? 1 : first < 0x800 ? 2 : 3;
+    let units = 1;
+    if (first >= 0xd800 && first <= 0xdbff && index + 1 < value.length) {
+      const second = value.charCodeAt(index + 1);
+      if (second >= 0xdc00 && second <= 0xdfff) {
+        width = 4;
+        units = 2;
+      }
+    }
+    if (bytes + width > byteLimit) break;
+    bytes += width;
+    index += units;
+  }
+  return { source: value.slice(0, index), truncated: index < value.length };
+}
+
+function boundedLines(trace: string): { source: string; lines: string[]; truncated: boolean } {
+  const byteBound = utf8Prefix(trace, STACK_TRACE_LIMITS.bytes);
+  const split = byteBound.source.split(/\r\n|\r|\n/, STACK_TRACE_LIMITS.lines + 1);
+  let truncated = byteBound.truncated || split.length > STACK_TRACE_LIMITS.lines;
+  const lines = split.slice(0, STACK_TRACE_LIMITS.lines).map((line) => {
+    if (line.length <= STACK_TRACE_LIMITS.lineCharacters) return line;
+    truncated = true;
+    return line.slice(0, STACK_TRACE_LIMITS.lineCharacters);
+  });
+  return { source: lines.join('\n'), lines, truncated };
+}
+
+function boundedGroups(groups: StackGroup[]): { groups: StackGroup[]; truncated: boolean } {
+  let remainingFrames = STACK_TRACE_LIMITS.frames;
+  let truncated = groups.length > STACK_TRACE_LIMITS.groups;
+  const bounded: StackGroup[] = [];
+  for (const group of groups.slice(0, STACK_TRACE_LIMITS.groups)) {
+    const frames = group.frames.slice(0, remainingFrames);
+    if (frames.length < group.frames.length) truncated = true;
+    bounded.push({ message: group.message, frames });
+    remainingFrames -= frames.length;
+    if (remainingFrames === 0) {
+      if (bounded.length < groups.length) truncated = true;
+      break;
+    }
+  }
+  return { groups: bounded, truncated };
+}
+
 /**
- * Parses a JS/TS (V8, Firefox/Safari) or Python stack trace into message+frame groups,
- * innermost-frame-first, splitting chained/caused-by errors into separate groups. Returns `[]`
- * when nothing parseable is found so the caller can fall back to verbatim raw rendering.
+ * Purely parses a bounded JS/TS (V8, Firefox/Safari) or Python stack trace into
+ * innermost-frame-first groups. Python mode requires an actual traceback header; a Python-looking
+ * prose line inside a JavaScript trace cannot discard valid JS frames. The returned `source` is
+ * the bounded text projection to use when `groups` is empty.
  */
-export function parseStackTrace(trace: string, internalPatterns: (string | RegExp)[]): StackGroup[] {
-  const lines = trace.split(/\r\n|\r|\n/);
-  const isPython = lines.some((line) => PYTHON_HEADER.test(line) || PYTHON_FRAME_DETECTOR.test(line));
-  return isPython ? parsePython(lines, internalPatterns) : parseJs(lines, internalPatterns);
+export function parseStackTrace(trace: string, options: StackTraceParseOptions = {}): StackTraceParseResult {
+  const bounded = boundedLines(trace);
+  // A standalone Python-looking frame is not a traceback. Requiring the header also makes mixed
+  // provider logs deterministic instead of choosing Python based on one incidental line.
+  const isPython = bounded.lines.some((line) => PYTHON_HEADER.test(line));
+  const parsed = isPython
+    ? parsePython(bounded.lines, options.internalPatterns ?? DEFAULT_INTERNAL_PATTERNS)
+    : parseJs(bounded.lines, options.internalPatterns ?? DEFAULT_INTERNAL_PATTERNS);
+  const limited = boundedGroups(parsed);
+  return {
+    groups: limited.groups,
+    truncated: bounded.truncated || limited.truncated,
+    source: bounded.source,
+  };
 }

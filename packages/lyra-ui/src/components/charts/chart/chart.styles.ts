@@ -18,11 +18,11 @@ export const styles = css`
        so a host can retheme just the chart's grid/ticks/legend/tooltip
        without affecting unrelated text/border/surface colors elsewhere in
        the component, while still defaulting to those semantic tokens. */
-    --lr-chart-grid-color: var(--lr-color-border);
-    --lr-chart-tick-color: var(--lr-color-text-quiet);
-    --lr-chart-legend-color: var(--lr-color-text);
-    --lr-chart-tooltip-bg: var(--lr-color-surface);
-    --lr-chart-tooltip-text: var(--lr-color-text);
+    --_lr-chart-grid-color: var(--lr-color-border);
+    --_lr-chart-tick-color: var(--lr-color-text-quiet);
+    --_lr-chart-legend-color: var(--lr-color-text);
+    --_lr-chart-tooltip-bg: var(--lr-color-surface);
+    --_lr-chart-tooltip-text: var(--lr-color-text);
   }
   [part='base'] {
     position: relative;
@@ -53,6 +53,14 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-x: auto;
     overflow-y: hidden;
+  }
+  [part='data-table'][data-visually-hidden] {
+    position: absolute;
+    inline-size: var(--lr-size-1px);
+    block-size: var(--lr-size-1px);
+    overflow: clip;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   [part='notices'] {
     grid-area: warning;
@@ -97,7 +105,7 @@ export const styles = css`
     padding: var(--lr-space-2xs);
     gap: var(--lr-space-2xs);
     background: transparent;
-    color: var(--lr-chart-legend-color);
+    color: var(--lr-chart-legend-color, var(--_lr-chart-legend-color));
     font: inherit;
     text-align: start;
     overflow-wrap: anywhere;
@@ -145,14 +153,18 @@ export const styles = css`
       'legend plot'
       'warning warning'
       'table table';
-    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    grid-template-columns:
+      minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))))
+      minmax(0, 1fr);
   }
   [part='base']:where([data-legend-position='inline-end']) {
     grid-template-areas:
       'plot legend'
       'warning warning'
       'table table';
-    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))));
   }
   @container (max-width: 479px) {
     [part='base']:where([data-legend-position='inline-start']),
@@ -185,7 +197,8 @@ export const styles = css`
        prominent) without also affecting every other --lr-border-width-thin consumer on the page
        -- the same indirection rationale as the --lr-chart-grid-color/-tick-color/etc. block
        above, applied to a state-specific rule instead of a :host-level default. */
-    outline: var(--lr-chart-canvas-hover-outline-width, var(--lr-border-width-thin)) solid var(--lr-chart-grid-color);
+    outline: var(--lr-chart-canvas-hover-outline-width, var(--lr-border-width-thin)) solid
+      var(--lr-chart-grid-color, var(--_lr-chart-grid-color));
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='canvas']:focus-visible {

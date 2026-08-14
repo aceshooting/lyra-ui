@@ -26,7 +26,7 @@ gate catches.
   resolve the same package either way. In every case, reject a candidate that lacks the callable
   capability the component needs. For a sanitizer specifically (`dompurify-loader.ts`), getting
   this wrong means sanitization silently **no-ops instead of throwing** — a security bug, not an
-  interop nit. `spreadsheet-loader.ts`/`archive-loader.ts`/`calendar-loader.ts` show the
+  interop nit. `spreadsheet-loader.ts`/`docx-loader.ts`/`calendar-loader.ts` show the
   namespace/default shape.
 - **Optional-peer load failure fails closed, visibly — and the accessible announcement is a
   separate step from the visible fallback.** A component whose render depends on a peer that

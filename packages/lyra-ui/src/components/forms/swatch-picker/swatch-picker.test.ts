@@ -15,6 +15,29 @@ function swatches(el: LyraSwatchPicker): HTMLButtonElement[] {
 }
 
 describe('lr-swatch-picker', () => {
+  it('uses the canonical readonly items/accessibility vocabulary while retaining aliases', async () => {
+    const palette = options();
+    const el = (await fixture(html`
+      <lr-swatch-picker aria-label="Accent" .items=${palette}></lr-swatch-picker>
+    `)) as LyraSwatchPicker;
+    expect(el.items).to.deep.equal(palette);
+    expect(el.items === palette).to.be.false;
+    expect(el.options).to.equal(el.items);
+    expect(Object.isFrozen(el.items)).to.be.true;
+    palette[0]!.label = 'Forged';
+    palette.push({ value: 'purple', color: '#8250df', label: 'Purple' });
+    expect(el.items.map((item) => item.label)).to.deep.equal(['Blue', 'Green', 'Red']);
+    palette[0]!.label = 'Blue';
+    palette.pop();
+    expect(el.accessibleLabel).to.equal('Accent');
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Accent');
+
+    const replacement = palette.slice().reverse();
+    el.options = replacement;
+    await el.updateComplete;
+    expect(el.items).to.deep.equal(replacement);
+    expect(swatches(el).map((swatch) => swatch.dataset['value'])).to.deep.equal(['red', 'green', 'blue']);
+  });
   it('rejects unsafe option colors from both CSS and gemstone SVG paint sinks', async () => {
     const el = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker></lr-swatch-picker>`);
     el.mode = 'gemstone';

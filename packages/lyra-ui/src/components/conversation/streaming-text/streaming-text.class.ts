@@ -1,14 +1,9 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { finiteDuration } from '../../../internal/numbers.js';
-import '../markdown/markdown.class.js';
 import { styles } from './streaming-text.styles.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 const DEFAULT_COALESCE_MS = 50;
@@ -23,11 +18,10 @@ const DEFAULT_COALESCE_MS = 50;
  * renders literal `**`/backticks/etc. as plain text until more of the stream
  * arrives.
  */
-const MARKDOWN_PATTERNS: readonly RegExp[] = [
+const APPEND_MONOTONIC_MARKDOWN_PATTERNS: readonly RegExp[] = [
   /^ {0,3}#{1,6}\s+\S/m, // ATX heading: "# Heading"
   /```/, // fenced code block
   /\*\*[^*\n]+\*\*/, // **bold**
-  /(?:^|[^\w])_[^_\n]+_(?:[^\w]|$)/, // _italic_
   /`[^`\n]+`/, // inline code
   /^ {0,3}[-*+]\s+\S/m, // bullet list item
   /^ {0,3}\d+\.\s+\S/m, // numbered list item
@@ -35,34 +29,23 @@ const MARKDOWN_PATTERNS: readonly RegExp[] = [
   /^ {0,3}>\s?\S/m, // blockquote
 ];
 
+// The trailing boundary may be the current end of a stream. Appending a
+// word character can therefore invalidate a prior match (`_x_` -> `_x_a`).
+const BOUNDARY_SENSITIVE_MARKDOWN_PATTERNS: readonly RegExp[] = [
+  /(?:^|[^\w])_[^_\n]+_(?:[^\w]|$)/, // _italic_
+];
+
 /** Runs {@link MARKDOWN_PATTERNS} against `text`, used whenever `markdown`
  *  is left unset (auto-detect). Exported so the heuristic is directly
  *  testable without going through the component's render cycle. */
 export function looksLikeMarkdown(text: string): boolean {
   if (!text) return false;
-  return MARKDOWN_PATTERNS.some((pattern) => pattern.test(text));
+  return [...APPEND_MONOTONIC_MARKDOWN_PATTERNS, ...BOUNDARY_SENSITIVE_MARKDOWN_PATTERNS].some((pattern) =>
+    pattern.test(text),
+  );
 }
 
-/**
- * Tri-state boolean attribute converter for `markdown`. Lit's built-in
- * `type: Boolean` converter is presence-based and can only ever represent
- * two states (attribute present -> `true`, absent -> `false`) -- there's no
- * way for it to also represent "not specified, auto-detect instead", which
- * is the actual default this property needs. `markdown` (no value, or
- * `="true"`) -> `true`; `markdown="false"` -> `false`; attribute entirely
- * absent -> `undefined`.
- *
- * Only `fromAttribute` is defined: `markdown` is not declared `reflect: true`
- * below, and Lit only ever calls a converter's `toAttribute()` when the
- * property it's attached to reflects, so a `toAttribute()` here would be
- * unreachable dead code.
- */
-const optionalBooleanConverter: ComplexAttributeConverter<boolean | undefined> = {
-  fromAttribute(value): boolean | undefined {
-    if (value === null) return undefined;
-    return value !== 'false';
-  },
-};
+export type StreamingTextContentMode = 'auto' | 'plain' | 'markdown';
 
 /**
  * `<lr-streaming-text>` — a token-coalescing incremental text renderer for
@@ -93,14 +76,13 @@ const optionalBooleanConverter: ComplexAttributeConverter<boolean | undefined> =
  * stream restarting on a reused element can never keep showing the
  * previous stream's stale final content for the length of the window).
  *
- * `markdown` is a tri-state property, not a plain boolean: left unset (the
- * default), it auto-detects via a lightweight regex heuristic (see
+ * `contentMode="auto"` (the default) auto-detects via a lightweight regex heuristic (see
  * `looksLikeMarkdown`) run against whatever text is currently displayed --
  * good enough to route obviously-Markdown output through `<lr-markdown>`
  * without the host needing to know or declare it up front, at the cost of
  * an occasional one-time mode flip if Markdown syntax only appears partway
- * through a stream. Explicitly setting `markdown` to `true`/`false` always
- * wins over the heuristic. Rendering itself is never reimplemented here:
+ * through a stream. Explicit `"plain"` and `"markdown"` modes always win
+ * over the heuristic. Rendering itself is never reimplemented here:
  * Markdown mode composes `<lr-markdown>` (`../markdown/markdown.js`)
  * directly, forwarding this component's own `streaming` through as that
  * component's own forward-compatible `streaming` hint prop; plain-text mode
@@ -132,22 +114,13 @@ const optionalBooleanConverter: ComplexAttributeConverter<boolean | undefined> =
  * @customElement lr-streaming-text
  * @csspart base - The root container.
  * @csspart cursor - The blinking (or, under reduced motion, static) cursor bar. Only rendered while `streaming` is `true`.
- * @cssprop [--lr-streaming-text-cursor-width=var(--lr-size-0-125rem)] - Width of the `cursor` bar (also its border radius).
- * @cssprop [--lr-streaming-text-cursor-height=var(--lr-size-1em)] - Height of the `cursor` bar.
+ * @cssprop [--lr-inline-cursor-width=var(--lr-size-0-125rem)] - Shared width of the inline cursor
+ * bar (also its border radius).
+ * @cssprop [--lr-inline-cursor-height=var(--lr-size-1em)] - Shared height of the inline cursor bar.
  * @status stable
  * @since 4.0.0
  */
 export class LyraStreamingText extends LyraElement {
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    anchorJumped: LYRA_DEFAULT_anchorJumped,
-    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
-    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
-
   static override styles = [LyraElement.styles, styles];
 
   /** The full current text so far -- always the complete string, never a
@@ -162,9 +135,9 @@ export class LyraStreamingText extends LyraElement {
    *  class doc. */
   @property({ type: Number, attribute: 'coalesce-ms' }) coalesceMs = DEFAULT_COALESCE_MS;
 
-  /** `undefined` (default) auto-detects via `looksLikeMarkdown`; `true`/
-   *  `false` force that rendering mode regardless of content. */
-  @property({ attribute: 'markdown', converter: optionalBooleanConverter }) markdown?: boolean;
+  /** Rendering mode. `auto` uses `looksLikeMarkdown`; the other values force
+   *  their named mode regardless of content. */
+  @property({ reflect: true, attribute: 'content-mode' }) contentMode: StreamingTextContentMode = 'auto';
 
   // The coalesced value actually rendered -- lags `content` by up to
   // `coalesceMs` (or zero, for the immediate-flush cases documented above).
@@ -178,6 +151,7 @@ export class LyraStreamingText extends LyraElement {
   // result that can't possibly have changed since the last scan.
   private lastScannedContent?: string;
   private lastScannedResult = false;
+  private lastMonotonicResult = false;
 
   private readonly coalescer: Announcer;
 
@@ -244,15 +218,17 @@ export class LyraStreamingText extends LyraElement {
     if (changed.has('displayedContent') && this.displayedContent !== this.lastScannedContent) {
       const previous = this.lastScannedContent;
       this.lastScannedContent = this.displayedContent;
-      // Every MARKDOWN_PATTERNS entry is append-monotonic: a match found in some prefix of the
-      // string still exists (at the same offset) after more text is appended, so once a scan has
-      // returned `true` for a prefix of the current content, re-running the whole battery over
-      // the ever-growing accumulated string on every coalesced flush would be quadratic work for
-      // a result that cannot change. The `startsWith` check is what verifies "content only
-      // appended" -- a non-append change (e.g. a reused element starting a brand-new stream)
-      // fails it and falls through to a full rescan, which is also what resets the memo.
-      if (!(this.lastScannedResult && previous !== undefined && this.displayedContent.startsWith(previous))) {
-        this.lastScannedResult = looksLikeMarkdown(this.displayedContent);
+      const appended = previous !== undefined && this.displayedContent.startsWith(previous);
+      // Only matches whose truth cannot be invalidated by appended text may
+      // short-circuit an append. Boundary-sensitive signals are rescanned;
+      // for example `_x_` is Markdown but `_x_a` is ordinary text.
+      if (!(appended && this.lastMonotonicResult)) {
+        this.lastMonotonicResult = APPEND_MONOTONIC_MARKDOWN_PATTERNS.some((pattern) =>
+          pattern.test(this.displayedContent),
+        );
+        this.lastScannedResult =
+          this.lastMonotonicResult ||
+          BOUNDARY_SENSITIVE_MARKDOWN_PATTERNS.some((pattern) => pattern.test(this.displayedContent));
       }
     }
   }
@@ -262,17 +238,20 @@ export class LyraStreamingText extends LyraElement {
     this.coalescer.cancel();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     const ownerWindow = this.ownerDocument.defaultView;
     if (ownerWindow) this.coalescer.setTimerHost(ownerWindow);
   }
 
   /** Whether Markdown mode is actually in effect right now, resolving the
-   *  tri-state `markdown` property against the memoized `looksLikeMarkdown`
+   *  `contentMode` property against the memoized `looksLikeMarkdown`
    *  result for the currently-displayed content (see `lastScannedContent`/
    *  `lastScannedResult` above). */
   private get effectiveMarkdown(): boolean {
-    return this.markdown ?? this.lastScannedResult;
+    if (this.contentMode === 'markdown') return true;
+    if (this.contentMode === 'plain') return false;
+    return this.lastScannedResult;
   }
 
   override render(): TemplateResult {

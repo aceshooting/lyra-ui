@@ -4,6 +4,9 @@ import './avatar-group.js';
 import '../avatar/avatar.js';
 import type { LyraAvatarGroup } from './avatar-group.js';
 
+const isGroupHidden = (avatar: Element): boolean =>
+  avatar.hasAttribute('data-lr-avatar-group-hidden');
+
 // A minimal host that re-projects its own light-DOM children into a
 // `<lr-avatar-group>` living in its shadow DOM via a forwarding `<slot>` --
 // this is the "slot forwarding" scenario `firstUpdated()`'s fallback
@@ -39,7 +42,7 @@ it('sanitizes a NaN/negative max to a finite non-negative integer instead of poi
   expect(el.max).to.equal(0); // finiteCount's own fallback of 0 for a NaN input
   await el.updateComplete;
   const avatars = Array.from(el.querySelectorAll('lr-avatar')) as HTMLElement[];
-  expect(avatars.every((a) => a.hidden)).to.be.true; // 0 visible, all 5 collapse behind the badge
+  expect(avatars.every(isGroupHidden)).to.be.true; // 0 visible, all 5 collapse behind the badge
   expect(el.shadowRoot!.querySelector('[part="overflow-badge"]')).to.exist;
 
   el.max = -5;
@@ -62,7 +65,7 @@ it('defaults max to undefined, size to medium, shape to circle, variant to neutr
   expect(el.variant).to.equal('neutral');
   expect((el.shadowRoot!.querySelector('[part="overflow-badge"]')) == null).to.be.true;
   const avatars = Array.from(el.querySelectorAll('lr-avatar')) as HTMLElement[];
-  expect(avatars.every((a) => !a.hidden)).to.be.true;
+  expect(avatars.every((a) => !isGroupHidden(a))).to.be.true;
 });
 
 it('spells its default size the same way lr-avatar does, and renders the same diameter', async () => {
@@ -87,18 +90,16 @@ it('spells its default size the same way lr-avatar does, and renders the same di
   );
   // ...and the group's own badge box tracks that same tier, so a "+N" circle can't be a
   // different size from the avatars it caps.
-  expect(getComputedStyle(group).getPropertyValue('--lr-avatar-group-avatar-size').trim()).to.equal(
-    getComputedStyle(standalone).getPropertyValue('--lr-avatar-size').trim(),
-  );
+  expect(diameterOf(grouped)).to.equal('48px');
 });
 
 it('reflects size/shape/variant as attributes for CSS selectors', async () => {
   const el = (await fixture(html`
-    <lr-avatar-group size="lg" shape="square" variant="brand">
+    <lr-avatar-group size="large" shape="square" variant="brand">
       <lr-avatar></lr-avatar>
     </lr-avatar-group>
   `)) as LyraAvatarGroup;
-  expect(el.getAttribute('size')).to.equal('lg');
+  expect(el.getAttribute('size')).to.equal('large');
   expect(el.getAttribute('shape')).to.equal('square');
   expect(el.getAttribute('variant')).to.equal('brand');
 });
@@ -117,21 +118,22 @@ it('shows every avatar with no badge when max is greater than or equal to the ch
   `)) as LyraAvatarGroup;
   expect((el.shadowRoot!.querySelector('[part="overflow-badge"]')) == null).to.be.true;
   const avatars = Array.from(el.querySelectorAll('lr-avatar')) as HTMLElement[];
-  expect(avatars.every((a) => !a.hidden)).to.be.true;
+  expect(avatars.every((a) => !isGroupHidden(a))).to.be.true;
 });
 
 describe('overflow behavior', () => {
   it('hides avatars beyond max and renders a "+N" overflow badge', async () => {
     const el = (await fixture(fiveAvatars())) as LyraAvatarGroup;
     const avatars = Array.from(el.querySelectorAll('lr-avatar')) as HTMLElement[];
-    expect(avatars.map((a) => a.hidden)).to.deep.equal([false, false, false, true, true]);
+    expect(avatars.map(isGroupHidden)).to.deep.equal([false, false, false, true, true]);
 
     const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
     expect((badge) != null).to.equal(true);
     expect(badge.textContent!.trim()).to.equal('+2');
     // The ordinary (not-sole-visible) case keeps the normal overlap margin --
     // contrasted against the max=0 regression test below.
-    expect(getComputedStyle(badge).marginInlineStart).to.equal('-6px');
+    const visual = badge.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
+    expect(getComputedStyle(visual).marginInlineStart).to.equal('-6px');
   });
 
   it('hides every avatar and shows a "+{childCount}" badge with zero own margin when max=0', async () => {
@@ -143,7 +145,7 @@ describe('overflow behavior', () => {
       </lr-avatar-group>
     `)) as LyraAvatarGroup;
     const avatars = Array.from(el.querySelectorAll('lr-avatar')) as HTMLElement[];
-    expect(avatars.every((a) => a.hidden)).to.be.true;
+    expect(avatars.every(isGroupHidden)).to.be.true;
 
     const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
     expect((badge) != null).to.equal(true);
@@ -151,7 +153,8 @@ describe('overflow behavior', () => {
     // The badge is the first *visible* thing in the row here (every avatar is
     // hidden), so its own margin-inline-start must be zeroed rather than
     // carrying the normal overlap value.
-    expect(getComputedStyle(badge).marginInlineStart).to.equal('0px');
+    const visual = badge.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
+    expect(getComputedStyle(visual).marginInlineStart).to.equal('0px');
   });
 
   it('restores each child’s author-owned hidden state when overflow ownership ends or the group disconnects', async () => {
@@ -163,10 +166,12 @@ describe('overflow behavior', () => {
       </lr-avatar-group>
     `)) as LyraAvatarGroup;
     const avatars = [...el.querySelectorAll('lr-avatar')] as HTMLElement[];
-    expect(avatars.map((avatar) => avatar.hidden)).to.deep.equal([false, true, true]);
+    expect(avatars.map(isGroupHidden)).to.deep.equal([false, false, true]);
+    expect(avatars.map((avatar) => avatar.hidden)).to.deep.equal([false, true, false]);
 
     el.max = undefined;
     await el.updateComplete;
+    expect(avatars.every((avatar) => !isGroupHidden(avatar))).to.be.true;
     expect(avatars.map((avatar) => avatar.hidden)).to.deep.equal([false, true, false]);
 
     el.max = 1;
@@ -206,7 +211,7 @@ describe('dynamic children', () => {
     const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
     expect((badge) != null).to.equal(true);
     expect(badge.textContent!.trim()).to.equal('+1');
-    expect((extra as HTMLElement).hidden).to.be.true;
+    expect(isGroupHidden(extra)).to.be.true;
   });
 
   it('recomputes overflow when an avatar is removed after first render', async () => {
@@ -220,7 +225,7 @@ describe('dynamic children', () => {
 
     expect((el.shadowRoot!.querySelector('[part="overflow-badge"]')) == null).to.be.true;
     const remaining = Array.from(el.querySelectorAll('lr-avatar')) as HTMLElement[];
-    expect(remaining.every((a) => !a.hidden)).to.be.true;
+    expect(remaining.every((a) => !isGroupHidden(a))).to.be.true;
   });
 });
 
@@ -260,13 +265,13 @@ it('reconciles childCount correctly through a forwarding <slot> (children.length
     expect((badge) != null).to.equal(true);
     expect(badge.textContent!.trim()).to.equal('+1');
     const forwardedAvatars = Array.from(host.querySelectorAll('lr-avatar')) as HTMLElement[];
-    expect(forwardedAvatars.map((avatar) => avatar.hidden)).to.deep.equal([false, false, true]);
+    expect(forwardedAvatars.map(isGroupHidden)).to.deep.equal([false, false, true]);
   } finally {
     console.warn = originalWarn;
   }
 
   const messages = calls.flat().map(String);
-  expect(messages.some((m) => m.includes('scheduled an update'))).to.be.true;
+  expect(messages.some((m) => m.includes('scheduled an update'))).to.be.false;
 });
 
 describe('overflow badge activation', () => {
@@ -279,6 +284,8 @@ describe('overflow badge activation', () => {
     const ev = await oneEvent(el, 'lr-overflow-click');
 
     expect(ev.detail.hiddenCount).to.equal(2);
+    expect(Object.isFrozen(ev.detail)).to.equal(true);
+    expect(Object.isFrozen(ev.detail.hiddenAvatars)).to.equal(true);
     // Deliberately avoid deep-equality against the raw element array (chai/loupe's
     // DOM-diff formatting can hang the whole test file) -- compare length and a
     // cheap per-element projection instead.
@@ -305,7 +312,7 @@ describe('overflow badge activation', () => {
     await el.updateComplete;
 
     const avatars = Array.from(el.querySelectorAll('lr-avatar')) as HTMLElement[];
-    expect(avatars.map((a) => a.hidden)).to.deep.equal([false, false, false, true, true]);
+    expect(avatars.map(isGroupHidden)).to.deep.equal([false, false, false, true, true]);
     expect(badge().textContent!.trim()).to.equal(textBefore);
     expect(badge().getAttribute('aria-label')).to.equal(labelBefore);
   });
@@ -440,11 +447,13 @@ it('flips the resolved overlap margin under dir="rtl" (Chromium resolves logical
 describe('design tokens reach rendered CSS', () => {
   it('resolves --lr-avatar-group-avatar-size/-overlap through the size token chain (lg tier)', async () => {
     const el = (await fixture(html`
-      <lr-avatar-group size="lg"><lr-avatar></lr-avatar></lr-avatar-group>
+    <lr-avatar-group size="large"><lr-avatar></lr-avatar></lr-avatar-group>
     `)) as LyraAvatarGroup;
     const hostStyle = getComputedStyle(el);
-    expect(hostStyle.getPropertyValue('--lr-avatar-group-avatar-size').trim()).to.equal('2.5rem');
-    expect(hostStyle.getPropertyValue('--lr-avatar-group-overlap').trim()).to.equal('-8px');
+    const avatar = el.querySelector('lr-avatar') as HTMLElement;
+    const base = avatar.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).inlineSize).to.equal('64px');
+    expect(getComputedStyle(avatar).marginInlineStart).to.equal('0px');
   });
 
   // Resolve a declaration through the component's own shadow scope and read back the *used* value
@@ -473,35 +482,28 @@ describe('design tokens reach rendered CSS', () => {
     const brand = hostStyle.getPropertyValue('--lr-color-brand').trim();
     expect(brandQuiet, '--lr-color-brand-quiet resolves to a real colour').to.match(/^(#|rgb|color\()/);
     expect(brand, '--lr-color-brand resolves to a real colour').to.match(/^(#|rgb|color\()/);
-    expect(hostStyle.getPropertyValue('--lr-avatar-group-badge-bg').trim()).to.equal(brandQuiet);
-    expect(hostStyle.getPropertyValue('--lr-avatar-group-badge-color').trim()).to.equal(brand);
+    // Public hooks remain unset unless authored, so ancestor themes are not shadowed by host
+    // defaults. The private defaults are verified through rendered output below.
+    expect(hostStyle.getPropertyValue('--lr-avatar-group-badge-bg').trim()).to.equal('');
+    expect(hostStyle.getPropertyValue('--lr-avatar-group-badge-color').trim()).to.equal('');
 
-    // ...and the brand tier is genuinely a different decision from the neutral default, so the two
-    // equalities above prove `:host([variant='brand'])` matched rather than passing vacuously.
     const neutral = (await fixture(html`
       <lr-avatar-group max="0"><lr-avatar initials="AB"></lr-avatar></lr-avatar-group>
     `)) as LyraAvatarGroup;
-    const neutralStyle = getComputedStyle(neutral);
-    expect(brandQuiet, 'brand badge bg differs from the default variant').to.not.equal(
-      neutralStyle.getPropertyValue('--lr-avatar-group-badge-bg').trim(),
-    );
-    expect(brand, 'brand badge color differs from the default variant').to.not.equal(
-      neutralStyle.getPropertyValue('--lr-avatar-group-badge-color').trim(),
-    );
+    const neutralBadge = neutral.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
     // A stale `tone="brand"` must no longer reach the badge at all -- the rename is not aliased.
     const stale = (await fixture(html`
       <lr-avatar-group max="0" tone="brand"><lr-avatar initials="AB"></lr-avatar></lr-avatar-group>
     `)) as LyraAvatarGroup;
-    expect(
-      getComputedStyle(stale).getPropertyValue('--lr-avatar-group-badge-bg').trim(),
-      'tone="brand" no longer recolors the badge',
-    ).to.equal(neutralStyle.getPropertyValue('--lr-avatar-group-badge-bg').trim());
+    const staleBadge = stale.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
 
-    const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
+    const badge = el.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
     expect(getComputedStyle(badge).backgroundColor).to.equal(
       resolvedIn(el.shadowRoot!, 'background-color: var(--lr-color-brand-quiet)', 'background-color'),
     );
     expect(getComputedStyle(badge).color).to.equal(resolvedIn(el.shadowRoot!, 'color: var(--lr-color-brand)', 'color'));
+    expect(getComputedStyle(badge).backgroundColor).to.not.equal(getComputedStyle(neutralBadge).backgroundColor);
+    expect(getComputedStyle(staleBadge).backgroundColor).to.equal(getComputedStyle(neutralBadge).backgroundColor);
   });
 });
 
@@ -557,44 +559,42 @@ describe('per-size overflow-badge font-size', () => {
           ></lr-avatar-group>`,
     )) as LyraAvatarGroup;
     await el.updateComplete;
-    const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
+    const badge = el.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
     return Number.parseFloat(getComputedStyle(badge).fontSize);
   };
 
   it('scales the rendered "+N" badge font-size with size', async () => {
     const [sm, md, lg] = [
-      await renderedBadgeFontSize('sm'),
-      await renderedBadgeFontSize('md'),
-      await renderedBadgeFontSize('lg'),
+      await renderedBadgeFontSize('small'),
+      await renderedBadgeFontSize('medium'),
+      await renderedBadgeFontSize('large'),
     ];
     expect(sm, 'sm < md').to.be.lessThan(md);
     expect(lg, 'lg > md').to.be.greaterThan(md);
   });
 
-  it('leaves the default (medium) tier byte-identical to today', async () => {
-    expect(await renderedBadgeFontSize()).to.equal(13);
-    expect(await renderedBadgeFontSize('md')).to.equal(13);
-    expect(await renderedBadgeFontSize('medium')).to.equal(13);
-    expect(await renderedBadgeFontSize('m')).to.equal(13);
+  it('uses the same font size for unset, medium and m', async () => {
+    expect(await renderedBadgeFontSize()).to.equal(await renderedBadgeFontSize('medium'));
+    expect(await renderedBadgeFontSize('m')).to.equal(await renderedBadgeFontSize('medium'));
   });
 
   it('lets a consumer override --lr-avatar-group-badge-font-size at any tier', async () => {
     const el = (await fixture(html`
-      <lr-avatar-group size="sm" max="1" label="Team">
+      <lr-avatar-group size="small" max="1" label="Team">
         <lr-avatar initials="AB"></lr-avatar>
         <lr-avatar initials="CD"></lr-avatar>
       </lr-avatar-group>
     `)) as LyraAvatarGroup;
     el.style.setProperty('--lr-avatar-group-badge-font-size', '19px');
     await el.updateComplete;
-    const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
+    const badge = el.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
     expect(getComputedStyle(badge).fontSize).to.equal('19px');
     await expect(el).to.be.accessible();
   });
 });
 
 it('keeps the interactive overflow badge at least 40px in both axes at sm and md tiers', async () => {
-  for (const size of ['sm', 'md', undefined] as const) {
+  for (const size of ['2xs', 'xs', 'small', undefined] as const) {
     const el = (await fixture(
       size
         ? html`<lr-avatar-group size=${size} max="1">
@@ -616,13 +616,164 @@ it('keeps the interactive overflow badge at least 40px in both axes at sm and md
 it('reapplies owned overflow hiding when reconnected', async () => {
   const el = (await fixture(fiveAvatars())) as LyraAvatarGroup;
   const avatars = [...el.querySelectorAll('lr-avatar')] as HTMLElement[];
-  expect(avatars.map((avatar) => avatar.hidden)).to.deep.equal([false, false, false, true, true]);
+  expect(avatars.map(isGroupHidden)).to.deep.equal([false, false, false, true, true]);
   const parent = el.parentElement!;
 
   el.remove();
-  expect(avatars.every((avatar) => !avatar.hidden)).to.be.true;
+  expect(avatars.every((avatar) => !isGroupHidden(avatar))).to.be.true;
   parent.append(el);
   await el.updateComplete;
 
-  expect(avatars.map((avatar) => avatar.hidden)).to.deep.equal([false, false, false, true, true]);
+  expect(avatars.map(isGroupHidden)).to.deep.equal([false, false, false, true, true]);
+});
+
+it('counts only author-visible, non-inert avatars and leaves invalid children untouched', async () => {
+  const el = (await fixture(html`
+    <lr-avatar-group max="1">
+      <svg id="foreign"></svg>
+      <lr-avatar id="hidden" hidden></lr-avatar>
+      <lr-avatar id="inert" inert></lr-avatar>
+      <lr-avatar id="first"></lr-avatar>
+      <lr-avatar id="overflow"></lr-avatar>
+      <div id="generic">generic</div>
+    </lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  const hidden = el.querySelector('#hidden')!;
+  const inert = el.querySelector('#inert')!;
+  const first = el.querySelector('#first')!;
+  const overflow = el.querySelector('#overflow')!;
+  expect(isGroupHidden(hidden)).to.be.false;
+  expect(isGroupHidden(inert)).to.be.false;
+  expect(isGroupHidden(first)).to.be.false;
+  expect(isGroupHidden(overflow)).to.be.true;
+  expect(el.querySelector('#foreign')!.hasAttribute('data-lr-avatar-group-hidden')).to.be.false;
+  expect(el.querySelector('#generic')!.hasAttribute('data-lr-avatar-group-hidden')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="overflow-badge"]')!.textContent!.trim()).to.equal('+1');
+});
+
+it('tracks live author hidden and inert writes without overwriting them', async () => {
+  const el = (await fixture(html`
+    <lr-avatar-group max="1"><lr-avatar id="a"></lr-avatar><lr-avatar id="b"></lr-avatar></lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  const [a, b] = [...el.querySelectorAll('lr-avatar')];
+  expect(isGroupHidden(b!)).to.be.true;
+  a!.setAttribute('hidden', '');
+  await new Promise((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+  expect(isGroupHidden(b!)).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="overflow-badge"]') === null).to.be.true;
+  a!.removeAttribute('hidden');
+  b!.setAttribute('inert', '');
+  await new Promise((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+  expect(a!.hasAttribute('hidden')).to.be.false;
+  expect(b!.hasAttribute('inert')).to.be.true;
+  expect(isGroupHidden(b!)).to.be.false;
+});
+
+it('defaults omitted child presentation while preserving explicit and later author values', async () => {
+  const el = (await fixture(html`
+    <lr-avatar-group size="large" shape="rounded" variant="brand">
+      <lr-avatar id="owned"></lr-avatar>
+      <lr-avatar id="explicit" size="small" shape="square" variant="danger"></lr-avatar>
+    </lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  const owned = el.querySelector('#owned')!;
+  const explicit = el.querySelector('#explicit')!;
+  expect([owned.getAttribute('size'), owned.getAttribute('shape'), owned.getAttribute('variant')]).to.deep.equal([
+    'large', 'rounded', 'brand',
+  ]);
+  expect([explicit.getAttribute('size'), explicit.getAttribute('shape'), explicit.getAttribute('variant')]).to.deep.equal([
+    'small', 'square', 'danger',
+  ]);
+  owned.setAttribute('size', 'xs');
+  el.size = 'xl';
+  await el.updateComplete;
+  expect(owned.getAttribute('size')).to.equal('xs');
+  expect(explicit.getAttribute('size')).to.equal('small');
+  el.remove();
+  expect(owned.getAttribute('size')).to.equal('xs');
+  expect(owned.hasAttribute('shape')).to.be.false;
+  expect(owned.hasAttribute('variant')).to.be.false;
+});
+
+it('relinquishes a group-owned default after an explicit same-value author attribute write', async () => {
+  const el = (await fixture(html`
+    <lr-avatar-group size="large"><lr-avatar id="owned"></lr-avatar></lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  const owned = el.querySelector('#owned')!;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  expect(owned.getAttribute('size')).to.equal('large');
+
+  owned.setAttribute('size', 'large');
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  el.size = 'xl';
+  await el.updateComplete;
+  expect(owned.getAttribute('size')).to.equal('large');
+});
+
+it('keeps restored defaults absent after a removed avatar settles', async () => {
+  const el = (await fixture(html`
+    <lr-avatar-group size="large" shape="rounded" variant="brand">
+      <lr-avatar id="owned"></lr-avatar>
+    </lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  const owned = el.querySelector('#owned') as HTMLElement & { updateComplete: Promise<boolean> };
+  owned.remove();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await el.updateComplete;
+  await owned.updateComplete;
+  expect([owned.hasAttribute('size'), owned.hasAttribute('shape'), owned.hasAttribute('variant')]).to.deep.equal([
+    false, false, false,
+  ]);
+});
+
+it('applies group defaults to a previously mounted avatar that omitted presentation attributes', async () => {
+  const avatar = (await fixture(html`<lr-avatar initials="AB"></lr-avatar>`)) as HTMLElement & {
+    updateComplete: Promise<boolean>;
+  };
+  await avatar.updateComplete;
+  expect([avatar.hasAttribute('size'), avatar.hasAttribute('shape'), avatar.hasAttribute('variant')]).to.deep.equal([
+    false, false, false,
+  ]);
+
+  const group = (await fixture(html`
+    <lr-avatar-group size="large" shape="rounded" variant="brand"></lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  group.append(avatar);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await group.updateComplete;
+  expect([avatar.getAttribute('size'), avatar.getAttribute('shape'), avatar.getAttribute('variant')]).to.deep.equal([
+    'large', 'rounded', 'brand',
+  ]);
+});
+
+it('marks the first effective visible avatar instead of the first DOM child', async () => {
+  const el = (await fixture(html`
+    <lr-avatar-group><lr-avatar hidden></lr-avatar><lr-avatar id="visible"></lr-avatar></lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  const [hidden, visible] = [...el.querySelectorAll('lr-avatar')];
+  expect(hidden!.hasAttribute('data-lr-avatar-group-first')).to.be.false;
+  expect(visible!.hasAttribute('data-lr-avatar-group-first')).to.be.true;
+  expect(getComputedStyle(visible!).marginInlineStart).to.equal('0px');
+});
+
+it('keeps a 40px action surface while painting an avatar-sized disc at every small tier', async () => {
+  const expected = new Map([['2xs', 24], ['xs', 32], ['small', 40]]);
+  for (const [size, paintedSize] of expected) {
+    const el = (await fixture(html`
+      <lr-avatar-group size=${size} max="0"><lr-avatar></lr-avatar></lr-avatar-group>
+    `)) as LyraAvatarGroup;
+    const action = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
+    const visual = el.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
+    expect(action.getBoundingClientRect().width).to.be.at.least(40);
+    expect(visual.getBoundingClientRect().width).to.equal(paintedSize);
+  }
+});
+
+it('preserves an explicit empty host aria-label', async () => {
+  const el = (await fixture(html`
+    <lr-avatar-group aria-label="" label="fallback"><lr-avatar></lr-avatar></lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
 });

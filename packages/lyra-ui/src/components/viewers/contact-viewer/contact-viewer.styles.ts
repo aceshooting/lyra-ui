@@ -14,5 +14,4 @@ export const styles = css`
   .type { font-size: var(--lr-font-size-xs); }
   .empty-note, [part='error'] { margin: 0; padding: var(--lr-space-m); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); }
   [part='error'] { padding: var(--lr-space-l); color: var(--lr-color-danger); text-align: center; }
-  [part='spinner'] { display: flex; justify-content: center; padding: var(--lr-space-l); }
 `;

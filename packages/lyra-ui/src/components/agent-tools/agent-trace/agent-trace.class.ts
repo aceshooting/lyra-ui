@@ -1,12 +1,13 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import { styles } from './agent-trace.styles.js';
-import type { LyraSpan } from '../trace-tree/span.js';
-import type { LyraGraphLegendType, LyraGraphLegendVisibilityDetail } from '../../retrieval/graph-legend/graph-legend.class.js';
+import { normalizeLyraSpans, type LyraSpan } from '../trace-tree/span.js';
+import type { LyraGraphLegendVisibilityDetail } from '../../retrieval/graph-legend/graph-legend.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -44,10 +45,8 @@ export interface LyraAgentTraceEventMap {
   'lr-span-select': CustomEvent<{ id: string }>;
   /** Bubbles, composed, from the composed `<lr-trace-tree>`, unchanged. */
   'lr-span-toggle': CustomEvent<{ id: string; expanded: boolean }>;
-  /** Bubbles, composed, from the composed filter `<lr-graph-legend>`. Despite the property name
-   *  (inherited verbatim from that component's own event contract), `hiddenTypes` here holds
-   *  `LyraSpan['kind']` values, not graph node-type ids. */
-  'lr-visibility-change': CustomEvent<LyraGraphLegendVisibilityDetail>;
+  /** Timeline-owned translation of the composed graph legend's visibility event. */
+  'lr-span-visibility-change': CustomEvent<{ hiddenKinds: LyraSpan['kind'][] }>;
 }
 
 /**
@@ -80,7 +79,7 @@ export interface LyraAgentTraceEventMap {
  * @customElement lr-agent-trace
  * @event lr-span-select - `detail: { id }` — a span was activated, from the tree or the handoff list.
  * @event lr-span-toggle - `detail: { id, expanded }` — a tree row was expanded or collapsed.
- * @event lr-visibility-change - `detail: { hiddenTypes }` — the span-kind filter changed; `hiddenTypes` holds `LyraSpan['kind']` values.
+ * @event lr-span-visibility-change - `detail: { hiddenKinds }` — the span-kind filter changed.
  * @csspart base - The root wrapper.
  * @csspart filter - The composed `<lr-graph-legend>` filter row, only rendered while `spans` has at least one span.
  * @csspart handoffs - The handoff quick-jump list wrapper, only rendered while at least one visible span has `kind: 'agent'`.
@@ -99,8 +98,15 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     agentTraceFilterLabel: LYRA_DEFAULT_agentTraceFilterLabel,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
     handoffFromToAgent: LYRA_DEFAULT_handoffFromToAgent,
     handoffToAgent: LYRA_DEFAULT_handoffToAgent,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     spanKindAgent: LYRA_DEFAULT_spanKindAgent,
     spanKindEmbedding: LYRA_DEFAULT_spanKindEmbedding,
     spanKindLlm: LYRA_DEFAULT_spanKindLlm,
@@ -113,7 +119,8 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** The full, unfiltered span array -- identical contract to `<lr-trace-tree>.spans`. Controlled
-   *  and never mutated by this component. */
+   *  and never mutated by this component; `activeSpanId` and its ancestor path reserve positions
+   *  inside the shared 500-row projection before kind filtering. */
   @property({ attribute: false }) spans: LyraSpan[] = [];
 
   /** Controlled selection, forwarded verbatim into the composed `<lr-trace-tree>`. Updated
@@ -123,7 +130,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
 
   /** Span kinds currently hidden from the tree. Empty (the default) shows every kind. Controlled
    *  -- a host may pre-set this (e.g. to hide `retriever`/`embedding` spans by default) or read it
-   *  back after `lr-visibility-change`. */
+   *  back after `lr-span-visibility-change`. */
   @property({ attribute: false }) hiddenKinds: LyraSpan['kind'][] = [];
 
   /** Accessible name forwarded to the composed `<lr-trace-tree>`. See its own `label` property. */
@@ -138,25 +145,27 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   /** Forwarded verbatim to the composed `<lr-trace-tree>`. */
   @property({ type: Boolean, attribute: 'hide-bars' }) hideBars = false;
 
-  private presentKinds(): LyraSpan['kind'][] {
-    const present = new Set(this.spans.map((s) => s.kind));
+  private presentKinds(spans: readonly LyraSpan[]): LyraSpan['kind'][] {
+    const present = new Set(spans.map((s) => s.kind));
     return KIND_ORDER.filter((k) => present.has(k));
   }
 
-  private get filteredSpans(): LyraSpan[] {
-    return this.hiddenKinds.length === 0 ? this.spans : this.spans.filter((s) => !this.hiddenKinds.includes(s.kind));
+  private filteredSpans(spans: readonly LyraSpan[]): LyraSpan[] {
+    if (this.hiddenKinds.length === 0) return [...spans];
+    const hidden = new Set(this.hiddenKinds);
+    return spans.filter((span) => !hidden.has(span.kind));
   }
 
-  private handoffSpans(): LyraSpan[] {
-    return this.filteredSpans.filter((s) => s.kind === 'agent');
+  private handoffSpans(spans: readonly LyraSpan[]): LyraSpan[] {
+    return spans.filter((span) => span.kind === 'agent');
   }
 
   /** The handed-off-from agent's name, resolved against the full (unfiltered) `spans` array so a
    *  hidden/filtered-out parent's name still renders -- empty when `parentId` is unset or
    *  unresolvable, mirroring `<lr-handoff-divider>`'s own "from is optional" contract. */
-  private handoffFromAgent(span: LyraSpan): string {
+  private handoffFromAgent(span: LyraSpan, byId: ReadonlyMap<string, LyraSpan>): string {
     if (!span.parentId) return '';
-    const parent = this.spans.find((s) => s.id === span.parentId);
+    const parent = byId.get(span.parentId);
     return parent?.kind === 'agent' ? parent.name : '';
   }
 
@@ -169,7 +178,9 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   }
 
   private onVisibilityChange = (e: CustomEvent<LyraGraphLegendVisibilityDetail>): void => {
+    e.stopPropagation();
     this.hiddenKinds = e.detail.hiddenTypes as LyraSpan['kind'][];
+    this.emit('lr-span-visibility-change', { hiddenKinds: [...this.hiddenKinds] });
   };
 
   /** Keeps `activeSpanId` (and therefore the handoff list's own highlighting) in sync when
@@ -185,10 +196,10 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
     this.emit('lr-span-select', { id });
   }
 
-  private renderFilter(): TemplateResult | typeof nothing {
-    const kinds = this.presentKinds();
+  private renderFilter(spans: readonly LyraSpan[]): TemplateResult | typeof nothing {
+    const kinds = this.presentKinds(spans);
     if (kinds.length === 0) return nothing;
-    const types: LyraGraphLegendType[] = kinds.map((k) => ({ id: k, label: this.localize(KIND_LABEL_KEY[k]) }));
+    const types: LyraNodeTypeStyle[] = kinds.map((k) => ({ id: k, label: this.localize(KIND_LABEL_KEY[k]) }));
     return html`
       <lr-graph-legend
         part="filter"
@@ -200,8 +211,8 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
     `;
   }
 
-  private renderHandoff(span: LyraSpan): TemplateResult {
-    const fromAgent = this.handoffFromAgent(span);
+  private renderHandoff(span: LyraSpan, byId: ReadonlyMap<string, LyraSpan>): TemplateResult {
+    const fromAgent = this.handoffFromAgent(span, byId);
     const isActive = this.activeSpanId === span.id;
     return html`
       <button
@@ -212,26 +223,28 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
         ?data-active=${isActive}
         @click=${() => this.selectSpan(span.id)}
       >
-        <lr-handoff-divider aria-hidden="true" agent=${span.name} from-agent=${fromAgent}></lr-handoff-divider>
+        <lr-handoff-divider aria-hidden="true" to-agent=${span.name} from-agent=${fromAgent}></lr-handoff-divider>
       </button>
     `;
   }
 
-  private renderHandoffs(): TemplateResult | typeof nothing {
-    const handoffs = this.handoffSpans();
+  private renderHandoffs(spans: readonly LyraSpan[], byId: ReadonlyMap<string, LyraSpan>): TemplateResult | typeof nothing {
+    const handoffs = this.handoffSpans(spans);
     if (handoffs.length === 0) return nothing;
-    return html`<div part="handoffs">${handoffs.map((span) => this.renderHandoff(span))}</div>`;
+    return html`<div part="handoffs">${handoffs.map((span) => this.renderHandoff(span, byId))}</div>`;
   }
 
   override render(): TemplateResult {
+    const projection = normalizeLyraSpans(this.spans, this.activeSpanId);
+    const filteredSpans = this.filteredSpans(projection.spans);
     return html`
       <div part="base">
-        ${this.renderFilter()} ${this.renderHandoffs()}
+        ${this.renderFilter(projection.spans)} ${this.renderHandoffs(filteredSpans, projection.byId)}
         <lr-trace-tree
           part="tree"
-          .spans=${this.filteredSpans}
+          .spans=${filteredSpans}
           .activeSpanId=${this.activeSpanId}
-          .label=${this.getAttribute('aria-label') || this.label}
+          .label=${this.label}
           ?show-tokens=${this.showTokens}
           ?show-cost=${this.showCost}
           ?hide-bars=${this.hideBars}

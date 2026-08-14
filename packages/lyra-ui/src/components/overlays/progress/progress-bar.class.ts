@@ -174,18 +174,6 @@ export class LyraProgressBar extends LyraElement {
     super.disconnectedCallback();
   }
 
-  /** Resolve inherited visibility parent-first before extracting descendant overrides. */
-  private primeVisibilityCascade(node: Node): void {
-    if (node.nodeType !== 1) return;
-    const element = node as Element;
-    void element.ownerDocument.defaultView?.getComputedStyle(element).visibility;
-    const childNodes =
-      element.localName === 'slot' && (element as HTMLSlotElement).assignedNodes().length > 0
-        ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
-        : element.childNodes;
-    for (const child of childNodes) this.primeVisibilityCascade(child);
-  }
-
   private computeVisibleLabelText(): string {
     const renderRoot = (this as unknown as { renderRoot?: ParentNode }).renderRoot;
     const renderedSlots = renderRoot?.querySelectorAll<HTMLSlotElement>('slot');
@@ -197,8 +185,13 @@ export class LyraProgressBar extends LyraElement {
           const slotName = (node as Element).getAttribute('slot') ?? '';
           return slotName === '' || slotName === 'label';
         });
-    for (const node of nodes) this.primeVisibilityCascade(node);
-    return joinAccessibleVisibleText(nodes);
+    // The shadow label wrapper is hidden when this semantic probe is empty. Starting the bounded
+    // owned traversal at the assigned roots avoids letting that derived presentation state form a
+    // false-empty cycle; each authored root's own hidden/inert/ARIA/CSS state is still enforced.
+    return joinAccessibleVisibleText(nodes, {
+      requireRendered: false,
+      skipRootAncestorValidation: true,
+    });
   }
 
   private recomputeVisibleLabelText(): void {

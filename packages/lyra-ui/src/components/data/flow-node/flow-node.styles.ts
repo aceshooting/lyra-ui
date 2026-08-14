@@ -11,6 +11,9 @@ export const styles = css`
     align-items: stretch;
     gap: var(--lr-space-xs);
   }
+  [hidden] {
+    display: none !important;
+  }
   :host([orientation='vertical']) [part='base'] {
     flex-direction: column;
   }
@@ -68,7 +71,9 @@ export const styles = css`
     gap: var(--lr-flow-node-compact-gap, var(--lr-space-2xs));
   }
   :host([selected]) .card {
-    border-color: var(--lr-flow-node-selected-border, var(--lr-color-brand));
+    outline: var(--lr-size-2px) solid
+      var(--lr-flow-node-selected-outline-color, var(--lr-color-brand));
+    outline-offset: var(--lr-size-2px);
   }
   [part='header'] {
     display: flex;
@@ -91,23 +96,23 @@ export const styles = css`
     inline-size: var(--lr-size-0-5rem);
     block-size: var(--lr-size-0-5rem);
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-flow-node-status-color, var(--lr-color-border-strong));
+    background: var(--lr-flow-status-color, var(--lr-color-border-strong));
     flex: 0 0 auto;
   }
   [part='status'][data-status='pending'] .status-dot {
-    background: var(--lr-flow-node-status-pending-color, var(--lr-color-border-strong));
+    background: var(--lr-flow-status-pending-color, var(--lr-color-border-strong));
   }
   [part='status'][data-status='running'] .status-dot {
-    background: var(--lr-flow-node-status-running-color, var(--lr-color-brand));
+    background: var(--lr-flow-status-running-color, var(--lr-color-brand));
   }
   [part='status'][data-status='success'] .status-dot {
-    background: var(--lr-flow-node-status-success-color, var(--lr-color-success));
+    background: var(--lr-flow-status-success-color, var(--lr-color-success));
   }
   [part='status'][data-status='error'] .status-dot {
-    background: var(--lr-flow-node-status-error-color, var(--lr-color-danger));
+    background: var(--lr-flow-status-error-color, var(--lr-color-danger));
   }
   [part='status'][data-status='denied'] .status-dot {
-    background: var(--lr-flow-node-status-denied-color, var(--lr-color-warning));
+    background: var(--lr-flow-status-denied-color, var(--lr-color-warning));
   }
   [part='progress'] {
     inline-size: 100%;
@@ -120,16 +125,10 @@ export const styles = css`
     block-size: 100%;
     background: var(--lr-flow-node-progress-fill-color, var(--lr-color-brand));
   }
-  [part='body']:empty {
-    display: none;
-  }
   [part='toolbar'] {
     display: flex;
     gap: var(--lr-space-2xs);
     justify-content: flex-end;
-    opacity: 0;
-  }
-  [part='toolbar']:has(::slotted(*)) {
     opacity: 0;
   }
   /* no-pressed-state: the toolbar is not a target -- it is the container the consumer slots the

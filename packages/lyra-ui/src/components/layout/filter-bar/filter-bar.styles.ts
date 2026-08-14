@@ -25,11 +25,24 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  [part='filter-control'] {
+  .filter-field {
     flex: 1 1 var(--lr-size-12rem);
     min-inline-size: 0;
+    max-inline-size: 100%;
   }
-  [part='reset-button'] {
+  [part='filter-control'] {
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  .validation-spacer {
+    display: block;
+    block-size: var(--lr-size-1-5rem);
+  }
+  .validation-spacer[hidden] {
+    display: none;
+  }
+  .reset-field {
     flex: 0 0 auto;
   }
   [part='status'] {

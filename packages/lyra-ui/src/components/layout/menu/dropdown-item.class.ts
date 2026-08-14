@@ -30,7 +30,8 @@ export interface LyraDropdownItemEventMap extends LyraMenuItemEventMap {
  * focusable host when it gains focus.
  * @event blur - Native, non-bubbling, composed, non-cancelable `FocusEvent` emitted by the
  * focusable host when it loses focus.
- * @attr {boolean} submenuopen - Normalized Web Awesome compatibility alias for `submenu-open`.
+ * @attr {boolean} submenuopen - Normalized Web Awesome compatibility alias for `submenu-open`;
+ *   both spellings reflect the live submenu state and changing either spelling controls it.
  * @csspart base - The visual item row.
  * @csspart checkmark - WA-compatible checkbox glyph.
  * @csspart checked-icon - Shoelace-compatible checkbox-glyph wrapper.
@@ -56,20 +57,43 @@ export class LyraDropdownItem extends LyraMenuItem {
   }
 
   private pendingAuthoredOpen = false;
+  private authoredOpenRequestPending = false;
+  private syncingSubmenuAttributes = false;
+
+  private syncSubmenuAttributes(open: boolean): void {
+    if (this.syncingSubmenuAttributes) return;
+    this.syncingSubmenuAttributes = true;
+    try {
+      this.toggleAttribute('submenu-open', open);
+      this.toggleAttribute('submenuopen', open);
+    } finally {
+      this.syncingSubmenuAttributes = false;
+    }
+  }
 
   override attributeChangedCallback(
     name: string,
     oldValue: string | null,
-    newValue: string | null,
+    newValue: string | null
   ): void {
     if (name === 'submenuopen') {
-      if (oldValue !== newValue) this.submenuOpen = newValue !== null;
+      if (this.syncingSubmenuAttributes || oldValue === newValue) return;
+      const requestedOpen = newValue !== null;
+      this.authoredOpenRequestPending = requestedOpen;
+      this.submenuOpen = requestedOpen;
+      this.syncSubmenuAttributes(requestedOpen);
+      if (requestedOpen && this.submenuOpen)
+        this.authoredOpenRequestPending = false;
       return;
     }
-    // Either supported spelling keeps the state open. If the normalized upstream alias remains,
-    // removing only the canonical reflection must not contradict that still-present input.
-    if (name === 'submenu-open' && newValue === null && this.hasAttribute('submenuopen')) {
-      this.setAttribute('submenu-open', '');
+    if (name === 'submenu-open') {
+      if (this.syncingSubmenuAttributes || oldValue === newValue) return;
+      const requestedOpen = newValue !== null;
+      this.authoredOpenRequestPending = requestedOpen;
+      super.attributeChangedCallback(name, oldValue, newValue);
+      this.syncSubmenuAttributes(requestedOpen);
+      if (requestedOpen && this.submenuOpen)
+        this.authoredOpenRequestPending = false;
       return;
     }
     super.attributeChangedCallback(name, oldValue, newValue);
@@ -77,8 +101,10 @@ export class LyraDropdownItem extends LyraMenuItem {
 
   /** Whether the submenu is currently open. Assigning it, or changing the reflected
    * `submenu-open` attribute, drives the same panel as `openSubmenu()` / `closeSubmenu()` without
-   * moving focus. The normalized upstream `submenuopen` attribute is a permanent compatibility
-   * alias. Like those methods, both spellings are a no-op until submenu content is connected.
+   * moving focus. The normalized upstream `submenuopen` attribute is a permanent, bidirectionally
+   * synchronized compatibility alias: changing either spelling controls the state, while every
+   * internal dismissal clears both so a stale alias cannot reopen the panel. Like those methods, an
+   * authored open request waits until submenu content is connected.
    * @default false */
   @property({ type: Boolean, reflect: true, attribute: 'submenu-open' })
   override get submenuOpen(): boolean {
@@ -86,9 +112,48 @@ export class LyraDropdownItem extends LyraMenuItem {
   }
   override set submenuOpen(next: boolean) {
     const normalized = Boolean(next);
-    if (normalized === super.submenuOpen) return;
+    if (normalized === super.submenuOpen) {
+      if (!normalized) {
+        this.authoredOpenRequestPending = false;
+        this.syncSubmenuAttributes(false);
+      }
+      return;
+    }
     if (normalized) void super.openSubmenu('none');
-    else void super.closeSubmenu();
+    else {
+      this.authoredOpenRequestPending = false;
+      void super.closeSubmenu();
+    }
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    // The superclass owns the canonical reflection. Fence its attribute write so it cannot be
+    // mistaken for a fresh authored request, then mirror the requested/actual state to both names.
+    this.syncingSubmenuAttributes = true;
+    try {
+      super.willUpdate(changed);
+    } finally {
+      this.syncingSubmenuAttributes = false;
+    }
+    if (this.submenuOpen) this.authoredOpenRequestPending = false;
+    this.syncSubmenuAttributes(
+      this.submenuOpen || this.authoredOpenRequestPending
+    );
+  }
+
+  protected override update(changed: PropertyValues): void {
+    // Lit performs `reflect: true` writes inside update(), after willUpdate(). Keep that second
+    // internal canonical write behind the same fence, then restore a not-yet-applied authored open
+    // request or mirror the live panel state before updated() decides whether to queue it.
+    this.syncingSubmenuAttributes = true;
+    try {
+      super.update(changed);
+    } finally {
+      this.syncingSubmenuAttributes = false;
+    }
+    this.syncSubmenuAttributes(
+      this.submenuOpen || this.authoredOpenRequestPending
+    );
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -108,12 +173,21 @@ export class LyraDropdownItem extends LyraMenuItem {
           this.isConnected &&
           this.hasSubmenu &&
           !this.submenuOpen &&
-          (this.hasAttribute('submenu-open') || this.hasAttribute('submenuopen'))
+          (this.hasAttribute('submenu-open') ||
+            this.hasAttribute('submenuopen'))
         ) {
           void this.openSubmenu('none');
         }
       });
     }
+  }
+
+  override disconnectedCallback(): void {
+    this.authoredOpenRequestPending = false;
+    super.disconnectedCallback();
+    // Open submenu state is transient. Clear both reflections now so even a synchronous reparent
+    // cannot present the normalized alias as a fresh request on reconnect.
+    this.syncSubmenuAttributes(false);
   }
 
   /** Opens the submenu and resolves after the panel state and render settle. The optional focus
@@ -125,7 +199,9 @@ export class LyraDropdownItem extends LyraMenuItem {
 
   /** Closes the submenu and resolves after the panel state and render settle. */
   override async closeSubmenu(): Promise<void> {
+    this.authoredOpenRequestPending = false;
     await super.closeSubmenu();
+    this.syncSubmenuAttributes(this.submenuOpen);
   }
 }
 

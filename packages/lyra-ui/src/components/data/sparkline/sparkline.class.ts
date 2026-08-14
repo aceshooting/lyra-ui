@@ -17,7 +17,8 @@ const MAX_POINTS = 500;
 export type LyraSparklineAppearance = "gradient" | "line" | "solid";
 export type LyraSparklineCurve = "linear" | "natural" | "step";
 export type LyraSparklineTrend = "positive" | "negative" | "neutral";
-export type LyraSparklineType = "line" | "bar" | "area";
+/** Geometry used to plot each sample. */
+export type LyraSparklineMark = "line" | "bar";
 
 function decimate<T>(arr: ReadonlyArray<T>, max: number): T[] {
   if (arr.length <= max) return [...arr];
@@ -49,7 +50,7 @@ function normalizeCurve(value: unknown): LyraSparklineCurve {
 /**
  * `<lr-sparkline>` — a zero-dependency inline SVG trend chart.
  * Mirrors the Web Awesome `<wa-sparkline>` API under the `lr-` prefix and retains the earlier
- * `values`/`type`/`min`/`max` Lyra surface as an additive programmatic extension.
+ * `values`/`mark`/`min`/`max` Lyra surface as an additive programmatic extension.
  *
  * @customElement lr-sparkline
  * @csspart sparkline - The outer SVG wrapper.
@@ -57,7 +58,7 @@ function normalizeCurve(value: unknown): LyraSparklineCurve {
  * @csspart fill - The filled area rendered by `appearance="solid"` and `appearance="gradient"`.
  * @csspart line - The stroked trend path.
  * @csspart area - Compatibility alias for `fill` on the same path.
- * @csspart bar - Each rectangle rendered by the additive `type="bar"` mode.
+ * @csspart bar - Each rectangle rendered by the additive `mark="bar"` mode.
  * @cssprop [--fill-color=var(--lr-color-brand-quiet)] - Area fill color. A `trend` supplies a
  *   semantic token default, while an authored value always wins.
  * @cssprop [--line-color=var(--lr-color-brand)] - Trend line color. A `trend` supplies a semantic
@@ -98,11 +99,24 @@ export class LyraSparkline extends LyraElement {
   /** Compatibility accessible-name override. `label` takes precedence. */
   @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
 
-  /** Additive programmatic data alias used when `data` is empty. */
-  @property({ type: Array }) values: number[] = [];
+  /** Additive programmatic data source used when `data` is empty. Property-only. */
+  @property({ attribute: false }) values: readonly number[] = [];
 
-  /** Additive rendering extension. Omit it to use `appearance`. */
-  @property() type?: LyraSparklineType;
+  private _mark: LyraSparklineMark = "line";
+
+  /** Geometry used to plot samples. Foreign tokens normalize to `line`. */
+  @property({ reflect: true })
+  get mark(): LyraSparklineMark { return this._mark; }
+  set mark(value: LyraSparklineMark) {
+    const normalized: LyraSparklineMark = value === "bar" ? "bar" : "line";
+    const previous = this._mark;
+    if (previous === normalized) {
+      if (value !== normalized) this.requestUpdate("mark", previous);
+      return;
+    }
+    this._mark = normalized;
+    this.requestUpdate("mark", previous);
+  }
 
   /** Lower bound of the value scale (defaults to the data minimum). */
   @property({ type: Number }) min?: number;
@@ -117,6 +131,7 @@ export class LyraSparkline extends LyraElement {
       const parsed = finiteData(this.data);
       return parsed.length >= 2 ? parsed : [];
     }
+    if (!Array.isArray(this.values)) return [];
     return this.values.filter((item): item is number => Number.isFinite(item));
   }
 
@@ -217,14 +232,9 @@ export class LyraSparkline extends LyraElement {
     const points = this.points(values);
     const name = this.accessibleName(values);
     const path = this.linePath(points);
-    const appearance =
-      this.type === "area"
-        ? "solid"
-        : this.type === "line"
-        ? "line"
-        : normalizeAppearance(this.appearance);
+    const appearance = normalizeAppearance(this.appearance);
     const showFill =
-      this.type !== "bar" && appearance !== "line" && points.length > 0;
+      this.mark !== "bar" && appearance !== "line" && points.length > 0;
     const first = points[0];
     const last = points.at(-1);
     const fillPath =
@@ -245,7 +255,7 @@ export class LyraSparkline extends LyraElement {
             </linearGradient>
           </defs>`
         : nothing}
-      ${this.type === "bar"
+      ${this.mark === "bar"
         ? this.renderBars(points)
         : html`
             ${showFill

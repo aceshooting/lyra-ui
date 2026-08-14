@@ -1,19 +1,10 @@
 /**
- * Everything `<lr-markdown>` and `<lr-markdown-core>` parse, render and compute identically: the
- * whole `marked` renderer contract (`parseMarkdownDocument()`), the `highlightCache` LRU helpers
- * around it, the optional-peer load/sanitize/fallback pipeline (`renderMarkdownDocument()`), the
- * `katex` resolution state, `fragment`/`text-quote` anchor application, highlight painting and
- * hit-testing, the internal-link contract, and the rendered `[part="content"]` template itself.
+ * Pure parsing, rendering, cache, anchor, and highlight helpers shared by `<lr-markdown>` and
+ * `<lr-markdown-core>`. Their common reactive lifecycle and DOM orchestration live in
+ * `markdown-base.class.ts`; the concrete classes supply only their distinct Shiki loading
+ * strategies and public reactive-property declarations.
  *
- * The two components differ in exactly one axis -- *which* shiki loader highlights a fenced block
- * (the full ~200-language dynamic-import table plus a per-language `loadLanguage()`, vs.
- * `shiki/core` seeded from a pre-supplied `languages` map), which is why `highlightPending()` stays
- * on each class. Everything else was previously duplicated verbatim across both ~890-line class
- * files, mirroring the same drift risk `code-block-shared.ts` was created to end for the
- * `<lr-code-block>` / `<lr-code-block-core>` pair. A fix or behavior change now has exactly one
- * place to land.
- *
- * Nothing here may `import` a *value* from `code-loader.js`'s full-table half
+ * Nothing in this shared module may `import` a *value* from `code-loader.js`'s full-table half
  * (`loadShikiHighlighter`/`loadShikiLanguage`): `<lr-markdown-core>`'s build-leanness claim rests on
  * its own module graph never reaching that call, and this module is in that graph.
  */
@@ -38,22 +29,29 @@ import {
 } from './markdown-loader.js';
 import { getKatex, type KatexApi } from './katex-loader.js';
 
-/** One configurable parser per resolved `marked` module namespace, shared by both Markdown
- * variants. Each parse still creates a fresh internal parser whose renderer closes over the
- * current component state; only the consumer-installed defaults are shared. */
-const sharedMarkedInstances = new WeakMap<object, LyraMarkedParser>();
-
-export function sharedMarkdownParser(marked: MarkedModule | undefined): LyraMarkedParser | undefined {
+/** Creates a parser owned by one component instance. Parser extensions can no longer leak into
+ * sibling instances; a consumer mutates the instance it intends to refresh. */
+export function createMarkdownParser(marked: MarkedModule | undefined): LyraMarkedParser | undefined {
   if (!marked || (typeof marked !== 'object' && typeof marked !== 'function') || typeof marked.Marked !== 'function') {
     return undefined;
   }
-  const key = marked as object;
-  let instance = sharedMarkedInstances.get(key);
-  if (!instance) {
-    instance = new marked.Marked() as unknown as LyraMarkedParser;
-    sharedMarkedInstances.set(key, instance);
+  return new marked.Marked() as unknown as LyraMarkedParser;
+}
+
+/** Owns one configurable parser and replaces it only when the resolved optional-peer module
+ * changes. Full and core use the same controller without sharing instance configuration. */
+export class MarkdownParserController {
+  private module?: MarkedModule;
+  private parser?: LyraMarkedParser;
+
+  get(marked: MarkedModule | undefined): LyraMarkedParser | undefined {
+    if (!marked) return undefined;
+    if (this.module !== marked) {
+      this.module = marked;
+      this.parser = createMarkdownParser(marked);
+    }
+    return this.parser;
   }
-  return instance;
 }
 
 /** Converts tabs only in a line's indentation to spaces at real tab stops. Markdown treats four
@@ -193,6 +191,50 @@ export interface MarkdownHeadingItem {
  *  exceeds the fenced-block count of any one document, so eviction only trims blocks that
  *  scrolled out of the content long ago. */
 export const HIGHLIGHT_CACHE_MAX = 100;
+export const HIGHLIGHT_CACHE_MAX_BYTES = 2 * 1024 * 1024;
+export const HIGHLIGHT_CACHE_ENTRY_MAX_BYTES = 512 * 1024;
+export const FAILED_HIGHLIGHT_MAX = 256;
+
+/** Bounded content key: raw source never remains retained merely because it was used as a cache
+ * key. Two 32-bit FNV streams plus source length make accidental collisions vanishingly unlikely. */
+export function markdownHighlightKey(language: string, code: string): string {
+  let a = 0x811c9dc5;
+  let b = 0x9e3779b9;
+  const input = `${language}\0${code}`;
+  for (let index = 0; index < input.length; index++) {
+    const unit = input.charCodeAt(index);
+    a = Math.imul(a ^ unit, 0x01000193) >>> 0;
+    b = Math.imul(b ^ unit, 0x85ebca6b) >>> 0;
+  }
+  return `${language}:${code.length}:${a.toString(36)}:${b.toString(36)}`;
+}
+
+export function addFailedHighlightKey(failed: Set<string>, key: string): void {
+  if (failed.has(key)) return;
+  if (failed.size >= FAILED_HIGHLIGHT_MAX) {
+    const oldest = failed.values().next().value;
+    if (oldest !== undefined) failed.delete(oldest);
+  }
+  failed.add(key);
+}
+
+/** Runs each unique highlight key once with bounded parallelism so one large document cannot
+ * fan out hundreds of simultaneous grammar/tokenization jobs. */
+export async function processPendingHighlights(
+  pending: readonly PendingHighlight[],
+  worker: (item: PendingHighlight) => Promise<void>,
+  concurrency = 4,
+): Promise<void> {
+  const unique = [...new Map(pending.map((item) => [item.key, item])).values()];
+  let next = 0;
+  const run = async (): Promise<void> => {
+    while (next < unique.length) {
+      const item = unique[next++];
+      if (item) await worker(item);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, unique.length) }, () => run()));
+}
 
 /** LRU read: a hit is re-inserted so Map iteration order (insertion order) keeps the first key
  *  the least recently used one -- the entry `setCachedHighlight()` evicts when full. */
@@ -209,20 +251,29 @@ export function setCachedHighlight(
   cache: Map<string, string>,
   key: string,
   html: string,
-  max: number = HIGHLIGHT_CACHE_MAX
-): void {
+  max: number = HIGHLIGHT_CACHE_MAX,
+  maxBytes: number = HIGHLIGHT_CACHE_MAX_BYTES,
+): boolean {
+  const entryBytes = (key.length + html.length) * 2;
+  if (entryBytes > HIGHLIGHT_CACHE_ENTRY_MAX_BYTES || entryBytes > maxBytes) return false;
   if (cache.has(key)) {
     cache.delete(key);
-  } else if (cache.size >= max) {
+  }
+  let retainedBytes = 0;
+  for (const [cachedKey, cachedHtml] of cache) retainedBytes += (cachedKey.length + cachedHtml.length) * 2;
+  while (cache.size >= max || retainedBytes + entryBytes > maxBytes) {
     const oldest = cache.keys().next().value;
-    if (oldest !== undefined) cache.delete(oldest);
+    if (oldest === undefined) break;
+    const oldestHtml = cache.get(oldest) ?? '';
+    retainedBytes -= (oldest.length + oldestHtml.length) * 2;
+    cache.delete(oldest);
   }
   cache.set(key, html);
+  return true;
 }
 
 // -- math (KaTeX) -----------------------------------------------------------------------------
 
-const MATH_BLOCK_RE = /^\$\$([^\n]+?)\$\$/;
 const MATH_INLINE_RE = /^\$((?:\\\$|[^$\s])(?:\\\$|[^$])*?)\$(?!\$)/;
 
 interface MathToken {
@@ -249,15 +300,21 @@ function mathExtension(renderMath: (token: MathToken) => string) {
       return index === -1 ? undefined : index;
     },
     tokenizer(src: string): MathToken | undefined {
-      const block = MATH_BLOCK_RE.exec(src);
-      // safe: both regexes have a single non-optional capture group, present on any match.
-      if (block)
-        return {
-          type: 'math',
-          raw: block[0],
-          tex: block[1]!.trim(),
-          display: true,
-        };
+      if (src.startsWith('$$')) {
+        const close = src.indexOf('$$', 2);
+        if (close > 2) {
+          const raw = src.slice(0, close + 2);
+          const tex = src.slice(2, close).trim();
+          if (tex) {
+            return {
+              type: 'math',
+              raw,
+              tex,
+              display: true,
+            };
+          }
+        }
+      }
       const inline = MATH_INLINE_RE.exec(src);
       if (inline)
         return {
@@ -280,8 +337,8 @@ function mathExtension(renderMath: (token: MathToken) => string) {
  *  both. */
 export interface ParseMarkdownOptions {
   marked: MarkedModule;
-  /** Snapshot of the Markdown pair's shared configurable parser defaults. */
-  markedConfiguration?: Record<string, unknown>;
+  /** Ordered snapshots of parser defaults. Later entries override earlier entries. */
+  markedConfigurations?: readonly (Record<string, unknown> | undefined)[];
   content: string;
   gfm: boolean;
   linkTarget: string | null;
@@ -337,6 +394,8 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
   // tag -- finiteInteger() normalizes it back to the documented `0` (additive-only) default.
   const headingOffset = finiteInteger(options.headingOffset, 0);
   const slugger = new Slugger();
+  const activeHighlightKeys = new Set<string>();
+  const pendingHighlightKeys = new Set(options.pendingKeys.map(({ key }) => key));
   let hadMathFallback = false;
   const instance = new marked.Marked();
   if (mathOption) {
@@ -401,10 +460,17 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
         const body = `${token.text.replace(/\n$/, '')}\n`;
         const text = token.escaped ? body : escapeHtml(body);
         if (highlightCodeOption && lang) {
-          const key = `${lang}\n${body}`;
-          const cached = getCached(key);
-          if (cached !== undefined) return cached;
-          if (!failedHighlightKeys.has(key)) pendingKeys.push({ key, lang, code: body });
+          const key = markdownHighlightKey(lang, body);
+          const admitted = activeHighlightKeys.has(key) || activeHighlightKeys.size < HIGHLIGHT_CACHE_MAX;
+          if (admitted) {
+            activeHighlightKeys.add(key);
+            const cached = getCached(key);
+            if (cached !== undefined) return cached;
+            if (!failedHighlightKeys.has(key) && !pendingHighlightKeys.has(key)) {
+              pendingHighlightKeys.add(key);
+              pendingKeys.push({ key, lang, code: body });
+            }
+          }
         }
         const cls = lang ? ` class="language-${escapeHtml(lang)}"` : '';
         return `<pre part="code-block" tabindex="0"><code${cls}>${text}</code></pre>\n`;
@@ -470,14 +536,13 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
   // fresh internal instance so its renderer closures always capture current component properties.
   // Apply the public parser's current defaults last: consumer hooks/extensions are meaningful,
   // and sanitization still runs over the resulting HTML in `renderMarkdownDocument()`.
-  if (options.markedConfiguration && typeof options.markedConfiguration === 'object') {
+  for (const configuration of options.markedConfigurations ?? []) {
+    if (!configuration || typeof configuration !== 'object') continue;
     // A pristine `Marked#defaults` contains `renderer: null`, `hooks: null`, and similar reset
     // sentinels. Passing those through `.use()` after our renderer would erase the part-bearing
     // overrides above. Keep meaningful configured values (including `false`) and discard only
     // nullish defaults; once a consumer installs a real renderer/hook, that object survives.
-    const configuredDefaults = Object.fromEntries(
-      Object.entries(options.markedConfiguration).filter(([, value]) => value != null)
-    );
+    const configuredDefaults = Object.fromEntries(Object.entries(configuration).filter(([, value]) => value != null));
     if (Object.keys(configuredDefaults).length > 0) instance.use(configuredDefaults as never);
   }
   return {
@@ -499,9 +564,6 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
  * one load.
  */
 export interface MarkdownKatexState {
-  /** Test-only override bypassing the real dynamic `import('katex')` and the module cache
-   *  entirely -- `undefined` (the default) defers to the resolved module. */
-  setForTesting(katex: KatexApi | null | undefined): void;
   /** The katex module to render this pass's math with, or `null` for the literal-TeX fallback
    *  (peer missing *or* still loading -- the fallback is the same either way). */
   getIfLoaded(): KatexApi | null;
@@ -512,10 +574,19 @@ export interface MarkdownKatexState {
   /** Subscribes one instance to the shared page-wide `getKatex()` load and kicks that load off the
    *  first time math needs it. Reusing the same callback is idempotent, so repeated renders while
    *  the peer is pending do not produce duplicate completion work.
-   *  Skipped entirely while `setForTesting()` is active -- that seam controls math-rendering
-   *  behavior directly and must never race a real, unmocked `import('katex')` settling underneath
-   *  it. `onResolved` runs after the module lands; the caller still guards its own liveness. */
+   *  `onResolved` runs after the module lands; the caller still guards its own liveness. */
   startLoad(onResolved: () => void): void;
+}
+
+const KATEX_OVERRIDE = Symbol.for('@aceshooting/lyra-ui/markdown-katex-override');
+
+function readKatexOverride(): { present: boolean; value: KatexApi | null } {
+  return Reflect.has(globalThis, KATEX_OVERRIDE)
+    ? {
+        present: true,
+        value: Reflect.get(globalThis, KATEX_OVERRIDE) as KatexApi | null,
+      }
+    : { present: false, value: null };
 }
 
 export function createMarkdownKatexState(): MarkdownKatexState {
@@ -524,20 +595,18 @@ export function createMarkdownKatexState(): MarkdownKatexState {
   // never collapse into the same falsy value.
   let resolved: KatexApi | null | undefined;
   let loadStarted = false;
-  let override: KatexApi | null | undefined;
   const subscribers = new Set<() => void>();
   return {
-    setForTesting(katex) {
-      override = katex;
-    },
     getIfLoaded() {
-      return override !== undefined ? override : resolved ?? null;
+      const override = readKatexOverride();
+      return override.present ? override.value : resolved ?? null;
     },
     isConfirmedMissing() {
-      return (override !== undefined ? override : resolved) === null;
+      const override = readKatexOverride();
+      return (override.present ? override.value : resolved) === null;
     },
     startLoad(onResolved) {
-      if (override !== undefined || resolved !== undefined) return;
+      if (readKatexOverride().present || resolved !== undefined) return;
       subscribers.add(onResolved);
       if (loadStarted) return;
       loadStarted = true;
@@ -659,10 +728,9 @@ export function tokenizeMarkdownHighlight(hl: ShikiHighlighter, pending: Pending
 const markdownDepsLoadGenerations = new WeakMap<object, number>();
 
 /**
- * `connectedCallback()`'s optional-peer load for both variants. `eagerLoad` only takes the
- * synchronous path when the shared `marked`/`dompurify` module cache has *already* settled (see
- * `getMarkdownDepsIfLoaded()`'s doc) -- otherwise it falls through to the same async path as the
- * default, since a dynamic `import()` can't be made synchronous from scratch.
+ * `connectedCallback()`'s optional-peer load for both variants. A settled shared cache is always
+ * adopted synchronously; {@link loadMarkdownDeps} / `preloadMarkdown()` is the sole eager-loading
+ * API when a consumer wants the first instance to avoid the dynamic-import window.
  *
  * The (module-cached, page-lifetime) `loadMarkdownDeps()` promise can resolve after the instance
  * was removed from the DOM -- e.g. a markdown viewer inside a conditionally-rendered chat message
@@ -672,17 +740,15 @@ const markdownDepsLoadGenerations = new WeakMap<object, number>();
  * promise settles, so one settlement cannot apply twice to the current connection.
  */
 export function beginMarkdownDepsLoad(
-  host: object & { readonly eagerLoad: boolean; readonly isConnected: boolean },
-  apply: (deps: MarkdownDeps) => void
+  host: object & { readonly isConnected: boolean },
+  apply: (deps: MarkdownDeps) => void,
 ): void {
   const generation = (markdownDepsLoadGenerations.get(host) ?? 0) + 1;
   markdownDepsLoadGenerations.set(host, generation);
-  if (host.eagerLoad) {
-    const alreadyLoaded = getMarkdownDepsIfLoaded();
-    if (alreadyLoaded) {
-      apply(alreadyLoaded);
-      return;
-    }
+  const alreadyLoaded = getMarkdownDepsIfLoaded();
+  if (alreadyLoaded) {
+    apply(alreadyLoaded);
+    return;
   }
   void loadMarkdownDeps().then((resolved) => {
     if (!host.isConnected || markdownDepsLoadGenerations.get(host) !== generation) return;
@@ -690,36 +756,32 @@ export function beginMarkdownDepsLoad(
   });
 }
 
-/** Every property whose change means the document has to be reparsed. `languagesOnly` is listed
- *  for `<lr-markdown>`; `<lr-markdown-core>` has no such property, so it simply never appears in
- *  that component's changed map. */
+/** Every property whose change means the document has to be reparsed. */
 export function markdownNeedsReparse(changed: Map<PropertyKey, unknown>): boolean {
   return (
     changed.has('content') ||
     changed.has('tabSize') ||
-    changed.has('sanitize') ||
+    changed.has('htmlMode') ||
     changed.has('gfm') ||
     changed.has('linkTarget') ||
     changed.has('headingOffset') ||
-    changed.has('escapeHtml') ||
     changed.has('streaming') ||
     changed.has('headingAnchors') ||
     changed.has('math') ||
     changed.has('highlightCode') ||
-    changed.has('languages') ||
-    changed.has('languagesOnly')
+    changed.has('languages')
   );
 }
 
 /** Whether the *highlighting* configuration changed, invalidating in-flight work and the
  *  permanently-failed key set. */
 export function markdownHighlightConfigChanged(changed: Map<PropertyKey, unknown>): boolean {
-  return changed.has('highlightCode') || changed.has('languages') || changed.has('languagesOnly');
+  return changed.has('highlightCode') || changed.has('languages');
 }
 
 /** Whether the *grammar set* changed, additionally invalidating already-highlighted output. */
 export function markdownLanguageSetChanged(changed: Map<PropertyKey, unknown>): boolean {
-  return changed.has('languages') || changed.has('languagesOnly');
+  return changed.has('languages');
 }
 
 /** The rendered outcome of one `renderMarkdownDocument()` pass. `headingTree` is non-`null`
@@ -743,17 +805,23 @@ export type MarkdownRenderOutcome =
       pendingKeys: PendingHighlight[];
     };
 
+export type MarkdownHtmlMode = 'sanitize' | 'escape' | 'trusted';
+
+export function normalizeMarkdownHtmlMode(value: unknown): MarkdownHtmlMode {
+  return value === 'escape' || value === 'trusted' ? value : 'sanitize';
+}
+
 export interface RenderMarkdownOptions {
   /** This variant's own tag, for the peer-failure diagnostics below. */
   tag: 'lr-markdown' | 'lr-markdown-core';
   deps: MarkdownDeps;
-  sanitize: boolean;
+  htmlMode: MarkdownHtmlMode;
   math: boolean;
   /** The instance's own `parseMarkdown()` -- see `ParseMarkdownOptions` for what it resolves. */
   parse: (
     marked: MarkedModule,
     pendingKeys: PendingHighlight[],
-    headingTreeOut: MarkdownHeadingItem[]
+    headingTreeOut: MarkdownHeadingItem[],
   ) => { html: string; hadMathFallback: boolean };
   /** Runs immediately after a successful parse, before sanitization -- where each instance kicks
    *  off its variant's katex load. */
@@ -767,9 +835,7 @@ export interface RenderMarkdownOptions {
  * event, so this stays a pure function of its inputs.
  *
  * Rendering never ships unsanitized or broken markup silently: a missing/throwing `marked`, or a
- * missing `dompurify` while `sanitize` is on, both fall back to plain text plus `lr-render-error`;
- * an explicit `sanitize="false"` renders marked's raw output regardless of whether `dompurify` is
- * installed, because the consumer opted out.
+ * missing `dompurify` in `sanitize` mode both fall back to plain text plus `lr-render-error`.
  */
 export function renderMarkdownDocument(options: RenderMarkdownOptions): MarkdownRenderOutcome {
   const { deps, tag } = options;
@@ -796,12 +862,12 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
   options.onParsed();
   const mathFailed = hadMathFallback && options.isKatexConfirmedMissing();
 
-  if (!options.sanitize) {
-    // Consumer explicitly opted out of sanitization -- dompurify's presence or absence is
-    // irrelevant to this path.
+  if (options.htmlMode !== 'sanitize') {
+    // Shiki palette data is trusted output from Lyra's highlighter, not authored HTML. Restore its
+    // strict color-only declarations in both escape and trusted modes as well as after DOMPurify.
     return {
       status: 'rendered',
-      html: rawHtml,
+      html: restoreMarkdownHighlightStyles(rawHtml),
       headingTree,
       mathFailed,
       pendingKeys,
@@ -812,7 +878,7 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
     const error = new Error(
       `<${tag}> could not render: sanitize is enabled (the default) but the "dompurify" peer ` +
         'dependency failed to load — refusing to render unsanitized HTML. Install it with `pnpm add ' +
-        'dompurify`, or set sanitize="false" to explicitly opt out of sanitization.'
+        'dompurify`, or set html-mode="trusted" to explicitly opt out of sanitization.',
     );
     console.warn(error.message);
     return { status: 'fallback', error, headingTree };
@@ -844,7 +910,7 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
 /** The `lr-render-error` payload for a permanently-missing `katex` peer while `math` is set. */
 export function markdownMathPeerError(tag: 'lr-markdown' | 'lr-markdown-core'): Error {
   return new Error(
-    `<${tag}> needs the optional peer dependency \`katex\` to render math (the \`math\` property is set) — install it with \`pnpm add katex\`.`
+    `<${tag}> needs the optional peer dependency \`katex\` to render math (the \`math\` property is set) — install it with \`pnpm add katex\`.`,
   );
 }
 
@@ -872,7 +938,7 @@ function markdownScrollBehavior(root: Element): ScrollBehavior {
 export function applyMarkdownFragmentAnchor(
   root: Element,
   anchor: Extract<LyraAnchor, { kind: 'fragment' }>,
-  headingTree: readonly MarkdownHeadingItem[]
+  headingTree: readonly MarkdownHeadingItem[],
 ): boolean {
   if (!anchor.id) return false;
   const index = headingTree.findIndex((h) => h.id === anchor.id);
@@ -896,7 +962,7 @@ export function applyMarkdownTextQuoteAnchor(
   anchor: Extract<LyraAnchor, { kind: 'text-quote' }>,
   /** The component's resolved locale. Text-quote matching case-folds, and casing is
    *  locale-sensitive -- under `lang="tr"` an unlocalized fold never matches "İSTANBUL". */
-  locale?: string
+  locale?: string,
 ): boolean {
   const range = resolveTextQuote(scopeFromElement(root), anchor, locale);
   if (!range) return false;
@@ -996,7 +1062,7 @@ export function internalLinkHrefFrom(e: MouseEvent, prefix: string): string | nu
   if (!prefix) return null;
   const anchor = e.composedPath().find(
     (
-      target
+      target,
     ): target is EventTarget & {
       localName: string;
       getAttribute(name: string): string | null;
@@ -1006,7 +1072,7 @@ export function internalLinkHrefFrom(e: MouseEvent, prefix: string): string | nu
       'localName' in target &&
       target.localName === 'a' &&
       'getAttribute' in target &&
-      typeof target.getAttribute === 'function'
+      typeof target.getAttribute === 'function',
   );
   if (!anchor) return null;
   const href = anchor.getAttribute('href') ?? '';
@@ -1018,7 +1084,7 @@ export interface MarkdownContentOptions {
   content: string;
   /** Whether the rendered document passed through DOMPurify. Unsanitized content gets an explicit
    *  paint-containment boundary in the shared stylesheet. */
-  sanitize: boolean;
+  sanitized: boolean;
   /** Sanitized (or deliberately unsanitized) HTML, or `null` for the plain-text fallback: peers
    *  still loading, or a render attempt just fell back after a failure. The two states look
    *  identical on purpose -- a consumer distinguishes them via `lr-render-error`. */
@@ -1051,9 +1117,9 @@ export function renderMarkdownContent(options: MarkdownContentOptions): Template
         part="content"
         role="document"
         tabindex=${options.content.trim() ? '0' : nothing}
-        aria-label=${options.hostAriaLabel || nothing}
+        aria-label=${options.hostAriaLabel ?? nothing}
         ?data-fallback=${isFallback}
-        ?data-unsanitized=${!options.sanitize}
+        ?data-unsanitized=${!options.sanitized}
         data-dark-theme=${options.isDarkTheme ? 'true' : nothing}
         @click=${options.onClick}
       >
@@ -1062,7 +1128,6 @@ export function renderMarkdownContent(options: MarkdownContentOptions): Template
       ${options.liveRegion}
     `;
 }
-
 
 /**
  * Starts (and immediately applies) the resolved-theme watch both markdown variants need so
@@ -1073,10 +1138,12 @@ export function renderMarkdownContent(options: MarkdownContentOptions): Template
  * OS-level `prefers-color-scheme` query directly, so a consumer who sets `--lr-theme-color-*`
  * explicitly gets the dark palette too -- identical to `<lr-code-block>`'s own handling.
  */
-export function watchMarkdownDarkTheme(
-  host: HTMLElement,
-  apply: (isDarkTheme: boolean) => void,
-): () => void {
+export function watchMarkdownDarkTheme(host: HTMLElement, apply: (isDarkTheme: boolean) => void): () => void {
   apply(resolveIsDarkTheme(host));
   return watchDarkTheme(host, () => apply(resolveIsDarkTheme(host)));
+}
+
+/** Resolves the current Shiki palette half for shared ThemeWatcher callbacks and explicit refresh. */
+export function resolveMarkdownDarkTheme(host: Element): boolean {
+  return resolveIsDarkTheme(host);
 }

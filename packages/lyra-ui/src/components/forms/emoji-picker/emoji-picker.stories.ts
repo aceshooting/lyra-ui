@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Emoji picks emit native input/change followed by lr-input/lr-change aliases with detail.value; search focus/blur are native FocusEvent relays followed by lr-focus/lr-blur.',
+          'Emoji picks emit owner-realm native input/change followed by lr-input/lr-change aliases with detail.value; search focus/blur are owner-realm native FocusEvent relays followed by lr-focus/lr-blur.',
       },
     },
   },
@@ -61,22 +61,20 @@ export const ControlledGroupReplacement: Story = {
   `,
 };
 
-/** The active (keyboard-highlighted) and hovered emoji share one background hook,
- *  `--lr-emoji-picker-active-bg`. It is not declared on `:host`, so setting it on an ancestor
- *  recolors only the emoji highlight — not everything else reading `--lr-color-brand-quiet`.
- *  Hover an emoji, or arrow-key through the grid, to see it. */
-export const ThemedHighlight: Story = {
-  name: 'Themed highlight (cssprop)',
+/** Hover, roving-active, committed-selected, and pointer-pressed states have independent hooks.
+ *  They are inherited inline fallbacks, so an ancestor can theme each without host shadowing. */
+export const ThemedInteractionStates: Story = {
+  name: 'Themed interaction states (cssprops)',
   parameters: {
     docs: {
       description: {
         story:
-          'Set `--lr-emoji-picker-active-bg` on the element or any ancestor to retint the hovered/active emoji highlight without hijacking the library-wide `--lr-color-brand-quiet` token.',
+          'The hover, keyboard-active, committed-selected, and pointer-pressed states are independently themeable. Pick one emoji, then hover or arrow to another to compare them.',
       },
     },
   },
   render: () => html`<lr-emoji-picker
-    style="--lr-emoji-picker-active-bg: var(--lr-color-success-quiet);"
+    style="--lr-emoji-picker-hover-bg: var(--lr-color-success-quiet); --lr-emoji-picker-keyboard-active-bg: var(--lr-color-warning-quiet); --lr-emoji-picker-selected-bg: var(--lr-color-brand-quiet); --lr-emoji-picker-pressed-bg: var(--lr-color-danger-quiet);"
     .groups=${groups}
   ></lr-emoji-picker>`,
 };

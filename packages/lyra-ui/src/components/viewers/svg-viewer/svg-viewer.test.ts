@@ -44,7 +44,9 @@ describe('lr-svg-viewer', () => {
       await el.updateComplete;
       expect(el.shadowRoot!.querySelector('[part="svg"]') !== null).to.be.true;
       expect(el.shadowRoot!.querySelector('script') === null).to.be.true;
-      expect(el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('aria-label')).to.equal('Chart');
+      expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Chart');
+      expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('img');
+      expect(el.shadowRoot!.querySelector('[part="svg"]')!.hasAttribute('role')).to.be.false;
     } finally {
       window.fetch = original;
     }
@@ -58,6 +60,7 @@ describe('lr-svg-viewer', () => {
         </defs>
         <style>:host { position: fixed; inset: 0 } image { filter: url(https://example.test/filter.svg#x) }</style>
         <image id="remote-image" href="https://example.test/tracker.png" />
+        <image id="inline-image" href="data:image/png;base64,AA==" />
         <rect id="remote-paint" fill="url(https://example.test/paint.svg#gradient)" />
         <rect id="local-paint" fill="url(#paint)" />
         <circle id="inline-style" style="fill:url(https://example.test/paint.svg#gradient)" />
@@ -71,6 +74,7 @@ describe('lr-svg-viewer', () => {
       const content = el.shadowRoot!.querySelector('[part="svg"]')!;
       expect(content.querySelectorAll('style').length).to.equal(0);
       expect(content.querySelector('#remote-image')?.hasAttribute('href')).to.be.false;
+      expect(content.querySelector('#inline-image')?.getAttribute('href')).to.equal('data:image/png;base64,AA==');
       expect(content.querySelector('#remote-paint')?.hasAttribute('fill')).to.be.false;
       expect(content.querySelector('#inline-style')?.hasAttribute('style')).to.be.false;
       expect(content.querySelector('#local-paint')?.getAttribute('fill')).to.equal('url(#paint)');
@@ -80,14 +84,17 @@ describe('lr-svg-viewer', () => {
     }
   });
 
-  it('forwards a host aria-label to the role="img" content region, winning over the localized default', async () => {
+  it('leaves a non-empty host aria-label on the host instead of duplicating the image owner', async () => {
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {
       const el = (await fixture(
         html`<lr-svg-viewer src="https://example.test/a.svg" aria-label="Revenue trend chart"></lr-svg-viewer>`,
       )) as LyraSvgViewer;
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('aria-label')).to.equal('Revenue trend chart');
+      const base = el.shadowRoot!.querySelector('[part="base"]')!;
+      expect(base.getAttribute('aria-label')).to.be.null;
+      expect(base.getAttribute('role')).to.be.null;
+      expect(el.shadowRoot!.querySelector('[part="svg"]')!.hasAttribute('role')).to.be.false;
     } finally {
       restore();
     }
@@ -102,7 +109,8 @@ describe('lr-svg-viewer', () => {
         html`<lr-svg-viewer src="https://example.test/a.svg" name="Chart" aria-label="Revenue trend chart"></lr-svg-viewer>`,
       )) as LyraSvgViewer;
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('aria-label')).to.equal('Revenue trend chart');
+      expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.be.null;
+      expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.be.null;
     } finally {
       restore();
     }
@@ -116,10 +124,21 @@ describe('lr-svg-viewer', () => {
     try {
       el.src = 'https://example.test/a.svg';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('aria-label')).to.equal('Visionneuse SVG');
+      expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse SVG');
+      expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('img');
     } finally {
       restore();
     }
+  });
+
+  it('preserves an explicitly empty host aria-label on the stable image owner', async () => {
+    const el = await fixture<LyraSvgViewer>(
+      html`<lr-svg-viewer name="Chart" aria-label=""></lr-svg-viewer>`,
+    );
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('img');
+    expect(base.hasAttribute('aria-label')).to.be.true;
+    expect(base.getAttribute('aria-label')).to.equal('');
   });
 
   it('rejects unsafe URLs and emits render errors for failed fetches', async () => {
@@ -167,6 +186,35 @@ describe('lr-svg-viewer', () => {
       parent.append(el);
       await waitUntil(() => fetchCount === 2);
       expect(el.shadowRoot!.querySelector('[part="svg"]') !== null).to.be.true;
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('keeps visible busy paint through a reload and removes it on error', async () => {
+    const original = window.fetch;
+    let call = 0;
+    let rejectReload!: (error: unknown) => void;
+    window.fetch = (() => {
+      call++;
+      if (call === 1) return Promise.resolve(response('<svg xmlns="http://www.w3.org/2000/svg"><circle r="1"/></svg>'));
+      return new Promise<Response>((_resolve, reject) => { rejectReload = reject; });
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraSvgViewer>(html`<lr-svg-viewer></lr-svg-viewer>`);
+      el.src = 'https://example.test/first.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      el.src = 'https://example.test/reload.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="spinner"]') !== null);
+      const base = el.shadowRoot!.querySelector('[part="base"]')!;
+      const label = el.shadowRoot!.querySelector<HTMLElement>('.viewer-loading-label')!;
+      expect(base.getAttribute('aria-busy')).to.equal('true');
+      expect(label.textContent).to.equal('Loading document…');
+      expect(label.getBoundingClientRect().height).to.be.greaterThan(0);
+      rejectReload(new Error('offline'));
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(base.getAttribute('aria-busy')).to.equal('false');
+      expect(el.shadowRoot!.querySelector('[part="spinner"]') === null).to.equal(true);
     } finally {
       window.fetch = original;
     }
@@ -478,6 +526,7 @@ describe('region highlights', () => {
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
       el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 10, height: 10 } } }];
       await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('region');
       await expect(el).to.be.accessible();
     } finally {
       restore();

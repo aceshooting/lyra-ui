@@ -99,8 +99,6 @@ describe('<lr-accordion>', () => {
 
     expect(accordion.mode).to.equal('multiple');
     expect(accordion.getAttribute('mode')).to.equal('multiple');
-    expect(accordion.multiple).to.be.true;
-    expect(accordion.hasAttribute('multiple')).to.be.false;
     expect(accordion.iconPlacement).to.equal('end');
     expect(accordion.headingLevel).to.equal('3');
     expect(accordion.appearance).to.equal('outlined');
@@ -111,9 +109,22 @@ describe('<lr-accordion>', () => {
     await accordion.updateComplete;
     await Promise.all(items.map((item) => item.updateComplete));
 
-    expect(items.map((item) => item.iconPlacement)).to.deep.equal(['start', 'start', 'start']);
-    expect(items.map((item) => item.headingLevel)).to.deep.equal(['2', '2', '2']);
-    expect(items.map((item) => item.appearance)).to.deep.equal(['filled', 'filled', 'filled']);
+    // Group presentation is an owner context, not a destructive write to the child's authored
+    // public state. This lets remove/reparent restore the item exactly.
+    expect(items.map((item) => item.iconPlacement)).to.deep.equal(['end', 'end', 'end']);
+    expect(items.map((item) => item.headingLevel)).to.deep.equal(['3', '3', '3']);
+    expect(items.map((item) => item.appearance)).to.deep.equal(['outlined', 'outlined', 'outlined']);
+    expect(items.map((item) =>
+      item.shadowRoot!.querySelector('[part~="accordion-item"]')?.getAttribute('data-icon-placement'),
+    )).to.deep.equal(['start', 'start', 'start']);
+    expect(items.map((item) =>
+      item.shadowRoot!.querySelector('[part~="accordion-item"]')?.getAttribute('data-appearance'),
+    )).to.deep.equal(['filled', 'filled', 'filled']);
+    expect(items.map((item) => item.shadowRoot!.querySelector('h2')?.localName)).to.deep.equal([
+      'h2',
+      'h2',
+      'h2',
+    ]);
 
     accordion.headingLevel = 'outside-range';
     await accordion.updateComplete;
@@ -125,37 +136,27 @@ describe('<lr-accordion>', () => {
     ]);
   });
 
-  it('keeps the legacy multiple alias unambiguous and gives an authored mode precedence', async () => {
-    const explicit = (await fixture(html`<lr-accordion mode="single" multiple>
+  it('uses mode as the sole expansion-policy authority', async () => {
+    const accordion = (await fixture(html`<lr-accordion mode="single" multiple="false">
       <lr-accordion-item label="One">One</lr-accordion-item>
     </lr-accordion>`)) as LyraAccordion;
-    await explicit.updateComplete;
-    expect(explicit.mode).to.equal('single');
-    expect(explicit.multiple).to.be.false;
-
-    const { accordion } = await renderAccordion();
-    accordion.multiple = false;
     await accordion.updateComplete;
-    expect(accordion.mode).to.equal('single-collapsible');
+    expect(accordion.mode).to.equal('single');
+    expect('multiple' in accordion).to.equal(false);
     expect(accordion.getAttribute('multiple')).to.equal('false');
 
-    accordion.multiple = true;
+    accordion.mode = 'single-collapsible';
     await accordion.updateComplete;
-    expect(accordion.mode).to.equal('multiple');
-    expect(accordion.hasAttribute('multiple')).to.be.false;
-
-    const markupAlias = (await fixture(html`<lr-accordion multiple="false">
-      <lr-accordion-item label="One">One</lr-accordion-item>
-    </lr-accordion>`)) as LyraAccordion;
-    expect(markupAlias.mode).to.equal('single-collapsible');
+    expect(accordion.mode).to.equal('single-collapsible');
+    expect(accordion.getAttribute('mode')).to.equal('single-collapsible');
   });
 
   it('allows multiple expanded items in the default mode', async () => {
-    const { items } = await renderAccordion();
-    const firstAfter = oneEvent(items[0]!, 'lr-after-show');
+    const { accordion, items } = await renderAccordion();
+    const firstAfter = oneEvent(accordion, 'lr-after-expand');
     buttonFor(items[0]!).click();
     await firstAfter;
-    const secondAfter = oneEvent(items[1]!, 'lr-after-show');
+    const secondAfter = oneEvent(accordion, 'lr-after-expand');
     buttonFor(items[1]!).click();
     await secondAfter;
 
@@ -228,24 +229,19 @@ describe('<lr-accordion>', () => {
 
     const collapsedIds: string[] = [];
     accordion.addEventListener('lr-after-collapse', (event) => collapsedIds.push(event.detail.item.id));
-    const itemCollapsed = oneEvent(items[0]!, 'lr-after-hide');
-    const disabledItemCollapsed = oneEvent(items[1]!, 'lr-after-hide');
     accordion.collapseAll();
-    await Promise.all([itemCollapsed, disabledItemCollapsed]);
+    await new Promise<void>((resolve) => {
+      const done = (): void => {
+        if (collapsedIds.length === 2) resolve();
+      };
+      accordion.addEventListener('lr-after-collapse', done);
+    });
 
     expect(items.map((item) => item.expanded)).to.deep.equal([false, false]);
     expect(collapsedIds.sort()).to.deep.equal(['disabled-open', 'method-item']);
   });
 
-  it('stops the panel-owned lr-show/lr-hide/lr-after-show/lr-after-hide events from also leaking past the accordion as raw events', async () => {
-    // <lr-accordion-item> extends <lr-details> and is a light-DOM (slotted) child, so its own
-    // public lr-show/lr-hide/lr-after-show/lr-after-hide (bubbles + composed) reach the
-    // accordion's shadow-internal [part="base"] listener and then keep bubbling right past the
-    // accordion host unless that listener stops them -- the same policy already applied to
-    // lr-accordion-item-trigger/lr-accordion-item-state-change above. An ancestor listening for
-    // the panel's raw events would otherwise see both them and the accordion's own semantically
-    // equivalent lr-expand/lr-collapse/lr-after-expand/lr-after-collapse -- a double delivery of
-    // the same signal.
+  it('keeps Details lifecycle events off the narrowed accordion-item surface', async () => {
     const { accordion, items } = await renderAccordion();
     const ancestor = accordion.parentElement!;
     const leaked: string[] = [];
@@ -265,7 +261,7 @@ describe('<lr-accordion>', () => {
     buttonFor(items[0]!).click();
     await afterCollapse;
 
-    expect(leaked, 'panel-level show/hide events must not leak past the accordion boundary').to.deep.equal([]);
+    expect(leaked).to.deep.equal([]);
     expect(wrapperLifecycle).to.deep.equal([
       'lr-expand',
       'lr-after-expand',
@@ -347,7 +343,7 @@ describe('<lr-accordion>', () => {
   // own disclosure lifecycle, and the group neither enforces its single-panel invariant over it nor
   // translates its Details events into group events.
   it('no longer coordinates direct lr-details children', async () => {
-    const accordion = (await fixture(html`<lr-accordion multiple="false">
+    const accordion = (await fixture(html`<lr-accordion mode="single-collapsible">
       <lr-details id="legacy-one" summary="One" open>One</lr-details>
       <lr-details id="legacy-two" summary="Two">Two</lr-details>
     </lr-accordion>`)) as LyraAccordion;
@@ -369,21 +365,19 @@ describe('<lr-accordion>', () => {
     expect(details.map((item) => item.open)).to.deep.equal([true, true]);
   });
 
-  // The migration for the removal above: <lr-details> -> <lr-accordion-item>, which already accepts
-  // the same `summary` text and `open` state through its inherited Details vocabulary.
+  // The v9 migration for the removal above is explicit across both tag and member vocabulary.
   it('coordinates the migrated lr-accordion-item markup with the full group lifecycle', async () => {
-    const accordion = (await fixture(html`<lr-accordion multiple="false">
-      <lr-accordion-item id="migrated-one" summary="One" open style=${quickMotion}>One</lr-accordion-item>
-      <lr-accordion-item id="migrated-two" summary="Two" style=${quickMotion}>Two</lr-accordion-item>
+    const accordion = (await fixture(html`<lr-accordion mode="single-collapsible">
+      <lr-accordion-item id="migrated-one" label="One" expanded style=${quickMotion}>One</lr-accordion-item>
+      <lr-accordion-item id="migrated-two" label="Two" style=${quickMotion}>Two</lr-accordion-item>
     </lr-accordion>`)) as LyraAccordion;
     const items = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
     const afterExpand = oneEvent(accordion, 'lr-after-expand');
-    void items[1]!.show();
+    void items[1]!.expand();
     const event = (await afterExpand) as CustomEvent<{ item: HTMLElement }>;
 
     expect(event.detail.item.id).to.equal('migrated-two');
     await Promise.all(items.map((item) => item.updateComplete));
-    expect(items.map((item) => item.open)).to.deep.equal([false, true]);
     expect(items.map((item) => item.expanded)).to.deep.equal([false, true]);
   });
 
@@ -403,6 +397,108 @@ describe('<lr-accordion>', () => {
     buttonFor(items[0]!).dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
     expect((document.activeElement as HTMLElement | null)?.id).to.equal('three');
     expect(buttonFor(items[1]!).tabIndex).to.equal(-1);
+  });
+
+  it('leaves composite keys from controls inside an expanded panel to that control', async () => {
+    const accordion = (await fixture(html`<lr-accordion>
+      <lr-accordion-item id="panel-owner" label="Owner" expanded>
+        <input id="panel-editor" aria-label="Panel editor" />
+      </lr-accordion-item>
+      <lr-accordion-item id="panel-next" label="Next">Next</lr-accordion-item>
+    </lr-accordion>`)) as LyraAccordion;
+    const input = accordion.querySelector<HTMLInputElement>('#panel-editor')!;
+    const next = accordion.querySelector<LyraAccordionItem>('#panel-next')!;
+    await Promise.all([
+      accordion.updateComplete,
+      ...[...accordion.querySelectorAll('lr-accordion-item')].map((item) => item.updateComplete),
+    ]);
+    input.focus();
+
+    for (const key of ['ArrowDown', 'ArrowRight', 'Home', 'End']) {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true });
+      input.dispatchEvent(event);
+      expect(event.defaultPrevented, `${key} should retain native editor behavior`).to.be.false;
+      expect(accordion.ownerDocument.activeElement?.id).to.equal('panel-editor');
+      expect(buttonFor(next).tabIndex).to.equal(-1);
+    }
+  });
+
+  it('runs lifecycle events for live policy closes and rejects a vetoed mode change', async () => {
+    const accordion = (await fixture(html`<lr-accordion mode="multiple">
+      <lr-accordion-item id="policy-first" label="First" expanded style=${quickMotion}>First</lr-accordion-item>
+      <lr-accordion-item id="policy-second" label="Second" expanded style=${quickMotion}>Second</lr-accordion-item>
+    </lr-accordion>`)) as LyraAccordion;
+    const second = accordion.querySelector<LyraAccordionItem>('#policy-second')!;
+    await Promise.all([accordion.updateComplete, second.updateComplete]);
+    const order: string[] = [];
+    accordion.addEventListener('lr-collapse', (event) => order.push(`${event.type}:${event.detail.item.id}`));
+    accordion.addEventListener('lr-after-collapse', (event) => order.push(`${event.type}:${event.detail.item.id}`));
+
+    const settled = oneEvent(accordion, 'lr-after-collapse');
+    accordion.mode = 'single';
+    await settled;
+    expect(second.expanded).to.be.false;
+    expect(order).to.deep.equal([
+      'lr-collapse:policy-second',
+      'lr-after-collapse:policy-second',
+    ]);
+
+    accordion.mode = 'multiple';
+    await accordion.updateComplete;
+    await second.expand();
+    accordion.addEventListener('lr-collapse', (event) => event.preventDefault(), { once: true });
+    accordion.mode = 'single';
+    await accordion.updateComplete;
+    expect(accordion.mode).to.equal('multiple');
+    expect(accordion.getAttribute('mode')).to.equal('multiple');
+    expect(second.expanded).to.be.true;
+  });
+
+  it('keeps item-authored presentation intact across live writes, removal, and reparenting', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div>
+      <lr-accordion id="presentation-a" appearance="filled" heading-level="2" icon-placement="start">
+        <lr-accordion-item
+          id="presentation-item"
+          appearance="outlined"
+          heading-level="4"
+          icon-placement="end"
+          label="Presentation"
+        >Content</lr-accordion-item>
+      </lr-accordion>
+      <lr-accordion id="presentation-b" appearance="filled-outlined" heading-level="5"></lr-accordion>
+    </div>`);
+    const first = wrapper.querySelector<LyraAccordion>('#presentation-a')!;
+    const second = wrapper.querySelector<LyraAccordion>('#presentation-b')!;
+    const item = wrapper.querySelector<LyraAccordionItem>('#presentation-item')!;
+    const base = () => item.shadowRoot!.querySelector<HTMLElement>('[part~="accordion-item"]')!;
+    await Promise.all([first.updateComplete, second.updateComplete, item.updateComplete]);
+    expect([item.appearance, item.headingLevel, item.iconPlacement]).to.deep.equal([
+      'outlined', '4', 'end',
+    ]);
+    expect(base().dataset.appearance).to.equal('filled');
+    expect(item.shadowRoot!.querySelector('h2')).to.exist;
+
+    item.appearance = 'plain';
+    item.headingLevel = '6';
+    item.iconPlacement = 'start';
+    await item.updateComplete;
+    expect(base().dataset.appearance).to.equal('filled');
+    expect(item.shadowRoot!.querySelector('h2')).to.exist;
+
+    item.remove();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await item.updateComplete;
+    expect(base().dataset.appearance).to.equal('plain');
+    expect(item.shadowRoot!.querySelector('h6')).to.exist;
+
+    second.append(item);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await item.updateComplete;
+    expect(base().dataset.appearance).to.equal('filled-outlined');
+    expect(item.shadowRoot!.querySelector('h5')).to.exist;
+    expect([item.appearance, item.headingLevel, item.iconPlacement]).to.deep.equal([
+      'plain', '6', 'start',
+    ]);
   });
 
   it('skips inert direct items while assigning and moving the roving stop', async () => {
@@ -685,7 +781,10 @@ describe('<lr-accordion>', () => {
     remaining = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
     await Promise.all(remaining.map((item) => item.updateComplete));
 
-    expect(remaining.map((item) => item.appearance)).to.deep.equal(['filled', 'filled']);
+    expect(remaining.map((item) => item.appearance)).to.deep.equal(['outlined', 'outlined']);
+    expect(remaining.map((item) =>
+      item.shadowRoot!.querySelector('[part~="accordion-item"]')?.getAttribute('data-appearance'),
+    )).to.deep.equal(['filled', 'filled']);
     expect(remaining.map((item) => buttonFor(item).tabIndex)).to.deep.equal([0, -1]);
 
     buttonFor(remaining[0]!).focus();
@@ -715,6 +814,26 @@ describe('<lr-accordion>', () => {
   });
 });
 
+it('normalizes mixed-case aria-hidden and observes excluded accordion ancestors', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div aria-hidden=" TRUE ">
+      <lr-accordion>
+        <lr-accordion-item id="case-one" label="One">One</lr-accordion-item>
+        <lr-accordion-item id="case-two" label="Two" aria-hidden=" TrUe ">Two</lr-accordion-item>
+      </lr-accordion>
+    </div>
+  `);
+  const accordion = wrapper.querySelector('lr-accordion') as LyraAccordion;
+  const items = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+  await Promise.all([accordion.updateComplete, ...items.map((item) => item.updateComplete)]);
+  expect(items.map((item) => buttonFor(item).tabIndex)).to.deep.equal([-1, -1]);
+
+  wrapper.removeAttribute('aria-hidden');
+  await new Promise<void>((resolve) => setTimeout(resolve));
+  await Promise.all(items.map((item) => item.updateComplete));
+  expect(items.map((item) => buttonFor(item).tabIndex)).to.deep.equal([0, -1]);
+});
+
 it('recognizes foreign-realm accordion items in focus and keyboard event paths', async () => {
   const accordion = (await fixture(html`<lr-accordion></lr-accordion>`)) as LyraAccordion;
   const iframe = document.createElement('iframe');
@@ -725,6 +844,10 @@ it('recognizes foreign-realm accordion items in focus and keyboard event paths',
     const second = foreignDocument.createElement('lr-accordion-item') as unknown as LyraAccordionItem;
     Object.assign(first, { disabled: false, isTabbable: false });
     Object.assign(second, { disabled: false, isTabbable: false });
+    const firstShadow = (first as unknown as HTMLElement).attachShadow({ mode: 'open' });
+    const foreignTrigger = foreignDocument.createElement('button');
+    foreignTrigger.setAttribute('part', 'button');
+    firstShadow.append(foreignTrigger);
     let focused = false;
     Object.defineProperty(second, 'focus', { configurable: true, value: () => { focused = true; } });
 
@@ -741,7 +864,7 @@ it('recognizes foreign-realm accordion items in focus and keyboard event paths',
     let prevented = false;
     access.handleKeyDown({
       key: 'ArrowDown',
-      composedPath: () => [first],
+      composedPath: () => [foreignTrigger, firstShadow, first],
       preventDefault: () => { prevented = true; },
       stopPropagation: () => undefined,
     } as unknown as KeyboardEvent);
@@ -754,7 +877,7 @@ it('recognizes foreign-realm accordion items in focus and keyboard event paths',
 });
 
 describe('<lr-accordion-item>', () => {
-  it('exposes the complete item surface and keeps Details aliases synchronized', async () => {
+  it('exposes the complete canonical item surface without the Details vocabulary', async () => {
     const item = (await fixture(html`<lr-accordion-item
       label="Canonical label"
       expanded
@@ -767,25 +890,27 @@ describe('<lr-accordion-item>', () => {
       Content
     </lr-accordion-item>`)) as LyraAccordionItem;
 
-    expect(item.open).to.be.true;
     expect(item.expanded).to.be.true;
-    expect(item.hasAttribute('open')).to.be.true;
     expect(item.hasAttribute('expanded')).to.be.true;
+    for (const removed of ['open', 'summary', 'name', 'size', 'show', 'hide']) {
+      expect(removed in item, `${removed} must remain on lr-details only`).to.equal(false);
+    }
     expect(item.shadowRoot!.querySelector('[part~="base"][part~="accordion-item"]')).to.exist;
     expect(item.shadowRoot!.querySelector('h2[part~="heading"]')).to.exist;
-    for (const part of ['button', 'summary', 'label', 'icon', 'panel', 'content']) {
+    for (const part of ['button', 'label', 'icon', 'panel', 'content']) {
       expect(item.shadowRoot!.querySelector(`[part~="${part}"]`), `missing part ${part}`).to.exist;
     }
+    expect(item.shadowRoot!.querySelector('[part~="summary"]') === null).to.equal(true);
     expect(getComputedStyle(item.shadowRoot!.querySelector<HTMLElement>('[part~="icon"]')!).order).to.equal('-1');
 
-    item.open = false;
+    item.expanded = false;
     await item.updateComplete;
     expect(item.expanded).to.be.false;
     expect(item.hasAttribute('expanded')).to.be.false;
 
     item.expanded = true;
     await item.updateComplete;
-    expect(item.open).to.be.true;
+    expect(item.expanded).to.be.true;
 
     item.headingLevel = 'none';
     await item.updateComplete;
@@ -809,20 +934,6 @@ describe('<lr-accordion-item>', () => {
     await item.updateComplete;
     expect(button.hasAttribute('aria-label')).to.equal(false);
     expect(button.textContent).to.contain('Fallback item');
-  });
-
-  it('accepts the legacy summary property and summary slot as label aliases', async () => {
-    const propertyItem = (await fixture(
-      html`<lr-accordion-item summary="Legacy summary">Content</lr-accordion-item>`,
-    )) as LyraAccordionItem;
-    expect(buttonFor(propertyItem).textContent).to.contain('Legacy summary');
-
-    const slotItem = (await fixture(html`<lr-accordion-item>
-      <span slot="summary">Legacy slot</span>
-      Content
-    </lr-accordion-item>`)) as LyraAccordionItem;
-    expect(slotItem.querySelector('[slot="summary"]')?.textContent).to.equal('Legacy slot');
-    expect(buttonFor(slotItem).textContent).to.not.contain('Details');
   });
 
   it('keeps a slotted label decorative while its text names the sole trigger', async () => {
@@ -855,38 +966,6 @@ describe('<lr-accordion-item>', () => {
       });
       await item.updateComplete;
       expect(linkActivations).to.equal(0);
-      expect(item.expanded).to.equal(true);
-    } finally {
-      await resetMouse();
-    }
-    await expect(item).to.be.accessible();
-  });
-
-  it('keeps a legacy summary control decorative while its text names and activates the trigger', async () => {
-    const item = (await fixture(html`<lr-accordion-item>
-      <button id="slotted-summary-button" slot="summary">Legacy preferences</button>
-      Content
-    </lr-accordion-item>`)) as LyraAccordionItem;
-    const summaryButton = item.querySelector<HTMLElement>('#slotted-summary-button')!;
-    const button = buttonFor(item);
-    const visualSummary = button.querySelector<HTMLElement>('[part="label"] > [inert][aria-hidden="true"]')!;
-
-    summaryButton.focus();
-    expect(item.ownerDocument.activeElement?.id).to.not.equal('slotted-summary-button');
-    expect(visualSummary.hasAttribute('inert')).to.equal(true);
-    expect(button.hasAttribute('aria-label')).to.equal(false);
-    expect(button.getAttribute('aria-labelledby')).to.equal('summary');
-
-    let summaryActivations = 0;
-    summaryButton.addEventListener('click', () => summaryActivations++);
-    const rect = summaryButton.getBoundingClientRect();
-    try {
-      await sendMouse({
-        type: 'click',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
-      await item.updateComplete;
-      expect(summaryActivations).to.equal(0);
       expect(item.expanded).to.equal(true);
     } finally {
       await resetMouse();
@@ -942,56 +1021,57 @@ describe('<lr-accordion-item>', () => {
     expect(button.getAttribute('aria-labelledby')).to.equal('label');
   });
 
-  it('gives the canonical label slot precedence and restores the summary alias when it is removed', async () => {
-    const item = (await fixture(html`<lr-accordion-item label="Property label" summary="Summary property">
-      <span id="canonical-label" slot="label">Canonical slot</span>
-      <span id="legacy-label" slot="summary">Summary slot</span>
-      Content
-    </lr-accordion-item>`)) as LyraAccordionItem;
-    const labelSlot = item.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="label"]')!;
-    const summarySlot = item.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="summary"]')!;
-    expect(labelSlot.parentElement?.hidden).to.be.false;
-    expect(summarySlot.parentElement?.hidden).to.be.true;
-    expect(buttonFor(item).getAttribute('aria-labelledby')).to.equal('label');
-
-    item.querySelector('#canonical-label')!.remove();
-    await item.updateComplete;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    expect(labelSlot.parentElement?.hidden).to.be.true;
-    expect(summarySlot.parentElement?.hidden).to.be.false;
-    expect(summarySlot.assignedElements()[0]?.id).to.equal('legacy-label');
-    expect(buttonFor(item).getAttribute('aria-labelledby')).to.equal('summary');
-  });
-
-  it('supports expand(), collapse(), toggle(), show(), hide(), focus(), blur(), and click()', async () => {
+  it('supports expand(), collapse(), toggle(), focus(), and click()', async () => {
     const item = (await fixture(
       html`<lr-accordion-item label="Methods" style=${quickMotion}>Content</lr-accordion-item>`,
     )) as LyraAccordionItem;
 
-    let settled = oneEvent(item, 'lr-after-show');
-    item.expand();
+    let settled = item.expand();
     expect(item.expanded).to.be.true;
     await settled;
-    settled = oneEvent(item, 'lr-after-hide');
-    item.collapse();
+    settled = item.collapse();
     expect(item.expanded).to.be.false;
     await settled;
-    settled = oneEvent(item, 'lr-after-show');
-    item.toggle();
+    settled = item.toggle();
     expect(item.expanded).to.be.true;
     await settled;
-    item.hide();
-    expect(item.expanded).to.be.false;
-    item.show();
-    expect(item.expanded).to.be.true;
 
     item.focus();
     expect(item.shadowRoot!.activeElement?.localName).to.equal('button');
-    item.blur();
-    expect(item.shadowRoot!.activeElement?.localName ?? null).to.equal(null);
     item.click();
     await item.updateComplete;
     expect(item.expanded).to.be.false;
+  });
+
+  it('uses owner-scoped coordination without leaking private protocol-shaped events', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div>
+      <lr-accordion id="protocol-owner" mode="single">
+        <lr-accordion-item id="protocol-owned" label="Owned">Owned</lr-accordion-item>
+      </lr-accordion>
+      <lr-accordion-item id="protocol-standalone" label="Standalone">Standalone</lr-accordion-item>
+    </div>`);
+    const owner = wrapper.querySelector<LyraAccordion>('#protocol-owner')!;
+    const owned = wrapper.querySelector<LyraAccordionItem>('#protocol-owned')!;
+    const standalone = wrapper.querySelector<LyraAccordionItem>('#protocol-standalone')!;
+    await Promise.all([owner.updateComplete, owned.updateComplete, standalone.updateComplete]);
+    const leaked: string[] = [];
+    for (const name of ['lr-accordion-item-trigger', 'lr-accordion-item-state-change']) {
+      wrapper.addEventListener(name, (event) => {
+        leaked.push(event.type);
+        event.preventDefault();
+      });
+    }
+
+    buttonFor(standalone).click();
+    await standalone.updateComplete;
+    buttonFor(owned).click();
+    await owned.updateComplete;
+    owned.disabled = true;
+    await owned.updateComplete;
+
+    expect(standalone.expanded).to.be.true;
+    expect(owned.expanded).to.be.true;
+    expect(leaked).to.deep.equal([]);
   });
 
   it('renders explicit false ARIA state and gates every activation path while disabled', async () => {
@@ -1008,35 +1088,32 @@ describe('<lr-accordion-item>', () => {
     expect(item.expanded).to.be.false;
   });
 
-  it('keeps a vetoed expanded attribute write synchronized with the open alias', async () => {
-    const item = (await fixture(
-      html`<lr-accordion-item label="Vetoed">Content</lr-accordion-item>`,
-    )) as LyraAccordionItem;
-    item.addEventListener('lr-show', (event) => event.preventDefault(), { once: true });
+  it('keeps a group-vetoed expanded attribute write synchronized', async () => {
+    const accordion = (await fixture(html`<lr-accordion>
+      <lr-accordion-item label="Vetoed">Content</lr-accordion-item>
+    </lr-accordion>`)) as LyraAccordion;
+    const item = accordion.querySelector('lr-accordion-item') as LyraAccordionItem;
+    accordion.addEventListener('lr-expand', (event) => event.preventDefault(), { once: true });
 
     item.setAttribute('expanded', '');
     await item.updateComplete;
     expect(item.expanded).to.be.false;
-    expect(item.open).to.be.false;
     expect(item.hasAttribute('expanded')).to.be.false;
-    expect(item.hasAttribute('open')).to.be.false;
   });
 
-  it('keeps a disabled write through the open attribute alias synchronized', async () => {
+  it('keeps a disabled expanded-attribute write synchronized', async () => {
     const item = (await fixture(
       html`<lr-accordion-item label="Disabled alias" disabled>Content</lr-accordion-item>`,
     )) as LyraAccordionItem;
 
-    item.setAttribute('open', '');
+    item.setAttribute('expanded', '');
     await item.updateComplete;
 
-    expect(item.open).to.be.false;
     expect(item.expanded).to.be.false;
-    expect(item.hasAttribute('open')).to.be.false;
     expect(item.hasAttribute('expanded')).to.be.false;
   });
 
-  it('keeps the canonical and Details-compatible spacing hooks live in rendered styles', async () => {
+  it('keeps the canonical and upstream spacing hooks live in rendered styles', async () => {
     const item = (await fixture(html`<lr-accordion-item
       label="Spacing"
       style="--lr-accordion-item-spacing: 17px"
@@ -1045,14 +1122,8 @@ describe('<lr-accordion-item>', () => {
     expect(getComputedStyle(button).paddingInlineStart).to.equal('17px');
 
     item.style.removeProperty('--lr-accordion-item-spacing');
-    item.style.setProperty('--lr-details-spacing', '23px');
-    expect(getComputedStyle(button).paddingInlineStart).to.equal('23px');
-
     item.style.setProperty('--spacing', '29px');
     expect(getComputedStyle(button).paddingInlineStart).to.equal('29px');
-
-    item.style.setProperty('--lr-details-font-size', '21px');
-    expect(getComputedStyle(button).fontSize).to.equal('21px');
   });
 
   it('mirrors the icon rotation in RTL and lets consumer part styles disable it', async () => {
@@ -1069,7 +1140,7 @@ describe('<lr-accordion-item>', () => {
     expect(getComputedStyle(staticIcon).rotate).to.equal('none');
   });
 
-  it('waits for rendered item motion before the inherited Details after-event', async () => {
+  it('settles expand() only after rendered item motion', async () => {
     const item = (await fixture(html`<lr-accordion-item
       label="After timing"
       style="--show-duration: 80ms"
@@ -1079,11 +1150,8 @@ describe('<lr-accordion-item>', () => {
     // real transition rather than being coalesced into the initial render.
     void panel.offsetWidth;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    const after = oneEvent(item, 'lr-after-show');
-
     const startedAt = performance.now();
-    item.show();
-    await after;
+    await item.expand();
 
     expect(performance.now() - startedAt).to.be.at.least(50);
   });
@@ -1094,8 +1162,7 @@ describe('<lr-accordion-item>', () => {
       style="--show-duration: 40ms"
     >Content</lr-accordion-item>`)) as LyraAccordionItem;
 
-    const expansion = oneEvent(item, 'lr-after-show');
-    item.expand();
+    const expansion = item.expand();
     await item.updateComplete;
     expect(item.matches(':state(animating)')).to.be.true;
     await expansion;

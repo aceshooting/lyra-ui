@@ -4,16 +4,15 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { finiteCount } from '../../../internal/numbers.js';
 import { chevronIcon } from '../../../internal/icons.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
-import '../../utility/live-region/live-region.class.js';
-import '../../overlays/empty/empty.class.js';
 import { styles } from './trace-tree.styles.js';
-import { normalizeLyraSpanKind, normalizeLyraSpanStatus, type LyraSpan } from './span.js';
+import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from './span.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_cost, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_traceTree, LYRA_DEFAULT_traceTreeMetricLabel, LYRA_DEFAULT_traceTreeSpanStatus } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_cost, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_traceTree, LYRA_DEFAULT_traceTreeMetricLabel, LYRA_DEFAULT_traceTreeSpanStatus } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -33,9 +32,9 @@ interface SpanHierarchy {
   childrenOf: Map<string, LyraSpan[]>;
   parentOf: Map<string, string>;
   roots: LyraSpan[];
+  truncated: boolean;
 }
 
-const MAX_RENDERED_SPANS = 500;
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
 
@@ -118,6 +117,7 @@ export interface LyraTraceTreeEventMap {
  * @csspart bar-track - The duration bar's background track.
  * @csspart bar - The duration bar's filled portion.
  * @csspart empty - The empty-state message shown when `spans` is empty.
+ * @csspart limit - Localized notice shown when the shared 500-span projection ceiling is reached.
  * @csspart live-region - The internal status-announcement live region.
  * @cssprop [--lr-trace-tree-row-active-bg=var(--lr-color-brand-quiet)] - Background of the active
  *   (`activeSpanId`) row. Shadow Parts forbids an attribute selector after `::part()`, so the active
@@ -140,6 +140,8 @@ export interface LyraTraceTreeEventMap {
  * @cssprop [--lr-trace-tree-running-color=var(--lr-color-brand)] - Running status text and stripe.
  * @cssprop [--lr-trace-tree-pending-color=var(--lr-color-text-quiet)] - Pending status text and bar.
  * @cssprop [--lr-trace-tree-bar-track-bg=var(--lr-color-surface-raised)] - Duration bar track.
+ * @cssprop [--lr-trace-tree-max-indent=var(--lr-size-12rem)] - Maximum visual nesting indentation;
+ *   semantic `aria-level` remains exact at deeper levels.
  * @cssprop [--lr-trace-tree-running-stripe-bg=var(--lr-color-brand-quiet)] - Running stripe contrast.
  * @status stable
  * @since 4.0.0
@@ -156,14 +158,19 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     duration: LYRA_DEFAULT_duration,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     durationSeconds: LYRA_DEFAULT_durationSeconds,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     spanKindAgent: LYRA_DEFAULT_spanKindAgent,
     spanKindEmbedding: LYRA_DEFAULT_spanKindEmbedding,
     spanKindLlm: LYRA_DEFAULT_spanKindLlm,
     spanKindOther: LYRA_DEFAULT_spanKindOther,
     spanKindRetriever: LYRA_DEFAULT_spanKindRetriever,
     spanKindTool: LYRA_DEFAULT_spanKindTool,
+    spanProjectionLimit: LYRA_DEFAULT_spanProjectionLimit,
     statusDenied: LYRA_DEFAULT_statusDenied,
     statusError: LYRA_DEFAULT_statusError,
     statusPending: LYRA_DEFAULT_statusPending,
@@ -181,14 +188,17 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
 
   /**
    * Flat span array. Hierarchy is derived from `parentId`; siblings order by `startMs`.
-   * The first 500 unique spans with finite timestamps are rendered; malformed parent cycles
-   * are broken into roots so hostile trace data cannot recurse indefinitely. Foreign runtime
+   * At most 500 unique spans with finite timestamps are rendered. A resolved `activeSpanId` and
+   * its nearest ancestor path reserve positions before ordinary input-order rows, so a controlled
+   * selection remains current and revealable across the ceiling. Malformed parent cycles are
+   * broken into roots so hostile trace data cannot recurse indefinitely. Foreign runtime
    * `kind`/`status` values normalize to `'other'`/`'pending'` before rendering.
    */
   @property({ attribute: false }) spans: LyraSpan[] = [];
   /** Controlled selection — the matching row carries `aria-current`/`data-active` and scrolls into view. */
   @property({ attribute: 'active-span-id' }) activeSpanId: string | null = null;
-  /** Accessible name for the `role="tree"` element. Falls back to a host `aria-label`, then the localized default. */
+  /** Accessible name for the `role="tree"` element. Falls back to the localized default; a host
+   *  `aria-label` names the host itself and is not cloned onto the independently interactive tree. */
   @property() label = '';
   /** Adds tokens-in/tokens-out columns. */
   @property({ type: Boolean, attribute: 'show-tokens', reflect: true }) showTokens = false;
@@ -204,26 +214,39 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   private previousStatuses = new Map<string, LyraSpan['status']>();
   private pendingAnnouncements: string[] = [];
+  private limitAnnouncementSink?: AnnouncementSink;
+  private limitAnnouncementInitialized = false;
+  private previouslyTruncated = false;
+  private renderedProjectionTruncated = false;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncLimitAnnouncementSink();
+    this.limitAnnouncementInitialized = this.hasUpdated;
+    this.previouslyTruncated = this.renderedProjectionTruncated;
+  }
+
+  override disconnectedCallback(): void {
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = undefined;
+    super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = undefined;
+    this.syncLimitAnnouncementSink();
+  }
+
+  private syncLimitAnnouncementSink(): void {
+    if (!this.isConnected || this.limitAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
+    this.limitAnnouncementSink?.release();
+    this.limitAnnouncementSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+  }
 
   private buildHierarchy(): SpanHierarchy {
-    const spans: LyraSpan[] = [];
-    const byId = new Map<string, LyraSpan>();
-    for (const candidate of this.spans) {
-      if (spans.length >= MAX_RENDERED_SPANS) break;
-      if (byId.has(candidate.id) || !Number.isFinite(candidate.startMs)) continue;
-      if (candidate.endMs != null && !Number.isFinite(candidate.endMs)) continue;
-      const startMs = finiteRange(candidate.startMs, 0, 0);
-      const endMs = candidate.endMs == null ? undefined : finiteRange(candidate.endMs, startMs, startMs);
-      const span = {
-        ...candidate,
-        kind: normalizeLyraSpanKind(candidate.kind),
-        status: normalizeLyraSpanStatus(candidate.status),
-        startMs,
-        endMs,
-      };
-      spans.push(span);
-      byId.set(span.id, span);
-    }
+    const { spans, byId, truncated } = normalizeLyraSpans(this.spans, this.activeSpanId);
 
     const childrenOf = new Map<string, LyraSpan[]>();
     const parentOf = new Map<string, string>();
@@ -255,7 +278,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     roots.sort(byStart);
     for (const list of childrenOf.values()) list.sort(byStart);
 
-    return { spans, byId, childrenOf, parentOf, roots };
+    return { spans, byId, childrenOf, parentOf, roots, truncated };
   }
 
   private buildRows(hierarchy = this.buildHierarchy()): SpanRow[] {
@@ -269,7 +292,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
         setSize: hierarchy.roots.length,
       }));
     const visited = new Set<string>();
-    while (stack.length > 0 && rows.length < MAX_RENDERED_SPANS) {
+    while (stack.length > 0 && rows.length < MAX_RENDERED_LYRA_SPANS) {
       const current = stack.pop();
       if (!current || visited.has(current.span.id)) continue;
       visited.add(current.span.id);
@@ -525,6 +548,13 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       this.pendingAnnouncements = [];
       for (const text of texts) this.liveRegion?.announce(text);
     }
+    if (this.limitAnnouncementInitialized && this.renderedProjectionTruncated && !this.previouslyTruncated) {
+      this.limitAnnouncementSink?.announce(this.localize('spanProjectionLimit', undefined, {
+        count: MAX_RENDERED_LYRA_SPANS,
+      }));
+    }
+    this.limitAnnouncementInitialized = true;
+    this.previouslyTruncated = this.renderedProjectionTruncated;
   }
 
   private renderHeader(): TemplateResult {
@@ -635,6 +665,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
 
   override render(): TemplateResult {
     const hierarchy = this.buildHierarchy();
+    this.renderedProjectionTruncated = hierarchy.truncated;
     const rows = this.buildRows(hierarchy);
     const firstId = rows[0]?.span.id;
     const extent = this.traceExtent(hierarchy.spans);
@@ -642,12 +673,17 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       <div
         part="base"
         role="tree"
-        aria-label=${this.getAttribute('aria-label') || this.label || this.localize('traceTree')}
+        aria-label=${this.label || this.localize('traceTree')}
         @keydown=${this.onKeyDown}
       >
         ${rows.length === 0
           ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
           : html`${this.showTokens || this.showCost ? this.renderHeader() : nothing}${rows.map((row) => this.renderRow(row, firstId, extent))}`}
+        ${hierarchy.truncated
+          ? html`<p part="limit" role="note">${this.localize('spanProjectionLimit', undefined, {
+              count: MAX_RENDERED_LYRA_SPANS,
+            })}</p>`
+          : nothing}
       </div>
       <lr-live-region part="live-region" mode="polite"></lr-live-region>
     `;

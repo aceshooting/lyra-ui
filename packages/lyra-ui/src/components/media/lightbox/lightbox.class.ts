@@ -24,12 +24,43 @@ import { LYRA_DEFAULT_close, LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_li
 export interface LyraLightboxImage {
   /** Full-resolution URL. Passed straight through to the embedded `<lr-pan-zoom>`'s own
    *  `src`, which already runs it through `safeMediaSrc()` -- no separate validation needed here. */
-  src: string;
+  readonly src: string;
   /** Accessible alt text. Defaults to `''` (decorative) when omitted; consumers should supply
    *  real alt text for meaningful images. */
-  alt?: string;
+  readonly alt?: string;
   /** Optional visible caption for this image, rendered in `part="caption"` below the stage. */
-  caption?: string;
+  readonly caption?: string;
+}
+
+const MAX_LIGHTBOX_IMAGES = 10_000;
+const EMPTY_LIGHTBOX_IMAGES: readonly LyraLightboxImage[] = Object.freeze([]);
+
+function snapshotLightboxImages(value: unknown): readonly LyraLightboxImage[] {
+  try {
+    if (!Array.isArray(value)) return EMPTY_LIGHTBOX_IMAGES;
+    const count = Math.min(value.length, MAX_LIGHTBOX_IMAGES);
+    const images: LyraLightboxImage[] = [];
+    for (let index = 0; index < count; index++) {
+      try {
+        const candidate = value[index] as Partial<LyraLightboxImage> | null;
+        if (typeof candidate !== 'object' || candidate === null) continue;
+        const src = candidate.src;
+        if (typeof src !== 'string') continue;
+        const alt = candidate.alt;
+        const caption = candidate.caption;
+        images.push(Object.freeze({
+          src,
+          ...(typeof alt === 'string' ? { alt } : {}),
+          ...(typeof caption === 'string' ? { caption } : {}),
+        }));
+      } catch {
+        // A hostile getter invalidates only its own record; later valid images remain reachable.
+      }
+    }
+    return images.length ? Object.freeze(images) : EMPTY_LIGHTBOX_IMAGES;
+  } catch {
+    return EMPTY_LIGHTBOX_IMAGES;
+  }
 }
 
 /**
@@ -48,7 +79,16 @@ export type LyraLightboxCloseReason =
   | 'unmount'
   | (string & Record<never, never>);
 
+/** The concrete affordance that requested a lightbox hide transition. */
+export interface LyraLightboxHideDetail {
+  source: Element;
+}
+
 export interface LyraLightboxEventMap {
+  'lr-show': CustomEvent<null>;
+  'lr-after-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<LyraLightboxHideDetail>;
+  'lr-after-hide': CustomEvent<null>;
   'lr-lightbox-close': CustomEvent<LyraLightboxCloseReason>;
   'lr-index-change': CustomEvent<{ index: number }>;
   /** Not emitted by `LyraLightbox` itself -- the embedded `<lr-pan-zoom>` already
@@ -62,6 +102,7 @@ function ownsNavigationKey(event: KeyboardEvent): boolean {
   for (const target of event.composedPath()) {
     const element = target as Element;
     if (typeof element.matches !== 'function') continue;
+    if (element.localName === 'lr-pan-zoom') return true;
     if (element.matches(
       'input, textarea, select, [contenteditable]:not([contenteditable="false"]), ' +
       '[role="textbox"], [role="searchbox"], [role="combobox"], [role="spinbutton"], ' +
@@ -109,10 +150,17 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * reset zoom/pan, but destroying/recreating the element would steal focus from a keyboard user
  * who had Tabbed into the frame's viewport mid-navigation.
  *
+ * Lifecycle: `show()` emits cancelable `lr-show` before committing `open=true`, followed by
+ * `lr-after-show` after the open panel renders. `hide()`/`close()` and post-render writes to
+ * `open=false` emit cancelable `lr-hide`, then cancelable `lr-lightbox-close`, followed by
+ * `lr-after-hide` after the closed state renders. A veto leaves the property and reflected
+ * attribute synchronized. Initial `open` markup is state rather than a transition and emits no
+ * lifecycle events.
+ *
  * **Scope for v1 (deliberate, not oversights):** no default slot / no arbitrary slotted content
  * per image (data-driven via `images` only); no dot-style indicators (a textual counter scales
- * better to photo-set sizes); no open/close transition or animation (matches `<lr-dialog>`'s
- * own precedent of having none -- `prefers-reduced-motion` has nothing to branch on here); no
+ * better to photo-set sizes); no visual open/close animation (`show()`/`hide()` still expose the
+ * shared before/after lifecycle contract); no
  * click-on-image-to-navigate (the image is already meaningfully interactive -- it focuses the
  * zoomable frame's viewport and drives its native scroll-to-pan); no touch-swipe-to-navigate.
  *
@@ -125,6 +173,11 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  *   whenever the lightbox is dismissed via Escape, a backdrop click, the built-in close button,
  *   a `close()` call, or (with reason `'unmount'`, not cancelable in practice since the element
  *   is already being removed) removal from the DOM by anything else while still open.
+ * @event lr-show - Cancelable request fired by `show()` before `open` changes.
+ * @event lr-after-show - Fired after a successful `show()` has rendered the open panel.
+ * @event lr-hide - Cancelable request fired before `lr-lightbox-close`; `detail: { source }`,
+ *   where `source` is the close button, backdrop, panel (for Escape), or host (for API writes).
+ * @event lr-after-hide - Fired after a successful `hide()`/`close()` has rendered closed.
  * @event lr-index-change - Fired for `next()`/`previous()`/`goTo()` navigation, including the
  *   built-in button and keyboard paths. Not fired when a consumer sets `index`/`images` directly.
  *   `detail: { index }` is always the rendered integer index.
@@ -148,9 +201,10 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  *   `closable`, a full-screen lightbox has no other built-in chrome, so this is not optional.
  * @csspart stage - Houses the embedded `<lr-pan-zoom>` plus the floating
  *   `previous-button`/`next-button`.
- * @csspart frame - The embedded `<lr-pan-zoom>` element itself. Its own internal parts
- *   are not re-exported via `exportparts` -- there is no precedent for `exportparts` anywhere in
- *   this codebase.
+ * @csspart frame - The embedded `<lr-pan-zoom>` element itself.
+ * @csspart frame-viewport - The embedded pan-zoom's scrollable viewport.
+ * @csspart frame-content - The embedded pan-zoom's transformed content wrapper.
+ * @csspart frame-controls - The embedded pan-zoom's zoom controls.
  * @csspart previous-button - Floating, absolutely positioned inside `stage`. Rendered only when
  *   `images.length > 1`.
  * @csspart previous-glyph - The `chevronIcon()` inside `previous-button`, mirrored under RTL.
@@ -179,12 +233,39 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   static override styles = [LyraElement.styles, srOnly, styles];
 
-  /** Whether the lightbox is open. Set this (or call `close()`) -- there is no separate
-   *  `show()`/`hide()` pair, exactly mirrors `<lr-dialog>`. */
-  @property({ type: Boolean, reflect: true }) open = false;
+  private _open = false;
 
-  /** The ordered set of images being browsed. */
-  @property({ attribute: false }) images: LyraLightboxImage[] = [];
+  /** Whether the lightbox is open. Post-render writes run the same cancelable lifecycle as
+   *  `show()`/`hide()`/`close()`; initial markup is state and emits nothing. */
+  @property({ type: Boolean, reflect: true })
+  get open(): boolean {
+    return this._open;
+  }
+  set open(next: boolean) {
+    const normalized = Boolean(next);
+    if (this.coalesceOpenRequest(normalized)) return;
+    if (normalized === this._open) return;
+    if (!this.hasUpdated) {
+      this.applyOpenState(normalized);
+      return;
+    }
+    if (normalized) void this.show();
+    else void this.close('api');
+  }
+
+  private _images: readonly LyraLightboxImage[] = EMPTY_LIGHTBOX_IMAGES;
+
+  /** The ordered, bounded, immutable set of images being browsed. Assign a new collection to
+   * update it; malformed records are omitted and at most 10,000 candidates are inspected. */
+  @property({ attribute: false })
+  get images(): readonly LyraLightboxImage[] {
+    return this._images;
+  }
+  set images(value: readonly LyraLightboxImage[]) {
+    const old = this._images;
+    this._images = snapshotLightboxImages(value);
+    this.requestUpdate('images', old);
+  }
 
   /** The currently displayed image. Clamped defensively for rendering (out-of-range/negative/
    *  non-integer never throws) and silently re-synced onto this property (no event) when
@@ -236,9 +317,12 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   private announcementSink?: AnnouncementSink;
   private announcementBaseline?: {
     index: number;
-    images: LyraLightboxImage[];
+    images: readonly LyraLightboxImage[];
   };
   private connectionGeneration = 0;
+  private transitionGeneration = 0;
+  private openRequestTarget?: boolean;
+  private openRequestDuringPreflight?: boolean;
   private readonly captionId = nextId('lightbox-caption');
 
   /** Clamped, always-valid index for rendering -- never throws on an out-of-range, negative,
@@ -279,17 +363,91 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
    *  integer index. Non-finite values are no-ops. */
   goTo: (index: number) => void = (index: number): void => this.changeTo(index);
 
+  /** Request opening, then resolve once the open panel is rendered. */
+  async show(): Promise<void> {
+    if (this.coalesceOpenRequest(true) || this._open) return;
+    this.beginOpenRequest(true);
+    const prevented = this.emit('lr-show', null, { cancelable: true }).defaultPrevented;
+    const superseded = this.openRequestWasSuperseded(true);
+    this.finishOpenRequest();
+    if (prevented || superseded) {
+      this.syncOpenAttribute();
+      return;
+    }
+    this.applyOpenState(true);
+    const generation = ++this.transitionGeneration;
+    await this.updateComplete;
+    if (generation === this.transitionGeneration && this._open) this.emit('lr-after-show', null);
+  }
+
+  /** Close with the standard API reason. */
+  hide(): Promise<void> {
+    return this.close('api');
+  }
+
   /**
    * Close the lightbox and return focus to whatever had it before the lightbox opened. `reason`
    * is forwarded as the `lr-lightbox-close` detail -- built-in triggers pass `'escape'`/
    * `'backdrop'`/`'close-button'`; a consumer's own close affordance (e.g. an `actions`-slotted
    * button) should call this directly with its own reason string.
    */
-  close(reason: LyraLightboxCloseReason = 'api'): void {
-    if (!this.open) return;
+  async close(reason: LyraLightboxCloseReason = 'api'): Promise<void> {
+    return this.closeFrom(reason, this);
+  }
+
+  private async closeFrom(reason: LyraLightboxCloseReason, source: Element): Promise<void> {
+    if (this.coalesceOpenRequest(false) || !this._open) return;
+    this.beginOpenRequest(false);
+    if (
+      this.emit('lr-hide', { source }, { cancelable: true }).defaultPrevented ||
+      this.openRequestWasSuperseded(false)
+    ) {
+      this.finishOpenRequest();
+      this.syncOpenAttribute();
+      return;
+    }
     const event = this.emit('lr-lightbox-close', reason, { cancelable: true });
-    if (event.defaultPrevented) return;
-    this.open = false;
+    if (event.defaultPrevented || this.openRequestWasSuperseded(false)) {
+      this.finishOpenRequest();
+      this.syncOpenAttribute();
+      return;
+    }
+    this.finishOpenRequest();
+    this.applyOpenState(false);
+    const generation = ++this.transitionGeneration;
+    await this.updateComplete;
+    if (generation === this.transitionGeneration && !this._open) this.emit('lr-after-hide', null);
+  }
+
+  private coalesceOpenRequest(next: boolean): boolean {
+    if (this.openRequestTarget === undefined) return false;
+    this.openRequestDuringPreflight = next;
+    return true;
+  }
+
+  private beginOpenRequest(next: boolean): void {
+    this.openRequestTarget = next;
+    this.openRequestDuringPreflight = undefined;
+  }
+
+  private openRequestWasSuperseded(next: boolean): boolean {
+    return this.openRequestDuringPreflight !== undefined &&
+      this.openRequestDuringPreflight !== next;
+  }
+
+  private finishOpenRequest(): void {
+    this.openRequestTarget = undefined;
+    this.openRequestDuringPreflight = undefined;
+  }
+
+  private applyOpenState(next: boolean): void {
+    const old = this._open;
+    this._open = next;
+    this.requestUpdate('open', old);
+  }
+
+  private syncOpenAttribute(): void {
+    this.toggleAttribute('open', this._open);
   }
 
   private updateLiveRegion(): void {
@@ -323,7 +481,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     // with no DOM measurement involved, so this belongs here, not in updated(): setting `liveText`
     // (a reactive property) from updated()/firstUpdated() schedules a *second* update on top of
     // the one that just finished, which Lit's dev-mode console flags ("scheduled an update ...
-    // after an update completed") -- mirrors lr-split's/lr-virtual-list's identical
+    // after an update completed") -- mirrors lr-multi-split's/lr-virtual-list's identical
     // willUpdate()-not-updated() fix for their own derived-property writes.
     if (changed.has('index') || changed.has('images') || changed.has('strings') || changed.has('locale')) {
       this.updateLiveRegion();
@@ -364,7 +522,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     // keep working past the first navigation.
     let currentSourceChanged = false;
     if (changed.has('images')) {
-      const previousImages = changed.get('images') as LyraLightboxImage[] | undefined;
+      const previousImages = changed.get('images') as readonly LyraLightboxImage[] | undefined;
       const previousIndex = changed.has('index')
         ? (changed.get('index') as number | undefined) ?? 0
         : this.index;
@@ -430,8 +588,11 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
           !this.isConnected &&
           this.open
         ) {
-          this.open = false;
+          this.transitionGeneration++;
+          this.emit('lr-hide', { source: this });
+          this.applyOpenState(false);
           this.emit('lr-lightbox-close', 'unmount');
+          this.emit('lr-after-hide', null);
         }
       });
     }
@@ -442,8 +603,14 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.overlay = activateOverlay({
       host: this,
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
-      onEscape: () => this.close('escape'),
-      onBackdrop: () => this.close('backdrop'),
+      onEscape: () => {
+        const panel = this.renderRoot.querySelector('[part="panel"]') ?? this;
+        void this.closeFrom('escape', panel);
+      },
+      onBackdrop: () => {
+        const backdrop = this.renderRoot.querySelector('[part="backdrop"]') ?? this;
+        void this.closeFrom('backdrop', backdrop);
+      },
       // An intentionally safe default action -- a full-screen image grabbing focus should hand
       // it to a predictable, always-present, non-destructive escape hatch first, rather than
       // whatever happens to be first in DOM tab order (which could otherwise be a consumer's own
@@ -465,7 +632,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   };
 
   private onCloseButtonClick = (): void => {
-    this.close('close-button');
+    const button = this.renderRoot.querySelector('[part="close-button"]') ?? this;
+    void this.closeFrom('close-button', button);
   };
 
   // RTL-aware, exactly mirroring <lr-carousel>'s onViewportKeyDown. Attached on part="panel"
@@ -546,12 +714,17 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
             : nothing}
           <lr-pan-zoom
             part="frame"
+            exportparts="viewport:frame-viewport,content:frame-content,controls:frame-controls"
             src=${image?.src ?? ''}
             alt=${image?.alt ?? ''}
             .minZoom=${this.minZoom}
             .maxZoom=${this.maxZoom}
             .zoomStep=${this.zoomStep}
             .accessibleLabel=${positionText || null}
+            @focus=${(event: Event) => event.stopPropagation()}
+            @blur=${(event: Event) => event.stopPropagation()}
+            @lr-focus=${(event: Event) => event.stopPropagation()}
+            @lr-blur=${(event: Event) => event.stopPropagation()}
           ></lr-pan-zoom>
           ${count > 1
             ? html`

@@ -12,7 +12,7 @@ import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
 import { styles } from './combobox.styles.js';
-import { LyraOption } from './option.class.js';
+import type { LyraOption } from './option.class.js';
 import './option.class.js';
 import {
   autocorrectConverter,
@@ -41,6 +41,7 @@ import {
   RESET_OPTION_SELECTED_FROM_OWNER,
   SET_OPTION_SELECTED_FROM_OWNER,
 } from '../../../internal/option-selection.js';
+import { isHtmlElement } from '../../../internal/dom-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
@@ -48,6 +49,10 @@ import { LYRA_DEFAULT_clear, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxL
 
 
 export type OptionFilter = (option: LyraOption, query: string) => boolean;
+
+function isLyraOptionElement(value: unknown): value is LyraOption {
+  return isHtmlElement(value) && value.localName === tag('option');
+}
 /** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
  *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
 export type LyraComboboxSize = LyraSizeStep;
@@ -97,35 +102,128 @@ function isValidityFlagKey(value: unknown): value is keyof ValidityStateFlags {
 }
 
 export interface ComboboxSourceRow {
-  value: string;
-  label: string;
-  sub?: string;
+  readonly value: string;
+  readonly label: string;
+  readonly sub?: string;
   /** Optional decorative leading visual. Its rendered subtree is inert and aria-hidden. */
-  icon?: unknown;
+  readonly icon?: unknown;
   /** Optional trailing metadata badge. */
-  badge?: string | number;
+  readonly badge?: string | number;
   /** Spoken option label when the visible row needs additional context. */
-  accessibleLabel?: string;
+  readonly accessibleLabel?: string;
   /** Opaque application payload retained in `selectedRows`. */
-  data?: unknown;
-  dotColor?: string;
-  group?: string;
-  disabled?: boolean;
+  readonly data?: unknown;
+  readonly dotColor?: string;
+  readonly group?: string;
+  readonly disabled?: boolean;
   /** @internal Marks the synthetic, cancelable "create this value" action row. */
-  createInput?: string;
+  readonly createInput?: string;
+}
+
+/** Bounded async response envelope. `total` is the provider-side match count before its own cap. */
+export interface ComboboxSourceResult {
+  readonly rows: readonly ComboboxSourceRow[];
+  readonly total?: number;
 }
 
 /** Async row provider for a remote-backed combobox. Receives the current query and an options bag
- *  carrying an `AbortSignal` that the component aborts when a newer query supersedes this one or the
- *  element disconnects — forward it to `fetch(url, { signal })` to cancel stale in-flight requests.
+ *  carrying an `AbortSignal` and the component's hard row ceiling. Forward the signal to
+ *  `fetch(url, { signal })` and honor `limit` when practical. A legacy bare row array remains valid;
+ *  `{ rows, total }` exposes provider-side truncation truthfully.
  *  The options parameter is required by the exported type so implementations can consume the
  *  cancellation signal. A one-parameter `(query) => …` function remains assignable under
  *  TypeScript's ordinary function-parameter compatibility rules. */
 export type ComboboxSource = (
   query: string,
-  options: { signal: AbortSignal },
-) => Promise<ComboboxSourceRow[]>;
+  options: { signal: AbortSignal; limit: number },
+) => Promise<readonly ComboboxSourceRow[] | ComboboxSourceResult>;
 export type LyraComboboxSelectionDirection = 'forward' | 'backward' | 'none';
+
+const MAX_SOURCE_ROWS = 2_000;
+const MAX_SOURCE_TEXT_UNITS = 250_000;
+const MAX_SOURCE_FIELD_UNITS = 4_096;
+const MAX_RENDER_ROWS = 1_000;
+
+function normalizeSourceResult(input: unknown): {
+  rows: ComboboxSourceRow[];
+  total: number;
+  truncated: boolean;
+} {
+  let candidateRows: unknown;
+  let candidateTotal: unknown;
+  try {
+    if (Array.isArray(input)) {
+      candidateRows = input;
+    } else if (typeof input === 'object' && input !== null) {
+      candidateRows = (input as { rows?: unknown }).rows;
+      candidateTotal = (input as { total?: unknown }).total;
+    }
+  } catch {
+    throw new TypeError('Invalid combobox source result');
+  }
+  if (!Array.isArray(candidateRows)) throw new TypeError('Invalid combobox source result');
+
+  const providerTotal =
+    typeof candidateTotal === 'number' && Number.isFinite(candidateTotal) && candidateTotal >= 0
+      ? Math.trunc(candidateTotal)
+      : candidateRows.length;
+  const rows: ComboboxSourceRow[] = [];
+  let textUnits = 0;
+  const limit = Math.min(candidateRows.length, MAX_SOURCE_ROWS);
+  for (let index = 0; index < limit; index++) {
+    try {
+      const value = (candidateRows[index] as { value?: unknown } | null)?.value;
+      const label = (candidateRows[index] as { label?: unknown } | null)?.label;
+      if (
+        typeof value !== 'string' ||
+        typeof label !== 'string' ||
+        value.length > MAX_SOURCE_FIELD_UNITS ||
+        label.length > MAX_SOURCE_FIELD_UNITS
+      ) {
+        continue;
+      }
+      const source = candidateRows[index] as Record<string, unknown>;
+      const optionalText = (key: string): string | undefined => {
+        const candidate = source[key];
+        return typeof candidate === 'string' && candidate.length <= MAX_SOURCE_FIELD_UNITS
+          ? candidate
+          : undefined;
+      };
+      const sub = optionalText('sub');
+      const accessibleLabel = optionalText('accessibleLabel');
+      const dotColor = optionalText('dotColor');
+      const group = optionalText('group');
+      const badgeCandidate = source['badge'];
+      const badge =
+        typeof badgeCandidate === 'string' && badgeCandidate.length <= MAX_SOURCE_FIELD_UNITS
+          ? badgeCandidate
+          : typeof badgeCandidate === 'number' && Number.isFinite(badgeCandidate)
+            ? badgeCandidate
+            : undefined;
+      const units =
+        value.length + label.length + (sub?.length ?? 0) + (accessibleLabel?.length ?? 0) +
+        (dotColor?.length ?? 0) + (group?.length ?? 0) + (typeof badge === 'string' ? badge.length : 0);
+      if (textUnits + units > MAX_SOURCE_TEXT_UNITS) break;
+      textUnits += units;
+      rows.push({
+        value,
+        label,
+        ...(sub === undefined ? {} : { sub }),
+        ...(source['icon'] === undefined ? {} : { icon: source['icon'] }),
+        ...(badge === undefined ? {} : { badge }),
+        ...(accessibleLabel === undefined ? {} : { accessibleLabel }),
+        ...(source['data'] === undefined ? {} : { data: source['data'] }),
+        ...(dotColor === undefined ? {} : { dotColor }),
+        ...(group === undefined ? {} : { group }),
+        ...(typeof source['disabled'] === 'boolean' ? { disabled: source['disabled'] } : {}),
+      });
+    } catch {
+      // A hostile getter invalidates only its row; valid siblings remain usable.
+    }
+  }
+  const total = Math.max(providerTotal, candidateRows.length);
+  return { rows, total, truncated: total > rows.length };
+}
 
 /** Detail of `lr-filter`: the in-progress filter text, never the committed selection. */
 export interface ComboboxFilterDetail {
@@ -342,7 +440,21 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
-  @property({ type: Boolean, reflect: true }) open = false;
+  /** Whether the listbox is open. Effectively disabled controls reject direct reopen attempts,
+   * including a synchronous fieldset cascade. */
+  @property({ type: Boolean, reflect: true })
+  get open(): boolean { return this._open; }
+  set open(next: boolean) {
+    const old = this._open;
+    const liveDisabled = this.effectiveDisabled ||
+      (typeof this.matches === 'function' && this.matches(':disabled'));
+    this._open = Boolean(next) && !liveDisabled;
+    if (this._open === old) {
+      if (next && !this._open && this.hasAttribute('open')) this.removeAttribute('open');
+      return;
+    }
+    this.requestUpdate('open', old);
+  }
   /** Allows a nonmatching query to be created as a new option through the cancelable `lr-create`
    * veto point. The default action appends and selects an `<lr-option>`. */
   @property({ type: Boolean, attribute: 'allow-create' }) allowCreate = false;
@@ -397,6 +509,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   /** Status copy shown when `maxRender` caps the row list; `{n}` is replaced with the hidden count. Empty string falls back to a localized message. */
   @property({ attribute: 'overflow-text' }) overflowText = '';
   @property({ attribute: false }) filter: OptionFilter | null = null;
+  /** Optional bounded async row source. Receives `{ signal, limit: 2000 }`; may return a legacy
+   * readonly row array or `{ rows, total? }`. Results are clone-normalized under row/text ceilings. */
   @property({ attribute: false }) source: ComboboxSource | null = null;
 
   /** Web Awesome's boolean `autocorrect` IDL; its HTML attribute uses `on`/`off`. */
@@ -466,6 +580,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @state() private loading = false;
   @state() private sourceFailed = false;
   @state() private asyncRows: ComboboxSourceRow[] = [];
+  private _sourceTotal = 0;
+  private _sourceTruncated = false;
   private sourceErrorAnnouncementSink?: AnnouncementSink;
   @query('[part="combobox-input"]') private inputEl?: HTMLInputElement;
   private sourceTimer?: { owner: Window; handle: number; token: number };
@@ -487,6 +603,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private _rowsByValue = new Map<string, ComboboxSourceRow>();
 
   private internals: ElementInternals;
+  private _open = false;
   private validityController: AnchoredValidityController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
@@ -697,7 +814,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     }
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
     this.overlayHandle?.deactivate({ restoreFocus: false });
@@ -748,6 +866,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       this.loading = false;
       this.sourceFailed = false;
       this.asyncRows = [];
+      this._sourceTotal = 0;
+      this._sourceTruncated = false;
       this.activeIndex = -1;
       this._sourceWarmed = false;
       if (this.source && this.open) this.runSource(this.query);
@@ -875,7 +995,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   /** Maximum number of rows rendered before the rest collapse behind the overflow indicator
    *  (the current selection is always kept visible regardless). Sanitized to a finite,
-   *  non-negative integer.
+   *  non-negative integer capped at 1,000.
    *
    *  Rows render in full rather than as a recycled scroll window, because the filter input's
    *  `aria-activedescendant` is an IDREF and can only resolve within its own tree scope — rows
@@ -900,8 +1020,18 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   set maxRender(next: number) {
     const old = this._maxRender;
-    this._maxRender = finiteCount(next, 200);
+    this._maxRender = Math.min(finiteCount(next, 200), MAX_RENDER_ROWS);
     this.requestUpdate('maxRender', old);
+  }
+
+  /** Provider-side match count for the latest accepted source response, before component caps. */
+  get sourceTotal(): number {
+    return this._sourceTotal;
+  }
+
+  /** Whether the latest response contained or reported more rows than the bounded retained set. */
+  get sourceTruncated(): boolean {
+    return this._sourceTruncated;
   }
 
   /** Structured rows corresponding to the current selection, including opaque async-row data. */
@@ -913,7 +1043,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           this.effectiveRows.find((row) => row.value === value) ??
           this.asyncRows.find((row) => row.value === value),
       )
-      .filter((row): row is ComboboxSourceRow => row != null);
+      .filter((row): row is ComboboxSourceRow => row != null)
+      .map((row) => ({ ...row }));
   }
 
   /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
@@ -1196,7 +1327,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     const previous = new Set(this.options);
     this.options = slot
       .assignedElements({ flatten: true })
-      .filter((el): el is LyraOption => el instanceof LyraOption);
+      .filter(isLyraOptionElement);
     this.normalizeActiveIndex();
     if (!this._defaultCaptured) {
       this._defaultCaptured = true;
@@ -1352,7 +1483,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private get renderedRows(): { rows: ComboboxSourceRow[]; overflow: number } {
     const all = this.effectiveRows;
     const create = this.createRow;
-    if (all.length <= this.maxRender) return { rows: create ? [...all, create] : all, overflow: 0 };
+    const sourceOverflow = this.source ? Math.max(0, this._sourceTotal - all.length) : 0;
+    if (all.length <= this.maxRender) {
+      return { rows: create ? [...all, create] : all, overflow: sourceOverflow };
+    }
     const originalIndex = new Map(all.map((r, i) => [r, i]));
     const capped = all.slice(0, this.maxRender);
     const cappedValues = new Set(capped.map((r) => r.value));
@@ -1375,7 +1509,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       capped.sort((a, b) => originalIndex.get(a)! - originalIndex.get(b)!);
     }
     if (create) capped.push(create);
-    return { rows: capped, overflow: all.length - capped.length + (create ? 1 : 0) };
+    return {
+      rows: capped,
+      overflow: all.length - capped.length + (create ? 1 : 0) + sourceOverflow,
+    };
   }
 
   /** Keeps the roving index inside the current source-agnostic enabled-row set without turning an
@@ -1473,6 +1610,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       if (queryChanged && this.source) {
         this.asyncRows = [];
         this.sourceFailed = false;
+        this._sourceTotal = 0;
+        this._sourceTruncated = false;
       }
     }
   }
@@ -1797,8 +1936,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       // following `.catch()` handles, instead of escaping this `setTimeout`
       // callback as an uncaught exception.
       Promise.resolve()
-        .then(() => source(query, { signal: controller.signal }))
-        .then((rows) => {
+        .then(() => source(query, { signal: controller.signal, limit: MAX_SOURCE_ROWS }))
+        .then((result) => {
           if (
             token !== this.sourceToken ||
             !this.isConnected ||
@@ -1806,11 +1945,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           ) {
             return;
           }
-          this.asyncRows = rows;
+          const normalized = normalizeSourceResult(result);
+          this._sourceTotal = normalized.total;
+          this._sourceTruncated = normalized.truncated;
+          this.asyncRows = normalized.rows;
           this.sourceFailed = false;
           this.normalizeActiveIndex();
           const selected = new Set(this._selected);
-          for (const row of rows) {
+          for (const row of normalized.rows) {
             if (selected.has(row.value)) this._selectedRowCache.set(row.value, row);
           }
         })
@@ -1833,6 +1975,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
             return;
           }
           this.asyncRows = [];
+          this._sourceTotal = 0;
+          this._sourceTruncated = false;
           this.activeIndex = -1;
           this.sourceFailed = true;
           this.sourceErrorAnnouncementSink?.announce(this.localize('comboboxLoadError'));
@@ -2134,13 +2278,13 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
                   this.clear();
                 }}
               >
-                <slot name="clear-icon">${closeIcon()}</slot>
+                <span aria-hidden="true" inert><slot name="clear-icon">${closeIcon()}</slot></span>
               </button>`
             : ''}
           <span part="end" ?hidden=${!this.slotPresence.has('end')}>
             <slot name="end"></slot>
           </span>
-          <span part="expand-icon" aria-hidden="true"><slot name="expand-icon">${chevronIcon()}</slot></span>
+          <span part="expand-icon" aria-hidden="true" inert><slot name="expand-icon">${chevronIcon()}</slot></span>
           </span>
         </div>
         <div

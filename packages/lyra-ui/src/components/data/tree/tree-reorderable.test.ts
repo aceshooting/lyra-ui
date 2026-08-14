@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './tree.js';
-import type { LyraTree, TreeItem } from './tree.js';
+import type { LyraTree, LyraTreeNodeData } from './tree.js';
 import type { LyraTreeItem } from './tree-item.js';
 
 /** Walks into shadow roots to find the actually-focused element (a focused
@@ -12,7 +12,7 @@ function deepActiveElement(root: Document | ShadowRoot = document): Element | nu
 }
 
 describe('reorderable', () => {
-  const reorderData: TreeItem[] = [
+  const reorderData: LyraTreeNodeData[] = [
     {
       id: '1',
       label: 'Root',
@@ -25,7 +25,7 @@ describe('reorderable', () => {
     { id: '2', label: 'Leaf' },
   ];
 
-  const clone = (): TreeItem[] => JSON.parse(JSON.stringify(reorderData));
+  const clone = (): LyraTreeNodeData[] => JSON.parse(JSON.stringify(reorderData));
 
   const applyDataReorder = (el: LyraTree, event: CustomEvent): void => {
     const { parentId, fromIndex, toIndex } = event.detail as {
@@ -33,8 +33,8 @@ describe('reorderable', () => {
       fromIndex: number;
       toIndex: number;
     };
-    const next = JSON.parse(JSON.stringify(el.data)) as TreeItem[];
-    const find = (items: TreeItem[], id: string): TreeItem | undefined => {
+    const next = JSON.parse(JSON.stringify(el.data)) as LyraTreeNodeData[];
+    const find = (items: LyraTreeNodeData[], id: string): LyraTreeNodeData | undefined => {
       for (const item of items) {
         if (item.id === id) return item;
         const nested = item.children ? find(item.children, id) : undefined;
@@ -221,7 +221,7 @@ describe('reorderable', () => {
 
     el.addEventListener('lr-reorder', (e) => {
       const { parentId, fromIndex, toIndex } = (e as CustomEvent).detail;
-      const next = JSON.parse(JSON.stringify(el.data)) as TreeItem[];
+      const next = JSON.parse(JSON.stringify(el.data)) as LyraTreeNodeData[];
       const parent = next.find((item) => item.id === parentId)!;
       const children = parent.children!;
       const [moved] = children.splice(fromIndex, 1);

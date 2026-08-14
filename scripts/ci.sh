@@ -220,6 +220,12 @@ fi
 step "pnpm lint"
 pnpm lint
 
+step "workflow syntax and policy"
+pnpm check:workflows
+
+step "release qualification manifest and workflow contract"
+pnpm check:release-qualification
+
 step "release-integrity helper tests"
 node scripts/release-integrity.test.mjs
 

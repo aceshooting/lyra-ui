@@ -1,12 +1,12 @@
-import { LyraChart, lockChartType } from './chart.class.js';
+import { LyraChart, type LyraChartType } from './chart.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 /**
- * `<lr-polar-area-chart>` — `<lr-chart>` with `type` locked to `"polarArea"`.
+ * `<lr-polar-area-chart>` — `<lr-chart>` with a `"polarArea"` default and the mirrored writable type.
  *
  * @customElement lr-polar-area-chart
  * @status stable
@@ -19,14 +19,16 @@ export class LyraPolarAreaChart extends LyraChart {
     ...super.defaultStrings,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  declare type: 'polarArea';
+  override type: LyraChartType = 'polarArea';
 }
-
-lockChartType(LyraPolarAreaChart, 'polarArea');
 
 
 declare global {
@@ -34,4 +36,3 @@ declare global {
     'lr-polar-area-chart': LyraPolarAreaChart;
   }
 }
-

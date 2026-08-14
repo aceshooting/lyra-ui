@@ -2,23 +2,32 @@ import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/t
 import { LitElement, render, type PropertyValues } from 'lit';
 import './pptx-viewer.js';
 import type { LyraPptxViewer } from './pptx-viewer.js';
-import type { PptxRendererModule } from './pptx-loader.js';
+import type {
+  PptxRendererModule,
+  PptxTextSearchResult,
+  PptxViewerApi,
+} from './pptx-loader.js';
 import { styles } from './pptx-viewer.styles.js';
 import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 
 function zipWithDeclaredSize(uncompressedBytes = 1): ArrayBuffer {
-  const localSize = 31;
-  const directorySize = 46;
+  const localSize = 32;
+  const directorySize = 47;
   const source = new ArrayBuffer(localSize + directorySize + 22);
   const view = new DataView(source);
   view.setUint32(0, 0x04034b50, true);
   view.setUint32(18, 1, true);
   view.setUint32(22, uncompressedBytes, true);
+  view.setUint16(26, 1, true);
+  view.setUint8(30, 0x61);
+  view.setUint8(31, 0);
   view.setUint32(localSize, 0x02014b50, true);
   view.setUint32(localSize + 20, 1, true);
   view.setUint32(localSize + 24, uncompressedBytes, true);
+  view.setUint16(localSize + 28, 1, true);
   view.setUint32(localSize + 42, 0, true);
+  view.setUint8(localSize + 46, 0x61);
   const endOffset = localSize + directorySize;
   view.setUint32(endOffset, 0x06054b50, true);
   view.setUint16(endOffset + 8, 1, true);
@@ -41,15 +50,44 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reje
   return { promise, resolve, reject };
 }
 
-function fakeModule(slideCount = 2) {
-  const calls = { open: 0, goToSlide: 0, destroy: 0 };
-  const viewer = new EventTarget() as EventTarget & { slideCount: number; currentSlideIndex: number; goToSlide(index: number): Promise<void>; destroy(): void };
+function fakeModule(slideCount = 2, searchResults: PptxTextSearchResult[] = []) {
+  const calls = {
+    open: 0,
+    goToSlide: 0,
+    destroy: 0,
+    searchText: 0,
+    highlightSearchResult: 0,
+    clearSearchHighlights: 0,
+    renderThumbnail: 0,
+    disposeThumbnail: 0,
+    highlighted: [] as PptxTextSearchResult[],
+  };
+  const viewer = new EventTarget() as PptxViewerApi;
   viewer.slideCount = slideCount;
   viewer.currentSlideIndex = 0;
   viewer.goToSlide = async (index: number) => { calls.goToSlide++; viewer.currentSlideIndex = index; viewer.dispatchEvent(new CustomEvent('slidechange', { detail: { index } })); };
+  viewer.searchText = () => { calls.searchText++; return searchResults; };
+  viewer.highlightSearchResult = async (result) => {
+    calls.highlightSearchResult++;
+    calls.highlighted.push(result);
+    return { dispose() {} };
+  };
+  viewer.renderThumbnailToContainer = (index, container, options) => {
+    calls.renderThumbnail++;
+    const preview = document.createElement('div');
+    preview.dataset['slideIndex'] = String(index);
+    preview.dataset['width'] = String(options?.width);
+    container.append(preview);
+    return {
+      ready: Promise.resolve(),
+      dispose() { calls.disposeThumbnail++; preview.remove(); },
+    };
+  };
+  viewer.clearSearchHighlights = () => { calls.clearSearchHighlights++; };
   viewer.destroy = () => { calls.destroy++; };
   return {
     calls,
+    viewer,
     module: {
       PptxViewer: { open: async () => { calls.open++; return viewer; } },
       RECOMMENDED_ZIP_LIMITS: {},
@@ -64,13 +102,14 @@ function stubFetch(ok = true): () => void {
 }
 
 describe('lr-pptx-viewer', () => {
-  it('uses host aria-label, label, name, then the localized default for its region name', async () => {
+  it('leaves a non-empty host aria-label on the host, then uses label, name, and localized fallbacks', async () => {
     const el = (await fixture(
       html`<lr-pptx-viewer aria-label="Host deck" label="API deck" name="Visible deck"></lr-pptx-viewer>`,
     )) as LyraPptxViewer;
     const base = () => el.shadowRoot!.querySelector('[part="base"]')!;
 
-    expect(base().getAttribute('aria-label')).to.equal('Host deck');
+    expect(base().getAttribute('aria-label')).to.be.null;
+    expect(base().getAttribute('role')).to.be.null;
     el.removeAttribute('aria-label');
     await el.updateComplete;
     expect(base().getAttribute('aria-label')).to.equal('API deck');
@@ -80,6 +119,16 @@ describe('lr-pptx-viewer', () => {
     el.name = '';
     await el.updateComplete;
     expect(base().getAttribute('aria-label')).to.equal('Presentation viewer');
+  });
+
+  it('preserves an explicitly empty host aria-label on the region owner', async () => {
+    const el = await fixture<LyraPptxViewer>(
+      html`<lr-pptx-viewer label="API deck" aria-label=""></lr-pptx-viewer>`,
+    );
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('region');
+    expect(base.hasAttribute('aria-label')).to.be.true;
+    expect(base.getAttribute('aria-label')).to.equal('');
   });
 
   it('shows its persistent fidelity notice and idle state', async () => {
@@ -124,6 +173,230 @@ describe('lr-pptx-viewer', () => {
       expect(fake.calls.goToSlide).to.equal(1);
       el.remove();
       expect(fake.calls.destroy).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('publishes atomic page state and maps one-based page assignments to slide navigation', async () => {
+    const fake = fakeModule(3);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      const identity = el.pageViewerSnapshot.identity;
+      expect(el.pageViewerSnapshot).to.deep.equal({
+        identity,
+        status: 'ready',
+        page: 1,
+        pageCount: 3,
+      });
+
+      const stateChanged = oneEvent(el, 'lr-page-viewer-state-change');
+      el.page = 3;
+      const snapshot = (await stateChanged).detail.snapshot;
+      expect(snapshot).to.deep.equal({ identity, status: 'ready', page: 3, pageCount: 3 });
+      expect(fake.viewer.currentSlideIndex).to.equal(2);
+
+      const replacementReady = oneEvent(el, 'lr-load');
+      fake.viewer.currentSlideIndex = 0;
+      el.src = 'https://example.test/replacement.pptx';
+      await replacementReady;
+      expect(el.pageViewerSnapshot.identity).to.be.greaterThan(identity);
+      expect(el.pageViewerSnapshot).to.deep.include({ status: 'ready', page: 1, pageCount: 3 });
+    } finally {
+      restore();
+    }
+  });
+
+  it('renders bounded one-based DOM thumbnails and transfers handle ownership to the caller', async () => {
+    const fake = fakeModule(2);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      const target = el.ownerDocument.createElement('div');
+      el.parentElement!.append(target);
+
+      expect(await el.renderPageThumbnailToContainer(0, target)).to.be.false;
+      expect(await el.renderPageThumbnailToContainer(1, target, { width: Number.POSITIVE_INFINITY })).to.be.false;
+      expect(await el.renderPageThumbnailToContainer(1, target, { width: 2_049 })).to.be.false;
+      expect(fake.calls.renderThumbnail).to.equal(0);
+
+      const handle = await el.renderPageThumbnailToContainer(2, target, { width: 80 });
+      expect(handle).to.not.equal(false);
+      expect(target.firstElementChild?.getAttribute('data-slide-index')).to.equal('1');
+      expect(target.firstElementChild?.getAttribute('data-width')).to.equal('80');
+      (handle as { dispose(): void }).dispose();
+      expect(fake.calls.disposeThumbnail).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('disposes and rejects a thumbnail whose async resources settle after disconnect', async () => {
+    const fake = fakeModule(1);
+    const ready = deferred<void>();
+    fake.viewer.renderThumbnailToContainer = (_index, container) => {
+      const preview = document.createElement('div');
+      container.append(preview);
+      return {
+        ready: ready.promise,
+        dispose() { fake.calls.disposeThumbnail++; preview.remove(); },
+      };
+    };
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      const target = el.ownerDocument.createElement('div');
+      el.parentElement!.append(target);
+      const result = el.renderPageThumbnailToContainer(1, target);
+      el.remove();
+      ready.resolve();
+      expect(await result).to.be.false;
+      expect(fake.calls.disposeThumbnail).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('searches the complete presentation model when the matching slide is not mounted', async () => {
+    const offscreenMatch: PptxTextSearchResult = {
+      slideIndex: 89,
+      nodeId: 'shape-offscreen',
+      matchStart: 0,
+      matchEnd: 6,
+      text: 'needle',
+    };
+    const fake = fakeModule(100, [offscreenMatch]);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+
+      const changed = oneEvent(el, 'lr-search-change');
+      expect(await el.search('needle')).to.equal(1);
+      expect((await changed).detail).to.deep.equal({ query: 'needle', matchCount: 1, activeIndex: 0 });
+      expect(fake.calls.searchText).to.equal(1);
+      expect(fake.calls.goToSlide).to.equal(1);
+      expect(fake.viewer.currentSlideIndex).to.equal(89);
+      expect(fake.calls.highlighted).to.deep.equal([offscreenMatch]);
+      // The fake renderer intentionally mounted no slide DOM. A DOM-derived search would have
+      // returned zero, so this proves the model adapter owns the complete windowed-deck contract.
+      expect(el.shadowRoot!.querySelector('[part="container"]')!.childElementCount).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('caps model search results before retaining or navigating them', async () => {
+    const matches = Array.from({ length: 10_050 }, (_unused, index): PptxTextSearchResult => ({
+      slideIndex: index,
+      nodeId: `node-${index}`,
+      matchStart: 0,
+      matchEnd: 1,
+      text: 'x',
+    }));
+    const fake = fakeModule(10_050, matches);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      expect(await el.search('x')).to.equal(10_000);
+    } finally {
+      restore();
+    }
+  });
+
+  it('forwards recoverable peer slide/node failures through typed diagnostics without unmounting', async () => {
+    const fake = fakeModule();
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+
+      const slideCause = new Error('slide failed');
+      const diagnosticEvent = oneEvent(el, 'lr-viewer-diagnostic');
+      let terminalErrors = 0;
+      el.addEventListener('lr-render-error', () => terminalErrors++);
+      fake.viewer.dispatchEvent(new CustomEvent('slideerror', {
+        detail: { index: 1, error: slideCause },
+      }));
+      expect((await diagnosticEvent).detail.diagnostic).to.deep.include({
+        code: 'pptx-slide-render-error',
+        severity: 'error',
+        fatal: false,
+        source: 'pptx-renderer',
+        cause: slideCause,
+        page: 2,
+      });
+      await aTimeout(0);
+      expect(terminalErrors).to.equal(0);
+      expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
+
+      const nodeCause = new Error('node failed');
+      const nodeDiagnostic = oneEvent(el, 'lr-viewer-diagnostic');
+      fake.viewer.dispatchEvent(new CustomEvent('nodeerror', {
+        detail: { nodeId: 'chart-4', error: nodeCause },
+      }));
+      expect((await nodeDiagnostic).detail.diagnostic).to.deep.include({
+        code: 'pptx-node-render-error',
+        nodeId: 'chart-4',
+        cause: nodeCause,
+      });
+    } finally {
+      restore();
+    }
+  });
+
+  it('turns a peer-classified fatal render diagnostic into one terminal state and removes listeners', async () => {
+    const fake = fakeModule();
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+
+      const cause = new Error('renderer unusable');
+      const diagnosticEvent = oneEvent(el, 'lr-viewer-diagnostic');
+      const terminalEvent = oneEvent(el, 'lr-render-error');
+      fake.viewer.dispatchEvent(new CustomEvent('slideerror', {
+        detail: { index: 0, error: cause, fatal: true },
+      }));
+      expect((await diagnosticEvent).detail.diagnostic).to.deep.include({
+        code: 'pptx-slide-render-error',
+        fatal: true,
+        page: 1,
+        cause,
+      });
+      expect((await terminalEvent).detail.error).to.equal(cause);
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(
+        'Failed to render this presentation.',
+      );
+      expect(el.shadowRoot!.querySelector('[part="container"]') === null).to.equal(true);
+      expect(fake.calls.destroy).to.equal(1);
+
+      let laterDiagnostics = 0;
+      el.addEventListener('lr-viewer-diagnostic', () => laterDiagnostics++);
+      fake.viewer.dispatchEvent(new CustomEvent('nodeerror', {
+        detail: { nodeId: 'late', error: new Error('late') },
+      }));
+      expect(laterDiagnostics).to.equal(0);
     } finally {
       restore();
     }

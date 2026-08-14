@@ -1,5 +1,10 @@
 import { expect } from '@open-wc/testing';
-import { getPptxRenderer, loadPptxRenderer, __setPptxRendererForTesting } from './pptx-loader.js';
+import {
+  adaptPptxViewer,
+  getPptxRenderer,
+  loadPptxRenderer,
+  __setPptxRendererForTesting,
+} from './pptx-loader.js';
 
 afterEach(() => __setPptxRendererForTesting(undefined));
 
@@ -15,6 +20,103 @@ function zipLimits(overrides: Record<string, unknown> = {}): Record<string, unkn
 }
 
 describe('pptx loader', () => {
+  it('adapts only complete window-safe viewer instances', () => {
+    const complete = Object.assign(new EventTarget(), {
+      slideCount: 2,
+      currentSlideIndex: 0,
+      goToSlide() {},
+      searchText: () => [],
+      highlightSearchResult: async () => null,
+      renderThumbnailToContainer: () => ({ ready: Promise.resolve(), dispose() {} }),
+      clearSearchHighlights() {},
+      destroy() {},
+    });
+    const adapter = adaptPptxViewer(complete);
+    expect(adapter).to.not.equal(complete);
+    expect(adapter?.slideCount).to.equal(2);
+    expect(adapter?.currentSlideIndex).to.equal(0);
+    for (const key of ['goToSlide', 'searchText', 'highlightSearchResult', 'renderThumbnailToContainer', 'clearSearchHighlights', 'destroy'] as const) {
+      expect(adaptPptxViewer({ ...complete, [key]: undefined }), key).to.be.null;
+    }
+    expect(adaptPptxViewer({ ...complete, slideCount: Number.POSITIVE_INFINITY })).to.be.null;
+  });
+
+  it('normalizes peer events into correlated adapter status and removes listeners on destroy', () => {
+    let destroyed = 0;
+    const raw = Object.assign(new EventTarget(), {
+      slideCount: 3,
+      currentSlideIndex: 0,
+      goToSlide() {},
+      searchText: () => [],
+      highlightSearchResult: async () => null,
+      renderThumbnailToContainer: () => ({ ready: Promise.resolve(), dispose() {} }),
+      clearSearchHighlights() {},
+      destroy: () => { destroyed++; },
+    });
+    const adapter = adaptPptxViewer(raw)!;
+    const events: unknown[] = [];
+    adapter.subscribe((event) => events.push(event));
+    raw.dispatchEvent(new CustomEvent('slidechange', { detail: { index: 2 } }));
+    raw.dispatchEvent(new CustomEvent('slideerror', {
+      detail: { index: 1, error: 'slide', fatal: true },
+    }));
+    raw.dispatchEvent(new CustomEvent('nodeerror', {
+      detail: { nodeId: 'chart-4', error: 'node' },
+    }));
+    expect(events).to.deep.equal([
+      { kind: 'slide-change', index: 2 },
+      {
+        kind: 'diagnostic',
+        code: 'pptx-slide-render-error',
+        cause: 'slide',
+        fatal: true,
+        page: 2,
+      },
+      {
+        kind: 'diagnostic',
+        code: 'pptx-node-render-error',
+        cause: 'node',
+        fatal: false,
+        nodeId: 'chart-4',
+      },
+    ]);
+    adapter.destroy();
+    raw.dispatchEvent(new CustomEvent('slidechange', { detail: { index: 1 } }));
+    expect(events).to.have.lengthOf(3);
+    expect(destroyed).to.equal(1);
+  });
+
+  it('validates thumbnail requests and wraps renderer-owned handles with idempotent disposal', async () => {
+    let renders = 0;
+    let disposals = 0;
+    const raw = Object.assign(new EventTarget(), {
+      slideCount: 2,
+      currentSlideIndex: 0,
+      goToSlide() {},
+      searchText: () => [],
+      highlightSearchResult: async () => null,
+      renderThumbnailToContainer(index: number, container: HTMLElement, options?: { width?: number }) {
+        renders++;
+        container.dataset['request'] = `${index}:${options?.width}`;
+        return { ready: Promise.resolve(), dispose: () => { disposals++; } };
+      },
+      clearSearchHighlights() {},
+      destroy() {},
+    });
+    const adapter = adaptPptxViewer(raw)!;
+    const container = document.createElement('div');
+    expect(adapter.renderThumbnailToContainer(-1, container)).to.be.null;
+    expect(adapter.renderThumbnailToContainer(2, container)).to.be.null;
+    expect(adapter.renderThumbnailToContainer(0, container, { width: Number.NaN })).to.be.null;
+    expect(renders).to.equal(0);
+
+    const handle = adapter.renderThumbnailToContainer(1, container, { width: 80 })!;
+    await handle.ready;
+    expect(container.dataset['request']).to.equal('1:80');
+    handle.dispose();
+    handle.dispose();
+    expect(disposals).to.equal(1);
+  });
   it('normalizes named, default-wrapped, and mixed module shapes capability-first', async () => {
     const named = { PptxViewer: { open() {} }, RECOMMENDED_ZIP_LIMITS: zipLimits({ source: 'named' }) };
     const fallback = { PptxViewer: { open() {} }, RECOMMENDED_ZIP_LIMITS: zipLimits({ source: 'default' }) };

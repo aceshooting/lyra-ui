@@ -37,7 +37,16 @@ export const CostOnly: Story = {
 export const WithExtraSlottedRow: Story = {
   render: () => html`
     <lr-usage-badge tokens-in="1204" tokens-out="386">
-      <div>Cache-read tokens: 900</div>
+      <div slot="details">Cache-read tokens: 900</div>
+    </lr-usage-badge>
+  `,
+};
+
+export const DetailsWithSummary: Story = {
+  render: () => html`
+    <lr-usage-badge summary="Additional usage">
+      <div slot="details">Cache-read tokens: 900</div>
+      <div slot="details">Cached prompt tokens: 2,400</div>
     </lr-usage-badge>
   `,
 };

@@ -1,16 +1,16 @@
-import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import { html } from 'lit';
-import './code-block.js';
+import type { Meta, StoryObj } from "@storybook/web-components-vite";
+import { html } from "lit";
+import "./code-block.js";
 
 const meta: Meta = {
-  title: 'CodeBlock',
-  component: 'lr-code-block',
-  tags: ['autodocs'],
+  title: "CodeBlock",
+  component: "lr-code-block",
+  tags: ["autodocs"],
   parameters: {
     docs: {
       description: {
         component:
-          'Fenced code display with an optional lazy-loaded syntax highlighter (the `shiki` peer dependency) and a copy button. Renders as plain unhighlighted `<pre><code>` at zero extra bytes whenever `shiki` isn\'t installed or `language` is unset/unrecognized — the default, supported rendering path, not a degraded one.',
+          "Fenced code display with an optional lazy-loaded syntax highlighter (the `shiki` peer dependency) and a copy button. Renders as plain unhighlighted `<pre><code>` at zero extra bytes whenever `shiki` isn't installed or `language` is unset/unrecognized — the default, supported rendering path, not a degraded one.",
       },
     },
   },
@@ -25,10 +25,16 @@ const tsSample = `export function greet(name: string): string {
 `;
 
 // Deliberately tab-indented (not spaces) so --lr-code-block-tab-size has something to act on.
-const tabSample = 'function greet(name) {\n\tif (name) {\n\t\treturn `Hello, ${name}!`;\n\t}\n\treturn "Hello!";\n}\n';
+const tabSample =
+  'function greet(name) {\n\tif (name) {\n\t\treturn `Hello, ${name}!`;\n\t}\n\treturn "Hello!";\n}\n';
 
 export const Default: Story = {
-  render: () => html`<lr-code-block language="typescript" .code=${tsSample} style="max-width: 32rem;"></lr-code-block>`,
+  render: () =>
+    html`<lr-code-block
+      language="typescript"
+      .code=${tsSample}
+      style="max-width: 32rem;"
+    ></lr-code-block>`,
 };
 
 export const WithFilename: Story = {
@@ -53,7 +59,7 @@ const languageSamples = {
   python: `def greet(name):\n    return f"Hello, {name}!"`,
   c: `#include <stdio.h>\nint main(void) { puts("Hello"); }`,
   java: `public final class Hello {\n  public static void main(String[] args) {\n    System.out.println("Hello");\n  }\n}`,
-  javascript: 'const greet = (name) => console.log(`Hello, ${name}!`);',
+  javascript: "const greet = (name) => console.log(`Hello, ${name}!`);",
   typescript: `type User = { name: string };\nconst user: User = { name: "Lyra" };`,
   greycat: `type User { name: String }\nfn greet(user: User) { return user.name }`,
   html: `<main><h1>Hello, Lyra</h1></main>`,
@@ -61,61 +67,74 @@ const languageSamples = {
 
 export const PythonLanguage: Story = {
   render: () => html`
-    <lr-code-block filename="fib.py" language="python" .code=${pySample} style="max-width: 32rem;"></lr-code-block>
+    <lr-code-block
+      filename="fib.py"
+      language="python"
+      .code=${pySample}
+      style="max-width: 32rem;"
+    ></lr-code-block>
   `,
 };
 
 export const CommonLanguages: Story = {
-  name: 'Common languages',
+  name: "Common languages",
   parameters: {
     docs: {
       description: {
         story:
-          'The default viewer lazy-loads Shiki grammars on demand. Python, C, Java, JavaScript, TypeScript, and HTML come from Shiki; GreyCat/GCL is included by Lyra because it is not in Shiki’s bundled catalog.',
+          "The default viewer lazy-loads Shiki grammars on demand. Python, C, Java, JavaScript, TypeScript, and HTML come from Shiki; GreyCat/GCL is included by Lyra because it is not in Shiki’s bundled catalog.",
       },
     },
   },
   render: () => html`
-    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(18rem,1fr)); gap:0.75rem;">
+    <div
+      style="display:grid; grid-template-columns:repeat(auto-fit,minmax(18rem,1fr)); gap:0.75rem;"
+    >
       ${Object.entries(languageSamples).map(
         ([language, code]) => html`
           <lr-code-block
-            filename=${language === 'greycat' ? 'hello.gcl' : `hello.${language}`}
+            filename=${language === "greycat"
+              ? "hello.gcl"
+              : `hello.${language}`}
             language=${language}
             .code=${code}
           ></lr-code-block>
-        `,
+        `
       )}
     </div>
   `,
 };
 
 export const PlainFallback: Story = {
-  name: 'No language set (always plain text)',
+  name: "No language set (always plain text)",
   render: () => html`
-    <lr-code-block filename="notes.txt" .code=${'Just plain text, never highlighted.\nline two\nline three'} style="max-width: 32rem;"></lr-code-block>
+    <lr-code-block
+      filename="notes.txt"
+      .code=${"Just plain text, never highlighted.\nline two\nline three"}
+      style="max-width: 32rem;"
+    ></lr-code-block>
   `,
 };
 
 export const WithLineNumbers: Story = {
-  name: 'Optional line numbers',
+  name: "Optional line numbers",
   render: () => html`
     <lr-code-block
       filename="example.ts"
       language="typescript"
       line-numbers
-      .code=${'const answer = 42;\nconsole.log(answer);\n'}
+      .code=${"const answer = 42;\nconsole.log(answer);\n"}
     ></lr-code-block>
   `,
 };
 
-export const InteractiveLines: Story = {
-  name: 'Keyboard-interactive line numbers',
+export const ActivatableLines: Story = {
+  name: "Keyboard-activatable line numbers",
   parameters: {
     docs: {
       description: {
         story:
-          'Tab into the gutter and use ArrowUp, ArrowDown, Home, and End. If a live code update removes the focused line, focus follows the final surviving line instead of escaping the widget.',
+          "Tab into the gutter and use ArrowUp, ArrowDown, Home, and End. If a live code update removes the focused line, focus follows the final surviving line instead of escaping the widget.",
       },
     },
   },
@@ -123,16 +142,20 @@ export const InteractiveLines: Story = {
     <lr-code-block
       filename="stream.ts"
       line-numbers
-      interactive-lines
-      .code=${'const first = 1;\nconst second = 2;\nconst third = 3;\nconst fourth = 4;'}
+      activatable-lines
+      .code=${"const first = 1;\nconst second = 2;\nconst third = 3;\nconst fourth = 4;"}
     ></lr-code-block>
   `,
 };
 
 export const UnrecognizedLanguage: Story = {
-  name: 'Unrecognized language id (falls back to plain text)',
+  name: "Unrecognized language id (falls back to plain text)",
   render: () => html`
-    <lr-code-block language="not-a-real-language" .code=${'plain(); // shiki has no grammar for this id'} style="max-width: 32rem;"></lr-code-block>
+    <lr-code-block
+      language="not-a-real-language"
+      .code=${"plain(); // shiki has no grammar for this id"}
+      style="max-width: 32rem;"
+    ></lr-code-block>
   `,
 };
 
@@ -143,7 +166,10 @@ export const Collapsible: Story = {
       collapsed
       filename="long-file.ts"
       language="typescript"
-      .code=${Array.from({ length: 20 }, (_, i) => `const line${i} = ${i};`).join('\n')}
+      .code=${Array.from(
+        { length: 20 },
+        (_, i) => `const line${i} = ${i};`
+      ).join("\n")}
       style="max-width: 32rem;"
     ></lr-code-block>
   `,
@@ -154,7 +180,10 @@ export const MaxHeightScrolling: Story = {
     <lr-code-block
       language="typescript"
       max-height="8rem"
-      .code=${Array.from({ length: 30 }, (_, i) => `const line${i} = ${i};`).join('\n')}
+      .code=${Array.from(
+        { length: 30 },
+        (_, i) => `const line${i} = ${i};`
+      ).join("\n")}
       style="max-width: 32rem;"
     ></lr-code-block>
   `,
@@ -173,12 +202,12 @@ export const NotCopyable: Story = {
 };
 
 export const AccessibleNameOverride: Story = {
-  name: 'Accessible code-region name',
+  name: "Accessible code-region name",
   parameters: {
     docs: {
       description: {
         story:
-          'The host `aria-label` is forwarded to the internal focusable code region, overriding the filename/language-derived default.',
+          "The host `aria-label` is forwarded to the internal focusable code region, overriding the filename/language-derived default.",
       },
     },
   },
@@ -193,41 +222,71 @@ export const AccessibleNameOverride: Story = {
   `,
 };
 
-export const CopyEvent: Story = {
+export const ClipboardEvents: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "A fulfilled clipboard write emits `lr-copy` with `{ ok: true, text }`. An unavailable or rejected clipboard write instead emits `lr-error` and `lr-copy-error` with `{ ok: false, text, reason, error }`, and the button shows a localized failure state.",
+      },
+    },
+  },
   render: () => html`
-    <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;">
+    <div
+      style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;"
+    >
       <lr-code-block
         language="typescript"
         .code=${tsSample}
-        @lr-copy=${(e: CustomEvent<{ text: string }>) => console.log('lr-copy', e.detail.text)}
+        @lr-copy=${(e: CustomEvent<{ ok: true; text: string }>) =>
+          console.log("lr-copy", e.detail)}
+        @lr-copy-error=${(
+          e: CustomEvent<{
+            ok: false;
+            text: string;
+            reason: string;
+            error: unknown;
+          }>
+        ) => console.error("lr-copy-error", e.detail)}
+        @lr-error=${(e: CustomEvent<null>) =>
+          console.error("lr-error", e.detail)}
       ></lr-code-block>
-      <p style="margin:0; color:var(--lr-color-text-quiet); font-size:0.8125rem;">
-        Open the console — clicking "Copy" logs the raw <code>code</code> text via <code>lr-copy</code>.
+      <p
+        style="margin:0; color:var(--lr-color-text-quiet); font-size:0.8125rem;"
+      >
+        Open the console — clicking "Copy" logs either the fulfilled
+        <code>lr-copy</code> result or both failure events.
       </p>
     </div>
   `,
 };
 
 export const TabWidth: Story = {
-  name: 'Tab width (--lr-code-block-tab-size)',
+  name: "Tab width (--lr-code-block-tab-size)",
   parameters: {
     docs: {
       description: {
         story:
-          'Tab-indented source rendered at the default width of `2` (matching `--lr-code-editor-tab-size`) and at `8`. The component writes the token, never an inline `tab-size`, so the override survives shiki\'s own inline `style` on the highlighted `<pre>`.',
+          "Tab-indented source rendered at the default width of `2` (matching `--lr-code-editor-tab-size`) and at `8`. The component writes the token, never an inline `tab-size`, so the override survives shiki's own inline `style` on the highlighted `<pre>`.",
       },
     },
   },
   render: () => html`
-    <div style="display:flex; flex-direction:column; gap:0.75rem; max-inline-size:32rem;">
+    <div
+      style="display:flex; flex-direction:column; gap:0.75rem; max-inline-size:32rem;"
+    >
       <lr-code-block language="javascript" .code=${tabSample}></lr-code-block>
-      <lr-code-block language="javascript" .code=${tabSample} style="--lr-code-block-tab-size: 8"></lr-code-block>
+      <lr-code-block
+        language="javascript"
+        .code=${tabSample}
+        style="--lr-code-block-tab-size: 8"
+      ></lr-code-block>
     </div>
   `,
 };
 
 export const Narrow320: Story = {
-  name: 'Narrow allocation (320px)',
+  name: "Narrow allocation (320px)",
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
       <lr-code-block
@@ -241,12 +300,12 @@ export const Narrow320: Story = {
 };
 
 export const ActiveLineOutlineColor: Story = {
-  name: 'Active-line outline color',
+  name: "Active-line outline color",
   parameters: {
     docs: {
       description: {
         story:
-          '`--lr-code-block-active-line-outline-color` retints only the active highlight outline; every other brand-colored surface (the language pill, hover and focus states) keeps `--lr-color-brand`.',
+          "`--lr-code-block-active-line-outline-color` retints only the active highlight outline; every other brand-colored surface (the language pill, hover and focus states) keeps `--lr-color-brand`.",
       },
     },
   },
@@ -255,7 +314,9 @@ export const ActiveLineOutlineColor: Story = {
       language="typescript"
       .code=${tsSample}
       line-numbers
-      .highlights=${[{ id: 'h1', anchor: { kind: 'line-range', start: 2, end: 2 } }]}
+      .highlights=${[
+        { id: "h1", anchor: { kind: "line-range", start: 2, end: 2 } },
+      ]}
       active-highlight-id="h1"
       style="max-inline-size:32rem; --lr-code-block-active-line-outline-color: var(--lr-color-success);"
     ></lr-code-block>

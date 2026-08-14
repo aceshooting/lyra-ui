@@ -15,7 +15,7 @@ export const Removable: StoryObj = {
     docs: {
       description: {
         story:
-          '`with-remove` is the Lyra spelling; Shoelace markup can use its `removable` alias. Either attribute enables one shared state. Activation emits a noncancelable `lr-remove` notification and leaves the tag connected so consumer state owns removal.',
+          '`with-remove` is the Lyra spelling; Shoelace markup can use its `removable` alias. Either attribute enables one shared state. Activation emits a noncancelable `lr-remove` notification and leaves the tag connected so consumer state owns removal. A host `aria-label` names one aggregate group while the remove action retains its purpose-specific visible-label name.',
       },
     },
   },

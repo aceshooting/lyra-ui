@@ -34,9 +34,10 @@ import {
 import { assertEpubArchiveWithinLimits } from './epub-resource-guard.js';
 import { styles } from './ebook-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_ebookViewerLoadError, LYRA_DEFAULT_ebookViewerNextChapter, LYRA_DEFAULT_ebookViewerPreviousChapter, LYRA_DEFAULT_ebookViewerRegionLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_ebookViewerLoadError, LYRA_DEFAULT_ebookViewerNextChapter, LYRA_DEFAULT_ebookViewerPreviousChapter, LYRA_DEFAULT_ebookViewerRegionLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -79,6 +80,7 @@ const TONE_FILL_TOKEN: Record<LyraHighlightTone, { token: string; fallback: stri
 /** The active search match's own fill token/fallback -- mirrors `docx-viewer`'s
  *  `search-match-active` treatment (`--lr-color-warning`) rather than any highlight tone. */
 const SEARCH_MATCH_FILL_TOKEN = { token: '--lr-color-warning', fallback: '#9a6700' };
+const ACTIVE_HIGHLIGHT_STROKE_TOKEN = { token: '--lr-focus-ring-color', fallback: '#0969da' };
 
 export interface LyraEbookViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -158,9 +160,13 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     ebookViewerRegionLabel: LYRA_DEFAULT_ebookViewerRegionLabel,
     loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     next: LYRA_DEFAULT_next,
     open: LYRA_DEFAULT_open,
     previous: LYRA_DEFAULT_previous,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
     viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
@@ -217,6 +223,14 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     onFlush: (text) => this.announcements.announcePolite(text),
   });
 
+  constructor() {
+    super();
+    // epub.js paints concrete SVG attributes inside its chapter iframe, outside this component's
+    // CSS cascade. Re-resolve and transactionally replace those attributes whenever the scoped
+    // theme watcher observes an effective-token change.
+    new ThemeWatcher(this, () => this.repaintAnnotations());
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // reaches DocumentAnchorTarget's own cleanup/live-region wiring
     this.announcements.transition(
@@ -231,7 +245,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       if (!fromRelocated && this.rendition && this.location) this.displayLocation(this.location);
     }
     if ((changed.has('highlights') || changed.has('activeHighlightId')) && this.rendition) {
-      this.repaintHighlights();
+      this.repaintAnnotations();
     }
   }
 
@@ -267,7 +281,8 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     const ownerWindow = this.ownerDocument.defaultView;
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
     this.announcements.adopted();
@@ -357,15 +372,19 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         const selection = contents?.window?.getSelection?.();
         const text = selection ? String(selection.toString()) : '';
         if (!text.trim()) return;
-        const rects: DOMRect[] =
-          selection && selection.rangeCount > 0 ? (Array.from(selection.getRangeAt(0).getClientRects()) as DOMRect[]) : [];
+        const rects = selection && selection.rangeCount > 0
+          ? this.translateSelectionRects(
+              Array.from(selection.getRangeAt(0).getClientRects()) as DOMRect[],
+              contents.window,
+            )
+          : [];
         this.emit('lr-text-select', { text, anchor: { kind: 'cfi', cfi: cfiRange }, rects });
       });
       this.book = book;
       this.rendition = rendition;
       candidateBook = undefined;
       this.ebookState = { kind: 'ready' };
-      this.repaintHighlights();
+      this.repaintAnnotations();
     } catch (error) {
       candidateBook?.destroy();
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
@@ -388,6 +407,71 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     ) return;
     this.ebookState = { kind: 'error', message: this.localize('ebookViewerLoadError') };
     this.emit('lr-render-error', { error });
+  }
+
+  /** Maps selection geometry from an epub.js chapter viewport through every containing iframe
+   *  into this component's owner viewport. `getClientRects()` is already scroll-adjusted; each
+   *  frame's live border box and content viewport ratio add its position, border and CSS scale. */
+  private translateSelectionRects(rects: readonly DOMRect[], sourceWindow?: Window): DOMRect[] {
+    const ownerWindow = this.ownerDocument.defaultView;
+    if (!ownerWindow || !sourceWindow) return [];
+    const translated: DOMRect[] = [];
+    for (const rect of rects) {
+      let x = Number(rect.x ?? rect.left);
+      let y = Number(rect.y ?? rect.top);
+      let width = Number(rect.width);
+      let height = Number(rect.height);
+      if (![x, y, width, height].every(Number.isFinite)) continue;
+      let current: Window | null = sourceWindow;
+      let valid = true;
+      while (current && current !== ownerWindow) {
+        // Keeps the peer seam usable with a minimal Window-shaped test double. Real Window
+        // objects always expose `frameElement`, so production geometry never takes this branch.
+        if (!('frameElement' in current)) {
+          current = ownerWindow;
+          break;
+        }
+        let frameElement: Element | null;
+        try {
+          frameElement = current.frameElement;
+        } catch {
+          valid = false;
+          break;
+        }
+        const frameWindow = frameElement?.ownerDocument.defaultView;
+        if (!frameElement || !frameWindow || !(frameElement instanceof frameWindow.HTMLElement)) {
+          valid = false;
+          break;
+        }
+        const frame = frameElement as HTMLElement;
+        const frameRect = frame.getBoundingClientRect();
+        const borderBoxWidth = frame.offsetWidth || frame.clientWidth;
+        const borderBoxHeight = frame.offsetHeight || frame.clientHeight;
+        const viewportWidth = current.innerWidth || frame.clientWidth;
+        const viewportHeight = current.innerHeight || frame.clientHeight;
+        if (
+          borderBoxWidth <= 0
+          || borderBoxHeight <= 0
+          || viewportWidth <= 0
+          || viewportHeight <= 0
+        ) {
+          valid = false;
+          break;
+        }
+        const borderScaleX = frameRect.width / borderBoxWidth;
+        const borderScaleY = frameRect.height / borderBoxHeight;
+        const contentScaleX = (frame.clientWidth * borderScaleX) / viewportWidth;
+        const contentScaleY = (frame.clientHeight * borderScaleY) / viewportHeight;
+        x = frameRect.left + frame.clientLeft * borderScaleX + x * contentScaleX;
+        y = frameRect.top + frame.clientTop * borderScaleY + y * contentScaleY;
+        width *= contentScaleX;
+        height *= contentScaleY;
+        current = frame.ownerDocument.defaultView;
+      }
+      if (!valid || current !== ownerWindow) continue;
+      translated.push(new ownerWindow.DOMRect(x, y, width, height));
+    }
+    return translated;
   }
 
   private displayLocation(location: string): void {
@@ -548,14 +632,55 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       if (highlight.anchor.kind !== 'cfi') continue;
       const cfi = highlight.anchor.cfi;
       const tone = highlight.tone ?? 'accent';
+      const active = highlight.id === this.activeHighlightId;
+      const styles: Record<string, string> = this.resolveHighlightFill(TONE_FILL_TOKEN[tone]);
+      if (active) {
+        const forcedColors = this.ownerDocument.defaultView
+          ?.matchMedia?.('(forced-colors: active)').matches ?? false;
+        styles['stroke'] = forcedColors
+          ? 'CanvasText'
+          : this.resolveHighlightFill(ACTIVE_HIGHLIGHT_STROKE_TOKEN).fill;
+        // Width/dash are unitless SVG presentation attributes. Together they preserve an active
+        // distinction without depending on color, including under forced-colors substitution.
+        styles['stroke-width'] = '3';
+        styles['stroke-dasharray'] = '2 1';
+      }
       this.rendition.annotations.highlight(
         cfi,
         { id: highlight.id },
         () => this.emit('lr-highlight-activate', { id: highlight.id }),
-        `lr-hl-${tone}`,
-        this.resolveHighlightFill(TONE_FILL_TOKEN[tone]),
+        active ? `lr-hl-${tone} lr-ebook-highlight-active` : `lr-hl-${tone}`,
+        styles,
       );
       this.paintedHighlightCfis.push(cfi);
+    }
+  }
+
+  private repaintSearchAnnotation(): void {
+    const rendition = this.rendition;
+    const cfi = this.searchAnnotationCfi;
+    if (!rendition || !cfi) return;
+    rendition.annotations.remove(cfi, 'highlight');
+    rendition.annotations.highlight(
+      cfi,
+      {},
+      undefined,
+      'lr-ebook-search',
+      this.resolveHighlightFill(SEARCH_MATCH_FILL_TOKEN),
+    );
+  }
+
+  /** Repaints all concrete iframe annotation colors against one live rendition. Peer failures are
+   *  correlated to the current load instead of escaping a property/theme update as an unhandled
+   *  exception. */
+  private repaintAnnotations(): void {
+    const rendition = this.rendition;
+    if (!rendition) return;
+    try {
+      this.repaintHighlights();
+      this.repaintSearchAnnotation();
+    } catch (error) {
+      this.reportRenditionFailure(error, rendition, this.generation);
     }
   }
 

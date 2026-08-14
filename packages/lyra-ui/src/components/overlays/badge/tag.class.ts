@@ -88,6 +88,8 @@ function isSourceLabelAvailable(node: Node): boolean {
  *
  * Like `<lr-chip>`, removal is controlled: activating the remove action emits one notification and
  * leaves the tag connected. The consumer updates its own source state and removes the tag.
+ * A host `aria-label` names one aggregate `role="group"`; the nested remove button retains a
+ * purpose-specific name derived from visible tag text or the localized remove fallback.
  *
  * @customElement lr-tag
  * @slot - Tag content. A removable tag keeps its action name synchronized with visible accessible
@@ -189,6 +191,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
   // the button and the name would go stale. Only wired while the button exists, so a bulk list of
   // plain tags pays nothing for it. Mirrors `<lr-chip>`'s identical label observer.
   private labelObserver?: MutationObserver;
+  private managedActionGroupRole = false;
   // A server renderer cannot inspect projected light DOM. Cache the browser-derived label so a
   // hydrating mount can reproduce the server's bare remove name first, then add context without
   // replacing the action node on the corrective update.
@@ -216,6 +219,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
+    this.releaseHostActionRole();
     super.disconnectedCallback();
   }
 
@@ -229,6 +233,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
     }
     this.labelObserver ??= new MutationObserverCtor(() => {
       this.bindLabelObserverTargets();
+      this.syncHostActionRole();
       this.updateBrowserDerivedState(() => this.recomputeLabelText());
     });
     this.bindLabelObserverTargets();
@@ -238,7 +243,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
   // remove button, so a light-DOM child moving to or from the decorative `start`/`end` slots
   // changes the name. Mirrors `<lr-chip>`'s identical binding.
   private bindLabelObserverTargets(): void {
-    bindAccessibleTextObserver(this.labelObserver, this, ['slot']);
+    bindAccessibleTextObserver(this.labelObserver, this, ['slot', 'role']);
   }
 
   // Only the default slot's own content names the remove button -- text living in the decorative
@@ -279,8 +284,6 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
   }
 
   private get accessibleRemoveLabel(): string {
-    const hostLabel = this.getAttribute('aria-label');
-    if (hostLabel !== null) return hostLabel;
     const text = this.labelText;
     return text ? this.localize('removeWithContext', undefined, { label: text }) : this.localize('remove');
   }
@@ -323,6 +326,26 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
       this.syncLabelObserver();
       if (this.withRemove && this.hasUpdated) this.recomputeLabelText();
     }
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    this.syncHostActionRole();
+  }
+
+  private syncHostActionRole(): void {
+    const needsGroup = this.withRemove && this.hasAttribute('aria-label');
+    if (needsGroup && !this.hasAttribute('role')) {
+      this.setAttribute('role', 'group');
+      this.managedActionGroupRole = true;
+    } else if (!needsGroup) {
+      this.releaseHostActionRole();
+    }
+  }
+
+  private releaseHostActionRole(): void {
+    if (this.managedActionGroupRole && this.getAttribute('role') === 'group') this.removeAttribute('role');
+    this.managedActionGroupRole = false;
   }
 
   protected override renderTrailing(): unknown {

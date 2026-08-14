@@ -1,0 +1,816 @@
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  TextViewerTarget,
+  type LyraTextViewerTargetEventMap,
+} from '../../../internal/text-viewer-target.js';
+import {
+  isAbortError,
+  isResourceLimitError,
+  LyraResourceLimitError,
+  LyraUserFacingError,
+  readResponseText,
+  resolveOwnerFetchTarget,
+} from '../../../internal/resource-loader.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
+import { loadMaplibre } from '../../media/map/map-loader.js';
+import {
+  type LyraMapGeoJsonDataLayer,
+  type LyraMap,
+  type LyraMapStyleSpecification,
+} from '../../media/map/map.class.js';
+import { styles } from './geojson-view.styles.js';
+import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import type {
+  AnchorResultDetail,
+  TextSelectDetail,
+} from '../document-viewer/anchors.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import {
+  LYRA_DEFAULT_anchorJumped,
+  LYRA_DEFAULT_anchorJumpedToPage,
+  LYRA_DEFAULT_anchorNotFound,
+  LYRA_DEFAULT_documentPreviewEmpty,
+  LYRA_DEFAULT_documentPreviewResourceTooLarge,
+  LYRA_DEFAULT_documentPreviewTypeDocument,
+  LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+  LYRA_DEFAULT_geojsonViewFeatureCount,
+  LYRA_DEFAULT_geojsonViewInvalid,
+  LYRA_DEFAULT_geojsonViewLabel,
+  LYRA_DEFAULT_geojsonViewMissingMapLibrary,
+  LYRA_DEFAULT_loadingDocument,
+} from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+/** The three structural container tags accepted by the GeoJSON bridge. */
+export type GeoJsonTypeTag =
+  | 'Feature'
+  | 'FeatureCollection'
+  | 'GeometryCollection';
+
+type GeoJsonLike = Record<string, unknown> & { type: string };
+type GeometryType =
+  | 'Point'
+  | 'LineString'
+  | 'Polygon'
+  | 'MultiPoint'
+  | 'MultiLineString'
+  | 'MultiPolygon'
+  | 'GeometryCollection';
+type GeoTask =
+  | {
+      kind: 'geo';
+      value: unknown;
+      depth: number;
+      mode: 'any' | 'feature' | 'geometry';
+    }
+  | {
+      kind:
+        | 'position'
+        | 'positions'
+        | 'line'
+        | 'ring'
+        | 'polygon'
+        | 'multi-line'
+        | 'multi-polygon';
+      value: unknown;
+      depth: number;
+    };
+type CoordinateTaskKind = Exclude<GeoTask['kind'], 'geo'>;
+interface GeoBounds {
+  minLng: number;
+  maxLng: number;
+  minShiftedLng: number;
+  maxShiftedLng: number;
+  minLat: number;
+  maxLat: number;
+}
+interface GeoJsonAnalysis {
+  value: GeoJsonLike;
+  metadata: string;
+  featureCount: number;
+  bounds: GeoBounds | null;
+}
+
+const GEOMETRY_TYPES = new Set<GeometryType>([
+  'Point',
+  'LineString',
+  'Polygon',
+  'MultiPoint',
+  'MultiLineString',
+  'MultiPolygon',
+  'GeometryCollection',
+]);
+const MAX_GEOJSON_POSITIONS = 10_000;
+const MAX_GEOJSON_NODES = 50_000;
+const MAX_GEOJSON_DEPTH = 64;
+const MAX_GEOJSON_TEXT_UNITS = 2 * 1024 * 1024;
+const MAX_GEOJSON_SERIALIZED_UNITS = 4 * 1024 * 1024;
+/** Network-silent base; the validated GeoJSON is added through `dataLayers`, so no tile source is
+ *  required and a bare viewer never inherits a third-party map provider. */
+const GEOJSON_BASE_MAP_STYLE: LyraMapStyleSpecification = {
+  version: 8,
+  sources: {},
+  layers: [],
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Budgets every value and object key in the parsed JSON graph before geometry validation,
+ *  pretty serialization, json-viewer handoff, or MapLibre handoff. Geometry has stricter rules
+ *  below; this first pass also covers Feature properties, foreign members, and arrays unrelated
+ *  to coordinates. */
+function assertGeoJsonGraphWithinLimits(root: unknown): void {
+  const tasks: Array<{ value: unknown; depth: number }> = [
+    { value: root, depth: 0 },
+  ];
+  const seen = new WeakSet<object>();
+  let graphUnits = 0;
+  let textUnits = 0;
+
+  const accountGraphUnit = (): void => {
+    graphUnits++;
+    if (graphUnits + tasks.length > MAX_GEOJSON_NODES) {
+      throw new LyraResourceLimitError(
+        'The GeoJSON contains too many nested values.'
+      );
+    }
+  };
+  const accountText = (value: string): void => {
+    textUnits += value.length;
+    if (textUnits > MAX_GEOJSON_TEXT_UNITS) {
+      throw new LyraResourceLimitError('The GeoJSON contains too much text.');
+    }
+  };
+
+  while (tasks.length > 0) {
+    const task = tasks.pop()!;
+    if (task.depth > MAX_GEOJSON_DEPTH) {
+      throw new LyraResourceLimitError('The GeoJSON nesting is too deep.');
+    }
+    accountGraphUnit();
+    const value = task.value;
+    if (typeof value === 'string') {
+      accountText(value);
+      continue;
+    }
+    if (value === null || typeof value === 'boolean') continue;
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) throw new Error('invalid JSON number');
+      continue;
+    }
+    if (typeof value !== 'object') throw new Error('invalid JSON value');
+    if (seen.has(value)) throw new Error('cyclic JSON graph');
+    seen.add(value);
+
+    if (Array.isArray(value)) {
+      if (graphUnits + tasks.length + value.length > MAX_GEOJSON_NODES) {
+        throw new LyraResourceLimitError(
+          'The GeoJSON contains too many nested values.'
+        );
+      }
+      for (let index = value.length - 1; index >= 0; index--) {
+        tasks.push({ value: value[index], depth: task.depth + 1 });
+      }
+      continue;
+    }
+
+    for (const key in value) {
+      if (!Object.hasOwn(value, key)) continue;
+      accountGraphUnit(); // object keys consume the same structural work budget as values
+      accountText(key);
+      tasks.push({
+        value: (value as Record<string, unknown>)[key],
+        depth: task.depth + 1,
+      });
+    }
+  }
+}
+
+/**
+ * Validates the complete GeoJSON structure and derives bounds in one bounded iterative pass. It
+ * never recursively descends or retains a second coordinate array, so adversarial nesting and
+ * large coordinate sets have explicit depth/node/position ceilings before map rendering.
+ */
+function analyzeGeoJson(value: unknown): GeoJsonAnalysis {
+  assertGeoJsonGraphWithinLimits(value);
+  if (!isRecord(value)) throw new Error('not a GeoJSON object');
+  const root = value as GeoJsonLike;
+  const tasks: GeoTask[] = [{ kind: 'geo', value, depth: 0, mode: 'any' }];
+  let processedNodes = 0;
+  let positionCount = 0;
+  let bounds: GeoBounds | null = null;
+
+  const pushTask = (task: GeoTask): void => {
+    if (task.depth > MAX_GEOJSON_DEPTH)
+      throw new LyraResourceLimitError('The GeoJSON nesting is too deep.');
+    if (processedNodes + tasks.length >= MAX_GEOJSON_NODES) {
+      throw new LyraResourceLimitError(
+        'The GeoJSON contains too many nested values.'
+      );
+    }
+    tasks.push(task);
+  };
+  const pushArray = (
+    items: unknown[],
+    kind: CoordinateTaskKind,
+    depth: number
+  ): void => {
+    if (processedNodes + tasks.length + items.length > MAX_GEOJSON_NODES) {
+      throw new LyraResourceLimitError(
+        'The GeoJSON contains too many nested values.'
+      );
+    }
+    for (let index = items.length - 1; index >= 0; index--) {
+      pushTask({ kind, value: items[index], depth });
+    }
+  };
+  const requireArray = (candidate: unknown, minimum = 0): unknown[] => {
+    if (!Array.isArray(candidate) || candidate.length < minimum)
+      throw new Error('invalid GeoJSON coordinates');
+    return candidate;
+  };
+
+  while (tasks.length > 0) {
+    const task = tasks.pop()!;
+    processedNodes++;
+    if (processedNodes > MAX_GEOJSON_NODES) {
+      throw new LyraResourceLimitError(
+        'The GeoJSON contains too many nested values.'
+      );
+    }
+    if (task.depth > MAX_GEOJSON_DEPTH)
+      throw new LyraResourceLimitError('The GeoJSON nesting is too deep.');
+
+    if (task.kind === 'position') {
+      const position = requireArray(task.value, 2);
+      if (
+        !position.every(
+          (coordinate) =>
+            typeof coordinate === 'number' && Number.isFinite(coordinate)
+        )
+      ) {
+        throw new Error('invalid GeoJSON position');
+      }
+      const [lng, lat] = position as number[];
+      if (lng! < -180 || lng! > 180 || lat! < -90 || lat! > 90)
+        throw new Error('invalid GeoJSON position');
+      positionCount++;
+      if (positionCount > MAX_GEOJSON_POSITIONS) {
+        throw new LyraResourceLimitError(
+          'The GeoJSON contains too many positions.'
+        );
+      }
+      const shiftedLng = lng! < 0 ? lng! + 360 : lng!;
+      if (!bounds) {
+        bounds = {
+          minLng: lng!,
+          maxLng: lng!,
+          minShiftedLng: shiftedLng,
+          maxShiftedLng: shiftedLng,
+          minLat: lat!,
+          maxLat: lat!,
+        };
+      } else {
+        bounds.minLng = Math.min(bounds.minLng, lng!);
+        bounds.maxLng = Math.max(bounds.maxLng, lng!);
+        bounds.minShiftedLng = Math.min(bounds.minShiftedLng, shiftedLng);
+        bounds.maxShiftedLng = Math.max(bounds.maxShiftedLng, shiftedLng);
+        bounds.minLat = Math.min(bounds.minLat, lat!);
+        bounds.maxLat = Math.max(bounds.maxLat, lat!);
+      }
+      continue;
+    }
+
+    if (
+      task.kind === 'positions' ||
+      task.kind === 'line' ||
+      task.kind === 'ring'
+    ) {
+      const minimum = task.kind === 'ring' ? 4 : task.kind === 'line' ? 2 : 0;
+      const positions = requireArray(task.value, minimum);
+      if (task.kind === 'ring') {
+        const first = positions[0];
+        const last = positions[positions.length - 1];
+        if (
+          !Array.isArray(first) ||
+          !Array.isArray(last) ||
+          first.length !== last.length ||
+          first.some((item, index) => item !== last[index])
+        ) {
+          throw new Error('GeoJSON polygon rings must be closed');
+        }
+      }
+      pushArray(positions, 'position', task.depth + 1);
+      continue;
+    }
+
+    if (task.kind === 'polygon' || task.kind === 'multi-line') {
+      const parts = requireArray(task.value);
+      pushArray(
+        parts,
+        task.kind === 'polygon' ? 'ring' : 'line',
+        task.depth + 1
+      );
+      continue;
+    }
+
+    if (task.kind === 'multi-polygon') {
+      pushArray(requireArray(task.value), 'polygon', task.depth + 1);
+      continue;
+    }
+
+    if (task.kind !== 'geo')
+      throw new Error('invalid GeoJSON coordinate structure');
+    if (!isRecord(task.value) || typeof task.value['type'] !== 'string')
+      throw new Error('invalid GeoJSON member');
+    const member = task.value as GeoJsonLike;
+    const type = member['type'];
+    if (task.mode === 'feature' && type !== 'Feature')
+      throw new Error('FeatureCollection contains a non-Feature');
+    if (task.mode === 'geometry' && !GEOMETRY_TYPES.has(type as GeometryType))
+      throw new Error('invalid GeoJSON geometry');
+
+    if (type === 'Feature') {
+      if (
+        task.mode === 'geometry' ||
+        !Object.hasOwn(member, 'geometry') ||
+        !Object.hasOwn(member, 'properties')
+      ) {
+        throw new Error('invalid GeoJSON Feature');
+      }
+      if (member['properties'] !== null && !isRecord(member['properties']))
+        throw new Error('invalid GeoJSON Feature properties');
+      if (member['geometry'] !== null) {
+        pushTask({
+          kind: 'geo',
+          value: member['geometry'],
+          depth: task.depth + 1,
+          mode: 'geometry',
+        });
+      }
+      continue;
+    }
+    if (type === 'FeatureCollection') {
+      if (task.mode !== 'any' || !Array.isArray(member['features']))
+        throw new Error('invalid GeoJSON FeatureCollection');
+      for (let index = member['features'].length - 1; index >= 0; index--) {
+        pushTask({
+          kind: 'geo',
+          value: member['features'][index],
+          depth: task.depth + 1,
+          mode: 'feature',
+        });
+      }
+      continue;
+    }
+    if (!GEOMETRY_TYPES.has(type as GeometryType))
+      throw new Error('invalid GeoJSON type');
+    if (type === 'GeometryCollection') {
+      if (!Array.isArray(member['geometries']))
+        throw new Error('invalid GeoJSON GeometryCollection');
+      for (let index = member['geometries'].length - 1; index >= 0; index--) {
+        pushTask({
+          kind: 'geo',
+          value: member['geometries'][index],
+          depth: task.depth + 1,
+          mode: 'geometry',
+        });
+      }
+      continue;
+    }
+    if (!Object.hasOwn(member, 'coordinates'))
+      throw new Error('GeoJSON geometry has no coordinates');
+    const coordinateKind: Record<
+      Exclude<GeometryType, 'GeometryCollection'>,
+      CoordinateTaskKind
+    > = {
+      Point: 'position',
+      LineString: 'line',
+      Polygon: 'polygon',
+      MultiPoint: 'positions',
+      MultiLineString: 'multi-line',
+      MultiPolygon: 'multi-polygon',
+    };
+    pushTask({
+      kind: coordinateKind[type as Exclude<GeometryType, 'GeometryCollection'>],
+      value: member['coordinates'],
+      depth: task.depth + 1,
+    });
+  }
+
+  const count =
+    root['type'] === 'FeatureCollection' && Array.isArray(root['features'])
+      ? root['features'].length
+      : 1;
+  const metadata = JSON.stringify(root, null, 2);
+  if (metadata.length > MAX_GEOJSON_SERIALIZED_UNITS) {
+    throw new LyraResourceLimitError('The serialized GeoJSON is too large.');
+  }
+  return { value: root, metadata, featureCount: count, bounds };
+}
+
+/** Web-Mercator-fit approximation with padding -- fits `bbox` into a viewport without needing a
+ *  loaded `maplibregl.Map` instance to ask (this bridge computes `center`/`zoom` before the map
+ *  exists). Latitude span is weighted ~2x to roughly account for Mercator's pole-ward compression. */
+function fitBboxToView(bounds: GeoBounds): {
+  center: [number, number];
+  zoom: number;
+} {
+  const standardSpan = bounds.maxLng - bounds.minLng;
+  const shiftedSpan = bounds.maxShiftedLng - bounds.minShiftedLng;
+  const crossesAntimeridian = shiftedSpan < standardSpan;
+  let centerLng = crossesAntimeridian
+    ? (bounds.minShiftedLng + bounds.maxShiftedLng) / 2
+    : (bounds.minLng + bounds.maxLng) / 2;
+  if (centerLng > 180) centerLng -= 360;
+  const center: [number, number] = [
+    centerLng,
+    (bounds.minLat + bounds.maxLat) / 2,
+  ];
+  const lngSpan = Math.max(
+    crossesAntimeridian ? shiftedSpan : standardSpan,
+    0.0001
+  );
+  const latSpan = Math.max(bounds.maxLat - bounds.minLat, 0.0001);
+  const span = Math.max(lngSpan, latSpan * 2) * 1.4; // 40% padding so the shape doesn't touch the edges
+  const zoom = Math.max(0, Math.min(18, Math.floor(Math.log2(360 / span))));
+  return { center, zoom };
+}
+
+type GeoJsonViewerState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | {
+      kind: 'loaded';
+      value: GeoJsonLike;
+      metadata: string;
+      featureCount: number;
+      center: [number, number];
+      zoom: number;
+      peerAvailable: boolean;
+    }
+  | { kind: 'error'; message: string };
+
+export interface LyraGeoJsonViewerEventMap
+  extends LyraTextViewerTargetEventMap {
+  'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-search-change': CustomEvent<{
+    query: string;
+    matchCount: number;
+    activeIndex: number;
+  }>;
+  'lr-anchor-result': CustomEvent<AnchorResultDetail>;
+  'lr-text-select': CustomEvent<TextSelectDetail>;
+}
+
+class LyraGeoJsonViewerBase extends LyraElement<LyraGeoJsonViewerEventMap> {}
+
+/**
+ * `<lr-geojson-viewer>` — document-registry bridge rendering a fetched GeoJSON file through
+ * `<lr-map>`'s `dataLayers`. The separately exported `<lr-geojson-view>` compatibility class
+ * preserves the earlier tag without sharing a custom-elements constructor.
+ *
+ * @customElement lr-geojson-viewer
+ * @event lr-render-error - Fetch, parse, or shape-validation failure. `detail: { error }`.
+ * @event {CustomEvent<{ query: string; matchCount: number; activeIndex: number }>} lr-search-change -
+ *   Fired whenever searchable metadata state changes. `detail: { query: string; matchCount: number;
+ *   activeIndex: number }`. Bubbling, composed, and non-cancelable.
+ * @event {CustomEvent<AnchorResultDetail>} lr-anchor-result - Fired after an `anchor` assignment or
+ *   `scrollToAnchor()` call is applied. `detail: { found: boolean }`. Bubbling, composed, and
+ *   non-cancelable.
+ * @event {CustomEvent<TextSelectDetail>} lr-text-select - Fired after a selection ends inside the
+ *   searchable metadata. `detail: { text: string; anchor: LyraAnchor | null; rects: DOMRect[] }`.
+ *   Bubbling, composed, and non-cancelable.
+ * @csspart base - The root container with explicit `aria-busy`. It owns the named region in
+ *   non-map states, the missing-peer fallback, and while a lazy map initializes; the loaded map
+ *   canvas then owns that landmark.
+ * @csspart status - The ordinary feature-count line; a successful transition announces through
+ *   the shared document-level polite region.
+ * @csspart metadata - Searchable, selectable serialized GeoJSON metadata; scrolls inline rather
+ *   than widening a narrow allocation.
+ * @csspart missing-library - The missing-maplibre-gl callout shown alongside the json-viewer fallback.
+ * @csspart error - Visible ordinary error text; transitions announce through the shared
+ *   document-level assertive region.
+ * @csspart spinner - The decorative loading placeholder and its ordinary visually-hidden label;
+ *   transitions announce through the shared document-level polite region.
+ * @status stable
+ * @since 4.0.0
+ */
+export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      anchorJumped: LYRA_DEFAULT_anchorJumped,
+      anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+      anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+      documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+      documentPreviewResourceTooLarge:
+        LYRA_DEFAULT_documentPreviewResourceTooLarge,
+      documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
+      documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+      geojsonViewFeatureCount: LYRA_DEFAULT_geojsonViewFeatureCount,
+      geojsonViewInvalid: LYRA_DEFAULT_geojsonViewInvalid,
+      geojsonViewLabel: LYRA_DEFAULT_geojsonViewLabel,
+      geojsonViewMissingMapLibrary: LYRA_DEFAULT_geojsonViewMissingMapLibrary,
+      loadingDocument: LYRA_DEFAULT_loadingDocument,
+    };
+  // GENERATED DEFAULT-STRING SLICE: END
+
+  static override styles = [LyraElement.styles, styles, srOnly];
+
+  @property() src = '';
+  /** Accessible-name fallback for the current region owner: the root in non-map states, or the
+   * loaded map canvas when the optional peer is available. */
+  @property() name = '';
+  /** Shared search/anchor surface for the ordinary-DOM serialized feature metadata and status
+   * text, independent of whether the optional map peer is available. */
+  override async search(query: string): Promise<number> {
+    return super.search(query);
+  }
+  override async searchNext(): Promise<boolean> {
+    return super.searchNext();
+  }
+  override async searchPrevious(): Promise<boolean> {
+    return super.searchPrevious();
+  }
+  override clearSearch(): void {
+    super.clearSearch();
+  }
+
+  @state() private loadState: GeoJsonViewerState = { kind: 'idle' };
+  @state() private mapReady = false;
+  private generation = 0;
+  private lastLoadSrc = '';
+  private registeredMap: LyraMap | null = null;
+  private readonly announcements = new ViewerAnnouncementController(this);
+
+  /** @internal test-only hook forcing the missing-peer fallback path without needing to actually
+   *  uninstall `maplibre-gl` in this test environment. */
+  forceMissingMaplibreForTesting = false;
+
+  protected textContentRoot(): Element | null {
+    return this.renderRoot.querySelector('[part="base"]');
+  }
+
+  private stopChildEvent(event: Event): void {
+    event.stopPropagation();
+  }
+
+  private onMapCanvasReady(map: LyraMap, _canvas: HTMLCanvasElement): void {
+    if (
+      !this.isConnected ||
+      map !== this.registeredMap ||
+      this.shadowRoot?.querySelector('lr-map') !== map ||
+      this.loadState.kind !== 'loaded' ||
+      !this.loadState.peerAvailable ||
+      this.src !== this.lastLoadSrc
+    )
+      return;
+    this.mapReady = true;
+    // The callback runs in the same stack that constructs MapLibre's already-semantic canvas.
+    // Remove the outer landmark synchronously so no observer can see two named regions before Lit's
+    // state-driven render commits the same ownership change.
+    const base = this.shadowRoot?.querySelector('[part="base"]');
+    base?.removeAttribute('role');
+    base?.removeAttribute('aria-label');
+  }
+
+  private syncMapCanvasReadyCallback(): void {
+    const next = this.shadowRoot?.querySelector('lr-map') as LyraMap | null;
+    if (next === this.registeredMap) return;
+    if (this.registeredMap) setMapCanvasReadyCallback(this.registeredMap, null);
+    this.registeredMap = next;
+    if (next) {
+      setMapCanvasReadyCallback(next, (canvas) =>
+        this.onMapCanvasReady(next, canvas)
+      );
+    }
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.announcements.connect();
+    if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc) {
+      this.scheduleAfterUpdate(() => {
+        void this.load();
+      });
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.generation++;
+    if (this.registeredMap) setMapCanvasReadyCallback(this.registeredMap, null);
+    this.registeredMap = null;
+    this.loadState = { kind: 'idle' };
+    this.mapReady = false;
+    this.announcements.disconnect();
+    super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (this.loadState.kind === 'loaded') {
+      const peerAvailable = this.loadState.peerAvailable;
+      this.announcements.transition(
+        'load',
+        peerAvailable ? 'loaded' : 'error',
+        peerAvailable
+          ? this.featureCountStatus(this.loadState.featureCount)
+          : this.localize('geojsonViewMissingMapLibrary'),
+        peerAvailable ? 'polite' : 'assertive'
+      );
+    } else {
+      this.announcements.transition(
+        'load',
+        this.loadState.kind,
+        this.loadState.kind === 'error'
+          ? this.loadState.message
+          : this.localize('loadingDocument')
+      );
+    }
+    this.syncMapCanvasReadyCallback();
+    if (changed.has('src'))
+      this.scheduleAfterUpdate(() => {
+        void this.load();
+      });
+  }
+
+  private async load(): Promise<void> {
+    const generation = ++this.generation;
+    const signal = this.beginAbortableLoad();
+    this.lastLoadSrc = this.src;
+    this.mapReady = false;
+    if (!this.src) {
+      this.loadState = { kind: 'idle' };
+      return;
+    }
+    const fetchTarget = resolveOwnerFetchTarget(this, this.src);
+    if (!fetchTarget) {
+      this.failWithLocalizedMessage(
+        this.localize('documentPreviewUrlNotAllowed')
+      );
+      return;
+    }
+    this.loadState = { kind: 'loading' };
+    try {
+      const response = await fetchTarget.view.fetch(
+        fetchTarget.url,
+        signal ? { signal } : undefined
+      );
+      if (!this.isConnected || generation !== this.generation) return;
+      if (!response.ok)
+        throw new Error(`${response.status} ${response.statusText}`);
+      const text = await readResponseText(response);
+      if (!this.isConnected || generation !== this.generation) return;
+      const parsed: unknown = JSON.parse(text);
+      const analysis = analyzeGeoJson(parsed);
+      const { center, zoom } = analysis.bounds
+        ? fitBboxToView(analysis.bounds)
+        : { center: [0, 0] as [number, number], zoom: 1 };
+      const maplibre = this.forceMissingMaplibreForTesting
+        ? null
+        : await loadMaplibre();
+      if (!this.isConnected || generation !== this.generation) return;
+      this.loadState = {
+        kind: 'loaded',
+        value: analysis.value,
+        metadata: analysis.metadata,
+        featureCount: analysis.featureCount,
+        center,
+        zoom,
+        peerAvailable: maplibre !== null,
+      };
+      if (!maplibre) {
+        this.emit('lr-render-error', {
+          error: new LyraUserFacingError(
+            this.localize('geojsonViewMissingMapLibrary')
+          ),
+        });
+      }
+    } catch (error) {
+      if (
+        isAbortError(error) ||
+        !this.isConnected ||
+        generation !== this.generation
+      )
+        return;
+      this.loadState = {
+        kind: 'error',
+        message: this.localize(
+          isResourceLimitError(error)
+            ? 'documentPreviewResourceTooLarge'
+            : 'geojsonViewInvalid'
+        ),
+      };
+      this.emit('lr-render-error', { error });
+    }
+  }
+
+  private failWithLocalizedMessage(message: string): void {
+    const error = new LyraUserFacingError(message);
+    this.loadState = { kind: 'error', message };
+    this.emit('lr-render-error', { error });
+  }
+
+  private get effectiveLabel(): string {
+    return (
+      hostAriaLabel(this) ?? (this.name || this.localize('geojsonViewLabel'))
+    );
+  }
+
+  private featureCountStatus(featureCount: number): string {
+    return this.localize('geojsonViewFeatureCount', undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(featureCount),
+      pluralCount: featureCount,
+    });
+  }
+
+  private renderBody(): TemplateResult {
+    switch (this.loadState.kind) {
+      case 'loaded': {
+        const { value, metadata, featureCount, center, zoom, peerAvailable } =
+          this.loadState;
+        const statusText = this.featureCountStatus(featureCount);
+        if (!peerAvailable) {
+          return html`
+            <p part="missing-library">
+              ${this.localize('geojsonViewMissingMapLibrary')}
+            </p>
+            <pre part="metadata">${metadata}</pre>
+            <lr-json-viewer
+              .data=${value}
+              collapsed-depth="2"
+              @lr-copy=${this.stopChildEvent}
+              @lr-search-change=${this.stopChildEvent}
+            ></lr-json-viewer>
+          `;
+        }
+        const dataLayers: LyraMapGeoJsonDataLayer[] = [
+          { sourceId: 'lr-geojson', geojson: value as never },
+        ];
+        return html`
+          <div part="status">${statusText}</div>
+          <pre part="metadata">${metadata}</pre>
+          <lr-map
+            .center=${center}
+            .zoom=${zoom}
+            .mapStyle=${GEOJSON_BASE_MAP_STYLE}
+            .dataLayers=${dataLayers}
+            label=${this.effectiveLabel}
+            @lr-map-load=${this.stopChildEvent}
+            @lr-map-click=${this.stopChildEvent}
+          ></lr-map>
+        `;
+      }
+      case 'loading':
+        return html`<div part="spinner">
+          <lr-skeleton shape="rect" .announce=${false}></lr-skeleton>
+          <span class="sr-only">${this.localize('loadingDocument')}</span>
+        </div>`;
+      case 'error':
+        return html`<div part="error">${this.loadState.message}</div>`;
+      case 'idle':
+      default:
+        return html`<p>
+          ${this.localize('documentPreviewEmpty', undefined, {
+            type: this.localize('documentPreviewTypeDocument'),
+          })}
+        </p>`;
+    }
+  }
+
+  override render(): TemplateResult {
+    const mapOwnsLandmark =
+      this.loadState.kind === 'loaded' &&
+      this.loadState.peerAvailable &&
+      this.mapReady;
+    return html`<div
+      part="base"
+      role=${mapOwnsLandmark ? nothing : 'region'}
+      aria-label=${mapOwnsLandmark ? nothing : this.effectiveLabel}
+      aria-busy=${this.loadState.kind === 'loading' ? 'true' : 'false'}
+    >
+      ${this.renderBody()}${this.renderAnchorLiveRegion()}
+    </div>`;
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'lr-geojson-viewer': LyraGeoJsonViewer;
+  }
+}

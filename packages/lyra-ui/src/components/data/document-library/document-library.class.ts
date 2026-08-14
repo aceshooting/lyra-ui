@@ -1,12 +1,17 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
-import { property, state } from "lit/decorators.js";
+import { property } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import {
   getDateTimeFormat,
   getNumberFormat,
 } from "../../../internal/intl-cache.js";
 import type { DocumentRef } from "../../../ai/types.js";
-import type { TableColumn } from "../table/table.class.js";
+import type {
+  TableColumn,
+  TableSortCommitDetail,
+  TableSortDirection,
+  TableSortRequestDetail,
+} from "../table/table.class.js";
 import type { LyraCombobox } from "../../forms/combobox/combobox.class.js";
 import {
   acquireAnnouncementSink,
@@ -32,7 +37,7 @@ export type LibraryDocumentFreshness = "fresh" | "aging" | "stale";
  * consistency across this component family.
  */
 export interface LibraryDocument extends DocumentRef {
-  tags?: string[];
+  tags?: readonly string[];
   owner?: string;
   /** Last-updated timestamp. `Date | string` (ISO-8601), matching `ChatMessage.timestamp`. */
   updatedAt?: Date | string;
@@ -47,28 +52,36 @@ export type LibraryDocumentSortKey =
   | "freshness"
   | "updatedAt";
 
-/** Sort direction for `sortKey`/`sortDirection`. */
-export type DocumentLibrarySortDirection = "ascending" | "descending";
-
 export interface DocumentLibraryFilterChangeDetail {
-  text: string;
-  tags: string[];
-  matchCount: number;
+  readonly searchTerm: string;
+  readonly tags: readonly string[];
+  readonly matchCount: number;
 }
-export interface DocumentLibrarySortDetail {
-  key: LibraryDocumentSortKey;
-  direction: DocumentLibrarySortDirection;
+export interface DocumentLibrarySortRequestDetail {
+  readonly phase: "request";
+  readonly sortKey: LibraryDocumentSortKey;
+  readonly sortDir: TableSortDirection;
 }
+export interface DocumentLibrarySortCommitDetail {
+  readonly phase: "commit";
+  readonly sortKey: LibraryDocumentSortKey;
+  readonly sortDir: TableSortDirection;
+}
+/** Canonical request/commit sort transaction detail. */
+export type DocumentLibrarySortDetail =
+  | DocumentLibrarySortRequestDetail
+  | DocumentLibrarySortCommitDetail;
 export interface DocumentLibrarySelectionChangeDetail {
-  ids: string[];
+  readonly ids: readonly string[];
 }
 export interface DocumentLibraryOpenDetail {
-  id: string;
+  readonly id: string;
 }
 
 export interface LyraDocumentLibraryEventMap {
   "lr-filter-change": CustomEvent<DocumentLibraryFilterChangeDetail>;
-  "lr-sort": CustomEvent<DocumentLibrarySortDetail>;
+  "lr-sort-request": CustomEvent<DocumentLibrarySortRequestDetail>;
+  "lr-sort": CustomEvent<DocumentLibrarySortCommitDetail>;
   "lr-selection-change": CustomEvent<DocumentLibrarySelectionChangeDetail>;
   "lr-open": CustomEvent<DocumentLibraryOpenDetail>;
 }
@@ -100,10 +113,10 @@ const FRESHNESS_TONE: Record<
  * column hiding, which this component relies on for its 320px-allocation behavior. Search
  * (`<lr-input type="search">`) and the tag facet (`<lr-combobox multiple>`) are both self-managed
  * (client-side filtering against `documents`, like `<lr-thread-list>`'s own `searchable` field) —
- * override matching entirely via `filter`. Row selection uses `<lr-checkbox>` per cell rather than
- * `<lr-table>`'s own built-in `selectionMode`, since that mode's click-anywhere-in-the-row toggle
- * would conflict with the row's own name button opening the document; `<lr-table>`'s
- * `selectedKeys` is still fed from `selectedIds` purely for its `aria-selected` row styling.
+ * override matching entirely via `filter`. Row selection uses `<lr-checkbox>` per cell. The
+ * composed table stays in multiple-selection semantics so `selectedIds` reaches row
+ * `aria-selected`, but its click-anywhere selection event is contained and rolled back because row
+ * activation opens the document; checkbox controls remain the sole selection interaction.
  * `<lr-table>` is set to `sort-mode="server"` because this component owns ordering:
  * `visibleDocuments` already sorts against real values (timestamps for `updatedAt`, a rank for
  * `freshness`). Client mode would order the rows a second time from `String(cell(row))`, and these
@@ -113,19 +126,24 @@ const FRESHNESS_TONE: Record<
  * Post-mount selection-count changes announce through the document's shared light-DOM polite
  * sink, including zero and repeated equal counts; initial declarative selection stays silent. The
  * visible selection bar remains ordinary, non-live content.
- * Internal search `lr-input`, tag-filter `change`, and checkbox `lr-change` events are consumed at
- * their translation boundary; hosts receive only the documented library-level filter/selection
- * events for those interactions.
+ * Internal search, tag-filter, and checkbox native/prefixed value-event aliases, plus table
+ * selection/pagination events, are consumed at their translation boundary; hosts receive only the
+ * documented library-level events.
  *
  * @customElement lr-document-library
- * @event lr-filter-change - The search text or tag facet changed. `detail: { text, tags, matchCount }`.
+ * @event lr-filter-change - The search term or tag facet changed. Frozen readonly
+ *   `detail: { searchTerm, tags, matchCount }`.
  *   The translated child `lr-input`/`change` event does not escape the library.
- * @event lr-sort - A sortable column header was activated. `detail: { key, direction }`.
+ * @event lr-sort-request - Cancelable sort proposal translated from the composed table. Frozen
+ *   readonly `detail: { phase: 'request', sortKey, sortDir }`.
+ * @event lr-sort - Accepted sort transaction. Frozen readonly
+ *   `detail: { phase: 'commit', sortKey, sortDir }`.
  * @event lr-selection-change - The bulk selection changed (a row checkbox, the header
- *   select-all checkbox, or "Clear selection"). `detail: { ids }`. Translated checkbox
+ *   select-all checkbox, or "Clear selection"). Frozen readonly
+ *   `detail: { ids: readonly string[] }`. Translated checkbox
  *   `lr-change` events do not escape the library.
  * @event lr-open - A document was activated (its name, or Enter/Space/click elsewhere on its
- *   row). `detail: { id }`.
+ *   row). Frozen readonly `detail: { id }`.
  * @csspart base - The root region.
  * @csspart toolbar - Wraps the search field and tag filter.
  * @csspart search - The `<lr-input>` search field.
@@ -174,8 +192,19 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The full, unfiltered/unsorted inventory. */
-  @property({ attribute: false }) documents: LibraryDocument[] = [];
+  private _documents: readonly LibraryDocument[] = Object.freeze([]);
+  /** Clone-owned readonly full inventory. Document records, nested tag arrays, and dates are
+   * snapshotted at assignment time; reads return detached snapshots so even `Date` mutators cannot
+   * reach retained state. Reassign the collection to update. */
+  @property({ attribute: false })
+  get documents(): readonly LibraryDocument[] {
+    return this.snapshotDocuments(this._documents);
+  }
+  set documents(value: readonly LibraryDocument[]) {
+    const previous = this._documents;
+    this._documents = this.snapshotDocuments(Array.isArray(value) ? value : []);
+    this.requestUpdate("documents", previous);
+  }
 
   /** Bulk-selected document ids. Settable up front (pre-selection) and mutated internally by the
    *  row/select-all checkboxes and "Clear selection" — read it back, or listen for
@@ -183,11 +212,29 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
    *  longer present in `documents` (no event fires for that pruning -- only an actual selection
    *  interaction does, mirroring `<lr-chip-group>`'s identical silent-resync convention for its
    *  own `expanded` state). */
-  @property({ attribute: false }) selectedIds: string[] = [];
+  private _selectedIds: readonly string[] = Object.freeze([]);
+  @property({ attribute: false })
+  get selectedIds(): readonly string[] {
+    return this._selectedIds;
+  }
+  set selectedIds(value: readonly string[]) {
+    const previous = this._selectedIds;
+    this._selectedIds = this.snapshotIds(Array.isArray(value) ? value : []);
+    this.requestUpdate("selectedIds", previous);
+  }
 
   /** Currently-applied tag facet (`AND` semantics -- a document must carry every listed tag).
    *  Settable up front and mutated internally by the tag filter combobox. */
-  @property({ attribute: false }) tagFilter: string[] = [];
+  private _tagFilter: readonly string[] = Object.freeze([]);
+  @property({ attribute: false })
+  get tagFilter(): readonly string[] {
+    return this._tagFilter;
+  }
+  set tagFilter(value: readonly string[]) {
+    const previous = this._tagFilter;
+    this._tagFilter = this.snapshotIds(Array.isArray(value) ? value : []);
+    this.requestUpdate("tagFilter", previous);
+  }
 
   /** Overrides the default case-insensitive name/owner/tag substring match. Receives the already
    *  trimmed, lowercased search text, mirroring `<lr-thread-list>`'s identical `filter` contract. */
@@ -196,9 +243,13 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     query: string
   ) => boolean;
 
+  /** Controlled sortable column key. */
   @property({ attribute: "sort-key" }) sortKey: LibraryDocumentSortKey = "name";
-  @property({ attribute: "sort-direction" })
-  sortDirection: DocumentLibrarySortDirection = "ascending";
+  /** Controlled canonical sort direction shared with `<lr-table>`. */
+  @property({ attribute: "sort-dir" }) sortDir: TableSortDirection = "asc";
+
+  /** Controlled search query applied to document names, owners, and tags. */
+  @property({ attribute: "search-term" }) searchTerm = "";
 
   @property({ type: Boolean, reflect: true }) loading = false;
 
@@ -206,7 +257,6 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
    *  `documentLibraryLabel`. */
   @property() label = "";
 
-  @state() private searchText = "";
   private announcementSink?: AnnouncementSink;
   private isMounting = true;
 
@@ -239,16 +289,27 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     });
   }
 
+  private snapshotDocuments(documents: readonly LibraryDocument[]): readonly LibraryDocument[] {
+    const snapshot = documents.map((document) => {
+      const updatedAt = document.updatedAt instanceof Date ? new Date(document.updatedAt.getTime()) : document.updatedAt;
+      const tags = document.tags === undefined ? undefined : Object.freeze([...document.tags]);
+      return Object.freeze({ ...document, updatedAt, tags });
+    });
+    return Object.freeze(snapshot);
+  }
+
+  private snapshotIds(ids: Iterable<string>): readonly string[] {
+    return Object.freeze([...new Set(ids)]);
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (
       (changed.has("documents") || changed.has("selectedIds")) &&
       this.selectedIds.length > 0
     ) {
-      const existing = new Set(this.documents.map((doc) => doc.id));
-      const normalized = [
-        ...new Set(this.selectedIds.filter((id) => existing.has(id))),
-      ];
+      const existing = new Set(this._documents.map((doc) => doc.id));
+      const normalized = this.snapshotIds(this.selectedIds.filter((id) => existing.has(id)));
       if (
         normalized.length !== this.selectedIds.length ||
         normalized.some((id, index) => id !== this.selectedIds[index])
@@ -261,11 +322,9 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
       this.tagFilter.length > 0
     ) {
       const availableTags = new Set(
-        this.documents.flatMap((document) => document.tags ?? [])
+        this._documents.flatMap((document) => document.tags ?? [])
       );
-      const normalized = [
-        ...new Set(this.tagFilter.filter((tag) => availableTags.has(tag))),
-      ];
+      const normalized = this.snapshotIds(this.tagFilter.filter((tag) => availableTags.has(tag)));
       if (
         normalized.length !== this.tagFilter.length ||
         normalized.some((tag, index) => tag !== this.tagFilter[index])
@@ -323,7 +382,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     b: LibraryDocument
   ): number => {
     const locale = this.effectiveLocale;
-    const dir = this.sortDirection === "ascending" ? 1 : -1;
+    const dir = this.sortDir === "asc" ? 1 : -1;
     let result = 0;
     switch (this.sortKey) {
       case "name":
@@ -355,11 +414,11 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   /** The current search+tag-facet-filtered, sorted view of `documents`. */
   private get visibleDocuments(): LibraryDocument[] {
-    const query = this.searchText
+    const query = this.searchTerm
       .trim()
       .toLocaleLowerCase(this.effectiveLocale);
     const matchFn = this.filter ?? this.defaultFilter;
-    const filtered = this.documents.filter(
+    const filtered = this._documents.filter(
       (document) =>
         (query === "" || matchFn(document, query)) &&
         this.matchesTagFilter(document)
@@ -372,50 +431,84 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
    *  non-empty. */
   private get allTags(): string[] {
     const tags = new Set<string>();
-    for (const document of this.documents)
+    for (const document of this._documents)
       for (const tag of document.tags ?? []) tags.add(tag);
     return [...tags].sort((a, b) => a.localeCompare(b, this.effectiveLocale));
   }
 
   private emitFilterChange(): void {
-    this.emit("lr-filter-change", {
-      text: this.searchText,
-      tags: this.tagFilter,
-      matchCount: this.visibleDocuments.length,
-    });
+    const tags = Object.freeze([...this.tagFilter]);
+    this.emit(
+      "lr-filter-change",
+      Object.freeze({ searchTerm: this.searchTerm, tags, matchCount: this.visibleDocuments.length })
+    );
   }
 
   private onSearchInput = (event: CustomEvent<{ value: string }>): void => {
     event.stopPropagation();
-    this.searchText = event.detail.value;
+    this.searchTerm = event.detail.value;
     this.emitFilterChange();
   };
 
   private onTagFilterChange = (event: Event): void => {
     event.stopPropagation();
     const combobox = event.target as LyraCombobox;
-    this.tagFilter = Array.isArray(combobox.value) ? [...combobox.value] : [];
+    this.tagFilter = Array.isArray(combobox.value) ? combobox.value : [];
     this.emitFilterChange();
   };
 
-  private onSort = (key: LibraryDocumentSortKey): void => {
-    if (this.sortKey === key) {
-      this.sortDirection =
-        this.sortDirection === "ascending" ? "descending" : "ascending";
-    } else {
-      this.sortKey = key;
-      this.sortDirection = "ascending";
+  private isSortKey(value: string): value is LibraryDocumentSortKey {
+    return value === "name" || value === "version" || value === "owner" || value === "freshness" || value === "updatedAt";
+  }
+
+  private onTableSortRequest = (event: CustomEvent<TableSortRequestDetail>): void => {
+    event.stopPropagation();
+    if (!this.isSortKey(event.detail.sortKey)) {
+      event.preventDefault();
+      return;
     }
-    this.emit("lr-sort", { key: this.sortKey, direction: this.sortDirection });
+    const detail = Object.freeze({
+      phase: "request",
+      sortKey: event.detail.sortKey,
+      sortDir: event.detail.sortDir,
+    } as const);
+    if (this.emit("lr-sort-request", detail, { cancelable: true }).defaultPrevented) event.preventDefault();
+  };
+
+  private onTableSortCommit = (event: CustomEvent<TableSortCommitDetail>): void => {
+    event.stopPropagation();
+    if (!this.isSortKey(event.detail.sortKey)) return;
+    this.sortKey = event.detail.sortKey;
+    this.sortDir = event.detail.sortDir;
+    this.emit(
+      "lr-sort",
+      Object.freeze({ phase: "commit", sortKey: this.sortKey, sortDir: this.sortDir } as const)
+    );
+  };
+
+  private stopOwnedEvent = (event: Event): void => {
+    event.stopPropagation();
+  };
+
+  /** Row activation opens a document; checkbox controls own selection. Keep the composed table in
+   * multiple-selection semantics for truthful `aria-selected`, but contain and roll back its
+   * click-anywhere selection behavior at this wrapper boundary. */
+  private onTableSelectionChange = (event: CustomEvent): void => {
+    event.stopPropagation();
+    const table = event.currentTarget as HTMLElement & {
+      selectedKeys: ReadonlySet<string | number>;
+    };
+    table.selectedKeys = new Set(this.selectedIds);
   };
 
   private openDocument(document: LibraryDocument): void {
-    this.emit("lr-open", { id: document.id });
+    this.emit("lr-open", Object.freeze({ id: document.id }));
   }
 
   private setSelected(ids: Iterable<string>): void {
-    this.selectedIds = [...new Set(ids)];
-    this.emit("lr-selection-change", { ids: this.selectedIds });
+    this.selectedIds = [...ids];
+    const eventIds = Object.freeze([...this.selectedIds]);
+    this.emit("lr-selection-change", Object.freeze({ ids: eventIds }));
   }
 
   private toggleSelection(document: LibraryDocument, checked: boolean): void {
@@ -460,6 +553,9 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
       .checked=${allSelected}
       .indeterminate=${someSelected}
       aria-label=${this.localize("documentLibrarySelectAll")}
+      @input=${this.stopOwnedEvent}
+      @lr-input=${this.stopOwnedEvent}
+      @change=${this.stopOwnedEvent}
       @lr-change=${(event: CustomEvent<{ checked: boolean }>) => {
         event.stopPropagation();
         this.toggleSelectAll(event.detail.checked, visible);
@@ -473,6 +569,9 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
       aria-label=${this.localize("documentLibrarySelectDocument", undefined, {
         name: document.name,
       })}
+      @input=${this.stopOwnedEvent}
+      @lr-input=${this.stopOwnedEvent}
+      @change=${this.stopOwnedEvent}
       @lr-change=${(event: CustomEvent<{ checked: boolean }>) => {
         event.stopPropagation();
         this.toggleSelection(document, event.detail.checked);
@@ -589,7 +688,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     const visible = this.visibleDocuments;
     const tags = this.allTags;
     const emptyHeading =
-      this.documents.length === 0
+      this._documents.length === 0
         ? this.localize("documentLibraryEmptyHeading")
         : this.localize("documentLibraryNoMatchesHeading");
 
@@ -599,10 +698,13 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           <lr-input
             part="search"
             type="search"
-            .value=${this.searchText}
+            .value=${this.searchTerm}
             placeholder=${this.localize("documentLibrarySearchPlaceholder")}
             aria-label=${this.localize("documentLibrarySearchPlaceholder")}
+            @input=${this.stopOwnedEvent}
+            @change=${this.stopOwnedEvent}
             @lr-input=${this.onSearchInput}
+            @lr-change=${this.stopOwnedEvent}
           ></lr-input>
           ${tags.length > 0
             ? html`<lr-combobox
@@ -611,7 +713,10 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
                 .value=${this.tagFilter}
                 placeholder=${this.localize("documentLibraryFilterByTag")}
                 aria-label=${this.localize("documentLibraryFilterByTag")}
+                @input=${this.stopOwnedEvent}
+                @lr-input=${this.stopOwnedEvent}
                 @change=${this.onTagFilterChange}
+                @lr-change=${this.stopOwnedEvent}
               >
                 ${tags.map(
                   (tag) => html`<lr-option value=${tag}>${tag}</lr-option>`
@@ -639,15 +744,16 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           .rows=${visible}
           .rowKey=${(document: LibraryDocument) => document.id}
           .selectedKeys=${new Set(this.selectedIds)}
+          selection-mode="multiple"
           .sortKey=${this.sortKey}
-          .sortDir=${this.sortDirection === "ascending" ? "asc" : "desc"}
+          .sortDir=${this.sortDir}
           sort-mode="server"
           ?loading=${this.loading}
           empty-heading=${emptyHeading}
-          @lr-sort=${(event: CustomEvent<{ key: string }>) => {
-            event.stopPropagation();
-            this.onSort(event.detail.key as LibraryDocumentSortKey);
-          }}
+          @lr-sort-request=${this.onTableSortRequest}
+          @lr-sort=${this.onTableSortCommit}
+          @lr-page-change=${this.stopOwnedEvent}
+          @lr-selection-change=${this.onTableSelectionChange}
           @lr-row-click=${(event: CustomEvent<{ row: LibraryDocument }>) => {
             event.stopPropagation();
             this.openDocument(event.detail.row);

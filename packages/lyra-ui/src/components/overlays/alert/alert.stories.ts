@@ -9,6 +9,10 @@ const meta: Meta = {
   tags: ['autodocs'],
   parameters: {
     docs: {
+      description: {
+        component:
+          'A closed-by-default inline alert whose host serializes `role="alert"` for SSR/no-JS output; an explicitly authored alternate role remains authoritative.',
+      },
       source: {
         type: 'code',
       },

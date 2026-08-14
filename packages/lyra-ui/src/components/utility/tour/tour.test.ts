@@ -1,13 +1,31 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tour.js';
-import type { LyraTour, TourStep } from './tour.js';
+import type { LyraTour, LyraTourStep } from './tour.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { styles } from './tour.styles.js';
 import { registerLyraLocale } from '../../../internal/localization.js';
 
-function makeSteps(count: number, overridesFor?: (index: number) => Partial<TourStep>): TourStep[] {
+class TourComposedFocusTarget extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const first = document.createElement('button');
+    first.id = 'shadow-target-first';
+    first.textContent = 'Shadow first';
+    const slot = document.createElement('slot');
+    const last = document.createElement('button');
+    last.id = 'shadow-target-last';
+    last.textContent = 'Shadow last';
+    root.append(first, slot, last);
+  }
+}
+if (!customElements.get('tour-composed-focus-target')) {
+  customElements.define('tour-composed-focus-target', TourComposedFocusTarget);
+}
+
+function makeSteps(count: number, overridesFor?: (index: number) => Partial<LyraTourStep>): LyraTourStep[] {
   return Array.from({ length: count }, (_, index) => ({
-    id: `step-${index}`,
+    stepId: `step-${index}`,
     target: `#tour-target-${index}`,
     heading: `Heading ${index}`,
     content: `Body ${index}`,
@@ -22,7 +40,7 @@ const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
       media: query,
       addEventListener: () => {},
       removeEventListener: () => {},
-    }) as MediaQueryList) as typeof window.matchMedia;
+    } as MediaQueryList)) as typeof window.matchMedia;
 
 /**
  * A browser's real :hover/:active pseudo-classes track the physical pointer and cannot be forced
@@ -66,7 +84,11 @@ function paintProbe(root: ShadowRoot) {
         (probe) => (probe.style.backgroundColor = `color-mix(in oklab, ${value}, transparent 0%)`),
         (style) => style.backgroundColor,
       ),
-    renderFilter: (value: string) => measure((probe) => (probe.style.filter = value), (style) => style.filter),
+    renderFilter: (value: string) =>
+      measure(
+        (probe) => (probe.style.filter = value),
+        (style) => style.filter,
+      ),
   };
 }
 
@@ -74,8 +96,7 @@ function channelDistance(left: string, right: string): number {
   // Keep scientific-notation channels intact. Firefox serializes a near-zero Oklab channel as
   // `5.96046e-8`; splitting that into `5.96046` and `-8` makes the exponent dominate the distance
   // and can invert an otherwise-obvious deeper pressed fill.
-  const channels = (color: string) =>
-    (color.match(/[-+]?(?:\d*\.?\d+)(?:e[-+]?\d+)?/gi) ?? []).map(Number);
+  const channels = (color: string) => (color.match(/[-+]?(?:\d*\.?\d+)(?:e[-+]?\d+)?/gi) ?? []).map(Number);
   const a = channels(left);
   const b = channels(right);
   return Math.hypot(...a.map((value, index) => value - (b[index] ?? 0)));
@@ -110,7 +131,15 @@ function hitDescriptor(el: Element | null): string {
 }
 
 function press(target: EventTarget, key: string, extra: KeyboardEventInit = {}): void {
-  target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true, ...extra }));
+  target.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+      ...extra,
+    }),
+  );
 }
 
 async function waitFor<T>(read: () => T, until: (v: T) => boolean, timeoutMs = 2000): Promise<T> {
@@ -133,9 +162,9 @@ describe('lr-tour', () => {
     )) as HTMLDivElement;
     const tour = el.querySelector('lr-tour') as LyraTour;
     expect(tour.open).to.be.false;
-    expect((tour.shadowRoot!.querySelector('[part="backdrop"]')) == null).to.be.true;
-    expect((tour.shadowRoot!.querySelector('[part="spotlight"]')) == null).to.be.true;
-    expect((tour.shadowRoot!.querySelector('[part="popover"]')) == null).to.be.true;
+    expect(tour.shadowRoot!.querySelector('[part="backdrop"]') == null).to.be.true;
+    expect(tour.shadowRoot!.querySelector('[part="spotlight"]') == null).to.be.true;
+    expect(tour.shadowRoot!.querySelector('[part="popover"]') == null).to.be.true;
   });
 
   it('start() opens at the given index (default 0), sets open, and fires lr-tour-start', async () => {
@@ -201,7 +230,13 @@ describe('lr-tour', () => {
 
     let missing = false;
     tour.addEventListener('lr-tour-target-missing', () => (missing = true));
-    tour.steps = [{ ...makeSteps(1)[0]!, heading: 'Replacement', target: '#missing-replacement' }];
+    tour.steps = [
+      {
+        ...makeSteps(1)[0]!,
+        heading: 'Replacement',
+        target: '#missing-replacement',
+      },
+    ];
     await tour.updateComplete;
     expect(tour.activeIndex).to.equal(0);
     expect(tour.shadowRoot!.querySelector('[part="heading"]')?.textContent).to.equal('Replacement');
@@ -213,7 +248,7 @@ describe('lr-tour', () => {
     expect(tour.shadowRoot!.querySelectorAll('[part="popover"]').length).to.equal(0);
   });
 
-  it('never mutates the steps array across next()/back()/goToStep()', async () => {
+  it('owns a frozen step snapshot and never mutates caller data across navigation', async () => {
     const original = makeSteps(3);
     const snapshot = JSON.parse(JSON.stringify(original));
     const el = (await fixture(
@@ -224,6 +259,16 @@ describe('lr-tour', () => {
     )) as HTMLDivElement;
     const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
+    expect(tour.steps).to.not.equal(original);
+    expect(Object.isFrozen(tour.steps)).to.equal(true);
+    expect(Object.isFrozen(tour.steps[0])).to.equal(true);
+
+    original.push({
+      stepId: 'late-caller-mutation',
+      target: '#late-caller-mutation',
+      heading: 'Late caller mutation',
+    });
+    expect(tour.steps.length).to.equal(3);
 
     tour.next();
     await tour.updateComplete;
@@ -232,7 +277,6 @@ describe('lr-tour', () => {
     tour.goToStep(2);
     await tour.updateComplete;
 
-    expect(tour.steps).to.equal(original);
     expect(JSON.parse(JSON.stringify(tour.steps))).to.deep.equal(snapshot);
   });
 
@@ -261,6 +305,33 @@ describe('lr-tour', () => {
     await tour.updateComplete;
     expect(tour.activeIndex).to.equal(2);
     expect(tour.getAttribute('active-index')).to.equal('2');
+  });
+
+  it('keeps duplicate business ids unambiguous by keying each step occurrence on its public index', async () => {
+    const steps = makeSteps(2).map((step) => ({ ...step, stepId: 'duplicate' }));
+    const el = (await fixture(html`
+      <div>
+        <lr-tour .steps=${steps} open></lr-tour>
+        ${targetButtons(2)}
+      </div>
+    `)) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+    const firstPanel = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+    firstPanel.dataset.occurrenceProbe = 'first';
+
+    const changed = oneEvent(tour, 'lr-tour-step-change');
+    tour.next();
+    const event = await changed;
+    await tour.updateComplete;
+
+    const secondPanel = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+    expect(secondPanel.dataset.occurrenceProbe).to.equal(undefined);
+    expect(Object.isFrozen(event.detail)).to.equal(true);
+    expect(Object.isFrozen(event.detail.step)).to.equal(true);
+    expect(event.detail.index).to.equal(1);
+    expect(event.detail.previousIndex).to.equal(0);
+    expect(event.detail.step.stepId).to.equal('duplicate');
   });
 
   it('normalizes an out-of-range/NaN activeIndex set directly (bypassing goToStep) to [0, steps.length - 1]', async () => {
@@ -299,7 +370,10 @@ describe('lr-tour', () => {
     tour.start();
     await tour.updateComplete;
     const cutout = () => tour.shadowRoot!.querySelector('[part="backdrop"] .cutout') as SVGRectElement;
-    await waitFor(() => cutout().getAttribute('width'), (v) => v !== null && v !== '0');
+    await waitFor(
+      () => cutout().getAttribute('width'),
+      (v) => v !== null && v !== '0',
+    );
 
     const rect = targetButton.getBoundingClientRect();
     // Default spotlight padding is 4px -- an invalid `spotlight-padding` must fall back to it
@@ -425,18 +499,18 @@ describe('lr-tour', () => {
 
     const started = oneEvent(tour, 'lr-tour-start');
     tour.start(1.9);
-    expect((await started as CustomEvent<{ index: number }>).detail.index).to.equal(1);
+    expect(((await started) as CustomEvent<{ index: number }>).detail.index).to.equal(1);
     expect(tour.activeIndex).to.equal(1);
     await tour.updateComplete;
 
     const changed = oneEvent(tour, 'lr-tour-step-change');
     tour.goToStep(2.8);
-    expect((await changed as CustomEvent<{ index: number }>).detail.index).to.equal(2);
+    expect(((await changed) as CustomEvent<{ index: number }>).detail.index).to.equal(2);
     expect(tour.activeIndex).to.equal(2);
 
     const fallback = oneEvent(tour, 'lr-tour-step-change');
     tour.goToStep(Number.POSITIVE_INFINITY);
-    expect((await fallback as CustomEvent<{ index: number }>).detail.index).to.equal(0);
+    expect(((await fallback) as CustomEvent<{ index: number }>).detail.index).to.equal(0);
     expect(tour.activeIndex).to.equal(0);
   });
 
@@ -550,11 +624,20 @@ describe('lr-tour', () => {
     const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
 
-    const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    const tab = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      bubbles: true,
+      cancelable: true,
+    });
     document.dispatchEvent(tab);
     expect(focusedDescriptor()).to.not.include('tour-target-0');
 
-    const shiftTab = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
+    const shiftTab = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
     document.dispatchEvent(shiftTab);
     expect(focusedDescriptor()).to.not.include('tour-target-0');
   });
@@ -563,10 +646,7 @@ describe('lr-tour', () => {
     const el = (await fixture(
       html`<div>
         <lr-tour .steps=${makeSteps(1)}></lr-tour>
-        <button
-          id="tour-target-0"
-          style="position:fixed; top:200px; left:200px; width:100px; height:40px;"
-        >
+        <button id="tour-target-0" style="position:fixed; top:200px; left:200px; width:100px; height:40px;">
           target 0
         </button>
       </div>`,
@@ -597,17 +677,17 @@ describe('lr-tour', () => {
     expect(hitDescriptor(hit)).to.not.equal(hitDescriptor(targetButton));
 
     targetButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(clicked, "a direct dispatch bypasses hit-testing, so this only proves the fixture button's own listener works").to.be.true;
+    expect(
+      clicked,
+      "a direct dispatch bypasses hit-testing, so this only proves the fixture button's own listener works",
+    ).to.be.true;
   });
 
   it('step.interactiveTarget restores real pointer/click reachability to the live target', async () => {
     const el = (await fixture(
       html`<div>
         <lr-tour .steps=${makeSteps(1, () => ({ interactiveTarget: true }))}></lr-tour>
-        <button
-          id="tour-target-0"
-          style="position:fixed; top:200px; left:200px; width:100px; height:40px;"
-        >
+        <button id="tour-target-0" style="position:fixed; top:200px; left:200px; width:100px; height:40px;">
           target 0
         </button>
       </div>`,
@@ -674,9 +754,7 @@ describe('lr-tour', () => {
     await tour.updateComplete;
 
     expect(document.activeElement?.id).to.equal(target.id);
-    expect(tour.shadowRoot!.querySelector('[part="heading"]')?.textContent).to.equal(
-      'Updated heading',
-    );
+    expect(tour.shadowRoot!.querySelector('[part="heading"]')?.textContent).to.equal('Updated heading');
   });
 
   it('returns focus to the panel when a same-index steps replacement changes or removes the interactive target', async () => {
@@ -725,11 +803,20 @@ describe('lr-tour', () => {
     press(next, 'Tab');
     expect(document.activeElement?.id).to.equal(first.id);
 
-    const internalTab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    const internalTab = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      bubbles: true,
+      cancelable: true,
+    });
     first.dispatchEvent(internalTab);
     expect(internalTab.defaultPrevented).to.be.false;
 
-    const boundaryTab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    const boundaryTab = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      bubbles: true,
+      cancelable: true,
+    });
+    last.focus();
     last.dispatchEvent(boundaryTab);
     expect(boundaryTab.defaultPrevented).to.be.true;
     expect((tour.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('skip-button');
@@ -740,14 +827,49 @@ describe('lr-tour', () => {
     expect(document.activeElement?.id).to.equal(last.id);
   });
 
+  it('bounds Tab across nested and forwarded target controls using their live availability', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(1, () => ({ interactiveTarget: true }))} open></lr-tour>
+        <tour-composed-focus-target id="tour-target-0">
+          <button id="forwarded-target-control">Forwarded</button>
+          <button id="inert-target-control" inert>Inert</button>
+        </tour-composed-focus-target>
+        <button id="unrelated-page-control">Unrelated</button>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    const target = el.querySelector('tour-composed-focus-target') as TourComposedFocusTarget;
+    const first = target.shadowRoot!.querySelector('#shadow-target-first') as HTMLButtonElement;
+    const last = target.shadowRoot!.querySelector('#shadow-target-last') as HTMLButtonElement;
+    const forwarded = target.querySelector('#forwarded-target-control') as HTMLButtonElement;
+    const unrelated = el.querySelector('#unrelated-page-control') as HTMLButtonElement;
+    await tour.updateComplete;
+
+    const panelLast = tour.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
+    panelLast.focus();
+    press(panelLast, 'Tab');
+    expect(focusedDescriptor()).to.include('shadow-target-first');
+
+    last.disabled = true;
+    forwarded.focus();
+    press(forwarded, 'Tab');
+    expect((tour.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('skip-button');
+
+    first.focus();
+    press(first, 'Tab', { shiftKey: true });
+    expect((tour.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('next-button');
+
+    unrelated.focus();
+    press(unrelated, 'Tab');
+    expect((tour.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('skip-button');
+  });
+
   it('tracks the target rect after a resize, updating the mask cutout and spotlight ring geometry', async () => {
     const el = (await fixture(
       html`<div>
         <lr-tour .steps=${makeSteps(1)}></lr-tour>
-        <button
-          id="tour-target-0"
-          style="position:fixed; top:100px; left:100px; width:50px; height:30px;"
-        >
+        <button id="tour-target-0" style="position:fixed; top:100px; left:100px; width:50px; height:30px;">
           target 0
         </button>
       </div>`,
@@ -760,12 +882,19 @@ describe('lr-tour', () => {
     const cutout = () => tour.shadowRoot!.querySelector('[part="backdrop"] .cutout') as SVGRectElement;
     const spotlight = () => tour.shadowRoot!.querySelector('[part="spotlight"]') as HTMLElement;
 
-    await waitFor(() => cutout().getAttribute('width'), (v) => v !== '0');
+    await waitFor(
+      () => cutout().getAttribute('width'),
+      (v) => v !== '0',
+    );
     const initialWidth = cutout().getAttribute('width');
     expect(spotlight().style.width).to.not.equal('');
 
     targetButton.style.width = '150px';
-    await waitFor(() => cutout().getAttribute('width'), (v) => v !== initialWidth, 3000);
+    await waitFor(
+      () => cutout().getAttribute('width'),
+      (v) => v !== initialWidth,
+      3000,
+    );
     expect(Number(cutout().getAttribute('width'))).to.be.greaterThan(Number(initialWidth));
     expect(parseFloat(spotlight().style.width)).to.be.greaterThan(0);
   });
@@ -774,10 +903,7 @@ describe('lr-tour', () => {
     const el = (await fixture(
       html`<div>
         <lr-tour .steps=${makeSteps(1)} placement="bottom" distance="4" spotlight-padding="4"></lr-tour>
-        <button
-          id="tour-target-0"
-          style="position:fixed; top:300px; left:300px; width:80px; height:30px;"
-        >
+        <button id="tour-target-0" style="position:fixed; top:300px; left:300px; width:80px; height:30px;">
           target 0
         </button>
       </div>`,
@@ -787,8 +913,14 @@ describe('lr-tour', () => {
     await tour.updateComplete;
     const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
     const cutout = () => tour.shadowRoot!.querySelector('[part="backdrop"] .cutout') as SVGRectElement;
-    await waitFor(() => popover.style.top, (value) => value !== '');
-    await waitFor(() => cutout().getAttribute('x'), (value) => value !== null);
+    await waitFor(
+      () => popover.style.top,
+      (value) => value !== '',
+    );
+    await waitFor(
+      () => cutout().getAttribute('x'),
+      (value) => value !== null,
+    );
     const initialTop = popover.style.top;
     const initialX = cutout().getAttribute('x');
 
@@ -796,8 +928,14 @@ describe('lr-tour', () => {
     tour.distance = 36;
     tour.spotlightPadding = 20;
     await tour.updateComplete;
-    await waitFor(() => cutout().getAttribute('x'), (value) => value !== initialX);
-    await waitFor(() => popover.style.top, (value) => value !== initialTop);
+    await waitFor(
+      () => cutout().getAttribute('x'),
+      (value) => value !== initialX,
+    );
+    await waitFor(
+      () => popover.style.top,
+      (value) => value !== initialTop,
+    );
     expect(Number(cutout().getAttribute('x'))).to.be.closeTo(280, 0.5);
   });
 
@@ -808,14 +946,16 @@ describe('lr-tour', () => {
     let calls = 0;
     try {
       const tour = (await fixture(html`<lr-tour></lr-tour>`)) as LyraTour;
-      tour.steps = [{
-        id: 'resolver',
-        target: () => {
-          calls += 1;
-          return target;
+      tour.steps = [
+        {
+          stepId: 'resolver',
+          target: () => {
+            calls += 1;
+            return target;
+          },
+          heading: 'Resolver',
         },
-        heading: 'Resolver',
-      }];
+      ];
       tour.start();
       await tour.updateComplete;
       expect(calls).to.equal(1);
@@ -825,7 +965,7 @@ describe('lr-tour', () => {
     }
   });
 
-  it('resolves a foreign-realm target and uses that target window\'s reduced-motion preference', async () => {
+  it("resolves a foreign-realm target and uses that target window's reduced-motion preference", async () => {
     const frame = document.createElement('iframe');
     document.body.append(frame);
     const ownerDocument = frame.contentDocument!;
@@ -850,7 +990,7 @@ describe('lr-tour', () => {
       target.scrollIntoView = ((options?: ScrollIntoViewOptions) => {
         behavior = options?.behavior;
       }) as typeof target.scrollIntoView;
-      tour.steps = [{ id: 'foreign', target, heading: 'Foreign target' }];
+      tour.steps = [{ stepId: 'foreign', target, heading: 'Foreign target' }];
       await tour.updateComplete;
       tour.start();
       await tour.updateComplete;
@@ -872,7 +1012,7 @@ describe('lr-tour', () => {
 
   it('normalizes invalid, throwing, and detached targets to the missing-target path', async () => {
     const detached = document.createElement('button');
-    const targets: TourStep['target'][] = [
+    const targets: LyraTourStep['target'][] = [
       '[',
       () => {
         throw new Error('resolver failed');
@@ -881,7 +1021,7 @@ describe('lr-tour', () => {
     ];
     for (const target of targets) {
       const tour = (await fixture(html`<lr-tour></lr-tour>`)) as LyraTour;
-      tour.steps = [{ id: 'bad-target', target, heading: 'Missing' }];
+      tour.steps = [{ stepId: 'bad-target', target, heading: 'Missing' }];
       let missing = 0;
       tour.addEventListener('lr-tour-target-missing', () => missing++);
       tour.start();
@@ -900,7 +1040,7 @@ describe('lr-tour', () => {
     frame.contentDocument!.body.append(target);
     try {
       const tour = (await fixture(html`<lr-tour></lr-tour>`)) as LyraTour;
-      tour.steps = [{ id: 'cross-document', target: () => target, heading: 'Missing' }];
+      tour.steps = [{ stepId: 'cross-document', target: () => target, heading: 'Missing' }];
       const missing = oneEvent(tour, 'lr-tour-target-missing');
       tour.start();
       await missing;
@@ -919,13 +1059,16 @@ describe('lr-tour', () => {
     const listener = oneEvent(el, 'lr-tour-target-missing');
     el.start();
     const event = await listener;
-    expect((event as CustomEvent).detail).to.deep.equal({ index: 0, step: el.steps[0] });
+    expect((event as CustomEvent).detail).to.deep.equal({
+      index: 0,
+      step: el.steps[0],
+    });
 
     await el.updateComplete;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
-    expect((popover) != null).to.equal(true);
+    expect(popover != null).to.equal(true);
     expect(popover.hasAttribute('data-unanchored')).to.be.true;
-    expect((el.shadowRoot!.querySelector('[part="backdrop"] .cutout')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="backdrop"] .cutout') == null).to.be.true;
   });
 
   it('showProgress=false hides the progress wrapper; the default renders "Step X of Y" text that tracks activeIndex', async () => {
@@ -945,7 +1088,7 @@ describe('lr-tour', () => {
 
     tour.showProgress = false;
     await tour.updateComplete;
-    expect((tour.shadowRoot!.querySelector('[part="progress"]')) == null).to.be.true;
+    expect(tour.shadowRoot!.querySelector('[part="progress"]') == null).to.be.true;
   });
 
   it('formats both progress numbers with the effective locale', async () => {
@@ -980,27 +1123,27 @@ describe('lr-tour', () => {
   it('the Previous button is disabled (present) on the first step; hidePrevious removes it entirely', async () => {
     const el = (await fixture(
       html`<div>
-        <lr-tour
-          .steps=${makeSteps(3, (index) => (index === 1 ? { hidePrevious: true } : {}))}
-          open
-        ></lr-tour>
+        <lr-tour .steps=${makeSteps(3, (index) => (index === 1 ? { hidePrevious: true } : {}))} open></lr-tour>
         ${targetButtons(3)}
       </div>`,
     )) as HTMLDivElement;
     const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     const firstPrevious = tour.shadowRoot!.querySelector('[part="previous-button"]') as HTMLButtonElement;
-    expect((firstPrevious) != null).to.equal(true);
+    expect(firstPrevious != null).to.equal(true);
     expect(firstPrevious.disabled).to.be.true;
 
     tour.next();
     await tour.updateComplete;
-    expect((tour.shadowRoot!.querySelector('[part="previous-button"]')) == null, 'hidePrevious removes the control entirely').to.be.true;
+    expect(
+      tour.shadowRoot!.querySelector('[part="previous-button"]') == null,
+      'hidePrevious removes the control entirely',
+    ).to.be.true;
 
     tour.next();
     await tour.updateComplete;
     const thirdPrevious = tour.shadowRoot!.querySelector('[part="previous-button"]') as HTMLButtonElement;
-    expect((thirdPrevious) != null).to.equal(true);
+    expect(thirdPrevious != null).to.equal(true);
     expect(thirdPrevious.disabled).to.be.false;
   });
 
@@ -1072,7 +1215,10 @@ describe('lr-tour', () => {
     const el = (await fixture(
       html`<div>
         <lr-tour .steps=${makeSteps(2)} open>
-          <select id="rich-select"><option>One</option><option>Two</option></select>
+          <select id="rich-select">
+            <option>One</option>
+            <option>Two</option>
+          </select>
           <input id="rich-range" type="range" />
           <div id="rich-slider" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="10"></div>
         </lr-tour>
@@ -1117,8 +1263,8 @@ describe('lr-tour', () => {
       ownerDocument.body.append(firstTarget, secondTarget);
       tour.append(input);
       tour.steps = [
-        { id: 'first', target: '#foreign-target-0', heading: 'First' },
-        { id: 'second', target: '#foreign-target-1', heading: 'Second' },
+        { stepId: 'first', target: '#foreign-target-0', heading: 'First' },
+        { stepId: 'second', target: '#foreign-target-1', heading: 'Second' },
       ];
       await tour.updateComplete;
       tour.start();
@@ -1174,7 +1320,9 @@ describe('lr-tour', () => {
     });
 
     it('a registered locale supplies tourStepOf without an explicit .strings override', async () => {
-      registerLyraLocale('fr-test-tour', { tourStepOf: 'Étape {current} sur {total}' });
+      registerLyraLocale('fr-test-tour', {
+        tourStepOf: 'Étape {current} sur {total}',
+      });
       const el = (await fixture(
         html`<div>
           <lr-tour .steps=${makeSteps(2)} open locale="fr-test-tour"></lr-tour>
@@ -1202,13 +1350,61 @@ describe('lr-tour', () => {
     const tour = el.querySelector('lr-tour') as LyraTour;
     tour.start();
     await tour.updateComplete;
-    expect((document.activeElement) !== (trigger)).to.equal(true);
+    expect(document.activeElement !== trigger).to.equal(true);
 
     tour.end('api');
     await tour.updateComplete;
-    expect((document.activeElement) === (trigger)).to.equal(true);
+    expect(document.activeElement === trigger).to.equal(true);
 
     trigger.remove();
+  });
+
+  it('preserves the original focus-return target across modal/interactive step transitions', async () => {
+    const trigger = document.createElement('button');
+    trigger.textContent = 'open';
+    document.body.append(trigger);
+    trigger.focus();
+
+    try {
+      const el = (await fixture(
+        html`<div>
+          <lr-tour
+            .steps=${makeSteps(2, (index) => ({
+              interactiveTarget: index === 1,
+            }))}
+          ></lr-tour>
+          ${targetButtons(2)}
+        </div>`,
+      )) as HTMLDivElement;
+      const tour = el.querySelector('lr-tour') as LyraTour;
+      tour.start();
+      await tour.updateComplete;
+
+      const veto = (event: Event): void => event.preventDefault();
+      tour.addEventListener('lr-tour-step-change', veto);
+      tour.next();
+      await tour.updateComplete;
+      expect(tour.activeIndex).to.equal(0);
+      expect(document.activeElement === trigger).to.be.false;
+      tour.removeEventListener('lr-tour-step-change', veto);
+
+      tour.next();
+      await tour.updateComplete;
+      expect(tour.activeIndex).to.equal(1);
+      expect(document.activeElement === trigger).to.be.false;
+
+      (el.querySelector('#tour-target-1') as HTMLButtonElement).focus();
+      tour.back();
+      await tour.updateComplete;
+      expect(tour.activeIndex).to.equal(0);
+      expect(document.activeElement === trigger).to.be.false;
+
+      tour.end('api');
+      await tour.updateComplete;
+      expect(document.activeElement === trigger).to.be.true;
+    } finally {
+      trigger.remove();
+    }
   });
 
   describe('external removal while open', () => {
@@ -1284,6 +1480,20 @@ describe('lr-tour', () => {
     expect(popover.hasAttribute('aria-labelledby')).to.be.false;
   });
 
+  it('gives a whitespace-heading dialog a localized fallback name with rich content and a missing target', async () => {
+    const tour = (await fixture(html`
+      <lr-tour .steps=${[{ stepId: 'blank-heading', target: '#missing-target', heading: '  \n  ' }]} open>
+        <p><strong>Rich body</strong> remains descriptive content.</p>
+      </lr-tour>
+    `)) as LyraTour;
+    await tour.updateComplete;
+    const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+    expect(popover.getAttribute('aria-label')).to.equal('Step 1 of 1');
+    expect(popover.hasAttribute('aria-labelledby')).to.be.false;
+    expect(popover.getAttribute('aria-describedby')).to.include('tour-body');
+    await expect(tour).to.be.accessible();
+  });
+
   it('mixes the Next button fill toward the shared partner on hover and further again on press', async () => {
     const el = (await fixture(
       html`<div>
@@ -1325,22 +1535,29 @@ describe('lr-tour', () => {
     const root = tour.shadowRoot!;
     const probes = paintProbe(root);
 
-    const resting = probes.render(declaredBackground(root, "[part='previous-button'], [part='skip-button'], [part='next-button']"));
+    const resting = probes.render(
+      declaredBackground(root, "[part='previous-button'], [part='skip-button'], [part='next-button']"),
+    );
     const hovered = probes.render(
-      declaredBackground(root, ":where([part='previous-button']):hover:where(:not(:disabled)), :where([part='skip-button']):hover"),
+      declaredBackground(
+        root,
+        ":where([part='previous-button']):hover:where(:not(:disabled)), :where([part='skip-button']):hover",
+      ),
     );
     const pressed = probes.render(
-      declaredBackground(root, ":where([part='previous-button']):active:where(:not(:disabled)), :where([part='skip-button']):active"),
+      declaredBackground(
+        root,
+        ":where([part='previous-button']):active:where(:not(:disabled)), :where([part='skip-button']):active",
+      ),
     );
 
     expect(hovered).to.not.equal(resting);
     expect(pressed).to.not.equal(hovered);
     const pressedDistance = channelDistance(pressed, resting);
     const hoverDistance = channelDistance(hovered, resting);
-    expect(
-      pressedDistance,
-      `resting=${resting}; hovered=${hovered}; pressed=${pressed}`,
-    ).to.be.greaterThan(hoverDistance);
+    expect(pressedDistance, `resting=${resting}; hovered=${hovered}; pressed=${pressed}`).to.be.greaterThan(
+      hoverDistance,
+    );
   });
 
   it('wraps the internal previous-button/skip-button hover rule in :where() so a consumer ::part(...):hover override wins without !important', async () => {
@@ -1395,18 +1612,17 @@ describe('lr-tour', () => {
     // background toward each other and reports a false "serious" violation. Finishing the
     // animation outright matches the idiom overlay.test.ts already uses for this same kind of
     // reveal animation.
-    tour.shadowRoot!.querySelector('[part="popover"]')?.getAnimations().forEach((animation) => animation.finish());
+    tour
+      .shadowRoot!.querySelector('[part="popover"]')
+      ?.getAnimations()
+      .forEach((animation) => animation.finish());
     await expect(tour).to.be.accessible();
   });
 
   it('is accessible with showProgress disabled and a hidden Previous control', async () => {
     const el = (await fixture(
       html`<div>
-        <lr-tour
-          .steps=${makeSteps(2, () => ({ hidePrevious: true }))}
-          open
-          .showProgress=${false}
-        ></lr-tour>
+        <lr-tour .steps=${makeSteps(2, () => ({ hidePrevious: true }))} open .showProgress=${false}></lr-tour>
         ${targetButtons(2)}
       </div>`,
     )) as HTMLDivElement;
@@ -1414,7 +1630,10 @@ describe('lr-tour', () => {
     await tour.updateComplete;
     // See the identical comment above -- `[part='popover']`'s reveal keyframes play from first
     // paint even though `open` is already set in the fixture.
-    tour.shadowRoot!.querySelector('[part="popover"]')?.getAnimations().forEach((animation) => animation.finish());
+    tour
+      .shadowRoot!.querySelector('[part="popover"]')
+      ?.getAnimations()
+      .forEach((animation) => animation.finish());
     await expect(tour).to.be.accessible();
   });
 
@@ -1500,9 +1719,7 @@ describe('lr-tour', () => {
     try {
       const el = (await fixture(
         html`<div>
-          <lr-tour
-            .steps=${makeSteps(3, (index) => (index === 1 ? { target: '#does-not-exist' } : {}))}
-          ></lr-tour>
+          <lr-tour .steps=${makeSteps(3, (index) => (index === 1 ? { target: '#does-not-exist' } : {}))}></lr-tour>
           ${targetButtons(3)}
         </div>`,
       )) as HTMLDivElement;
@@ -1523,7 +1740,12 @@ describe('lr-tour', () => {
     } finally {
       console.warn = originalWarn;
     }
-    expect(calls.flat().map(String).some((message) => message.includes('scheduled an update'))).to.be.false;
+    expect(
+      calls
+        .flat()
+        .map(String)
+        .some((message) => message.includes('scheduled an update')),
+    ).to.be.false;
   });
 });
 
@@ -1568,7 +1790,11 @@ it('does not lock scroll or hijack Escape when opened while detached', async () 
   // document and installs a global Escape handler with nothing visible on screen.
   expect(document.documentElement.style.overflow, 'the page must stay scrollable').to.equal(overflowBefore);
 
-  const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+  const escape = new KeyboardEvent('keydown', {
+    key: 'Escape',
+    bubbles: true,
+    cancelable: true,
+  });
   document.dispatchEvent(escape);
   expect(escape.defaultPrevented, 'Escape must not be swallowed by a detached tour').to.be.false;
 });

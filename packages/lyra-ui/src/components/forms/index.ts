@@ -1,3 +1,4 @@
+export type { LyraFormValidator, LyraFormValidatorResult } from './form-validator.js';
 export * from './button/button.js';
 export * from './checkbox/checkbox.js';
 export * from './checkbox-group/checkbox-group.js';

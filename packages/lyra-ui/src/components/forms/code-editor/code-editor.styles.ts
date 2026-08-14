@@ -25,7 +25,10 @@ export const styles = css`
      native horizontal scrollbar when wrap="off"; its max-content track lets the frame own both
      axes instead. */
   [part='editor'] { display: grid; grid-template-columns: auto max-content; overflow: auto; min-block-size: var(--lr-code-editor-min-block-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); background: var(--lr-color-surface); }
-  [part='gutter'] { padding: var(--lr-code-editor-padding) var(--lr-space-xs); border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border); color: var(--lr-color-text-quiet); text-align: end; white-space: pre; user-select: none; font: inherit; font-size: var(--lr-code-editor-font-size); line-height: var(--lr-code-editor-line-height); }
+  [part='gutter'] { position: relative; padding: var(--lr-code-editor-padding) var(--lr-space-xs); border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border); color: var(--lr-color-text-quiet); text-align: end; white-space: pre; user-select: none; font: inherit; font-size: var(--lr-code-editor-font-size); line-height: var(--lr-code-editor-line-height); }
+  .gutter-measure { visibility: hidden; }
+  .gutter-window { position: absolute; inset-block-start: var(--lr-code-editor-padding); inset-inline: var(--lr-space-xs); display: block; }
+  .gutter-line { position: absolute; inset-inline: 0; }
   /* --lr-code-editor-tab-size is the single channel for the tab width: the class writes that token
      inline on this part only when tabSize was explicitly assigned, so an untouched tabSize leaves a
      host-level override of the token in charge instead of losing to an inline tab-size

@@ -206,7 +206,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   /** Accessible text generated from flattened default-slot content, excluding named adornments. */
   get defaultLabel(): string {
     if (!('childNodes' in this)) return '';
-    const roots = Array.from(this.childNodes).filter((node) => this.isDefaultLabelNode(node));
+    const roots = Array.from(this.childNodes ?? []).filter((node) => this.isDefaultLabelNode(node));
     // Pickers deliberately project option hosts through a hidden data-source slot. Direct roots
     // remain readable there; composed exposure begins only when a forwarding slot crosses into
     // consumer-owned content.
@@ -469,14 +469,14 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     const hasEnd = this.slotPresence.has('end') || this.slotPresence.has('suffix');
     return html`
       <div part="base">
-        <span part="checked-icon" aria-hidden="true" ?hidden=${!this.selected}>
+        <span part="checked-icon" aria-hidden="true" inert ?hidden=${!this.selected}>
           ${checkmarkGlyph()}
         </span>
-        <span part="start prefix" aria-hidden="true" ?hidden=${!hasStart}>
+        <span part="start prefix" aria-hidden="true" inert ?hidden=${!hasStart}>
           <slot name="start"></slot><slot name="prefix"></slot>
         </span>
         <span part="label"><slot @slotchange=${this.handleLabelSlotChange}></slot></span>
-        <span part="end suffix" aria-hidden="true" ?hidden=${!hasEnd}>
+        <span part="end suffix" aria-hidden="true" inert ?hidden=${!hasEnd}>
           <slot name="end"></slot><slot name="suffix"></slot>
         </span>
       </div>

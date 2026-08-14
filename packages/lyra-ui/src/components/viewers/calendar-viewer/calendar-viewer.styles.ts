@@ -12,5 +12,4 @@ export const styles = css`
   [part='event-description'] { margin: 0; color: var(--lr-color-text); font-size: var(--lr-font-size-md-sm); line-height: var(--lr-line-height-normal); white-space: pre-wrap; overflow-wrap: anywhere; }
   .empty-note { margin: 0; padding: var(--lr-space-m); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); }
   [part='error'] { margin: 0; padding: var(--lr-space-l); color: var(--lr-color-danger); font-size: var(--lr-font-size-md-sm); text-align: center; }
-  [part='spinner'] { display: flex; justify-content: center; padding: var(--lr-space-l); }
 `;

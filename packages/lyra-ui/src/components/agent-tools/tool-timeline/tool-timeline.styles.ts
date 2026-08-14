@@ -153,4 +153,10 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     white-space: pre-wrap;
   }
+
+  [part='limit'] {
+    margin-block: var(--lr-space-s) 0;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
 `;

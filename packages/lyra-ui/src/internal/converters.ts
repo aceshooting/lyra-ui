@@ -1,5 +1,37 @@
 import type { ComplexAttributeConverter } from 'lit';
 
+/** A closed-string-set converter that can also normalize direct JavaScript property writes. */
+export interface LiteralSetConverter<T extends string> extends ComplexAttributeConverter<T> {
+  /** Returns `value` when it belongs to the declared set, otherwise the configured fallback. */
+  readonly normalize: (value: unknown) => T;
+}
+
+/**
+ * Creates one fail-safe contract for a reflected closed string property.
+ *
+ * Lit applies converters to attribute reads and reflection, but not to direct property writes.
+ * Components with a custom accessor therefore use the same object's `normalize()` method in the
+ * setter, keeping markup and untyped JavaScript writes on one authoritative path.
+ */
+export function literalSetConverter<const T extends string>(
+  values: readonly T[],
+  fallback: T,
+): LiteralSetConverter<T> {
+  const allowed = new Set<T>(values);
+  if (allowed.size !== values.length || !allowed.has(fallback)) {
+    throw new TypeError('literalSetConverter requires unique values that include its fallback');
+  }
+
+  const normalize = (value: unknown): T =>
+    typeof value === 'string' && allowed.has(value as T) ? (value as T) : fallback;
+
+  return Object.freeze({
+    fromAttribute: normalize,
+    toAttribute: normalize,
+    normalize,
+  });
+}
+
 const trueUnlessLiteralFalse = (value: string | null): boolean => value !== 'false';
 
 /** Reflects non-empty strings while keeping the empty/default value absent from markup. */

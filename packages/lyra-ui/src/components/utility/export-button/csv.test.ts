@@ -37,10 +37,15 @@ it('guards against a leading tab or CR being read as formula syntax by some spre
   expect(escapeCsvField('\rcmd')).to.equal('"\'\rcmd"');
 });
 
-it('guards leading minus after coercion, including numeric values', () => {
+it('guards leading minus in strings while preserving finite numeric cell types', () => {
   expect(escapeCsvField('-5')).to.equal("'-5");
   expect(escapeCsvField('-$5.00')).to.equal("'-$5.00");
-  expect(escapeCsvField(-5)).to.equal("'-5");
+  expect(escapeCsvField(-5)).to.equal('-5');
+  expect(escapeCsvField(12.5)).to.equal('12.5');
+  expect(escapeCsvField(0)).to.equal('0');
+  expect(escapeCsvField('-12.5')).to.equal("'-12.5");
+  expect(escapeCsvField(Number.NaN)).to.equal('NaN');
+  expect(escapeCsvField(Number.POSITIVE_INFINITY)).to.equal('Infinity');
 });
 
 it('prefixes a leading line-feed the same as a leading carriage-return', () => {

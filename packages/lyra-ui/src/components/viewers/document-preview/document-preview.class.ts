@@ -316,7 +316,8 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.announcements.adopted();
   }
 

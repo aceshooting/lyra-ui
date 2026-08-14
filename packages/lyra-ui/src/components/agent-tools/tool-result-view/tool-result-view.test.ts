@@ -26,6 +26,21 @@ it('defaults to fallback="json" and falls back to lr-json-viewer when nothing is
   expect(base(el).querySelector('lr-json-viewer')).to.exist;
 });
 
+it('normalizes unsupported fallback property and attribute values to the reflected json default', async () => {
+  const el = (await fixture(html`
+    <lr-tool-result-view tool-name="unregistered" fallback="html" .result=${'plain'}></lr-tool-result-view>
+  `)) as LyraToolResultView;
+  expect(el.fallback).to.equal('json');
+  expect(el.getAttribute('fallback')).to.equal('json');
+  expect(base(el).querySelector('lr-json-viewer')).to.exist;
+
+  el.fallback = 'markdown' as never;
+  await el.updateComplete;
+  expect(el.fallback).to.equal('json');
+  expect(el.getAttribute('fallback')).to.equal('json');
+  expect(base(el).querySelector('lr-json-viewer')).to.exist;
+});
+
 it('resets renderer-owned status when falling back to a different unsupported tool', async () => {
   registerToolRenderer('denied', {
     render: (_result, _args, context) => {

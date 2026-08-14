@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { GEMSTONES } from '../../../theme/gemstones-data.js';
-import type { LyraColorPickerSize, LyraColorPickerFormat } from './color-picker.js';
+import type { LyraColorPickerFormat } from './color-picker.js';
 import './color-picker.js';
 
 // A color picker's `value` is a color *literal* by definition -- `var(--lr-color-brand)` is not a
@@ -45,8 +45,8 @@ export const ReversiblePointerPreview: StoryObj = {
 };
 
 /** `inline` removes the popup trigger and keeps the complete picker panel in normal flow.
- * `no-format-toggle` is the Shoelace spelling of `without-format-toggle`; `default-value` supplies
- * the reset value. */
+ * `no-format-toggle` is the Shoelace spelling of `without-format-toggle`; the canonical `value`
+ * attribute supplies the reset value. */
 export const InlineCompatibility: StoryObj = {
   name: 'Inline and compatibility aliases',
   render: () => html`
@@ -55,7 +55,7 @@ export const InlineCompatibility: StoryObj = {
       with-label
       with-hint
       no-format-toggle
-      default-value=${ACCENT}
+      value=${ACCENT}
       swatches=${[ACCENT, SUCCESS, DANGER].join('; ')}
       style="--grid-width: 20rem; --slider-height: 0.875rem;"
     >
@@ -150,7 +150,7 @@ export const Placement: StoryObj = {
 /** `size` spans the same `2xs`–`xl` scale as `lr-input`, default `m`. */
 export const Sizes: StoryObj = {
   render: () => {
-    const sizes: LyraColorPickerSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
+    const sizes = ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'] as const;
     return html`
       <div style="display: flex; flex-direction: column; gap: 1rem">
         ${sizes.map((size) => html`<lr-color-picker size=${size} label=${`Size "${size}"`}></lr-color-picker>`)}

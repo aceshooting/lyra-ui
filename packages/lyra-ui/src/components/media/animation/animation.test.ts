@@ -1,5 +1,5 @@
 import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
-import type { LyraAnimation } from './animation.js';
+import { animations, getAnimationNames, getEasingNames, type LyraAnimation } from './animation.js';
 import { setAnimation, setDefaultAnimation } from '../../../utilities/animation-registry.js';
 import './animation.js';
 
@@ -227,11 +227,9 @@ it('is accessible with a slotted animation target', async () => {
   await expect(el).to.be.accessible();
 });
 
-// Regression test: `Element.animate()` throws a synchronous TypeError for a non-finite/negative
-// `duration`/`delay`/`endDelay`, and for a negative/non-finite `iterationStart` -- this used to
-// crash createAnimation() (called from updated() on nearly every property change) instead of
-// clamping to a sane value.
-it('does not throw and still produces a real, clamped animation when timing properties are non-finite/out-of-range', async () => {
+// Regression test: non-finite WAAPI timing values must fail closed, while signed finite delays
+// remain valid Web Animations values instead of being treated like timer durations.
+it('preserves signed finite WAAPI delays while normalizing only invalid timing values', async () => {
   const el = (await fixture(html`
     <lr-animation
       name="fade-in"
@@ -253,10 +251,23 @@ it('does not throw and still produces a real, clamped animation when timing prop
 
   const timing = animations[0].effect!.getComputedTiming();
   expect(timing.duration).to.equal(1000); // NaN -> falls back to the constructed default
-  expect(timing.delay).to.equal(0); // -50 clamped to the non-negative floor
-  expect(timing.endDelay).to.equal(0); // Infinity clamped (endDelay has no Infinity sentinel)
+  expect(timing.delay).to.equal(-50); // signed delay is valid WAAPI input
+  expect(timing.endDelay).to.equal(0); // Infinity is not a valid endDelay
   expect(timing.iterationStart).to.equal(0); // -3 clamped to the non-negative floor
   expect(timing.iterations).to.equal(1); // NaN -> falls back to 1, not the Infinity default
+});
+
+it('does not impose the setTimeout ceiling on finite WAAPI durations or end delays', async () => {
+  const el = (await fixture(html`
+    <lr-animation name="fade-in" duration="3000000000" end-delay="-250" iterations="1">
+      <p>content</p>
+    </lr-animation>
+  `)) as LyraAnimation;
+  await el.updateComplete;
+
+  const timing = el.querySelector('p')!.getAnimations()[0].effect!.getComputedTiming();
+  expect(timing.duration).to.equal(3_000_000_000);
+  expect(timing.endDelay).to.equal(-250);
 });
 
 it('keeps the documented Infinity default for iterations intact (a legitimate WAAPI sentinel)', async () => {
@@ -403,7 +414,30 @@ it('normalizes invalid WAAPI direction, fill, and easing values without rejectin
   }
 });
 
-it('falls back to safe IntersectionObserver options when rootMargin or threshold is invalid', async () => {
+it('owns a bounded readonly threshold snapshot and retains only finite values from 0 through 1', () => {
+  const el = document.createElement('lr-animation') as LyraAnimation;
+  const authored = [0.25, 0.75];
+  el.threshold = authored;
+  authored[0] = 1;
+  authored.push(0.5);
+  expect(el.threshold).to.deep.equal([0.25, 0.75]);
+  expect(Object.isFrozen(el.threshold)).to.equal(true);
+
+  const mixed = [0.5, Number.NaN, -1, 2, 0.25] as unknown[];
+  Object.defineProperty(mixed, 0, {
+    configurable: true,
+    get(): never { throw new Error('hostile threshold entry'); },
+  });
+  el.threshold = mixed as readonly number[];
+  expect(el.threshold).to.deep.equal([0.25]);
+
+  el.threshold = Array.from({ length: 1_005 }, (_, index) => index / 1_005);
+  expect((el.threshold as readonly number[]).length).to.equal(1_000);
+  el.threshold = Number.POSITIVE_INFINITY;
+  expect(el.threshold).to.equal(0);
+});
+
+it('falls back to safe IntersectionObserver options when rootMargin is invalid and normalizes thresholds', async () => {
   const io = stubIntersectionObserver();
   try {
     const el = document.createElement('lr-animation') as LyraAnimation;
@@ -411,6 +445,7 @@ it('falls back to safe IntersectionObserver options when rootMargin or threshold
     el.playOnVisible = true;
     el.rootMargin = 'not-a-margin';
     el.threshold = [-1, 2];
+    expect(el.threshold).to.equal(0);
     const target = document.createElement('p');
     target.textContent = 'content';
     el.append(target);
@@ -829,6 +864,78 @@ it('resolves named presets through the public registry while retaining token tim
     expect(native.effect!.getComputedTiming().duration).to.equal(120);
   } finally {
     cleanup();
+  }
+});
+
+it('publishes the complete mirrored animation/easing catalogs and resolves every animation name', async () => {
+  const names = getAnimationNames();
+  const easings = getEasingNames();
+  expect(names.length).to.equal(98);
+  expect(new Set(names).size).to.equal(names.length);
+  expect(names).to.include('fadeIn');
+  expect(names).to.include('jackInTheBox');
+  expect(names).to.include('zoomOutUp');
+  expect(easings.length).to.equal(29);
+  expect(easings).to.include('easeInOutBack');
+  expect(Object.keys(animations).filter((name) => name !== 'easings')).to.deep.equal(names);
+  expect(animations.fadeIn.length).to.be.greaterThan(0);
+  expect(animations.easings.easeInOutBack).to.match(/^cubic-bezier\(/);
+  expect(Object.isFrozen(animations)).to.be.true;
+  expect(Object.isFrozen(animations.fadeIn)).to.be.true;
+  expect(Object.isFrozen(animations.fadeIn[0])).to.be.true;
+
+  const el = (await fixture(html`
+    <lr-animation duration="1" iterations="1"><span>target</span></lr-animation>
+  `)) as LyraAnimation;
+  const target = el.querySelector('span')!;
+  for (const name of names) {
+    el.name = name;
+    await el.updateComplete;
+    expect(target.getAnimations().length, name).to.equal(1);
+  }
+});
+
+it('resolves mirrored named easings before validating raw CSS timing functions', async () => {
+  const el = (await fixture(html`
+    <lr-animation name="fadeIn" easing="easeInOutBack" duration="100" iterations="1">
+      <span>target</span>
+    </lr-animation>
+  `)) as LyraAnimation;
+  await el.updateComplete;
+  const easing = el.querySelector('span')!.getAnimations()[0].effect!.getComputedTiming().easing;
+  expect(easing).to.match(/^cubic-bezier\(/);
+});
+
+it('animates owner-realm SVG and MathML elements from the default slot', async () => {
+  const svgEl = (await fixture(html`
+    <lr-animation name="fadeIn" iterations="1"><svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"></circle></svg></lr-animation>
+  `)) as LyraAnimation;
+  await svgEl.updateComplete;
+  expect(svgEl.querySelector('svg')!.getAnimations().length).to.equal(1);
+
+  const mathEl = (await fixture(html`
+    <lr-animation name="fadeIn" iterations="1"><math><mi>x</mi></math></lr-animation>
+  `)) as LyraAnimation;
+  await mathEl.updateComplete;
+  expect(mathEl.querySelector('math')!.getAnimations().length).to.equal(1);
+});
+
+it('keeps hostile direct keyframe records inert without rejecting updateComplete', async () => {
+  const hostile = Object.defineProperty({}, 'opacity', {
+    enumerable: true,
+    get(): never {
+      throw new Error('hostile keyframe getter');
+    },
+  });
+  const el = document.createElement('lr-animation') as LyraAnimation;
+  el.keyframes = [hostile as Keyframe];
+  el.append(document.createElement('span'));
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    expect(el.querySelector('span')!.getAnimations().length).to.equal(1);
+  } finally {
+    el.remove();
   }
 });
 

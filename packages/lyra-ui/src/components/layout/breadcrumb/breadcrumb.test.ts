@@ -4,11 +4,17 @@ import "./breadcrumb-item.js";
 import type { LyraBreadcrumb } from "./breadcrumb.js";
 
 class BreadcrumbSeparatorTestControl extends HTMLElement {
+  static connectedCount = 0;
+  static disconnectedCount = 0;
+
   constructor() {
     super();
     const root = this.attachShadow({ mode: "open" });
     root.innerHTML = '<button type="button">Decorative custom action</button>';
   }
+
+  connectedCallback(): void { BreadcrumbSeparatorTestControl.connectedCount += 1; }
+  disconnectedCallback(): void { BreadcrumbSeparatorTestControl.disconnectedCount += 1; }
 }
 
 if (!customElements.get("breadcrumb-separator-test-control")) {
@@ -101,6 +107,31 @@ it("distributes the breadcrumb-level separator slot to every item", async () => 
   );
   const secondSlot = items[1]!.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="separator"]')!;
   expect(secondSlot.assignedNodes({ flatten: true }).map((node) => node.textContent).join("" )).to.equal("→");
+});
+
+it("updates shared separator clones in place when source content mutates", async () => {
+  BreadcrumbSeparatorTestControl.connectedCount = 0;
+  BreadcrumbSeparatorTestControl.disconnectedCount = 0;
+  const el = await fixture(html`<lr-breadcrumb>
+    <breadcrumb-separator-test-control slot="separator" data-tone="old"><span>Old</span></breadcrumb-separator-test-control>
+    <lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>
+    <lr-breadcrumb-item current>Reports</lr-breadcrumb-item>
+  </lr-breadcrumb>`);
+  const source = el.querySelector<BreadcrumbSeparatorTestControl>(':scope > [slot="separator"]')!;
+  const second = el.querySelectorAll("lr-breadcrumb-item")[1]!;
+  await waitUntil(() => second.querySelector('[slot="separator"]') !== null, "initial clone missing");
+  const clone = second.querySelector<BreadcrumbSeparatorTestControl>('[slot="separator"]')!;
+  const initialConnections = BreadcrumbSeparatorTestControl.connectedCount;
+
+  source.setAttribute("data-tone", "new");
+  source.querySelector("span")!.textContent = "New";
+  await waitUntil(
+    () => clone.getAttribute("data-tone") === "new" && clone.querySelector("span")?.textContent === "New",
+    "live clone did not refresh",
+  );
+  expect(second.querySelector('[slot="separator"]') === clone).to.equal(true);
+  expect(BreadcrumbSeparatorTestControl.connectedCount).to.equal(initialConnections);
+  expect(BreadcrumbSeparatorTestControl.disconnectedCount).to.equal(0);
 });
 
 it("keeps generated focusable shared separators decorative and strips cloned identities", async () => {
@@ -240,6 +271,24 @@ it("renders separators as explicitly decorative content", async () => {
   expect(secondSeparator.hasAttribute("inert")).to.equal(true);
   expect(getComputedStyle(firstSeparator).display).to.equal("none");
   expect(getComputedStyle(secondSeparator).display).to.not.equal("none");
+});
+
+it("hides the first owned item's separator regardless of auxiliary sibling order", async () => {
+  const el = await fixture(html`<lr-breadcrumb>
+    <span slot="separator">/</span>
+    <span>Ignored auxiliary content</span>
+    <lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>
+    <lr-breadcrumb-item current>Reports</lr-breadcrumb-item>
+  </lr-breadcrumb>`);
+  const [first, second] = [...el.querySelectorAll("lr-breadcrumb-item")];
+  await waitUntil(() => first!.hasAttribute("data-lr-breadcrumb-first"), "first-item state missing");
+  expect(getComputedStyle(first!.shadowRoot!.querySelector('[part="separator"]')!).display).to.equal("none");
+  expect(getComputedStyle(second!.shadowRoot!.querySelector('[part="separator"]')!).display).to.not.equal("none");
+
+  el.append(first!);
+  await waitUntil(() => second!.hasAttribute("data-lr-breadcrumb-first"), "first-item state did not follow reorder");
+  expect(getComputedStyle(second!.shadowRoot!.querySelector('[part="separator"]')!).display).to.equal("none");
+  expect(getComputedStyle(first!.shadowRoot!.querySelector('[part="separator"]')!).display).to.not.equal("none");
 });
 
 it("contains a long localized RTL trail at an exact 320px allocation", async () => {

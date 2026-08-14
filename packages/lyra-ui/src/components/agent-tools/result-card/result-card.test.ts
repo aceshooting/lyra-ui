@@ -2,31 +2,31 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './result-card.js';
 import type { LyraResultCard } from './result-card.js';
 
-it('hides the header when there is no title and no actions content', async () => {
+it('hides the header when there is no heading and no actions content', async () => {
   const el = (await fixture(html`<lr-result-card>body</lr-result-card>`)) as LyraResultCard;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   expect(header.hasAttribute('hidden')).to.be.true;
 });
 
-it('shows the header and renders the title text when title is set', async () => {
-  const el = (await fixture(html`<lr-result-card title="HTTP request">body</lr-result-card>`)) as LyraResultCard;
+it('shows the header and renders the heading text when heading is set', async () => {
+  const el = (await fixture(html`<lr-result-card heading="HTTP request">body</lr-result-card>`)) as LyraResultCard;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
-  const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
+  const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
   expect(header.hasAttribute('hidden')).to.be.false;
-  expect(title.textContent).to.equal('HTTP request');
+  expect(heading.textContent).to.equal('HTTP request');
 });
 
-it('shows the header (with no title rendered) when only actions content is present', async () => {
+it('shows the header (with no heading rendered) when only actions content is present', async () => {
   const el = (await fixture(
     html`<lr-result-card><button slot="actions">Copy</button>body</lr-result-card>`,
   )) as LyraResultCard;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   expect(header.hasAttribute('hidden')).to.be.false;
-  expect((el.shadowRoot!.querySelector('[part="title"]')) == null).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="heading"]')) == null).to.be.true;
 });
 
 it('hides the actions wrapper when empty, shows it once slotted, reacting to slotchange', async () => {
-  const el = (await fixture(html`<lr-result-card title="x">body</lr-result-card>`)) as LyraResultCard;
+  const el = (await fixture(html`<lr-result-card heading="x">body</lr-result-card>`)) as LyraResultCard;
   const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
   const actionsSlot = el.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement;
   expect(actions.hasAttribute('hidden')).to.be.true;
@@ -63,7 +63,7 @@ it('uses with-actions as an explicit first-render presence hint and restores the
   expect(actions.hasAttribute('hidden')).to.be.true;
 });
 
-it('keeps the header hidden->visible transition working for actions added after mount, with no title set', async () => {
+it('keeps the header hidden->visible transition working for actions added after mount, with no heading set', async () => {
   const el = (await fixture(html`<lr-result-card>body</lr-result-card>`)) as LyraResultCard;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   const actionsSlot = el.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement;
@@ -78,56 +78,59 @@ it('keeps the header hidden->visible transition working for actions added after 
   expect(header.hasAttribute('hidden'), 'header appears once actions is populated').to.be.false;
 });
 
-it('reacts to a title being set after initial mount, updating both the header visibility and the title text', async () => {
+it('reacts to a heading being set after initial mount, updating both header visibility and text', async () => {
   const el = (await fixture(html`<lr-result-card>body</lr-result-card>`)) as LyraResultCard;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   expect(header.hasAttribute('hidden'), 'starts untitled, so no header').to.be.true;
-  expect((el.shadowRoot!.querySelector('[part="title"]')) == null, 'no title span while untitled').to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="heading"]')) == null, 'no heading span while untitled').to.be.true;
 
-  el.title = 'Deployment result';
+  el.heading = 'Deployment result';
   await el.updateComplete;
 
-  expect(header.hasAttribute('hidden'), 'header appears once a title is assigned').to.be.false;
-  const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
-  expect(title.textContent).to.equal('Deployment result');
+  expect(header.hasAttribute('hidden'), 'header appears once a heading is assigned').to.be.false;
+  const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+  expect(heading.textContent).to.equal('Deployment result');
 
-  el.title = 'Renamed result';
+  el.heading = 'Renamed result';
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal('Renamed result');
+  expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('Renamed result');
 
-  el.title = '';
+  el.heading = '';
   await el.updateComplete;
 
-  expect(header.hasAttribute('hidden'), 'header hides again once title is cleared').to.be.true;
-  expect((el.shadowRoot!.querySelector('[part="title"]')) == null).to.be.true;
+  expect(header.hasAttribute('hidden'), 'header hides again once heading is cleared').to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="heading"]')) == null).to.be.true;
 });
 
-it('exposes the full title text on the truncating [part="title"] span via its own title attribute, scoped away from the host', async () => {
-  const longTitle =
-    'A very long tool result title that is guaranteed to overflow a narrow fixed-width card and get ellipsis-truncated';
+it('exposes the full heading on its truncating part through a scoped native tooltip', async () => {
+  const longHeading =
+    'A very long tool result heading that is guaranteed to overflow a narrow fixed-width card and get ellipsis-truncated';
   const el = (await fixture(
-    html`<lr-result-card title=${longTitle} style="max-inline-size: 8rem;">body</lr-result-card>`,
+    html`<lr-result-card heading=${longHeading} style="max-inline-size: 8rem;">body</lr-result-card>`,
   )) as LyraResultCard;
-  const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
+  const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
 
-  expect(title.scrollWidth, 'sanity check: the text actually overflows its box').to.be.greaterThan(
-    title.clientWidth,
+  expect(heading.scrollWidth, 'sanity check: the text actually overflows its box').to.be.greaterThan(
+    heading.clientWidth,
   );
-  expect(title.getAttribute('title')).to.equal(longTitle);
+  expect(heading.getAttribute('title')).to.equal(longHeading);
 });
 
-it('strips the redundant host-level title attribute so only the truncating span shows a native tooltip', async () => {
-  const el = (await fixture(html`<lr-result-card title="HTTP request">body</lr-result-card>`)) as LyraResultCard;
-  expect(el.hasAttribute('title')).to.be.false;
-  expect(el.title).to.equal('HTTP request');
-  const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
-  expect(title.getAttribute('title')).to.equal('HTTP request');
+it('keeps the visible heading independent from the native host title tooltip', async () => {
+  const el = (await fixture(html`
+    <lr-result-card heading="HTTP request" title="Native card tooltip">body</lr-result-card>
+  `)) as LyraResultCard;
+  expect(el.getAttribute('title')).to.equal('Native card tooltip');
+  expect(el.title).to.equal('Native card tooltip');
+  expect(el.heading).to.equal('HTTP request');
+  const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+  expect(heading.getAttribute('title')).to.equal('HTTP request');
 
-  el.title = 'Renamed result';
+  el.heading = 'Renamed result';
   await el.updateComplete;
-  expect(el.hasAttribute('title'), 'stays stripped after a later property assignment').to.be.false;
-  expect(el.title).to.equal('Renamed result');
+  expect(el.title).to.equal('Native card tooltip');
+  expect(el.heading).to.equal('Renamed result');
 });
 
 it('always renders the body wrapper around the default slot', async () => {
@@ -137,14 +140,14 @@ it('always renders the body wrapper around the default slot', async () => {
   expect(el.textContent).to.equal('plain body text');
 });
 
-it('is accessible with no title/actions and only plain body content', async () => {
+it('is accessible with no heading/actions and only plain body content', async () => {
   const el = await fixture(html`<lr-result-card>Rows affected: 12</lr-result-card>`);
   await expect(el).to.be.accessible();
 });
 
-it('is accessible with a title, header actions, and populated result-field body', async () => {
+it('is accessible with a heading, header actions, and populated result-field body', async () => {
   const el = await fixture(html`
-    <lr-result-card title="HTTP request">
+    <lr-result-card heading="HTTP request">
       <button slot="actions" aria-label="Copy result">Copy</button>
       <span>Status: 200 OK</span>
     </lr-result-card>
@@ -153,7 +156,7 @@ it('is accessible with a title, header actions, and populated result-field body'
 });
 
 it('defaults to compact=false and frame="card", keeping the border/background/padding', async () => {
-  const el = (await fixture(html`<lr-result-card title="x">body</lr-result-card>`)) as LyraResultCard;
+  const el = (await fixture(html`<lr-result-card heading="x">body</lr-result-card>`)) as LyraResultCard;
   expect(el.compact).to.be.false;
   expect(el.frame).to.equal('card');
   expect(el.hasAttribute('compact')).to.be.false;
@@ -167,7 +170,7 @@ it('defaults to compact=false and frame="card", keeping the border/background/pa
 });
 
 it('reflects compact and tightens the header/body padding, keeping the card border', async () => {
-  const el = (await fixture(html`<lr-result-card compact title="x">body</lr-result-card>`)) as LyraResultCard;
+  const el = (await fixture(html`<lr-result-card compact heading="x">body</lr-result-card>`)) as LyraResultCard;
   expect(el.hasAttribute('compact')).to.be.true;
 
   const header = getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement);
@@ -182,7 +185,7 @@ it('reflects compact and tightens the header/body padding, keeping the card bord
 });
 
 it('lets a consumer retune the compact values through --lr-result-card-compact-* without re-declaring the rule', async () => {
-  const el = (await fixture(html`<lr-result-card compact title="x">body</lr-result-card>`)) as LyraResultCard;
+  const el = (await fixture(html`<lr-result-card compact heading="x">body</lr-result-card>`)) as LyraResultCard;
   el.style.setProperty('--lr-result-card-compact-header-padding', '3px');
   el.style.setProperty('--lr-result-card-compact-body-padding', '5px');
   await el.updateComplete;
@@ -194,13 +197,13 @@ it('lets a consumer retune the compact values through --lr-result-card-compact-*
 
 it('tightens the header/body gap under compact too, not just padding', async () => {
   const normal = (await fixture(
-    html`<lr-result-card title="x"><button slot="actions">Copy</button>body</lr-result-card>`,
+    html`<lr-result-card heading="x"><button slot="actions">Copy</button>body</lr-result-card>`,
   )) as LyraResultCard;
   const normalHeaderGap = getComputedStyle(normal.shadowRoot!.querySelector('[part="header"]') as HTMLElement).gap;
   const normalBodyGap = getComputedStyle(normal.shadowRoot!.querySelector('[part="body"]') as HTMLElement).gap;
 
   const el = (await fixture(
-    html`<lr-result-card compact title="x"><button slot="actions">Copy</button>body</lr-result-card>`,
+    html`<lr-result-card compact heading="x"><button slot="actions">Copy</button>body</lr-result-card>`,
   )) as LyraResultCard;
   const compactHeaderGap = getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).gap;
   const compactBodyGap = getComputedStyle(el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).gap;
@@ -216,7 +219,7 @@ it('tightens the header/body gap under compact too, not just padding', async () 
 
 it('drops the border, background, and radius under frame="plain", without doubling the actions/body padding', async () => {
   const el = (await fixture(
-    html`<lr-result-card frame="plain" title="x">body</lr-result-card>`,
+    html`<lr-result-card frame="plain" heading="x">body</lr-result-card>`,
   )) as LyraResultCard;
   expect(el.getAttribute('frame')).to.equal('plain');
   const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
@@ -229,7 +232,7 @@ it('drops the border, background, and radius under frame="plain", without doubli
 
 it('lets plain win over compact when both are set', async () => {
   const el = (await fixture(
-    html`<lr-result-card compact frame="plain" title="x">body</lr-result-card>`,
+    html`<lr-result-card compact frame="plain" heading="x">body</lr-result-card>`,
   )) as LyraResultCard;
   const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
   expect(base.borderTopWidth).to.equal('0px');
@@ -245,12 +248,12 @@ describe('frame', () => {
   }
 
   it('keeps the card border and background under frame="card" and drops both under frame="plain"', async () => {
-    const card = (await fixture(html`<lr-result-card frame="card" title="x">body</lr-result-card>`)) as LyraResultCard;
+    const card = (await fixture(html`<lr-result-card frame="card" heading="x">body</lr-result-card>`)) as LyraResultCard;
     expect(base(card).borderTopWidth).to.equal('1px');
     expect(base(card).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 
     const plain = (await fixture(
-      html`<lr-result-card frame="plain" title="x">body</lr-result-card>`,
+      html`<lr-result-card frame="plain" heading="x">body</lr-result-card>`,
     )) as LyraResultCard;
     expect(base(plain).borderTopWidth).to.equal('0px');
     expect(base(plain).borderTopLeftRadius).to.equal('0px');
@@ -258,7 +261,7 @@ describe('frame', () => {
   });
 
   it('re-renders the chrome when frame is reassigned as a property', async () => {
-    const el = (await fixture(html`<lr-result-card title="x">body</lr-result-card>`)) as LyraResultCard;
+    const el = (await fixture(html`<lr-result-card heading="x">body</lr-result-card>`)) as LyraResultCard;
     expect(base(el).borderTopWidth).to.equal('1px');
 
     el.frame = 'plain';
@@ -273,7 +276,7 @@ describe('frame', () => {
 
   it('gives the superseded `appearance` attribute no effect at all -- the rename left no alias', async () => {
     const el = (await fixture(
-      html`<lr-result-card appearance="plain" title="x">body</lr-result-card>`,
+      html`<lr-result-card appearance="plain" heading="x">body</lr-result-card>`,
     )) as LyraResultCard;
     expect(el.frame).to.equal('card');
     expect(base(el).borderTopWidth).to.equal('1px');
@@ -283,12 +286,12 @@ describe('frame', () => {
 
 it('is accessible in the populated compact and plain states', async () => {
   const compactEl = (await fixture(
-    html`<lr-result-card compact title="x">body</lr-result-card>`,
+    html`<lr-result-card compact heading="x">body</lr-result-card>`,
   )) as LyraResultCard;
   await expect(compactEl).to.be.accessible();
 
   const plainEl = (await fixture(
-    html`<lr-result-card frame="plain" title="x">body</lr-result-card>`,
+    html`<lr-result-card frame="plain" heading="x">body</lr-result-card>`,
   )) as LyraResultCard;
   await expect(plainEl).to.be.accessible();
 });

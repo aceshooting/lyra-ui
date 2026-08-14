@@ -4,13 +4,53 @@ import './checkbox-group.js'; import '../checkbox/checkbox.js';
 const meta: Meta = { title: 'Checkbox Group', component: 'lr-checkbox-group', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
 export const Default: Story = { render: () => html`<lr-checkbox-group label="Topics" name="topics"><lr-checkbox value="news">News</lr-checkbox><lr-checkbox value="product">Product updates</lr-checkbox></lr-checkbox-group>` };
 
+export const NativeMethods: Story = {
+  name: 'Native method semantics',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`focus()` and `blur()` forward to the first enabled owned checkbox. `click()` has native activation semantics and toggles that checkbox; it is not a focus shorthand. `reportValidity()` validates the aggregate and focuses the first enabled checkbox when the required group is empty.',
+      },
+    },
+  },
+  render: () => {
+    const invoke = (event: Event, method: 'focus' | 'blur' | 'click' | 'reportValidity') => {
+      const demo = (event.currentTarget as HTMLElement).closest<HTMLElement>('[data-native-methods]')!;
+      const group = demo.querySelector('lr-checkbox-group')!;
+      const status = demo.querySelector<HTMLElement>('[role="status"]')!;
+      if (method === 'reportValidity') {
+        status.textContent = `reportValidity() returned ${group.reportValidity()}`;
+      } else {
+        group[method]();
+        status.textContent = `${method}() called; value is ${JSON.stringify(group.value)}`;
+      }
+    };
+    return html`
+      <div data-native-methods style="display:grid;gap:var(--lr-space-m);justify-items:start">
+        <lr-checkbox-group label="Required topics" name="native-topics" required>
+          <lr-checkbox value="unavailable" disabled>Unavailable first option</lr-checkbox>
+          <lr-checkbox value="news">News</lr-checkbox>
+          <lr-checkbox value="product">Product updates</lr-checkbox>
+        </lr-checkbox-group>
+        <div style="display:flex;gap:var(--lr-space-s);flex-wrap:wrap">
+          ${(['focus', 'blur', 'click', 'reportValidity'] as const).map(
+            (method) => html`<button type="button" @click=${(event: Event) => invoke(event, method)}>${method}()</button>`,
+          )}
+        </div>
+        <p role="status">Choose a method.</p>
+      </div>
+    `;
+  },
+};
+
 export const ValueIsReadOnly: Story = {
   name: 'value reflects the children',
   parameters: {
     docs: {
       description: {
         story:
-          '`value` is a read-out of child state, never an input. `sync()` recomputes it from the `<lr-checkbox>` children on every toggle, slot change, blur and form reset — and `connectedCallback()` syncs before the first render — so assigning it (even from a template binding) is discarded and logs a console warning. Preselect by setting `checked` on the children instead, and give each child a distinct `value` so the submitted `FormData` can tell them apart.',
+          '`value` is a defensive readonly snapshot of child state. Direct child checked/value writes update it, FormData and validity in the same task without emitting user events. Preselect by setting `checked` on the children, and give each child a distinct `value` so submitted FormData can tell them apart.',
       },
     },
   },
@@ -18,7 +58,7 @@ export const ValueIsReadOnly: Story = {
     <lr-checkbox-group
       label="Topics"
       name="topics"
-      @lr-change=${(event: CustomEvent<{ value: string[] }>) => {
+      @lr-change=${(event: CustomEvent<{ value: readonly string[] }>) => {
         const output = document.getElementById('checkbox-group-value');
         if (output) output.textContent = JSON.stringify(event.detail.value);
       }}
@@ -67,6 +107,25 @@ export const Sizes: StoryObj = {
       <lr-checkbox-group size="m" name="pick-m" label="Size m"><lr-checkbox value="a">Alpha</lr-checkbox><lr-checkbox value="b">Bravo</lr-checkbox></lr-checkbox-group>
       <lr-checkbox-group size="l" name="pick-l" label="Size l"><lr-checkbox value="a">Alpha</lr-checkbox><lr-checkbox value="b">Bravo</lr-checkbox></lr-checkbox-group>
     </div>
+  `,
+};
+
+export const OptionalSizeAuthority: Story = {
+  name: 'Optional size authority',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'An unset group preserves each authored child tier. Setting size temporarily projects one tier; removing it or moving a child out restores that child’s latest authored size.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-checkbox-group label="Authored child sizes" name="mixed-size">
+      <lr-checkbox value="compact" size="s">Compact</lr-checkbox>
+      <lr-checkbox value="default">Default</lr-checkbox>
+      <lr-checkbox value="large" size="l">Large</lr-checkbox>
+    </lr-checkbox-group>
   `,
 };
 

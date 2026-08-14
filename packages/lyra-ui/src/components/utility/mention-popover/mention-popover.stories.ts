@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './mention-popover.js';
-import type { LyraMentionPopover, MentionItem } from './mention-popover.js';
+import type { LyraMentionItem, LyraMentionPopover, LyraMentionSelectDetail } from './mention-popover.js';
 
 const meta: Meta = {
   title: 'MentionPopover',
@@ -11,17 +11,17 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-const PEOPLE: MentionItem[] = [
-  { id: 'alice', label: 'Alice Johansson', description: 'Product design', icon: '👩‍🎨' },
-  { id: 'bob', label: 'Bob Nakamura', description: 'Backend engineering', icon: '🧑‍💻' },
-  { id: 'carol', label: 'Carol Ibarra', description: 'Solar ops', icon: '🧑‍🔧' },
-  { id: 'dan', label: 'Dan Petrov', description: 'Customer success', icon: '🧑‍💼' },
+const PEOPLE: LyraMentionItem[] = [
+  { suggestionId: 'alice', label: 'Alice Johansson', description: 'Product design', icon: '👩‍🎨' },
+  { suggestionId: 'bob', label: 'Bob Nakamura', description: 'Backend engineering', icon: '🧑‍💻' },
+  { suggestionId: 'carol', label: 'Carol Ibarra', description: 'Solar ops', icon: '🧑‍🔧' },
+  { suggestionId: 'dan', label: 'Dan Petrov', description: 'Customer success', icon: '🧑‍💼' },
 ];
 
-const COMMANDS: MentionItem[] = [
-  { id: 'summarize', label: '/summarize', description: 'Summarize this conversation' },
-  { id: 'explain', label: '/explain', description: 'Explain the last response in more detail' },
-  { id: 'retry', label: '/retry', description: 'Regenerate the last response' },
+const COMMANDS: LyraMentionItem[] = [
+  { suggestionId: 'summarize', label: '/summarize', description: 'Summarize this conversation' },
+  { suggestionId: 'explain', label: '/explain', description: 'Explain the last response in more detail' },
+  { suggestionId: 'retry', label: '/retry', description: 'Regenerate the last response' },
 ];
 
 // This component has no anchor of its own -- place() needs a real element to
@@ -32,7 +32,7 @@ const COMMANDS: MentionItem[] = [
 // detection. See LiveComposerIntegration below for the full, real-textarea version.
 function staticDemo(
   id: string,
-  items: MentionItem[],
+  items: LyraMentionItem[],
   props: Partial<LyraMentionPopover> = {},
   maxWidth = '28rem',
 ) {
@@ -82,7 +82,7 @@ export const NarrowLongContent: Story = {
       'mention-demo-narrow-long',
       [
         {
-          id: 'long',
+          suggestionId: 'long',
           label: 'Avery-With-An-Exceptionally-Long-Unbroken-Display-Name',
           description: 'A-description-without-natural-breakpoints-that-must-not-expand-the-popover-inline-axis',
         },
@@ -127,8 +127,10 @@ function wireDemo(containerId: string): void {
   if (!textarea || !popover) return;
 
   let triggerIndex = -1;
+  let suggestionGeneration = 0;
 
   const closeMention = () => {
+    suggestionGeneration += 1;
     triggerIndex = -1;
     popover.open = false;
     popover.syncActiveDescendant(textarea);
@@ -147,6 +149,7 @@ function wireDemo(containerId: string): void {
       return;
     }
     triggerIndex = caret - match[1].length - 1;
+    suggestionGeneration += 1;
     popover.anchor = textarea;
     popover.query = match[1];
     popover.open = true;
@@ -156,7 +159,13 @@ function wireDemo(containerId: string): void {
   textarea.addEventListener('keydown', (e) => {
     if (popover.open && popover.handleKeyDown(e)) {
       if (!popover.syncActiveDescendant(textarea) && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-        void popover.focusActiveOption();
+        const generation = suggestionGeneration;
+        void popover.focusActiveOption({
+          ownsFocus: () =>
+            generation === suggestionGeneration &&
+            (textarea.ownerDocument.activeElement === textarea ||
+              textarea.ownerDocument.activeElement === popover),
+        });
       }
     }
   });
@@ -167,7 +176,7 @@ function wireDemo(containerId: string): void {
     if (event.relatedTarget !== popover) closeMention();
   });
 
-  popover.addEventListener('lr-mention-select', ((e: CustomEvent<{ id: string; label: string }>) => {
+  popover.addEventListener('lr-mention-select', ((e: CustomEvent<LyraMentionSelectDetail>) => {
     const caret = textarea.selectionStart ?? 0;
     const before = textarea.value.slice(0, triggerIndex);
     const after = textarea.value.slice(caret);

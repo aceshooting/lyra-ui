@@ -24,8 +24,7 @@ export interface LyraSsrClientRenderReason {
 
 /** Runtime readiness reported by {@link diagnoseLyraHydration}. */
 export type LyraHydrationStatus =
-  | 'hydrated'
-  | 'client-rendered'
+  | 'ready'
   | 'unregistered'
   | 'missing-shadow-root'
   | 'update-failed';
@@ -34,6 +33,7 @@ export interface LyraHydrationDiagnostic {
   element: Element;
   tag: string;
   mode: LyraSsrMode;
+  /** Runtime readiness only; the diagnostic does not infer whether server markup was hydrated. */
   status: LyraHydrationStatus;
   error?: unknown;
 }
@@ -225,6 +225,37 @@ function prepareLyraElementForSsr(value: unknown): void {
   }
 }
 
+function collectLyraHosts(root: ParentNode): Element[] {
+  const hosts: Element[] = [];
+  const seenHosts = new Set<Element>();
+  const seenRoots = new Set<ParentNode>();
+  const pendingRoots: ParentNode[] = [root];
+
+  for (let rootIndex = 0; rootIndex < pendingRoots.length; rootIndex += 1) {
+    const currentRoot = pendingRoots[rootIndex]!;
+    if (seenRoots.has(currentRoot)) continue;
+    seenRoots.add(currentRoot);
+
+    const rootLocalName = (currentRoot as ParentNode & { localName?: unknown }).localName;
+    const elements = [
+      ...(typeof rootLocalName === 'string' ? [currentRoot as Element] : []),
+      ...currentRoot.querySelectorAll('*'),
+    ];
+
+    for (const element of elements) {
+      if (getLyraSsrMode(element.localName) !== undefined && !seenHosts.has(element)) {
+        seenHosts.add(element);
+        hosts.push(element);
+      }
+      if (element.shadowRoot && !seenRoots.has(element.shadowRoot)) {
+        pendingRoots.push(element.shadowRoot);
+      }
+    }
+  }
+
+  return hosts;
+}
+
 /**
  * Builds the renderer list expected by `@lit-labs/ssr` without making that server package a
  * browser dependency. Lyra's adapter supplies the inert light-DOM/style methods omitted by Lit's
@@ -248,7 +279,10 @@ export function lyraSsrElementRenderers<T extends LyraLitElementRendererConstruc
   return [LyraSsrFallbackRenderer, LyraRenderAndHydrateRenderer as unknown as T] as const;
 }
 
-/** Awaits registered Lyra hosts' current updates and reports their runtime readiness. */
+/**
+ * Awaits registered Lyra hosts' current updates and reports their runtime readiness.
+ * The search includes the supplied root and descendants of every reachable open shadow root.
+ */
 export async function diagnoseLyraHydration(
   root?: ParentNode,
 ): Promise<readonly LyraHydrationDiagnostic[]> {
@@ -266,11 +300,7 @@ export async function diagnoseLyraHydration(
       ? customElements
       : undefined);
 
-  const rootLocalName = (scope as ParentNode & { localName?: unknown }).localName;
-  const candidates = [
-    ...(typeof rootLocalName === 'string' ? [scope as Element] : []),
-    ...scope.querySelectorAll('*'),
-  ].filter((element) => getLyraSsrMode(element.localName) !== undefined);
+  const candidates = collectLyraHosts(scope);
 
   return Promise.all(
     candidates.map(async (element): Promise<LyraHydrationDiagnostic> => {
@@ -294,7 +324,7 @@ export async function diagnoseLyraHydration(
         element,
         tag: tagName,
         mode,
-        status: mode === 'render-and-hydrate' ? 'hydrated' : 'client-rendered',
+        status: 'ready',
       };
     }),
   );

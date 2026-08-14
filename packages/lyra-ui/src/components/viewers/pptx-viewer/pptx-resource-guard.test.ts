@@ -4,21 +4,28 @@ import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 import { assertPptxArchiveWithinLimits } from './pptx-resource-guard.js';
 
 function zipWithDeclaredSizes(sizes: number[]): ArrayBuffer {
-  const localSize = sizes.reduce((sum, size) => sum + 30 + size, 0);
-  const directorySize = sizes.length * 46;
+  const names = sizes.map((_size, index) => `e${index}`);
+  const localSize = sizes.reduce((sum, size, index) => sum + 30 + names[index]!.length + size, 0);
+  const directorySize = sizes.reduce((sum, _size, index) => sum + 46 + names[index]!.length, 0);
   const source = new ArrayBuffer(localSize + directorySize + 22);
   const view = new DataView(source);
   let localOffset = 0;
+  let centralOffset = localSize;
   sizes.forEach((size, index) => {
+    const name = names[index]!;
     view.setUint32(localOffset, 0x04034b50, true);
     view.setUint32(localOffset + 18, size, true);
     view.setUint32(localOffset + 22, size, true);
-    const centralOffset = localSize + index * 46;
+    view.setUint16(localOffset + 26, name.length, true);
+    for (let byte = 0; byte < name.length; byte++) view.setUint8(localOffset + 30 + byte, name.charCodeAt(byte));
     view.setUint32(centralOffset, 0x02014b50, true);
     view.setUint32(centralOffset + 20, size, true);
     view.setUint32(centralOffset + 24, size, true);
+    view.setUint16(centralOffset + 28, name.length, true);
     view.setUint32(centralOffset + 42, localOffset, true);
-    localOffset += 30 + size;
+    for (let byte = 0; byte < name.length; byte++) view.setUint8(centralOffset + 46 + byte, name.charCodeAt(byte));
+    localOffset += 30 + name.length + size;
+    centralOffset += 46 + name.length;
   });
   const endOffset = localSize + directorySize;
   view.setUint32(endOffset, 0x06054b50, true);

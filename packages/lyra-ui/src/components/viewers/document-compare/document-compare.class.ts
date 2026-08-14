@@ -7,11 +7,15 @@ import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import type { ShikiLanguageInput } from '../../conversation/code-block/code-loader.js';
 import type { LyraDiffViewLayout } from '../../utility/diff-view/diff-view.class.js';
+import type {
+  LyraClipboardWriteFailure,
+  LyraClipboardWriteSuccess,
+} from '../../../internal/clipboard.js';
 import { styles } from './document-compare.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentCompareLabel, LYRA_DEFAULT_documentCompareNewVersion, LYRA_DEFAULT_documentCompareNoVersion, LYRA_DEFAULT_documentCompareOldVersion, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentCompareLabel, LYRA_DEFAULT_documentCompareNewVersion, LYRA_DEFAULT_documentCompareNoVersion, LYRA_DEFAULT_documentCompareOldVersion, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -30,8 +34,12 @@ export type LyraDocumentCompareView = 'diff' | 'side-by-side';
  *  converter). */
 
 export interface LyraDocumentCompareEventMap {
-  /** Bubbles unchanged from the internal `<lr-diff-view>` while `view="diff"`. `detail: { text }` — the full unified-diff text. */
-  'lr-copy': CustomEvent<{ text: string }>;
+  /** Bubbles unchanged from the internal `<lr-diff-view>` after the clipboard write fulfills. */
+  'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
+  /** Bubbles unchanged from the internal `<lr-diff-view>` when clipboard writing fails. */
+  'lr-error': CustomEvent<undefined>;
+  /** Detailed clipboard failure bubbled unchanged from the internal `<lr-diff-view>`. */
+  'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   /** Bubbles unchanged from whichever pane's `<lr-document-preview>` it originated in, while `view="side-by-side"`. `detail: { id }`. Activating a highlight that shares its `id` with a highlight on the *other* version also scrolls that pane to the matching highlight -- see the class doc's "Synchronized anchors" section. */
   'lr-highlight-activate': CustomEvent<{ id: string }>;
   /** Bubbles unchanged from whichever pane's `<lr-document-preview>` it originated in. `detail: { src, filename }`. */
@@ -55,6 +63,17 @@ export interface DocumentCompareVersion extends DocumentRef {
   text?: string;
   /** Region highlights rendered over this version's own `<lr-document-preview>` pane (image format only -- see that component's own scope). An id shared between `oldVersion.highlights` and `newVersion.highlights` is what "synchronized anchors" resolves against. */
   highlights?: LyraHighlight[];
+}
+
+function versionSourceIdentity(version: DocumentCompareVersion | undefined): string {
+  if (!version) return '';
+  return JSON.stringify([
+    version.id ?? '',
+    version.uri ?? '',
+    version.version ?? '',
+    version.mimeType ?? '',
+    version.name ?? '',
+  ]);
 }
 
 /**
@@ -82,12 +101,17 @@ export interface DocumentCompareVersion extends DocumentRef {
  *   `<lr-document-preview>` already documents.
  * - A shared `anchor` property (same declarative shape as `<lr-document-viewer>`'s own `anchor`)
  *   drives both panes to the same target at once via their own `scrollToAnchor()`.
+ * - Replacing a pane with a different source identity resets that pane to the top (both panes while
+ *   `syncScroll` is true). Re-rendering the same identity preserves reading position, and an active
+ *   shared `anchor` always wins over the reset.
  *
  * A host `aria-label` names the comparison group by attribute presence, including an explicitly
  * empty value. The localized comparison label is used only when that attribute is absent.
  *
  * @customElement lr-document-compare
  * @event lr-copy - See `LyraDocumentCompareEventMap`.
+ * @event lr-error - See `LyraDocumentCompareEventMap`.
+ * @event lr-copy-error - See `LyraDocumentCompareEventMap`.
  * @event lr-highlight-activate - See `LyraDocumentCompareEventMap`.
  * @event lr-download - See `LyraDocumentCompareEventMap`.
  * @event lr-render-error - See `LyraDocumentCompareEventMap`.
@@ -113,7 +137,11 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     documentCompareNewVersion: LYRA_DEFAULT_documentCompareNewVersion,
     documentCompareNoVersion: LYRA_DEFAULT_documentCompareNoVersion,
     documentCompareOldVersion: LYRA_DEFAULT_documentCompareOldVersion,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -169,7 +197,8 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     // A pending callback belongs to the browsing context that scheduled it. Adoption can happen
     // between the mirrored scroll write and that callback, so cancel through the retained owner
     // instead of leaving the suppression guard stranded in the old document.
@@ -204,14 +233,32 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const anchor = this.anchor;
-    if (anchor == null) return;
-    const shouldJump =
-      changed.has('anchor') ||
-      (this.view === 'side-by-side' &&
-        (changed.has('view') || changed.has('oldVersion') || changed.has('newVersion')));
-    if (!shouldJump) return;
-    void this.previewOldEl?.scrollToAnchor(anchor);
-    void this.previewNewEl?.scrollToAnchor(anchor);
+    const sourceChanged = (property: 'oldVersion' | 'newVersion'): boolean =>
+      changed.has(property)
+      && versionSourceIdentity(changed.get(property) as DocumentCompareVersion | undefined)
+        !== versionSourceIdentity(this[property]);
+    const oldSourceChanged = sourceChanged('oldVersion');
+    const newSourceChanged = sourceChanged('newVersion');
+
+    if (anchor != null) {
+      const shouldJump =
+        changed.has('anchor') ||
+        (this.view === 'side-by-side' &&
+          (changed.has('view') || changed.has('oldVersion') || changed.has('newVersion')));
+      if (shouldJump) {
+        void this.previewOldEl?.scrollToAnchor(anchor);
+        void this.previewNewEl?.scrollToAnchor(anchor);
+      }
+      return;
+    }
+    if (this.view !== 'side-by-side' || (!oldSourceChanged && !newSourceChanged)) return;
+    this.cancelSyncRelease();
+    if (this.syncScroll || oldSourceChanged) {
+      if (this.paneOldEl) this.paneOldEl.scrollTop = 0;
+    }
+    if (this.syncScroll || newSourceChanged) {
+      if (this.paneNewEl) this.paneNewEl.scrollTop = 0;
+    }
   }
 
   private onPaneScroll = (source: DocumentComparePaneSide): (() => void) => {

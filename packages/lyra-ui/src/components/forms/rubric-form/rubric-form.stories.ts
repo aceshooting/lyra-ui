@@ -52,18 +52,30 @@ export const RequiredMarkerTheme: Story = {
   `,
 };
 
-/** Native form reset restores the structured value supplied before the component's first render,
- * rather than blanking the rubric. Later live edits do not rewrite that snapshot. */
+/** Native form reset restores the explicit canonical default. Later live edits do not rewrite it. */
 export const FormResetBaseline: Story = {
   render: () => html`
     <form style="display: grid; gap: var(--lr-space-m); max-inline-size: var(--lr-size-28rem);">
       <lr-rubric-form
         name="review"
         .keys=${keys}
-        .value=${{ accuracy: 4, comment: 'Seeded review' } satisfies RubricValue}
+        .defaultValue=${{ accuracy: 4, comment: 'Seeded review' } satisfies RubricValue}
       ></lr-rubric-form>
       <button type="reset" style="justify-self: start;">Reset to seeded review</button>
     </form>
+  `,
+};
+
+/** External values are normalized against the schema before any consumer-facing projection. */
+export const CanonicalValueNormalization: Story = {
+  render: () => html`
+    <lr-rubric-form
+      label="Canonical value normalization"
+      hint="The supplied score 999 clamps to 5; the unknown category is omitted and remains required."
+      style="max-inline-size: var(--lr-size-28rem)"
+      .keys=${keys}
+      .value=${{ accuracy: 999, issue: 'not-an-option', undeclared: 'discarded' } as RubricValue}
+    ></lr-rubric-form>
   `,
 };
 

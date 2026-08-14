@@ -1,12 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { ChoroplethLayer, GeoJsonDataLayer, LegendEntry, MapMarker } from './map.js';
+import type {
+  LyraMapChoroplethLayer,
+  LyraMapGeoJsonDataLayer,
+  LyraMapLegendEntry,
+  LyraMapMarker,
+} from './map.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 import '../../../../../../.storybook/maplibre-worker.js';
 
-const legend = (): LegendEntry[] => [
-  { color: storyColor('brand'), label: 'Low' },
-  { color: storyColor('danger'), label: 'High' },
+const legend = (): LyraMapLegendEntry[] => [
+  { color: storyColor('brand'), label: 'Low', pattern: 'solid' },
+  { color: storyColor('danger'), label: 'High', pattern: 'diagonal' },
 ];
 
 const RASTER_STYLE = {
@@ -58,7 +63,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Demoed with a raster OpenStreetMap tile style since a vector style needs an API key.',
+          'Requires an explicit `mapStyle`; the deterministic default story uses a network-silent inlined raster tile, while the opt-in live story demonstrates OpenStreetMap tiles.',
       },
     },
   },
@@ -76,6 +81,32 @@ export const Default: Story = {
       .mapStyle=${OFFLINE_RASTER_STYLE}
     ></lr-map>
   `,
+};
+
+/** The legend owns a frozen 100-row projection, keeps a required non-color pattern for every
+ * category, and reports omitted input through `legendProjection` plus visible localized text. */
+export const BoundedSemanticLegend: Story = {
+  render: () => {
+    const patterns = ['solid', 'diagonal', 'dots', 'crosshatch'] as const;
+    const entries: LyraMapLegendEntry[] = Array.from({ length: 104 }, (_, index) => ({
+      color: index % 2 === 0 ? storyColor('brand') : storyColor('danger'),
+      label: `Category ${index + 1}`,
+      pattern: patterns[index % patterns.length]!,
+    }));
+    return html`
+      <lr-map
+        style="height: 20rem"
+        .legend=${entries}
+        .mapStyle=${OFFLINE_RASTER_STYLE}
+      ></lr-map>
+    `;
+  },
+};
+
+/** A bare map never selects or contacts a style/tile provider. It fails closed with the localized
+ * style-required state until `mapStyle` is assigned. */
+export const ExplicitStyleRequired: Story = {
+  render: () => html`<lr-map style="height: 12rem"></lr-map>`,
 };
 
 /**
@@ -101,7 +132,7 @@ export const LiveOsmTiles: Story = {
  */
 export const Choropleth: Story = {
   render: () => {
-    const choropleth: ChoroplethLayer = {
+    const choropleth: LyraMapChoroplethLayer = {
       sourceId: 'regions',
       field: 'value',
       stops: [
@@ -153,9 +184,9 @@ export const Choropleth: Story = {
         center="[2.3522, 48.8566]"
         zoom="10"
         .legend=${[
-          { color: storyColor('brand'), label: 'Low' },
-          { color: storyColor('warning'), label: 'Medium' },
-          { color: storyColor('danger'), label: 'High' },
+          { color: storyColor('brand'), label: 'Low', pattern: 'solid' },
+          { color: storyColor('warning'), label: 'Medium', pattern: 'dots' },
+          { color: storyColor('danger'), label: 'High', pattern: 'crosshatch' },
         ]}
         .choropleth=${choropleth}
         .mapStyle=${RASTER_STYLE}
@@ -172,7 +203,7 @@ export const Choropleth: Story = {
  */
 export const DataLayers: Story = {
   render: () => {
-    const dataLayers: GeoJsonDataLayer[] = [
+    const dataLayers: LyraMapGeoJsonDataLayer[] = [
       {
         sourceId: 'route',
         tone: 'success',
@@ -222,7 +253,7 @@ export const ThemedFillOpacity: Story = {
     },
   },
   render: () => {
-    const choropleth: ChoroplethLayer = {
+    const choropleth: LyraMapChoroplethLayer = {
       sourceId: 'theme-regions',
       field: 'value',
       stops: [[0, storyColor('brand')], [100, storyColor('danger')]],
@@ -238,7 +269,7 @@ export const ThemedFillOpacity: Story = {
         }],
       },
     };
-    const dataLayers: GeoJsonDataLayer[] = [{
+    const dataLayers: LyraMapGeoJsonDataLayer[] = [{
       sourceId: 'theme-zone',
       tone: 'success',
       geojson: {
@@ -272,7 +303,7 @@ export const ThemedFillOpacity: Story = {
  */
 export const Markers: Story = {
   render: () => {
-    const markers: MapMarker[] = [
+    const markers: LyraMapMarker[] = [
       { id: 'eiffel', lngLat: [2.2945, 48.8584], label: 'Eiffel Tower' },
       {
         id: 'louvre',
@@ -310,7 +341,7 @@ export const Narrow320LtrRtl: Story = {
           style="block-size: var(--lr-size-20rem)"
           center="[2.3522, 48.8566]"
           zoom="10"
-          .legend=${[{ color: storyColor('brand'), label: longLtrLegend }]}
+          .legend=${[{ color: storyColor('brand'), label: longLtrLegend, pattern: 'solid' }]}
           .markers=${[{ id: 'long-ltr', lngLat: [2.3522, 48.8566], label: longLtrPopup }]}
           .mapStyle=${OFFLINE_RASTER_STYLE}
         ></lr-map>
@@ -320,7 +351,7 @@ export const Narrow320LtrRtl: Story = {
           style="block-size: var(--lr-size-20rem)"
           center="[2.3522, 48.8566]"
           zoom="10"
-          .legend=${[{ color: storyColor('danger'), label: longRtlLegend }]}
+          .legend=${[{ color: storyColor('danger'), label: longRtlLegend, pattern: 'crosshatch' }]}
           .markers=${[{ id: 'long-rtl', lngLat: [2.3522, 48.8566], label: longRtlPopup }]}
           .mapStyle=${OFFLINE_RASTER_STYLE}
         ></lr-map>

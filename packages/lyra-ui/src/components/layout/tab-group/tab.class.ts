@@ -10,7 +10,7 @@ import { LYRA_DEFAULT_close } from '../../../internal/default-strings.generated.
 
 
 export interface LyraTabEventMap {
-  'lr-close': CustomEvent<undefined>;
+  'lr-close': CustomEvent<null>;
 }
 
 /**
@@ -92,7 +92,7 @@ export class LyraTab extends LyraElement<LyraTabEventMap> {
   /** @internal Owning-group seam for the focused tab's `Delete` shortcut. */
   requestCloseFromOwner(): void {
     if (!this.closable || this.disabled) return;
-    this.emit('lr-close', undefined);
+    this.emit('lr-close', null);
   }
 
   override render(): TemplateResult {

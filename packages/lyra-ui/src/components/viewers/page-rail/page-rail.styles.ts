@@ -64,6 +64,10 @@ export const styles = css`
     background: var(--lr-color-surface);
     overflow: hidden;
   }
+  lr-virtual-list::part(thumbnail-target) {
+    display: block;
+    max-inline-size: 100%;
+  }
   lr-virtual-list::part(page-number) {
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);

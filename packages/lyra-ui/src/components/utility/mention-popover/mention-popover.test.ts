@@ -1,12 +1,12 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './mention-popover.js';
-import type { LyraMentionPopover, MentionItem, MentionSelectDetail } from './mention-popover.js';
+import type { LyraMentionItem, LyraMentionPopover, LyraMentionSelectDetail } from './mention-popover.js';
 import { styles } from './mention-popover.styles.js';
 
-const ITEMS: MentionItem[] = [
-  { id: 'alice', label: 'Alice Johansson', description: 'Product design' },
-  { id: 'bob', label: 'Bob Nakamura', icon: '🤖' },
-  { id: 'carol', label: 'Carol Ibarra', description: 'Engineering' },
+const ITEMS: LyraMentionItem[] = [
+  { suggestionId: 'alice', label: 'Alice Johansson', description: 'Product design' },
+  { suggestionId: 'bob', label: 'Bob Nakamura', icon: '🤖' },
+  { suggestionId: 'carol', label: 'Carol Ibarra', description: 'Engineering' },
 ];
 
 class MentionPopoverShadowHarness extends HTMLElement {
@@ -26,7 +26,7 @@ function rows(el: LyraMentionPopover): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll('[part="option"]');
 }
 
-async function openWithItems(items: MentionItem[] = ITEMS): Promise<LyraMentionPopover> {
+async function openWithItems(items: LyraMentionItem[] = ITEMS): Promise<LyraMentionPopover> {
   const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
   const anchor = document.createElement('div');
   document.body.appendChild(anchor);
@@ -60,7 +60,7 @@ it('renders items as listbox rows, with icon/description parts only when set', a
 it('shows the empty-text row when items is empty', async () => {
   const el = await openWithItems([]);
   const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement;
-  expect((empty) != null).to.equal(true);
+  expect(empty != null).to.equal(true);
   expect(empty.textContent).to.equal('No matches');
   expect(empty.getAttribute('role')).to.equal('option');
   expect(empty.getAttribute('aria-disabled')).to.equal('true');
@@ -70,23 +70,35 @@ it('filters items against query using the built-in case-insensitive label/descri
   const el = await openWithItems();
   el.query = 'engineering';
   await el.updateComplete;
-  expect(el.filteredItems.map((i) => i.id)).to.deep.equal(['carol']);
+  expect(el.filteredItems.map((i) => i.suggestionId)).to.deep.equal(['carol']);
+});
+
+it('owns a frozen item snapshot so later caller mutation cannot silently alter suggestions', async () => {
+  const source = ITEMS.map((item) => ({ ...item }));
+  const el = await openWithItems(source);
+  expect(el.items).to.not.equal(source);
+  expect(Object.isFrozen(el.items)).to.equal(true);
+  expect(Object.isFrozen(el.items[0])).to.equal(true);
+  source.push({ suggestionId: 'late', label: 'Late mutation' });
+  source[0]!.label = 'Mutated caller label';
+  expect(el.filteredItems.length).to.equal(3);
+  expect(el.filteredItems[0]!.label).to.equal('Alice Johansson');
 });
 
 it('uses the effective locale for built-in case-insensitive filtering', async () => {
-  const el = await openWithItems([{ id: 'istanbul', label: 'İstanbul' }]);
+  const el = await openWithItems([{ suggestionId: 'istanbul', label: 'İstanbul' }]);
   el.lang = 'tr';
   el.query = 'istanbul';
   await el.updateComplete;
-  expect(el.filteredItems.map((i) => i.id)).to.deep.equal(['istanbul']);
+  expect(el.filteredItems.map((i) => i.suggestionId)).to.deep.equal(['istanbul']);
 });
 
 it('overrides the built-in filter via the filter property', async () => {
   const el = await openWithItems();
-  el.filter = (item, query) => item.id === query;
+  el.filter = (item, query) => item.suggestionId === query;
   el.query = 'bob';
   await el.updateComplete;
-  expect(el.filteredItems.map((i) => i.id)).to.deep.equal(['bob']);
+  expect(el.filteredItems.map((i) => i.suggestionId)).to.deep.equal(['bob']);
 });
 
 it('pre-highlights the first match (index 0) as soon as it opens', async () => {
@@ -102,7 +114,7 @@ it('resets the active row to the top match whenever query changes', async () => 
 
   el.query = 'carol';
   await el.updateComplete;
-  expect(el.filteredItems.map((i) => i.id)).to.deep.equal(['carol']);
+  expect(el.filteredItems.map((i) => i.suggestionId)).to.deep.equal(['carol']);
   expect(el.activeDescendantId).to.equal(el.listboxId + '-opt-0');
 });
 
@@ -129,8 +141,11 @@ it('moves the active row with ArrowDown/ArrowUp, clamped at the ends', async () 
   expect(el.activeDescendantId).to.equal(el.listboxId + '-opt-0');
 });
 
-it('scrolls the active row into view as ArrowDown moves it past the popup\'s visible, height-capped area', async () => {
-  const manyItems: MentionItem[] = Array.from({ length: 20 }, (_, i) => ({ id: `item-${i}`, label: `Item ${i}` }));
+it("scrolls the active row into view as ArrowDown moves it past the popup's visible, height-capped area", async () => {
+  const manyItems: LyraMentionItem[] = Array.from({ length: 20 }, (_, i) => ({
+    suggestionId: `item-${i}`,
+    label: `Item ${i}`,
+  }));
   const el = await openWithItems(manyItems);
   const box = listbox(el);
 
@@ -143,7 +158,7 @@ it('scrolls the active row into view as ArrowDown moves it past the popup\'s vis
   }
 
   const activeRow = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
-  expect((activeRow) != null).to.equal(true);
+  expect(activeRow != null).to.equal(true);
   const rowRect = activeRow.getBoundingClientRect();
   const boxRect = box.getBoundingClientRect();
   expect(rowRect.top >= boxRect.top - 1, 'active row top must be within the scrolled listbox viewport').to.be.true;
@@ -153,7 +168,10 @@ it('scrolls the active row into view as ArrowDown moves it past the popup\'s vis
 
 it('ArrowDown/ArrowUp preventDefault and report the key as consumed', async () => {
   const el = await openWithItems();
-  const evt = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+  const evt = new KeyboardEvent('keydown', {
+    key: 'ArrowDown',
+    cancelable: true,
+  });
   const consumed = el.handleKeyDown(evt);
   expect(consumed).to.be.true;
   expect(evt.defaultPrevented).to.be.true;
@@ -165,12 +183,18 @@ it('leaves ArrowDown/ArrowUp unconsumed when there is nothing to navigate (no ma
   await el.updateComplete;
   expect(el.filteredItems.length).to.equal(0);
 
-  const downEvt = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
-  expect(el.handleKeyDown(downEvt), 'ArrowDown must fall through, e.g. so the host textarea still moves its caret')
-    .to.be.false;
+  const downEvt = new KeyboardEvent('keydown', {
+    key: 'ArrowDown',
+    cancelable: true,
+  });
+  expect(el.handleKeyDown(downEvt), 'ArrowDown must fall through, e.g. so the host textarea still moves its caret').to
+    .be.false;
   expect(downEvt.defaultPrevented).to.be.false;
 
-  const upEvt = new KeyboardEvent('keydown', { key: 'ArrowUp', cancelable: true });
+  const upEvt = new KeyboardEvent('keydown', {
+    key: 'ArrowUp',
+    cancelable: true,
+  });
   expect(el.handleKeyDown(upEvt)).to.be.false;
   expect(upEvt.defaultPrevented).to.be.false;
 });
@@ -183,11 +207,12 @@ it('commits the active item on Enter: fires lr-mention-select, closes, and does 
   const listener = oneEvent(el, 'lr-mention-select');
   const evt = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
   const consumed = el.handleKeyDown(evt);
-  const { detail } = (await listener) as CustomEvent<MentionSelectDetail>;
+  const { detail } = (await listener) as CustomEvent<LyraMentionSelectDetail>;
 
   expect(consumed).to.be.true;
   expect(evt.defaultPrevented).to.be.true;
-  expect(detail).to.deep.equal({ id: 'alice', label: 'Alice Johansson' });
+  expect(Object.isFrozen(detail)).to.equal(true);
+  expect(detail).to.deep.equal({ suggestionId: 'alice', index: 0, label: 'Alice Johansson' });
   expect(el.open).to.be.false;
   await el.updateComplete;
   expect(closeFired).to.be.false;
@@ -200,9 +225,9 @@ it('commits the active item on Tab, same as Enter', async () => {
 
   const listener = oneEvent(el, 'lr-mention-select');
   const consumed = el.handleKeyDown(new KeyboardEvent('keydown', { key: 'Tab', cancelable: true }));
-  const { detail } = (await listener) as CustomEvent<MentionSelectDetail>;
+  const { detail } = (await listener) as CustomEvent<LyraMentionSelectDetail>;
   expect(consumed).to.be.true;
-  expect(detail).to.deep.equal({ id: 'bob', label: 'Bob Nakamura' });
+  expect(detail).to.deep.equal({ suggestionId: 'bob', index: 1, label: 'Bob Nakamura' });
 });
 
 it('leaves Enter/Tab unconsumed when there is no active row to commit (no matches)', async () => {
@@ -211,7 +236,10 @@ it('leaves Enter/Tab unconsumed when there is no active row to commit (no matche
   await el.updateComplete;
   expect(el.filteredItems.length).to.equal(0);
 
-  const enterEvt = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+  const enterEvt = new KeyboardEvent('keydown', {
+    key: 'Enter',
+    cancelable: true,
+  });
   expect(el.handleKeyDown(enterEvt)).to.be.false;
   expect(enterEvt.defaultPrevented).to.be.false;
   expect(el.open).to.be.true;
@@ -278,11 +306,24 @@ it('commits a row on click, and preventDefaults its own mousedown so focus never
   const row = rows(el)[2];
   const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
   row.dispatchEvent(down);
-  expect(down.defaultPrevented, 'mousedown on a row must be prevented so focus never leaves the host input').to.be
-    .true;
+  expect(down.defaultPrevented, 'mousedown on a row must be prevented so focus never leaves the host input').to.be.true;
   row.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-  const { detail } = (await listener) as CustomEvent<MentionSelectDetail>;
-  expect(detail).to.deep.equal({ id: 'carol', label: 'Carol Ibarra' });
+  const { detail } = (await listener) as CustomEvent<LyraMentionSelectDetail>;
+  expect(detail).to.deep.equal({ suggestionId: 'carol', index: 2, label: 'Carol Ibarra' });
+});
+
+it('reports the assigned collection occurrence so filtering and duplicate ids remain unambiguous', async () => {
+  const el = await openWithItems([
+    { suggestionId: 'duplicate', label: 'First occurrence' },
+    { suggestionId: 'other', label: 'Filtered away' },
+    { suggestionId: 'duplicate', label: 'Second occurrence' },
+  ]);
+  el.query = 'second';
+  await el.updateComplete;
+  const listener = oneEvent(el, 'lr-mention-select');
+  rows(el)[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  const { detail } = (await listener) as CustomEvent<LyraMentionSelectDetail>;
+  expect(detail).to.deep.equal({ suggestionId: 'duplicate', index: 2, label: 'Second occurrence' });
 });
 
 it('exposes activeDescendantId as null while closed', async () => {
@@ -311,18 +352,100 @@ it('uses element reflection when supported and otherwise offers a same-tree real
     expect(await el.focusActiveOption()).to.be.true;
     expect(el.shadowRoot!.activeElement === active).to.be.true;
 
-    active!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    active!.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
     await el.updateComplete;
     expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('data-id')).to.equal('bob');
 
     el.shadowRoot!.activeElement!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true,
+      }),
     );
     await el.updateComplete;
     expect(document.activeElement === textarea).to.be.true;
   }
 
   textarea.remove();
+});
+
+it('owns and restores the anchor combobox relationship across close, replacement, and adoption', async () => {
+  const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
+  el.items = ITEMS;
+  const first = document.createElement('textarea') as HTMLTextAreaElement & {
+    ariaControlsElements?: readonly Element[] | null;
+    ariaActiveDescendantElement?: Element | null;
+  };
+  first.setAttribute('role', 'searchbox');
+  first.setAttribute('aria-expanded', 'false');
+  first.setAttribute('aria-haspopup', 'grid');
+  first.setAttribute('aria-controls', 'author-results');
+  first.setAttribute('aria-activedescendant', 'author-active');
+  const second = document.createElement('input');
+  second.type = 'search';
+  second.setAttribute('aria-expanded', 'mixed-author-value');
+  document.body.append(first, second);
+  try {
+    el.anchor = first;
+    el.open = true;
+    await el.updateComplete;
+    expect(first.getAttribute('role')).to.equal('searchbox');
+    expect(first.getAttribute('aria-expanded')).to.equal('true');
+    expect(first.getAttribute('aria-haspopup')).to.equal('listbox');
+    if ('ariaControlsElements' in first) {
+      const controlled = first.ariaControlsElements?.[0];
+      expect(controlled === listbox(el) || controlled === el).to.be.true;
+    } else {
+      expect(first.hasAttribute('aria-controls')).to.be.false;
+    }
+    if ('ariaActiveDescendantElement' in first) {
+      const active = first.ariaActiveDescendantElement;
+      expect(active === null || active === el.activeDescendantElement).to.be.true;
+      if (active === null) expect(first.hasAttribute('aria-activedescendant')).to.be.false;
+    } else {
+      expect(first.hasAttribute('aria-activedescendant')).to.be.false;
+    }
+
+    el.anchor = second;
+    await el.updateComplete;
+    expect(first.getAttribute('role')).to.equal('searchbox');
+    expect(first.getAttribute('aria-expanded')).to.equal('false');
+    expect(first.getAttribute('aria-haspopup')).to.equal('grid');
+    expect(first.getAttribute('aria-controls')).to.equal('author-results');
+    expect(first.getAttribute('aria-activedescendant')).to.equal('author-active');
+    expect(second.getAttribute('role')).to.equal('combobox');
+    expect(second.getAttribute('aria-expanded')).to.equal('true');
+
+    el.open = false;
+    await el.updateComplete;
+    expect(second.hasAttribute('role')).to.be.false;
+    expect(second.getAttribute('aria-expanded')).to.equal('mixed-author-value');
+    expect(second.hasAttribute('aria-haspopup')).to.be.false;
+
+    el.anchor = first;
+    el.open = true;
+    await el.updateComplete;
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      frame.contentDocument!.adoptNode(el);
+      expect(first.getAttribute('role')).to.equal('searchbox');
+      expect(first.getAttribute('aria-expanded')).to.equal('false');
+      expect(first.getAttribute('aria-controls')).to.equal('author-results');
+    } finally {
+      frame.remove();
+    }
+  } finally {
+    first.remove();
+    second.remove();
+  }
 });
 
 it('focuses the active fallback option when nested inside another shadow root', async () => {
@@ -346,6 +469,67 @@ it('focuses the active fallback option when nested inside another shadow root', 
     expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('alice');
   } finally {
     textarea.remove();
+  }
+});
+
+it('refuses a stale fallback focus transfer when caller ownership expires during its awaited render', async () => {
+  const el = await openWithItems();
+  const textarea = document.createElement('textarea');
+  const outside = document.createElement('button');
+  document.body.append(textarea, outside);
+  try {
+    el.anchor = textarea;
+    await el.updateComplete;
+    textarea.focus();
+
+    // Leave a candidate render pending so focusActiveOption() must cross an actual await boundary.
+    el.query = 'bob';
+    let ownsFocus = true;
+    const pending = el.focusActiveOption({ ownsFocus: () => ownsFocus });
+    ownsFocus = false;
+    outside.focus();
+
+    expect(await pending).to.equal(false);
+    expect(document.activeElement === outside).to.be.true;
+    expect(el.shadowRoot!.activeElement === null).to.be.true;
+  } finally {
+    textarea.remove();
+    outside.remove();
+  }
+});
+
+it('invalidates a pending fallback focus transfer on close, candidate replacement, and disconnect', async () => {
+  for (const invalidate of [
+    (el: LyraMentionPopover) => {
+      el.open = false;
+    },
+    (el: LyraMentionPopover) => {
+      el.items = [];
+    },
+    (el: LyraMentionPopover) => {
+      el.remove();
+    },
+  ]) {
+    const el = await openWithItems();
+    const textarea = document.createElement('textarea');
+    const outside = document.createElement('button');
+    document.body.append(textarea, outside);
+    try {
+      el.anchor = textarea;
+      await el.updateComplete;
+      textarea.focus();
+      el.query = 'bob';
+      const pending = el.focusActiveOption({ ownsFocus: () => document.activeElement === textarea });
+      outside.focus();
+      invalidate(el);
+
+      expect(await pending).to.equal(false);
+      expect(document.activeElement === outside).to.be.true;
+    } finally {
+      el.remove();
+      textarea.remove();
+      outside.remove();
+    }
   }
 });
 
@@ -592,11 +776,33 @@ it('keeps a dynamically emptied host aria-label on the listbox owner and restore
 
 it('honors a strings override for mentionSuggestions/noMatches while label/emptyText are left at their defaults', async () => {
   const el = await openWithItems([]);
-  el.strings = { mentionSuggestions: 'Suggestions de mention', noMatches: 'Aucun résultat' };
+  el.strings = {
+    mentionSuggestions: 'Suggestions de mention',
+    noMatches: 'Aucun résultat',
+  };
   await el.updateComplete;
   expect(listbox(el).getAttribute('aria-label')).to.equal('Suggestions de mention');
   const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement;
   expect(empty.textContent).to.equal('Aucun résultat');
+});
+
+it('keeps explicit empty and old-English label strings caller-owned', async () => {
+  const el = await openWithItems([]);
+  el.strings = {
+    mentionSuggestions: 'Suggestions de mention',
+    noMatches: 'Aucun résultat',
+  };
+  el.label = 'Suggestions';
+  el.emptyText = 'No matches';
+  await el.updateComplete;
+  expect(listbox(el).getAttribute('aria-label')).to.equal('Suggestions');
+  expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('No matches');
+
+  el.label = '';
+  el.emptyText = '';
+  await el.updateComplete;
+  expect(listbox(el).getAttribute('aria-label')).to.equal('');
+  expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('');
 });
 
 it('is accessible (empty/closed default state)', async () => {
@@ -611,7 +817,9 @@ it('is accessible (populated, open state)', async () => {
   // current (transitional) opacity, so sampling mid-fade blends its text and background toward
   // each other and reports a false "serious" violation. Finishing it outright matches the idiom
   // overlay.test.ts already uses for this same kind of reveal animation.
-  listbox(el).getAnimations().forEach((animation) => animation.finish());
+  listbox(el)
+    .getAnimations()
+    .forEach((animation) => animation.finish());
   await expect(el).to.be.accessible();
 });
 
@@ -648,9 +856,7 @@ describe('active-option row cssprop indirection', () => {
     // Guard against the comparison degenerating into a tautology: were the token undefined, both
     // the probe and the row would fall back to the transparent initial background-color and the
     // equality below would pass while proving nothing.
-    expect(expected, '--lr-color-brand-quiet must resolve to a real opaque colour').to.match(
-      /^rgb\(\d+, \d+, \d+\)$/,
-    );
+    expect(expected, '--lr-color-brand-quiet must resolve to a real opaque colour').to.match(/^rgb\(\d+, \d+, \d+\)$/);
     expect(getComputedStyle(active).backgroundColor).to.equal(expected);
   });
 });

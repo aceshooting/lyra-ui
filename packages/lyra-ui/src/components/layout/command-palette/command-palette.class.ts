@@ -43,6 +43,20 @@ interface CommandResultModel {
   totalHeight: number;
 }
 
+/** Last-connected matching palette owns a global chord in each browsing context. */
+const hotkeyOwners = new WeakMap<Window, LyraCommandPalette[]>();
+
+function registerHotkeyOwner(view: Window, palette: LyraCommandPalette): void {
+  const owners = hotkeyOwners.get(view) ?? [];
+  hotkeyOwners.set(view, [...owners.filter((candidate) => candidate !== palette), palette]);
+}
+
+function unregisterHotkeyOwner(view: Window, palette: LyraCommandPalette): void {
+  const owners = hotkeyOwners.get(view)?.filter((candidate) => candidate !== palette) ?? [];
+  if (owners.length) hotkeyOwners.set(view, owners);
+  else hotkeyOwners.delete(view);
+}
+
 export interface LyraCommand {
   id: string;
   label: string;
@@ -58,8 +72,8 @@ export interface LyraCommand {
 }
 export interface LyraCommandPaletteEventMap {
   "lr-select": CustomEvent<{ command: LyraCommand }>;
-  "lr-open": CustomEvent<undefined>;
-  "lr-close": CustomEvent<undefined>;
+  "lr-open": CustomEvent<null>;
+  "lr-close": CustomEvent<null>;
 }
 
 /** `<lr-command-palette>` — searchable application command menu with keyboard navigation.
@@ -133,7 +147,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     this.requestOpen(normalized);
   }
   @property({ attribute: false }) commands: LyraCommand[] = [];
-  @property() shortcut = "mod+k";
+  /** Exact global activation chord. `mod` resolves to Command on macOS and Control elsewhere. */
+  @property() hotkey = "mod+k";
   @property({ attribute: "aria-label" }) accessibleLabel = "";
   @state() private queryText = "";
   @state() private activeIndex = 0;
@@ -296,8 +311,14 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private measureRowPitch(): void {
     const style = this.ownerDocument.defaultView?.getComputedStyle(this);
     if (!style) return;
-    const row = resolveCssLength(style.getPropertyValue("--lr-command-palette-row-height").trim(), this);
-    const group = resolveCssLength(style.getPropertyValue("--lr-command-palette-group-height").trim(), this);
+    const row = resolveCssLength(
+      style.getPropertyValue("--lr-command-palette-row-height").trim(),
+      { host: this }
+    );
+    const group = resolveCssLength(
+      style.getPropertyValue("--lr-command-palette-group-height").trim(),
+      { host: this }
+    );
     if (row !== undefined && row > 0 && row !== this.rowPitch) this.rowPitch = row;
     if (group !== undefined && group > 0 && group !== this.groupPitch) this.groupPitch = group;
   }
@@ -319,7 +340,10 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     super.connectedCallback();
     const view = this.ownerDocument.defaultView;
     this.runtimeWindow = view ?? undefined;
-    view?.addEventListener("keydown", this.onGlobalKeyDown);
+    if (view) {
+      registerHotkeyOwner(view, this);
+      view.addEventListener("keydown", this.onGlobalKeyDown);
+    }
     const ResizeObserverCtor = view?.ResizeObserver;
     if (ResizeObserverCtor && view) {
       let observer: ResizeObserver;
@@ -354,7 +378,10 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     const view = this.runtimeWindow;
-    view?.removeEventListener("keydown", this.onGlobalKeyDown);
+    if (view) {
+      unregisterHotkeyOwner(view, this);
+      view.removeEventListener("keydown", this.onGlobalKeyDown);
+    }
     this.overlay?.suspend();
     this.listResizeObserver?.disconnect();
     this.listResizeObserver = undefined;
@@ -399,7 +426,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private requestOpen(next: boolean): boolean {
     if (next === this._open || this.openRequestTarget === next) return false;
     this.openRequestTarget = next;
-    const prevented = this.emit(next ? "lr-open" : "lr-close", undefined, {
+    const prevented = this.emit(next ? "lr-open" : "lr-close", null, {
       cancelable: true,
     }).defaultPrevented;
     this.openRequestTarget = undefined;
@@ -433,24 +460,39 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     };
   }
   private matchesShortcut(event: KeyboardEvent): boolean {
-    const parts = this.shortcut.toLowerCase().split("+");
-    if (event.key.toLowerCase() !== parts.at(-1)) return false;
+    const parts = this.hotkey.toLowerCase().split("+").map((part) => part.trim());
+    const key = parts.pop();
+    if (!key || event.key.toLowerCase() !== key) return false;
+    const modifiers = new Set(parts);
     if (
-      event.shiftKey !== parts.includes("shift") ||
-      event.altKey !== parts.includes("alt")
-    )
-      return false;
-    if (parts.includes("mod"))
-      return (this.runtimeWindow ?? this.ownerDocument.defaultView)?.navigator.platform.includes("Mac")
-        ? event.metaKey
-        : event.ctrlKey;
-    return event.ctrlKey === parts.includes("ctrl");
+      modifiers.size !== parts.length ||
+      [...modifiers].some((part) => !["alt", "ctrl", "meta", "mod", "shift"].includes(part)) ||
+      (modifiers.has("mod") && (modifiers.has("ctrl") || modifiers.has("meta")))
+    ) return false;
+    const isMac = (this.runtimeWindow ?? this.ownerDocument.defaultView)?.navigator.platform.includes("Mac") ?? false;
+    const expectedCtrl = modifiers.has("ctrl") || (modifiers.has("mod") && !isMac);
+    const expectedMeta = modifiers.has("meta") || (modifiers.has("mod") && isMac);
+    return event.ctrlKey === expectedCtrl &&
+      event.metaKey === expectedMeta &&
+      event.shiftKey === modifiers.has("shift") &&
+      event.altKey === modifiers.has("alt");
   }
   private onGlobalKeyDown = (event: KeyboardEvent): void => {
-    if (this.matchesShortcut(event)) {
-      event.preventDefault();
-      this.open ? this.close() : this.openPalette();
+    if (event.repeat || event.isComposing || event.keyCode === 229) return;
+    const view = this.runtimeWindow;
+    if (!view || !this.matchesShortcut(event)) return;
+    const owners = hotkeyOwners.get(view) ?? [];
+    let owner: LyraCommandPalette | undefined;
+    for (let index = owners.length - 1; index >= 0; index -= 1) {
+      const candidate = owners[index]!;
+      if (candidate.isConnected && candidate.matchesShortcut(event)) {
+        owner = candidate;
+        break;
+      }
     }
+    if (owner !== this) return;
+    event.preventDefault();
+    this.openPalette();
   };
 
   private get filtered(): LyraCommand[] {
@@ -497,6 +539,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   }
 
   private onKeyDown = (event: KeyboardEvent): void => {
+    if (event.isComposing || event.keyCode === 229) return;
     const rows = this.filtered;
     if (event.key === "ArrowDown") {
       event.preventDefault();
@@ -516,6 +559,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   };
 
   private onInput = (event: Event): void => {
+    event.stopPropagation();
     this.queryText = (event.target as HTMLInputElement).value;
     this.listScrollTop = 0;
     const list = this.renderRoot.querySelector<HTMLElement>('[part="list"]');
@@ -649,7 +693,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       @click=${() => this.select(command)}
     >
       ${command.icon
-        ? html`<span part="icon" aria-hidden="true"
+        ? html`<span part="icon" aria-hidden="true" inert
             >${command.icon as TemplateResult}</span
           >`
         : nothing}<span part="label">${command.label}</span

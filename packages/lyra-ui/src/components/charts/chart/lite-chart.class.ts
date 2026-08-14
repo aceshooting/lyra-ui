@@ -26,21 +26,36 @@ import {
   MAX_RENDERED_CHART_RECORDS,
   sampleChartTableIndexes,
 } from './chart-table-sampling.js';
+import {
+  chartChromeLegendPlacement,
+  normalizeChartChromeLegendPosition,
+  type LyraChartChromeLegendPosition,
+} from './chart-chrome.js';
+import type {
+  LyraChartDatumActivateDetail,
+  LyraChartFormatter,
+} from './chart.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_liteChartBarLabel, LYRA_DEFAULT_liteChartCustomMarkSummary, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export interface LiteSeries {
-  label: string;
-  data: (number | null)[];
+export interface LyraLiteChartSeries {
+  readonly label: string;
+  readonly data: readonly (number | null)[];
   /** A CSS color. Invalid values and `url()` paint servers fall back to the semantic categorical
    *  color keyed by dataset index. */
-  color?: string;
+  readonly color?: string;
 }
+/** @deprecated Use the namespaced, readonly `LyraLiteChartSeries`. */
+export type LiteSeries = LyraLiteChartSeries;
 
 export type LyraLiteChartType = 'bar' | 'line';
+
+function normalizeLiteChartType(value: unknown): LyraLiteChartType {
+  return value === 'line' || value === 'bar' ? value : 'bar';
+}
 
 /** `type="bar"` only: `'linear'` (default) maps a bar's value to height via the standard
  *  `niceDomain`-based fraction; `'sqrt'` compresses via `Math.sqrt(value / domainMax)`. See the
@@ -78,14 +93,14 @@ export type LyraLiteChartTableCellFormatter = (
 // The semantic variables are resolved by SVG/CSS at paint time, so changing a
 // theme or color-scheme does not require a second JS-side draw pass.
 const DEFAULT_PALETTE = [
-  'var(--lr-chart-color-1)',
-  'var(--lr-chart-color-2)',
-  'var(--lr-chart-color-3)',
-  'var(--lr-chart-color-4)',
-  'var(--lr-chart-color-5)',
-  'var(--lr-chart-color-6)',
-  'var(--lr-chart-color-7)',
-  'var(--lr-chart-color-8)',
+  'var(--lr-chart-color-1, var(--lr-color-chart-1))',
+  'var(--lr-chart-color-2, var(--lr-color-chart-2))',
+  'var(--lr-chart-color-3, var(--lr-color-chart-3))',
+  'var(--lr-chart-color-4, var(--lr-color-chart-4))',
+  'var(--lr-chart-color-5, var(--lr-color-chart-5))',
+  'var(--lr-chart-color-6, var(--lr-color-chart-6))',
+  'var(--lr-chart-color-7, var(--lr-color-chart-7))',
+  'var(--lr-chart-color-8, var(--lr-color-chart-8))',
 ];
 
 const PAD_LEFT = 36;
@@ -190,6 +205,9 @@ interface LineHitPoint {
 }
 
 export interface LyraLiteChartEventMap {
+  'lr-datum-activate': CustomEvent<
+    LyraChartDatumActivateDetail<'bar' | 'point', number | null>
+  >;
   'lr-point-click': CustomEvent<{
     datasetIndex: number;
     index: number;
@@ -228,7 +246,7 @@ export interface LyraLiteChartEventMap {
  * `lr-heatmap`'s `cellText` hook), falling back to the built-in raw-value
  * template when unset; `roundedBars` draws bars as a rounded-top path
  * instead of a square-cornered rect; `skipZero` omits a bar entirely (not
- * just zero-height) for an exactly-`0` value; `padLeft`/`barGapRatio`
+ * just zero-height) for an exactly-`0` value; `valueAxisGutter`/`barGapRatio`
  * override the internal `PAD_LEFT`/`BAR_GROUP_GAP` layout constants; `scale`
  * (`type="bar"` only) switches the bar-height mapping from the default
  * linear `niceDomain` fraction to a `Math.sqrt(value / domainMax)`
@@ -236,7 +254,7 @@ export interface LyraLiteChartEventMap {
  * skewed dataset's smaller bars don't get washed out by one dominant value
  * — gridlines/tick labels stay on the linear domain regardless, only the bar
  * marks' own height changes, and `type="line"` ignores `scale` entirely; and
- * `hideAxis` suppresses `renderGrid()`'s gridlines/tick labels altogether
+ * `withoutValueAxis` suppresses `renderGrid()`'s gridlines/tick labels altogether
  * (x-axis category labels, rendered separately, are unaffected). An eighth,
  * `legendText`, appends a formatter-supplied string after each series' label in the
  * built-in legend row (e.g. a value or share) — no-op while `legend` is unset, matching the same
@@ -246,6 +264,9 @@ export interface LyraLiteChartEventMap {
  * unset.
  *
  * @customElement lr-lite-chart
+ * @event lr-datum-activate - Fired when a bar/point is activated. The
+ *   normalized detail includes `kind`, `datasetIndex`, `index`, `label`, and
+ *   `value` across the chart family.
  * @event lr-point-click - Fired when a bar/point is activated (click, or
  *   Enter/Space while focused). `detail: { datasetIndex: number, index:
  *   number, label: string | undefined, value: number | null }` — same shape
@@ -255,7 +276,7 @@ export interface LyraLiteChartEventMap {
  * @csspart axis-label - Each axis tick label.
  * @csspart axis-title - The x/y axis title text, when set.
  * @csspart bar - Each bar rect (type="bar"). Carries `data-selected` and `aria-pressed="true"`
- *   when its category index is in `selectedIndex`. While `forced-colors: active` matches, its fill
+ *   when its category index is in `selectedIndices`. While `forced-colors: active` matches, its fill
  *   is a per-series SVG texture instead of a flat color, so series that collapse onto the same
  *   system color stay distinguishable.
  * @csspart line - Each series' stroked line path (type="line"). While `forced-colors: active`
@@ -273,13 +294,26 @@ export interface LyraLiteChartEventMap {
  * @csspart data-table - A visually hidden sampled category×series data table, rendered instead of
  *   `data-list` when there is more than one dataset so a screen-reader user hears series grouping
  *   rather than one flattened N×M sequence.
+ * @csspart table - The generated semantic table inside the `data-table` container.
  * @csspart data-truncation - Explanation shown when built-in marks/data alternatives sample more
  *   than 1,000 records.
  * @slot data-table - An optional consumer-provided complete/paginated accessible data alternative.
  * @cssprop [--lr-chart-height=var(--lr-size-280px)] - Consumer-owned chart height. The `height`
  *   property supplies only a private fallback, so this public token always wins when set.
- * @cssprop [--lr-lite-chart-selected-outline-color=var(--lr-color-brand)] - Stroke for a bar/point whose category index is in `selectedIndex`.
- * @cssprop [--lr-lite-chart-selected-outline-width=var(--lr-size-2px)] - Stroke width for a bar/point whose category index is in `selectedIndex`.
+ * @cssprop [--lr-chart-grid-color=var(--lr-color-border)] - Grid-line color.
+ * @cssprop [--lr-chart-tick-color=var(--lr-color-text-quiet)] - Axis and legend-detail color.
+ * @cssprop [--lr-chart-legend-color=var(--lr-color-text)] - Legend label color.
+ * @cssprop [--lr-chart-legend-side-max=var(--lr-size-15rem)] - Maximum side-legend track size.
+ * @cssprop [--lr-chart-color-1=var(--lr-color-chart-1)] - First series color.
+ * @cssprop [--lr-chart-color-2=var(--lr-color-chart-2)] - Second series color.
+ * @cssprop [--lr-chart-color-3=var(--lr-color-chart-3)] - Third series color.
+ * @cssprop [--lr-chart-color-4=var(--lr-color-chart-4)] - Fourth series color.
+ * @cssprop [--lr-chart-color-5=var(--lr-color-chart-5)] - Fifth series color.
+ * @cssprop [--lr-chart-color-6=var(--lr-color-chart-6)] - Sixth series color.
+ * @cssprop [--lr-chart-color-7=var(--lr-color-chart-7)] - Seventh series color.
+ * @cssprop [--lr-chart-color-8=var(--lr-color-chart-8)] - Eighth series color.
+ * @cssprop [--lr-lite-chart-selected-outline-color=var(--lr-color-brand)] - Stroke for a bar/point whose category index is in `selectedIndices`.
+ * @cssprop [--lr-lite-chart-selected-outline-width=var(--lr-size-2px)] - Stroke width for a bar/point whose category index is in `selectedIndices`.
  * @cssprop [--lr-chart-pattern-step=var(--lr-space-2xs)] - Tile size of the texture painted on
  *   `[part='legend-swatch']` while `forced-colors: active` matches, where the eight-color series
  *   ramp collapses onto a repeating system-color cycle and the texture becomes the only channel
@@ -308,10 +342,17 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
-  @property() type: LyraLiteChartType = 'bar';
+  @property({ converter: { fromAttribute: (value) => normalizeLiteChartType(value) } })
+  type: LyraLiteChartType = 'bar';
   @property({ attribute: false }) labels: string[] = [];
-  @property({ attribute: false }) datasets: LiteSeries[] = [];
+  @property({ attribute: false }) datasets: readonly LyraLiteChartSeries[] = [];
   @property({ type: Boolean }) legend = false;
+  /** Logical placement for the optional DOM legend. */
+  @property({
+    attribute: 'legend-position',
+    converter: { fromAttribute: normalizeChartChromeLegendPosition },
+  })
+  legendPosition: LyraChartChromeLegendPosition = 'bottom';
   /** A CSS `height`; invalid values leave the default height token in control. The public
    * `--lr-chart-height` token always takes precedence over this private fallback. */
   @property() height = '280px';
@@ -326,6 +367,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Formats finite numeric cells in the built-in multi-series accessible table, including its
    *  opt-in total cells. Unset preserves locale-aware number formatting. */
   @property({ attribute: false }) tableCellFormatter?: LyraLiteChartTableCellFormatter;
+  /** Unified context-object formatter shared with the Chart.js-backed chart surfaces. */
+  @property({ attribute: false }) formatter?: LyraChartFormatter;
   /** Adds a localized total column to the built-in multi-series accessible table for a stacked
    *  bar chart. Ignored for grouped bars and line charts. */
   @property({ type: Boolean, attribute: 'table-totals' }) tableTotals = false;
@@ -371,7 +414,15 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @property({ type: Boolean, attribute: 'skip-zero' }) skipZero = false;
   /** Overrides the internal `PAD_LEFT` (36px) axis-gutter constant. The gutter is on the left in
    *  LTR and the right in RTL, keeping the y axis at logical start. Unset keeps the 36px default. */
-  @property({ type: Number, attribute: 'pad-left' }) padLeft?: number;
+  @property({ type: Number, attribute: 'value-axis-gutter' }) valueAxisGutter?: number;
+  /** @deprecated Use the logical, purpose-named `valueAxisGutter`. */
+  @property({ type: Number, attribute: 'pad-left' })
+  get padLeft(): number | undefined {
+    return this.valueAxisGutter;
+  }
+  set padLeft(value: number | undefined) {
+    this.valueAxisGutter = value;
+  }
   /** Overrides the internal `BAR_GROUP_GAP` (0.2) fraction of a category slot left as a gap between
    *  categories. Unset (the default) keeps today's fixed 0.2. */
   @property({ type: Number, attribute: 'bar-gap-ratio' }) barGapRatio?: number;
@@ -384,7 +435,15 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @property() scale: LyraLiteChartScale = 'linear';
   /** Suppresses `renderGrid()` entirely — no gridlines, no y-axis tick labels. x-axis category
    *  labels (rendered separately) are unaffected. Default `false` preserves today's behavior. */
-  @property({ type: Boolean, attribute: 'hide-axis' }) hideAxis = false;
+  @property({ type: Boolean, attribute: 'without-value-axis' }) withoutValueAxis = false;
+  /** @deprecated Use `withoutValueAxis`, which names the axis actually affected. */
+  @property({ type: Boolean, attribute: 'hide-axis' })
+  get hideAxis(): boolean {
+    return this.withoutValueAxis;
+  }
+  set hideAxis(value: boolean) {
+    this.withoutValueAxis = value;
+  }
   /** A pixel floor for a bar/stacked-segment's rendered height, for a nonzero value that would
    *  otherwise round to sub-pixel and become visually indistinguishable from absent (while still
    *  being focusable/tab-stoppable/announced) — a real accessibility/visibility gap for
@@ -403,15 +462,27 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  forbids an attribute selector after `::part()`), so the outline is
    *  painted inside the shadow root and exposed through that token. This component takes no opinion
    *  on what the highlight looks like, only which marks it applies to. */
-  @property({ attribute: false }) selectedIndex: number[] = [];
+  @property({ attribute: false }) selectedIndices: readonly number[] = [];
+  /** @deprecated Use the grammatically plural `selectedIndices`. */
+  get selectedIndex(): readonly number[] {
+    return this.selectedIndices;
+  }
+  set selectedIndex(value: readonly number[]) {
+    this.selectedIndices = value;
+  }
   /** Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||
    *  'Chart'`) — for a consumer with a real, localized chart description. A host `aria-label`
    *  takes precedence. Unset (the default) keeps today's auto-derived (English-fallback) label
    *  exactly. Named `accessible-label` to match the same override on `lr-chart`/`lr-box-plot`. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
+  /** Accessible chart name. A host `aria-label` wins. */
+  @property() label: string | null = null;
+  /** Optional accessible chart description. */
+  @property() description: string | null = null;
 
   /** Instance-unique prefix for the forced-colors `<pattern>` ids this chart's marks reference. */
   private forcedColorPatternId = nextId('lite-chart-pattern');
+  private descriptionId = nextId('lite-chart-description');
 
   @state() private plotWidth = 0;
   @state() private plotHeight = 0;
@@ -427,6 +498,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private resizeObserverDocument?: Document;
   private resizeObserverTarget?: SVGSVGElement;
   private resizeObserverGeneration = 0;
+  private forcedColorsQuery?: MediaQueryList;
+  private forcedColorsWindow?: Window;
   private refocusMarkAfterUpdate = false;
   private refocusChartAfterUpdate = false;
   private politeAnnouncementSink?: AnnouncementSink;
@@ -442,16 +515,30 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    */
   appendData(label: string, values: (number | null)[], maxPoints: number = 0): void {
     const limit = Math.max(0, finiteCount(maxPoints, 0));
-    const labels = [...this.labels, label];
+    let domainLength = this.labels.length;
+    for (const series of this.datasets) domainLength = Math.max(domainLength, series.data.length);
+    const labels = [
+      ...this.labels,
+      ...Array.from({ length: Math.max(0, domainLength - this.labels.length) }, () => ''),
+      label,
+    ];
     const datasets = this.datasets.map((series, index) => ({
       ...series,
-      data: [...series.data, values[index] ?? null],
+      data: [
+        ...series.data,
+        ...Array.from({ length: Math.max(0, domainLength - series.data.length) }, () => null),
+        values[index] ?? null,
+      ],
     }));
     this.labels = limit > 0 ? labels.slice(-limit) : labels;
     this.datasets = limit > 0 ? datasets.map((series) => ({ ...series, data: series.data.slice(-limit) })) : datasets;
   }
 
-  /** Returns a spreadsheet-safe CSV snapshot of the visible labels and series values. */
+  /**
+   * Returns a spreadsheet-safe CSV snapshot over the complete canonical record domain: the
+   * greatest of the label count and every series' data count. Missing labels and values become
+   * empty aligned cells, so a longer or ragged series is never truncated or shifted.
+   */
   exportData(format: LyraLiteChartExportFormat): string {
     if (format === 'svg') {
       const XMLSerializerCtor = this.ownerDocument.defaultView?.XMLSerializer;
@@ -459,9 +546,25 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       return new XMLSerializerCtor().serializeToString(this.svgEl);
     }
     const header = ['label', ...this.datasets.map((series) => series.label)].map(escapeCsvField).join(',');
-    const rows = this.labels.map((label, index) =>
-      [label, ...this.datasets.map((series) => series.data[index] ?? '')].map(escapeCsvField).join(','),
-    );
+    const rows = Array.from({ length: this.recordCount() }, (_, index) => {
+      const label = this.labels[index] ?? '';
+      return [
+        label,
+        ...this.datasets.map((series, datasetIndex) => {
+          const value = series.data[index];
+          return typeof value === 'number' && Number.isFinite(value)
+            ? this.formatter?.({
+                value,
+                surface: 'export',
+                datasetIndex,
+                index,
+                label,
+                seriesLabel: series.label,
+              }) ?? value
+            : '';
+        }),
+      ].map(escapeCsvField).join(',');
+    });
     return [header, ...rows].join('\r\n');
   }
 
@@ -469,6 +572,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     super.connectedCallback();
     this.syncAnnouncementSink();
     this.armResizeObserver();
+    this.armForcedColorsWatcher();
   }
 
   private armResizeObserver(): void {
@@ -524,13 +628,37 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     this.lastDataTruncationAnnouncement = '';
     this.isMounting = true;
     this.resetResizeObserver();
+    this.disarmForcedColorsWatcher();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.resetResizeObserver();
     this.releaseAnnouncementSink();
     this.syncAnnouncementSink();
     this.refreshFitMeasurementAvailability();
+    this.armForcedColorsWatcher();
+  }
+
+  private readonly onForcedColorsChange = (): void => {
+    if (!this.isConnected || this.ownerDocument.defaultView !== this.forcedColorsWindow) return;
+    this.requestUpdate();
+  };
+
+  private armForcedColorsWatcher(): void {
+    const ownerWindow = this.ownerDocument?.defaultView ?? undefined;
+    if (!ownerWindow?.matchMedia) return;
+    if (this.forcedColorsWindow === ownerWindow && this.forcedColorsQuery) return;
+    this.disarmForcedColorsWatcher();
+    this.forcedColorsWindow = ownerWindow;
+    this.forcedColorsQuery = ownerWindow.matchMedia('(forced-colors: active)');
+    this.forcedColorsQuery.addEventListener('change', this.onForcedColorsChange);
+  }
+
+  private disarmForcedColorsWatcher(): void {
+    this.forcedColorsQuery?.removeEventListener('change', this.onForcedColorsChange);
+    this.forcedColorsQuery = undefined;
+    this.forcedColorsWindow = undefined;
   }
 
   private syncAnnouncementSink(): void {
@@ -640,6 +768,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     return sanitizeCssColor(series.color) ?? DEFAULT_PALETTE[index % DEFAULT_PALETTE.length]!; // safe: modulo a non-empty constant palette
   }
 
+  /** Effective closed-set type for both attribute and untyped property writes. */
+  private get effectiveType(): LyraLiteChartType {
+    return normalizeLiteChartType(this.type);
+  }
+
   /**
    * Whether the per-series forced-colors encodings apply. Under `forced-colors: active` the
    * `--lr-color-chart-*` ramp behind `DEFAULT_PALETTE` is remapped onto the small repeating
@@ -658,7 +791,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** The paint a mark of `index` uses: a texture reference under forced colors, else the color. */
   private markPaint(index: number, series: LiteSeries): string {
     const color = this.colorFor(index, series);
-    return this.type === 'bar' && this.forcedColors()
+    return this.effectiveType === 'bar' && this.forcedColors()
       ? `url(#${this.forcedColorPatternId}-${index})`
       : color;
   }
@@ -685,12 +818,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private renderForcedColorPatterns() {
     // Only bars consume a pattern fill; a line's own dash carries the encoding, and a 4px point
     // is too small to read one, so anything else would emit defs nothing references.
-    if (this.type !== 'bar' || !this.forcedColors()) return nothing;
+    if (this.effectiveType !== 'bar' || !this.forcedColors()) return nothing;
     const size = 8;
     const half = size / 2;
     const texture = 'var(--lr-color-surface)';
     return svg`<defs>
-      ${this.datasets.map((series, index) => {
+      ${this.recordSample().seriesIndexes.map((index) => {
+        const series = this.datasets[index]!;
         const encoding = forcedColorEncoding(index).name;
         const shapes = (() => {
           switch (encoding) {
@@ -738,7 +872,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Dispatches to the host-provided `pointText` formatter when set, otherwise `undefined` (the
    *  caller falls back to its own built-in template) — mirrors `lr-heatmap`'s `resolveCellText()`. */
   private resolvePointText(label: string, value: number, datasetIndex: number): string | undefined {
-    return this.pointText?.(label, value, datasetIndex);
+    return this.formatter?.({
+      value,
+      surface: 'visual',
+      datasetIndex,
+      label,
+      seriesLabel: this.datasets[datasetIndex]?.label,
+    }) ?? this.pointText?.(label, value, datasetIndex);
   }
 
   private formatTableCell(
@@ -746,13 +886,23 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     context: LyraLiteChartTableCellContext,
     numberFormat: Intl.NumberFormat,
   ): string {
-    return this.tableCellFormatter?.(value, context) ?? numberFormat.format(value);
+    return this.formatter?.({
+      value,
+      surface: 'table',
+      datasetIndex: context.datasetIndex ?? undefined,
+      index: context.index,
+      label: context.label,
+      seriesLabel: context.seriesLabel ?? undefined,
+      ...(context.kind === 'total' ? { statistic: 'total' as const } : {}),
+    }) ?? this.tableCellFormatter?.(value, context) ?? numberFormat.format(value);
   }
 
-  private tableTotalAt(index: number): number | null {
+  private tableTotalAt(index: number, seriesIndexes: readonly number[]): number | null {
     let total = 0;
     let hasValue = false;
-    for (const series of this.datasets) {
+    for (const seriesIndex of seriesIndexes) {
+      const series = this.datasets[seriesIndex];
+      if (!series) continue;
       const value = series.data[index];
       if (value == null || !Number.isFinite(value)) continue;
       total = finiteAdd(total, value);
@@ -797,7 +947,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private interactiveMarks(): InteractiveMark[] {
     const marks: InteractiveMark[] = [];
     const sample = this.recordSample();
-    if (this.type === 'bar') {
+    if (this.effectiveType === 'bar') {
       for (const index of sample.rowIndexes) {
         for (const datasetIndex of sample.seriesIndexes) {
           const value = this.datasets[datasetIndex]?.data[index];
@@ -848,7 +998,14 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const mark = marks[index];
     if (!mark) return '';
     const series = this.datasets[mark.datasetIndex]?.label ?? this.localize('chartSeriesLabel');
-    const custom = this.resolvePointText(mark.label, mark.value, mark.datasetIndex);
+    const custom = this.formatter?.({
+      value: mark.value,
+      surface: 'spoken',
+      datasetIndex: mark.datasetIndex,
+      index: mark.index,
+      label: mark.label,
+      seriesLabel: series,
+    }) ?? this.resolvePointText(mark.label, mark.value, mark.datasetIndex);
     if (custom) {
       return this.localize('liteChartCustomMarkSummary', undefined, {
         content: custom,
@@ -940,7 +1097,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private domain() {
     let lo = Infinity;
     let hi = -Infinity;
-    if (this.type === 'bar' && this.stacked) {
+    if (this.effectiveType === 'bar' && this.stacked) {
       // Stacked bars: each category's extent is the sum of its (signed)
       // positive/negative segments, not the max single value.
       for (let i = 0; i < this.recordCount(); i++) {
@@ -974,6 +1131,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private emitPoint(datasetIndex: number, index: number): void {
     const label = this.labels[index];
     const value = this.datasets[datasetIndex]?.data[index] ?? null;
+    this.emit('lr-datum-activate', {
+      kind: this.effectiveType === 'bar' ? 'bar' : 'point',
+      datasetIndex,
+      index,
+      label,
+      value,
+    });
     this.emit('lr-point-click', { datasetIndex, index, label, value });
   }
 
@@ -1061,7 +1225,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           y=${y}
           text-anchor="end"
           dominant-baseline="middle"
-        >${this.tickFormat ? this.tickFormat(t) : formatTick(t, this.effectiveLocale)}</text>
+        >${this.formatter?.({ value: t, surface: 'tick' }) ??
+          (this.tickFormat ? this.tickFormat(t) : formatTick(t, this.effectiveLocale))}</text>
       `;
     });
   }
@@ -1082,6 +1247,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     hi: number,
     barOrigins: ReadonlyMap<number, number>,
     recordSample: { readonly rowIndexes: readonly number[]; readonly seriesIndexes: readonly number[] },
+    selectedIndices: ReadonlySet<number>,
   ) {
     const groupCount = this.stacked ? 1 : Math.max(1, recordSample.seriesIndexes.length);
     // barGapRatio is a fraction of a category slot (groupW = slot * (1 - groupGap)) -- clamped to
@@ -1269,7 +1435,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           h = clampSvgLength(Math.max(0, y2 - y1));
         }
         const markIndex = markIndexes.get(`${di}:${i}`)!;
-        const selected = this.selectedIndex.includes(i);
+        const selected = selectedIndices.has(i);
         const intraGroupSpacing = barW + BAR_GAP * slot;
         const crossCategorySpacing =
           slot - Math.max(0, groupCount - 1) * intraGroupSpacing;
@@ -1361,6 +1527,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     lo: number,
     hi: number,
     recordSample: { readonly rowIndexes: readonly number[]; readonly seriesIndexes: readonly number[] },
+    selectedIndices: ReadonlySet<number>,
   ) {
     const n = this.recordCount();
     const xFor = (i: number) => plotX + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
@@ -1392,15 +1559,31 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       const color = this.colorFor(di, s);
       let d = '';
       let penDown = false;
+      let previousSourceIndex = -1;
       recordSample.rowIndexes.forEach((i) => {
         const v = s.data[i];
         if (v == null || !Number.isFinite(v)) {
           penDown = false;
+          previousSourceIndex = i;
           return;
+        }
+        // The bounded sampler can omit the source index that carries a real null/non-finite gap.
+        // Scan each skipped interval once so a pair of sampled finite neighbors never invents a
+        // continuous segment across missing source data. Across the ordered sample this remains a
+        // single linear pass over the source series, not one scan per sampled point.
+        if (penDown && previousSourceIndex >= 0 && i > previousSourceIndex + 1) {
+          for (let skipped = previousSourceIndex + 1; skipped < i; skipped++) {
+            const candidate = s.data[skipped];
+            if (candidate == null || !Number.isFinite(candidate)) {
+              penDown = false;
+              break;
+            }
+          }
         }
         const cmd = penDown ? 'L' : 'M';
         d += `${cmd}${xFor(i)},${yFor(v)} `;
         penDown = true;
+        previousSourceIndex = i;
       });
       const dots = recordSample.rowIndexes.map((i) => {
         const v = s.data[i];
@@ -1416,7 +1599,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           });
         const titleText = barText;
         const markIndex = markIndexes.get(`${di}:${i}`)!;
-        const selected = this.selectedIndex.includes(i);
+        const selected = selectedIndices.has(i);
         return svg`
           <g class="mark-hit-group">
             <circle
@@ -1506,9 +1689,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     // padLeft is a non-negative pixel gutter width -- a non-finite explicit value (NaN/Infinity,
     // e.g. an unparsable attribute) falls back to the PAD_LEFT default; an explicit negative value
     // instead clamps to 0. Either way the gutter never goes negative or NaN.
-    const padLeft = this.padLeft == null
+    const padLeft = this.valueAxisGutter == null
       ? PAD_LEFT
-      : finiteRange(this.padLeft, PAD_LEFT, 0, MAX_SCROLL_CONTENT_WIDTH);
+      : finiteRange(this.valueAxisGutter, PAD_LEFT, 0, MAX_SCROLL_CONTENT_WIDTH);
     const axisGutter = padLeft + (this.yLabel ? AXIS_TITLE_SPACE : 0);
     const rtl = this.effectiveDirection === 'rtl';
     const padBottom = PAD_BOTTOM + (this.xLabel ? AXIS_TITLE_SPACE : 0);
@@ -1541,10 +1724,22 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     }
     const { lo, hi, ticks } = this.domain();
     const recordSample = this.recordSample();
+    const selectedIndices = new Set<number>();
+    // Only sampled source rows can render a selected mark. Bound work by the same visual ceiling
+    // instead of running `includes()` against an unbounded controlled array for every mark.
+    const renderedRows = new Set(recordSample.rowIndexes);
+    for (let index = 0; index < Math.min(this.selectedIndices.length, MAX_RENDERED_CHART_RECORDS); index++) {
+      const candidate = this.selectedIndices[index];
+      if (
+        typeof candidate === 'number' &&
+        Number.isInteger(candidate) &&
+        renderedRows.has(candidate)
+      ) selectedIndices.add(candidate);
+    }
     // Resolve a public `barX` callback once in source-index order, after the slot width is known.
     // The same finite origin drives bars and category labels, preventing stateful callbacks from
     // drifting those surfaces apart and keeping hostile values out of SVG geometry.
-    const barOrigins = this.type === 'bar' && !awaitingFitMeasurement
+    const barOrigins = this.effectiveType === 'bar' && !awaitingFitMeasurement
       ? new Map(recordSample.rowIndexes.map((index) => {
           const fallback = plotX + index * slot;
           const candidate = typeof this.barX === 'function' ? this.barX(index) : fallback;
@@ -1555,20 +1750,20 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         }))
       : new Map<number, number>();
 
-    const grid = awaitingFitMeasurement || this.hideAxis
+    const grid = awaitingFitMeasurement || this.withoutValueAxis
       ? []
       : this.renderGrid(plotX, plotY, plotW, plotH, ticks, lo, hi);
     const marks =
       awaitingFitMeasurement
         ? []
-        : this.type === 'bar'
-        ? this.renderBars(plotX, plotY, plotH, slot, lo, hi, barOrigins, recordSample)
-        : this.renderLines(plotX, plotY, plotW, plotH, lo, hi, recordSample);
+        : this.effectiveType === 'bar'
+        ? this.renderBars(plotX, plotY, plotH, slot, lo, hi, barOrigins, recordSample, selectedIndices)
+        : this.renderLines(plotX, plotY, plotW, plotH, lo, hi, recordSample, selectedIndices);
 
     const visibleLabelIndexes = this.visibleLabelIndexes(n);
     const categoryLabelWidth = Math.max(
       0,
-      (this.type === 'bar'
+      (this.effectiveType === 'bar'
         ? slot
         : n > 1
           ? plotW / (n - 1)
@@ -1579,7 +1774,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       if (visibleLabelIndexes && !visibleLabelIndexes.has(i)) return nothing;
       const fullLabel = label ?? '';
       const x =
-        this.type === 'bar' && n > 0
+        this.effectiveType === 'bar' && n > 0
           ? (barOrigins.get(i) ?? plotX + i * slot) + slot / 2
           : plotX + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
       const displayLabel = this.displayCategoryLabel(fullLabel, categoryLabelWidth);
@@ -1597,6 +1792,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     );
     const chartLabel =
       this.getAttribute('aria-label') ||
+      this.label ||
       this.accessibleLabel ||
       (datasetLabels.length
         ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(datasetLabels)
@@ -1604,17 +1800,23 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       this.localize('chart');
     const marksForA11y = this.interactiveMarks();
     const tableNumberFormat = getNumberFormat(this.effectiveLocale);
-    const showTableTotals = this.type === 'bar' && this.stacked && this.tableTotals;
+    const showTableTotals = this.effectiveType === 'bar' && this.stacked && this.tableTotals;
     const dataTruncation = this.dataTruncationMessage();
     const hasCustomDataTable = this.hasCustomDataTable();
 
     return html`
-      <div part="base">
+      <div
+        part="base"
+        data-legend-position=${this.legend
+          ? chartChromeLegendPlacement(this.legendPosition)
+          : nothing}
+      >
         <svg
           viewBox="0 0 ${w} ${h}"
           style=${this.layout === 'scroll' ? `inline-size: ${w}px` : nothing}
           role="group"
           aria-label=${chartLabel}
+          aria-describedby=${this.description ? this.descriptionId : nothing}
           tabindex=${!awaitingFitMeasurement && marksForA11y.length ? '-1' : '0'}
         >
           ${this.renderForcedColorPatterns()}
@@ -1635,11 +1837,14 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             : nothing}
         </svg>
         <lr-live-region part="live-region"></lr-live-region>
+        ${this.description
+          ? html`<p part="description" id=${this.descriptionId} class="sr-only">${this.description}</p>`
+          : nothing}
         ${dataTruncation ? html`<p part="data-truncation">${dataTruncation}</p>` : nothing}
-        <div part="data-table">
+        <div part="data-table" ?data-visually-hidden=${!hasCustomDataTable}>
           <slot name="data-table" @slotchange=${() => this.requestUpdate()}></slot>
           ${hasCustomDataTable ? nothing : this.datasets.length > 1
-          ? html`<table part="data-table" class="sr-only">
+          ? html`<table part="table" class="sr-only">
               <caption>${this.localize('chartData')}</caption>
               <thead>
                 <tr>
@@ -1676,7 +1881,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                     })}
                     ${showTableTotals
                       ? (() => {
-                          const total = this.tableTotalAt(index);
+                          const total = this.tableTotalAt(index, recordSample.seriesIndexes);
                           return html`<td>${total == null
                             ? ''
                             : this.formatTableCell(
@@ -1703,19 +1908,35 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         </div>
         ${this.legend
           ? html`<div part="legend">
-              ${this.datasets.map(
-                (s, i) => html`
+              ${recordSample.seriesIndexes.map(
+                (i) => {
+                  const s = this.datasets[i]!;
+                  return html`
                   <span part="legend-item">
                     <span
                       part="legend-swatch"
                       data-encoding=${this.legendEncoding(i)}
                       style=${styleMap({ backgroundColor: this.colorFor(i, s) })}
                     ></span>
-                    ${s.label}${this.legendText
-                      ? html`<span part="legend-text">${this.legendText(s.label, i)}</span>`
+                    ${s.label}${this.formatter || this.legendText
+                      ? html`<span part="legend-text">${this.formatter?.({
+                          value: recordSample.rowIndexes.reduce(
+                            (sum, index) => {
+                              const value = s.data[index];
+                              return typeof value === 'number' && Number.isFinite(value)
+                                ? finiteAdd(sum, value)
+                                : sum;
+                            },
+                            0,
+                          ),
+                          surface: 'legend',
+                          datasetIndex: i,
+                          seriesLabel: s.label,
+                        }) ?? this.legendText?.(s.label, i)}</span>`
                       : nothing}
                   </span>
-                `,
+                `;
+                },
               )}
             </div>`
           : nothing}

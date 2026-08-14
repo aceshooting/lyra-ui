@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import '../components/data/flow-node/flow-node.js';
-import '../components/data/flow-run-overlay/flow-run-overlay.js';
+import '../components/data/flow-run-status/flow-run-status.js';
 import '../components/data/stat/stat.js';
 
 /**
@@ -43,11 +43,11 @@ it('paints the flow-node status row with the quiet-text token', async () => {
   expect(computedOf(el, 'status').color).to.equal(resolvedColorFor(el, '--lr-color-text-quiet'));
 });
 
-it('paints the flow-run-overlay counts with the quiet-text token', async () => {
+it('paints the flow-run-status counts with the quiet-text token', async () => {
   const el = (await fixture(html`
-    <lr-flow-run-overlay
+    <lr-flow-run-status
       .decorations=${{ a: { status: 'done' }, b: { status: 'running' } }}
-    ></lr-flow-run-overlay>
+    ></lr-flow-run-status>
   `)) as HTMLElement & { updateComplete: Promise<unknown> };
   await el.updateComplete;
   expect(computedOf(el, 'count').color).to.equal(resolvedColorFor(el, '--lr-color-text-quiet'));

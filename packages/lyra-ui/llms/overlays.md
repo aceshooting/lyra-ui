@@ -94,7 +94,8 @@ Stacking toast/notification region. Mirrors `<wa-toast>`/`<wa-toast-item>` under
 
 ### `lr-toast`
 
-One per page recommended — the region.
+A placement-specific region. The imperative helper maintains one region for each
+`ownerDocument` + `placement` pair; manually authored regions remain independent.
 
 **Properties:**
 - `placement: ToastPlacement = 'top-end'` (reflected) — one of `'top-start'|'top-center'|'top-end'|
@@ -103,10 +104,21 @@ One per page recommended — the region.
   Start/end follow direction, center placements use that rectangle's midpoint even when the inline
   safe-area insets are asymmetric, and an oversized stack is capped to its usable inline size.
 
-**Methods:** `async create(message: string, options?: ToastCreateOptions): Promise<LyraToastItem>` —
-`ToastCreateOptions = { variant?, duration?, size?, withIcon? }`. Its `size` accepts the canonical
-`2xs`/`xs`/`s`/`m`/`l`/`xl` values plus `small`/`medium`/`large`; either spelling is preserved by
-the created item's getter and reflected attribute.
+**Methods:** `create(options: LyraToastOptions): Promise<LyraToastItem>` is the canonical form;
+`create(message: string, options?: ToastCreateOptions)` remains as a compatibility overload.
+`LyraToastOptions` contains `message`, optional `placement`, `ownerDocument`, `variant`, `duration`,
+`size`, `withIcon`, `icon`, and `action`; `ToastCreateOptions` omits `message` and `placement`.
+`icon` accepts text, a DOM node, a Lit template, or a target-document factory returning one of
+those. Strings are always text, never HTML; cross-document nodes are imported into the region's
+document. `action` creates a native button from `{ label, onClick }`. The options' `ownerDocument`,
+and `placement`, when supplied directly to a region, must match that region. Calling `create()`
+while the region is detached rejects immediately instead of leaving a render-dependent promise pending. `size` accepts
+the canonical `2xs`/`xs`/`s`/`m`/`l`/`xl` values plus `small`/`medium`/`large`; either spelling is
+preserved by the created item's getter and reflected attribute.
+
+**Live members:** `stack: HTMLElement | null` returns the rendered `[part="stack"]` element, or
+`null` before the render root is populated. Its identity remains stable across ordinary updates and
+reconnection.
 
 The region keeps exactly three items active. Later items enter a hidden, inert FIFO queue capped at
 twenty; their show lifecycle and auto-dismiss timer do not start until promotion. Removing an active
@@ -149,7 +161,8 @@ A single notification.
 - `withIcon: boolean = false` (attribute `with-icon`)
 
 **Methods:** `async hide(): Promise<void>` — plays the hide animation, then removes itself from the
-DOM.
+DOM. `toastItemElement: HTMLElement | null` exposes the live `[part="toast-item"]` surface (or
+`null` before rendering) and remains the same node across ordinary updates/reconnection.
 
 **Events:** `lr-show`, `lr-after-show`, `lr-hide`, `lr-after-hide`. `lr-show` and `lr-hide` are the
 cancelable before-transition veto points. The item stays hidden and inert throughout `lr-show`;
@@ -223,17 +236,23 @@ needed:
 import { toast } from '@aceshooting/lyra-ui/components/overlays/toast/toaster.js';
 
 toast('Saved');
-toast({ message: 'Deleted', variant: 'danger', action: { label: 'Undo', onClick: (item) => {/*...*/} } });
+toast({
+  message: 'Deleted',
+  variant: 'danger',
+  icon: (ownerDocument) => ownerDocument.createTextNode('!'),
+  action: { label: 'Undo', onClick: (item) => {/*...*/} },
+});
 ```
 
-`toast(input: ToastOptions | string): ToastHandle` where
-`ToastOptions = ToastCreateOptions & { message: string; placement?: ToastPlacement; action?: { label: string; onClick: (item: LyraToastItem) => void } }`,
-and `ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. Because it extends
-`ToastCreateOptions`, the helper accepts the same long `small`/`medium`/`large` size aliases and
-preserves them on the created item identically. It lazily mounts (and
-re-mounts if removed) **one singleton `<lr-toast>` region per distinct `placement`** on
-`document.body` — a `toast()` call targeting one placement never relocates toasts already showing
-at another, since `placement` is a per-call option rather than a single global region's setting.
+`toast(input: LyraToastOptions | string): ToastHandle`, where `ToastOptions` remains a deprecated
+type alias for `LyraToastOptions`, and
+`ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. The canonical options are
+shared byte-for-byte with the region's object-form `create()`, including `ownerDocument`, safe icon
+payloads/factories, actions, and the long `small`/`medium`/`large` size aliases. It lazily mounts
+(and re-mounts if removed) **one singleton `<lr-toast>` region per distinct `ownerDocument` and
+`placement`** on that document's body — a call targeting one placement/document never relocates
+toasts already showing in another. A foreign document must have the toast elements registered in
+its own custom-element registry; otherwise the returned `item` promise rejects explicitly.
 
 ```html
 <script type="module">
@@ -343,20 +362,24 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
 
 ## `lr-skeleton`
 
-Loading placeholder (`text`/`circle`/`rect` shapes, opt-in `pulse`/`sheen` effects).
+Loading placeholder mirroring the Web Awesome/Shoelace skeleton surface under the `lr-` prefix,
+with `text`/`circle`/`rect` geometry and opt-in `pulse`/`sheen` effects.
 
 **Properties:**
-- `variant: 'text'|'circle'|'rect' = 'text'` (reflected)
+- `shape: 'text'|'circle'|'rect' = 'text'` (reflected) — the canonical geometry vocabulary;
+  exported as `LyraSkeletonShape`. The former `variant` property/attribute and `SkeletonVariant`
+  type are removed in v9; use `shape` and `LyraSkeletonShape`.
 - `effect: 'pulse'|'sheen'|'none' = 'none'` (reflected) — animation is opt-in. **Changed in
   8.0.0:** the Lyra default was `pulse`; set `effect="pulse"` to preserve that motion explicitly.
 - `width?: string`
 - `height?: string`
-- `label: string = 'Loading…'` — accessible name for this instance's own `role="status"` (rendered as
-  visually-hidden text inside `[part="base"]`); override with a description of what's actually
-  loading, e.g. `label="Loading chart"`
-- `announce: boolean = true` (reflected) — set false for decorative members of a skeleton group;
-  removes the status role, live-region state, and visually hidden announcement while preserving
-  the visual placeholder
+- `label?: string` — accessible name used when `announce` is set (rendered as visually-hidden text
+  inside `[part="base"]`). Only absence uses the localized loading default; every explicit caller
+  value—including `label="Loading…"` and `label=""`—is preserved literally. Prefer a description
+  of what's actually loading, e.g. `label="Loading chart"`.
+- `announce: boolean = false` (reflected) — opt one meaningful placeholder into `role="status"`
+  and localized hidden text. The false default preserves the decorative bare Web Awesome/Shoelace
+  skeleton contract and prevents repeated placeholders from producing duplicate announcements.
 
 **Events:** none.
 
@@ -375,13 +398,13 @@ timing.
 **Optional peer deps:** none.
 
 ```html
-<lr-skeleton variant="circle" effect="pulse" width="3rem" height="3rem"></lr-skeleton>
-<lr-skeleton variant="text" effect="sheen" label="Loading name"></lr-skeleton>
+<lr-skeleton shape="circle" effect="pulse" width="3rem" height="3rem"></lr-skeleton>
+<lr-skeleton announce shape="text" effect="sheen" label="Loading name"></lr-skeleton>
 ```
 
 **Known gotchas:**
-- Each instance announces by default. In a repeated skeleton layout, provide one parent status and
-  set `announce="false"` on the decorative child placeholders to avoid duplicate announcements.
+- Bare skeletons are decorative. In a repeated layout, set `announce` only on one meaningful
+  placeholder or provide one parent status; leave every other child unannounced.
 - no `lines`/`count` shorthand for "N lines of skeleton text" — stamp out N elements
   yourself.
 - Respects `prefers-reduced-motion` (both effects) — safe to leave as-is for that concern.
@@ -738,14 +761,13 @@ button all resolve `false`. It sets `lightDismiss = true` on its transient dialo
 backdrop-click branch survives 8.0.0's flip of that property's own default to `false`. Mounts a
 transient `<lr-dialog>` on `document.body` for the duration
 of the call and removes it once settled, rather than reusing a persistent page-level region
-(contrast `lr-toast`'s `toaster.ts`): a confirmation modal has no stacking/queueing concerns —
-only one is ever meant to be open at a time — so a mount-and-remove per call keeps its lifetime
-trivially tied to the returned promise. `title` becomes a slotted `<h2>`, which per `<lr-dialog>`'s
+(contrast `lr-toast`'s `toaster.ts`). Concurrent calls are distinct dialogs in the shared overlay
+stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
 own heading-detection also drives the dialog's accessible name; `description`, if provided, becomes
-a slotted `<p>`. `tone: 'danger'` fills the confirm button with `--lr-color-danger` instead of
-`--lr-color-brand`, for destructive actions. Confirm/cancel buttons are plain inline-styled
-`<button>` elements (no shared button component exists in this library yet), but every color value
-used is still a `--lr-*` token reference, never a raw literal. They carry the same interaction
+a direct light-DOM `<p>`. `tone: 'danger'` fills the confirm button with `--lr-color-danger` instead
+of `--lr-color-brand`, for destructive actions. Confirm/cancel actions deliberately use native
+inline-styled `<button>` elements so this helper does not register or import the broader button
+component; every color value is still a `--lr-*` token reference, never a raw literal. They carry the same interaction
 states as every other control in the library: a hover/pressed fill mixed toward
 `--lr-color-mix-partner` by `--lr-color-mix-hover`/`--lr-color-mix-active`, and a
 `--lr-focus-ring-width`/`--lr-focus-ring-color`/`--lr-focus-ring-offset` `:focus-visible` ring. An
@@ -765,9 +787,9 @@ their `data-lr-confirm-action` attribute.
   `--lr-color-<variant>-on-loud`), which in turn reads the matching `--lr-theme-color-*` hook and
   falls back to the shared neutral ramp — so retheming the grid retints the confirm button with no
   `::part()` rule, in light and dark alike.
-- Importing `confirm` alone is enough to register `<lr-dialog>` — `confirm.ts` imports
-  `./dialog.js` for its side effect, so a consumer doesn't need a separate import for the dialog
-  element.
+- Importing `confirm` is side-effect free and does not register `<lr-dialog>`. Invoking the helper
+  synchronously registers exactly the dialog class it creates before mounting the transient
+  element; consumers do not need a separate registration import for helper-created dialogs.
 
 ---
 
@@ -787,6 +809,12 @@ fully-rounded treatment moved behind the new opt-in `pill` boolean. Existing mar
 radius only if you add `pill`, or set `--lr-chip-radius: var(--lr-radius-pill)` once at the app
 level. `<lr-badge>`/`<lr-tag>` made the identical shape change, with the identical `pill` opt-in.
 
+**Two breaks in 9.0.0.** The chip's leading adornment slot and CSS part are now `start`, matching
+the library-wide adornment vocabulary; migrate `slot="icon"` to `slot="start"` and
+`::part(icon)` to `::part(start)`. Also, `toggleable` is now the sole toggle-mode opt-in:
+`selected` represents only current pressed state, so add `toggleable` anywhere that previously
+relied on `<lr-chip selected>` to create an action.
+
 ### `lr-chip`
 
 **Properties:**
@@ -804,20 +832,17 @@ level. `<lr-badge>`/`<lr-tag>` made the identical shape change, with the identic
 - `pill: boolean = false` (reflected) — **new in 8.0.0.** Fully-rounded ends instead of the default
   rounded rectangle; the same property `<lr-badge>`/`<lr-tag>` carry. Since it defaults to `false`,
   `pill="false"` is not a way to switch it off — remove the attribute, or assign `.pill = false`.
-- `selected: boolean = false` (reflected) — current value for opt-in toggle/pressed mode. Once
-  toggle mode is active, a separate native `[part='toggle-button']` owns focus, Enter/Space/click
+- `selected: boolean = false` (reflected) — current pressed value. It does not opt into interaction
+  or selected styling by itself; set `toggleable` independently. Once toggle mode is active, a
+  separate native `[part='toggle-button']` owns focus, Enter/Space/click
   activation, and explicit `"true"`/`"false"` `aria-pressed`; `[part='base']` remains a container
   and the visible default-slot label is inert and aria-hidden. Activation proposes the opposite
   value through the cancelable `lr-chip-select` event and mutates `selected` only when that event is
   not prevented.
   Has no toggle effect when combined with `removable`, where the remove button is the sole control.
-  `false` (with `toggleable` also left at its default) reproduces the passive label-pill output.
-- `toggleable: boolean = false` (reflected) — explicit opt-in into `selected`'s toggle/pressed
-  interactive mode, independent of `selected`'s own current value. Setting `selected` to `true` at
-  any point opts in automatically and keeps `toggleable` `true` from then on (enough for a chip that
-  starts already pressed) — set `toggleable` directly instead for a chip that must be clickable from
-  the outset while starting **unselected**, e.g. an initially-inactive category filter chip, since
-  `selected`'s own default (`false`) can't otherwise be distinguished from "never opted in".
+- `toggleable: boolean = false` (reflected) — sole opt-in into the toggle/pressed interactive mode,
+  independent of `selected`'s current value. Pair it with `selected` for an initially pressed chip;
+  leave `selected` unset for an initially unpressed chip.
 - `value?: string` — opaque consumer bookkeeping value, never read, validated, or rendered by this
   component itself, only ever echoed back verbatim (including `undefined` if never set) in
   `lr-remove`'s detail
@@ -838,31 +863,34 @@ Synchronous controlled removal receives the same repair, and a newer external fo
 never overridden.
 
 **Slots:** default (the chip's label content; its flattened subtree is inert and aria-hidden in
-toggle mode, so move links/buttons outside a toggleable chip), `icon` (optional decorative leading
-icon or status dot; its flattened subtree stays visible but is always inert and aria-hidden, and
-nothing is reserved for it — no extra gap — when left empty), `end` (optional trailing content,
+toggle mode, so move links/buttons outside a toggleable chip), `start` (optional decorative leading
+adornment such as an icon or status dot; its flattened subtree stays visible but is always inert
+and aria-hidden, and nothing is reserved for it — no extra gap — when left empty), `end` (optional trailing content,
 typically an icon, placed after the label and before the toggle/remove button; nothing is reserved
 for it — no extra gap — when left empty, mirroring `<lr-badge>`'s identical `end` slot). `end`
 remains ordinary consumer content in passive/removable mode, but its flattened subtree becomes
 inert and aria-hidden beneath the full-surface toggle.
 
 Toggle/remove action names follow the default slot's live visible accessible text through nested
-forwarding slots and assigned-node replacement; decorative `icon` content never leaks into them.
-Hidden, inert, CSS-hidden and `aria-hidden` label branches are excluded. A host `aria-label` wins by
-presence, so an explicitly empty value remains empty.
+forwarding slots and assigned-node replacement; decorative `start` content never leaks into them.
+Hidden, inert, CSS-hidden and `aria-hidden` label branches are excluded. When a host `aria-label`
+is present—including `aria-label=""`—the host becomes the one aggregate `role="group"` owner;
+that label is not copied onto the nested action. The toggle/remove button instead keeps its
+purpose-specific name from visible label text or the localized `select`/`remove` fallback, so the
+host and action never expose duplicate names.
 
-**CSS parts:** `base` (the pill's root container), `icon` (inert, aria-hidden wrapper around the
-decorative `icon` slot; hidden entirely while empty), `label` (wrapper around the default slot,
+**CSS parts:** `base` (the pill's root container), `start` (inert, aria-hidden wrapper around the
+decorative `start` slot; hidden entirely while empty), `label` (wrapper around the default slot,
 inert and aria-hidden in toggle mode), `end` (wrapper around the `end` slot; hidden entirely while
 empty and inert plus aria-hidden in toggle mode, the same `end` csspart name `<lr-badge>` uses),
 `toggle-button` (the real native toggle control, rendered over the label in toggle mode),
 `remove-button` (the remove (×) affordance, only rendered while `removable`)
 
-The toggle control's accessible name comes from a host `aria-label` first, then the chip's own
-default-slot text. An icon-only toggleable chip (a colour swatch standing in for a chart series, a
-bare status dot) has neither, so it falls back to the localized `select` message rather than
-shipping an unnamed focusable button — the same generic fallback the remove button already makes to
-`remove`.
+The toggle control's accessible name comes from the chip's default-slot text. A start-only
+toggleable chip (a colour swatch standing in for a chart series, a bare status dot) falls back to
+the localized `select` message rather than shipping an unnamed focusable button—the same generic
+fallback the remove button makes to `remove`. A host name, when supplied, remains on the aggregate
+group as described above.
 
 **Themeable custom properties:** `--lr-chip-accent`, `--lr-chip-bg`, `--lr-chip-border`
 (component-local trio swapped per `variant` rather than repeating background/color/border per part
@@ -875,7 +903,7 @@ the chip reads those generic slots and never names a variant, and sets its borde
 `--lr-chip-accent`), `--lr-chip-pressed-bg` (background color while pressed/selected — falls
 back to `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-padding-block`,
 `--lr-chip-padding-inline`, `--lr-chip-gap`, `--lr-chip-icon-size` (all five are rewritten by each
-`:host([size])` rule, so setting one directly on the element overrides that step of the scale; the
+`:host([size])` rule, so setting one on the element or a theme ancestor overrides that step of the scale; the
 `m` defaults are `--lr-font-size-sm` / `--lr-size-0-25rem` / `--lr-space-s` / `--lr-space-xs` /
 `--lr-font-size-sm`), the height pair `--lr-chip-min-height` / `--lr-chip-height` (below),
 `--lr-chip-radius` (default `var(--lr-radius)`; `pill` raises it to `var(--lr-radius-pill)`) — the
@@ -890,20 +918,21 @@ plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 
 **Chip height — a floor and an exact cap:**
 
-- `--lr-chip-min-height` (default `--lr-size-1-5rem`) floors an **interactive** chip only — one in
-  toggle mode or with `removable` set. `2xs`/`xs`/`s`/`m` all share that `1.5rem` value because it
-  is the 24px WCAG 2.2 SC 2.5.8 target minimum and an interactive chip must never shrink below it;
-  `l` and `xl` raise it to their own taller floors. A passive display chip takes no floor from
-  this at all, and every default sits below the chip's own content-driven height, so the floor is
-  invisible until you raise it.
+- `--lr-chip-min-height` (default `--lr-size-1-5rem`) controls the component-density floor for
+  **every interactive chip**—toggleable and removable alike. The final used block size is also
+  floored by the shared `--lr-icon-button-size` target in both modes, while `l`/`xl` raise the
+  density default. A passive display chip takes no floor from this at all. The interactive base is
+  likewise allocated at least the shared target width, so its absolute toggle action cannot escape
+  into an adjacent control.
 - `--lr-chip-height` pins an **exact** height on `[part='base']` — interactive and passive chips
   alike — so a row of chips can line up with a sibling control of a known height. It is
   **undeclared by default**, which is what keeps the per-tier floor alive: `auto` is a valid
   declared value that would win over the `var()` fallback arm and make `--lr-chip-min-height` dead
   code, so never set it to `auto` — remove the declaration instead. Because the component never
   declares it, it can be set inline, from an ancestor, or from an outer-tree rule.
-  **A value below 24px is for non-interactive display chips only**; pinning an interactive chip
-  that short breaks its tap target.
+  On an interactive chip, a value below the shared target size controls only the painted density;
+  the owned action allocation still expands to the target floor and cannot overlap adjacent
+  controls.
 
 **Optional peer deps:** none.
 
@@ -920,13 +949,14 @@ plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 ### `lr-chip-group`
 
 A flex-wrap container for a set of `<lr-chip>` children — plain light-DOM composition, direct
-children are the chips (the same shape `<lr-split>`'s panels / `<lr-source-list>`'s cards take,
+children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards take,
 no `.items` array prop).
 
 **Properties:**
 - `maxVisible?: number` (attribute `max-visible`) — maximum number of assigned children shown before
   the rest collapse behind a "+N" indicator; flattened slot-forwarded children count the same as
-  direct children. Unset means no limit
+  direct children. Author-hidden or inert children do not consume capacity or inflate the hidden
+  count. Unset means no limit.
 
 **Events:** `lr-overflow-toggle` (`detail: { expanded }` — the overflow indicator was activated,
 revealing or re-collapsing the excess children; fires only from that click, i.e. only when
@@ -942,7 +972,8 @@ usage)
 
 **CSS parts:** `base` (the flex-wrap container, holds both the slot and the overflow indicator),
 `overflow-indicator` (the "+N" / "Show less" toggle button; only rendered while `max-visible` is
-actively causing an overflow — a locally-styled pill, not an instantiated real `<lr-chip>`)
+actively causing an overflow—a locally-styled pill, not an instantiated real `<lr-chip>`, with the
+shared minimum hit area in both axes)
 
 **Themeable custom properties:** `--lr-chip-group-overflow-expanded-color` (default
 `var(--lr-color-text)`) — text color of `[part="overflow-indicator"]` while expanded
@@ -977,14 +1008,16 @@ re-pointing shared tokens. Left unset, rendering is unchanged. Otherwise shared 
 
 Since CSS alone can't parameterize `:nth-child` on a runtime prop, `<lr-chip-group>` reaches
 directly into the light DOM and sets each excess child's own `hidden` property once `max-visible` is
-exceeded — the same approach `<lr-split>` uses to set each panel's inline `flex`/`order`, rather
+exceeded — the same approach `<lr-multi-split>` uses to set each panel's inline `flex`/`order`, rather
 than a stylesheet-only solution. It observes live author changes to each managed child's `hidden`
-state and restores the latest author-owned value when ownership ends or the group disconnects;
-reconnecting reapplies the current collapsed state.
+and `inert` state, uses real `hidden` attributes for arbitrary HTML/SVG elements, and restores the
+latest author-owned value when ownership ends or the group disconnects; reconnecting reapplies the
+current collapsed state. Forwarded-slot reconciliation is deferred without scheduling a reactive
+write from `firstUpdated()`.
 
 **Known gotchas:**
 - `<lr-chip>`'s accessible remove-button label ("Remove {text}") is computed only from the default
-  slot's own text content — text living inside the (decorative) `icon` slot doesn't leak into it.
+  slot's own text content — text living inside the (decorative) `start` slot doesn't leak into it.
 - `<lr-chip-group>` silently un-expands (`expanded` resets to `false`, with no event firing) if a
   consumer raises `max-visible` past the current child count while already expanded — only an actual
   click on the overflow indicator fires `lr-overflow-toggle`.
@@ -1012,6 +1045,11 @@ string. First-party invention (no Web Awesome equivalent).
   arrow glyphs, `plus`/`minus` → literal "+"/"−" as an escape hatch since `+` is the token
   delimiter and can't appear as a literal token itself), or, failing that, renders as typed
   (single letters/digits upper-cased).
+- `platform: 'auto'|'mac'|'windows'|'linux' = 'auto'` (reflected) — `auto` detects the current
+  runtime once; an explicit value makes SSR, screenshots, documentation, and tests deterministic.
+- `effectivePlatform: 'mac'|'windows'|'linux'` (read-only) — the concrete platform currently used.
+  It is serialized as `data-effective-platform` on `[part="base"]`; hydration adopts a server's
+  serialized auto choice instead of re-sniffing and replacing its key caps in another realm.
 
 **Exported types/functions (also directly usable standalone):** `KbdKeyLabel { visual: string;
 word: string }` — one resolved token's rendered glyph and spelled-out word; `KbdLocalize = (key:
@@ -1046,11 +1084,12 @@ absent.
 <lr-kbd keys="esc"></lr-kbd>
 ```
 
-Platform detection (`IS_MAC`, computed once at module scope, not per-instance/per-render, since a
+Automatic platform detection (computed once at module scope, not per-instance/per-render, since a
 page's platform never changes mid-session) prefers `navigator.userAgentData` (Client Hints, so far
 Chromium-only) when available, falling back through `navigator.platform` (long-deprecated) and
-finally a `navigator.userAgent` substring check — all three are deprecated/non-standard to varying
-degrees but remain, in combination, the practical cross-browser way to answer "is this macOS" today.
+finally a `navigator.userAgent` substring check. A server without `navigator` uses `linux`; its
+serialized effective value is retained by hydration. Set `platform` explicitly whenever the
+rendered documentation should target a different platform.
 The rendered chip carries `role="img"` with a single spelled-out `aria-label` (e.g. "Command+K")
 rather than exposing each glyph/`+`-separator as separate accessible-tree text, since the individual
 pieces aren't real words and would read worse piecemeal than as one label — glyphs like ⌘/⇧/⌥ are
@@ -1471,7 +1510,8 @@ graph.addEventListener('click', (event) => {
 ## `lr-dropdown`
 
 The complete mapped action-menu component. The public element remains a Popover-style trigger plus
-positioned popup; inside that popup it owns the same contained interaction engine as `lr-menu`, so
+positioned popup shell; the shell is presentation-only, and its contained `lr-menu` is the sole
+menu role/name owner. That menu provides the same interaction engine as standalone `lr-menu`, so
 direct `lr-dropdown-item`/`lr-menu-item` children get roving focus, disabled skipping, type-ahead,
 nested submenu keyboard/pointer intent, and focus return without a second public popup. A
 consumer-supplied `lr-menu` in the default slot becomes that contained engine instead of being
@@ -1485,9 +1525,18 @@ consumer-supplied `<lr-menu>` uses that controller directly. This preserves both
 direct-item composition and Shoelace's consumer-menu composition. The canonical item properties,
 methods, events, slots, parts, and theme variables are documented in the layout-family
 `lr-menu` / `lr-menu-item` section.
-When `popupRole` is changed away from its default `menu`, the outer popup owns that requested role
-and the contained controller renders a real inner `role="menu"`; menuitem descendants are never
-left directly under an incompatible dialog or generic role.
+The trigger always receives `aria-haspopup="menu"`. `popupRole` is narrowed to the invariant
+`'menu'`; assigning another runtime value or authoring another `popup-role` value normalizes it
+back to `menu` and never puts a dialog/menu role on the outer positioning shell. This matches Web
+Awesome's fixed inner menu role and Shoelace's consumer-menu ownership rather than exposing a
+Lyra-only role switch.
+
+The generated menu uses the dropdown's presence-sensitive host `aria-label`, `accessibleLabel`, or
+localized "Menu" fallback. A consumer-supplied menu keeps its own naming precedence: its host
+`aria-label` (including an explicit empty value), then an explicit nondefault `label`, then the
+dropdown fallback. Its `header` and `footer` slots remain rendered outside the inner
+`role="menu"` list while contained, including after live slot changes; Tab can therefore reach
+their controls without putting arbitrary content inside the menu role.
 
 **Properties:**
 - `open: boolean = false` (reflected), `placement: Placement = 'bottom-start'`,
@@ -1506,23 +1555,29 @@ left directly under an incompatible dialog or generic role.
 - `sync?: 'width'|'height'|'both'` (reflected) — copies the trigger dimension(s) onto the popup.
 - `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
   light-dismiss handling.
-- `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, `accessibleLabel`
-  (`aria-label`) and `popupRole` are retained from `lr-popover` for existing Lyra consumers; the
-  popup role defaults to `menu` and its accessible-name fallback is the localized "Menu".
+- `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, and `accessibleLabel`
+  (`aria-label`) are retained from `lr-popover` for existing Lyra consumers.
+- `popupRole: 'menu'` (attribute `popup-role`) is the narrowed inherited surface. Dropdowns cannot
+  be changed into dialogs; use `lr-popover popup-role="dialog"` for arbitrary dialog-like content.
 
 **Methods:** `show(): Promise<void>` and
 `hide(options?: { focusTrigger?: boolean }): Promise<void>` use the same cancelable before-events,
 after-events, focus return, and settlement rules as `lr-popover`. `reposition(): void` immediately
-recomputes placement after an imperative anchor/layout change. `showAt()` remains available for
-Lyra's virtual-anchor compatibility surface.
+recomputes placement after an imperative anchor/layout change. `focusOnTrigger(options?): void`
+focuses the first assigned trigger, and `getMenu(): LyraMenu | null` returns the live generated or
+consumer-supplied contained menu engine. `showAt()` remains available for Lyra's virtual-anchor
+compatibility surface.
+
+While a consumer-supplied menu is contained, the dropdown snapshots every integration field it owns
+(`dropdownOpen`, owner/contained/role flags, stay-open policy, and size). Removing/swapping that menu or
+disconnecting the dropdown restores the exact author values, so reuse outside this dropdown does
+not retain hidden parent policy.
 
 **Events:** `lr-select` is the single mapped selection path: cancelable, bubbling/composed, with
 `detail: { item }` carrying the activated element. Preventing it keeps the complete submenu chain
 open; `stay-open-on-select` applies the same default suppression declaratively. Nested selection is
 not translated or re-emitted at each level, so a listener on `lr-dropdown` receives exactly one
-event. The contained menu's standalone `lr-menu-select` compatibility alias is stopped inside the
-dropdown for direct, nested, and consumer-supplied menu shapes. `lr-show` (cancelable),
-`lr-after-show`, `lr-hide` (cancelable), and `lr-after-hide` retain
+event. `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), and `lr-after-hide` retain
 the Popover lifecycle; none fires for initial open markup.
 
 Dropdown motion resolves `dropdown.show` / `dropdown.hide` through the public animation registry;
@@ -1530,9 +1585,10 @@ it retains the dropdown's `--show-duration` / `--hide-duration` defaults when an
 only keyframes. Passing `null` disables motion without skipping the after-event or promise.
 
 **Slots:** `trigger`; default (`lr-dropdown-item`/`lr-menu-item` rows, or one consumer-supplied
-`lr-menu`). **CSS parts:** `trigger`; `popup dialog popup__popup base base__popup panel` (all six
-tokens on the positioned popup, preserving the popover, Web Awesome and Shoelace wrapper names on
-the same node); `menu` (the contained controller); `content body`; and the retained optional
+`lr-menu`; that menu may use its own `header`/`footer` regions). **CSS parts:** `trigger`;
+`popup dialog popup__popup base base__popup panel` (all six tokens on the neutral positioned
+popup, preserving the popover, Web Awesome and Shoelace wrapper names on the same node); `menu`
+(the contained semantic/controller owner); `content body`; and the retained optional
 `arrow popup__arrow` token set.
 
 **Themeable custom properties:** `--show-duration` and `--hide-duration` (both default
@@ -1597,8 +1653,9 @@ formatted percentage.
 
 **Properties:** `value` (reflected), `max`, `indeterminate`, `variant`, `showValue` (`show-value`), and
 `label` (mapped accessible-name property), plus `accessibleLabel` (`accessible-label`) — the
-library-wide explicit-accessible-name convention carried by every Lyra component that names a
-shadow-owned role, not an alias retained for one upstream. Host `aria-label` has highest precedence.
+retained Lyra compatibility spelling for this component. It is not a library-wide attribute:
+spinner, rating, and tooltip expose their explicit host name through `aria-label`. Host
+`aria-label` has highest precedence here too.
 The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when
 determinate. Slotted label content is always visible and names the progressbar unless an explicit
 label overrides it; `show-value` controls only whether the locale-formatted percentage is appended.
@@ -1635,8 +1692,9 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 
 **Properties:** `value: number = 0` (reflected), `max: number = 100`, `indeterminate: boolean = false`
 (reflected), `label: string = ''` (the mapped accessible-name property), and
-`accessibleLabel: string = ''` (attribute `accessible-label`; the library-wide explicit
-accessible-name convention, not an upstream alias). Host
+`accessibleLabel: string = ''` (attribute `accessible-label`; a Lyra compatibility
+accessible-name spelling retained by this progress component, while several sibling components use
+`aria-label` directly). Host
 `aria-label` takes precedence; otherwise the name falls back to `label`, `accessibleLabel`, the
 visible default-slot text when supplied, then the localized "Progress". Non-finite/out-of-range
 `value`/`max` are normalized (`max <= 0` falls
@@ -1645,6 +1703,10 @@ back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 percentage (and nothing at all while `indeterminate`).
 Its accessible text uses the same visibility filtering, forwarding-slot mutation/reassignment
 tracking, and explicit-empty host-label precedence as `lr-progress-bar`.
+**Live members:** `indicator: SVGCircleElement | null` returns the rendered indicator circle (or
+`null` before rendering). `indicatorOffset: number` returns the normalized stroke offset used for
+that circle, including the indeterminate value. The indicator node remains stable across ordinary
+value updates and reconnection while the offset updates live.
 **CSS parts:** `base` and `progress-ring` are aliases on the same progressbar; `track`, `indicator`,
 `label`.
 **Themeable custom properties:** `--lr-progress-ring-size` (default `var(--lr-size-2-5rem)` — the
@@ -1740,7 +1802,9 @@ compact surface without being clipped), and `remove-button` (`lr-tag` only, rend
 either part name styles the same native button.
 
 **Themeable custom properties.** Three layers, so a consumer can retune one without restating the
-others. All of them are declared by `lr-badge` and reach `lr-tag` unchanged.
+others. Public hooks are consumed through private use-site defaults instead of being redeclared on
+the host, so values set directly or inherited from a theme ancestor both win. The same contract
+reaches `lr-tag` unchanged.
 
 *Overrides* — undeclared by default, so they still inherit from a consumer's own ancestor rule, and
 win over whatever `variant`/`appearance` resolved: `--lr-badge-background` (falls back to
@@ -1789,15 +1853,15 @@ the remove button's `:hover` fill).
 
 **Known gotchas:**
 - The remove button's hit target meets the shared `--lr-icon-button-size` minimum in both axes while
-  the visible glyph stays compact; the extra growth is pulled back with a matching negative margin
-  on every side, so the enlarged hit area overhangs the pill's padding instead of inflating the
-  row's layout box.
+  the visible glyph stays compact. Its full allocation participates in layout with no negative
+  margins, so adjacent compact tags retain disjoint targets.
 - Its accessible name is computed from the default slot's own text ("Remove {label}", localized;
   bare "Remove" for a label-less tag) and re-derived live when that text changes. Text inside the
   decorative `start`/`end` slots never leaks into it. Visible accessible text, forwarding-slot
   reassignment and external assigned-node mutations stay synchronized; hidden/inert/CSS-hidden/
-  `aria-hidden` branches are excluded. A host `aria-label` wins by presence, including an explicit
-  empty value.
+  `aria-hidden` branches are excluded. A host `aria-label`, including an explicit empty value,
+  names a single aggregate `role="group"`; it is not copied to the nested action. The remove button
+  retains its purpose-specific visible-label/localized-fallback name.
 - `appearance` and `variant` are orthogonal: `appearance="plain"` on `variant="danger"` still reads
   as danger, because the palette is chosen before the surface routing.
 
@@ -1838,6 +1902,9 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
 - `countdown: 'rtl' | 'ltr' | undefined` (reflected, unset by default) — adds a decorative visual
   bar that empties in the requested physical direction. Its motion is removed under
   `prefers-reduced-motion: reduce`.
+- `role: string | null = 'alert'` (reflected) — the light-DOM semantic owner. The default is a
+  reactive initial value, so SSR/no-JS output serializes it before `connectedCallback`; an authored
+  alternate role such as `status` remains authoritative.
 
 **Methods:** `show(): Promise<void>` and `hide(): Promise<void>` resolve after their respective
 after-event. `toast(): Promise<void>` moves the same alert instance into Lyra's singleton logical
@@ -1878,9 +1945,10 @@ subtree remains visible but is inert and aria-hidden.
 native close button. The pinned surface exposes no component CSS custom properties, custom states,
 form association, native-event relays, or delegated native methods.
 
-The light-DOM `<lr-alert>` host owns `role="alert"`, so initially-open/static alerts and alerts shown
-later expose one assertive, content-derived semantic surface without duplicating it in a shadow or
-shared live region. The optional icon wrapper remains visible, but its flattened subtree is inert
+By default the light-DOM `<lr-alert>` host owns `role="alert"`, so initially-open/static alerts and
+alerts shown later expose one assertive, content-derived semantic surface without duplicating it in
+a shadow or shared live region. The role is present in server output; an explicit authored role is
+preserved. The optional icon wrapper remains visible, but its flattened subtree is inert
 and `aria-hidden`; the close action remains independently accessible through Lyra's localized
 `close` string. Layout uses logical properties, wraps unbroken content at 320px, and the toast path
 reuses the existing Lyra toast layer instead of creating a second placement system.
@@ -1950,7 +2018,9 @@ and padding.
 `--lr-callout-border` read the inherited generic semantic quiet/loud slots, with brand quiet/loud
 as their standalone fallback. An explicit `variant` maps all generic slots locally; leaving it
 unset preserves an ancestor's mapping. Explicit `appearance` works with either source and uses the
-same brand fallback when there is no surrounding context. `--lr-callout-close-hover-bg`
+same brand fallback when there is no surrounding context. Public callout hooks are consumed at use
+sites through private defaults, so a value inherited from a theme ancestor has the same authority
+as one set directly on the callout. `--lr-callout-close-hover-bg`
 (default `var(--lr-color-brand-quiet)`) — the close button's `:hover` background, deliberately
 decoupled from `--lr-callout-background` (which every explicit `variant`, including `neutral`,
 retargets for the panel itself) so a consumer can retint the hover fill — e.g. to keep it visibly distinct from a
@@ -1972,7 +2042,10 @@ them).
 Initial content and initially distributed slots are silent. After that first render/slot
 distribution settles, heading-property changes and direct or nested default/heading-slot additions,
 removals, and text changes are appended to Lyra's shared light-DOM polite sink (`assertive` for
-`danger`). Announcement text is whitespace-normalized, honors meaningful `aria-label` values, and
+`danger`). An unset callout resolves that urgency from the nearest composed ancestor carrying an
+explicit semantic `variant`, matching the palette it inherits without inspecting computed RGB.
+Ancestor changes, removal, reconnect, and adoption are resolved live; an explicit local variant
+pins both presentation and urgency. Announcement text is whitespace-normalized, honors meaningful `aria-label` values, and
 excludes the icon/close chrome plus content hidden by `hidden`, `inert`, or `aria-hidden="true"` at
 any nested level. `display:none`/`content-visibility:hidden` prune a branch; a
 `visibility:hidden|collapse` wrapper suppresses its own text while a descendant that restores
@@ -2020,6 +2093,18 @@ associated external label focuses the host-owned slider without changing its val
 property is visible label text, since a rating is a bare row of symbols with no field frame of its
 own; wrap the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
 
+**Static constructor API:** `LyraRating.validators` is the mirrored callable validator catalog.
+Each access returns a fresh `LyraFormValidator<LyraRating>[]`; its entry observes
+`required`/`disabled`/`readonly`/`value`/`max`, and `checkValidity(element)` projects the element's
+current `ValidityState` into `{ isValid, message, invalidKeys }` without changing it.
+
+```ts
+import { LyraRating } from '@aceshooting/lyra-ui/components/overlays/rating/rating.js';
+
+const rating = document.querySelector('lr-rating')!;
+const result = LyraRating.validators[0].checkValidity(rating);
+```
+
 The host is the one focusable `role="slider"` owner and carries `tabindex`, its accessible name,
 `aria-valuemin`/`aria-valuemax`/`aria-valuenow`/`aria-valuetext`, and explicit true/false disabled,
 readonly and required states. The shadow star row is `aria-hidden` presentation only, so custom
@@ -2060,7 +2145,9 @@ Left unset, the built-in star outline/solid pair is unchanged.
 - `lr-invalid` — no detail; fired when a validity check finds the rating invalid.
 
 **Methods:** `focus()`, `blur()` and `click()` operate on the host-owned slider and are gated while
-disabled.
+disabled. `rating: HTMLElement | null` is the live presentational symbol row (the element carrying
+the `rating`/`base` parts), or `null` before rendering; its identity remains stable across ordinary
+updates and reconnection.
 `getForm()` returns the browser-resolved owning form. `checkValidity()` and `reportValidity()`
 behave as on a native form control — `reportValidity()`
 additionally shows the browser's validation UI, and counts as interaction, so a failed submit is
@@ -2107,7 +2194,8 @@ Pointer selection resolves the position within the clicked star and snaps upward
 (with the physical fraction mirrored under RTL), so half/quarter-star precision applies to pointer
 input as well as keyboard/value updates. The host-owned slider's presentational symbol row keeps a
 40×40px minimum activation area even for the degenerate `max=0`/`max=1` cases; larger ratings
-naturally grow wider.
+naturally grow wider, while symbols may shrink within a narrow allocation instead of forcing the
+host beyond its container.
 
 ```html
 <lr-rating

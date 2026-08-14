@@ -46,6 +46,25 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
 
+  [part='attachments'] {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lr-space-2xs) var(--lr-space-xs);
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+    list-style: none;
+  }
+
+  [part='attachment'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
+
   [part='actions'] {
     display: flex;
     flex-wrap: wrap;

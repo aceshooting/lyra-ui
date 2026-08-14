@@ -15,7 +15,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A category-grouped, filterable dialog for picking which agent tools are enabled for a conversation. `useDefaults` is a single top-level switch — while on, every per-tool checkbox renders disabled (reflecting whatever `selected` holds); turning it off is the "customize" action that unlocks per-tool editing.',
+          'A category-grouped, filterable dialog for picking which agent tools are enabled for a conversation. `useDefaults` is a single top-level switch — while on, every per-tool checkbox renders disabled (reflecting whatever `selected` holds); turning it off is the "customize" action that unlocks per-tool editing. Large result sets mount in 200-row batches, reserving matching selected identities before ordinary rows, with an explicit localized limit notice and Load more continuation.',
       },
     },
   },
@@ -88,7 +88,7 @@ const NARROW_UNBROKEN = `ToolIdentifier${'WithoutNaturalBreaks'.repeat(20)}`;
 function openDialog(e: Event): void {
   const trigger = e.currentTarget as HTMLElement;
   const dialog = trigger.parentElement!.querySelector('lr-tool-select-dialog') as LyraToolSelectDialog;
-  dialog.open = true;
+  dialog.show();
 }
 
 export const Default: Story = {
@@ -207,7 +207,7 @@ export const CancelableChange: Story = {
 };
 
 export const Narrow320: Story = {
-  name: 'Narrow viewport with long tool content',
+  name: 'Narrow viewport with long tool and footer content',
   parameters: { viewport: { defaultViewport: 'mobile1' } },
   render: (_args, context) => html`
     <lr-tool-select-dialog
@@ -226,6 +226,31 @@ export const Narrow320: Story = {
         ...TOOLS,
       ]}
       .selected=${['long-tool', 'web_search']}
+    >
+      <button slot="footer">${NARROW_UNBROKEN}</button>
+    </lr-tool-select-dialog>
+  `,
+};
+
+export const LargeCatalogContinuation: Story = {
+  name: 'Large catalog with reserved selection',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The selected final tool is mounted checked inside the first 200-row projection; Load more reveals the remaining ordinary row.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-tool-select-dialog
+      .open=${context.viewMode !== 'docs'}
+      .tools=${Array.from({ length: 225 }, (_, index) => ({
+        id: `catalog-tool-${index}`,
+        name: `Catalog tool ${index + 1}`,
+        category: index < 210 ? 'Workspace' : 'External',
+      }))}
+      .selected=${['catalog-tool-224']}
     ></lr-tool-select-dialog>
   `,
 };

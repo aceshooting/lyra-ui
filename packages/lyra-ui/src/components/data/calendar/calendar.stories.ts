@@ -1,6 +1,33 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html } from 'lit'; import './calendar.js';
 const meta: Meta = { title: 'Calendar', component: 'lr-calendar', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
 export const Month: Story = { render: () => html`<lr-calendar view-date="2026-07-01" .events=${[{ date: '2026-07-15', title: 'Planning review' }, { date: '2026-07-22', title: 'Release' }]}></lr-calendar>` };
+
+/** Agenda is a closed display mode; invalid values normalize back to the month view. */
+export const Agenda: Story = {
+  render: () => html`
+    <lr-calendar
+      view="agenda"
+      view-date="2026-07-01"
+      .events=${[
+        { date: '2026-07-15', title: 'Planning review' },
+        { date: '2026-07-22', title: 'Release' },
+      ]}
+    ></lr-calendar>
+  `,
+};
+
+/** The two navigation controls have symmetric, purpose-specific styling hooks. */
+export const NavigationParts: Story = {
+  render: () => html`
+    <style>
+      .navigation-parts::part(previous-button),
+      .navigation-parts::part(next-button) {
+        border-style: dashed;
+      }
+    </style>
+    <lr-calendar class="navigation-parts" view-date="2026-07-01"></lr-calendar>
+  `,
+};
 // Exact narrow RTL allocation with long localized and unbroken event content. This is below the
 // 28rem @container threshold, so it also exercises the calendar host's own containment context.
 export const NarrowAllocation: Story = {

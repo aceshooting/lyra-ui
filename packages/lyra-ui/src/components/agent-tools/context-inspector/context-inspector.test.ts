@@ -143,17 +143,27 @@ it('clamps, sorts, and merges malformed redaction spans (out-of-range, inverted,
 });
 
 it('lr-copy-button value is the assembled label+text of every segment, in order, and lr-copy bubbles unchanged', async () => {
+  const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: async () => undefined },
+  });
   const el = (await fixture(html`<lr-context-inspector></lr-context-inspector>`)) as LyraContextInspector;
-  el.segments = segments;
-  await el.updateComplete;
-  const copyButton = el.shadowRoot!.querySelector('lr-copy-button') as LyraCopyButton;
-  expect(copyButton.value).to.equal(
-    'System prompt\nYou are helpful.\n\nChunk 1\nParis is the capital of France.',
-  );
-  const listener = oneEvent(el, 'lr-copy');
-  (copyButton.shadowRoot!.querySelector('button[part~="button"]') as HTMLButtonElement).click();
-  const event = await listener;
-  expect(event.detail).to.deep.equal({ text: copyButton.value });
+  try {
+    el.segments = segments;
+    await el.updateComplete;
+    const copyButton = el.shadowRoot!.querySelector('lr-copy-button') as LyraCopyButton;
+    expect(copyButton.value).to.equal(
+      'System prompt\nYou are helpful.\n\nChunk 1\nParis is the capital of France.',
+    );
+    const listener = oneEvent(el, 'lr-copy');
+    (copyButton.shadowRoot!.querySelector('button[part~="button"]') as HTMLButtonElement).click();
+    const event = await listener;
+    expect(event.detail).to.deep.equal({ ok: true, text: copyButton.value });
+  } finally {
+    if (original) Object.defineProperty(navigator, 'clipboard', original);
+    else Reflect.deleteProperty(navigator, 'clipboard');
+  }
 });
 
 it('builds one export row per segment and bubbles lr-export / lr-export-complete from the embedded lr-export-button', async () => {
@@ -190,6 +200,20 @@ it('builds one export row per segment and bubbles lr-export / lr-export-complete
   const event = await exportEvent;
   expect(event.detail.format).to.equal('json');
   await completeEvent;
+});
+
+it('forwards the explicit exportFormats/exportFilename vocabulary to the export control', async () => {
+  const el = (await fixture(html`
+    <lr-context-inspector export-filename="model-context"></lr-context-inspector>
+  `)) as LyraContextInspector;
+  el.exportFormats = ['csv', 'json'];
+  el.segments = [{ id: 's1', label: 'System', text: 'Prompt', tokens: 1 }];
+  await el.updateComplete;
+
+  const exportButton = el.shadowRoot!.querySelector('lr-export-button') as LyraExportButton;
+  expect(el.exportFilename).to.equal('model-context');
+  expect(exportButton.formats).to.deep.equal(['csv', 'json']);
+  expect(exportButton.filename).to.equal('model-context');
 });
 
 it('renders the default English built-in copy with no locale registered and no .strings override', async () => {
@@ -276,4 +300,22 @@ it('shrinks to a 320px allocation with a long label and long segment text withou
   ];
   await el.updateComplete;
   expect(el.getBoundingClientRect().width).to.be.at.most(320);
+});
+
+it('normalizes duplicate segment ids first-wins before metering and rendering', async () => {
+  const el = await fixture<LyraContextInspector>(html`
+    <lr-context-inspector
+      .segments=${[
+        { id: 'same', label: 'First segment', text: 'first', tokens: 10 },
+        { id: 'same', label: 'Later segment', text: 'later', tokens: 90 },
+      ]}
+      total="100"
+    ></lr-context-inspector>
+  `);
+  const rows = el.shadowRoot!.querySelectorAll('[part="segment"]');
+  expect(rows).to.have.length(1);
+  expect(rows[0]!.textContent).to.contain('First segment');
+  const meter = el.shadowRoot!.querySelector('lr-context-meter') as LyraContextMeter;
+  expect(meter.segments).to.have.length(1);
+  expect(meter.segments[0]!.value).to.equal(10);
 });

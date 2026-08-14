@@ -6,14 +6,17 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
+import type { ChatMessageRole } from '../../conversation/chat-message/chat-message.class.js';
 import { styles } from './prompt-studio.styles.js';
+import { overallSemanticLabel } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_promptStudioAddMessage, LYRA_DEFAULT_promptStudioLabel, LYRA_DEFAULT_promptStudioMessageContent, LYRA_DEFAULT_promptStudioMessageRole, LYRA_DEFAULT_promptStudioMessages, LYRA_DEFAULT_promptStudioPreview, LYRA_DEFAULT_promptStudioRemoveMessage, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleTool, LYRA_DEFAULT_promptStudioRoleUser, LYRA_DEFAULT_promptStudioRun, LYRA_DEFAULT_promptStudioSave, LYRA_DEFAULT_promptStudioVariableName, LYRA_DEFAULT_promptStudioVariableValue, LYRA_DEFAULT_promptStudioVariables, LYRA_DEFAULT_promptStudioVersions } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type PromptStudioRole = 'system' | 'user' | 'assistant' | 'tool';
+/** Conversation message roles plus the tool-result role needed by prompt authoring. */
+export type PromptStudioRole = ChatMessageRole | 'tool';
 /** Retained name for the shared native `<textarea wrap>` vocabulary. */
 export type PromptStudioWrap = LyraTextWrap;
 export interface PromptStudioMessage {
@@ -61,6 +64,10 @@ type PromptStudioMessageMovePart = 'move-message-up' | 'move-message-down';
  * messages, `{{variable}}` substitution, version selection, preview, save, and run intents.
  * The host owns persistence and model execution. Opting into message reordering exposes native,
  * keyboard-operable move controls; every proposed move is cancelable before the editor state changes.
+ * Duplicate message/version ids use deterministic first-wins semantics. Variable rows are
+ * occurrence-addressed because their names are editable and may temporarily be empty or repeated;
+ * duplicate names remain independently editable while placeholder resolution uses the first one.
+ * Variable values resolve recursively; undefined and cyclic placeholders remain intact.
  *
  * @customElement lr-prompt-studio
  * @event lr-change - A cancelable proposal that messages or variables are about to change.
@@ -72,7 +79,7 @@ type PromptStudioMessageMovePart = 'move-message-up' | 'move-message-down';
  * @event lr-run - The current prompt was requested for execution.
  * @event lr-save - The current prompt was requested for persistence.
  * @event lr-version-select - A complete saved version was activated.
- * @event focus - Re-dispatched when the message textarea or a variable input receives focus,
+ * @event focus - Re-dispatched when the message role selector, textarea, or a variable input receives focus,
  *   since native focus neither bubbles nor crosses the shadow boundary.
  * @event blur - Re-dispatched when the message textarea or a variable input loses focus.
  * @csspart base - The named studio region.
@@ -135,8 +142,12 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   @property({ attribute: false }) messages: PromptStudioMessage[] = [];
   @property({ attribute: false }) variables: PromptStudioVariable[] = [];
   @property({ attribute: false }) versions: PromptStudioVersion[] = [];
-  @property({ attribute: 'selected-version-id' }) selectedVersionId = '';
+  @property({ attribute: 'selected-version-id' }) selectedVersionId: string | null = null;
+  /** Accessible name for the studio region. It is independent from the visible `heading`; when
+   * absent, the heading text names the region. A host `aria-label` remains authoritative. */
   @property() label = '';
+  /** Visible toolbar heading. Falls back to the localized “Prompt studio” string. */
+  @property() heading = '';
   @property({ type: Boolean, reflect: true }) running = false;
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Opts into native move-up/move-down buttons for each message. A move first emits the
@@ -175,9 +186,27 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
 
   private state(): PromptStudioState {
     return {
-      messages: this.messages.map((message) => ({ ...message })),
+      messages: this.uniqueMessages().map((message) => ({ ...message })),
       variables: this.variables.map((variable) => ({ ...variable })),
     };
+  }
+
+  private uniqueMessages(source = this.messages): PromptStudioMessage[] {
+    const seen = new Set<string>();
+    return source.filter((message) => {
+      if (!message || typeof message.id !== 'string' || message.id === '' || seen.has(message.id)) return false;
+      seen.add(message.id);
+      return true;
+    });
+  }
+
+  private uniqueVersions(): PromptStudioVersion[] {
+    const seen = new Set<string>();
+    return this.versions.filter((version) => {
+      if (!version || typeof version.id !== 'string' || version.id === '' || seen.has(version.id)) return false;
+      seen.add(version.id);
+      return true;
+    });
   }
 
   private emitChange(messages = this.messages, variables = this.variables): void {
@@ -185,54 +214,71 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     // pattern below: a listener may hold, persist, or alter its own copy without mutating the
     // component's accepted next state behind the veto point.
     const proposal: PromptStudioState = {
-      messages: messages.map((message) => ({ ...message })),
+      messages: this.uniqueMessages(messages).map((message) => ({ ...message })),
       variables: variables.map((variable) => ({ ...variable })),
     };
     if (this.emit('lr-change', proposal, { cancelable: true }).defaultPrevented) return;
-    this.messages = messages;
-    this.variables = variables;
+    this.messages = proposal.messages;
+    this.variables = proposal.variables;
   }
 
   private updateMessage(id: string, patch: Partial<PromptStudioMessage>): void {
-    this.emitChange(this.messages.map((message) => (message.id === id ? { ...message, ...patch } : message)));
+    let found = false;
+    this.emitChange(this.uniqueMessages().map((message) => {
+      if (!found && message.id === id) {
+        found = true;
+        return { ...message, ...patch };
+      }
+      return message;
+    }));
   }
 
   private removeMessage(id: string): void {
-    this.emitChange(this.messages.filter((message) => message.id !== id));
+    let removed = false;
+    this.emitChange(this.uniqueMessages().filter((message) => {
+      if (!removed && message.id === id) {
+        removed = true;
+        return false;
+      }
+      return true;
+    }));
   }
 
   private addMessage(): void {
-    const existingIds = new Set(this.messages.map((message) => message.id));
-    const base = `message-${Date.now()}-${this.messages.length}`;
+    const messages = this.uniqueMessages();
+    const existingIds = new Set(messages.map((message) => message.id));
+    const base = `message-${Date.now()}-${messages.length}`;
     let id = base;
     let suffix = 1;
     while (existingIds.has(id)) {
       id = `${base}-${suffix}`;
       suffix++;
     }
-    this.emitChange([...this.messages, { id, role: 'user', content: '' }]);
+    this.emitChange([...messages, { id, role: 'user', content: '' }]);
   }
 
   private updateVariable(index: number, patch: Partial<PromptStudioVariable>): void {
     this.emitChange(
       this.messages,
-      this.variables.map((variable, itemIndex) => (itemIndex === index ? { ...variable, ...patch } : variable)),
+      this.variables.map((variable, candidateIndex) =>
+        candidateIndex === index ? { ...variable, ...patch } : variable),
     );
   }
 
   private requestMessageMove(messageId: string, fromIndex: number, offset: -1 | 1): void {
+    const messages = this.uniqueMessages();
     const toIndex = fromIndex + offset;
     if (
       this.disabled ||
       !this.reorderable ||
       toIndex < 0 ||
-      toIndex >= this.messages.length ||
-      this.messages[fromIndex]?.id !== messageId
+      toIndex >= messages.length ||
+      messages[fromIndex]?.id !== messageId
     ) {
       return;
     }
 
-    const nextMessages = this.messages.map((message) => ({ ...message }));
+    const nextMessages = messages.map((message) => ({ ...message }));
     const [moved] = nextMessages.splice(fromIndex, 1);
     if (!moved) return;
     nextMessages.splice(toIndex, 0, moved);
@@ -277,12 +323,24 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   }
 
   private resolve(content: string): string {
-    let resolved = content;
+    const variables = new Map<string, string>();
     for (const variable of this.variables) {
-      if (!variable.name) continue;
-      resolved = resolved.split(`{{${variable.name}}}`).join(variable.value);
+      if (variable.name !== '' && !variables.has(variable.name)) variables.set(variable.name, variable.value);
     }
-    return resolved;
+    const resolved = new Map<string, string>();
+    const visiting = new Set<string>();
+    const resolveName = (name: string): string => {
+      const cached = resolved.get(name);
+      if (cached !== undefined) return cached;
+      const value = variables.get(name);
+      if (value === undefined || visiting.has(name)) return `{{${name}}}`;
+      visiting.add(name);
+      const next = value.replace(/\{\{([^{}]+)\}\}/g, (_match, nested: string) => resolveName(nested));
+      visiting.delete(name);
+      resolved.set(name, next);
+      return next;
+    };
+    return content.replace(/\{\{([^{}]+)\}\}/g, (_match, name: string) => resolveName(name));
   }
 
   // Native focus/blur events don't bubble and don't cross the shadow boundary on their own, so
@@ -303,6 +361,8 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
           ?disabled=${this.disabled}
           @change=${(event: Event) =>
             this.updateMessage(message.id, { role: (event.target as HTMLSelectElement).value as PromptStudioRole })}
+          @focus=${this.onFocus}
+          @blur=${this.onBlur}
         >
           ${(['system', 'user', 'assistant', 'tool'] as const).map(
             (role) => html`<option value=${role}>${this.roleLabel(role)}</option>`,
@@ -339,7 +399,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
               <button
                 part="move-message-down"
                 type="button"
-                ?disabled=${this.disabled || index === this.messages.length - 1}
+                ?disabled=${this.disabled || index === this.uniqueMessages().length - 1}
                 aria-label=${this.localize('moveDown')}
                 @click=${() => this.requestMessageMove(message.id, index, 1)}
               >
@@ -365,11 +425,14 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   }
 
   override render(): TemplateResult {
-    const label = this.getAttribute('aria-label') || this.label || this.localize('promptStudioLabel');
+    const heading = this.heading || this.localize('promptStudioLabel');
+    const label = this.label || heading;
+    const messages = this.uniqueMessages();
+    const variables = this.variables;
     return html`
-      <section part="base" aria-label=${label}>
+      <section part="base" aria-label=${overallSemanticLabel(this, label) ?? nothing}>
         <header part="toolbar">
-          <h2>${label}</h2>
+          <h2>${heading}</h2>
           <button part="save" type="button" ?disabled=${this.disabled} @click=${() => this.emit('lr-save', this.state())}>
             ${this.localize('promptStudioSave')}
           </button>
@@ -384,16 +447,16 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
         </header>
         <div part="editor">
           <section aria-label=${this.localize('promptStudioMessages')}>
-            <ol part="messages">${repeat(this.messages, (message) => message.id, this.renderMessage)}</ol>
+            <ol part="messages">${repeat(messages, (message) => message.id, this.renderMessage)}</ol>
             <button part="add-message" type="button" ?disabled=${this.disabled} @click=${this.addMessage}>
               ${this.localize('promptStudioAddMessage')}
             </button>
           </section>
-          ${this.variables.length
+          ${variables.length
             ? html`
                 <section part="variables" aria-label=${this.localize('promptStudioVariables')}>
                   <h3>${this.localize('promptStudioVariables')}</h3>
-                  ${this.variables.map((variable, index) => {
+                  ${variables.map((variable, index) => {
                     const displayIndex = getNumberFormat(this.effectiveLocale).format(index + 1);
                     return html`
                       <div part="variable">
@@ -427,10 +490,10 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
                 </section>
               `
             : nothing}
-          ${this.versions.length
+          ${this.uniqueVersions().length
             ? html`
                 <nav part="versions" aria-label=${this.localize('promptStudioVersions')}>
-                  ${this.versions.map(
+                  ${this.uniqueVersions().map(
                     (version) => html`
                       <button
                         part="version"
@@ -450,7 +513,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
         </div>
         <section part="preview" aria-label=${this.localize('promptStudioPreview')}>
           <h3>${this.localize('promptStudioPreview')}</h3>
-          ${this.messages.map(
+          ${messages.map(
             (message) => html`<article><strong>${this.roleLabel(message.role)}</strong><pre>${this.resolve(message.content)}</pre></article>`,
           )}
         </section>

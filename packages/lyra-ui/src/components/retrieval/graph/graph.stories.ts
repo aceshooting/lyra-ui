@@ -1,74 +1,78 @@
-import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import { html } from 'lit';
+import type { Meta, StoryObj } from "@storybook/web-components-vite";
+import { html } from "lit";
 import type {
   GraphCommunity,
-  GraphLink,
-  GraphNode,
-  GraphNodeType,
+  LyraGraphLink,
+  LyraGraphNode,
   LyraGraph,
-} from './graph.js';
+} from "./graph.js";
+import type { LyraNodeTypeStyle } from "../../../internal/node-type-style.js";
 
-const nodes: GraphNode[] = [
-  { id: 'a', label: 'A' },
-  { id: 'b', label: 'B' },
-  { id: 'c', label: 'C' },
-  { id: 'd', label: 'D' },
+const nodes: LyraGraphNode[] = [
+  { id: "a", label: "A" },
+  { id: "b", label: "B" },
+  { id: "c", label: "C" },
+  { id: "d", label: "D" },
 ];
 
-const links: GraphLink[] = [
-  { source: 'a', target: 'b' },
-  { source: 'a', target: 'c' },
-  { source: 'b', target: 'd' },
-  { source: 'c', target: 'd' },
+const links: LyraGraphLink[] = [
+  { source: "a", target: "b" },
+  { source: "a", target: "c" },
+  { source: "b", target: "d" },
+  { source: "c", target: "d" },
 ];
 
-const relationshipNodes: GraphNode[] = [
+const relationshipNodes: LyraGraphNode[] = [
   {
-    id: 'judgment',
-    label: 'Judgment',
-    accessibleLabel: 'Judgment, the source document',
-    description: 'The decision whose citations are shown.',
-    color: 'var(--lr-color-brand)',
+    id: "judgment",
+    label: "Judgment",
+    accessibleLabel: "Judgment, the source document",
+    description: "The decision whose citations are shown.",
+    color: "var(--lr-color-brand)",
   },
   {
-    id: 'opinion',
-    label: 'Opinion',
-    accessibleLabel: 'Advocate General opinion, cited by the judgment',
-    description: 'A related legal opinion.',
-    color: 'var(--lr-color-success)',
+    id: "opinion",
+    label: "Opinion",
+    accessibleLabel: "Advocate General opinion, cited by the judgment",
+    description: "A related legal opinion.",
+    color: "var(--lr-color-success)",
   },
-  { id: 'regulation', label: 'Regulation', description: 'The governing regulation.' },
+  {
+    id: "regulation",
+    label: "Regulation",
+    description: "The governing regulation.",
+  },
 ];
 
-const relationshipLinks: GraphLink[] = [
+const relationshipLinks: LyraGraphLink[] = [
   {
-    id: 'judgment-cites-opinion',
-    source: 'judgment',
-    target: 'opinion',
-    label: 'cites',
-    accessibleLabel: 'Judgment cites the Advocate General opinion',
-    description: 'A directed citation relationship.',
+    id: "judgment-cites-opinion",
+    source: "judgment",
+    target: "opinion",
+    label: "cites",
+    accessibleLabel: "Judgment cites the Advocate General opinion",
+    description: "A directed citation relationship.",
     directed: true,
-    color: 'var(--lr-color-brand)',
+    color: "var(--lr-color-brand)",
     width: 2.5,
   },
   {
-    id: 'judgment-applies-regulation',
-    source: 'judgment',
-    target: 'regulation',
-    label: 'applies',
-    description: 'A dashed directed relationship.',
+    id: "judgment-applies-regulation",
+    source: "judgment",
+    target: "regulation",
+    label: "applies",
+    description: "A dashed directed relationship.",
     directed: true,
-    color: 'var(--lr-color-success)',
+    color: "var(--lr-color-success)",
     dash: [7, 4],
     width: 2,
   },
 ];
 
 const meta: Meta = {
-  title: 'Graph',
-  component: 'lr-graph',
-  tags: ['autodocs'],
+  title: "Graph",
+  component: "lr-graph",
+  tags: ["autodocs"],
 };
 export default meta;
 type Story = StoryObj;
@@ -86,7 +90,7 @@ export const Default: Story = {
 };
 
 export const NarrowLongContent: Story = {
-  name: 'Narrow long content (320px)',
+  name: "Narrow long content (320px)",
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
       <lr-graph
@@ -98,24 +102,28 @@ export const NarrowLongContent: Story = {
         style="block-size: 20rem"
         .nodes=${[
           {
-            id: 'unbroken-source-identifier-that-must-not-expand-the-allocation',
-            label: 'unbroken-source-identifier-that-must-not-expand-the-allocation',
-            description: 'A deliberately long source description used to exercise tooltip wrapping.',
+            id: "unbroken-source-identifier-that-must-not-expand-the-allocation",
+            label:
+              "unbroken-source-identifier-that-must-not-expand-the-allocation",
+            description:
+              "A deliberately long source description used to exercise tooltip wrapping.",
           },
           {
-            id: 'target',
-            label: 'A target node with a long human-readable label',
-            description: 'A second deliberately long description for narrow tooltip containment.',
+            id: "target",
+            label: "A target node with a long human-readable label",
+            description:
+              "A second deliberately long description for narrow tooltip containment.",
           },
-        ] satisfies GraphNode[]}
+        ] satisfies LyraGraphNode[]}
         .links=${[
           {
-            source: 'unbroken-source-identifier-that-must-not-expand-the-allocation',
-            target: 'target',
-            label: 'a-very-long-relationship-label-without-natural-breaks',
+            source:
+              "unbroken-source-identifier-that-must-not-expand-the-allocation",
+            target: "target",
+            label: "a-very-long-relationship-label-without-natural-breaks",
             directed: true,
           },
-        ] satisfies GraphLink[]}
+        ] satisfies LyraGraphLink[]}
       ></lr-graph>
     </div>
   `,
@@ -126,8 +134,8 @@ export const NormalizedLinkWidths: Story = {
     docs: {
       description: {
         story:
-          'Link widths are normalized consistently in SVG, canvas paint, and canvas picking: ' +
-          'negative values clamp to zero and non-finite values use the 1.5 default.',
+          "Link widths are normalized consistently in SVG, canvas paint, and canvas picking: " +
+          "negative values clamp to zero and non-finite values use the 1.5 default.",
       },
     },
   },
@@ -139,24 +147,24 @@ export const NormalizedLinkWidths: Story = {
       style="height: 20rem"
       .nodes=${nodes}
       .links=${[
-        { source: 'a', target: 'b', width: Number.NaN },
-        { source: 'a', target: 'c', width: -4 },
-        { source: 'b', target: 'd', width: 2.5 },
-      ] satisfies GraphLink[]}
+        { source: "a", target: "b", width: Number.NaN },
+        { source: "a", target: "c", width: -4 },
+        { source: "b", target: "d", width: 2.5 },
+      ] satisfies LyraGraphLink[]}
     ></lr-graph>
   `,
 };
 
 export const DimmedNeighborhood: Story = {
-  name: 'Dimmed non-neighbors (controlled)',
+  name: "Dimmed non-neighbors (controlled)",
   parameters: {
     docs: {
       description: {
         story:
-          'dimmedNodeIds/dimmedLinkIds are controlled -- the host computes the complement of a ' +
-          'hovered node\'s neighbor set (e.g. from lr-node-enter) and assigns it back. This story ' +
+          "dimmedNodeIds/dimmedLinkIds are controlled -- the host computes the complement of a " +
+          "hovered node's neighbor set (e.g. from lr-node-enter) and assigns it back. This story " +
           'holds a static example: node "a" and its incident links stay at full opacity; everything ' +
-          'else is dimmed via --lr-graph-dimmed-opacity.',
+          "else is dimmed via --lr-graph-dimmed-opacity.",
       },
     },
   },
@@ -164,8 +172,8 @@ export const DimmedNeighborhood: Story = {
     <lr-graph
       .nodes=${nodes}
       .links=${links}
-      .dimmedNodeIds=${['c', 'd']}
-      .dimmedLinkIds=${['b->d', 'c->d']}
+      .dimmedNodeIds=${["c", "d"]}
+      .dimmedLinkIds=${["b->d", "c->d"]}
       style="--lr-graph-dimmed-opacity: 0.15; width: 100%; height: 400px;"
     ></lr-graph>
   `,
@@ -173,9 +181,16 @@ export const DimmedNeighborhood: Story = {
 
 export const ClickPosition: Story = {
   render: () => {
-    const report = (event: CustomEvent<{ id: string; x: number; y: number }>) => {
-      const output = (event.currentTarget as HTMLElement).parentElement?.querySelector('output');
-      if (output) output.textContent = `${event.detail.id}: (${event.detail.x.toFixed(1)}, ${event.detail.y.toFixed(1)})`;
+    const report = (
+      event: CustomEvent<{ id: string; x: number; y: number }>
+    ) => {
+      const output = (
+        event.currentTarget as HTMLElement
+      ).parentElement?.querySelector("output");
+      if (output)
+        output.textContent = `${event.detail.id}: (${event.detail.x.toFixed(
+          1
+        )}, ${event.detail.y.toFixed(1)})`;
     };
     return html`
       <div>
@@ -225,22 +240,43 @@ export const BoundedZoom: Story = {
 export const SeededLayout: Story = {
   render: () => html`
     <p>
-      Both graphs below share <code>seed="42"</code> — reload the page or diff a screenshot across builds and their
-      node positions are bit-identical, unlike the non-seeded <code>Default</code> story above.
+      Both graphs below share <code>seed="42"</code> — reload the page or diff a
+      screenshot across builds and their node positions are bit-identical,
+      unlike the non-seeded <code>Default</code> story above.
     </p>
     <div style="display: flex; gap: 1rem; flex-wrap: wrap">
-      <lr-graph width="320" height="240" style="height: 15rem" seed="42" .nodes=${nodes} .links=${links}></lr-graph>
-      <lr-graph width="320" height="240" style="height: 15rem" seed="42" .nodes=${nodes} .links=${links}></lr-graph>
+      <lr-graph
+        width="320"
+        height="240"
+        style="height: 15rem"
+        seed="42"
+        .nodes=${nodes}
+        .links=${links}
+      ></lr-graph>
+      <lr-graph
+        width="320"
+        height="240"
+        style="height: 15rem"
+        seed="42"
+        .nodes=${nodes}
+        .links=${links}
+      ></lr-graph>
     </div>
   `,
 };
 
 export const DirectedRelationships: Story = {
   render: () => {
-    const reportLink = (event: CustomEvent<{ source: string; target: string; id?: string }>) => {
-      const output = (event.currentTarget as HTMLElement).parentElement?.querySelector('output');
+    const reportLink = (
+      event: CustomEvent<{ source: string; target: string; id?: string }>
+    ) => {
+      const output = (
+        event.currentTarget as HTMLElement
+      ).parentElement?.querySelector("output");
       if (output) {
-        output.textContent = `Activated ${event.detail.id ?? 'unidentified link'}: ${event.detail.source} → ${event.detail.target}`;
+        output.textContent = `Activated ${
+          event.detail.id ?? "unidentified link"
+        }: ${event.detail.source} → ${event.detail.target}`;
       }
     };
 
@@ -256,32 +292,50 @@ export const DirectedRelationships: Story = {
           .links=${relationshipLinks}
           @lr-link-click=${reportLink}
         ></lr-graph>
-        <output aria-live="polite">Activate a link to inspect its stable id.</output>
+        <output aria-live="polite"
+          >Activate a link to inspect its stable id.</output
+        >
       </div>
     `;
   },
 };
 
-const typedNodes: GraphNode[] = [
-  { id: 'collect', label: 'Collect', type: 'input', communityId: 'pipeline' },
-  { id: 'rank', label: 'Rank', type: 'process', communityId: 'pipeline' },
-  { id: 'answer', label: 'Answer', type: 'output', communityId: 'response' },
+const typedNodes: LyraGraphNode[] = [
+  { id: "collect", label: "Collect", type: "input", communityId: "pipeline" },
+  { id: "rank", label: "Rank", type: "process", communityId: "pipeline" },
+  { id: "answer", label: "Answer", type: "output", communityId: "response" },
 ];
 
-const typedLinks: GraphLink[] = [
-  { id: 'collect-rank', source: 'collect', target: 'rank', label: 'feeds', directed: true },
-  { id: 'rank-answer', source: 'rank', target: 'answer', label: 'grounds', directed: true },
+const typedLinks: LyraGraphLink[] = [
+  {
+    id: "collect-rank",
+    source: "collect",
+    target: "rank",
+    label: "feeds",
+    directed: true,
+  },
+  {
+    id: "rank-answer",
+    source: "rank",
+    target: "answer",
+    label: "grounds",
+    directed: true,
+  },
 ];
 
-const nodeTypes: GraphNodeType[] = [
-  { id: 'input', label: 'Input', shape: 'circle' },
-  { id: 'process', label: 'Processing', shape: 'diamond' },
-  { id: 'output', label: 'Output', shape: 'square' },
+const nodeTypes: LyraNodeTypeStyle[] = [
+  { id: "input", label: "Input", shape: "circle" },
+  { id: "process", label: "Processing", shape: "diamond" },
+  { id: "output", label: "Output", shape: "square" },
 ];
 
 const communities: GraphCommunity[] = [
-  { id: 'pipeline', label: 'Retrieval pipeline', memberIds: ['collect', 'rank'] },
-  { id: 'response', label: 'Response', memberIds: ['answer'] },
+  {
+    id: "pipeline",
+    label: "Retrieval pipeline",
+    memberIds: ["collect", "rank"],
+  },
+  { id: "response", label: "Response", memberIds: ["answer"] },
 ];
 
 export const CanvasLayeredCommunities: Story = {
@@ -289,30 +343,42 @@ export const CanvasLayeredCommunities: Story = {
     docs: {
       description: {
         story:
-          'Canvas rendering, deterministic layered layout, node types, community hulls, and controlled multiple selection. The palette button changes inherited graph tokens; the canvas repaints without reassigning its data.',
+          "Canvas rendering, deterministic layered layout, node types, community hulls, and controlled multiple selection. The palette button changes inherited graph tokens; the canvas repaints without reassigning its data.",
       },
     },
   },
   render: () => {
-    const applySelection = (event: CustomEvent<{ nodeIds: string[]; linkIds: string[] }>) => {
+    const applySelection = (
+      event: CustomEvent<{ nodeIds: string[]; linkIds: string[] }>
+    ) => {
       const graph = event.currentTarget as LyraGraph;
       graph.selectedNodeIds = event.detail.nodeIds;
       graph.selectedLinkIds = event.detail.linkIds;
     };
     const togglePalette = (event: Event) => {
       const graph = (event.currentTarget as HTMLElement)
-        .closest('.graph-canvas-demo')
-        ?.querySelector('lr-graph') as LyraGraph | null;
+        .closest(".graph-canvas-demo")
+        ?.querySelector("lr-graph") as LyraGraph | null;
       if (!graph) return;
-      const alternate = graph.dataset.palette !== 'alternate';
-      graph.dataset.palette = alternate ? 'alternate' : 'default';
-      graph.style.setProperty('--lr-node-fill', alternate ? 'var(--lr-color-warning)' : 'var(--lr-color-brand)');
-      graph.style.setProperty('--lr-link-color', alternate ? 'var(--lr-color-success)' : 'var(--lr-color-border)');
+      const alternate = graph.dataset.palette !== "alternate";
+      graph.dataset.palette = alternate ? "alternate" : "default";
+      graph.style.setProperty(
+        "--lr-node-fill",
+        alternate ? "var(--lr-color-warning)" : "var(--lr-color-brand)"
+      );
+      graph.style.setProperty(
+        "--lr-link-color",
+        alternate ? "var(--lr-color-success)" : "var(--lr-color-border)"
+      );
     };
 
     return html`
       <div class="graph-canvas-demo" style="display:grid;gap:0.75rem">
-        <button type="button" style="justify-self:start" @click=${togglePalette}>
+        <button
+          type="button"
+          style="justify-self:start"
+          @click=${togglePalette}
+        >
           Toggle canvas palette
         </button>
         <lr-graph
@@ -328,7 +394,7 @@ export const CanvasLayeredCommunities: Story = {
           .links=${typedLinks}
           .nodeTypes=${nodeTypes}
           .communities=${communities}
-          .selectedNodeIds=${['rank']}
+          .selectedNodeIds=${["rank"]}
           @lr-selection-change=${applySelection}
         ></lr-graph>
       </div>

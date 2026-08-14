@@ -2,6 +2,11 @@ import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-c
 
 export interface IcalTimeApi {
   toJSDate(): Date;
+  /** True for RFC 5545 DATE values (all-day semantics), false for DATE-TIME values. */
+  isDate?: boolean;
+  year?: number;
+  month?: number;
+  day?: number;
 }
 
 export interface IcalEventApi {

@@ -1,11 +1,20 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './qr-code.js';
+import { LyraQrCode } from './qr-code.js';
 
 const meta: Meta = {
   title: 'QR Code',
   component: 'lr-qr-code',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Paints modules across the full canvas with a fixed 2× backing store at ordinary sizes. Host color and background-color control paint; add CSS padding when output needs a quiet zone.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;
@@ -31,13 +40,38 @@ export const LowErrorCorrection: Story = {
 };
 
 export const CustomColors: Story = {
-  name: 'Custom fill/background colors',
+  name: 'Host color/background colors',
   render: () => html`
     <lr-qr-code
       value="https://example.com/branded"
-      style="--lr-qr-code-fill: var(--lr-color-brand); --lr-qr-code-background: var(--lr-color-brand-quiet);"
+      style="color: var(--lr-color-brand); background-color: var(--lr-color-brand-quiet);"
     ></lr-qr-code>
   `,
+};
+
+export const CssColorAliases: Story = {
+  name: 'CSS color aliases',
+  render: () => html`
+    <lr-qr-code
+      value="https://example.com/aliases"
+      style="--lr-qr-code-fill: var(--lr-color-success); --lr-qr-code-background: var(--lr-color-success-quiet);"
+    ></lr-qr-code>
+  `,
+};
+
+export const Preloaded: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'LyraQrCode.preload(): Promise<boolean> primes the shared optional peer before the element connects; generation still begins from the element value.',
+      },
+    },
+  },
+  render: () => {
+    void LyraQrCode.preload();
+    return html`<lr-qr-code value="https://example.com/preloaded"></lr-qr-code>`;
+  },
 };
 
 export const EmbeddedImage: Story = {

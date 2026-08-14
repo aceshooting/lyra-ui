@@ -5,6 +5,7 @@ import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numb
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './audio-visualizer.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -12,8 +13,14 @@ import { LYRA_DEFAULT_audioVisualizerIdle, LYRA_DEFAULT_audioVisualizerLabel, LY
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type AudioVisualizerVariant = 'bars' | 'waveform';
+export type AudioVisualizerMode = 'bars' | 'waveform';
 export type AudioVisualizerState = 'idle' | 'listening' | 'thinking' | 'speaking';
+
+const AUDIO_VISUALIZER_MODE = literalSetConverter<AudioVisualizerMode>(['bars', 'waveform'], 'bars');
+const AUDIO_VISUALIZER_STATE = literalSetConverter<AudioVisualizerState>(
+  ['idle', 'listening', 'thinking', 'speaking'],
+  'idle',
+);
 
 const WAVEFORM_SAMPLES = 64;
 const AMBIENT_REDUCED_MOTION_INTERVAL_MS = 500; // ~2 Hz snapshot cadence
@@ -37,8 +44,8 @@ interface OwnedAnimationFrame {
 }
 
 /**
- * `<lr-audio-visualizer>` — a presentational, canvas-drawn voice-activity visualization (bars or
- * waveform), the LiveKit-BarVisualizer counterpart for this library. Driven by a `MediaStream`
+ * `<lr-audio-visualizer>` — a presentational, canvas-drawn voice-activity visualization. Its
+ * `mode` is `"bars"` (default) or `"waveform"`. Driven by a `MediaStream`
  * (lazily wired to a WebAudio `AnalyserNode`), a numeric `level` for hosts that already compute
  * levels (e.g. `lr-push-to-talk`'s `lr-level`), or `state` alone for an ambient animation when no
  * real signal exists. A real signal (`stream` or `level`) always drives amplitude regardless of
@@ -88,8 +95,31 @@ export class LyraAudioVisualizer extends LyraElement {
    *  (e.g. `lr-push-to-talk`'s `lr-level`). `null` (the default) means "no external signal" --
    *  see `effectiveLevel` for how a non-null value is clamped/NaN-guarded before it feeds `draw()`. */
   @property({ type: Number }) level: number | null = null;
-  @property({ reflect: true }) state: AudioVisualizerState = 'idle';
-  @property({ reflect: true }) variant: AudioVisualizerVariant = 'bars';
+  private _state: AudioVisualizerState = 'idle';
+  @property({ reflect: true, converter: AUDIO_VISUALIZER_STATE })
+  get state(): AudioVisualizerState {
+    return this._state;
+  }
+  set state(next: AudioVisualizerState) {
+    const normalized = AUDIO_VISUALIZER_STATE.normalize(next);
+    const old = this._state;
+    if (old === normalized) return;
+    this._state = normalized;
+    this.requestUpdate('state', old);
+  }
+  private _mode: AudioVisualizerMode = 'bars';
+  /** Drawing vocabulary: discrete `bars` or a continuous `waveform`. */
+  @property({ reflect: true, converter: AUDIO_VISUALIZER_MODE })
+  get mode(): AudioVisualizerMode {
+    return this._mode;
+  }
+  set mode(next: AudioVisualizerMode) {
+    const normalized = AUDIO_VISUALIZER_MODE.normalize(next);
+    const old = this._mode;
+    if (old === normalized) return;
+    this._mode = normalized;
+    this.requestUpdate('mode', old);
+  }
   @property({ type: Number, attribute: 'bar-count' }) barCount = 5;
   /** Amplitude multiplier applied in `draw()`. NaN/non-finite falls back to `1` via `effectiveGain`. */
   @property({ type: Number }) gain = 1;
@@ -105,7 +135,7 @@ export class LyraAudioVisualizer extends LyraElement {
   private drawFrameRequest?: OwnedAnimationFrame;
   private lastAmbientDrawMs = 0;
   private authorSuppliedRole = false;
-  private generatedAriaLabel = '';
+  private generatedAriaLabel?: string;
   /** Host size cached from the `ResizeObserver` so `draw()` never forces a per-frame layout read. */
   private hostSize?: { width: number; height: number };
   /** Token colors resolved once per theme change so `draw()` never calls `getComputedStyle` per frame. */
@@ -144,6 +174,8 @@ export class LyraAudioVisualizer extends LyraElement {
 
   constructor() {
     super();
+    this.requestUpdate('state', undefined);
+    this.requestUpdate('mode', undefined);
     // Redraws when prefers-color-scheme flips or an ancestor's theme attribute mutates. The
     // controller registers itself with the host via addController().
     new ThemeWatcher(this, () => this.refreshTheme());
@@ -282,39 +314,69 @@ export class LyraAudioVisualizer extends LyraElement {
     this.scheduleDraw();
   }
 
+  private get hasUsableAudioStream(): boolean {
+    if (!this.stream || typeof this.stream.getAudioTracks !== 'function') return false;
+    try {
+      return this.stream.getAudioTracks().some((track) => track.readyState !== 'ended');
+    } catch {
+      return false;
+    }
+  }
+
   /** Lazily creates (or tears down) the `AudioContext`/`AnalyserNode` pair to match `stream`.
    *  Clearing `stream` suspends the context (cheap to resume if reassigned soon); `disconnectedCallback`
    *  is what actually closes it. */
   private syncAnalyser(): void {
-    if (this.stream) {
-      const owner = this.ownerDocument.defaultView;
-      if (!owner) return;
-      if (!this.audioCtx) {
-        const AudioCtxCtor =
-          owner.AudioContext ??
-          (owner as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-        if (!AudioCtxCtor) return;
-        this.audioCtx = new AudioCtxCtor();
-        // `resume()`/`suspend()` settle asynchronously, and the parked draw loop only animates while
-        // the context reports `running` — restart it once the transition lands.
-        this.audioCtx.addEventListener('statechange', this.onAudioCtxStateChange);
-      }
-      // Autoplay policy can hand back a brand-new context already `suspended`, and nothing
-      // spontaneously transitions it to `running` without an explicit `resume()` call — so this
-      // must run on every attach, not only when reusing a context created by a prior attach.
-      void this.audioCtx.resume().catch(() => {});
-      this.sourceNode?.disconnect();
-      this.sourceNode = this.audioCtx.createMediaStreamSource(this.stream);
-      this.analyser = this.audioCtx.createAnalyser();
-      this.analyser.fftSize = this.variant === 'waveform' ? 2048 : 256;
-      this.sourceNode.connect(this.analyser);
-      this.timeDomainData = new owner.Uint8Array(this.analyser.frequencyBinCount);
-    } else {
+    if (!this.isConnected || !this.hasUsableAudioStream) {
       this.sourceNode?.disconnect();
       this.sourceNode = undefined;
       this.analyser = undefined;
       this.timeDomainData = undefined;
       if (this.audioCtx) void this.audioCtx.suspend().catch(() => {});
+      return;
+    }
+
+    const stream = this.stream;
+    if (!stream) return;
+    const owner = this.ownerDocument.defaultView;
+    if (!owner) return;
+    let context = this.audioCtx;
+    let source: MediaStreamAudioSourceNode | undefined;
+    try {
+      if (!context) {
+        const AudioCtxCtor =
+          owner.AudioContext ??
+          (owner as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!AudioCtxCtor) return;
+        context = new AudioCtxCtor();
+        context.addEventListener('statechange', this.onAudioCtxStateChange);
+      }
+      source = context.createMediaStreamSource(stream);
+      const analyser = context.createAnalyser();
+      analyser.fftSize = this.mode === 'waveform' ? 2048 : 256;
+      source.connect(analyser);
+      const data = new owner.Uint8Array(analyser.frequencyBinCount);
+
+      this.sourceNode?.disconnect();
+      this.audioCtx = context;
+      this.sourceNode = source;
+      this.analyser = analyser;
+      this.timeDomainData = data;
+      // `resume()`/`suspend()` settle asynchronously, and the parked draw loop only animates while
+      // the context reports `running` — restart it once the transition lands.
+      void context.resume().catch(() => {});
+    } catch {
+      source?.disconnect();
+      // A failed source/analyser construction is not reusable state. Close both a newly-created
+      // and a previously parked context so the next valid stream starts from a clean transaction.
+      if (context) {
+        context.removeEventListener('statechange', this.onAudioCtxStateChange);
+        void context.close().catch(() => {});
+      }
+      this.audioCtx = undefined;
+      this.sourceNode = undefined;
+      this.analyser = undefined;
+      this.timeDomainData = undefined;
     }
   }
 
@@ -353,14 +415,14 @@ export class LyraAudioVisualizer extends LyraElement {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('stream') || (changed.has('variant') && this.stream)) this.syncAnalyser();
+    if (changed.has('stream') || (changed.has('mode') && this.stream)) this.syncAnalyser();
     const currentRole = this.getAttribute('role');
     this.authorSuppliedRole = currentRole !== null && currentRole !== 'img';
     if (!this.authorSuppliedRole) this.setAttribute('role', 'img');
     const currentAriaLabel = this.getAttribute('aria-label');
     const consumerSuppliedAriaLabel = currentAriaLabel !== null && currentAriaLabel !== this.generatedAriaLabel;
     if (consumerSuppliedAriaLabel) {
-      this.generatedAriaLabel = '';
+      this.generatedAriaLabel = undefined;
     } else {
       const generated = this.label || this.localize('audioVisualizerLabel', undefined, { state: this.stateLabel() });
       if (currentAriaLabel !== generated) this.setAttribute('aria-label', generated);
@@ -370,7 +432,7 @@ export class LyraAudioVisualizer extends LyraElement {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (['state', 'variant', 'barCount', 'gain', 'level', 'stream'].some((key) => changed.has(key))) {
+    if (['state', 'mode', 'barCount', 'gain', 'level', 'stream'].some((key) => changed.has(key))) {
       this.scheduleDraw();
     }
   }
@@ -447,7 +509,7 @@ export class LyraAudioVisualizer extends LyraElement {
    *  pulse; `thinking` sweeps a moving peak across the array unless `reduced`, in which case it
    *  collapses to a flat mid-height pattern (never a frozen mid-sweep frame). */
   private ambientAmplitudes(nowMs: number, reduced: boolean): number[] {
-    const n = this.variant === 'waveform' ? WAVEFORM_SAMPLES : this.effectiveBarCount;
+    const n = this.mode === 'waveform' ? WAVEFORM_SAMPLES : this.effectiveBarCount;
     const phase = reduced ? 0 : finiteNumber(nowMs, 0) / this.resolveAmbientDuration();
     switch (this.state) {
       case 'listening':
@@ -473,9 +535,10 @@ export class LyraAudioVisualizer extends LyraElement {
    * a cycle duration; malformed, zero, negative, or non-finite values retain the shared default. */
   private resolveAmbientDuration(): number {
     if (this.ambientDurationMs !== undefined) return this.ambientDurationMs;
-    const value = this.ownerDocument.defaultView
-      ?.getComputedStyle(this)
-      .getPropertyValue('--lr-audio-visualizer-ambient-duration') ?? '';
+    const style = this.ownerDocument.defaultView?.getComputedStyle(this);
+    const value = style?.getPropertyValue('--lr-audio-visualizer-ambient-duration').trim()
+      || style?.getPropertyValue('--_lr-audio-visualizer-ambient-duration-default').trim()
+      || '';
     this.ambientDurationMs = parseAmbientDuration(value) ?? DEFAULT_AMBIENT_DURATION_MS;
     return this.ambientDurationMs;
   }
@@ -483,11 +546,11 @@ export class LyraAudioVisualizer extends LyraElement {
   private currentAmplitudes(nowMs: number): number[] {
     if (this.analyser && this.timeDomainData && this.audioCtx?.state === 'running') {
       this.analyser.getByteTimeDomainData(this.timeDomainData);
-      if (this.variant === 'waveform') return Array.from(this.timeDomainData, (v) => (v - 128) / 128);
+      if (this.mode === 'waveform') return Array.from(this.timeDomainData, (v) => (v - 128) / 128);
       return this.barsFromTimeDomain(this.timeDomainData, this.effectiveBarCount);
     }
     if (this.effectiveLevel != null) {
-      const n = this.variant === 'waveform' ? WAVEFORM_SAMPLES : this.effectiveBarCount;
+      const n = this.mode === 'waveform' ? WAVEFORM_SAMPLES : this.effectiveBarCount;
       return new Array(n).fill(this.effectiveLevel);
     }
     return this.ambientAmplitudes(nowMs, prefersReducedMotion(this.ownerDocument.defaultView));
@@ -498,8 +561,12 @@ export class LyraAudioVisualizer extends LyraElement {
    *  color probe or `getComputedStyle`. */
   private resolveColors(): { active: string; quiet: string } {
     const cs = this.ownerDocument.defaultView?.getComputedStyle(this);
-    const active = cs?.getPropertyValue('--lr-audio-visualizer-color').trim() || '#0969da';
-    const quiet = cs?.getPropertyValue('--lr-audio-visualizer-quiet-color').trim() || '#ddf4ff';
+    const active = cs?.getPropertyValue('--lr-audio-visualizer-color').trim()
+      || cs?.getPropertyValue('--_lr-audio-visualizer-color-default').trim()
+      || '#0969da';
+    const quiet = cs?.getPropertyValue('--lr-audio-visualizer-quiet-color').trim()
+      || cs?.getPropertyValue('--_lr-audio-visualizer-quiet-color-default').trim()
+      || '#ddf4ff';
     return {
       active: resolveCanvasColor(this, active, '#0969da'),
       quiet: resolveCanvasColor(this, quiet, '#ddf4ff'),
@@ -545,7 +612,7 @@ export class LyraAudioVisualizer extends LyraElement {
     ctx.strokeStyle = active ? activeColor : quietColor;
 
     const gain = this.effectiveGain;
-    if (this.variant === 'waveform') {
+    if (this.mode === 'waveform') {
       ctx.lineWidth = 2;
       ctx.beginPath();
       amplitudes.forEach((amp, i) => {

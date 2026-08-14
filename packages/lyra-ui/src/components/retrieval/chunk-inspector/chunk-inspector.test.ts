@@ -212,7 +212,7 @@ it('localizes the empty-state message via a .strings override, not a hardcoded E
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('Aucun extrait récupéré');
 });
 
-it('lets a host aria-label override the label prop on the populated group owner', async () => {
+it('keeps one populated owner across explicit-empty and dynamic host naming', async () => {
   const el = (await fixture(
     html`<lr-chunk-inspector
       label="Chunk fallback"
@@ -221,8 +221,19 @@ it('lets a host aria-label override the label prop on the populated group owner'
     ></lr-chunk-inspector>`,
   )) as LyraChunkInspector;
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.getAttribute('role')).to.equal(null);
+  expect(el.getAttribute('aria-label')).to.equal('Author chunks');
+  expect(base.getAttribute('aria-label')).to.equal(null);
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('');
+  expect(base.getAttribute('aria-label')).to.equal('');
   expect(base.getAttribute('role')).to.equal('group');
-  expect(base.getAttribute('aria-label')).to.equal('Author chunks');
+  el.setAttribute('aria-label', 'Revised chunks');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Revised chunks');
+  expect(base.getAttribute('aria-label')).to.equal(null);
+  expect(base.getAttribute('role')).to.equal(null);
 });
 
 it('is accessible with mixed-tier chunks', async () => {

@@ -1,4 +1,5 @@
 import { finiteInteger, finiteRange } from '../../../internal/numbers.js';
+import type { ComplexAttributeConverter } from 'lit';
 
 export type FormatNumberType = 'currency' | 'decimal' | 'percent';
 export type FormatNumberNotation = 'standard' | 'compact' | 'scientific' | 'engineering';
@@ -26,15 +27,27 @@ const MONTH_STYLES = ['numeric', '2-digit', 'narrow', 'short', 'long'] as const;
 const TIME_ZONE_NAME_STYLES = ['short', 'long'] as const;
 const HOUR_FORMATS = ['auto', '12', '24'] as const;
 
+const NUMERIC_DATE_SOURCE = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
+
+/** Attribute converter shared by date-formatting elements. Numeric markup denotes epoch
+ * milliseconds, while every other string remains an ISO/date string for the platform parser. */
+export const dateSourceConverter: ComplexAttributeConverter<string | number | Date> = {
+  fromAttribute(value): string | number {
+    const source = value ?? '';
+    const normalized = source.trim();
+    if (NUMERIC_DATE_SOURCE.test(normalized)) {
+      const epoch = Number(normalized);
+      if (Number.isFinite(epoch)) return epoch;
+    }
+    return source;
+  },
+};
+
 const MAX_FRACTION_DIGITS = 100;
 const MAX_SIGNIFICANT_DIGITS = 21;
 
 /** Runtime guard for public literal-union properties assigned through untyped JS or markup. */
-export function closedValue<T extends string>(
-  value: unknown,
-  values: readonly T[],
-  fallback: T,
-): T {
+export function closedValue<T extends string>(value: unknown, values: readonly T[], fallback: T): T {
   return typeof value === 'string' && values.includes(value as T) ? (value as T) : fallback;
 }
 
@@ -142,19 +155,20 @@ export interface DateFormatInputs {
 export function dateTimeFormatOptions(input: DateFormatInputs): Intl.DateTimeFormatOptions {
   const dateStyle = optionalClosedValue(input.dateStyle, DATE_STYLES);
   const timeStyle = optionalClosedValue(input.timeStyle, DATE_STYLES);
-  const options: Intl.DateTimeFormatOptions = dateStyle || timeStyle
-    ? { dateStyle, timeStyle }
-    : {
-        weekday: optionalClosedValue(input.weekday, DATE_TEXT_STYLES),
-        era: optionalClosedValue(input.era, DATE_TEXT_STYLES),
-        year: optionalClosedValue(input.year, DATE_NUMERIC_STYLES),
-        month: optionalClosedValue(input.month, MONTH_STYLES),
-        day: optionalClosedValue(input.day, DATE_NUMERIC_STYLES),
-        hour: optionalClosedValue(input.hour, DATE_NUMERIC_STYLES),
-        minute: optionalClosedValue(input.minute, DATE_NUMERIC_STYLES),
-        second: optionalClosedValue(input.second, DATE_NUMERIC_STYLES),
-        timeZoneName: optionalClosedValue(input.timeZoneName, TIME_ZONE_NAME_STYLES),
-      };
+  const options: Intl.DateTimeFormatOptions =
+    dateStyle || timeStyle
+      ? { dateStyle, timeStyle }
+      : {
+          weekday: optionalClosedValue(input.weekday, DATE_TEXT_STYLES),
+          era: optionalClosedValue(input.era, DATE_TEXT_STYLES),
+          year: optionalClosedValue(input.year, DATE_NUMERIC_STYLES),
+          month: optionalClosedValue(input.month, MONTH_STYLES),
+          day: optionalClosedValue(input.day, DATE_NUMERIC_STYLES),
+          hour: optionalClosedValue(input.hour, DATE_NUMERIC_STYLES),
+          minute: optionalClosedValue(input.minute, DATE_NUMERIC_STYLES),
+          second: optionalClosedValue(input.second, DATE_NUMERIC_STYLES),
+          timeZoneName: optionalClosedValue(input.timeZoneName, TIME_ZONE_NAME_STYLES),
+        };
 
   if (input.timeZone?.trim()) options.timeZone = input.timeZone.trim();
   const hourFormat = closedValue(input.hourFormat, HOUR_FORMATS, 'auto');
@@ -179,9 +193,10 @@ export function byteFormat(
   const units = safeUnit === 'bit' ? BIT_UNITS : BYTE_UNITS;
   const step = finiteRange(unitStep, 1000, 1);
   const safeStep = step > 1 ? step : 1000;
-  const index = value === 0
-    ? 0
-    : Math.max(0, Math.min(units.length - 1, Math.floor(Math.log(Math.abs(value)) / Math.log(safeStep))));
+  const index =
+    value === 0
+      ? 0
+      : Math.max(0, Math.min(units.length - 1, Math.floor(Math.log(Math.abs(value)) / Math.log(safeStep))));
   return {
     amount: value / safeStep ** index,
     options: {

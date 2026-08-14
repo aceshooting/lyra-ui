@@ -16,6 +16,10 @@ import { loadNotebookSanitizer } from './dompurify-loader.js';
 import { styles } from './notebook-viewer.styles.js';
 import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { sanitizePassiveMarkup } from '../passive-markup.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import { resolveViewerSource, type LyraViewerSource } from '../viewer-source.js';
+import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_notebookViewerCodeCell, LYRA_DEFAULT_notebookViewerCollapseOutput, LYRA_DEFAULT_notebookViewerErrorOutput, LYRA_DEFAULT_notebookViewerInPrompt, LYRA_DEFAULT_notebookViewerInPromptEmpty, LYRA_DEFAULT_notebookViewerInvalid, LYRA_DEFAULT_notebookViewerLabel, LYRA_DEFAULT_notebookViewerMarkdownCell, LYRA_DEFAULT_notebookViewerRawCell, LYRA_DEFAULT_notebookViewerShowAllOutput, LYRA_DEFAULT_notebookViewerTooManyCells, LYRA_DEFAULT_notebookViewerUnrenderedOutput, LYRA_DEFAULT_notebookViewerUnsupportedVersion } from '../../../internal/default-strings.generated.js';
@@ -165,6 +169,10 @@ type NotebookState =
  *  `svg`/`svgFilters` profiles, `html` uses DOMPurify's default profile. */
 type SanitizeProfile = 'svg' | 'html';
 
+/** Effective source authority. Inline values win by presence (including an empty string); clearing
+ *  them returns authority to the already configured URL without requiring a `src` reassignment. */
+export type LyraNotebookViewerSource = LyraViewerSource<NotebookDoc | string>;
+
 export interface LyraNotebookViewerEventMap {
   'lr-load': CustomEvent<{ cellCount: number; language: string }>;
   'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
@@ -225,7 +233,7 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  * @csspart error-output-label - The label introducing an error output's traceback.
  * @csspart output-toggle - Expands/collapses a long text output.
  * @csspart error - The error region.
- * @csspart spinner - The loading status region.
+ * @csspart spinner - Visible ordinary loading content with a motion-safe progress indicator.
  * @cssprop [--lr-notebook-viewer-max-height=none] - Maximum block size of the scrollable body
  *   before it scrolls internally. Also settable via the `max-height` property.
  * @cssprop [--lr-notebook-viewer-active-bg=var(--lr-color-brand-quiet)] - Background of the
@@ -264,24 +272,36 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, viewerLoadingStyles];
 
-  /** URL to fetch and parse as a notebook. Ignored once `notebook` is set. */
+  /** URL to fetch and parse as a notebook. Ignored while `notebook` is present. */
   @property() src = '';
 
-  /** A parsed notebook document, or its raw JSON text. Setting this wins over `src` and is parsed
-   *  (and validated) synchronously. */
+  /** A parsed notebook document, or its raw JSON text. Presence wins over `src` (including `''`)
+   *  and is parsed synchronously. Assigning `undefined` clears inline authority, invalidates its
+   *  rendering/sanitization work, and immediately resumes the already configured `src`. */
   @property({ attribute: false })
   get notebook(): NotebookDoc | string | undefined {
     return this._notebook;
   }
   set notebook(value: NotebookDoc | string | undefined) {
     const old = this._notebook;
+    if (Object.is(old, value)) return;
     this._notebook = value;
     this.requestUpdate('notebook', old);
-    this.parseInline();
+    if (value === undefined) {
+      this.beginSourceTransition(this.src ? 'loading' : 'idle');
+      if (this.isConnected) this.scheduleSourceLoad();
+    } else {
+      this.parseInline();
+    }
   }
   private _notebook?: NotebookDoc | string;
+
+  /** Readonly discriminated snapshot of the effective source authority. */
+  get source(): LyraNotebookViewerSource {
+    return resolveViewerSource(this.src, this._notebook);
+  }
 
   /** Display name used as the viewer's accessible label, and matched against a `fragment` anchor's
    *  cell id. */
@@ -315,6 +335,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   private generation = 0;
   private sanitizerGeneration = 0;
   private sanitizerFailureReported = false;
+  private sourceLoadScheduled = false;
   private readonly announcements = new ViewerAnnouncementController(this);
 
   /** `outputCollapseLines`, normalized to a finite non-negative integer (falling back to the
@@ -332,14 +353,21 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       this.loadState.kind,
       this.loadState.kind === 'error' ? this.loadState.message : this.localize('loadingDocument'),
     );
-    if (changed.has('src') && !this._notebook) this.scheduleAfterUpdate(() => { void this.loadFromSrc(); });
+    if (changed.has('src') && this._notebook === undefined) this.scheduleSourceLoad();
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has('src') && this._notebook === undefined) {
+      this.beginSourceTransition(this.src ? 'loading' : 'idle');
+    }
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
     if (this.hasUpdated && this.src && this._notebook === undefined) {
-      this.scheduleAfterUpdate(() => { void this.loadFromSrc(); });
+      this.scheduleSourceLoad();
     }
     if (this.hasUpdated && this._notebook !== undefined && this.loadState.kind === 'loaded') {
       // Disconnect invalidates and clears every in-flight/cached sanitizer result. A pure DOM move
@@ -356,18 +384,23 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     this.sanitizedOutputCache.clear();
     this.sanitizationTasks.clear();
     this.sanitizerFailureReported = false;
+    this.sourceLoadScheduled = false;
     if (this._notebook === undefined) this.loadState = { kind: 'idle' };
     this.announcements.disconnect();
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.announcements.adopted();
   }
 
   private parseInline(): void {
     if (this._notebook === undefined) return;
     const generation = ++this.generation;
+    this.beginAbortableLoad();
+    this.resetParsedState();
+    this.loadState = { kind: 'idle' };
     try {
       const raw = typeof this._notebook === 'string' ? JSON.parse(this._notebook) : this._notebook;
       this.setDoc(raw, generation);
@@ -377,12 +410,38 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     }
   }
 
+  private resetParsedState(): void {
+    this.sanitizerGeneration++;
+    this.sanitizedOutputCache.clear();
+    this.sanitizationTasks.clear();
+    this.sanitizerFailureReported = false;
+    this.expandedOutputs = new Set();
+    this.clearSearchState();
+    this.activeCellIndex = null;
+  }
+
+  private beginSourceTransition(kind: 'idle' | 'loading'): void {
+    this.generation++;
+    this.beginAbortableLoad();
+    this.resetParsedState();
+    this.loadState = { kind };
+  }
+
+  private scheduleSourceLoad(): void {
+    if (this.sourceLoadScheduled) return;
+    this.sourceLoadScheduled = true;
+    this.scheduleAfterUpdate(() => {
+      this.sourceLoadScheduled = false;
+      if (this.isConnected && this._notebook === undefined) void this.loadFromSrc();
+    });
+  }
+
   private async loadFromSrc(): Promise<void> {
     // Re-checked here (not just by updated()'s scheduling guard) -- this call is deferred via
     // scheduleAfterUpdate(), so a synchronous `notebook` assignment arriving after it was scheduled
     // but before it actually runs must still win; otherwise this stale src-fetch attempt would
     // overwrite the freshly-parsed inline notebook's `loaded` state back to `idle`.
-    if (this._notebook !== undefined) return;
+    if (!this.isConnected || this._notebook !== undefined) return;
     const generation = ++this.generation;
     const signal = this.beginAbortableLoad();
     if (!this.src) {
@@ -436,12 +495,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       this.emit('lr-render-error', { error: new Error('too many cells') });
       return;
     }
-    this.sanitizerGeneration++;
-    this.sanitizedOutputCache.clear();
-    this.sanitizationTasks.clear();
-    this.sanitizerFailureReported = false;
-    this.expandedOutputs = new Set();
-    this.clearSearchState();
+    this.resetParsedState();
     this.loadState = { kind: 'loaded', doc: raw };
     const language = raw.metadata?.language_info?.name ?? raw.metadata?.kernelspec?.language ?? '';
     this.emit('lr-load', { cellCount: raw.cells.length, language });
@@ -654,9 +708,12 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
         const sanitizer = await loadNotebookSanitizer();
         if (!this.isConnected || generation !== this.sanitizerGeneration) return;
         const clean = sanitizer
-          ? profile === 'svg'
-            ? (sanitizer.sanitize(raw, { USE_PROFILES: { svg: true, svgFilters: true } }) as string)
-            : (sanitizer.sanitize(raw) as string)
+          ? sanitizePassiveMarkup(
+              sanitizer,
+              raw,
+              this.ownerDocument,
+              profile === 'svg' ? 'passive-svg' : 'passive-document',
+            )
           : null;
         if (!this.isConnected || generation !== this.sanitizerGeneration) return;
         if (!sanitizer && !this.sanitizerFailureReported) {
@@ -749,14 +806,14 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   }
 
   override render(): TemplateResult {
-    const label = this.getAttribute('aria-label') || this.name || this.localize('notebookViewerLabel');
+    const label = viewerSemanticLabel(this, this.name || this.localize('notebookViewerLabel'));
     return html`<div
       part="base"
       style=${sanitizeCssLength(this.maxHeight)
         ? styleMap({ '--lr-notebook-viewer-max-height': sanitizeCssLength(this.maxHeight)! })
         : nothing}
-      role="region"
-      aria-label=${label}
+      role=${viewerSemanticRole(this, 'region') ?? nothing}
+      aria-label=${label ?? nothing}
       aria-busy=${this.loadState.kind === 'loading' ? 'true' : 'false'}
     >
       ${this.loadState.kind === 'loaded'
@@ -767,10 +824,10 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
             .keyFunction=${(item: unknown, i: number) => (item as NotebookCell).id ?? i}
             .activeId=${this.activeCellIndex ?? ''}
             @lr-visible-range-changed=${this.stopVirtualListEvent}
-            @lr-scroll=${this.stopVirtualListEvent}
+            @lr-virtual-scroll=${this.stopVirtualListEvent}
           ></lr-virtual-list>`
         : this.loadState.kind === 'loading'
-          ? html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`
+          ? renderViewerLoading(this.localize('loadingDocument'))
           : this.loadState.kind === 'error'
             ? html`<div part="error">${this.loadState.message}</div>`
             : html`<p>${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`}

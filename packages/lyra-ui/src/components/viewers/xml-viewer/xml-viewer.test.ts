@@ -28,13 +28,35 @@ function textResponse(body: string, ok = true, status = 200): Response {
   } as unknown as Response;
 }
 
+function stubClipboard(target: Navigator, value: unknown): () => void {
+  const original = Object.getOwnPropertyDescriptor(target, 'clipboard');
+  Object.defineProperty(target, 'clipboard', { configurable: true, value });
+  return () => {
+    if (original) Object.defineProperty(target, 'clipboard', original);
+    else Reflect.deleteProperty(target, 'clipboard');
+  };
+}
+
 describe('defaults', () => {
   it('defaults to empty src/xml/name, copyable false', async () => {
     const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
     expect(el.src).to.equal('');
     expect(el.xml).to.be.undefined;
+    expect(el.source).to.equal(null);
     expect(el.name).to.equal('');
     expect(el.copyable).to.be.false;
+  });
+
+  it('exposes one discriminated source authority as inline content is set and cleared', () => {
+    const el = document.createElement('lr-xml-viewer') as LyraXmlViewer;
+    el.src = 'https://example.test/remote.xml';
+    expect(el.source).to.deep.equal({ kind: 'url', url: 'https://example.test/remote.xml' });
+    el.xml = '';
+    expect(el.source).to.deep.equal({ kind: 'inline', value: '' });
+    el.xml = SIMPLE_XML;
+    expect(el.source).to.deep.equal({ kind: 'inline', value: SIMPLE_XML });
+    el.xml = undefined;
+    expect(el.source).to.deep.equal({ kind: 'url', url: 'https://example.test/remote.xml' });
   });
 });
 
@@ -183,6 +205,27 @@ describe('parsing and tree rendering', () => {
 });
 
 describe('loading xml via src', () => {
+  it('paints a visible busy treatment while pending and replaces it with parsed content', async () => {
+    let resolveFetch!: (response: Response) => void;
+    const restore = stubFetch(() => new Promise<Response>((resolve) => { resolveFetch = resolve; }));
+    try {
+      const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer></lr-xml-viewer>`);
+      el.src = 'https://example.test/pending.xml';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="spinner"]') !== null);
+      const base = el.shadowRoot!.querySelector('[part="base"]')!;
+      const label = el.shadowRoot!.querySelector<HTMLElement>('.viewer-loading-label')!;
+      expect(base.getAttribute('aria-busy')).to.equal('true');
+      expect(label.textContent).to.equal('Loading document…');
+      expect(label.getBoundingClientRect().height).to.be.greaterThan(0);
+      resolveFetch(textResponse(SIMPLE_XML));
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="tree"]') !== null);
+      expect(base.getAttribute('aria-busy')).to.equal('false');
+      expect(el.shadowRoot!.querySelector('[part="spinner"]') === null).to.equal(true);
+    } finally {
+      restore();
+    }
+  });
+
   it('fetches, parses, and renders a document reached via src', async () => {
     const restore = stubFetch(async () => textResponse(SIMPLE_XML));
     try {
@@ -296,15 +339,25 @@ describe('collapsedDepth and toggling', () => {
 });
 
 describe('copy', () => {
-  it('renders a whole-document copy button only when copyable, and emits lr-copy on click', async () => {
-    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} copyable></lr-xml-viewer>`)) as LyraXmlViewer;
-    await el.updateComplete;
-    const button = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
-    expect((button) != null).to.equal(true);
-    const eventPromise = oneEvent(el, 'lr-copy');
-    button.click();
-    const event = await eventPromise;
-    expect(event.detail.text).to.include('<root>');
+  it('renders a whole-document copy button and emits success only after clipboard fulfillment', async () => {
+    const writes: string[] = [];
+    const restore = stubClipboard(navigator, { writeText: async (text: string) => { writes.push(text); } });
+    try {
+      const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} copyable></lr-xml-viewer>`)) as LyraXmlViewer;
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
+      expect((button) != null).to.equal(true);
+      const eventPromise = oneEvent(el, 'lr-copy');
+      button.click();
+      const event = await eventPromise;
+      expect(event.detail).to.deep.include({ ok: true });
+      expect(event.detail.text).to.include('<root>');
+      expect(writes).to.deep.equal([event.detail.text]);
+      await el.updateComplete;
+      expect(button.textContent!.trim()).to.equal('Copied!');
+    } finally {
+      restore();
+    }
   });
 
   it('uses the adopted owner clipboard and fails closed in an ownerless document', async () => {
@@ -351,8 +404,9 @@ describe('copy', () => {
     try {
       frameDocument.body.append(frameDocument.adoptNode(el));
       await el.updateComplete;
+      const copied = oneEvent(el, 'lr-copy');
       button.click();
-      await Promise.resolve();
+      expect((await copied).detail).to.deep.include({ ok: true });
       expect(mainWrites).to.equal(0);
       expect(frameWrites).to.have.length(1);
       expect(frameWrites[0]).to.include('<root>');
@@ -640,11 +694,12 @@ describe('toggle geometry', () => {
 });
 
 describe('accessibility', () => {
-  it('puts its accessible name on a region rather than a roleless generic container', async () => {
+  it('leaves a non-empty host accessible name on the host instead of duplicating a region owner', async () => {
     const el = (await fixture(html`<lr-xml-viewer aria-label="XML source" .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
-    expect(base.getAttribute('role')).to.equal('region');
-    expect(base.getAttribute('aria-label')).to.equal('XML source');
+    expect(base.getAttribute('role')).to.be.null;
+    expect(base.getAttribute('aria-label')).to.be.null;
+    expect(el.getAttribute('aria-label')).to.equal('XML source');
   });
 
   it('is accessible with an expanded tree and copyable on', async () => {
@@ -830,18 +885,27 @@ describe('stale generation guards', () => {
 });
 
 describe('leaf elements (no children of any kind)', () => {
-  it('hides the toggle and omits its aria attributes for a truly childless element', async () => {
+  it('uses a non-interactive alignment placeholder instead of a CSS-revealable hidden button', async () => {
     const el = (await fixture(
       html`<lr-xml-viewer .xml=${'<root><empty/><item>x</item></root>'}></lr-xml-viewer>`,
     )) as LyraXmlViewer;
     await el.updateComplete;
     const toggles = [...el.shadowRoot!.querySelectorAll('[part="toggle"]')] as HTMLButtonElement[];
-    const leafToggle = toggles[1]; // toggles[0] is root's own (it has children)
-    expect(leafToggle.hasAttribute('hidden')).to.be.true;
-    expect(leafToggle.getAttribute('tabindex')).to.equal('-1');
-    expect(leafToggle.getAttribute('aria-hidden')).to.equal('true');
-    expect(leafToggle.hasAttribute('aria-expanded')).to.be.false;
-    expect(leafToggle.hasAttribute('aria-label')).to.be.false;
+    expect(toggles).to.have.lengthOf(2); // root and <item>; <empty/> owns no button at all
+    const placeholder = el.shadowRoot!.querySelector('[part="toggle-placeholder"]')!;
+    expect(placeholder.localName).to.equal('span');
+    expect(placeholder.getAttribute('aria-hidden')).to.equal('true');
+    expect(placeholder.hasAttribute('tabindex')).to.be.false;
+    expect(placeholder.hasAttribute('aria-expanded')).to.be.false;
+  });
+
+  it('preserves an explicitly empty host aria-label on the region owner', async () => {
+    const el = await fixture<LyraXmlViewer>(
+      html`<lr-xml-viewer name="Named document" aria-label="" .xml=${SIMPLE_XML}></lr-xml-viewer>`,
+    );
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute('aria-label')).to.be.true;
+    expect(base.getAttribute('aria-label')).to.equal('');
   });
 });
 
@@ -912,41 +976,49 @@ describe('collapsed child-count preview pluralization', () => {
 
 describe('per-node copy button', () => {
   it("copies a single node's serialized XML and stops the click from also toggling its row", async () => {
-    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} copyable></lr-xml-viewer>`)) as LyraXmlViewer;
-    await el.updateComplete;
-    const nodeButtons = [...el.shadowRoot!.querySelectorAll('[part="node"] [part="copy-button"]')] as HTMLButtonElement[];
-    const itemButton = nodeButtons[0]; // the first element row's own per-node button
-    const eventPromise = oneEvent(el, 'lr-copy');
-    itemButton.click();
-    const event = await eventPromise;
-    expect(event.detail.text).to.include('<item');
-    // A row-toggle click would have flipped an aria-expanded value; none did.
-    expect(el.shadowRoot!.querySelectorAll('[part="toggle"][aria-expanded="false"]').length).to.equal(0);
-  });
-});
-
-describe('writeClipboard defensive catch', () => {
-  it('still emits lr-copy when navigator.clipboard.writeText throws synchronously', async () => {
-    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: {
-        writeText: () => {
-          throw new Error('denied');
-        },
-      },
-    });
+    const restore = stubClipboard(navigator, { writeText: async () => {} });
     try {
       const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} copyable></lr-xml-viewer>`)) as LyraXmlViewer;
       await el.updateComplete;
-      const button = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
+      const nodeButtons = [...el.shadowRoot!.querySelectorAll('[part="node"] [part="copy-button"]')] as HTMLButtonElement[];
+      const itemButton = nodeButtons[0]; // the first element row's own per-node button
       const eventPromise = oneEvent(el, 'lr-copy');
-      button.click();
+      itemButton.click();
       const event = await eventPromise;
-      expect(event.detail.text).to.include('<root>');
+      expect(event.detail).to.deep.include({ ok: true });
+      expect(event.detail.text).to.include('<item');
+      // A row-toggle click would have flipped an aria-expanded value; none did.
+      expect(el.shadowRoot!.querySelectorAll('[part="toggle"][aria-expanded="false"]').length).to.equal(0);
     } finally {
-      if (original) Object.defineProperty(navigator, 'clipboard', original);
-      else delete (navigator as unknown as { clipboard?: unknown }).clipboard;
+      restore();
+    }
+  });
+});
+
+describe('clipboard failures', () => {
+  it('localizes failure and emits lr-error/lr-copy-error, never lr-copy, after a synchronous throw', async () => {
+    const error = new Error('denied');
+    const restore = stubClipboard(navigator, { writeText: () => { throw error; } });
+    try {
+      const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} copyable></lr-xml-viewer>`)) as LyraXmlViewer;
+      el.strings = { copyFailed: 'Échec de la copie' };
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
+      let copies = 0;
+      el.addEventListener('lr-copy', () => copies++);
+      const genericError = oneEvent(el, 'lr-error');
+      const detailedError = oneEvent(el, 'lr-copy-error');
+      button.click();
+      await genericError;
+      const event = await detailedError;
+      expect(copies).to.equal(0);
+      expect(event.detail).to.deep.include({ ok: false, reason: 'failed', error });
+      expect(event.detail.text).to.include('<root>');
+      await el.updateComplete;
+      expect(button.textContent!.trim()).to.equal('Échec de la copie');
+      expect(button.getAttribute('aria-label')).to.equal('Échec de la copie');
+    } finally {
+      restore();
     }
   });
 });

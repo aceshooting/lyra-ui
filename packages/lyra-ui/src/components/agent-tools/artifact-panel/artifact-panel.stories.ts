@@ -11,9 +11,9 @@ export default meta;
 type Story = StoryObj;
 
 const versions: ArtifactVersion[] = [
-  { id: 'v1', label: 'v1' },
-  { id: 'v2', label: 'v2' },
-  { id: 'v3', label: 'v3' },
+  { id: 'v1', label: 'Initial draft' },
+  { id: 'v2', label: 'Reviewed' },
+  { id: 'v3', label: 'Published' },
 ];
 
 const REPORT_MARKDOWN = '# Report\n\nHello';
@@ -50,7 +50,7 @@ export const Narrow320: Story = {
         active-version-id="v1"
         .versions=${versions}
         .copyText=${REPORT_MARKDOWN}
-        download-src="data:text/plain,report"
+        download-src="https://example.com/reports/quarterly-customer-support.md"
         download-name="quarterly-customer-support-evaluation-report.md"
       >
         <div style="overflow-wrap:anywhere">Rendered preview with long content that must stay inside the panel allocation.</div>

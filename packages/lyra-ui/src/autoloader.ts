@@ -1,15 +1,16 @@
-import {
-  AUTOLOADER_MANIFEST,
-  type AutoloaderManifestEntry,
-} from './internal/autoloader-manifest.js';
+import { AUTOLOADER_MANIFEST, type AutoloaderManifestEntry } from './internal/autoloader-manifest.js';
 import { loadAutoloaderConstructor } from './internal/autoloader-loaders.js';
+import { AUTOLOADER_TAG_SET, type AutoloadableTagName } from './internal/autoloader-tags.js';
+import { registryForRoot } from './internal/definition-registry.js';
 import {
-  AUTOLOADER_TAG_SET,
-  type AutoloadableTagName,
-} from './internal/autoloader-tags.js';
-import {
-  registryForRoot,
-} from './internal/definition-registry.js';
+  collectRenderedTree,
+  renderedTreeTraversalLimits,
+  RenderedTreeTraversalError,
+  type RenderedTreeTraversalLimit,
+  type RenderedTreeTraversalLimits,
+  type RenderedTreeTraversalOptions,
+  type RenderedTreeTraversalState,
+} from './internal/rendered-tree-traversal.js';
 import type { LyraDefinitionRoot } from './utilities/defined.js';
 
 export type { AutoloadableTagName } from './internal/autoloader-tags.js';
@@ -23,11 +24,13 @@ export const AUTOLOADER_PENDING_ATTRIBUTE = 'data-lr-autoload-pending';
  */
 export type AutoloaderOptionalPeers = 'all' | readonly string[] | ReadonlySet<string>;
 
-export interface AutoloaderOptions {
+export interface AutoloaderOptions extends RenderedTreeTraversalOptions {
   /** Explicit package allowlist for optional-peer components, or `'all'` after installing them. */
   readonly optionalPeers?: AutoloaderOptionalPeers;
-  /** Emit `lr-autoload-preload`, `lr-autoload-loaded`, and `lr-autoload-error` on the caller root. */
+  /** Emit load and traversal lifecycle events on the caller root. */
   readonly events?: boolean;
+  /** Maximum concurrent definition and first-update tasks. Default 16. */
+  readonly maxConcurrency?: number;
 }
 
 export interface AutoloaderEventDetail {
@@ -39,15 +42,24 @@ export interface AutoloaderErrorEventDetail extends AutoloaderEventDetail {
   readonly error: unknown;
 }
 
+export interface AutoloaderTraversalErrorEventDetail {
+  readonly limit: RenderedTreeTraversalLimit;
+  readonly maximum: number;
+  readonly error: Error;
+}
+
 export interface AutoloaderEventMap {
   'lr-autoload-preload': CustomEvent<AutoloaderEventDetail>;
   'lr-autoload-loaded': CustomEvent<AutoloaderEventDetail>;
   'lr-autoload-error': CustomEvent<AutoloaderErrorEventDetail>;
+  'lr-autoload-traversal-error': CustomEvent<AutoloaderTraversalErrorEventDetail>;
 }
 
 interface NormalizedOptions {
   readonly optionalPeers: 'all' | ReadonlySet<string>;
   readonly events: boolean;
+  readonly traversal: RenderedTreeTraversalLimits;
+  readonly maxConcurrency: number;
 }
 
 interface LoaderContext {
@@ -59,6 +71,14 @@ interface LoaderContext {
   readonly loadedTags: Set<AutoloadableTagName>;
   observer?: MutationObserver;
   readonly observedRoots: Set<LyraDefinitionRoot>;
+  discoveryTail: Promise<void>;
+  activeWork: number;
+  readonly workWaiters: Array<() => void>;
+}
+
+interface DiscoveryState extends RenderedTreeTraversalState {
+  readonly elements: Set<Element>;
+  readonly roots: Set<LyraDefinitionRoot>;
 }
 
 interface UpdateCompleteElement extends Element {
@@ -78,10 +98,25 @@ function isReadonlySet(value: unknown): value is ReadonlySet<string> {
   return typeof candidate.has === 'function' && typeof candidate[Symbol.iterator] === 'function';
 }
 
+function normalizeConcurrency(value: number | undefined): number {
+  const resolved = value ?? 16;
+  if (!Number.isFinite(resolved) || !Number.isInteger(resolved) || resolved < 1) {
+    throw new RangeError('Autoloader maxConcurrency must be an integer >= 1');
+  }
+  return resolved;
+}
+
 function normalizeOptions(options: AutoloaderOptions | undefined): NormalizedOptions {
+  const traversal = renderedTreeTraversalLimits(options ?? {}, 'Autoloader');
+  const maxConcurrency = normalizeConcurrency(options?.maxConcurrency);
+  const common = {
+    events: options?.events === true,
+    traversal,
+    maxConcurrency,
+  };
   const policy = options?.optionalPeers;
-  if (policy === undefined) return { optionalPeers: new Set(), events: options?.events === true };
-  if (policy === 'all') return { optionalPeers: 'all', events: options?.events === true };
+  if (policy === undefined) return { optionalPeers: new Set(), ...common };
+  if (policy === 'all') return { optionalPeers: 'all', ...common };
   if (!Array.isArray(policy) && !isReadonlySet(policy)) {
     throw new TypeError("optionalPeers must be 'all', an array, or a ReadonlySet of package names");
   }
@@ -89,7 +124,7 @@ function normalizeOptions(options: AutoloaderOptions | undefined): NormalizedOpt
   if (peers.some((peer) => typeof peer !== 'string' || peer.length === 0 || peer !== peer.trim())) {
     throw new TypeError('optionalPeers must contain non-empty package names');
   }
-  return { optionalPeers: new Set(peers), events: options?.events === true };
+  return { optionalPeers: new Set(peers), ...common };
 }
 
 function isEligible(entry: AutoloaderManifestEntry, options: NormalizedOptions): boolean {
@@ -105,13 +140,16 @@ function eventConstructor(root: LyraDefinitionRoot): typeof CustomEvent | undefi
   return typeof CustomEvent === 'undefined' ? undefined : CustomEvent;
 }
 
-type AutoloaderEventDetailFor<Name extends keyof AutoloaderEventMap> =
-  AutoloaderEventMap[Name] extends CustomEvent<infer Detail> ? Detail : never;
+type AutoloaderEventDetailFor<Name extends keyof AutoloaderEventMap> = AutoloaderEventMap[Name] extends CustomEvent<
+  infer Detail
+>
+  ? Detail
+  : never;
 
 function emit<Name extends keyof AutoloaderEventMap>(
   context: LoaderContext,
   name: Name,
-  detail: AutoloaderEventDetailFor<Name>,
+  detail: AutoloaderEventDetailFor<Name>
 ): void {
   if (!context.options.events || !context.active) return;
   const EventConstructor = eventConstructor(context.root);
@@ -121,7 +159,7 @@ function emit<Name extends keyof AutoloaderEventMap>(
       bubbles: true,
       composed: true,
       detail,
-    }),
+    })
   );
 }
 
@@ -147,7 +185,7 @@ function clearAllPending(context: LoaderContext): void {
 
 function definitionMap(
   context: LoaderContext,
-  registry: CustomElementRegistry,
+  registry: CustomElementRegistry
 ): Map<AutoloadableTagName, Promise<void>> {
   let definitions = context.definitionLoads.get(registry);
   if (!definitions) {
@@ -157,19 +195,58 @@ function definitionMap(
   return definitions;
 }
 
-async function waitForUpdates(elements: readonly Element[]): Promise<void> {
-  const updates: Promise<unknown>[] = [];
-  for (const element of elements) {
-    const updateComplete = (element as UpdateCompleteElement).updateComplete;
-    if (updateComplete && typeof updateComplete.then === 'function') updates.push(updateComplete);
+async function waitForUpdate(element: Element): Promise<void> {
+  const updateComplete = (element as UpdateCompleteElement).updateComplete;
+  if (updateComplete && typeof updateComplete.then === 'function') await updateComplete;
+}
+
+async function runBounded<Item>(
+  items: readonly Item[],
+  concurrency: number,
+  task: (item: Item) => Promise<void>
+): Promise<void> {
+  let next = 0;
+  let failed = false;
+  let failure: unknown;
+  const worker = async (): Promise<void> => {
+    while (!failed) {
+      const index = next;
+      if (index >= items.length) return;
+      next += 1;
+      try {
+        await task(items[index]!);
+      } catch (error) {
+        if (!failed) {
+          failed = true;
+          failure = error;
+        }
+      }
+    }
+  };
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
+  await Promise.all(workers);
+  if (failed) throw failure;
+}
+
+async function withWorkSlot<Result>(context: LoaderContext, task: () => Promise<Result>): Promise<Result | undefined> {
+  if (!context.active) return undefined;
+  if (context.activeWork >= context.options.maxConcurrency) {
+    await new Promise<void>((resolve) => context.workWaiters.push(resolve));
   }
-  await Promise.all(updates);
+  if (!context.active) return undefined;
+  context.activeWork += 1;
+  try {
+    return await task();
+  } finally {
+    context.activeWork -= 1;
+    context.workWaiters.shift()?.();
+  }
 }
 
 async function defineTag(
   context: LoaderContext,
   registry: CustomElementRegistry,
-  tag: AutoloadableTagName,
+  tag: AutoloadableTagName
 ): Promise<void> {
   if (registry.get(tag)) return;
   const definitions = definitionMap(context, registry);
@@ -178,7 +255,10 @@ async function defineTag(
 
   const entry = AUTOLOADER_MANIFEST[tag];
   const pending = (async () => {
-    emit(context, 'lr-autoload-preload', { tag, optionalPeers: entry.optionalPeers });
+    emit(context, 'lr-autoload-preload', {
+      tag,
+      optionalPeers: entry.optionalPeers,
+    });
     try {
       const constructor = await loadAutoloaderConstructor(tag);
       if (!context.active) return;
@@ -186,9 +266,16 @@ async function defineTag(
       await registry.whenDefined(tag);
       if (!context.active) return;
       context.loadedTags.add(tag);
-      emit(context, 'lr-autoload-loaded', { tag, optionalPeers: entry.optionalPeers });
+      emit(context, 'lr-autoload-loaded', {
+        tag,
+        optionalPeers: entry.optionalPeers,
+      });
     } catch (error) {
-      emit(context, 'lr-autoload-error', { tag, optionalPeers: entry.optionalPeers, error });
+      emit(context, 'lr-autoload-error', {
+        tag,
+        optionalPeers: entry.optionalPeers,
+        error,
+      });
       throw error;
     }
   })();
@@ -200,37 +287,41 @@ async function defineTag(
   return pending;
 }
 
-function isElement(node: Node): node is Element {
-  return node.nodeType === 1;
+function newDiscoveryState(): DiscoveryState {
+  return { work: 0, elements: new Set(), roots: new Set() };
 }
 
-function collect(
-  root: LyraDefinitionRoot,
-): { roots: LyraDefinitionRoot[]; elements: Element[] } {
-  const roots: LyraDefinitionRoot[] = [];
-  const elements: Element[] = [];
-  const seenRoots = new Set<LyraDefinitionRoot>();
-  const seenElements = new Set<Element>();
+function collectDiscoveryBatch(
+  context: LoaderContext,
+  roots: readonly LyraDefinitionRoot[],
+  state: DiscoveryState
+): {
+  readonly roots: readonly LyraDefinitionRoot[];
+  readonly elements: readonly Element[];
+} {
+  const batchRoots = new Set<LyraDefinitionRoot>();
+  const batchElements = new Set<Element>();
+  for (const root of roots) {
+    const result = collectRenderedTree(root, context.options.traversal, state, 'Autoloader discovery');
+    for (const discoveredRoot of result.roots) batchRoots.add(discoveredRoot);
+    for (const element of result.elements) batchElements.add(element);
+  }
 
-  const visit = (current: LyraDefinitionRoot): void => {
-    if (seenRoots.has(current)) return;
-    seenRoots.add(current);
-    roots.push(current);
-    const candidates = [
-      ...(isElement(current) ? [current] : []),
-      ...current.querySelectorAll('*'),
-    ];
-    for (const element of candidates) {
-      if (!seenElements.has(element)) {
-        seenElements.add(element);
-        elements.push(element);
-      }
-      if (element.shadowRoot) visit(element.shadowRoot);
-    }
-  };
+  const newRoots = [...batchRoots].filter((root) => !state.roots.has(root));
+  if (state.roots.size + newRoots.length > context.options.traversal.maxRoots) {
+    throw new RenderedTreeTraversalError('Autoloader discovery', 'maxRoots', context.options.traversal.maxRoots);
+  }
+  const newElements = [...batchElements].filter((element) => !state.elements.has(element));
+  if (state.elements.size + newElements.length > context.options.traversal.maxElements) {
+    throw new RenderedTreeTraversalError('Autoloader discovery', 'maxElements', context.options.traversal.maxElements);
+  }
+  for (const root of newRoots) state.roots.add(root);
+  for (const element of newElements) state.elements.add(element);
+  return { roots: [...batchRoots], elements: [...batchElements] };
+}
 
-  visit(root);
-  return { roots, elements };
+function isElement(node: Node): node is Element {
+  return node.nodeType === 1;
 }
 
 function observerConstructor(root: LyraDefinitionRoot): typeof MutationObserver | undefined {
@@ -240,47 +331,73 @@ function observerConstructor(root: LyraDefinitionRoot): typeof MutationObserver 
   return typeof MutationObserver === 'undefined' ? undefined : MutationObserver;
 }
 
+function parentAcrossOpenShadowBoundary(node: Node): Node | null {
+  if (node.parentNode) return node.parentNode;
+  if (node.nodeType !== 11 || !('host' in node)) return null;
+  const host = (node as ShadowRoot).host;
+  return isElement(host) ? host : null;
+}
+
+function isReachableFromRoot(root: LyraDefinitionRoot, node: Node): boolean {
+  let current: Node | null = node;
+  while (current) {
+    if (current === root) return true;
+    current = parentAcrossOpenShadowBoundary(current);
+  }
+  return false;
+}
+
 function observeRoot(context: LoaderContext, root: LyraDefinitionRoot): void {
   if (!context.observer || context.observedRoots.has(root)) return;
   context.observer.observe(root, { childList: true, subtree: true });
   context.observedRoots.add(root);
 }
 
-async function discoverOpenShadowRoots(context: LoaderContext, elements: readonly Element[]): Promise<void> {
-  const discoveries: Promise<unknown>[] = [];
-  for (const element of elements) {
-    if (!element.shadowRoot) continue;
-    observeRoot(context, element.shadowRoot);
-    discoveries.push(discoverWithContext(context, element.shadowRoot));
-  }
-  await Promise.all(discoveries);
+function pruneDetachedObservedRoots(context: LoaderContext): void {
+  const observer = context.observer;
+  if (!observer) return;
+  const reachableRoots = [...context.observedRoots].filter((root) => isReachableFromRoot(context.root, root));
+  if (reachableRoots.length === context.observedRoots.size) return;
+
+  // MutationObserver has no per-target unobserve operation. Reconnect the shared observer to the
+  // roots that still belong to the caller's tree so removed hosts and their shadow subtrees are
+  // no longer retained or able to enqueue discovery work.
+  observer.disconnect();
+  context.observedRoots.clear();
+  for (const root of reachableRoots) observeRoot(context, root);
 }
 
-async function finishDiscoveredElement(context: LoaderContext, element: Element): Promise<void> {
+async function finishDiscoveredElement(context: LoaderContext, element: Element): Promise<ShadowRoot | undefined> {
   try {
-    await waitForUpdates([element]);
-    if (!context.active) return;
-    const shadowDiscovery = discoverOpenShadowRoots(context, [element]);
-    clearPending(context, element);
-    await shadowDiscovery;
+    await waitForUpdate(element);
+    if (!context.active) return undefined;
+    return element.shadowRoot ?? undefined;
   } finally {
     clearPending(context, element);
   }
 }
 
-async function discoverWithContext(
+interface DefinitionWork {
+  readonly registry: CustomElementRegistry;
+  readonly tag: AutoloadableTagName;
+}
+
+interface PreparedDiscoveryBatch {
+  readonly definitions: readonly DefinitionWork[];
+  readonly elementsToFinish: readonly Element[];
+  readonly state: DiscoveryState;
+}
+
+function prepareDiscoveryBatch(
   context: LoaderContext,
-  root: LyraDefinitionRoot,
-): Promise<readonly AutoloadableTagName[]> {
-  if (!context.active) return [];
-  const before = new Set(context.loadedTags);
-  const { roots, elements } = collect(root);
+  requestedRoots: readonly LyraDefinitionRoot[],
+  state: DiscoveryState
+): PreparedDiscoveryBatch | undefined {
+  if (!context.active || requestedRoots.length === 0) return undefined;
+  const { roots, elements } = collectDiscoveryBatch(context, requestedRoots, state);
   for (const discoveredRoot of roots) observeRoot(context, discoveredRoot);
 
-  const grouped = new Map<
-    CustomElementRegistry,
-    Map<AutoloadableTagName, Element[]>
-  >();
+  const grouped = new Map<CustomElementRegistry, Map<AutoloadableTagName, Element[]>>();
   const definedElements: Element[] = [];
   for (const element of elements) {
     const tag = element.localName;
@@ -308,27 +425,69 @@ async function discoverWithContext(
     tags.set(typedTag, matches);
   }
 
-  const definitions: Promise<void>[] = definedElements.map((element) =>
-    finishDiscoveredElement(context, element),
-  );
+  const definitions: DefinitionWork[] = [];
+  const elementsToFinish = [...definedElements];
   for (const [registry, tags] of grouped) {
     for (const [tag, matches] of tags) {
-      definitions.push(
-        (async () => {
-          try {
-            await defineTag(context, registry, tag);
-            if (!context.active) return;
-            await Promise.all(matches.map((element) => finishDiscoveredElement(context, element)));
-          } finally {
-            // Definition failures and stop() paths still clear every loader-owned marker.
-            for (const element of matches) clearPending(context, element);
-          }
-        })(),
-      );
+      definitions.push({ registry, tag });
+      elementsToFinish.push(...matches);
     }
   }
-  await Promise.all(definitions);
+
+  return { definitions, elementsToFinish, state };
+}
+
+async function executeDiscoveryBatch(context: LoaderContext, prepared: PreparedDiscoveryBatch): Promise<void> {
+  const { definitions, elementsToFinish, state } = prepared;
+  try {
+    await runBounded(definitions, context.options.maxConcurrency, async ({ registry, tag }) => {
+      await withWorkSlot(context, () => defineTag(context, registry, tag));
+    });
+    if (!context.active) return;
+
+    const postUpdateRoots = new Set<ShadowRoot>();
+    await runBounded(elementsToFinish, context.options.maxConcurrency, async (element) => {
+      const shadowRoot = await withWorkSlot(context, () => finishDiscoveredElement(context, element));
+      if (shadowRoot) postUpdateRoots.add(shadowRoot);
+    });
+    if (context.active && postUpdateRoots.size > 0) {
+      await processDiscoveryBatch(context, [...postUpdateRoots], state);
+    }
+  } finally {
+    // Definition/update failures and stop() paths still clear every loader-owned marker.
+    for (const element of elementsToFinish) clearPending(context, element);
+  }
+}
+
+async function processDiscoveryBatch(
+  context: LoaderContext,
+  requestedRoots: readonly LyraDefinitionRoot[],
+  state: DiscoveryState
+): Promise<void> {
+  const prepared = prepareDiscoveryBatch(context, requestedRoots, state);
+  if (prepared) await executeDiscoveryBatch(context, prepared);
+}
+
+async function discoverRootsWithContext(
+  context: LoaderContext,
+  roots: readonly LyraDefinitionRoot[]
+): Promise<readonly AutoloadableTagName[]> {
+  if (!context.active) return [];
+  const before = new Set(context.loadedTags);
+  await processDiscoveryBatch(context, roots, newDiscoveryState());
   return [...context.loadedTags].filter((tag) => !before.has(tag));
+}
+
+function queueObservedDiscovery(context: LoaderContext, roots: readonly LyraDefinitionRoot[]): Promise<void> {
+  const state = newDiscoveryState();
+  const prepared = context.discoveryTail.then(() => prepareDiscoveryBatch(context, roots, state));
+  context.discoveryTail = prepared.then(
+    () => undefined,
+    () => undefined
+  );
+  return prepared.then(async (batch) => {
+    if (batch) await executeDiscoveryBatch(context, batch);
+  });
 }
 
 function createContext(root: LyraDefinitionRoot, options: AutoloaderOptions | undefined): LoaderContext {
@@ -340,18 +499,21 @@ function createContext(root: LyraDefinitionRoot, options: AutoloaderOptions | un
     definitionLoads: new WeakMap(),
     loadedTags: new Set(),
     observedRoots: new Set(),
+    discoveryTail: Promise.resolve(),
+    activeWork: 0,
+    workWaiters: [],
   };
 }
 
 /** Loads and defines the known Lyra tags currently rendered below `root`. */
 export async function discover(
   root: LyraDefinitionRoot | undefined = defaultRoot(),
-  options?: AutoloaderOptions,
+  options?: AutoloaderOptions
 ): Promise<readonly AutoloadableTagName[]> {
   if (!root || typeof root.querySelectorAll !== 'function') return [];
   const context = createContext(root, options);
   try {
-    return await discoverWithContext(context, root);
+    return await discoverRootsWithContext(context, [root]);
   } finally {
     context.active = false;
     clearAllPending(context);
@@ -364,7 +526,7 @@ export async function discover(
  */
 export async function start(
   root: LyraDefinitionRoot | undefined = defaultRoot(),
-  options?: AutoloaderOptions,
+  options?: AutoloaderOptions
 ): Promise<readonly AutoloadableTagName[]> {
   stop();
   if (!root || typeof root.querySelectorAll !== 'function') return [];
@@ -374,19 +536,34 @@ export async function start(
   if (Observer) {
     context.observer = new Observer((records) => {
       if (!context.active) return;
+      if (records.some((record) => record.removedNodes.length > 0)) {
+        pruneDetachedObservedRoots(context);
+      }
+      const addedRoots = new Set<LyraDefinitionRoot>();
       for (const record of records) {
+        if (!isReachableFromRoot(context.root, record.target)) continue;
         for (const node of record.addedNodes) {
           if (node.nodeType !== 1 && node.nodeType !== 11) continue;
-          void discoverWithContext(context, node as LyraDefinitionRoot).catch(() => {
-            // The opt-in lr-autoload-error event reports observer-driven failures. A later DOM
-            // insertion or explicit discover() call is allowed to retry rejected imports.
-          });
+          if (!isReachableFromRoot(context.root, node)) continue;
+          addedRoots.add(node as LyraDefinitionRoot);
         }
       }
+      if (addedRoots.size === 0) return;
+      void queueObservedDiscovery(context, [...addedRoots]).catch((error: unknown) => {
+        if (error instanceof RenderedTreeTraversalError) {
+          emit(context, 'lr-autoload-traversal-error', {
+            limit: error.limit,
+            maximum: error.maximum,
+            error,
+          });
+        }
+        // Import failures already emit lr-autoload-error. A later DOM insertion or explicit
+        // discover() call is allowed to retry rejected imports or a bounded traversal.
+      });
     });
   }
   try {
-    return await discoverWithContext(context, root);
+    return await discoverRootsWithContext(context, [root]);
   } catch (error) {
     if (activeContext === context) stop();
     throw error;
@@ -401,5 +578,6 @@ export function stop(): void {
   context.active = false;
   context.observer?.disconnect();
   context.observedRoots.clear();
+  for (const resolve of context.workWaiters.splice(0)) resolve();
   clearAllPending(context);
 }

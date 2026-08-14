@@ -5,7 +5,7 @@ import { hasRealContent, hostAriaLabel } from '../../../internal/a11y.js';
 import { styles } from './kbd.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_kbdAltWord, LYRA_DEFAULT_kbdArrowDownWord, LYRA_DEFAULT_kbdArrowLeftWord, LYRA_DEFAULT_kbdArrowRightWord, LYRA_DEFAULT_kbdArrowUpWord, LYRA_DEFAULT_kbdBackspaceWord, LYRA_DEFAULT_kbdCommandWord, LYRA_DEFAULT_kbdControlVisual, LYRA_DEFAULT_kbdControlWord, LYRA_DEFAULT_kbdDeleteVisual, LYRA_DEFAULT_kbdDeleteWord, LYRA_DEFAULT_kbdEndWord, LYRA_DEFAULT_kbdEnterWord, LYRA_DEFAULT_kbdEscapeVisual, LYRA_DEFAULT_kbdEscapeWord, LYRA_DEFAULT_kbdHomeWord, LYRA_DEFAULT_kbdMinusWord, LYRA_DEFAULT_kbdOptionWord, LYRA_DEFAULT_kbdPageDownVisual, LYRA_DEFAULT_kbdPageDownWord, LYRA_DEFAULT_kbdPageUpVisual, LYRA_DEFAULT_kbdPageUpWord, LYRA_DEFAULT_kbdPlusWord, LYRA_DEFAULT_kbdShiftWord, LYRA_DEFAULT_kbdSpaceWord, LYRA_DEFAULT_kbdTabWord, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_kbdAltWord, LYRA_DEFAULT_kbdArrowDownWord, LYRA_DEFAULT_kbdArrowLeftWord, LYRA_DEFAULT_kbdArrowRightWord, LYRA_DEFAULT_kbdArrowUpWord, LYRA_DEFAULT_kbdBackspaceWord, LYRA_DEFAULT_kbdCommandWord, LYRA_DEFAULT_kbdControlVisual, LYRA_DEFAULT_kbdControlWord, LYRA_DEFAULT_kbdDeleteVisual, LYRA_DEFAULT_kbdDeleteWord, LYRA_DEFAULT_kbdEndWord, LYRA_DEFAULT_kbdEnterWord, LYRA_DEFAULT_kbdEscapeVisual, LYRA_DEFAULT_kbdEscapeWord, LYRA_DEFAULT_kbdHomeWord, LYRA_DEFAULT_kbdMinusWord, LYRA_DEFAULT_kbdOptionWord, LYRA_DEFAULT_kbdPageDownVisual, LYRA_DEFAULT_kbdPageDownWord, LYRA_DEFAULT_kbdPageUpVisual, LYRA_DEFAULT_kbdPageUpWord, LYRA_DEFAULT_kbdPlusWord, LYRA_DEFAULT_kbdShiftWord, LYRA_DEFAULT_kbdSpaceWord, LYRA_DEFAULT_kbdTabWord, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -17,6 +17,11 @@ export interface KbdKeyLabel {
   visual: string;
   word: string;
 }
+
+/** Platform vocabulary used to resolve the platform-neutral `mod` and `alt` shortcut tokens. */
+export type KbdPlatform = 'auto' | 'mac' | 'windows' | 'linux';
+/** Concrete platform produced after resolving `platform="auto"`. */
+export type EffectiveKbdPlatform = Exclude<KbdPlatform, 'auto'>;
 
 /** Resolves a localization key to its localized text, falling back to
  *  `fallback` (the built-in English default) when no override applies --
@@ -142,19 +147,24 @@ export function parseShortcut(keys: string, isMac: boolean, localize?: KbdLocali
  * combination, the practical cross-browser way to answer "is this macOS"
  * today with no dependency.
  */
-function detectIsMac(): boolean {
-  if (typeof navigator === 'undefined') return false;
+function detectPlatform(): EffectiveKbdPlatform {
+  if (typeof navigator === 'undefined') return 'linux';
   const uaData = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData;
-  if (uaData?.platform) return uaData.platform.toLowerCase().includes('mac');
-  if (navigator.platform) return /mac/i.test(navigator.platform);
-  return /mac/i.test(navigator.userAgent ?? '');
+  const platform = uaData?.platform || navigator.platform || navigator.userAgent || '';
+  if (/mac|iphone|ipad|ipod/i.test(platform)) return 'mac';
+  if (/win/i.test(platform)) return 'windows';
+  return 'linux';
 }
 
 // Computed once at module scope, not per-instance/per-render — a page's
 // platform never changes mid-session, so there is nothing to gain (and a
 // little cost, however small) from re-detecting it on every <lr-kbd>
 // instance or every re-render.
-const IS_MAC = detectIsMac();
+const AUTO_PLATFORM = detectPlatform();
+
+function isEffectivePlatform(value: string | null): value is EffectiveKbdPlatform {
+  return value === 'mac' || value === 'windows' || value === 'linux';
+}
 
 /**
  * `<lr-kbd>` — a small chip representing a keyboard shortcut, rendering
@@ -229,7 +239,11 @@ export class LyraKbd extends LyraElement {
     kbdShiftWord: LYRA_DEFAULT_kbdShiftWord,
     kbdSpaceWord: LYRA_DEFAULT_kbdSpaceWord,
     kbdTabWord: LYRA_DEFAULT_kbdTabWord,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -238,6 +252,19 @@ export class LyraKbd extends LyraElement {
   /** A `+`-separated shortcut, e.g. `'mod+k'`. See the class doc for the
    *  full token grammar. */
   @property() keys = '';
+
+  /** Platform used for the platform-neutral `mod` and `alt` tokens. `auto` performs browser
+   * detection; an explicit value is deterministic across browsers, SSR, screenshots, and tests. */
+  @property({ reflect: true }) platform: KbdPlatform = 'auto';
+
+  // The browser-only default is snapshotted into rendered output. Hydration adopts that serialized
+  // choice rather than re-sniffing in a different realm and replacing server-rendered key caps.
+  private autoPlatform: EffectiveKbdPlatform = AUTO_PLATFORM;
+
+  /** The concrete, serializable platform currently used to render the shortcut. */
+  get effectivePlatform(): EffectiveKbdPlatform {
+    return this.platform === 'auto' ? this.autoPlatform : this.platform;
+  }
 
   // Real (non-whitespace) light-DOM content overrides the keys-driven
   // rendering below — same "seed synchronously, refine on slotchange"
@@ -248,6 +275,12 @@ export class LyraKbd extends LyraElement {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (!this.hasUpdated && this.platform === 'auto') {
+      const serialized = this.renderRoot
+        .querySelector<HTMLElement>('[data-effective-platform]')
+        ?.getAttribute('data-effective-platform') ?? null;
+      if (isEffectivePlatform(serialized)) this.autoPlatform = serialized;
+    }
     // A server render sees no light-DOM children, so a hydrating chip reproduces the server's
     // keys rendering first and adopts slotted content on the very next update instead.
     this.seedFirstRenderState(() => {
@@ -271,7 +304,7 @@ export class LyraKbd extends LyraElement {
     // is intentional (KbdLocalize callers may ignore trailing params).
     const tokens = this.hasCustomContent
       ? []
-      : parseShortcut(this.keys, IS_MAC, (key) => this.localize(key));
+      : parseShortcut(this.keys, this.effectivePlatform === 'mac', (key) => this.localize(key));
     // role="img" treats the chip as one opaque unit (matching
     // lr-context-meter's/lr-chart's canvas usage of the same pattern):
     // the individual glyphs and "+" separators aren't real words, so
@@ -293,6 +326,7 @@ export class LyraKbd extends LyraElement {
     return html`
       <span
         part="base"
+        data-effective-platform=${this.effectivePlatform}
         role=${hasAriaLabel ? 'img' : nothing}
         aria-hidden=${!this.hasCustomContent && !hasAriaLabel ? 'true' : nothing}
         aria-label=${hasAriaLabel ? ariaLabel : nothing}

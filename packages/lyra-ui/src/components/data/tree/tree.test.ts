@@ -1,13 +1,13 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tree.js';
-import type { LyraTree, TreeItem } from './tree.js';
+import type { LyraTree, LyraTreeNodeData } from './tree.js';
 import type { LyraTreeItem } from './tree-item.js';
 
 const data = [
   {
     id: '1',
     label: 'Root',
-    badge: 2,
+    badges: [{ text: '2' }],
     children: [
       { id: '1.1', label: 'Child A' },
       { id: '1.2', label: 'Child B' },
@@ -34,6 +34,23 @@ it('exposes selection and skips disabled items in interaction and roving focus',
   expect(selected.tabIndex).to.equal(0);
   loading.click();
   expect(selections).to.equal(0);
+});
+
+it('forwards host click to row selection exactly once and keeps disabled hosts inert', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = [
+    { id: 'enabled', label: 'Enabled' },
+    { id: 'disabled', label: 'Disabled', disabled: true },
+  ];
+  await el.updateComplete;
+  const [enabled, disabled] = [...el.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
+  const ids: string[] = [];
+  el.addEventListener('lr-node-select', (event) => ids.push(event.detail.id));
+
+  enabled!.click();
+  disabled!.click();
+
+  expect(ids).to.deep.equal(['enabled']);
 });
 
 it('does not choose a hidden child of a collapsed disabled branch as the roving stop', async () => {
@@ -121,10 +138,10 @@ it('applies duplicate-id ownership across nested paths and releases it after a v
 });
 
 it('stops rendering a cyclic item graph instead of recursing indefinitely', async () => {
-  const cyclic = { id: 'cycle', label: 'Cycle' } as TreeItem;
+  const cyclic: { id: string; label: string; children?: unknown[] } = { id: 'cycle', label: 'Cycle' };
   cyclic.children = [cyclic];
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
-  el.data = [cyclic];
+  el.data = [cyclic as unknown as LyraTreeNodeData];
   await el.updateComplete;
   const root = el.querySelector('lr-tree-item') as LyraTreeItem;
 
@@ -135,8 +152,8 @@ it('stops rendering a cyclic item graph instead of recursing indefinitely', asyn
   expect(repeated.hasChildren).to.be.false;
 });
 
-it('bounds rendering of a valid extremely deep hierarchy', async () => {
-  let item: TreeItem = { id: 'leaf', label: 'Leaf' };
+it('lazily projects and bounds a valid extremely deep hierarchy', async () => {
+  let item: LyraTreeNodeData = { id: 'leaf', label: 'Leaf' };
   for (let depth = 5000; depth > 0; depth--) {
     item = { id: `level-${depth}`, label: `Level ${depth}`, children: [item] };
   }
@@ -144,8 +161,10 @@ it('bounds rendering of a valid extremely deep hierarchy', async () => {
   el.data = [item];
   await el.updateComplete;
 
-  // Data-backed descendants render while collapsed, and updateComplete already waits through the
-  // bounded descendant chain. Expanding every level here would only repeat those cascading waits.
+  expect(el.dataTruncated).to.be.true;
+  expect((el.querySelector('lr-tree-item') as LyraTreeItem).getChildrenItems()).to.have.length(0);
+  el.style.setProperty('--show-duration', '0ms');
+  await el.expandAll();
 
   let renderedDepth = 0;
   let current = el.querySelector('lr-tree-item') as LyraTreeItem | null;
@@ -154,13 +173,92 @@ it('bounds rendering of a valid extremely deep hierarchy', async () => {
     current = current.shadowRoot?.querySelector('lr-tree-item') as LyraTreeItem | null;
   }
   expect(renderedDepth).to.be.greaterThan(1);
-  expect(renderedDepth).to.be.lessThan(5000);
+  expect(renderedDepth).to.be.at.most(65);
+});
+
+it('bounds a 10,000-level declarative traversal without recursive stack growth', () => {
+  const el = document.createElement('lr-tree') as LyraTree;
+  let parent: HTMLElement = el;
+  for (let depth = 0; depth < 10_000; depth++) {
+    const child = document.createElement('lr-tree-item') as LyraTreeItem;
+    child.label = `Level ${depth}`;
+    child.selected = true;
+    parent.append(child);
+    parent = child;
+  }
+
+  expect(() => el.selectedItems).to.not.throw();
+  expect(el.selectedItems.length, 'only levels 0 through 64 enter controller work').to.equal(65);
+});
+
+it('installs a recursively frozen snapshot and never invokes caller accessors', async () => {
+  const child = { id: 'child', label: 'Original child' };
+  const badges = [{ text: '1', label: 'One' }];
+  const input: Array<{
+    id: string;
+    label: string;
+    children: Array<{ id: string; label: string }>;
+    badges: Array<{ text: string; label: string }>;
+  }> = [{ id: 'root', label: 'Original root', children: [child], badges }];
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = input;
+
+  input[0]!.label = 'Mutated root';
+  child.label = 'Mutated child';
+  badges[0]!.text = '99';
+  input.push({ id: 'later', label: 'Later', children: [], badges: [] });
+  await el.updateComplete;
+
+  expect(el.data.map((entry) => entry.label)).to.deep.equal(['Original root']);
+  expect(el.data[0]!.children![0]!.label).to.equal('Original child');
+  expect(el.data[0]!.badges![0]!.text).to.equal('1');
+  expect(Object.isFrozen(el.data)).to.be.true;
+  expect(Object.isFrozen(el.data[0])).to.be.true;
+  expect(Object.isFrozen(el.data[0]!.children)).to.be.true;
+  expect(Object.isFrozen(el.data[0]!.children![0])).to.be.true;
+  expect(Object.isFrozen(el.data[0]!.badges)).to.be.true;
+  expect(Object.isFrozen(el.data[0]!.badges![0])).to.be.true;
+
+  let getterReads = 0;
+  const hostile = Object.defineProperty({ id: 'hostile' }, 'label', {
+    enumerable: true,
+    get() {
+      getterReads++;
+      return 'Do not read';
+    },
+  });
+  el.data = [hostile as unknown as LyraTreeNodeData];
+  await el.updateComplete;
+  expect(getterReads).to.equal(0);
+  expect(el.data).to.deep.equal([]);
+  expect(el.dataTruncated).to.be.true;
+});
+
+it('caps total data work, keeps collapsed descendants unmounted, and preserves declared set size', async () => {
+  const children = Array.from({ length: 2_000 }, (_, index) => ({
+    id: `child-${index}`,
+    label: `Child ${index}`,
+  }));
+  const el = (await fixture(html`<lr-tree style="--show-duration:0ms"></lr-tree>`)) as LyraTree;
+  el.data = [{ id: 'root', label: 'Root', children }];
+  await el.updateComplete;
+  const root = el.querySelector('lr-tree-item') as LyraTreeItem;
+
+  expect(el.dataTruncated).to.be.true;
+  expect(el.data[0]!.children).to.have.length(999);
+  expect(root.childItems()).to.have.length(0);
+
+  root.expand();
+  await el.updateComplete;
+  const rendered = root.childItems();
+  expect(rendered).to.have.length(999);
+  expect(rendered[0]!.getAttribute('aria-setsize')).to.equal('2000');
 });
 
 it('mirrors the collapsed disclosure chevron under RTL while keeping expanded chevrons downward', async () => {
   // Reads real computed transforms off rendered nodes instead of substring-matching the exported
   // stylesheet source, which would still pass even if a selector typo left the rule dead.
-  const branch: TreeItem = { id: 'branch', label: 'Branch', children: [{ id: 'leaf', label: 'Leaf' }] };
+  const branch: LyraTreeNodeData = { id: 'branch', label: 'Branch', children: [{ id: 'leaf', label: 'Leaf' }] };
 
   const ltrCollapsed = (await fixture(
     html`<lr-tree-item .item=${branch}></lr-tree-item>`,
@@ -348,7 +446,7 @@ it('expandAll()/collapseAll() toggle every parent node', async () => {
   await el.updateComplete;
   const root = el.querySelector('lr-tree-item') as any;
   expect(root.expanded).to.be.true;
-  el.collapseAll();
+  await el.collapseAll();
   await el.updateComplete;
   expect(root.expanded).to.be.false;
 });
@@ -400,7 +498,7 @@ it('collapseAll closes a branch that became disabled and restores a visible rovi
     { id: 'visible', label: 'Visible item' },
   ];
   await el.updateComplete;
-  el.collapseAll();
+  await el.collapseAll();
   await el.updateComplete;
 
   const visible = [...el.querySelectorAll<HTMLElement>('lr-tree-item')][1]!;
@@ -463,7 +561,7 @@ it('expandAll() does not mark leaf nodes as expanded, so a following collapseAll
   expect(leaf.expanded).to.be.false;
   expect((leaf as unknown as HTMLElement).hasAttribute('expanded')).to.be.false;
 
-  el.collapseAll();
+  await el.collapseAll();
   await el.updateComplete;
   const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   expect(root.expanded).to.be.false;
@@ -524,7 +622,7 @@ it('collapseAll() leaves exactly one node with a roving tabindex of 0 after the 
   const childA = root.shadowRoot!.querySelector('lr-tree-item') as unknown as LyraTreeItem;
   expect((childA as unknown as HTMLElement).tabIndex).to.equal(0);
 
-  el.collapseAll();
+  await el.collapseAll();
   await el.updateComplete;
 
   expect(root.expanded).to.be.false;

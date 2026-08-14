@@ -399,6 +399,17 @@ describe('follow contract (non-virtualized)', () => {
     expect(el.follow).to.be.false;
   });
 
+  it('does not echo direct follow property assignments', async () => {
+    const el = await fixture<LyraActivityFeed>(html`<lr-activity-feed></lr-activity-feed>`);
+    let events = 0;
+    el.addEventListener('lr-follow-change', () => events++);
+    el.follow = false;
+    await el.updateComplete;
+    el.follow = true;
+    await el.updateComplete;
+    expect(events).to.equal(0);
+  });
+
   it('resets follow to true and jumps to the bottom when expanding an already-populated live feed', async () => {
     const el = (await fixture(
       html`<lr-activity-feed mode="live" .entries=${makeEntries(20)}></lr-activity-feed>`,
@@ -732,4 +743,17 @@ it('is accessible expanded, with entries, icons, variants, and timestamps', asyn
     ></lr-activity-feed>`,
   )) as LyraActivityFeed;
   await expect(el).to.be.accessible();
+});
+
+it('normalizes duplicate entry ids first-wins before rendering', async () => {
+  const el = await fixture<LyraActivityFeed>(html`
+    <lr-activity-feed expanded .entries=${[
+      { id: 'same', text: 'First entry' },
+      { id: 'same', text: 'Later duplicate' },
+    ]}></lr-activity-feed>
+  `);
+  const rows = el.shadowRoot!.querySelectorAll('[part~="entry"]');
+  expect(rows).to.have.length(1);
+  expect(rows[0]!.textContent).to.contain('First entry');
+  expect(rows[0]!.textContent).not.to.contain('Later duplicate');
 });

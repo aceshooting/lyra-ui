@@ -82,6 +82,13 @@ export const styles = css`
     border-block-end: var(--border-width) solid var(--border-color);
   }
 
+  [part='tree-limit'] {
+    padding: var(--lr-space-s) var(--lr-space-m);
+    border-block-start: var(--border-width) solid var(--border-color);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
+
   [part='search'] {
     box-sizing: border-box;
     min-block-size: var(--lr-icon-button-size);
@@ -120,6 +127,7 @@ export const styles = css`
 
   [part='search']:focus-visible,
   button:focus-visible,
+  [part='resize-handle']:focus-visible,
   [role='gridcell']:focus-visible,
   [role='columnheader']:focus-visible {
     outline: var(--focus-ring);
@@ -554,6 +562,7 @@ export const styles = css`
     [part='search'] {
       inline-size: 100%;
       min-inline-size: 0;
+      flex: 0 1 auto;
     }
 
     [part='pager'] {

@@ -4,14 +4,21 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { tag } from "../../../internal/prefix.js";
 import "./dashboard-grid.js";
 import type { LyraDashboardGrid } from "./dashboard-grid.js";
-import type { DashboardCell } from "./layout.js";
+import type { LyraDashboardCell } from "./layout.js";
 import { styles } from "./dashboard-grid.styles.js";
 
-function twoCells(): DashboardCell[] {
+function twoCells(): LyraDashboardCell[] {
   return [
     { id: "a", x: 0, y: 0, w: 2, h: 1, label: "Alpha" },
     { id: "b", x: 2, y: 0, w: 2, h: 1, label: "Beta" },
   ];
+}
+
+async function settleChildReconciliation(el: LyraDashboardGrid): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  await el.updateComplete;
+  await Promise.resolve();
 }
 
 function createRealmFrame(): {
@@ -25,7 +32,9 @@ function createRealmFrame(): {
   const frameWindow = iframe.contentWindow;
   if (!frameDocument || !frameWindow) {
     iframe.remove();
-    throw new Error("Could not create an iframe realm for the dashboard-grid test.");
+    throw new Error(
+      "Could not create an iframe realm for the dashboard-grid test."
+    );
   }
   return { iframe, frameDocument, frameWindow };
 }
@@ -34,17 +43,17 @@ type CssEscapeHost = { escape?: (identifier: string) => string };
 
 function replaceCssEscape(
   target: CssEscapeHost,
-  replacement: CssEscapeHost['escape'],
+  replacement: CssEscapeHost["escape"]
 ): () => void {
-  const previous = Object.getOwnPropertyDescriptor(target, 'escape');
-  Object.defineProperty(target, 'escape', {
+  const previous = Object.getOwnPropertyDescriptor(target, "escape");
+  Object.defineProperty(target, "escape", {
     configurable: true,
     writable: true,
     value: replacement,
   });
   return () => {
-    if (previous) Object.defineProperty(target, 'escape', previous);
-    else Reflect.deleteProperty(target, 'escape');
+    if (previous) Object.defineProperty(target, "escape", previous);
+    else Reflect.deleteProperty(target, "escape");
   };
 }
 
@@ -74,11 +83,13 @@ it("renders lr-empty with the noData message when layout is empty", async () => 
 
 it("routes repeated announcements through a pre-mounted light-DOM sink and releases it", async () => {
   const el = (await fixture(
-    html`<lr-dashboard-grid .layout=${twoCells()}></lr-dashboard-grid>`,
+    html`<lr-dashboard-grid .layout=${twoCells()}></lr-dashboard-grid>`
   )) as LyraDashboardGrid;
   const selector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`;
   const sink = document.querySelector<HTMLElement>(selector)!;
-  const mirror = el.shadowRoot!.querySelector<HTMLElement>('[part="live-region"]')!;
+  const mirror = el.shadowRoot!.querySelector<HTMLElement>(
+    '[part="live-region"]'
+  )!;
 
   expect(sink !== null, "the live region is mounted before interaction").to.be
     .true;
@@ -87,16 +98,17 @@ it("routes repeated announcements through a pre-mounted light-DOM sink and relea
   expect(mirror.hasAttribute("role")).to.be.false;
   expect(mirror.hasAttribute("aria-live")).to.be.false;
 
-  const announcer = (el as unknown as {
-    announcer: { announce(text: string, options: { force: boolean }): void };
-  }).announcer;
+  const announcer = (
+    el as unknown as {
+      announcer: { announce(text: string, options: { force: boolean }): void };
+    }
+  ).announcer;
   announcer.announce("Alpha moved.", { force: true });
   announcer.announce("Alpha moved.", { force: true });
   await el.updateComplete;
-  expect(Array.from(sink.children, (child) => child.textContent)).to.deep.equal([
-    "Alpha moved.",
-    "Alpha moved.",
-  ]);
+  expect(Array.from(sink.children, (child) => child.textContent)).to.deep.equal(
+    ["Alpha moved.", "Alpha moved."]
+  );
   expect(mirror.textContent?.trim()).to.equal("Alpha moved.");
 
   el.remove();
@@ -156,21 +168,23 @@ it("keeps keyboard-navigation feedback silent when the host or a composed ancest
       const sink = document.querySelector<HTMLElement>(
         `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
       )!;
-      const announcer = (el as unknown as {
-        announcer: { throttleMs: number };
-      }).announcer;
+      const announcer = (
+        el as unknown as {
+          announcer: { throttleMs: number };
+        }
+      ).announcer;
       announcer.throttleMs = 0;
       scenario.exclude(el, ancestor);
 
-      el.shadowRoot!
-        .querySelector<HTMLElement>('[data-cell-id="a"]')!
-        .dispatchEvent(
-          new KeyboardEvent("keydown", {
-            key: "ArrowRight",
-            bubbles: true,
-            cancelable: true,
-          })
-        );
+      el.shadowRoot!.querySelector<HTMLElement>(
+        '[data-cell-id="a"]'
+      )!.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowRight",
+          bubbles: true,
+          cancelable: true,
+        })
+      );
       await new Promise<void>((resolve) => setTimeout(resolve, 20));
 
       expect(sink.childElementCount, scenario.label).to.equal(0);
@@ -199,7 +213,7 @@ describe("grid placement", () => {
     expect(cellEl.style.gridRow).to.equal("3 / span 4");
   });
 
-  it("reflects columns/row-height/gap onto the base as custom properties", async () => {
+  it("keeps computed geometry private so author-facing CSS properties retain cascade authority", async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid
         columns="6"
@@ -211,14 +225,29 @@ describe("grid placement", () => {
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.style.getPropertyValue("--lr-dashboard-grid-columns")).to.equal(
-      "6"
+      ""
     );
     expect(
       base.style.getPropertyValue("--lr-dashboard-grid-row-height")
+    ).to.equal("");
+    expect(base.style.getPropertyValue("--lr-dashboard-grid-gap")).to.equal("");
+    expect(
+      base.style.getPropertyValue("--_lr-dashboard-grid-computed-columns")
+    ).to.equal("6");
+    expect(
+      base.style.getPropertyValue("--_lr-dashboard-grid-computed-row-height")
     ).to.equal("40px");
-    expect(base.style.getPropertyValue("--lr-dashboard-grid-gap")).to.equal(
-      "4px"
-    );
+    expect(
+      base.style.getPropertyValue("--_lr-dashboard-grid-computed-gap")
+    ).to.equal("4px");
+
+    el.style.setProperty("--lr-dashboard-grid-columns", "3");
+    el.style.setProperty("--lr-dashboard-grid-row-height", "31px");
+    el.style.setProperty("--lr-dashboard-grid-gap", "7px");
+    const computed = getComputedStyle(base);
+    expect(computed.gridTemplateColumns.split(" ")).to.have.length(3);
+    expect(computed.gridAutoRows).to.equal("31px");
+    expect(computed.gap).to.equal("7px");
   });
 
   it("renders cells in row-major order regardless of layout array order", async () => {
@@ -257,6 +286,50 @@ describe("grid placement", () => {
     expect(cell.getAttribute("style")).to.not.include("Infinity");
   });
 
+  it("admits a bounded unique schema snapshot while retaining valid records around malformed input", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    const hostile = { id: "hostile", y: 1, w: 1, h: 1 };
+    Object.defineProperty(hostile, "x", {
+      get: () => {
+        throw new Error("hostile x");
+      },
+    });
+    (el as unknown as { layout: unknown }).layout = [
+      { id: "a", x: 1, y: 0, w: 1, h: 1, label: "first" },
+      null,
+      { id: "a", x: 4, y: 4, w: 1, h: 1, label: "duplicate" },
+      { id: 9, x: 0, y: 0, w: 1, h: 1 },
+      hostile,
+      { id: "tail", x: 2, y: 1, w: 1, h: 1 },
+    ];
+    await el.updateComplete;
+
+    expect(el.layout.map((cell) => cell.id)).to.deep.equal(["a", "tail"]);
+    expect(el.layout[0]).to.deep.include({ x: 1, label: "first" });
+    expect(el.layout[1]).to.deep.include({ x: 2, y: 1 });
+    expect(
+      Array.from(el.shadowRoot!.querySelectorAll('[part="cell"]'), (cell) =>
+        cell.getAttribute("data-cell-id")
+      )
+    ).to.deep.equal(["a", "tail"]);
+    expect(el.querySelectorAll('[cell-id="a"]')).to.have.length(1);
+  });
+
+  it("normalizes foreign property and attribute collision values to reject", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid collision="push"></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    expect(el.collision).to.equal("push");
+
+    (el as unknown as { collision: unknown }).collision = "pushy";
+    expect(el.collision).to.equal("reject");
+    el.setAttribute("collision", "foreign");
+    await el.updateComplete;
+    expect(el.collision).to.equal("reject");
+  });
+
   it("normalizes non-finite geometry and constraints before placement events and layout snapshots", async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`
@@ -282,7 +355,7 @@ describe("grid placement", () => {
           previous: { x: number; y: number };
         }
       | undefined;
-    let snapshot: DashboardCell[] | undefined;
+    let snapshot: LyraDashboardCell[] | undefined;
     el.addEventListener(
       "lr-cell-move",
       (event) => (move = (event as CustomEvent).detail)
@@ -317,7 +390,7 @@ describe("grid placement", () => {
         proposed.maxW,
         proposed.minH,
         proposed.maxH,
-      ].every((value) => Number.isFinite(value))
+      ].every((value) => value === undefined || Number.isFinite(value))
     ).to.be.true;
   });
 });
@@ -345,9 +418,14 @@ describe("default cell composition", () => {
     expect(widget.getAttribute("slot")).to.equal("cell-a");
     expect((widget as unknown as { label: string }).label).to.equal("Users");
     const renderer = widget.querySelector("lr-widget-renderer") as unknown as {
-      tree: unknown;
+      document: { version: "2"; root: unknown } | null;
     } & Element;
     expect(renderer !== null).to.be.true;
+    expect(renderer.document).to.deep.equal({
+      version: "2",
+      root: { type: "stat", props: { label: "Users", value: "12" } },
+    });
+    expect(Object.isFrozen(renderer.document)).to.be.true;
     await (renderer as unknown as { updateComplete: Promise<unknown> })
       .updateComplete;
     expect(renderer.shadowRoot!.querySelector("lr-stat") !== null).to.be.true;
@@ -463,6 +541,108 @@ describe("default cell composition", () => {
     await el.updateComplete;
     expect(el.querySelector('[cell-id="a"]') === null).to.be.true;
   });
+
+  it("reconciles late authored insertion/removal and restores authored slot ownership across reconnect", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+    const initialDefault = el.querySelector('[cell-id="a"]')!;
+
+    const authored = document.createElement("div");
+    authored.setAttribute("cell-id", "a");
+    authored.setAttribute("slot", "author-slot");
+    el.append(authored);
+    await settleChildReconciliation(el);
+
+    expect(el.querySelectorAll('[cell-id="a"]')).to.have.length(1);
+    expect(el.querySelector('[cell-id="a"]') === authored).to.be.true;
+    expect(authored.getAttribute("slot")).to.equal("cell-a");
+    expect(initialDefault.isConnected).to.be.false;
+
+    el.remove();
+    expect(authored.getAttribute("slot")).to.equal("author-slot");
+    document.body.append(el);
+    await settleChildReconciliation(el);
+    expect(el.querySelector('[cell-id="a"]') === authored).to.be.true;
+    expect(authored.getAttribute("slot")).to.equal("cell-a");
+
+    authored.remove();
+    await settleChildReconciliation(el);
+    const restoredDefault = el.querySelector('[cell-id="a"]')!;
+    expect(restoredDefault !== null).to.be.true;
+    expect(restoredDefault !== authored).to.be.true;
+    expect(restoredDefault.hasAttribute("data-dashboard-grid-default-cell")).to
+      .be.true;
+    expect(authored.getAttribute("slot")).to.equal("author-slot");
+    el.remove();
+  });
+
+  it("uses first-authored ownership, preserves duplicate identities, and ignores a forged default marker", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    const first = document.createElement("div");
+    first.setAttribute("cell-id", "a");
+    first.setAttribute("slot", "first-slot");
+    first.setAttribute("data-dashboard-grid-default-cell", "");
+    const second = document.createElement("div");
+    second.setAttribute("cell-id", "a");
+    second.setAttribute("slot", "second-slot");
+    el.append(first, second);
+    el.layout = [
+      { id: "a", x: 0, y: 0, w: 1, h: 1 },
+      { id: "b", x: 1, y: 0, w: 1, h: 1 },
+    ];
+    await settleChildReconciliation(el);
+
+    expect(first.getAttribute("slot")).to.equal("cell-a");
+    expect(second.getAttribute("slot")).to.equal("second-slot");
+    expect(first.isConnected).to.be.true;
+    expect(el.querySelectorAll('[cell-id="a"]')).to.have.length(2);
+
+    first.remove();
+    await settleChildReconciliation(el);
+    expect(second.getAttribute("slot")).to.equal("cell-a");
+    expect(first.getAttribute("slot")).to.equal("first-slot");
+
+    second.setAttribute("cell-id", "b");
+    await settleChildReconciliation(el);
+    expect(second.getAttribute("slot")).to.equal("cell-b");
+    expect(el.querySelector('[cell-id="b"]') === second).to.be.true;
+    expect(
+      el
+        .querySelector('[cell-id="a"]')
+        ?.hasAttribute("data-dashboard-grid-default-cell")
+    ).to.be.true;
+  });
+
+  it("rebinds direct-child observation after cross-document adoption", async () => {
+    const { iframe, frameDocument } = createRealmFrame();
+    const el = (await fixture(
+      html`<lr-dashboard-grid></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.remove();
+    frameDocument.adoptNode(el);
+    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+
+    try {
+      frameDocument.body.append(el);
+      await settleChildReconciliation(el);
+      const defaultCell = el.querySelector('[cell-id="a"]')!;
+      const authored = frameDocument.createElement("div");
+      authored.setAttribute("cell-id", "a");
+      el.append(authored);
+      await settleChildReconciliation(el);
+
+      expect(el.querySelector('[cell-id="a"]') === authored).to.be.true;
+      expect(defaultCell.isConnected).to.be.false;
+      expect(authored.ownerDocument === frameDocument).to.be.true;
+    } finally {
+      iframe.remove();
+    }
+  });
 });
 
 describe("owner-realm pointer interactions", () => {
@@ -476,7 +656,9 @@ describe("owner-realm pointer interactions", () => {
     const originalClearTimeout = frameWindow.clearTimeout;
     frameWindow.setTimeout = ((handler: TimerHandler, timeout = 0) => {
       if (typeof handler !== "function") {
-        throw new TypeError("The dashboard-grid test only accepts timer callbacks.");
+        throw new TypeError(
+          "The dashboard-grid test only accepts timer callbacks."
+        );
       }
       const timer = nextTimer++;
       scheduled.set(timer, handler as VoidFunction);
@@ -503,23 +685,27 @@ describe("owner-realm pointer interactions", () => {
     try {
       frameDocument.body.append(el);
       await el.updateComplete;
-      el.shadowRoot!
-        .querySelector<HTMLElement>('[data-cell-id="a"]')!
-        .dispatchEvent(
-          new frameWindow.KeyboardEvent("keydown", {
-            key: "ArrowRight",
-            bubbles: true,
-            cancelable: true,
-          })
-        );
+      el.shadowRoot!.querySelector<HTMLElement>(
+        '[data-cell-id="a"]'
+      )!.dispatchEvent(
+        new frameWindow.KeyboardEvent("keydown", {
+          key: "ArrowRight",
+          bubbles: true,
+          cancelable: true,
+        })
+      );
 
-      expect(scheduled.size, "the frame schedules the pending announcement").to.equal(1);
+      expect(
+        scheduled.size,
+        "the frame schedules the pending announcement"
+      ).to.equal(1);
       expect(delays).to.deep.equal([500]);
       const [timer] = scheduled.keys();
       el.remove();
-      expect(cleared, "disconnect cancels through the same frame window").to.deep.equal([
-        timer,
-      ]);
+      expect(
+        cleared,
+        "disconnect cancels through the same frame window"
+      ).to.deep.equal([timer]);
     } finally {
       el.remove();
       frameWindow.setTimeout = originalSetTimeout;
@@ -545,9 +731,8 @@ describe("owner-realm pointer interactions", () => {
     try {
       frameDocument.body.append(el);
       await el.updateComplete;
-      const wrapper = el.shadowRoot!.querySelector<HTMLElement>(
-        '[part="cell"]'
-      )!;
+      const wrapper =
+        el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!;
       wrapper.setPointerCapture = () => {};
       let moveDetail: { position: { x: number; y: number } } | undefined;
       el.addEventListener("lr-cell-move", (event) => {
@@ -556,6 +741,7 @@ describe("owner-realm pointer interactions", () => {
 
       wrapper.dispatchEvent(
         new frameWindow.PointerEvent("pointerdown", {
+          isPrimary: true,
           pointerId: 17,
           button: 0,
           clientX: 0,
@@ -601,13 +787,13 @@ describe("owner-realm pointer interactions", () => {
     try {
       frameDocument.body.append(el);
       await el.updateComplete;
-      const wrapper = el.shadowRoot!.querySelector<HTMLElement>(
-        '[part="cell"]'
-      )!;
+      const wrapper =
+        el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!;
       wrapper.setPointerCapture = () => {};
 
       button.dispatchEvent(
         new frameWindow.PointerEvent("pointerdown", {
+          isPrimary: true,
           pointerId: 23,
           button: 0,
           bubbles: true,
@@ -649,6 +835,7 @@ describe("owner-realm pointer interactions", () => {
 
       handle.dispatchEvent(
         new frameWindow.PointerEvent("pointerdown", {
+          isPrimary: true,
           pointerId: 29,
           button: 0,
           clientX: 0,
@@ -701,19 +888,19 @@ describe("roving keyboard navigation", () => {
     await el.updateComplete;
     expect(a.getAttribute("tabindex")).to.equal("-1");
     expect(b.getAttribute("tabindex")).to.equal("0");
-    expect((el.shadowRoot!.activeElement) === (b)).to.equal(true);
+    expect(el.shadowRoot!.activeElement === b).to.equal(true);
   });
 
   it("uses the adopted owner realm CSS escape when keyboard focus targets a special cell id", async () => {
-    const specialId = 'target\"] [data-cell-id=\"decoy';
-    const layout: DashboardCell[] = [
+    const specialId = 'target"] [data-cell-id="decoy';
+    const layout: LyraDashboardCell[] = [
       { id: "start", x: 0, y: 0, w: 1, h: 1 },
       { id: specialId, x: 1, y: 0, w: 1, h: 1 },
       { id: "decoy", x: 2, y: 0, w: 1, h: 1 },
     ];
     const { iframe, frameDocument, frameWindow } = createRealmFrame();
     const el = (await fixture(
-      html`<lr-dashboard-grid .layout=${layout}></lr-dashboard-grid>`,
+      html`<lr-dashboard-grid .layout=${layout}></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
     el.remove();
     frameDocument.adoptNode(el);
@@ -728,18 +915,22 @@ describe("roving keyboard navigation", () => {
     });
     const restoreAmbient = replaceCssEscape(CSS, () => "decoy");
     try {
-      el.shadowRoot!.querySelector<HTMLElement>('[data-cell-id="start"]')!.dispatchEvent(
+      el.shadowRoot!.querySelector<HTMLElement>(
+        '[data-cell-id="start"]'
+      )!.dispatchEvent(
         new frameWindow.KeyboardEvent("keydown", {
           key: "ArrowRight",
           bubbles: true,
           cancelable: true,
-        }),
+        })
       );
       await el.updateComplete;
       await Promise.resolve();
 
       expect(ownerCalls).to.equal(1);
-      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset["cellId"]).to.equal(specialId);
+      expect(
+        (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset["cellId"]
+      ).to.equal(specialId);
     } finally {
       restoreAmbient();
       restoreOwner();
@@ -749,8 +940,8 @@ describe("roving keyboard navigation", () => {
   });
 
   it("falls back to an exact cell-id scan when adopted owner CSS escape is missing or throws", async () => {
-    const specialId = 'target\"] [data-cell-id=\"decoy';
-    const layout: DashboardCell[] = [
+    const specialId = 'target"] [data-cell-id="decoy';
+    const layout: LyraDashboardCell[] = [
       { id: "start", x: 0, y: 0, w: 1, h: 1 },
       { id: specialId, x: 1, y: 0, w: 1, h: 1 },
       { id: "decoy", x: 2, y: 0, w: 1, h: 1 },
@@ -758,7 +949,7 @@ describe("roving keyboard navigation", () => {
     for (const mode of ["missing", "throwing"] as const) {
       const { iframe, frameDocument, frameWindow } = createRealmFrame();
       const el = (await fixture(
-        html`<lr-dashboard-grid .layout=${layout}></lr-dashboard-grid>`,
+        html`<lr-dashboard-grid .layout=${layout}></lr-dashboard-grid>`
       )) as LyraDashboardGrid;
       el.remove();
       frameDocument.adoptNode(el);
@@ -773,21 +964,27 @@ describe("roving keyboard navigation", () => {
           : () => {
               ownerCalls += 1;
               throw new Error("owner CSS escape unavailable");
-            },
+            }
       );
       const restoreAmbient = replaceCssEscape(CSS, () => "decoy");
       try {
-        el.shadowRoot!.querySelector<HTMLElement>('[data-cell-id="start"]')!.dispatchEvent(
+        el.shadowRoot!.querySelector<HTMLElement>(
+          '[data-cell-id="start"]'
+        )!.dispatchEvent(
           new frameWindow.KeyboardEvent("keydown", {
             key: "ArrowRight",
             bubbles: true,
             cancelable: true,
-          }),
+          })
         );
         await el.updateComplete;
         await Promise.resolve();
 
-        expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset["cellId"]).to.equal(specialId);
+        expect(
+          (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset[
+            "cellId"
+          ]
+        ).to.equal(specialId);
         expect(ownerCalls).to.equal(mode === "throwing" ? 1 : 0);
       } finally {
         restoreAmbient();
@@ -892,6 +1089,49 @@ describe("roving keyboard navigation", () => {
     expect(focused?.dataset["cellId"]).to.equal("a");
     expect(focused?.tabIndex).to.equal(0);
   });
+
+  it("leaves plain and modified arrow keys to a nested cell control", async () => {
+    const el = (await fixture(html`
+      <lr-dashboard-grid cells-draggable cells-resizable .layout=${twoCells()}>
+        <div cell-id="a"><input aria-label="Cell editor" /></div>
+        <div cell-id="b">Beta</div>
+      </lr-dashboard-grid>
+    `)) as LyraDashboardGrid;
+    await el.updateComplete;
+    const input = el.querySelector("input")!;
+    let moves = 0;
+    let resizes = 0;
+    el.addEventListener("lr-cell-move", () => moves++);
+    el.addEventListener("lr-cell-resize", () => resizes++);
+
+    const plain = new KeyboardEvent("keydown", {
+      key: "ArrowRight",
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    input.dispatchEvent(plain);
+    const modified = new KeyboardEvent("keydown", {
+      key: "ArrowDown",
+      ctrlKey: true,
+      shiftKey: true,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    input.dispatchEvent(modified);
+    await el.updateComplete;
+
+    expect(plain.defaultPrevented).to.be.false;
+    expect(modified.defaultPrevented).to.be.false;
+    expect(moves).to.equal(0);
+    expect(resizes).to.equal(0);
+    expect(
+      el
+        .shadowRoot!.querySelector('[data-cell-id="a"]')!
+        .getAttribute("tabindex")
+    ).to.equal("0");
+  });
 });
 
 describe("keyboard move (Ctrl/Cmd+Arrow)", () => {
@@ -903,7 +1143,7 @@ describe("keyboard move (Ctrl/Cmd+Arrow)", () => {
     await el.updateComplete;
     const cellEl = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
     let moveDetail: unknown;
-    let layoutDetail: { layout: DashboardCell[] } | undefined;
+    let layoutDetail: { layout: LyraDashboardCell[] } | undefined;
     el.addEventListener(
       "lr-cell-move",
       (e) => (moveDetail = (e as CustomEvent).detail)
@@ -929,6 +1169,20 @@ describe("keyboard move (Ctrl/Cmd+Arrow)", () => {
       x: 3,
       y: 2,
     });
+    expect(Object.isFrozen(moveDetail)).to.be.true;
+    expect(
+      Object.isFrozen(
+        (moveDetail as { position: object; previous: object }).position
+      )
+    ).to.be.true;
+    expect(
+      Object.isFrozen(
+        (moveDetail as { position: object; previous: object }).previous
+      )
+    ).to.be.true;
+    expect(Object.isFrozen(layoutDetail)).to.be.true;
+    expect(Object.isFrozen(layoutDetail!.layout)).to.be.true;
+    expect(Object.isFrozen(layoutDetail!.layout[0])).to.be.true;
   });
 
   it("flips ArrowRight to decrease x under RTL, matching the roving-nav direction convention", async () => {
@@ -1007,7 +1261,7 @@ describe("keyboard resize (Ctrl/Cmd+Shift+Arrow)", () => {
     await el.updateComplete;
     const cellEl = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
     let resizeDetail: unknown;
-    let layoutDetail: { layout: DashboardCell[] } | undefined;
+    let layoutDetail: { layout: LyraDashboardCell[] } | undefined;
     el.addEventListener(
       "lr-cell-resize",
       (e) => (resizeDetail = (e as CustomEvent).detail)
@@ -1061,6 +1315,45 @@ describe("keyboard resize (Ctrl/Cmd+Shift+Arrow)", () => {
     expect(resizeDetail).to.be.undefined;
   });
 
+  it("keeps physical Right=grow and Left=shrink under RTL", async () => {
+    const host = (await fixture(html`
+      <div dir="rtl">
+        <lr-dashboard-grid cells-resizable></lr-dashboard-grid>
+      </div>
+    `)) as HTMLElement;
+    const el = host.querySelector("lr-dashboard-grid") as LyraDashboardGrid;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 2, h: 1 }];
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelector('[part="cell"]')!;
+    const widths: number[] = [];
+    el.addEventListener("lr-cell-resize", (event) => {
+      widths.push(
+        (event as CustomEvent<{ size: { w: number } }>).detail.size.w
+      );
+    });
+
+    cell.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    cell.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowLeft",
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+
+    expect(widths).to.deep.equal([3, 1]);
+  });
+
   it("does nothing when cells-resizable is unset", async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid></lr-dashboard-grid>`
@@ -1091,7 +1384,7 @@ describe("collision policy", () => {
         collision="reject"
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    const layout: DashboardCell[] = [
+    const layout: LyraDashboardCell[] = [
       { id: "a", x: 0, y: 0, w: 1, h: 1 },
       { id: "b", x: 1, y: 0, w: 1, h: 1 },
     ];
@@ -1124,7 +1417,14 @@ describe("collision policy", () => {
       policy: "reject",
       accepted: false,
     });
-    expect(el.layout).to.equal(layout);
+    expect(Object.isFrozen(collisionDetail)).to.be.true;
+    expect(
+      Object.isFrozen(
+        (collisionDetail as { collidedWith: readonly string[] }).collidedWith
+      )
+    ).to.be.true;
+    expect(el.layout).to.not.equal(layout);
+    expect(el.layout).to.deep.equal(layout);
   });
 
   it("push: displaces the occupying cell and reports the layout-change cascade", async () => {
@@ -1142,7 +1442,7 @@ describe("collision policy", () => {
     const cellA = el.shadowRoot!.querySelector(
       '[data-cell-id="a"]'
     ) as HTMLElement;
-    let layoutDetail: { layout: DashboardCell[] } | undefined;
+    let layoutDetail: { layout: LyraDashboardCell[] } | undefined;
     el.addEventListener(
       "lr-layout-change",
       (e) => (layoutDetail = (e as CustomEvent).detail)
@@ -1200,6 +1500,126 @@ describe("collision policy", () => {
 });
 
 describe("pointer drag", () => {
+  it("coalesces repeated pointermove previews into one owner-window animation frame", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid
+        cells-draggable
+        row-height="50"
+        gap="8"
+      ></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector(
+      '[part="cell"]'
+    ) as HTMLElement;
+    wrapper.setPointerCapture = () => {};
+    wrapper.releasePointerCapture = () => {};
+    const originalRequest = window.requestAnimationFrame;
+    const originalCancel = window.cancelAnimationFrame;
+    const callbacks = new Map<number, FrameRequestCallback>();
+    let nextFrame = 400;
+    window.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      const frame = nextFrame++;
+      callbacks.set(frame, callback);
+      return frame;
+    }) as typeof window.requestAnimationFrame;
+    window.cancelAnimationFrame = ((frame: number) => {
+      callbacks.delete(frame);
+    }) as typeof window.cancelAnimationFrame;
+
+    try {
+      const originalRow = wrapper.style.gridRow;
+      wrapper.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          isPrimary: true,
+          pointerId: 301,
+          button: 0,
+          clientX: 0,
+          clientY: 0,
+          bubbles: true,
+        })
+      );
+      for (const clientY of [58, 116, 174]) {
+        window.dispatchEvent(
+          new PointerEvent("pointermove", {
+            pointerId: 301,
+            clientX: 0,
+            clientY,
+          })
+        );
+      }
+
+      expect(callbacks.size).to.equal(1);
+      expect(wrapper.style.gridRow).to.equal(originalRow);
+      const [callback] = callbacks.values();
+      callbacks.clear();
+      callback!(performance.now());
+      expect(wrapper.style.gridRow).to.equal("4 / span 1");
+      window.dispatchEvent(
+        new PointerEvent("pointercancel", { pointerId: 301 })
+      );
+    } finally {
+      window.requestAnimationFrame = originalRequest;
+      window.cancelAnimationFrame = originalCancel;
+    }
+  });
+
+  it("suppresses the synthetic click after movement but admits the next ordinary click", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid
+        cells-draggable
+        row-height="50"
+        gap="8"
+      ></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector(
+      '[part="cell"]'
+    ) as HTMLElement;
+    wrapper.setPointerCapture = () => {};
+    wrapper.releasePointerCapture = () => {};
+    wrapper.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        isPrimary: true,
+        pointerId: 302,
+        button: 0,
+        clientX: 0,
+        clientY: 0,
+        bubbles: true,
+      })
+    );
+    window.dispatchEvent(
+      new PointerEvent("pointermove", {
+        pointerId: 302,
+        clientX: 0,
+        clientY: 58,
+      })
+    );
+    window.dispatchEvent(
+      new PointerEvent("pointerup", {
+        pointerId: 302,
+        clientX: 0,
+        clientY: 58,
+      })
+    );
+
+    let bubbledClicks = 0;
+    el.addEventListener("click", () => bubbledClicks++);
+    const synthetic = new MouseEvent("click", {
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    expect(wrapper.dispatchEvent(synthetic)).to.be.false;
+    expect(synthetic.defaultPrevented).to.be.true;
+    expect(bubbledClicks).to.equal(0);
+
+    wrapper.click();
+    expect(bubbledClicks).to.equal(1);
+  });
+
   it("drags a cell vertically (grid-snapped) and emits lr-cell-move on release", async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid
@@ -1216,6 +1636,7 @@ describe("pointer drag", () => {
     wrapper.setPointerCapture = () => {};
     wrapper.dispatchEvent(
       new PointerEvent("pointerdown", {
+        isPrimary: true,
         pointerId: 1,
         clientX: 0,
         clientY: 0,
@@ -1278,6 +1699,7 @@ describe("pointer drag", () => {
 
       wrapper.dispatchEvent(
         new PointerEvent("pointerdown", {
+          isPrimary: true,
           pointerId,
           clientX: 0,
           clientY: 0,
@@ -1290,6 +1712,9 @@ describe("pointer drag", () => {
           clientX: 0,
           clientY: 116,
         })
+      );
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve())
       );
       expect(wrapper.style.gridRow, endType).to.not.equal(originalGridRow);
 
@@ -1314,6 +1739,7 @@ describe("pointer drag", () => {
     wrapper.setPointerCapture = () => {};
     wrapper.dispatchEvent(
       new PointerEvent("pointerdown", {
+        isPrimary: true,
         pointerId: 1,
         clientX: 0,
         clientY: 0,
@@ -1343,6 +1769,51 @@ describe("pointer drag", () => {
     expect(detail!.position.x).to.equal(2);
   });
 
+  it("maps a physical leftward drag to increasing logical columns under RTL", async () => {
+    const host = (await fixture(html`
+      <div dir="rtl">
+        <lr-dashboard-grid cells-draggable columns="4"></lr-dashboard-grid>
+      </div>
+    `)) as HTMLElement;
+    const el = host.querySelector("lr-dashboard-grid") as LyraDashboardGrid;
+    el.layout = [{ id: "a", x: 1, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector(
+      '[part="cell"]'
+    ) as HTMLElement;
+    wrapper.setPointerCapture = () => {};
+    let x: number | undefined;
+    el.addEventListener("lr-cell-move", (event) => {
+      x = (event as CustomEvent<{ position: { x: number } }>).detail.position.x;
+    });
+    wrapper.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        isPrimary: true,
+        pointerId: 303,
+        button: 0,
+        clientX: 0,
+        clientY: 0,
+        bubbles: true,
+      })
+    );
+    window.dispatchEvent(
+      new PointerEvent("pointermove", {
+        pointerId: 303,
+        clientX: -10_000,
+        clientY: 0,
+      })
+    );
+    window.dispatchEvent(
+      new PointerEvent("pointerup", {
+        pointerId: 303,
+        clientX: -10_000,
+        clientY: 0,
+      })
+    );
+
+    expect(x).to.equal(3);
+  });
+
   it("rejects the drop (and fires lr-collision, not lr-cell-move) when it would land on another cell", async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid
@@ -1352,7 +1823,7 @@ describe("pointer drag", () => {
         gap="8"
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    const layout: DashboardCell[] = [
+    const layout: LyraDashboardCell[] = [
       { id: "a", x: 0, y: 0, w: 1, h: 1 },
       { id: "b", x: 0, y: 2, w: 1, h: 1 },
     ];
@@ -1364,6 +1835,7 @@ describe("pointer drag", () => {
     wrapper.setPointerCapture = () => {};
     wrapper.dispatchEvent(
       new PointerEvent("pointerdown", {
+        isPrimary: true,
         pointerId: 1,
         clientX: 0,
         clientY: 0,
@@ -1401,7 +1873,8 @@ describe("pointer drag", () => {
       policy: "reject",
       accepted: false,
     });
-    expect(el.layout).to.equal(layout);
+    expect(el.layout).to.not.equal(layout);
+    expect(el.layout).to.deep.equal(layout);
   });
 
   it("does not drag when cells-draggable is unset", async () => {
@@ -1418,6 +1891,7 @@ describe("pointer drag", () => {
     el.addEventListener("lr-cell-move", () => (fired = true));
     wrapper.dispatchEvent(
       new PointerEvent("pointerdown", {
+        isPrimary: true,
         pointerId: 1,
         clientX: 0,
         clientY: 0,
@@ -1481,6 +1955,7 @@ describe("pointer drag", () => {
       const pointerId = 60 + index;
       wrapper.dispatchEvent(
         new PointerEvent("pointerdown", {
+          isPrimary: true,
           pointerId,
           clientX: 0,
           clientY: 0,
@@ -1499,10 +1974,7 @@ describe("pointer drag", () => {
       window.dispatchEvent(new PointerEvent("pointerup", { pointerId }));
 
       expect(moves, testCase.name).to.equal(0);
-      expect(
-        wrapper.hasAttribute("data-dragging"),
-        testCase.name
-      ).to.be.false;
+      expect(wrapper.hasAttribute("data-dragging"), testCase.name).to.be.false;
       expect(releasedPointerId, testCase.name).to.equal(pointerId);
     }
   });
@@ -1519,6 +1991,45 @@ describe("pointer drag", () => {
 });
 
 describe("pointer resize", () => {
+  it("admits only primary-button primary pointers for both drag and resize", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid
+        cells-draggable
+        cells-resizable
+      ></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector(
+      '[part="cell"]'
+    ) as HTMLElement;
+    const handle = el.shadowRoot!.querySelector(
+      '[part="resize-handle"]'
+    ) as HTMLElement;
+    wrapper.setPointerCapture = () => {};
+    handle.setPointerCapture = () => {};
+
+    for (const init of [
+      { isPrimary: false, button: 0, pointerId: 311 },
+      { isPrimary: true, button: 1, pointerId: 312 },
+    ]) {
+      wrapper.dispatchEvent(
+        new PointerEvent("pointerdown", { ...init, bubbles: true })
+      );
+      expect(wrapper.hasAttribute("data-dragging")).to.be.false;
+
+      handle.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          ...init,
+          pointerId: init.pointerId + 10,
+          bubbles: true,
+          composed: true,
+        })
+      );
+      expect(wrapper.hasAttribute("data-resizing")).to.be.false;
+    }
+  });
+
   it("resizes a cell vertically (grid-snapped) and emits lr-cell-resize on release", async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid
@@ -1535,6 +2046,7 @@ describe("pointer resize", () => {
     handle.setPointerCapture = () => {};
     handle.dispatchEvent(
       new PointerEvent("pointerdown", {
+        isPrimary: true,
         pointerId: 1,
         clientX: 0,
         clientY: 0,
@@ -1570,6 +2082,51 @@ describe("pointer resize", () => {
     });
   });
 
+  it("grows from the physical left-side inline-end handle under RTL", async () => {
+    const host = (await fixture(html`
+      <div dir="rtl">
+        <lr-dashboard-grid cells-resizable columns="4"></lr-dashboard-grid>
+      </div>
+    `)) as HTMLElement;
+    const el = host.querySelector("lr-dashboard-grid") as LyraDashboardGrid;
+    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+    const handle = el.shadowRoot!.querySelector(
+      '[part="resize-handle"]'
+    ) as HTMLElement;
+    handle.setPointerCapture = () => {};
+    let width: number | undefined;
+    el.addEventListener("lr-cell-resize", (event) => {
+      width = (event as CustomEvent<{ size: { w: number } }>).detail.size.w;
+    });
+    handle.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        isPrimary: true,
+        pointerId: 313,
+        button: 0,
+        clientX: 0,
+        clientY: 0,
+        bubbles: true,
+      })
+    );
+    window.dispatchEvent(
+      new PointerEvent("pointermove", {
+        pointerId: 313,
+        clientX: -10_000,
+        clientY: 0,
+      })
+    );
+    window.dispatchEvent(
+      new PointerEvent("pointerup", {
+        pointerId: 313,
+        clientX: -10_000,
+        clientY: 0,
+      })
+    );
+
+    expect(width).to.equal(4);
+  });
+
   it("rolls back the live resize preview without terminal events when the gesture is canceled", async () => {
     for (const [index, endType] of (
       ["pointercancel", "lostpointercapture"] as const
@@ -1600,6 +2157,7 @@ describe("pointer resize", () => {
 
       handle.dispatchEvent(
         new PointerEvent("pointerdown", {
+          isPrimary: true,
           pointerId,
           clientX: 0,
           clientY: 0,
@@ -1612,6 +2170,9 @@ describe("pointer resize", () => {
           clientX: 0,
           clientY: 116,
         })
+      );
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve())
       );
       expect(wrapper.style.gridRow, endType).to.not.equal(originalGridRow);
 
@@ -1671,6 +2232,7 @@ describe("pointer resize", () => {
       const pointerId = 70 + index;
       handle.dispatchEvent(
         new PointerEvent("pointerdown", {
+          isPrimary: true,
           pointerId,
           clientX: 0,
           clientY: 0,
@@ -1689,10 +2251,7 @@ describe("pointer resize", () => {
       window.dispatchEvent(new PointerEvent("pointerup", { pointerId }));
 
       expect(resizes, testCase.name).to.equal(0);
-      expect(
-        wrapper.hasAttribute("data-resizing"),
-        testCase.name
-      ).to.be.false;
+      expect(wrapper.hasAttribute("data-resizing"), testCase.name).to.be.false;
       expect(releasedPointerId, testCase.name).to.equal(pointerId);
     }
   });
@@ -1720,7 +2279,10 @@ describe("narrow allocation", () => {
   for (const direction of ["ltr", "rtl"] as const) {
     it(`keeps short resizable custom cells at least as tall as their 40px handle in ${direction.toUpperCase()}`, async () => {
       const wrapper = await fixture<HTMLElement>(html`
-        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+        <div
+          dir=${direction}
+          style="inline-size: 320px; max-inline-size: 100%;"
+        >
           <lr-dashboard-grid
             cells-resizable
             style="inline-size: 100%;"
@@ -1731,21 +2293,29 @@ describe("narrow allocation", () => {
           </lr-dashboard-grid>
         </div>
       `);
-      const el = wrapper.querySelector("lr-dashboard-grid") as LyraDashboardGrid;
+      const el = wrapper.querySelector(
+        "lr-dashboard-grid"
+      ) as LyraDashboardGrid;
       await el.updateComplete;
-      const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
-      const handles = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="resize-handle"]')];
+      const cells = [
+        ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]'),
+      ];
+      const handles = [
+        ...el.shadowRoot!.querySelectorAll<HTMLElement>(
+          '[part="resize-handle"]'
+        ),
+      ];
 
       expect(cells.length).to.equal(2);
       expect(handles.length).to.equal(2);
       for (let index = 0; index < cells.length; index += 1) {
         expect(cells[index]!.getBoundingClientRect().height).to.be.at.least(40);
         expect(cells[index]!.getBoundingClientRect().height).to.be.at.least(
-          handles[index]!.getBoundingClientRect().height,
+          handles[index]!.getBoundingClientRect().height
         );
       }
       expect(cells[1]!.getBoundingClientRect().top).to.be.at.least(
-        cells[0]!.getBoundingClientRect().bottom + el.gap - 1,
+        cells[0]!.getBoundingClientRect().bottom + el.gap - 1
       );
       expect(getComputedStyle(cells[0]!).direction).to.equal(direction);
     });
@@ -1753,24 +2323,33 @@ describe("narrow allocation", () => {
     it(`contains unbroken custom-cell text inside a 320px ${direction.toUpperCase()} stack`, async () => {
       const longText = "LocalizationWithoutBreakOpportunity".repeat(100);
       const wrapper = await fixture<HTMLElement>(html`
-        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+        <div
+          dir=${direction}
+          style="inline-size: 320px; max-inline-size: 100%;"
+        >
           <lr-dashboard-grid style="inline-size: 100%;" .layout=${twoCells()}>
             <div cell-id="a">${longText}</div>
             <div cell-id="b">B</div>
           </lr-dashboard-grid>
         </div>
       `);
-      const el = wrapper.querySelector("lr-dashboard-grid") as LyraDashboardGrid;
+      const el = wrapper.querySelector(
+        "lr-dashboard-grid"
+      ) as LyraDashboardGrid;
       await el.updateComplete;
       const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
-      const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+      const cells = [
+        ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]'),
+      ];
       const custom = el.querySelector<HTMLElement>('[cell-id="a"]')!;
 
       expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
       expect(el.scrollWidth).to.be.at.most(el.clientWidth);
       expect(base.scrollWidth).to.be.at.most(base.clientWidth);
       expect(custom.scrollWidth).to.be.at.most(custom.clientWidth);
-      expect(cells.every((cell) => cell.scrollWidth <= cell.clientWidth)).to.equal(true);
+      expect(
+        cells.every((cell) => cell.scrollWidth <= cell.clientWidth)
+      ).to.equal(true);
       expect(getComputedStyle(custom).direction).to.equal(direction);
     });
   }
@@ -1779,8 +2358,13 @@ describe("narrow allocation", () => {
     const longText = "ChildOwnedHorizontalScrollContent".repeat(100);
     const wrapper = await fixture<HTMLElement>(html`
       <div style="inline-size: 320px; max-inline-size: 100%;">
-        <lr-dashboard-grid style="inline-size: 100%;" .layout=${[twoCells()[0]!]}>
-          <div cell-id="a" style="overflow: auto; white-space: nowrap;">${longText}</div>
+        <lr-dashboard-grid
+          style="inline-size: 100%;"
+          .layout=${[twoCells()[0]!]}
+        >
+          <div cell-id="a" style="overflow: auto; white-space: nowrap;">
+            ${longText}
+          </div>
         </lr-dashboard-grid>
       </div>
     `);
@@ -1842,7 +2426,7 @@ describe("accessibility", () => {
     ).to.equal("Ops overview");
   });
 
-  it('preserves an explicitly empty host aria-label instead of replacing it with the fallback', async () => {
+  it("preserves an explicitly empty host aria-label instead of replacing it with the fallback", async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid aria-label=""></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
@@ -1918,9 +2502,11 @@ describe("localized strings", () => {
     const cellA = el.shadowRoot!.querySelector(
       '[data-cell-id="a"]'
     ) as HTMLElement;
-    const announcer = (el as unknown as {
-      announcer: { pendingText?: string };
-    }).announcer;
+    const announcer = (
+      el as unknown as {
+        announcer: { pendingText?: string };
+      }
+    ).announcer;
 
     cellA.dispatchEvent(
       new KeyboardEvent("keydown", {
@@ -1930,9 +2516,7 @@ describe("localized strings", () => {
         cancelable: true,
       })
     );
-    expect(announcer.pendingText).to.equal(
-      "Alpha moved to column 2, row 1."
-    );
+    expect(announcer.pendingText).to.equal("Alpha moved to column 2, row 1.");
 
     cellA.dispatchEvent(
       new KeyboardEvent("keydown", {
@@ -2025,6 +2609,7 @@ it("themes the live drag elevation through a component-scoped interaction-shadow
   cell.setPointerCapture = () => {};
   cell.dispatchEvent(
     new PointerEvent("pointerdown", {
+      isPrimary: true,
       pointerId: 91,
       clientX: 0,
       clientY: 0,
@@ -2050,13 +2635,13 @@ it("chains willUpdate() to super.willUpdate() so a mixin layered under LyraEleme
       willUpdate?: (changed: PropertyValues) => void;
     }
   ).willUpdate;
-  let called = false;
+  const calledBy = new Set<string>();
   (
     LitElement.prototype as unknown as {
       willUpdate: (changed: PropertyValues) => void;
     }
   ).willUpdate = function (this: LitElement, changed: PropertyValues) {
-    called = true;
+    calledBy.add((this as unknown as Element).localName);
     original?.call(this, changed);
   };
   try {
@@ -2064,7 +2649,7 @@ it("chains willUpdate() to super.willUpdate() so a mixin layered under LyraEleme
       html`<lr-dashboard-grid .layout=${twoCells()}></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
     await el.updateComplete;
-    expect(called).to.be.true;
+    expect(calledBy.has("lr-dashboard-grid")).to.be.true;
   } finally {
     if (hadOwn) {
       (LitElement.prototype as unknown as { willUpdate: unknown }).willUpdate =
@@ -2078,25 +2663,42 @@ it("chains willUpdate() to super.willUpdate() so a mixin layered under LyraEleme
 
 it("formats move and resize announcement coordinates with the effective locale", async () => {
   const el = (await fixture(
-    html`<lr-dashboard-grid lang="ar-EG" cells-draggable cells-resizable></lr-dashboard-grid>`
+    html`<lr-dashboard-grid
+      lang="ar-EG"
+      cells-draggable
+      cells-resizable
+    ></lr-dashboard-grid>`
   )) as LyraDashboardGrid;
   el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" }];
   await el.updateComplete;
   const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
-  const announcer = (el as unknown as {
-    announcer: { pendingText?: string };
-  }).announcer;
+  const announcer = (
+    el as unknown as {
+      announcer: { pendingText?: string };
+    }
+  ).announcer;
   const number = new Intl.NumberFormat("ar-EG");
 
-  cell.dispatchEvent(new KeyboardEvent("keydown", {
-    key: "ArrowRight", ctrlKey: true, bubbles: true, cancelable: true,
-  }));
+  cell.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "ArrowRight",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   expect(announcer.pendingText).to.include(number.format(2));
   expect(announcer.pendingText).to.include(number.format(1));
 
-  cell.dispatchEvent(new KeyboardEvent("keydown", {
-    key: "ArrowDown", ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true,
-  }));
+  cell.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "ArrowDown",
+      ctrlKey: true,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+  );
   expect(announcer.pendingText).to.include(number.format(2));
   expect(announcer.pendingText).to.include(number.format(1));
 });
@@ -2129,6 +2731,7 @@ it("does not start a cell drag from a pointerdown on an interactive control insi
   // Composed + bubbling, exactly as a real pointerdown on the slotted button reaches the wrapper.
   button.dispatchEvent(
     new PointerEvent("pointerdown", {
+      isPrimary: true,
       pointerId: 7,
       clientX: 0,
       clientY: 0,
@@ -2144,7 +2747,71 @@ it("does not start a cell drag from a pointerdown on an interactive control insi
   );
   await el.updateComplete;
 
-  expect(moved, "grabbing a button inside a cell must not drag the cell").to.equal(0);
+  expect(
+    moved,
+    "grabbing a button inside a cell must not drag the cell"
+  ).to.equal(0);
+});
+
+it("rejects drag admission through labels, disabled controls, editable content, links, and nested shadow controls", async () => {
+  const nestedTag = "x-dashboard-grid-shadow-control";
+  if (!customElements.get(nestedTag)) {
+    customElements.define(
+      nestedTag,
+      class extends HTMLElement {
+        constructor() {
+          super();
+          const root = this.attachShadow({ mode: "open" });
+          const button = document.createElement("button");
+          button.textContent = "Nested action";
+          root.append(button);
+        }
+      }
+    );
+  }
+  const el = (await fixture(html`
+    <lr-dashboard-grid
+      cells-draggable
+      .layout=${[{ id: "a", x: 0, y: 0, w: 1, h: 1 }]}
+    >
+      <div cell-id="a"></div>
+    </lr-dashboard-grid>
+  `)) as LyraDashboardGrid;
+  await el.updateComplete;
+  const content = el.querySelector('[cell-id="a"]')!;
+  const label = document.createElement("label");
+  label.textContent = "Label";
+  const disabledButton = document.createElement("button");
+  disabledButton.disabled = true;
+  const editable = document.createElement("div");
+  editable.setAttribute("contenteditable", "true");
+  const link = document.createElement("a");
+  link.href = "#target";
+  const nested = document.createElement(nestedTag);
+  content.append(label, disabledButton, editable, link, nested);
+  const nestedButton = nested.shadowRoot!.querySelector("button")!;
+  const wrapper = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+  wrapper.setPointerCapture = () => {};
+
+  const targets: Array<[string, Element]> = [
+    ["label", label],
+    ["disabled button", disabledButton],
+    ["contenteditable", editable],
+    ["link", link],
+    ["nested shadow button", nestedButton],
+  ];
+  for (const [index, [name, target]] of targets.entries()) {
+    target.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        isPrimary: true,
+        pointerId: 500 + index,
+        button: 0,
+        bubbles: true,
+        composed: true,
+      })
+    );
+    expect(wrapper.hasAttribute("data-dragging"), name).to.be.false;
+  }
 });
 
 describe("defensive edge cases", () => {
@@ -2154,7 +2821,9 @@ describe("defensive edge cases", () => {
     )) as LyraDashboardGrid;
     el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
-    const wrapper = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+    const wrapper = el.shadowRoot!.querySelector(
+      '[part="cell"]'
+    ) as HTMLElement;
     wrapper.setPointerCapture = () => {};
     let releasedPointerId: number | undefined;
     wrapper.releasePointerCapture = (pointerId) => {
@@ -2162,6 +2831,7 @@ describe("defensive edge cases", () => {
     };
     wrapper.dispatchEvent(
       new PointerEvent("pointerdown", {
+        isPrimary: true,
         pointerId: 42,
         clientX: 0,
         clientY: 0,
@@ -2189,7 +2859,9 @@ describe("defensive edge cases", () => {
     )) as LyraDashboardGrid;
     el.layout = [{ id: "a", x: 0, y: 0, w: 2, h: 2 }];
     await el.updateComplete;
-    const wrapper = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+    const wrapper = el.shadowRoot!.querySelector(
+      '[part="cell"]'
+    ) as HTMLElement;
     const handle = el.shadowRoot!.querySelector(
       '[part="resize-handle"]'
     ) as HTMLElement;
@@ -2200,6 +2872,7 @@ describe("defensive edge cases", () => {
     };
     handle.dispatchEvent(
       new PointerEvent("pointerdown", {
+        isPrimary: true,
         pointerId: 43,
         clientX: 0,
         clientY: 0,
@@ -2224,7 +2897,9 @@ describe("defensive edge cases", () => {
     )) as LyraDashboardGrid;
     el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
-    const wrapper = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+    const wrapper = el.shadowRoot!.querySelector(
+      '[part="cell"]'
+    ) as HTMLElement;
     wrapper.setPointerCapture = () => {};
     // A browser can report the capture as already gone (e.g. an implicit native release) by the
     // time cancellation runs; that must not surface as an uncaught error.
@@ -2233,6 +2908,7 @@ describe("defensive edge cases", () => {
     };
     wrapper.dispatchEvent(
       new PointerEvent("pointerdown", {
+        isPrimary: true,
         pointerId: 7,
         clientX: 0,
         clientY: 0,
@@ -2285,8 +2961,13 @@ describe("defensive edge cases", () => {
     await el.updateComplete;
     await Promise.resolve();
 
-    expect((el.shadowRoot!.querySelector('[data-cell-id="b"]')) === (null)).to.equal(true);
-    expect((el.shadowRoot!.activeElement) === (null), "cellElement(\"b\") found nothing, so the scheduled focus() was skipped").to.equal(true);
+    expect(
+      el.shadowRoot!.querySelector('[data-cell-id="b"]') === null
+    ).to.equal(true);
+    expect(
+      el.shadowRoot!.activeElement === null,
+      'cellElement("b") found nothing, so the scheduled focus() was skipped'
+    ).to.equal(true);
   });
 
   it("ignores a key that is neither an arrow, Home/End, nor part of a modified-arrow shortcut", async () => {
@@ -2310,7 +2991,7 @@ describe("defensive edge cases", () => {
     await el.updateComplete;
 
     expect(first.getAttribute("tabindex")).to.equal("0");
-    expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
+    expect(el.shadowRoot!.activeElement === null).to.equal(true);
   });
 
   it("moves the focused cell for the remaining Ctrl+Arrow directions (left/down/up)", async () => {
@@ -2325,7 +3006,9 @@ describe("defensive edge cases", () => {
       )) as LyraDashboardGrid;
       el.layout = [{ id: "a", x: 2, y: 2, w: 1, h: 1 }];
       await el.updateComplete;
-      const cellEl = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+      const cellEl = el.shadowRoot!.querySelector(
+        '[part="cell"]'
+      ) as HTMLElement;
       let detail: { position: { x: number; y: number } } | undefined;
       el.addEventListener(
         "lr-cell-move",
@@ -2371,41 +3054,30 @@ describe("defensive edge cases", () => {
     });
   });
 
-  it("falls back to a clamped active index when an in-place layout mutation leaves activeCellId stale", async () => {
-    // The component's own contract never mutates `layout` in place -- but a consumer holding the
-    // same array reference and mutating it directly (instead of assigning a new array) leaves
-    // Lit's default reference-equality `hasChanged` blind to the edit: `layout` never appears in
-    // willUpdate()'s `changed` map, so the active-cell recompute at the top of willUpdate() never
-    // runs. render() carries its own defensive fallback for exactly this staleness.
+  it("isolates its immutable layout snapshot from caller mutation until a new value is assigned", async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = twoCells();
+    const authored = [
+      { id: "a", x: 0, y: 0, w: 2, h: 1, label: "Alpha" },
+      { id: "b", x: 2, y: 0, w: 2, h: 1, label: "Beta" },
+    ];
+    el.layout = authored;
     await el.updateComplete;
-    const first = el.shadowRoot!.querySelector(
-      '[data-cell-id="a"]'
-    ) as HTMLElement;
-    first.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "ArrowRight",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    await el.updateComplete;
-    expect(
-      el.shadowRoot!.querySelector('[tabindex="0"]')!.getAttribute("data-cell-id")
-    ).to.equal("b");
-
-    // Remove "b" via the SAME array reference, then force a re-render through an unrelated
-    // property so Lit never sees `layout` itself change.
-    el.layout.splice(1, 1);
+    const snapshot = el.layout;
+    authored.splice(1, 1);
+    authored[0]!.x = 9;
     el.columns = 6;
     await el.updateComplete;
 
-    const cells = el.shadowRoot!.querySelectorAll('[part="cell"]');
-    expect(cells.length).to.equal(1);
-    expect(cells[0]!.getAttribute("data-cell-id")).to.equal("a");
-    expect(cells[0]!.getAttribute("tabindex")).to.equal("0");
+    expect(el.layout).to.have.length(2);
+    expect(el.layout[0]!.x).to.equal(0);
+    expect(Object.isFrozen(snapshot)).to.be.true;
+    expect(Object.isFrozen(snapshot[0])).to.be.true;
+
+    el.layout = authored;
+    await el.updateComplete;
+    expect(el.layout).to.have.length(1);
+    expect(el.layout[0]!.x).to.equal(4);
   });
 });

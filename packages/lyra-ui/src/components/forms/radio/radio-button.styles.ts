@@ -1,6 +1,14 @@
 import { css } from 'lit';
 
 export const buttonChromeStyles = css`
+  :host([data-lr-group-size]) {
+    --lr-form-control-height: inherit;
+    --lr-form-control-font-size: inherit;
+    --lr-form-control-padding-inline: inherit;
+    --lr-form-control-padding-block: inherit;
+    --lr-form-control-gap: inherit;
+    --lr-form-control-radius: inherit;
+  }
   [part~='button'] {
     display: inline-flex;
     align-items: center;
@@ -21,12 +29,10 @@ export const buttonChromeStyles = css`
     cursor: pointer;
     transition: background var(--lr-transition-fast), border-color var(--lr-transition-fast);
 
-    /* Sitting among sibling radio buttons they read as one segmented control: square the shared
-       inner edges and round only the outer ones. :of-type counts only lr-radio-button
-       siblings, so a group's slot="label"/slot="hint" children never shift the ends, and the
-       owning group needs to cooperate in no way at all. A lone button matches both ends and comes
-       out fully rounded. Logical radii, so RTL mirrors without a :dir() rule. */
-    border-radius: 0;
+    /* Standalone is the safe default. The owning group projects data-run only after measuring
+       real adjacency; separated, vertical, mixed, and wrapped controls therefore keep all four
+       corners instead of guessing from DOM sibling order. */
+    border-radius: var(--lr-radio-radius);
   }
   [part='label'] {
     min-inline-size: 0;
@@ -40,15 +46,27 @@ export const buttonChromeStyles = css`
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  :host(:first-of-type) [part~='button'] {
+  [part~='button'][data-run='start'] {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+  }
+  [part~='button'][data-run='middle'] {
+    border-radius: 0;
+  }
+  [part~='button'][data-run='end'] {
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+  }
+  [part~='button'][data-run='start'] {
     border-start-start-radius: var(--lr-radio-radius);
     border-end-start-radius: var(--lr-radio-radius);
   }
-  :host(:last-of-type) [part~='button'] {
+  [part~='button'][data-run='end'] {
     border-start-end-radius: var(--lr-radio-radius);
     border-end-end-radius: var(--lr-radio-radius);
   }
-  :host(:not(:first-of-type)) [part~='button'] {
+  [part~='button'][data-run='middle'],
+  [part~='button'][data-run='end'] {
     margin-inline-start: calc(-1 * var(--lr-border-width-thin));
   }
 
@@ -60,7 +78,7 @@ export const buttonChromeStyles = css`
      the same way it does for a native control -- from the host's own disabled attribute or
      an ancestor <fieldset disabled>'s cascade -- matching [part~='circle']'s guard in the
      sibling radio.styles.ts exactly. */
-  :host(:not(:disabled)) [part~='button']:hover {
+  [part~='button']:not([part~='disabled']):hover {
     background: var(--lr-radio-button-hover-bg, var(--lr-color-brand-quiet));
     border-color: var(--lr-radio-button-hover-border-color, var(--lr-color-brand));
   }
@@ -68,7 +86,7 @@ export const buttonChromeStyles = css`
      colour). This rule used to be byte-identical to the :hover above, which is a pressed state only
      on paper -- a segment that looks exactly the same held down as hovered tells the user nothing
      about whether their click landed. */
-  :host(:not(:disabled)) [part~='button']:active {
+  [part~='button']:not([part~='disabled']):active {
     background: var(--lr-radio-button-active-bg, color-mix(in oklab, var(--lr-radio-button-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
     border-color: var(--lr-radio-button-active-border-color, var(--lr-radio-button-hover-border-color, var(--lr-color-brand)));
   }
@@ -95,11 +113,11 @@ export const buttonChromeStyles = css`
      rules land on would read as a DESELECTION -- but it still has to move, and the press still has
      to out-read the hover. Both mix the loud fill toward --lr-color-mix-partner, which follows the
      text colour, so the on-brand label stays legible at either share. */
-  :host(:not(:disabled)) [part~='checked']:hover {
+  [part~='checked']:not([part~='disabled']):hover {
     background: var(--lr-radio-button-checked-hover-bg, color-mix(in oklab, var(--lr-radio-button-checked-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
     border-color: var(--lr-radio-button-checked-hover-border-color, var(--lr-radio-button-checked-border-color, var(--lr-color-brand)));
   }
-  :host(:not(:disabled)) [part~='checked']:active {
+  [part~='checked']:not([part~='disabled']):active {
     background: var(--lr-radio-button-checked-active-bg, color-mix(in oklab, var(--lr-radio-button-checked-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
     border-color: var(--lr-radio-button-checked-active-border-color, var(--lr-radio-button-checked-hover-border-color, var(--lr-radio-button-checked-border-color, var(--lr-color-brand))));
   }

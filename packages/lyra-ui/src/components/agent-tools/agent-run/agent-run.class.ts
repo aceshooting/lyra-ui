@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { durationMessageValue } from '../../../internal/duration.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
 import type { AgentRun, AgentStatusKind, AgentStep, CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
@@ -11,11 +12,12 @@ import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import type { TaskItem, TaskStatus } from '../task-list/task-list.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './agent-run.styles.js';
+import { firstByIdentity } from '../collection-identity.js';
 
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentRunCurrentStepLabel, LYRA_DEFAULT_agentRunStatusAnnounce, LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_cancel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentRunCurrentStepLabel, LYRA_DEFAULT_agentRunStatusAnnounce, LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_cancel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -92,32 +94,12 @@ export interface AgentRunMetric {
   variant?: BadgeVariant;
 }
 
-interface FormattedDuration {
-  key: 'durationMilliseconds' | 'durationSeconds';
-  value: number;
-}
-
-/** `820` -> `"820ms"`; `1500` -> `"1.5s"`; `2000` -> `"2s"`. Identical algorithm to
- *  `<lr-usage-badge>`'s own `formatDuration` (itself already a duplicate of `<lr-tool-call-chip>`'s),
- *  duplicated locally again for the same reason: independently consumable components, no shared
- *  runtime dependency between them. Used only for a *terminal* run's static duration -- see the
- *  class doc's "elapsed time" section for why the live ticker below intentionally doesn't reuse
- *  this for an in-progress run. */
-function formatDuration(ms: number): FormattedDuration {
-  if (!Number.isFinite(ms) || ms < 1000) {
-    return { key: 'durationMilliseconds', value: Math.round(Math.max(0, Number.isFinite(ms) ? ms : 0)) };
-  }
-  const seconds = ms / 1000;
-  const rounded = Math.round(seconds * 10) / 10;
-  return { key: 'durationSeconds', value: rounded };
-}
-
 /** Visual chrome for `<lr-agent-run>`'s root — the library's shared container-frame vocabulary. */
 export type AgentRunAppearance = LyraFrame;
 
 export interface LyraAgentRunEventMap {
   'lr-cancel': CustomEvent<CancelEventDetail>;
-  'lr-retry': CustomEvent<RetryEventDetail>;
+  'lr-run-retry': CustomEvent<RetryEventDetail>;
 }
 
 /**
@@ -127,23 +109,23 @@ export interface LyraAgentRunEventMap {
  * content. This is deliberately a SHELL, not a new step-rendering surface — every piece of
  * per-step or per-invocation rendering routes through an existing primitive:
  *
- * - **Elapsed time**: composes `<lr-generation-status>` (`active`/`started-at`, its own built-in
+ * - **Elapsed time**: composes `<lr-generation-metrics>` (`status`/`started-at`, its own built-in
  *   Stop button hidden via `show-stop="false"` since this component renders its own Cancel/Retry
  *   pair instead) for the *live, ticking* readout while the run is genuinely in progress
  *   (`running`/`collecting`/`waiting-input`/`waiting-approval`). `<lr-stream-status>` doesn't fit:
  *   its `phase` vocabulary
  *   (`idle`/`connecting`/`streaming`/`stalled`) models transport/connection health, not an agent
  *   run's nine built-in lifecycle statuses (plus application-defined extensions), and it exposes no elapsed-time readout at all — exactly the
- *   distinction `<lr-generation-status>`'s own class doc already draws between the two. Once the
+ *   distinction `<lr-generation-metrics>`'s own class doc already draws between the two. Once the
  *   run reaches a terminal state (`done`/`error`/`cancelled`) with both a `startedAt` and an
  *   `endedAt`, this component instead renders a small locally-formatted static duration
- *   (`endedAt - startedAt`): `<lr-generation-status>`'s freeze-on-`active=false` semantics only
+ *   (`endedAt - startedAt`): `<lr-generation-metrics>`'s `status="complete"` semantics only
  *   ever freeze at whatever it last computed *live*, so mounting it directly against a completed
  *   run loaded from history (e.g. `startedAt` yesterday, `endedAt` five minutes later, loaded
  *   today) would either show a stale zero or the wrong multi-hour span — it has no way to render a
- *   fixed historical span on demand. That static fallback reuses the same small `formatDuration()`
- *   algorithm `<lr-usage-badge>` and `<lr-tool-call-chip>` already duplicate locally for the same
- *   reason (see this file's own copy).
+ *   fixed historical span on demand. That static fallback reuses the side-effect-free duration
+ *   value model shared by the run/tool surfaces while retaining this component's own localized
+ *   message interpolation.
  * - **Model + cost summary**: composes `<lr-usage-badge>`, fed `run.costEstimate` (formatted via
  *   `formatCost`, or a plain `Intl.NumberFormat` by default — this library never assumes a
  *   currency, see `<lr-format-number>`'s own explicit `currency` prop) as its `cost-text`.
@@ -169,10 +151,10 @@ export interface LyraAgentRunEventMap {
  *
  * The built-in Cancel button renders while `showCancel` is true and the run's status is one of
  * `TICKING_KINDS` (still genuinely in progress); Retry renders while `showRetry` is true and the
- * status is `error` or `cancelled`. Clicking either fires `lr-cancel`/`lr-retry` with
+ * status is `error` or `cancelled`. Clicking either fires `lr-cancel`/`lr-run-retry` with
  * `CancelEventDetail`/`RetryEventDetail` from `src/ai/types.ts` — this component never cancels or
  * retries anything itself, it only requests. `RetryEventDetail.attempt` is a 1-based counter
- * local to this component, incremented on every `lr-retry` click and reset to `0` whenever
+ * local to this component, incremented on every `lr-run-retry` click and reset to `0` whenever
  * `run.id` changes (a genuinely new run replacing the old one, as opposed to the same run's status
  * merely updating in place).
  *
@@ -195,7 +177,7 @@ export interface LyraAgentRunEventMap {
  * @slot actions - Extra header actions alongside the built-in Cancel/Retry buttons.
  * @event lr-cancel - The built-in Cancel button was activated. `detail: CancelEventDetail`
  *   (`{ reason }`, always `undefined` from the built-in button itself).
- * @event lr-retry - The built-in Retry button was activated. `detail: RetryEventDetail`
+ * @event lr-run-retry - The built-in Retry button was activated. `detail: RetryEventDetail`
  *   (`{ attempt }`, a 1-based counter reset per `run.id`).
  * @csspart base - The root container.
  * @csspart empty - The `<lr-empty>` shown when `run` is `null`.
@@ -203,7 +185,7 @@ export interface LyraAgentRunEventMap {
  * @csspart status - Wrapper around the status badge and optional status message.
  * @csspart status-badge - The resolved `<lr-badge>` lifecycle-status pill.
  * @csspart status-message - `run.status.message`, when set.
- * @csspart elapsed - The composed `<lr-generation-status>`, only rendered while the run is
+ * @csspart elapsed - The composed `<lr-generation-metrics>`, only rendered while the run is
  *   actively ticking (see the class doc).
  * @csspart elapsed-static - The static formatted duration for a terminal run with both
  *   `startedAt` and `endedAt`.
@@ -228,6 +210,7 @@ export interface LyraAgentRunEventMap {
  * @csspart reasoning - The `reasoning` slot.
  * @csspart output - The `output` slot.
  * @cssprop [--lr-agent-run-spin=var(--lr-transition-ambient)] - Current-step icon spin animation.
+ * @cssprop [--lr-agent-run-metric-brand-color=var(--lr-color-brand)] - Brand metric value.
  * @cssprop [--lr-agent-run-metric-danger-color=var(--lr-color-danger)] - Danger metric value.
  * @cssprop [--lr-agent-run-metric-success-color=var(--lr-color-success)] - Success metric value.
  * @cssprop [--lr-agent-run-metric-warning-color=var(--lr-color-warning)] - Warning metric value.
@@ -257,9 +240,13 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     details: LYRA_DEFAULT_details,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     durationSeconds: LYRA_DEFAULT_durationSeconds,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
     retry: LYRA_DEFAULT_retry,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
   };
@@ -282,8 +269,13 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   /** Badge variants for application-defined lifecycle kinds. Unknown kinds default to `neutral`. */
   @property({ attribute: false }) statusVariants: Record<string, BadgeVariant> = {};
 
-  /** Additional run metrics such as prompt/completion token counts. */
+  /** Additional run metrics such as prompt/completion token counts. Duplicate ids normalize
+   *  first-wins before summary visibility and rendering. */
   @property({ attribute: false }) metrics: AgentRunMetric[] = [];
+
+  private get normalizedMetrics(): AgentRunMetric[] {
+    return firstByIdentity(Array.isArray(this.metrics) ? this.metrics : [], (metric) => metric.id);
+  }
 
   /** Whether the built-in Cancel button can render at all -- still gated by the run's own status
    *  being cancelable (`running`/`collecting`/`waiting-input`/`waiting-approval`). Set `false` for a read-only
@@ -406,7 +398,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     if (startedAt == null || endedAt == null || !Number.isFinite(startedAt) || !Number.isFinite(endedAt)) {
       return undefined;
     }
-    const d = formatDuration(Math.max(0, endedAt - startedAt));
+    const d = durationMessageValue(Math.max(0, endedAt - startedAt));
     return this.localize(d.key, undefined, {
       value: getNumberFormat(this.effectiveLocale, {
         maximumFractionDigits: d.key === 'durationSeconds' ? 1 : 0,
@@ -438,7 +430,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
 
   private onRetryClick = (): void => {
     this.retryAttempt += 1;
-    this.emit('lr-retry', { attempt: this.retryAttempt });
+    this.emit('lr-run-retry', { attempt: this.retryAttempt });
   };
 
   override render(): TemplateResult {
@@ -452,7 +444,8 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     const ticking = this.isTicking;
     const staticElapsed = this.staticElapsedText;
     const cost = this.costText;
-    const hasSummary = !!run.model || cost !== '' || this.metrics.length > 0;
+    const metrics = this.normalizedMetrics;
+    const hasSummary = !!run.model || cost !== '' || metrics.length > 0;
 
     return html`
       <div part="base">
@@ -469,13 +462,13 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
                   ${run.status.message ? html`<span part="status-message">${run.status.message}</span>` : nothing}
                 </div>
                 ${ticking
-                  ? html`<lr-generation-status
+                  ? html`<lr-generation-metrics
                       part="elapsed"
                       exportparts="elapsed:elapsed-time"
-                      active
+                      status="running"
                       .startedAt=${run.startedAt}
                       .showStop=${false}
-                    ></lr-generation-status>`
+                    ></lr-generation-metrics>`
                   : staticElapsed
                     ? html`<span part="elapsed-static">${staticElapsed}</span>`
                     : nothing}
@@ -496,7 +489,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
                             ${cost !== ''
                               ? html`<lr-usage-badge part="usage" exportparts="cost:cost" cost-text=${cost}></lr-usage-badge>`
                               : nothing}
-                            ${this.metrics.map(
+                            ${metrics.map(
                               (metric) => html`<span part="metric" data-metric-id=${metric.id}>
                                 <span part="metric-label">${metric.label}</span>
                                 <span part="metric-value" data-variant=${metric.variant ?? nothing}>${metric.value}</span>

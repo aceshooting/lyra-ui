@@ -20,6 +20,7 @@ it('emits lr-export then lr-export-complete for a single format', async () => {
   btn.click();
   const ev = await exportEvent;
   expect(ev.detail.format).to.equal('csv');
+  expect(Object.isFrozen(ev.detail)).to.equal(true);
   await completeEvent;
 });
 
@@ -44,11 +45,11 @@ it('offers a format menu when multiple formats are configured', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="menu-item"]').length).to.equal(2);
 });
 
-it('renders custom format descriptors and carries their id through lr-export', async () => {
+it('renders custom format descriptors and carries their formatId through lr-export', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = [
     'csv',
-    { id: 'xlsx', label: 'Excel', description: 'Native spreadsheet format', extension: 'xlsx' },
+    { formatId: 'xlsx', label: 'Excel', description: 'Native spreadsheet format', extension: 'xlsx' },
   ];
   await el.updateComplete;
   const items = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="menu-item"]')];
@@ -59,6 +60,35 @@ it('renders custom format descriptors and carries their id through lr-export', a
   const exportEvent = oneEvent(el, 'lr-export');
   items[1]!.click();
   expect((await exportEvent).detail.format).to.equal('xlsx');
+});
+
+it('owns frozen collection snapshots instead of retaining caller-owned arrays', async () => {
+  const sourceRows = [{ id: 'a' }];
+  const sourceColumns = [{ key: 'id', label: 'ID' }];
+  const sourceFormats = [{ formatId: 'xlsx', label: 'Excel' }];
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.rows = sourceRows;
+  el.columns = sourceColumns;
+  el.formats = sourceFormats;
+  await el.updateComplete;
+
+  sourceRows.push({ id: 'b' });
+  sourceColumns.push({ key: 'name', label: 'Name' });
+  sourceFormats.push({ formatId: 'pdf', label: 'PDF' });
+  sourceColumns[0]!.label = 'Mutated';
+  sourceFormats[0]!.label = 'Mutated';
+  sourceRows[0]!.id = 'mutated';
+
+  expect(el.rows.length).to.equal(1);
+  expect(el.rows[0]!.id).to.equal('a');
+  expect(el.columns.map((column) => column.label)).to.deep.equal(['ID']);
+  expect(el.formats.map((format) => (typeof format === 'string' ? format : format.label))).to.deep.equal(['Excel']);
+  expect(Object.isFrozen(el.rows)).to.equal(true);
+  expect(Object.isFrozen(el.rows[0])).to.equal(true);
+  expect(Object.isFrozen(el.columns)).to.equal(true);
+  expect(Object.isFrozen(el.columns[0])).to.equal(true);
+  expect(Object.isFrozen(el.formats)).to.equal(true);
+  expect(Object.isFrozen(el.formats[0])).to.equal(true);
 });
 
 it('disables activation and exposes busy state while loading', async () => {
@@ -772,7 +802,7 @@ it('transfers focus to a surviving menu item when the focused format is removed'
   items[1]!.focus();
   expect((el.shadowRoot!.activeElement) === (items[1])).to.equal(true);
 
-  el.formats = ['csv', { id: 'xml', label: 'XML' }];
+  el.formats = ['csv', { formatId: 'xml', label: 'XML' }];
   await el.updateComplete;
 
   const survivingItems = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="menu-item"]')];
@@ -927,12 +957,20 @@ describe('label localization', () => {
     expect(trigger.textContent!.trim()).to.equal('Télécharger');
   });
 
-  it('lets a .strings override for exportButtonLabel win over an explicit label attribute (per resolveLyraString precedence)', async () => {
+  it('keeps every explicit label caller-owned, including the old English default and empty text', async () => {
     const el = (await fixture(html`
       <lr-export-button label="Télécharger" .strings=${{ exportButtonLabel: 'Exporter' }}></lr-export-button>
     `)) as LyraExportButton;
     const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
-    expect(trigger.textContent!.trim()).to.equal('Exporter');
+    expect(trigger.textContent!.trim()).to.equal('Télécharger');
+
+    el.label = 'Export';
+    await el.updateComplete;
+    expect(trigger.textContent!.trim()).to.equal('Export');
+
+    el.label = '';
+    await el.updateComplete;
+    expect(trigger.textContent!.trim()).to.equal('');
   });
 });
 
@@ -980,8 +1018,8 @@ it('blur() releases the native trigger it focused', async () => {
 });
 
 const twoFormats = [
-  { id: 'csv', label: 'CSV' },
-  { id: 'json', label: 'JSON' },
+  { formatId: 'csv', label: 'CSV' },
+  { formatId: 'json', label: 'JSON' },
 ] as unknown as LyraExportButton['formats'];
 
 it('honours preventDefault() on lr-show and lr-hide for the format menu', async () => {

@@ -1,5 +1,4 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import { sendKeys } from '@web/test-runner-commands';
+import { expect, fixture, html } from '@open-wc/testing';
 import './image-comparer.js';
 import type { LyraImageComparer } from './image-comparer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -18,7 +17,7 @@ it('renders before and after slots with a positioned divider', async () => {
   expect((el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).style.getPropertyValue('--lr-comparer-position')).to.equal('35%');
 });
 
-it('clamps a NaN/out-of-range position into [0, 100] for rendering, without mutating the raw property', async () => {
+it('normalizes and reflects every assigned position into [0, 100]', async () => {
   const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
   await el.updateComplete;
   const base = () => el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
@@ -26,37 +25,51 @@ it('clamps a NaN/out-of-range position into [0, 100] for rendering, without muta
   el.position = NaN;
   await el.updateComplete;
   expect(base().style.getPropertyValue('--lr-comparer-position')).to.equal('50%'); // documented fallback
+  expect(el.position).to.equal(50);
+  expect(el.getAttribute('position')).to.equal('50');
 
   el.position = -20;
   await el.updateComplete;
   expect(base().style.getPropertyValue('--lr-comparer-position')).to.equal('0%');
+  expect(el.position).to.equal(0);
+  expect(el.getAttribute('position')).to.equal('0');
 
   el.position = 150;
   await el.updateComplete;
   expect(base().style.getPropertyValue('--lr-comparer-position')).to.equal('100%');
-  expect(el.position).to.equal(150); // the raw property itself is left untouched, matching native <input type=range>
+  expect(el.position).to.equal(100);
+  expect(el.getAttribute('position')).to.equal('100');
 });
 
-it('relays the range platform\'s native Event after synchronously committing the live position', async () => {
+it('normalizes invalid orientation values through one reflected runtime vocabulary', async () => {
+  const el = (await fixture(html`<lr-image-comparer orientation="diagonal"></lr-image-comparer>`)) as LyraImageComparer;
+  await el.updateComplete;
+  expect(el.orientation).to.equal('horizontal');
+  expect(el.getAttribute('orientation')).to.equal('horizontal');
+  expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('data-orientation')).to.equal('horizontal');
+  expect(el.shadowRoot!.querySelector('[part="input"]')!.getAttribute('aria-orientation')).to.equal('horizontal');
+
+  el.orientation = 'vertical';
+  await el.updateComplete;
+  expect(el.orientation).to.equal('vertical');
+  expect(el.getAttribute('orientation')).to.equal('vertical');
+});
+
+it('relays exactly one native input event after synchronously committing the live position', async () => {
   const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
   await el.updateComplete;
   const handle = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   const events: Event[] = [];
   const positionsAtDispatch: number[] = [];
-  const aliases: CustomEvent<{ position: number }>[] = [];
-  const sequence: string[] = [];
+  let legacyPositionChanges = 0;
   el.addEventListener('input', (event) => {
     events.push(event);
     positionsAtDispatch.push(el.position);
-    sequence.push('input');
   });
-  el.addEventListener('lr-position-change', (event) => {
-    aliases.push(event);
-    sequence.push('lr-position-change');
-  });
+  el.addEventListener('lr-position-change', () => legacyPositionChanges++);
 
-  handle.focus();
-  await sendKeys({ press: 'ArrowRight' });
+  handle.value = '51';
+  handle.dispatchEvent(new Event('input', { bubbles: true }));
 
   expect(events).to.have.length(1);
   expect(events[0]!.constructor === el.ownerDocument.defaultView!.Event).to.be.true;
@@ -65,28 +78,21 @@ it('relays the range platform\'s native Event after synchronously committing the
   expect(events[0]!.bubbles).to.be.true;
   expect(events[0]!.composed).to.be.true;
   expect(positionsAtDispatch).to.deep.equal([51]);
-  expect(aliases).to.have.length(1);
-  expect(aliases[0]!.detail).to.deep.equal({ position: 51 });
-  expect(sequence).to.deep.equal(['input', 'lr-position-change']);
+  expect(legacyPositionChanges).to.equal(0);
   expect(el.position).to.equal(51);
 });
 
-it('relays one native change after synchronously committing position plus one prefixed alias', async () => {
+it('relays exactly one native change after synchronously committing position', async () => {
   const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
   const input = el.shadowRoot!.querySelector('input[type="range"]') as HTMLInputElement;
   const events: Event[] = [];
   const positionsAtDispatch: number[] = [];
-  const aliases: CustomEvent<undefined>[] = [];
-  const sequence: string[] = [];
+  let legacyChanges = 0;
   el.addEventListener('change', (event) => {
     events.push(event);
     positionsAtDispatch.push(el.position);
-    sequence.push('change');
   });
-  el.addEventListener('lr-change', (event) => {
-    aliases.push(event);
-    sequence.push('lr-change');
-  });
+  el.addEventListener('lr-change', () => legacyChanges++);
 
   input.value = '64';
   input.dispatchEvent(new Event('change', { bubbles: true, composed: false }));
@@ -97,10 +103,72 @@ it('relays one native change after synchronously committing position plus one pr
   expect(events[0]!.bubbles).to.be.true;
   expect(events[0]!.composed).to.be.true;
   expect(positionsAtDispatch).to.deep.equal([64]);
-  expect(aliases).to.have.length(1);
-  expect(aliases[0] instanceof CustomEvent).to.be.true;
-  expect(sequence).to.deep.equal(['change', 'lr-change']);
+  expect(legacyChanges).to.equal(0);
   expect(el.position).to.equal(64);
+});
+
+it('normalizes every keyboard direction and commit in LTR and RTL', async () => {
+  const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
+  const input = el.shadowRoot!.querySelector('input[type="range"]') as HTMLInputElement;
+  const emitted: string[] = [];
+  el.addEventListener('input', () => emitted.push('input'));
+  el.addEventListener('change', () => emitted.push('change'));
+
+  const cases: ReadonlyArray<{
+    orientation: 'horizontal' | 'vertical';
+    direction: 'ltr' | 'rtl';
+    key: string;
+    expected: number;
+  }> = [
+    { orientation: 'horizontal', direction: 'ltr', key: 'ArrowLeft', expected: 49 },
+    { orientation: 'horizontal', direction: 'ltr', key: 'ArrowRight', expected: 51 },
+    { orientation: 'horizontal', direction: 'ltr', key: 'ArrowUp', expected: 51 },
+    { orientation: 'horizontal', direction: 'ltr', key: 'ArrowDown', expected: 49 },
+    { orientation: 'horizontal', direction: 'rtl', key: 'ArrowLeft', expected: 51 },
+    { orientation: 'horizontal', direction: 'rtl', key: 'ArrowRight', expected: 49 },
+    { orientation: 'horizontal', direction: 'rtl', key: 'ArrowUp', expected: 51 },
+    { orientation: 'horizontal', direction: 'rtl', key: 'ArrowDown', expected: 49 },
+    { orientation: 'vertical', direction: 'ltr', key: 'ArrowLeft', expected: 49 },
+    { orientation: 'vertical', direction: 'ltr', key: 'ArrowRight', expected: 51 },
+    { orientation: 'vertical', direction: 'ltr', key: 'ArrowUp', expected: 49 },
+    { orientation: 'vertical', direction: 'ltr', key: 'ArrowDown', expected: 51 },
+    { orientation: 'vertical', direction: 'rtl', key: 'ArrowLeft', expected: 49 },
+    { orientation: 'vertical', direction: 'rtl', key: 'ArrowRight', expected: 51 },
+    { orientation: 'vertical', direction: 'rtl', key: 'ArrowUp', expected: 49 },
+    { orientation: 'vertical', direction: 'rtl', key: 'ArrowDown', expected: 51 },
+    { orientation: 'horizontal', direction: 'ltr', key: 'Home', expected: 0 },
+    { orientation: 'horizontal', direction: 'ltr', key: 'End', expected: 100 },
+    { orientation: 'horizontal', direction: 'ltr', key: 'PageUp', expected: 60 },
+    { orientation: 'horizontal', direction: 'ltr', key: 'PageDown', expected: 40 },
+  ];
+
+  for (const testCase of cases) {
+    el.orientation = testCase.orientation;
+    el.setAttribute('dir', testCase.direction);
+    el.position = 50;
+    await el.updateComplete;
+    emitted.length = 0;
+
+    const keydown = new KeyboardEvent('keydown', {
+      key: testCase.key,
+      bubbles: true,
+      cancelable: true,
+    });
+    input.dispatchEvent(keydown);
+    await el.updateComplete;
+    expect(keydown.defaultPrevented, `${testCase.orientation}/${testCase.direction} ${testCase.key} prevents native double handling`).to.be.true;
+    expect(el.position, `${testCase.orientation}/${testCase.direction} ${testCase.key}`).to.equal(testCase.expected);
+    expect(emitted, `${testCase.orientation}/${testCase.direction} ${testCase.key} live event`).to.deep.equal(['input']);
+
+    const keyup = new KeyboardEvent('keyup', {
+      key: testCase.key,
+      bubbles: true,
+      cancelable: true,
+    });
+    input.dispatchEvent(keyup);
+    expect(keyup.defaultPrevented, `${testCase.orientation}/${testCase.direction} ${testCase.key} commits once`).to.be.true;
+    expect(emitted, `${testCase.orientation}/${testCase.direction} ${testCase.key} event order`).to.deep.equal(['input', 'change']);
+  }
 });
 
 it('renders the handle slot and resolves both upstream sizing properties', async () => {
@@ -325,19 +393,82 @@ it('keeps interactive descendants of the decorative handle slot out of focus and
   await expect(el).to.be.accessible();
 });
 
-it('publishes dragging only for the active pointer gesture and clears it on cancellation', async () => {
+it('admits only one primary pointer and clears its gesture on every terminal path', async () => {
   const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
   const input = el.shadowRoot!.querySelector('input[type="range"]') as HTMLInputElement;
 
-  input.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 7 }));
-  expect(el.matches(':state(dragging)')).to.be.true;
-  input.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 7 }));
+  const pointer = (type: string, init: PointerEventInit) =>
+    input.dispatchEvent(new PointerEvent(type, { bubbles: true, ...init }));
+
+  pointer('pointerdown', { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 2 });
+  pointer('pointerdown', { pointerId: 2, pointerType: 'mouse', isPrimary: true, button: 1 });
+  pointer('pointerdown', { pointerId: 3, pointerType: 'pen', isPrimary: true, button: 2 });
+  pointer('pointerdown', { pointerId: 4, pointerType: 'touch', isPrimary: false, button: 0 });
   expect(el.matches(':state(dragging)')).to.be.false;
 
-  input.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 8 }));
+  pointer('pointerdown', { pointerId: 7, pointerType: 'touch', isPrimary: true, button: 0 });
+  expect(el.matches(':state(dragging)')).to.be.true;
+  pointer('pointerdown', { pointerId: 8, pointerType: 'touch', isPrimary: true, button: 0 });
+  pointer('pointercancel', { pointerId: 8, pointerType: 'touch', isPrimary: true, button: 0 });
+  expect(el.matches(':state(dragging)')).to.be.true;
+  pointer('lostpointercapture', { pointerId: 7, pointerType: 'touch', isPrimary: true, button: 0 });
+  expect(el.matches(':state(dragging)')).to.be.false;
+
+  pointer('pointerdown', { pointerId: 9, pointerType: 'pen', isPrimary: true, button: 0 });
+  expect(el.matches(':state(dragging)')).to.be.true;
+  pointer('pointercancel', { pointerId: 9, pointerType: 'pen', isPrimary: true, button: 0 });
+  expect(el.matches(':state(dragging)')).to.be.false;
+
+  pointer('pointerdown', { pointerId: 10, pointerType: 'mouse', isPrimary: true, button: 0 });
+  expect(el.matches(':state(dragging)')).to.be.true;
+  pointer('pointerup', { pointerId: 10, pointerType: 'mouse', isPrimary: true, button: 0 });
+  expect(el.matches(':state(dragging)')).to.be.false;
+
+  pointer('pointerdown', { pointerId: 11, pointerType: 'mouse', isPrimary: true, button: 0 });
   expect(el.matches(':state(dragging)')).to.be.true;
   el.remove();
   expect(el.matches(':state(dragging)')).to.be.false;
+});
+
+it('keeps fallback chevrons in physical order while custom handles remain intact in every axis and direction', async () => {
+  for (const orientation of ['horizontal', 'vertical'] as const) {
+    for (const direction of ['ltr', 'rtl'] as const) {
+      const fallbackWrapper = await fixture<HTMLDivElement>(html`
+        <div dir=${direction}>
+          <lr-image-comparer
+            .orientation=${orientation}
+            style="inline-size: 200px; block-size: 120px"
+          ></lr-image-comparer>
+        </div>
+      `);
+      const fallbackEl = fallbackWrapper.querySelector('lr-image-comparer') as LyraImageComparer;
+      await fallbackEl.updateComplete;
+      const fallback = fallbackEl.shadowRoot!.querySelector('.handle-fallback') as HTMLElement;
+      const [first, second] = [...fallback.querySelectorAll('svg')].map((svg) => svg.getBoundingClientRect());
+      expect(getComputedStyle(fallback).direction, `${orientation}/${direction} fallback direction`).to.equal('ltr');
+      expect(getComputedStyle(fallback).flexDirection, `${orientation}/${direction} fallback flex order`).to.equal('row');
+      if (orientation === 'horizontal') {
+        expect(first!.left, `${orientation}/${direction} first glyph remains physically left`).to.be.lessThan(second!.left);
+      } else {
+        expect(first!.top, `${orientation}/${direction} first glyph remains physically top`).to.be.lessThan(second!.top);
+      }
+
+      const customWrapper = await fixture<HTMLDivElement>(html`
+        <div dir=${direction}>
+          <lr-image-comparer
+            .orientation=${orientation}
+            style="inline-size: 200px; block-size: 120px"
+          ><span slot="handle">${orientation}-${direction}</span></lr-image-comparer>
+        </div>
+      `);
+      const customEl = customWrapper.querySelector('lr-image-comparer') as LyraImageComparer;
+      await customEl.updateComplete;
+      const slot = customEl.shadowRoot!.querySelector('slot[name="handle"]') as HTMLSlotElement;
+      expect(slot.assignedElements().map((node) => node.textContent)).to.deep.equal([
+        `${orientation}-${direction}`,
+      ]);
+    }
+  }
 });
 
 it('falls back to the localized default label when no aria-label is set', async () => {
@@ -470,12 +601,11 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('relays one native focus/blur pair with payload plus one prefixed alias pair', async () => {
+it('relays exactly one native focus/blur pair with payload', async () => {
   const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
   const handle = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   const related = document.createElement('button');
   const nativeEvents: FocusEvent[] = [];
-  const aliases: string[] = [];
   const sequence: string[] = [];
   el.addEventListener('focus', (event) => {
     nativeEvents.push(event as FocusEvent);
@@ -485,14 +615,10 @@ it('relays one native focus/blur pair with payload plus one prefixed alias pair'
     nativeEvents.push(event as FocusEvent);
     sequence.push('blur');
   });
-  el.addEventListener('lr-focus', () => {
-    aliases.push('lr-focus');
-    sequence.push('lr-focus');
-  });
-  el.addEventListener('lr-blur', () => {
-    aliases.push('lr-blur');
-    sequence.push('lr-blur');
-  });
+  let legacyFocus = 0;
+  let legacyBlur = 0;
+  el.addEventListener('lr-focus', () => legacyFocus++);
+  el.addEventListener('lr-blur', () => legacyBlur++);
 
   handle.dispatchEvent(new FocusEvent('focus', {
     bubbles: true,
@@ -511,6 +637,29 @@ it('relays one native focus/blur pair with payload plus one prefixed alias pair'
   expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
   expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
   expect(nativeEvents.every((event) => event.relatedTarget === related)).to.be.true;
-  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
-  expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
+  expect([legacyFocus, legacyBlur]).to.deep.equal([0, 0]);
+  expect(sequence).to.deep.equal(['focus', 'blur']);
+});
+
+it('commits a dirty keyboard gesture before relaying blur', async () => {
+  const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const sequence: string[] = [];
+  el.addEventListener('input', () => sequence.push('input'));
+  el.addEventListener('change', () => sequence.push('change'));
+  el.addEventListener('blur', () => sequence.push('blur'));
+
+  input.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowRight',
+    bubbles: true,
+    cancelable: true,
+  }));
+  input.dispatchEvent(new FocusEvent('blur', {
+    bubbles: true,
+    composed: true,
+    relatedTarget: document.body,
+    view: window,
+  }));
+
+  expect(sequence).to.deep.equal(['input', 'change', 'blur']);
 });

@@ -44,10 +44,11 @@ export class LyraHandoffDivider extends LyraElement {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The agent now in control. With nothing else set, renders `'Transferred to {agent}'`. */
-  @property() agent = '';
+  /** The destination agent now in control. With nothing else set, renders
+   *  `'Transferred to {agent}'`. */
+  @property({ attribute: 'to-agent' }) toAgent = '';
 
-  /** Optional source agent. With both `fromAgent` and `agent` set, renders `'Transferred from
+  /** Optional source agent. With both `fromAgent` and `toAgent` set, renders `'Transferred from
    *  {from} to {to}'` — worded, not an arrow, so RTL needs no mirroring. */
   @property({ attribute: 'from-agent' }) fromAgent = '';
 
@@ -68,7 +69,7 @@ export class LyraHandoffDivider extends LyraElement {
 
   override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
-    this.liveRegion?.announce(this.getAttribute('aria-label') || this.computedLabel, { force: true });
+    this.liveRegion?.announce(this.getAttribute('aria-label') ?? this.computedLabel, { force: true });
   }
 
   private onAvatarSlotChange = (e: Event): void => {
@@ -77,18 +78,18 @@ export class LyraHandoffDivider extends LyraElement {
 
   private get computedLabel(): string {
     if (this.label) return this.label;
-    if (this.fromAgent && this.agent) {
-      return this.localize('handoffFromToAgent', undefined, { from: this.fromAgent, to: this.agent });
+    if (this.fromAgent && this.toAgent) {
+      return this.localize('handoffFromToAgent', undefined, { from: this.fromAgent, to: this.toAgent });
     }
-    if (this.agent) {
-      return this.localize('handoffToAgent', undefined, { agent: this.agent });
+    if (this.toAgent) {
+      return this.localize('handoffToAgent', undefined, { agent: this.toAgent });
     }
     return this.localize('handoffLabel');
   }
 
   override render(): TemplateResult {
     const label = this.computedLabel;
-    const ariaLabel = this.getAttribute('aria-label') || label;
+    const ariaLabel = this.getAttribute('aria-label') ?? label;
     return html`
       <div part="base" role="separator" aria-orientation="horizontal" aria-label=${ariaLabel}>
         <span part="line" aria-hidden="true"></span>

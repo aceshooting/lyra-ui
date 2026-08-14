@@ -194,6 +194,8 @@ export const SelectedLinePoint: Story = {
   render: () => html`
     <lr-lite-chart
       type="line"
+      legend
+      legend-position="start"
       height="16rem"
       style="
         width: 22rem;
@@ -202,7 +204,7 @@ export const SelectedLinePoint: Story = {
       "
       .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
       .datasets=${[{ label: 'Runs', data: [12, 19, 14, 22] }]}
-      .selectedIndex=${[1]}
+      .selectedIndices=${[1]}
     ></lr-lite-chart>
   `,
 };

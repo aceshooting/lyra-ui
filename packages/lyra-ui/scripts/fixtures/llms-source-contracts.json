@@ -1,0 +1,3167 @@
+{
+  "$comment": "Locked census of public exported interfaces/free functions absent from Custom Elements Manifest member tables. Utility contracts and explicitly enrolled component contracts are checked against authored docs; legacy component signatures may only change by promotion to documented enrollment.",
+  "schemaVersion": 1,
+  "documented": [
+    {
+      "module": "src/components/agent-tools/tool-param-form/tool-param-form.class.ts",
+      "exportName": "FlatToolParamSchema",
+      "kind": "interface",
+      "fingerprint": "6e2502a22614161a0354",
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-tool-param-form",
+        "declaration": "FlatToolParamSchema"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/tool-param-form/tool-param-form.class.ts",
+      "exportName": "ToolParamFormProperty",
+      "kind": "interface",
+      "fingerprint": "03c3bb08ca5797675e1c",
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-tool-param-form",
+        "declaration": "ToolParamFormProperty"
+      }
+    },
+    {
+      "module": "src/components/media/attachment-chip/file-size.ts",
+      "exportName": "formatFileSize",
+      "kind": "function",
+      "fingerprint": "43d523c198d71b9ed8e7",
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-attachment-chip",
+        "declaration": "formatFileSize"
+      }
+    },
+    {
+      "module": "src/internal/anchor-target.ts",
+      "exportName": "LyraAnchorTarget",
+      "kind": "interface",
+      "fingerprint": "d8c099d6028163ed0153",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "anchor-target"
+      }
+    },
+    {
+      "module": "src/internal/announcer.ts",
+      "exportName": "acquireAnnouncementSink",
+      "kind": "function",
+      "fingerprint": "52a0630b0c7c130d4695",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "announcer"
+      }
+    },
+    {
+      "module": "src/internal/announcer.ts",
+      "exportName": "AnnouncementSink",
+      "kind": "interface",
+      "fingerprint": "c1638b67d015d9016021",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "announcer"
+      }
+    },
+    {
+      "module": "src/internal/announcer.ts",
+      "exportName": "AnnouncementSinkOptions",
+      "kind": "interface",
+      "fingerprint": "0f4cdafedfbc71dfb0df",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "announcer"
+      }
+    },
+    {
+      "module": "src/internal/announcer.ts",
+      "exportName": "AnnounceOptions",
+      "kind": "interface",
+      "fingerprint": "c9184efc41dfb5b50ac5",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "announcer"
+      }
+    },
+    {
+      "module": "src/internal/announcer.ts",
+      "exportName": "AnnouncerOptions",
+      "kind": "interface",
+      "fingerprint": "7dcfdc8af3ee2dd0669a",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "announcer"
+      }
+    },
+    {
+      "module": "src/internal/announcer.ts",
+      "exportName": "AnnouncerTimerHost",
+      "kind": "interface",
+      "fingerprint": "0abcce9825d105b20999",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "announcer"
+      }
+    },
+    {
+      "module": "src/internal/css-length.ts",
+      "exportName": "resolveCssLength",
+      "kind": "function",
+      "fingerprint": "fb353c6394ae4134fb7a",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "css-length"
+      }
+    },
+    {
+      "module": "src/internal/css-length.ts",
+      "exportName": "ResolveCssLengthOptions",
+      "kind": "interface",
+      "fingerprint": "60b332445d528ab58516",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "css-length"
+      }
+    },
+    {
+      "module": "src/internal/element-internals.ts",
+      "exportName": "attachInternalsSafely",
+      "kind": "function",
+      "fingerprint": "e5a110bc0f77ebfaa016",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "form-associated"
+      }
+    },
+    {
+      "module": "src/internal/element-internals.ts",
+      "exportName": "createFallbackInternals",
+      "kind": "function",
+      "fingerprint": "d6b9897d22ce9c50983c",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "form-associated"
+      }
+    },
+    {
+      "module": "src/internal/form-associated.ts",
+      "exportName": "createStringArrayFormDataState",
+      "kind": "function",
+      "fingerprint": "eca3f531f5f20b1b0193",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "form-associated"
+      }
+    },
+    {
+      "module": "src/internal/form-associated.ts",
+      "exportName": "FormAssociated",
+      "kind": "function",
+      "fingerprint": "7b32988741f129786c52",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "form-associated"
+      }
+    },
+    {
+      "module": "src/internal/form-associated.ts",
+      "exportName": "FormAssociatedInterface",
+      "kind": "interface",
+      "fingerprint": "bade71a1c93d0c5cc7b1",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "form-associated"
+      }
+    },
+    {
+      "module": "src/internal/form-associated.ts",
+      "exportName": "FormValueAdapter",
+      "kind": "interface",
+      "fingerprint": "9ff090fef59481ce664e",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "form-associated"
+      }
+    },
+    {
+      "module": "src/internal/form-associated.ts",
+      "exportName": "isEmptyFormValue",
+      "kind": "function",
+      "fingerprint": "137477988acaa6dd95ed",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "form-associated"
+      }
+    },
+    {
+      "module": "src/internal/form-associated.ts",
+      "exportName": "readStringArrayFormDataState",
+      "kind": "function",
+      "fingerprint": "27ad1cccab78a0aea882",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "form-associated"
+      }
+    },
+    {
+      "module": "src/internal/group-by-recency.ts",
+      "exportName": "groupByRecency",
+      "kind": "function",
+      "fingerprint": "b6e0be70c0e987d7ea57",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "group-by-recency"
+      }
+    },
+    {
+      "module": "src/internal/group-by-recency.ts",
+      "exportName": "GroupByRecencyOptions",
+      "kind": "interface",
+      "fingerprint": "79add70371e288c74b63",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "group-by-recency"
+      }
+    },
+    {
+      "module": "src/internal/group-by-recency.ts",
+      "exportName": "RecencyBucket",
+      "kind": "interface",
+      "fingerprint": "d51f0e7243db003c9e84",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "group-by-recency"
+      }
+    },
+    {
+      "module": "src/internal/group-by-recency.ts",
+      "exportName": "RecencyLabels",
+      "kind": "interface",
+      "fingerprint": "5105afd300730b877dd7",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "group-by-recency"
+      }
+    },
+    {
+      "module": "src/internal/icons.ts",
+      "exportName": "calendarIcon",
+      "kind": "function",
+      "fingerprint": "3647cf333fad80ad0a1b",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "icons"
+      }
+    },
+    {
+      "module": "src/internal/icons.ts",
+      "exportName": "chevronIcon",
+      "kind": "function",
+      "fingerprint": "26e43e44dd0398fbb788",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "icons"
+      }
+    },
+    {
+      "module": "src/internal/icons.ts",
+      "exportName": "closeIcon",
+      "kind": "function",
+      "fingerprint": "24a33a57ed97457a3d97",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "icons"
+      }
+    },
+    {
+      "module": "src/internal/icons.ts",
+      "exportName": "expandIcon",
+      "kind": "function",
+      "fingerprint": "8597edcdd0c2b84e6837",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "icons"
+      }
+    },
+    {
+      "module": "src/internal/icons.ts",
+      "exportName": "eyeIcon",
+      "kind": "function",
+      "fingerprint": "da5bf442b348456094ee",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "icons"
+      }
+    },
+    {
+      "module": "src/internal/icons.ts",
+      "exportName": "eyeOffIcon",
+      "kind": "function",
+      "fingerprint": "ac32b463366b15ea776c",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "icons"
+      }
+    },
+    {
+      "module": "src/internal/icons.ts",
+      "exportName": "fileIcon",
+      "kind": "function",
+      "fingerprint": "363eb8f6ee0a32dc6b6f",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "icons"
+      }
+    },
+    {
+      "module": "src/internal/icons.ts",
+      "exportName": "folderIcon",
+      "kind": "function",
+      "fingerprint": "104984e4eb2c45c6b9a3",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "icons"
+      }
+    },
+    {
+      "module": "src/internal/icons.ts",
+      "exportName": "pauseIcon",
+      "kind": "function",
+      "fingerprint": "1a40efb091269f1c1fa5",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "icons"
+      }
+    },
+    {
+      "module": "src/internal/icons.ts",
+      "exportName": "playIcon",
+      "kind": "function",
+      "fingerprint": "52d6c1c30f043df0b7ca",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "icons"
+      }
+    },
+    {
+      "module": "src/internal/icons.ts",
+      "exportName": "spinnerIcon",
+      "kind": "function",
+      "fingerprint": "0cbcffe3bd71ed28e8d1",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "icons"
+      }
+    },
+    {
+      "module": "src/internal/layered-layout.ts",
+      "exportName": "LayeredLayoutEdge",
+      "kind": "interface",
+      "fingerprint": "ad4f8a764fff21c31280",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "layered-layout"
+      }
+    },
+    {
+      "module": "src/internal/layered-layout.ts",
+      "exportName": "layeredLayout",
+      "kind": "function",
+      "fingerprint": "62c84477ac2b28948244",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "layered-layout"
+      }
+    },
+    {
+      "module": "src/internal/layered-layout.ts",
+      "exportName": "LayeredLayoutNode",
+      "kind": "interface",
+      "fingerprint": "09a7355f314ebcb1e85a",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "layered-layout"
+      }
+    },
+    {
+      "module": "src/internal/layered-layout.ts",
+      "exportName": "LayeredLayoutOptions",
+      "kind": "interface",
+      "fingerprint": "d9b3cbb7f91695eea086",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "layered-layout"
+      }
+    },
+    {
+      "module": "src/internal/layered-layout.ts",
+      "exportName": "LayeredLayoutResult",
+      "kind": "interface",
+      "fingerprint": "40fdff29576d22e30927",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "layered-layout"
+      }
+    },
+    {
+      "module": "src/internal/localization-runtime.ts",
+      "exportName": "subscribeLyraLocale",
+      "kind": "function",
+      "fingerprint": "6b38f80a26105eefa81d",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "localization"
+      }
+    },
+    {
+      "module": "src/internal/lyra-element.ts",
+      "exportName": "LyraEmitOptions",
+      "kind": "interface",
+      "fingerprint": "38765c2f7a263762faaf",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "LyraElement"
+      }
+    },
+    {
+      "module": "src/internal/overlay-manager.ts",
+      "exportName": "activateOverlay",
+      "kind": "function",
+      "fingerprint": "2bf276c713837a085036",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "overlay-manager"
+      }
+    },
+    {
+      "module": "src/internal/overlay-manager.ts",
+      "exportName": "OverlayActivationOptions",
+      "kind": "interface",
+      "fingerprint": "61cdfc757f8d10f4d875",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "overlay-manager"
+      }
+    },
+    {
+      "module": "src/internal/overlay-manager.ts",
+      "exportName": "OverlayDeactivateOptions",
+      "kind": "interface",
+      "fingerprint": "72d1462a223439db0509",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "overlay-manager"
+      }
+    },
+    {
+      "module": "src/internal/overlay-manager.ts",
+      "exportName": "OverlayHandle",
+      "kind": "interface",
+      "fingerprint": "72cde3b5a3ed4a80a986",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "overlay-manager"
+      }
+    },
+    {
+      "module": "src/internal/overlay-manager.ts",
+      "exportName": "suspendLyraModalsFor",
+      "kind": "function",
+      "fingerprint": "aa5ea31d59ab5bbe1aea",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "overlay-manager"
+      }
+    },
+    {
+      "module": "src/internal/positioner.ts",
+      "exportName": "place",
+      "kind": "function",
+      "fingerprint": "83635c3f4130d75e6c49",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "positioner"
+      }
+    },
+    {
+      "module": "src/internal/positioner.ts",
+      "exportName": "PlacementResult",
+      "kind": "interface",
+      "fingerprint": "5ec45ff6197336d0bd06",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "positioner"
+      }
+    },
+    {
+      "module": "src/internal/positioner.ts",
+      "exportName": "PlaceOptions",
+      "kind": "interface",
+      "fingerprint": "c32fe230189ae2db2186",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "positioner"
+      }
+    },
+    {
+      "module": "src/internal/positioner.ts",
+      "exportName": "trackRect",
+      "kind": "function",
+      "fingerprint": "ca19b2714e0e6f5b451f",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "positioner"
+      }
+    },
+    {
+      "module": "src/internal/positioner.ts",
+      "exportName": "virtualAnchorFromRect",
+      "kind": "function",
+      "fingerprint": "46f27040ac5f2173df1c",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "positioner"
+      }
+    },
+    {
+      "module": "src/internal/positioner.ts",
+      "exportName": "VirtualAnchor",
+      "kind": "interface",
+      "fingerprint": "aa1528918c236b926db3",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "positioner"
+      }
+    },
+    {
+      "module": "src/internal/prefix.ts",
+      "exportName": "defineElement",
+      "kind": "function",
+      "fingerprint": "d188572a751eaea09bff",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "prefix"
+      }
+    },
+    {
+      "module": "src/internal/scroll-lock.ts",
+      "exportName": "lockScroll",
+      "kind": "function",
+      "fingerprint": "1288f11632216d7dd562",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "scroll-lock"
+      }
+    },
+    {
+      "module": "src/internal/theme-watcher.ts",
+      "exportName": "invalidateLyraTheme",
+      "kind": "function",
+      "fingerprint": "637fd62cd23ba8aa5d5b",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "declaration",
+        "name": "invalidateLyraTheme"
+      }
+    },
+    {
+      "module": "src/utilities/animation-registry.ts",
+      "exportName": "getAnimation",
+      "kind": "function",
+      "fingerprint": "84a7bfeec60a76f7eba8",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "animation-registry"
+      }
+    },
+    {
+      "module": "src/utilities/animation-registry.ts",
+      "exportName": "LyraElementAnimation",
+      "kind": "interface",
+      "fingerprint": "3279ed5db919cb3c6ecb",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "animation-registry"
+      }
+    },
+    {
+      "module": "src/utilities/animation-registry.ts",
+      "exportName": "LyraGetAnimationOptions",
+      "kind": "interface",
+      "fingerprint": "b3d495c0ae0f5efd731b",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "animation-registry"
+      }
+    },
+    {
+      "module": "src/utilities/animation-registry.ts",
+      "exportName": "LyraResolvedElementAnimation",
+      "kind": "interface",
+      "fingerprint": "26bfca147cca7de2a74d",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "animation-registry"
+      }
+    },
+    {
+      "module": "src/utilities/animation-registry.ts",
+      "exportName": "setAnimation",
+      "kind": "function",
+      "fingerprint": "67e0f70bb929bded4eca",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "animation-registry"
+      }
+    },
+    {
+      "module": "src/utilities/animation-registry.ts",
+      "exportName": "setDefaultAnimation",
+      "kind": "function",
+      "fingerprint": "424825af1bb2a65005f6",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "animation-registry"
+      }
+    },
+    {
+      "module": "src/utilities/defined.ts",
+      "exportName": "allDefined",
+      "kind": "function",
+      "fingerprint": "2c507e334fae4ae7abc4",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "defined"
+      }
+    },
+    {
+      "module": "src/utilities/defined.ts",
+      "exportName": "AllDefinedOptions",
+      "kind": "interface",
+      "fingerprint": "892be9f4da93fe4ec291",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "defined"
+      }
+    },
+    {
+      "module": "src/utilities/localization.ts",
+      "exportName": "bridgeLyraLocale",
+      "kind": "function",
+      "fingerprint": "9237b1ba5cd83d84aeda",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "localization"
+      }
+    },
+    {
+      "module": "src/utilities/localization.ts",
+      "exportName": "LyraLocaleBridgeOptions",
+      "kind": "interface",
+      "fingerprint": "f590a73836cf4189715d",
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "localization"
+      }
+    }
+  ],
+  "legacy": [
+    {
+      "module": "src/components/agent-tools/activity-feed/activity-feed.class.ts",
+      "exportName": "ActivityEntry",
+      "kind": "interface",
+      "fingerprint": "d757798fd778c002deb3"
+    },
+    {
+      "module": "src/components/agent-tools/activity-feed/activity-feed.class.ts",
+      "exportName": "ActivityFeedFollowChangeDetail",
+      "kind": "interface",
+      "fingerprint": "36b189576f606d5a0a81"
+    },
+    {
+      "module": "src/components/agent-tools/activity-feed/activity-feed.class.ts",
+      "exportName": "ActivityFeedToggleDetail",
+      "kind": "interface",
+      "fingerprint": "8bd82827670e76aa6f82"
+    },
+    {
+      "module": "src/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.class.ts",
+      "exportName": "AgentEvaluationDashboardRun",
+      "kind": "interface",
+      "fingerprint": "1881b5cb9f93e2b4dd7a"
+    },
+    {
+      "module": "src/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.class.ts",
+      "exportName": "AgentEvaluationMetric",
+      "kind": "interface",
+      "fingerprint": "1a2c0d3026007e477db5"
+    },
+    {
+      "module": "src/components/agent-tools/agent-run/agent-run.class.ts",
+      "exportName": "AgentRunMetric",
+      "kind": "interface",
+      "fingerprint": "201782e2db5744790b44"
+    },
+    {
+      "module": "src/components/agent-tools/approval-queue/approval-queue.class.ts",
+      "exportName": "ToolApprovalRequest",
+      "kind": "interface",
+      "fingerprint": "3db4582b49e37b4978b0"
+    },
+    {
+      "module": "src/components/agent-tools/artifact-panel/artifact-panel.class.ts",
+      "exportName": "ArtifactVersion",
+      "kind": "interface",
+      "fingerprint": "bcd5d716932577525027"
+    },
+    {
+      "module": "src/components/agent-tools/browser-frame/browser-frame.class.ts",
+      "exportName": "BrowserPing",
+      "kind": "interface",
+      "fingerprint": "654802af9fbecda3aefd"
+    },
+    {
+      "module": "src/components/agent-tools/commit-card/commit-card.class.ts",
+      "exportName": "CommitFileChange",
+      "kind": "interface",
+      "fingerprint": "d3374125d03816d9dd62"
+    },
+    {
+      "module": "src/components/agent-tools/context-inspector/context-inspector.class.ts",
+      "exportName": "ContextInspectorRedaction",
+      "kind": "interface",
+      "fingerprint": "50dfc2fee67c0cf798bf"
+    },
+    {
+      "module": "src/components/agent-tools/context-inspector/context-inspector.class.ts",
+      "exportName": "ContextInspectorSegment",
+      "kind": "interface",
+      "fingerprint": "1a05f53fba9c5d841a47"
+    },
+    {
+      "module": "src/components/agent-tools/eval-dataset/eval-dataset.class.ts",
+      "exportName": "EvalExample",
+      "kind": "interface",
+      "fingerprint": "ccec72fee57fc111add9"
+    },
+    {
+      "module": "src/components/agent-tools/eval-result/eval-result.class.ts",
+      "exportName": "EvalRunResult",
+      "kind": "interface",
+      "fingerprint": "fc8013a3e0d6bf4118fd"
+    },
+    {
+      "module": "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
+      "exportName": "EvaluationCitationSelectDetail",
+      "kind": "interface",
+      "fingerprint": "c6214f1d711418cdfd87"
+    },
+    {
+      "module": "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
+      "exportName": "EvaluationClaimSelectDetail",
+      "kind": "interface",
+      "fingerprint": "f4b50770d0327fcae7cf"
+    },
+    {
+      "module": "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
+      "exportName": "EvaluationContent",
+      "kind": "interface",
+      "fingerprint": "e7619f5cb0825ff9504b"
+    },
+    {
+      "module": "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
+      "exportName": "EvaluationExampleResult",
+      "kind": "interface",
+      "fingerprint": "3cdbe6762ffde5948258"
+    },
+    {
+      "module": "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
+      "exportName": "EvaluationExampleToggleDetail",
+      "kind": "interface",
+      "fingerprint": "408d23cc268706452d53"
+    },
+    {
+      "module": "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
+      "exportName": "EvaluationToolActivateDetail",
+      "kind": "interface",
+      "fingerprint": "fc47d55fb358bdacd09d"
+    },
+    {
+      "module": "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
+      "exportName": "EvaluationToolApprovalDetail",
+      "kind": "interface",
+      "fingerprint": "4956e5cb0472375e5ecd"
+    },
+    {
+      "module": "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
+      "exportName": "EvaluationToolRenderErrorDetail",
+      "kind": "interface",
+      "fingerprint": "536356f5d5e65ee90456"
+    },
+    {
+      "module": "src/components/agent-tools/mcp-app/mcp-app.class.ts",
+      "exportName": "McpAppCsp",
+      "kind": "interface",
+      "fingerprint": "3eb2f75793f749d55b7d"
+    },
+    {
+      "module": "src/components/agent-tools/mcp-app/mcp-app.class.ts",
+      "exportName": "McpAppPermissions",
+      "kind": "interface",
+      "fingerprint": "252d9bddca01d22b56db"
+    },
+    {
+      "module": "src/components/agent-tools/mcp-app/mcp-app.class.ts",
+      "exportName": "McpAppToolCallDetail",
+      "kind": "interface",
+      "fingerprint": "da6b79400ee912777e88"
+    },
+    {
+      "module": "src/components/agent-tools/policy-summary/policy-summary.class.ts",
+      "exportName": "PolicyDecision",
+      "kind": "interface",
+      "fingerprint": "e64b0b3e48ec551efb8c"
+    },
+    {
+      "module": "src/components/agent-tools/prompt-studio/prompt-studio.class.ts",
+      "exportName": "PromptStudioMessage",
+      "kind": "interface",
+      "fingerprint": "5007d3440352a183834f"
+    },
+    {
+      "module": "src/components/agent-tools/prompt-studio/prompt-studio.class.ts",
+      "exportName": "PromptStudioMessageReorderDetail",
+      "kind": "interface",
+      "fingerprint": "11151b05c51a57f1077d"
+    },
+    {
+      "module": "src/components/agent-tools/prompt-studio/prompt-studio.class.ts",
+      "exportName": "PromptStudioState",
+      "kind": "interface",
+      "fingerprint": "707fabd576c5a6612238"
+    },
+    {
+      "module": "src/components/agent-tools/prompt-studio/prompt-studio.class.ts",
+      "exportName": "PromptStudioVariable",
+      "kind": "interface",
+      "fingerprint": "bf400fdadd54e3eae05a"
+    },
+    {
+      "module": "src/components/agent-tools/prompt-studio/prompt-studio.class.ts",
+      "exportName": "PromptStudioVersion",
+      "kind": "interface",
+      "fingerprint": "63bd66dac1ed8cd708fa"
+    },
+    {
+      "module": "src/components/agent-tools/schema-viewer/schema-viewer.class.ts",
+      "exportName": "JsonSchemaNode",
+      "kind": "interface",
+      "fingerprint": "f9392c6e79c3285f0aca"
+    },
+    {
+      "module": "src/components/agent-tools/schema-viewer/schema-viewer.class.ts",
+      "exportName": "SchemaValidationIssue",
+      "kind": "interface",
+      "fingerprint": "fd01b1b41e6899dbb907"
+    },
+    {
+      "module": "src/components/agent-tools/subagent-panel/subagent-panel.class.ts",
+      "exportName": "SubagentRun",
+      "kind": "interface",
+      "fingerprint": "4849d3bf995d096a202a"
+    },
+    {
+      "module": "src/components/agent-tools/task-list/task-list.class.ts",
+      "exportName": "TaskItem",
+      "kind": "interface",
+      "fingerprint": "735f379b5351e17bf7c3"
+    },
+    {
+      "module": "src/components/agent-tools/task-list/task-list.class.ts",
+      "exportName": "TaskListToggleDetail",
+      "kind": "interface",
+      "fingerprint": "4b780eef7893a4e36175"
+    },
+    {
+      "module": "src/components/agent-tools/test-results/test-results.class.ts",
+      "exportName": "TestCaseResult",
+      "kind": "interface",
+      "fingerprint": "9b1f38acf3815a25c8f2"
+    },
+    {
+      "module": "src/components/agent-tools/test-results/test-results.class.ts",
+      "exportName": "testResultDetailSlotName",
+      "kind": "function",
+      "fingerprint": "866a449c7d9d4d8c8622"
+    },
+    {
+      "module": "src/components/agent-tools/test-results/test-results.class.ts",
+      "exportName": "TestSuiteResult",
+      "kind": "interface",
+      "fingerprint": "542e87a230781b068141"
+    },
+    {
+      "module": "src/components/agent-tools/thinking-panel/thinking-panel.class.ts",
+      "exportName": "ThinkingPanelToggleDetail",
+      "kind": "interface",
+      "fingerprint": "6d6eaa5f08ad0f21a5a8"
+    },
+    {
+      "module": "src/components/agent-tools/tool-call-chip/tool-call-chip.class.ts",
+      "exportName": "ToolChipSelectDetail",
+      "kind": "interface",
+      "fingerprint": "81773d4bf9a93e207c62"
+    },
+    {
+      "module": "src/components/agent-tools/tool-result-view/registry.ts",
+      "exportName": "DirectToolRendererDefinition",
+      "kind": "interface",
+      "fingerprint": "d5b5b0fb05428dcf4b31"
+    },
+    {
+      "module": "src/components/agent-tools/tool-result-view/registry.ts",
+      "exportName": "findToolRenderer",
+      "kind": "function",
+      "fingerprint": "254e95f752426e56c6b2"
+    },
+    {
+      "module": "src/components/agent-tools/tool-result-view/registry.ts",
+      "exportName": "getDefaultToolRendererRegistry",
+      "kind": "function",
+      "fingerprint": "cdcb8099a9b0697538c6"
+    },
+    {
+      "module": "src/components/agent-tools/tool-result-view/registry.ts",
+      "exportName": "LazyToolRendererDefinition",
+      "kind": "interface",
+      "fingerprint": "30383d10eece538c1c21"
+    },
+    {
+      "module": "src/components/agent-tools/tool-result-view/registry.ts",
+      "exportName": "loadToolRenderer",
+      "kind": "function",
+      "fingerprint": "561592d35507a3974598"
+    },
+    {
+      "module": "src/components/agent-tools/tool-result-view/registry.ts",
+      "exportName": "registerToolRenderer",
+      "kind": "function",
+      "fingerprint": "6a0314a4e98d588b1e19"
+    },
+    {
+      "module": "src/components/agent-tools/tool-result-view/registry.ts",
+      "exportName": "ToolRenderContext",
+      "kind": "interface",
+      "fingerprint": "e01392f6683f205153ee"
+    },
+    {
+      "module": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.class.ts",
+      "exportName": "ToolSelectDialogTool",
+      "kind": "interface",
+      "fingerprint": "71075a1636f9517a6449"
+    },
+    {
+      "module": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.class.ts",
+      "exportName": "ToolSelectionChangeDetail",
+      "kind": "interface",
+      "fingerprint": "0e7ea8c030d2860dd7f0"
+    },
+    {
+      "module": "src/components/agent-tools/tool-timeline/tool-timeline.class.ts",
+      "exportName": "ToolTimelineActivateDetail",
+      "kind": "interface",
+      "fingerprint": "1222a0b23ad020786090"
+    },
+    {
+      "module": "src/components/agent-tools/tool-timeline/tool-timeline.class.ts",
+      "exportName": "ToolTimelineApprovalDetail",
+      "kind": "interface",
+      "fingerprint": "e89e7196be676e1f1dbf"
+    },
+    {
+      "module": "src/components/agent-tools/tool-timeline/tool-timeline.class.ts",
+      "exportName": "ToolTimelineEntry",
+      "kind": "interface",
+      "fingerprint": "c2ba058405d6024d8727"
+    },
+    {
+      "module": "src/components/agent-tools/tool-timeline/tool-timeline.class.ts",
+      "exportName": "ToolTimelineRenderErrorDetail",
+      "kind": "interface",
+      "fingerprint": "97f887efb565f24cc3ec"
+    },
+    {
+      "module": "src/components/agent-tools/trace-tree/span.ts",
+      "exportName": "LyraSpan",
+      "kind": "interface",
+      "fingerprint": "7ccd1ffe447e485bdd22"
+    },
+    {
+      "module": "src/components/charts/chart/box-plot.class.ts",
+      "exportName": "LyraBoxPlotPointDetail",
+      "kind": "interface",
+      "fingerprint": "12b5fa0a49e6f3322670"
+    },
+    {
+      "module": "src/components/charts/chart/box-plot.class.ts",
+      "exportName": "LyraBoxPlotSeries",
+      "kind": "interface",
+      "fingerprint": "a93fbc561fefdb23fee5"
+    },
+    {
+      "module": "src/components/charts/chart/box-plot.class.ts",
+      "exportName": "LyraBoxPlotSummary",
+      "kind": "interface",
+      "fingerprint": "4174f56f787e125561e7"
+    },
+    {
+      "module": "src/components/charts/chart/chart-colors.ts",
+      "exportName": "seriesPalette",
+      "kind": "function",
+      "fingerprint": "a4d408cddfb3fe2bfb62"
+    },
+    {
+      "module": "src/components/charts/chart/chart-colors.ts",
+      "exportName": "translucentAreaColor",
+      "kind": "function",
+      "fingerprint": "73d38464b7c53669a3e2"
+    },
+    {
+      "module": "src/components/charts/chart/chart-legend-visibility.ts",
+      "exportName": "LyraChartLegendVisibilityChangeDetail",
+      "kind": "interface",
+      "fingerprint": "a5d87041a8c738fc1510"
+    },
+    {
+      "module": "src/components/charts/chart/chart-preload.ts",
+      "exportName": "LyraChartPreloadOptions",
+      "kind": "interface",
+      "fingerprint": "e66b19057e51a1bdcd92"
+    },
+    {
+      "module": "src/components/charts/chart/chart-preload.ts",
+      "exportName": "LyraChartPreloadResult",
+      "kind": "interface",
+      "fingerprint": "92abf8103b14e0e5a257"
+    },
+    {
+      "module": "src/components/charts/chart/chart-preload.ts",
+      "exportName": "preloadCharts",
+      "kind": "function",
+      "fingerprint": "9654412d9c8dd6632ffd"
+    },
+    {
+      "module": "src/components/charts/chart/chart.class.ts",
+      "exportName": "lockChartType",
+      "kind": "function",
+      "fingerprint": "79fa9a852dcf7498f637"
+    },
+    {
+      "module": "src/components/charts/chart/chart.class.ts",
+      "exportName": "LyraChartArea",
+      "kind": "interface",
+      "fingerprint": "1e12170581666b841d6c"
+    },
+    {
+      "module": "src/components/charts/chart/chart.class.ts",
+      "exportName": "LyraChartConfiguration",
+      "kind": "interface",
+      "fingerprint": "71b5326be42618f0bf60"
+    },
+    {
+      "module": "src/components/charts/chart/chart.class.ts",
+      "exportName": "LyraChartDataConfiguration",
+      "kind": "interface",
+      "fingerprint": "ea625f0ab5951b1df21a"
+    },
+    {
+      "module": "src/components/charts/chart/chart.class.ts",
+      "exportName": "LyraChartDatasetConfiguration",
+      "kind": "interface",
+      "fingerprint": "4559b11f2244e09374c1"
+    },
+    {
+      "module": "src/components/charts/chart/chart.class.ts",
+      "exportName": "LyraChartDatumActivateDetail",
+      "kind": "interface",
+      "fingerprint": "1ddfaf5982a2bbeb887d"
+    },
+    {
+      "module": "src/components/charts/chart/chart.class.ts",
+      "exportName": "LyraChartFormatterContext",
+      "kind": "interface",
+      "fingerprint": "94a935a804c7edd28be2"
+    },
+    {
+      "module": "src/components/charts/chart/chart.class.ts",
+      "exportName": "LyraChartInstance",
+      "kind": "interface",
+      "fingerprint": "2f0dfd0bdb8af7fdf42a"
+    },
+    {
+      "module": "src/components/charts/chart/chart.class.ts",
+      "exportName": "LyraChartPlugin",
+      "kind": "interface",
+      "fingerprint": "5a64e279322bc4437248"
+    },
+    {
+      "module": "src/components/charts/chart/chart.class.ts",
+      "exportName": "LyraChartPoint",
+      "kind": "interface",
+      "fingerprint": "be290e04ad93629030e5"
+    },
+    {
+      "module": "src/components/charts/chart/chart.class.ts",
+      "exportName": "LyraChartSeries",
+      "kind": "interface",
+      "fingerprint": "c0636b488f259d7e313e"
+    },
+    {
+      "module": "src/components/charts/chart/histogram.class.ts",
+      "exportName": "binnedBuckets",
+      "kind": "function",
+      "fingerprint": "71ee563bf8ad86cfee85"
+    },
+    {
+      "module": "src/components/charts/chart/lite-chart.class.ts",
+      "exportName": "LyraLiteChartSeries",
+      "kind": "interface",
+      "fingerprint": "b2293bd1345003a45552"
+    },
+    {
+      "module": "src/components/charts/chart/lite-chart.class.ts",
+      "exportName": "LyraLiteChartTableCellContext",
+      "kind": "interface",
+      "fingerprint": "47e6d3aeec0b68da14fb"
+    },
+    {
+      "module": "src/components/conversation/chat-message/chat-message.class.ts",
+      "exportName": "ChatMessageToggleDetail",
+      "kind": "interface",
+      "fingerprint": "0620bfc1eecf87453d98"
+    },
+    {
+      "module": "src/components/conversation/checkpoint/checkpoint.class.ts",
+      "exportName": "CheckpointRestoreDetail",
+      "kind": "interface",
+      "fingerprint": "ba4d36244c370260ea97"
+    },
+    {
+      "module": "src/components/conversation/conversation-item/conversation-item.class.ts",
+      "exportName": "ConversationItemRenameDetail",
+      "kind": "interface",
+      "fingerprint": "2d04c2ef824cc061bf32"
+    },
+    {
+      "module": "src/components/conversation/conversation-item/conversation-item.class.ts",
+      "exportName": "ConversationItemSelectDetail",
+      "kind": "interface",
+      "fingerprint": "8e9b42e44086f2e922c8"
+    },
+    {
+      "module": "src/components/conversation/message-actions/toolbar-actions.ts",
+      "exportName": "isLyraToolbarActionProvider",
+      "kind": "function",
+      "fingerprint": "4b4e28bb496f1d4e110b"
+    },
+    {
+      "module": "src/components/conversation/message-actions/toolbar-actions.ts",
+      "exportName": "LyraToolbarAction",
+      "kind": "interface",
+      "fingerprint": "d74a20312d08ffdd363e"
+    },
+    {
+      "module": "src/components/conversation/message-actions/toolbar-actions.ts",
+      "exportName": "LyraToolbarActionProvider",
+      "kind": "interface",
+      "fingerprint": "7ef831784416d321d7fd"
+    },
+    {
+      "module": "src/components/conversation/message-feedback/message-feedback.class.ts",
+      "exportName": "MessageFeedbackDetailConfiguration",
+      "kind": "interface",
+      "fingerprint": "9477aaacf8ddd4009611"
+    },
+    {
+      "module": "src/components/conversation/message-feedback/message-feedback.class.ts",
+      "exportName": "MessageFeedbackReason",
+      "kind": "interface",
+      "fingerprint": "09ff388614ce2685342f"
+    },
+    {
+      "module": "src/components/conversation/message-feedback/message-feedback.class.ts",
+      "exportName": "MessageFeedbackSubmitDetail",
+      "kind": "interface",
+      "fingerprint": "a38f45688c653766080e"
+    },
+    {
+      "module": "src/components/conversation/model-select/model-select.class.ts",
+      "exportName": "LyraModelCatalogEntry",
+      "kind": "interface",
+      "fingerprint": "97731d5bd0018174e7d7"
+    },
+    {
+      "module": "src/components/conversation/model-settings-panel/model-settings-panel.class.ts",
+      "exportName": "ModelSettingsChangeDetail",
+      "kind": "interface",
+      "fingerprint": "b8e3f7ad9440beea43ff"
+    },
+    {
+      "module": "src/components/conversation/prompt-input/prompt-input.class.ts",
+      "exportName": "LyraPromptInputAttachment",
+      "kind": "interface",
+      "fingerprint": "c79ba5eb40e689dd3e05"
+    },
+    {
+      "module": "src/components/conversation/prompt-input/prompt-input.class.ts",
+      "exportName": "LyraPromptSuggestion",
+      "kind": "interface",
+      "fingerprint": "89703b3db403e4e476c7"
+    },
+    {
+      "module": "src/components/conversation/prompt-queue/prompt-queue.class.ts",
+      "exportName": "PromptQueueChangeDetail",
+      "kind": "interface",
+      "fingerprint": "e2bb0c20db0d44efcd2d"
+    },
+    {
+      "module": "src/components/conversation/prompt-queue/prompt-queue.class.ts",
+      "exportName": "PromptQueueItem",
+      "kind": "interface",
+      "fingerprint": "135f13f20b579b1c97f9"
+    },
+    {
+      "module": "src/components/conversation/selection-toolbar/selection-toolbar.class.ts",
+      "exportName": "SelectionActionDetail",
+      "kind": "interface",
+      "fingerprint": "3a789beb995c060e0739"
+    },
+    {
+      "module": "src/components/conversation/streaming-text/streaming-text.class.ts",
+      "exportName": "looksLikeMarkdown",
+      "kind": "function",
+      "fingerprint": "6436aeaa0d758da7034e"
+    },
+    {
+      "module": "src/components/conversation/suggestion-chips/suggestion-chips.class.ts",
+      "exportName": "LyraChatSuggestion",
+      "kind": "interface",
+      "fingerprint": "a7e66e77e2295514c2ef"
+    },
+    {
+      "module": "src/components/conversation/thread-list/thread-list.class.ts",
+      "exportName": "ChatThread",
+      "kind": "interface",
+      "fingerprint": "a66053456c522e00d7d1"
+    },
+    {
+      "module": "src/components/conversation/thread-list/thread-list.class.ts",
+      "exportName": "ThreadGroupContext",
+      "kind": "interface",
+      "fingerprint": "d3d183942524c1f54a30"
+    },
+    {
+      "module": "src/components/conversation/transcript-feed/transcript-feed.class.ts",
+      "exportName": "LyraTranscriptEntry",
+      "kind": "interface",
+      "fingerprint": "1c3b781613a086642c78"
+    },
+    {
+      "module": "src/components/conversation/voice-picker/voice-picker.class.ts",
+      "exportName": "LyraVoiceCatalogEntry",
+      "kind": "interface",
+      "fingerprint": "60ee8559dab9d3627b91"
+    },
+    {
+      "module": "src/components/conversation/widget-renderer/registry.ts",
+      "exportName": "createWidgetTypeRegistry",
+      "kind": "function",
+      "fingerprint": "1abff6aae2d2e58a4ac1"
+    },
+    {
+      "module": "src/components/conversation/widget-renderer/registry.ts",
+      "exportName": "isWidgetTypeRegistry",
+      "kind": "function",
+      "fingerprint": "a7e04847a66cd69af3bf"
+    },
+    {
+      "module": "src/components/conversation/widget-renderer/registry.ts",
+      "exportName": "WidgetTypeDefinition",
+      "kind": "interface",
+      "fingerprint": "a7fa12e464931076dc38"
+    },
+    {
+      "module": "src/components/conversation/widget-renderer/registry.ts",
+      "exportName": "WidgetTypeRegistry",
+      "kind": "interface",
+      "fingerprint": "2c24f7eee3467b0683bc"
+    },
+    {
+      "module": "src/components/data/calendar/calendar.class.ts",
+      "exportName": "CalendarEvent",
+      "kind": "interface",
+      "fingerprint": "3d057df472e2d0ae56e1"
+    },
+    {
+      "module": "src/components/data/context-meter/context-meter.class.ts",
+      "exportName": "ContextMeterSegment",
+      "kind": "interface",
+      "fingerprint": "fc444785249a78a6a06b"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridCellContextMenuDetail",
+      "kind": "interface",
+      "fingerprint": "e871805efd49c02e141a"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridCellDetail",
+      "kind": "interface",
+      "fingerprint": "5342addb06b037e8003b"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridColumn",
+      "kind": "interface",
+      "fingerprint": "3a2481868d93997bd28b"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridColumnMoveDetail",
+      "kind": "interface",
+      "fingerprint": "158e366ab24d34e1abe1"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridColumnPinDetail",
+      "kind": "interface",
+      "fingerprint": "29b3d54f1645e63232fa"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridColumnResizeDetail",
+      "kind": "interface",
+      "fingerprint": "5810f89ade35d4ee93af"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridColumnState",
+      "kind": "interface",
+      "fingerprint": "91022e968754b65c6779"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridColumnVisibilityDetail",
+      "kind": "interface",
+      "fingerprint": "1047e1d793ddb3a38e52"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridCopyOptions",
+      "kind": "interface",
+      "fingerprint": "91f9a49590a0aef7ddef"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridCsvOptions",
+      "kind": "interface",
+      "fingerprint": "20cd02ff056ee91b6e49"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridDataErrorDetail",
+      "kind": "interface",
+      "fingerprint": "42ec4f63a3841f972862"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridExportOptions",
+      "kind": "interface",
+      "fingerprint": "21a62aac4d1c85c7798f"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridFacets",
+      "kind": "interface",
+      "fingerprint": "d8828d0625b13813882a"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridFilter",
+      "kind": "interface",
+      "fingerprint": "53d796927bd723415f2a"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridGroupDetail",
+      "kind": "interface",
+      "fingerprint": "ebd605366fb3c33aca47"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridPageDetail",
+      "kind": "interface",
+      "fingerprint": "2a1c77b5a1833bb90724"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridRequest",
+      "kind": "interface",
+      "fingerprint": "3ba6f8c2cc49ecee516a"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridResponse",
+      "kind": "interface",
+      "fingerprint": "383ca41b9bc390404dbd"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridRowDetail",
+      "kind": "interface",
+      "fingerprint": "2b7e43d3e0e7398ec1ee"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridScrollOptions",
+      "kind": "interface",
+      "fingerprint": "d2d5046c7cee9655d62c"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridSelectionDetail",
+      "kind": "interface",
+      "fingerprint": "ca2f4604bcf9ce5a00ff"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridSort",
+      "kind": "interface",
+      "fingerprint": "f2f0ca945faac287af6c"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridStateFilter",
+      "kind": "interface",
+      "fingerprint": "3c1d54f39aaebf12c40a"
+    },
+    {
+      "module": "src/components/data/data-grid/data-grid-types.ts",
+      "exportName": "DataGridState",
+      "kind": "interface",
+      "fingerprint": "3505c52d17c0e54c4416"
+    },
+    {
+      "module": "src/components/data/document-library/document-library.class.ts",
+      "exportName": "DocumentLibraryFilterChangeDetail",
+      "kind": "interface",
+      "fingerprint": "5fa5edafb22a9d2d0c95"
+    },
+    {
+      "module": "src/components/data/document-library/document-library.class.ts",
+      "exportName": "DocumentLibraryOpenDetail",
+      "kind": "interface",
+      "fingerprint": "c161a92784ff29af98ea"
+    },
+    {
+      "module": "src/components/data/document-library/document-library.class.ts",
+      "exportName": "DocumentLibrarySelectionChangeDetail",
+      "kind": "interface",
+      "fingerprint": "f4cf5f5b4b5c915e94fb"
+    },
+    {
+      "module": "src/components/data/document-library/document-library.class.ts",
+      "exportName": "DocumentLibrarySortCommitDetail",
+      "kind": "interface",
+      "fingerprint": "c15b8662f540427d88e6"
+    },
+    {
+      "module": "src/components/data/document-library/document-library.class.ts",
+      "exportName": "DocumentLibrarySortRequestDetail",
+      "kind": "interface",
+      "fingerprint": "9b74cd7699b85beff60f"
+    },
+    {
+      "module": "src/components/data/document-library/document-library.class.ts",
+      "exportName": "LibraryDocument",
+      "kind": "interface",
+      "fingerprint": "c10b20bdaee110efa5bb"
+    },
+    {
+      "module": "src/components/data/env-list/env-list.class.ts",
+      "exportName": "EnvEntry",
+      "kind": "interface",
+      "fingerprint": "d140fb802b1370241eb5"
+    },
+    {
+      "module": "src/components/data/file-tree/file-tree.class.ts",
+      "exportName": "FileTreeNode",
+      "kind": "interface",
+      "fingerprint": "e53cef579dc1b85d739a"
+    },
+    {
+      "module": "src/components/data/flow-canvas/flow-types.ts",
+      "exportName": "FlowEdge",
+      "kind": "interface",
+      "fingerprint": "9be8cd7d3aacd91482d2"
+    },
+    {
+      "module": "src/components/data/flow-canvas/flow-types.ts",
+      "exportName": "FlowHandle",
+      "kind": "interface",
+      "fingerprint": "da32962d38334e05946f"
+    },
+    {
+      "module": "src/components/data/flow-canvas/flow-types.ts",
+      "exportName": "FlowLayoutChangeDetail",
+      "kind": "interface",
+      "fingerprint": "e34f3a782527d0d13173"
+    },
+    {
+      "module": "src/components/data/flow-canvas/flow-types.ts",
+      "exportName": "FlowNode",
+      "kind": "interface",
+      "fingerprint": "bffd7b70f706e3a811ab"
+    },
+    {
+      "module": "src/components/data/flow-canvas/flow-types.ts",
+      "exportName": "FlowRunDecoration",
+      "kind": "interface",
+      "fingerprint": "dfe6cd9fbece04a452c9"
+    },
+    {
+      "module": "src/components/data/flow-canvas/flow-types.ts",
+      "exportName": "FlowStructureEdgeSnapshot",
+      "kind": "interface",
+      "fingerprint": "9af32c6f8a81875d6e1b"
+    },
+    {
+      "module": "src/components/data/flow-canvas/flow-types.ts",
+      "exportName": "FlowStructureNodeSnapshot",
+      "kind": "interface",
+      "fingerprint": "91ca3e3424c87c237082"
+    },
+    {
+      "module": "src/components/data/flow-canvas/flow-types.ts",
+      "exportName": "FlowStructureSnapshot",
+      "kind": "interface",
+      "fingerprint": "1488f6978d97e55eb108"
+    },
+    {
+      "module": "src/components/data/flow-canvas/flow-types.ts",
+      "exportName": "FlowViewportSnapshot",
+      "kind": "interface",
+      "fingerprint": "2a54addea8f93d80fefd"
+    },
+    {
+      "module": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
+      "exportName": "GraphQueryDeleteDetail",
+      "kind": "interface",
+      "fingerprint": "08c0eb7320d103de936a"
+    },
+    {
+      "module": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
+      "exportName": "GraphQuery",
+      "kind": "interface",
+      "fingerprint": "4b203cb2c602ce12b02e"
+    },
+    {
+      "module": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
+      "exportName": "GraphQueryLoadDetail",
+      "kind": "interface",
+      "fingerprint": "d8b7dce53fa8c2a92fec"
+    },
+    {
+      "module": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
+      "exportName": "GraphQueryRunDetail",
+      "kind": "interface",
+      "fingerprint": "e57c18eeebcaf918fdc0"
+    },
+    {
+      "module": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
+      "exportName": "GraphQuerySaveDetail",
+      "kind": "interface",
+      "fingerprint": "47e92b27358973f8e12a"
+    },
+    {
+      "module": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
+      "exportName": "GraphQuerySavedItem",
+      "kind": "interface",
+      "fingerprint": "7d4cdcf5d2a4a2ffbdb9"
+    },
+    {
+      "module": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
+      "exportName": "GraphQueryTypeOption",
+      "kind": "interface",
+      "fingerprint": "c100e816f740bb22e7f5"
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap.class.ts",
+      "exportName": "CalendarCellPos",
+      "kind": "interface",
+      "fingerprint": "a73de766facd925209a2"
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap.class.ts",
+      "exportName": "HeatmapAnnotation",
+      "kind": "interface",
+      "fingerprint": "f33f6c566672c47809db"
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap.class.ts",
+      "exportName": "HeatmapCalendarData",
+      "kind": "interface",
+      "fingerprint": "547b90d4c95822d35c96"
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap.class.ts",
+      "exportName": "HeatmapLegendStop",
+      "kind": "interface",
+      "fingerprint": "012ac015ff0bcd6e7dd8"
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap.class.ts",
+      "exportName": "HeatmapMatrixData",
+      "kind": "interface",
+      "fingerprint": "b93d0290cf6914b7106c"
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap.class.ts",
+      "exportName": "HeatmapSelectedCell",
+      "kind": "interface",
+      "fingerprint": "0be5d28680f41eae4e72"
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap.class.ts",
+      "exportName": "hexToRgb",
+      "kind": "function",
+      "fingerprint": "5ae192c2cdf2d53ecd5a"
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap.class.ts",
+      "exportName": "MatrixCellPos",
+      "kind": "interface",
+      "fingerprint": "2917713a7005c8417640"
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap.class.ts",
+      "exportName": "normalizeBucketCount",
+      "kind": "function",
+      "fingerprint": "3e48dfbe8c784c09eeff"
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap.class.ts",
+      "exportName": "resolveRgb",
+      "kind": "function",
+      "fingerprint": "ad0d4a218c965bc56d81"
+    },
+    {
+      "module": "src/components/data/pagination/pagination.class.ts",
+      "exportName": "LyraPaginationChangeDetail",
+      "kind": "interface",
+      "fingerprint": "3d8fe7cfd87b28b81874"
+    },
+    {
+      "module": "src/components/data/sequence-strip/sequence-strip.class.ts",
+      "exportName": "SequenceStripCategory",
+      "kind": "interface",
+      "fingerprint": "0d9b37efd29b5cec7b22"
+    },
+    {
+      "module": "src/components/data/sequence-strip/sequence-strip.class.ts",
+      "exportName": "SequenceStripItem",
+      "kind": "interface",
+      "fingerprint": "c02b68751f511870b4b5"
+    },
+    {
+      "module": "src/components/data/stat/stat.class.ts",
+      "exportName": "StatRow",
+      "kind": "interface",
+      "fingerprint": "df4e5a842b42a102016e"
+    },
+    {
+      "module": "src/components/data/table/table.class.ts",
+      "exportName": "TableColumn",
+      "kind": "interface",
+      "fingerprint": "de1e054b8a7979ff5944"
+    },
+    {
+      "module": "src/components/data/table/table.class.ts",
+      "exportName": "TableSortCommitDetail",
+      "kind": "interface",
+      "fingerprint": "1fed07f385a08c12fe73"
+    },
+    {
+      "module": "src/components/data/table/table.class.ts",
+      "exportName": "TableSortRequestDetail",
+      "kind": "interface",
+      "fingerprint": "5b2e8b017c00116d4ece"
+    },
+    {
+      "module": "src/components/data/tree/tree-types.ts",
+      "exportName": "LyraTreeNodeData",
+      "kind": "interface",
+      "fingerprint": "0b04c0fd99d8de4167bb"
+    },
+    {
+      "module": "src/components/data/tree/tree-types.ts",
+      "exportName": "TreeBadge",
+      "kind": "interface",
+      "fingerprint": "43778a20e43db6acbda9"
+    },
+    {
+      "module": "src/components/data/word-cloud/word-cloud-layout.ts",
+      "exportName": "WordCloudWord",
+      "kind": "interface",
+      "fingerprint": "4454152029ba419f8bd2"
+    },
+    {
+      "module": "src/components/data/word-cloud/word-cloud.class.ts",
+      "exportName": "WordCloudLegendItem",
+      "kind": "interface",
+      "fingerprint": "8a2d1a9530ddeeee6b13"
+    },
+    {
+      "module": "src/components/forms/color-picker/color-core.ts",
+      "exportName": "LyraColorHsva",
+      "kind": "interface",
+      "fingerprint": "c947da7e99091c0c18ed"
+    },
+    {
+      "module": "src/components/forms/color-picker/color-picker.class.ts",
+      "exportName": "LyraColorPickerSwatch",
+      "kind": "interface",
+      "fingerprint": "b26a05b33dda7971e42a"
+    },
+    {
+      "module": "src/components/forms/combobox/combobox.class.ts",
+      "exportName": "ComboboxFilterDetail",
+      "kind": "interface",
+      "fingerprint": "cab6113f14537e1b6b13"
+    },
+    {
+      "module": "src/components/forms/combobox/combobox.class.ts",
+      "exportName": "ComboboxSourceResult",
+      "kind": "interface",
+      "fingerprint": "efdbcca79ad3e07e3039"
+    },
+    {
+      "module": "src/components/forms/combobox/combobox.class.ts",
+      "exportName": "ComboboxSourceRow",
+      "kind": "interface",
+      "fingerprint": "ac8b5481b4727b543d51"
+    },
+    {
+      "module": "src/components/forms/combobox/combobox.class.ts",
+      "exportName": "LyraComboboxObjectValidator",
+      "kind": "interface",
+      "fingerprint": "b3c80ef9b02a1ce61506"
+    },
+    {
+      "module": "src/components/forms/combobox/combobox.class.ts",
+      "exportName": "LyraComboboxObjectValidatorResult",
+      "kind": "interface",
+      "fingerprint": "e6f0ad54fb521edce5c5"
+    },
+    {
+      "module": "src/components/forms/date-picker/date-input.class.ts",
+      "exportName": "LyraDateInputObjectValidator",
+      "kind": "interface",
+      "fingerprint": "fb76911f1200a4c136a1"
+    },
+    {
+      "module": "src/components/forms/date-picker/date-input.class.ts",
+      "exportName": "LyraDateInputObjectValidatorResult",
+      "kind": "interface",
+      "fingerprint": "30db8df7bf367883883c"
+    },
+    {
+      "module": "src/components/forms/date-picker/date-picker.class.ts",
+      "exportName": "DateRange",
+      "kind": "interface",
+      "fingerprint": "14cb6be995c699d91be7"
+    },
+    {
+      "module": "src/components/forms/emoji-picker/emoji-types.ts",
+      "exportName": "EmojiPickerGroup",
+      "kind": "interface",
+      "fingerprint": "4ce2186c26cbaed0dc04"
+    },
+    {
+      "module": "src/components/forms/emoji-picker/emoji-types.ts",
+      "exportName": "EmojiPickerItem",
+      "kind": "interface",
+      "fingerprint": "7b7673fdad0f7f17b826"
+    },
+    {
+      "module": "src/components/forms/locale-picker/locale-picker.class.ts",
+      "exportName": "LyraLocaleChangeDetail",
+      "kind": "interface",
+      "fingerprint": "12a2e3492a42a0c19ecf"
+    },
+    {
+      "module": "src/components/forms/locale-picker/locale-picker.class.ts",
+      "exportName": "LyraLocaleEntry",
+      "kind": "interface",
+      "fingerprint": "465896bbb9fc9fc67290"
+    },
+    {
+      "module": "src/components/forms/phone-input/phone-input.class.ts",
+      "exportName": "LibphonenumberModuleLike",
+      "kind": "interface",
+      "fingerprint": "acccddf491b909589c08"
+    },
+    {
+      "module": "src/components/forms/phone-input/phone-input.class.ts",
+      "exportName": "loadLibphonenumberAdapter",
+      "kind": "function",
+      "fingerprint": "f637b571922e6803aa5e"
+    },
+    {
+      "module": "src/components/forms/phone-input/phone-input.class.ts",
+      "exportName": "LyraPhoneCountry",
+      "kind": "interface",
+      "fingerprint": "18efe60515d6b2606ff1"
+    },
+    {
+      "module": "src/components/forms/phone-input/phone-input.class.ts",
+      "exportName": "LyraPhoneInputEventDetail",
+      "kind": "interface",
+      "fingerprint": "f1ce980d580cc1ae2b40"
+    },
+    {
+      "module": "src/components/forms/phone-input/phone-input.class.ts",
+      "exportName": "LyraPhoneNumberAdapter",
+      "kind": "interface",
+      "fingerprint": "58c485d0f16799a5e796"
+    },
+    {
+      "module": "src/components/forms/rubric-form/rubric-form.class.ts",
+      "exportName": "CategoryRubricKey",
+      "kind": "interface",
+      "fingerprint": "21df71d2dfc139310da8"
+    },
+    {
+      "module": "src/components/forms/rubric-form/rubric-form.class.ts",
+      "exportName": "CommentRubricKey",
+      "kind": "interface",
+      "fingerprint": "4010c7203df414661456"
+    },
+    {
+      "module": "src/components/forms/rubric-form/rubric-form.class.ts",
+      "exportName": "RubricKeyOption",
+      "kind": "interface",
+      "fingerprint": "b8667d0b28d7870921a1"
+    },
+    {
+      "module": "src/components/forms/rubric-form/rubric-form.class.ts",
+      "exportName": "ScoreRubricKey",
+      "kind": "interface",
+      "fingerprint": "97eecc0431cadc9b6195"
+    },
+    {
+      "module": "src/components/forms/slider/slider.class.ts",
+      "exportName": "LyraSliderChangeDetail",
+      "kind": "interface",
+      "fingerprint": "bd5bf7d9d25645166c4d"
+    },
+    {
+      "module": "src/components/forms/swatch-picker/swatch-picker.class.ts",
+      "exportName": "SwatchPickerItem",
+      "kind": "interface",
+      "fingerprint": "a0dfe85cf2a7d42971f7"
+    },
+    {
+      "module": "src/components/forms/textarea/textarea.class.ts",
+      "exportName": "TextareaScrollPosition",
+      "kind": "interface",
+      "fingerprint": "e50f79f33dec623c3e6a"
+    },
+    {
+      "module": "src/components/forms/time-range/time-range.class.ts",
+      "exportName": "TimeRangePreset",
+      "kind": "interface",
+      "fingerprint": "61b7b1f724c5d8d3e99a"
+    },
+    {
+      "module": "src/components/layout/app-rail/app-rail.class.ts",
+      "exportName": "AppRailModeChangeDetail",
+      "kind": "interface",
+      "fingerprint": "8a2afd8081c7ea41ecd3"
+    },
+    {
+      "module": "src/components/layout/app-rail/app-rail.class.ts",
+      "exportName": "AppRailResizeDetail",
+      "kind": "interface",
+      "fingerprint": "7295209e9d350ed87c54"
+    },
+    {
+      "module": "src/components/layout/app-rail/app-rail.class.ts",
+      "exportName": "AppRailToggleDetail",
+      "kind": "interface",
+      "fingerprint": "3de6446acc8b6367328c"
+    },
+    {
+      "module": "src/components/layout/app-rail/app-rail.class.ts",
+      "exportName": "computeAppRailMode",
+      "kind": "function",
+      "fingerprint": "a8658e0f01f28a90d6b6"
+    },
+    {
+      "module": "src/components/layout/command-palette/command-palette.class.ts",
+      "exportName": "LyraCommand",
+      "kind": "interface",
+      "fingerprint": "0d45e15c7d4725a741ef"
+    },
+    {
+      "module": "src/components/layout/dashboard-grid/dashboard-grid.class.ts",
+      "exportName": "LyraDashboardCellMoveDetail",
+      "kind": "interface",
+      "fingerprint": "3f9b89f56ecdeff33c95"
+    },
+    {
+      "module": "src/components/layout/dashboard-grid/dashboard-grid.class.ts",
+      "exportName": "LyraDashboardCellResizeDetail",
+      "kind": "interface",
+      "fingerprint": "6c59c7cbfc2fe5f9a9ca"
+    },
+    {
+      "module": "src/components/layout/dashboard-grid/dashboard-grid.class.ts",
+      "exportName": "LyraDashboardCollisionDetail",
+      "kind": "interface",
+      "fingerprint": "1783f885fd967d393a26"
+    },
+    {
+      "module": "src/components/layout/dashboard-grid/dashboard-grid.class.ts",
+      "exportName": "LyraDashboardLayoutChangeDetail",
+      "kind": "interface",
+      "fingerprint": "287626c6ac5a1e8bc90b"
+    },
+    {
+      "module": "src/components/layout/details/accordion.class.ts",
+      "exportName": "LyraAccordionEventDetail",
+      "kind": "interface",
+      "fingerprint": "f11e464c992a04b9a0b3"
+    },
+    {
+      "module": "src/components/layout/details/details.class.ts",
+      "exportName": "LyraDetailsToggleDetail",
+      "kind": "interface",
+      "fingerprint": "53fb4e9cfeb023795240"
+    },
+    {
+      "module": "src/components/layout/dock-panel/dock-panel.class.ts",
+      "exportName": "LyraDockPanelCollapseChangeDetail",
+      "kind": "interface",
+      "fingerprint": "89d3804320e29f70d689"
+    },
+    {
+      "module": "src/components/layout/dock-panel/dock-panel.class.ts",
+      "exportName": "LyraDockPanelResizeDetail",
+      "kind": "interface",
+      "fingerprint": "120c7713ff717e460888"
+    },
+    {
+      "module": "src/components/layout/drilldown-panel/drilldown-panel.class.ts",
+      "exportName": "LyraDrilldownCategoryChangeDetail",
+      "kind": "interface",
+      "fingerprint": "8cd8d0e71b4d1f71ea12"
+    },
+    {
+      "module": "src/components/layout/drilldown-panel/drilldown-panel.class.ts",
+      "exportName": "LyraDrilldownDocumentDownloadDetail",
+      "kind": "interface",
+      "fingerprint": "adc17e19196f0d6a61f3"
+    },
+    {
+      "module": "src/components/layout/drilldown-panel/drilldown-panel.class.ts",
+      "exportName": "LyraDrilldownDocumentHighlightActivateDetail",
+      "kind": "interface",
+      "fingerprint": "4ec79a7f2f342569c8db"
+    },
+    {
+      "module": "src/components/layout/drilldown-panel/drilldown-panel.class.ts",
+      "exportName": "LyraDrilldownDocument",
+      "kind": "interface",
+      "fingerprint": "44ece3cdde8b621531a0"
+    },
+    {
+      "module": "src/components/layout/drilldown-panel/drilldown-panel.class.ts",
+      "exportName": "LyraDrilldownDocumentRenderErrorDetail",
+      "kind": "interface",
+      "fingerprint": "d73c13421658644fcc80"
+    },
+    {
+      "module": "src/components/layout/drilldown-panel/drilldown-panel.class.ts",
+      "exportName": "LyraDrilldownEntityActivateDetail",
+      "kind": "interface",
+      "fingerprint": "d37bb0b05b6a0aa13441"
+    },
+    {
+      "module": "src/components/layout/drilldown-panel/drilldown-panel.class.ts",
+      "exportName": "LyraDrilldownEntity",
+      "kind": "interface",
+      "fingerprint": "5061393d1f5f68c354f9"
+    },
+    {
+      "module": "src/components/layout/drilldown-panel/drilldown-panel.class.ts",
+      "exportName": "LyraDrilldownEvidenceExpandDetail",
+      "kind": "interface",
+      "fingerprint": "1f2f892f497da86124fa"
+    },
+    {
+      "module": "src/components/layout/drilldown-panel/drilldown-panel.class.ts",
+      "exportName": "LyraDrilldownEvidenceItem",
+      "kind": "interface",
+      "fingerprint": "88f4eb6632ccabc9e407"
+    },
+    {
+      "module": "src/components/layout/drilldown-panel/drilldown-panel.class.ts",
+      "exportName": "LyraDrilldownEvidenceOpenDetail",
+      "kind": "interface",
+      "fingerprint": "188a372fa382c628da97"
+    },
+    {
+      "module": "src/components/layout/drilldown-panel/drilldown-panel.class.ts",
+      "exportName": "LyraDrilldownNavigateDetail",
+      "kind": "interface",
+      "fingerprint": "52af01f33fd25e5fb040"
+    },
+    {
+      "module": "src/components/layout/drilldown-panel/drilldown-panel.class.ts",
+      "exportName": "LyraDrilldownNode",
+      "kind": "interface",
+      "fingerprint": "cc0b30f8ed58e3a7a686"
+    },
+    {
+      "module": "src/components/layout/filter-bar/filter-bar.class.ts",
+      "exportName": "LyraFilterBarComboboxDefinition",
+      "kind": "interface",
+      "fingerprint": "ed4fb19a17c75c9369c6"
+    },
+    {
+      "module": "src/components/layout/filter-bar/filter-bar.class.ts",
+      "exportName": "LyraFilterBarCustomControlAdapter",
+      "kind": "interface",
+      "fingerprint": "86a350b2462ec1620159"
+    },
+    {
+      "module": "src/components/layout/filter-bar/filter-bar.class.ts",
+      "exportName": "LyraFilterBarCustomControlContext",
+      "kind": "interface",
+      "fingerprint": "48079b65136ff20952f3"
+    },
+    {
+      "module": "src/components/layout/filter-bar/filter-bar.class.ts",
+      "exportName": "LyraFilterBarCustomControl",
+      "kind": "interface",
+      "fingerprint": "1cdfd13caef7b9b272d0"
+    },
+    {
+      "module": "src/components/layout/filter-bar/filter-bar.class.ts",
+      "exportName": "LyraFilterBarCustomDefinition",
+      "kind": "interface",
+      "fingerprint": "32eaaf4a6b75aea193cb"
+    },
+    {
+      "module": "src/components/layout/filter-bar/filter-bar.class.ts",
+      "exportName": "LyraFilterBarDateDefinition",
+      "kind": "interface",
+      "fingerprint": "0fe8143ced8c0d41d366"
+    },
+    {
+      "module": "src/components/layout/filter-bar/filter-bar.class.ts",
+      "exportName": "LyraFilterBarDateRangeDefinition",
+      "kind": "interface",
+      "fingerprint": "b90704b5ff1135ad7c2d"
+    },
+    {
+      "module": "src/components/layout/filter-bar/filter-bar.class.ts",
+      "exportName": "LyraFilterBarInputDetail",
+      "kind": "interface",
+      "fingerprint": "36ec5ebc19b336040611"
+    },
+    {
+      "module": "src/components/layout/filter-bar/filter-bar.class.ts",
+      "exportName": "LyraFilterBarOption",
+      "kind": "interface",
+      "fingerprint": "d65b0897b79ff93bf2a9"
+    },
+    {
+      "module": "src/components/layout/filter-bar/filter-bar.class.ts",
+      "exportName": "LyraFilterBarResetDetail",
+      "kind": "interface",
+      "fingerprint": "3a837f40ea6a022aaf3a"
+    },
+    {
+      "module": "src/components/layout/filter-bar/filter-bar.class.ts",
+      "exportName": "LyraFilterBarSelectDefinition",
+      "kind": "interface",
+      "fingerprint": "efc407ddc8268448a686"
+    },
+    {
+      "module": "src/components/layout/filter-bar/filter-bar.class.ts",
+      "exportName": "LyraFilterBarTextDefinition",
+      "kind": "interface",
+      "fingerprint": "9b3faac9faadf8308925"
+    },
+    {
+      "module": "src/components/layout/filter-bar/filter-bar.class.ts",
+      "exportName": "LyraFilterBarValidityDetail",
+      "kind": "interface",
+      "fingerprint": "b6279ddf16edfc3e49f7"
+    },
+    {
+      "module": "src/components/layout/menu/menu-item.class.ts",
+      "exportName": "MenuItemChangeDetail",
+      "kind": "interface",
+      "fingerprint": "5b6f6cfc9f5aeff6e186"
+    },
+    {
+      "module": "src/components/layout/menu/menu-item.class.ts",
+      "exportName": "MenuItemStateChangeDetail",
+      "kind": "interface",
+      "fingerprint": "304568c4c2e3699b952f"
+    },
+    {
+      "module": "src/components/layout/menu/menu.class.ts",
+      "exportName": "MenuItemSelectDetail",
+      "kind": "interface",
+      "fingerprint": "f016807829cf367e727e"
+    },
+    {
+      "module": "src/components/layout/multi-split/multi-split.class.ts",
+      "exportName": "LyraMultiSplitCollapseChangeDetail",
+      "kind": "interface",
+      "fingerprint": "e3af506902101d8a2af3"
+    },
+    {
+      "module": "src/components/layout/multi-split/multi-split.class.ts",
+      "exportName": "LyraMultiSplitConstraintIssueDetail",
+      "kind": "interface",
+      "fingerprint": "807d99776c7115e7f394"
+    },
+    {
+      "module": "src/components/layout/multi-split/multi-split.class.ts",
+      "exportName": "LyraMultiSplitOrientationChangeDetail",
+      "kind": "interface",
+      "fingerprint": "40e03c8e3f326f455f74"
+    },
+    {
+      "module": "src/components/layout/multi-split/multi-split.class.ts",
+      "exportName": "LyraMultiSplitPanelConstraint",
+      "kind": "interface",
+      "fingerprint": "d8a0b68a2775729a7f38"
+    },
+    {
+      "module": "src/components/layout/multi-split/multi-split.class.ts",
+      "exportName": "LyraMultiSplitResizeDetail",
+      "kind": "interface",
+      "fingerprint": "0ebf54cb9c62deda10ae"
+    },
+    {
+      "module": "src/components/layout/reorder-list/reorder-list.class.ts",
+      "exportName": "LyraReorderDetail",
+      "kind": "interface",
+      "fingerprint": "2c096717c1740c4a691a"
+    },
+    {
+      "module": "src/components/layout/responsive-panel/responsive-panel.class.ts",
+      "exportName": "LyraResponsivePanelModeChangeDetail",
+      "kind": "interface",
+      "fingerprint": "ca37796156530b38fca8"
+    },
+    {
+      "module": "src/components/layout/responsive-panel/responsive-panel.class.ts",
+      "exportName": "resolveResponsivePanelEffectiveMode",
+      "kind": "function",
+      "fingerprint": "bf3d8c1d96c36142c8bb"
+    },
+    {
+      "module": "src/components/layout/segmented/segmented.class.ts",
+      "exportName": "LyraSegmentedItem",
+      "kind": "interface",
+      "fingerprint": "16961aeb2610798a64cf"
+    },
+    {
+      "module": "src/components/layout/split-panel/split-panel.class.ts",
+      "exportName": "SnapFunctionParams",
+      "kind": "interface",
+      "fingerprint": "50ce127470197e4f5604"
+    },
+    {
+      "module": "src/components/layout/split-panel/split-panel.class.ts",
+      "exportName": "SplitPanelRepositionDetail",
+      "kind": "interface",
+      "fingerprint": "574899fe4962628ec471"
+    },
+    {
+      "module": "src/components/layout/stepper/stepper.class.ts",
+      "exportName": "LyraStepItem",
+      "kind": "interface",
+      "fingerprint": "f7cf5254212adec280d9"
+    },
+    {
+      "module": "src/components/layout/stepper/stepper.class.ts",
+      "exportName": "LyraStepperOrientationChangeDetail",
+      "kind": "interface",
+      "fingerprint": "a0526da29198215bb263"
+    },
+    {
+      "module": "src/components/layout/virtual-list/virtual-list.class.ts",
+      "exportName": "VirtualListGroup",
+      "kind": "interface",
+      "fingerprint": "273b73451ae4991bf5fa"
+    },
+    {
+      "module": "src/components/layout/virtual-list/virtual-list.class.ts",
+      "exportName": "VirtualListIndexedSource",
+      "kind": "interface",
+      "fingerprint": "834ea7c792d62ad1fce5"
+    },
+    {
+      "module": "src/components/layout/virtual-list/virtual-list.class.ts",
+      "exportName": "VirtualListRange",
+      "kind": "interface",
+      "fingerprint": "c0b4054874bf7c9559a9"
+    },
+    {
+      "module": "src/components/layout/virtual-list/virtual-list.class.ts",
+      "exportName": "VirtualListScroll",
+      "kind": "interface",
+      "fingerprint": "07263e768f5b13df2e55"
+    },
+    {
+      "module": "src/components/layout/widget/widget.class.ts",
+      "exportName": "LyraWidgetView",
+      "kind": "interface",
+      "fingerprint": "817092485aa24d5ec841"
+    },
+    {
+      "module": "src/components/media/animation/animation-catalog.ts",
+      "exportName": "getAnimationNames",
+      "kind": "function",
+      "fingerprint": "de585b5dc4bba62e2239"
+    },
+    {
+      "module": "src/components/media/animation/animation-catalog.ts",
+      "exportName": "getEasingNames",
+      "kind": "function",
+      "fingerprint": "eda200d5fd6902bbd619"
+    },
+    {
+      "module": "src/components/media/attachment-chip/attachment-chip.class.ts",
+      "exportName": "LyraAttachmentIdDetail",
+      "kind": "interface",
+      "fingerprint": "3b7aed466f747bec61f5"
+    },
+    {
+      "module": "src/components/media/attachment-chip/attachment-chip.class.ts",
+      "exportName": "LyraAttachmentPreviewRequestDetail",
+      "kind": "interface",
+      "fingerprint": "1790a7d27c0b2322f28d"
+    },
+    {
+      "module": "src/components/media/attachment-trigger/attachment-trigger.class.ts",
+      "exportName": "LyraAttachmentFilesDetail",
+      "kind": "interface",
+      "fingerprint": "8e431839d97b66c3bff0"
+    },
+    {
+      "module": "src/components/media/av-player/av-player.class.ts",
+      "exportName": "LyraAvCueChangeDetail",
+      "kind": "interface",
+      "fingerprint": "736526b079299ac7d3e0"
+    },
+    {
+      "module": "src/components/media/av-player/av-player.class.ts",
+      "exportName": "LyraAvCue",
+      "kind": "interface",
+      "fingerprint": "b8058eb3023f1cc5beaf"
+    },
+    {
+      "module": "src/components/media/av-player/av-player.class.ts",
+      "exportName": "LyraAvTrack",
+      "kind": "interface",
+      "fingerprint": "beae55e2c6668d101760"
+    },
+    {
+      "module": "src/components/media/avatar-group/avatar-group.class.ts",
+      "exportName": "LyraAvatarGroupOverflowDetail",
+      "kind": "interface",
+      "fingerprint": "7ed2540e69619427163f"
+    },
+    {
+      "module": "src/components/media/avatar/avatar.class.ts",
+      "exportName": "LyraAvatarErrorDetail",
+      "kind": "interface",
+      "fingerprint": "6618f5ac2a1bbc036637"
+    },
+    {
+      "module": "src/components/media/file-input/file-input.class.ts",
+      "exportName": "LyraFileInputFilesDetail",
+      "kind": "interface",
+      "fingerprint": "ddc9110a10f75a48c2bc"
+    },
+    {
+      "module": "src/components/media/file-input/file-input.class.ts",
+      "exportName": "LyraFileInputObjectValidator",
+      "kind": "interface",
+      "fingerprint": "b3ba960718569842b23d"
+    },
+    {
+      "module": "src/components/media/file-input/file-input.class.ts",
+      "exportName": "LyraFileInputObjectValidatorResult",
+      "kind": "interface",
+      "fingerprint": "8da926136fad7f34482b"
+    },
+    {
+      "module": "src/components/media/file-input/file-input.class.ts",
+      "exportName": "LyraFileInputRejectedFile",
+      "kind": "interface",
+      "fingerprint": "d0b48710f6ca4031167a"
+    },
+    {
+      "module": "src/components/media/flag/flag-peer.ts",
+      "exportName": "registerLyraFlagPeer",
+      "kind": "function",
+      "fingerprint": "df41af88c43fca9aec0b"
+    },
+    {
+      "module": "src/components/media/flag/flag.class.ts",
+      "exportName": "loadFlagUrl",
+      "kind": "function",
+      "fingerprint": "58843be4e0a1e455b67f"
+    },
+    {
+      "module": "src/components/media/flag/flag.class.ts",
+      "exportName": "setFlagUrlResolver",
+      "kind": "function",
+      "fingerprint": "c9a12cad2753c0b67687"
+    },
+    {
+      "module": "src/components/media/flag/language-map.ts",
+      "exportName": "languageToCountry",
+      "kind": "function",
+      "fingerprint": "adcf48a1dda1fad3206f"
+    },
+    {
+      "module": "src/components/media/flag/language-map.ts",
+      "exportName": "localeNativeName",
+      "kind": "function",
+      "fingerprint": "74f8e77ce2b904aa5ca5"
+    },
+    {
+      "module": "src/components/media/image-viewer/image-viewer.class.ts",
+      "exportName": "LyraImageRegionRect",
+      "kind": "interface",
+      "fingerprint": "5756a520088de9252279"
+    },
+    {
+      "module": "src/components/media/lightbox/lightbox.class.ts",
+      "exportName": "LyraLightboxHideDetail",
+      "kind": "interface",
+      "fingerprint": "f3f71e3a79680f8ee340"
+    },
+    {
+      "module": "src/components/media/lightbox/lightbox.class.ts",
+      "exportName": "LyraLightboxImage",
+      "kind": "interface",
+      "fingerprint": "7ab9554cb22e7a3c6b01"
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapChoroplethLayer",
+      "kind": "interface",
+      "fingerprint": "e485c94e2ebea5fc3b90"
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapGeoJsonDataLayer",
+      "kind": "interface",
+      "fingerprint": "8a14ef93c1007f493bb4"
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapInstance",
+      "kind": "interface",
+      "fingerprint": "07a5adf6c8e84931ee26"
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapLegendEntry",
+      "kind": "interface",
+      "fingerprint": "a87816b710b772dd15ca"
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapLegendProjection",
+      "kind": "interface",
+      "fingerprint": "3e219401cc3bc9e89e97"
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapMarker",
+      "kind": "interface",
+      "fingerprint": "1c6c2d7c7099943106be"
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapStyleSpecification",
+      "kind": "interface",
+      "fingerprint": "18297d6363e3417ea254"
+    },
+    {
+      "module": "src/components/media/media-card/media-card.class.ts",
+      "exportName": "LyraMediaCardOpenDetail",
+      "kind": "interface",
+      "fingerprint": "7175f3bfca6035319d9c"
+    },
+    {
+      "module": "src/components/media/video-playlist/video-playlist.class.ts",
+      "exportName": "LyraVideoPlaylistChangeDetail",
+      "kind": "interface",
+      "fingerprint": "70c0edebdf40996c8191"
+    },
+    {
+      "module": "src/components/media/video-playlist/video-playlist.class.ts",
+      "exportName": "LyraVideoPlaylistItem",
+      "kind": "interface",
+      "fingerprint": "41c0bc076ff5a48830bb"
+    },
+    {
+      "module": "src/components/media/video-playlist/video-playlist.class.ts",
+      "exportName": "LyraVideoPlaylistSource",
+      "kind": "interface",
+      "fingerprint": "ae691f9c3c6afb759023"
+    },
+    {
+      "module": "src/components/media/video-playlist/video-playlist.class.ts",
+      "exportName": "LyraVideoPlaylistTrack",
+      "kind": "interface",
+      "fingerprint": "3b7d24d12ae45c594de5"
+    },
+    {
+      "module": "src/components/media/video-playlist/video-playlist.class.ts",
+      "exportName": "LyraVideoPlaylistVideo",
+      "kind": "interface",
+      "fingerprint": "77245a2f9844c4bfe825"
+    },
+    {
+      "module": "src/components/media/video/video.class.ts",
+      "exportName": "VideoState",
+      "kind": "interface",
+      "fingerprint": "8baf6b27ea0c84563408"
+    },
+    {
+      "module": "src/components/overlays/chip/chip-group.class.ts",
+      "exportName": "ChipGroupOverflowToggleDetail",
+      "kind": "interface",
+      "fingerprint": "2ccc62d928d1ccb8f2d8"
+    },
+    {
+      "module": "src/components/overlays/chip/chip.class.ts",
+      "exportName": "ChipRemoveDetail",
+      "kind": "interface",
+      "fingerprint": "8695e67d03105097b79b"
+    },
+    {
+      "module": "src/components/overlays/chip/chip.class.ts",
+      "exportName": "ChipSelectDetail",
+      "kind": "interface",
+      "fingerprint": "c2656d785de74db281fd"
+    },
+    {
+      "module": "src/components/overlays/dialog/confirm.ts",
+      "exportName": "confirm",
+      "kind": "function",
+      "fingerprint": "c77a3af4cb678efc7056"
+    },
+    {
+      "module": "src/components/overlays/dialog/confirm.ts",
+      "exportName": "ConfirmOptions",
+      "kind": "interface",
+      "fingerprint": "879f5abe23969fa334d1"
+    },
+    {
+      "module": "src/components/overlays/dialog/dialog.class.ts",
+      "exportName": "LyraDialogHideDetail",
+      "kind": "interface",
+      "fingerprint": "569789a9a288c987a3a9"
+    },
+    {
+      "module": "src/components/overlays/dialog/dialog.class.ts",
+      "exportName": "LyraDialogModalController",
+      "kind": "interface",
+      "fingerprint": "a47c65815d82be4e13b4"
+    },
+    {
+      "module": "src/components/overlays/dialog/dialog.class.ts",
+      "exportName": "LyraDialogRequestCloseDetail",
+      "kind": "interface",
+      "fingerprint": "1665941e6c27dbce634a"
+    },
+    {
+      "module": "src/components/overlays/kbd/kbd.class.ts",
+      "exportName": "KbdKeyLabel",
+      "kind": "interface",
+      "fingerprint": "e06a46ea2524b88279c9"
+    },
+    {
+      "module": "src/components/overlays/kbd/kbd.class.ts",
+      "exportName": "parseShortcut",
+      "kind": "function",
+      "fingerprint": "c3ed97be16f5801dd784"
+    },
+    {
+      "module": "src/components/overlays/kbd/kbd.class.ts",
+      "exportName": "shortcutTokenLabel",
+      "kind": "function",
+      "fingerprint": "f29cd84d85bc1b6d6116"
+    },
+    {
+      "module": "src/components/overlays/toast/toast.class.ts",
+      "exportName": "LyraToastOptions",
+      "kind": "interface",
+      "fingerprint": "c954bc9030bc3ca9d827"
+    },
+    {
+      "module": "src/components/overlays/toast/toast.class.ts",
+      "exportName": "ToastOverflowDetail",
+      "kind": "interface",
+      "fingerprint": "bdfc6821d86d14b158d5"
+    },
+    {
+      "module": "src/components/overlays/toast/toaster.ts",
+      "exportName": "toast",
+      "kind": "function",
+      "fingerprint": "aeeb53bac039f5ad1629"
+    },
+    {
+      "module": "src/components/overlays/toast/toaster.ts",
+      "exportName": "ToastHandle",
+      "kind": "interface",
+      "fingerprint": "f7c682195739f8547af4"
+    },
+    {
+      "module": "src/components/retrieval/chunk-inspector/chunk-inspector.class.ts",
+      "exportName": "LyraChunk",
+      "kind": "interface",
+      "fingerprint": "fe115ab96c6490a433d0"
+    },
+    {
+      "module": "src/components/retrieval/citation-badge/citation-badge.class.ts",
+      "exportName": "CitationActivateDetail",
+      "kind": "interface",
+      "fingerprint": "181d995e87a6504a58b5"
+    },
+    {
+      "module": "src/components/retrieval/citation-badge/citation-badge.class.ts",
+      "exportName": "CitationOpenDetail",
+      "kind": "interface",
+      "fingerprint": "e23ce52d1cd534c1f23c"
+    },
+    {
+      "module": "src/components/retrieval/community-card/community-card.class.ts",
+      "exportName": "LyraCommunity",
+      "kind": "interface",
+      "fingerprint": "973d674b761f410f6e66"
+    },
+    {
+      "module": "src/components/retrieval/embedding-explorer/embedding-explorer.class.ts",
+      "exportName": "EmbeddingPoint",
+      "kind": "interface",
+      "fingerprint": "65770c09e7bed2681c52"
+    },
+    {
+      "module": "src/components/retrieval/entity-card/entity-card.class.ts",
+      "exportName": "LyraEntity",
+      "kind": "interface",
+      "fingerprint": "2e51a315e7829357b715"
+    },
+    {
+      "module": "src/components/retrieval/entity-dossier/entity-dossier.class.ts",
+      "exportName": "LyraEntityDossierConfidence",
+      "kind": "interface",
+      "fingerprint": "a4d39f4528b6abf6930a"
+    },
+    {
+      "module": "src/components/retrieval/graph-legend/graph-legend.class.ts",
+      "exportName": "LyraGraphLegendVisibilityDetail",
+      "kind": "interface",
+      "fingerprint": "0a242d9ff69951a8f0ba"
+    },
+    {
+      "module": "src/components/retrieval/graph/graph.class.ts",
+      "exportName": "GraphCommunity",
+      "kind": "interface",
+      "fingerprint": "43c7f7d872a1fd4cb712"
+    },
+    {
+      "module": "src/components/retrieval/graph/graph.class.ts",
+      "exportName": "LyraGraphLink",
+      "kind": "interface",
+      "fingerprint": "087e3b14934781b83c8b"
+    },
+    {
+      "module": "src/components/retrieval/graph/graph.class.ts",
+      "exportName": "LyraGraphNode",
+      "kind": "interface",
+      "fingerprint": "f4c79193e51759b5166a"
+    },
+    {
+      "module": "src/components/retrieval/graph/graph.class.ts",
+      "exportName": "LyraScoreThresholds",
+      "kind": "interface",
+      "fingerprint": "1f66b783821ac81846bd"
+    },
+    {
+      "module": "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
+      "exportName": "IngestionCancelEventDetail",
+      "kind": "interface",
+      "fingerprint": "6a62df238c44e5adb5ad"
+    },
+    {
+      "module": "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
+      "exportName": "IngestionQueueItem",
+      "kind": "interface",
+      "fingerprint": "fe1e72de5ccd92a1c8b6"
+    },
+    {
+      "module": "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
+      "exportName": "IngestionRetryEventDetail",
+      "kind": "interface",
+      "fingerprint": "4f90b50e57e794e09c8d"
+    },
+    {
+      "module": "src/components/retrieval/knowledge-base/knowledge-base.class.ts",
+      "exportName": "KnowledgeSource",
+      "kind": "interface",
+      "fingerprint": "f65fb909709ed56e6dc8"
+    },
+    {
+      "module": "src/components/retrieval/memory-panel/memory-panel.class.ts",
+      "exportName": "LyraMemoryAddDetail",
+      "kind": "interface",
+      "fingerprint": "314667d550dadb2aa2ce"
+    },
+    {
+      "module": "src/components/retrieval/memory-panel/memory-panel.class.ts",
+      "exportName": "LyraMemoryExpandDetail",
+      "kind": "interface",
+      "fingerprint": "989b6a0061d0b9c44bc0"
+    },
+    {
+      "module": "src/components/retrieval/memory-panel/memory-panel.class.ts",
+      "exportName": "LyraMemoryItem",
+      "kind": "interface",
+      "fingerprint": "451434cbf9f72ac17a6f"
+    },
+    {
+      "module": "src/components/retrieval/memory-panel/memory-panel.class.ts",
+      "exportName": "LyraMemoryRemoveDetail",
+      "kind": "interface",
+      "fingerprint": "9923be76df000d3b3a08"
+    },
+    {
+      "module": "src/components/retrieval/mind-map/mind-map-layout.ts",
+      "exportName": "LyraTopic",
+      "kind": "interface",
+      "fingerprint": "0386712f8d27d5d4ea13"
+    },
+    {
+      "module": "src/components/retrieval/neighbor-list/neighbor-list.class.ts",
+      "exportName": "LyraNeighborRow",
+      "kind": "interface",
+      "fingerprint": "7b8f6b1ae261515ba9c3"
+    },
+    {
+      "module": "src/components/retrieval/node-palette/node-palette.class.ts",
+      "exportName": "PaletteItem",
+      "kind": "interface",
+      "fingerprint": "90325c03124785e89045"
+    },
+    {
+      "module": "src/components/retrieval/provenance-panel/provenance-panel.class.ts",
+      "exportName": "LyraProvenance",
+      "kind": "interface",
+      "fingerprint": "1df1603577574f828e9a"
+    },
+    {
+      "module": "src/components/retrieval/rag-answer/rag-answer.class.ts",
+      "exportName": "LyraRagCitationSelectDetail",
+      "kind": "interface",
+      "fingerprint": "3f995c6ea1df075730a8"
+    },
+    {
+      "module": "src/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.class.ts",
+      "exportName": "RagEvaluationMetric",
+      "kind": "interface",
+      "fingerprint": "dd4304feb03b5533fb03"
+    },
+    {
+      "module": "src/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.class.ts",
+      "exportName": "RagEvaluationRun",
+      "kind": "interface",
+      "fingerprint": "07663b9edc56d3153b77"
+    },
+    {
+      "module": "src/components/retrieval/retrieval-compare/retrieval-compare.class.ts",
+      "exportName": "RetrievalComparisonSet",
+      "kind": "interface",
+      "fingerprint": "0856eaa19dadfe8af368"
+    },
+    {
+      "module": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
+      "exportName": "RetrievalResultsSelectDetail",
+      "kind": "interface",
+      "fingerprint": "470f7c5474a60ee0365f"
+    },
+    {
+      "module": "src/components/retrieval/retrieval-search/retrieval-search.class.ts",
+      "exportName": "RetrievalFiltersChangeDetail",
+      "kind": "interface",
+      "fingerprint": "9ed31459a824a11e5d71"
+    },
+    {
+      "module": "src/components/retrieval/retrieval-trace/retrieval-trace.class.ts",
+      "exportName": "RetrievalStageEvidence",
+      "kind": "interface",
+      "fingerprint": "8f3d7d8586120db77ae6"
+    },
+    {
+      "module": "src/components/retrieval/retrieval-trace/retrieval-trace.class.ts",
+      "exportName": "RetrievalStage",
+      "kind": "interface",
+      "fingerprint": "55790d4dedb5abb174ff"
+    },
+    {
+      "module": "src/components/retrieval/source-card/source-card.class.ts",
+      "exportName": "SourceCardExpandDetail",
+      "kind": "interface",
+      "fingerprint": "2ff1d8ebd8544b3bfbc2"
+    },
+    {
+      "module": "src/components/retrieval/source-card/source-card.class.ts",
+      "exportName": "SourceCardOpenDetail",
+      "kind": "interface",
+      "fingerprint": "e15361a26aff57f6e5dc"
+    },
+    {
+      "module": "src/components/retrieval/source-list/source-list.class.ts",
+      "exportName": "SourceListToggleDetail",
+      "kind": "interface",
+      "fingerprint": "22624f6d35fa8b5abeb6"
+    },
+    {
+      "module": "src/components/retrieval/source-picker/source-picker.class.ts",
+      "exportName": "LyraSourceEntry",
+      "kind": "interface",
+      "fingerprint": "2c7d1e33dabe8740c3e2"
+    },
+    {
+      "module": "src/components/utility/export-button/csv.ts",
+      "exportName": "buildCsv",
+      "kind": "function",
+      "fingerprint": "14c83d9069c35d694dda"
+    },
+    {
+      "module": "src/components/utility/export-button/csv.ts",
+      "exportName": "downloadBlob",
+      "kind": "function",
+      "fingerprint": "d8650159baca96b5014b"
+    },
+    {
+      "module": "src/components/utility/export-button/csv.ts",
+      "exportName": "escapeCsvField",
+      "kind": "function",
+      "fingerprint": "a9d8d340b019d0c049e9"
+    },
+    {
+      "module": "src/components/utility/export-button/csv.ts",
+      "exportName": "LyraCsvColumn",
+      "kind": "interface",
+      "fingerprint": "df5d6d1956f4168fd217"
+    },
+    {
+      "module": "src/components/utility/export-button/export-button.class.ts",
+      "exportName": "LyraExportFormatDescriptor",
+      "kind": "interface",
+      "fingerprint": "068150fbe074a81ae517"
+    },
+    {
+      "module": "src/components/utility/icon/icon-library.ts",
+      "exportName": "getIconLibrary",
+      "kind": "function",
+      "fingerprint": "4117205e005ae1e343a9"
+    },
+    {
+      "module": "src/components/utility/icon/icon-library.ts",
+      "exportName": "LyraIconLibrary",
+      "kind": "interface",
+      "fingerprint": "750772b6d4ef37188c91"
+    },
+    {
+      "module": "src/components/utility/icon/icon-library.ts",
+      "exportName": "LyraIconLibraryOptions",
+      "kind": "interface",
+      "fingerprint": "c06cb3e4f3e6201e98d4"
+    },
+    {
+      "module": "src/components/utility/icon/icon-library.ts",
+      "exportName": "registerIconLibrary",
+      "kind": "function",
+      "fingerprint": "2ac30c7a18c7ea6db732"
+    },
+    {
+      "module": "src/components/utility/icon/icon-library.ts",
+      "exportName": "unregisterIconLibrary",
+      "kind": "function",
+      "fingerprint": "c198913be15bc6eb1d51"
+    },
+    {
+      "module": "src/components/utility/known-date/known-date.class.ts",
+      "exportName": "LyraKnownDateEventDetail",
+      "kind": "interface",
+      "fingerprint": "94234c3db0d5fe2daac3"
+    },
+    {
+      "module": "src/components/utility/known-date/known-date.class.ts",
+      "exportName": "LyraKnownDateParts",
+      "kind": "interface",
+      "fingerprint": "b13d76e687fc2e7414e0"
+    },
+    {
+      "module": "src/components/utility/mention-popover/mention-popover.class.ts",
+      "exportName": "LyraMentionFocusOptions",
+      "kind": "interface",
+      "fingerprint": "faf97f064ad13a60ee93"
+    },
+    {
+      "module": "src/components/utility/mention-popover/mention-popover.class.ts",
+      "exportName": "LyraMentionItem",
+      "kind": "interface",
+      "fingerprint": "80f19f63506572db0351"
+    },
+    {
+      "module": "src/components/utility/mention-popover/mention-popover.class.ts",
+      "exportName": "LyraMentionSelectDetail",
+      "kind": "interface",
+      "fingerprint": "e688e11dbb7814c4e5b0"
+    },
+    {
+      "module": "src/components/utility/tour/tour.class.ts",
+      "exportName": "LyraTourStep",
+      "kind": "interface",
+      "fingerprint": "1e5075e670225f06e8fa"
+    },
+    {
+      "module": "src/components/viewers/archive-viewer/archive-viewer.class.ts",
+      "exportName": "ArchiveEntry",
+      "kind": "interface",
+      "fingerprint": "20e26192bad56769839c"
+    },
+    {
+      "module": "src/components/viewers/calendar-viewer/calendar-viewer.class.ts",
+      "exportName": "ParsedCalendarEvent",
+      "kind": "interface",
+      "fingerprint": "eb2b0967b9df8fe864bc"
+    },
+    {
+      "module": "src/components/viewers/dataset-viewer/dataset-viewer.class.ts",
+      "exportName": "DatasetTable",
+      "kind": "interface",
+      "fingerprint": "4c28dc11d7d8ca6dcbc7"
+    },
+    {
+      "module": "src/components/viewers/document-compare/document-compare.class.ts",
+      "exportName": "DocumentCompareVersion",
+      "kind": "interface",
+      "fingerprint": "766fb0573ff527bc87c1"
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "clearDocumentRenderers",
+      "kind": "function",
+      "fingerprint": "d2627de7cd00eae3c4a6"
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "createDocumentRendererRegistry",
+      "kind": "function",
+      "fingerprint": "0b78f15046e675dfb8c9"
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "DirectDocumentRendererDefinition",
+      "kind": "interface",
+      "fingerprint": "36db04b9936bee739b15"
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "DocumentFile",
+      "kind": "interface",
+      "fingerprint": "fe5a3ae9adc623143c7a"
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "findDocumentRenderer",
+      "kind": "function",
+      "fingerprint": "683705b779f6730e1a45"
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "getDefaultDocumentRendererRegistry",
+      "kind": "function",
+      "fingerprint": "9247a04360580447b2e0"
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "LazyDocumentRendererDefinition",
+      "kind": "interface",
+      "fingerprint": "670b44ace2c11c658fc1"
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "loadDocumentRenderer",
+      "kind": "function",
+      "fingerprint": "9bc864a6395d1ab1836d"
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "registerDocumentRenderer",
+      "kind": "function",
+      "fingerprint": "10093a0901c7888f64f9"
+    },
+    {
+      "module": "src/components/viewers/docx-viewer/docx-viewer.class.ts",
+      "exportName": "DocxHeadingItem",
+      "kind": "interface",
+      "fingerprint": "f5c30cdef9d262a2f2a8"
+    },
+    {
+      "module": "src/components/viewers/ebook-viewer/ebook-viewer.class.ts",
+      "exportName": "EbookTocItem",
+      "kind": "interface",
+      "fingerprint": "a19c3ffc3d738653e34b"
+    },
+    {
+      "module": "src/components/viewers/email-viewer/email-viewer.class.ts",
+      "exportName": "ParsedEmailAttachment",
+      "kind": "interface",
+      "fingerprint": "9ee4b16b1b365212d12b"
+    },
+    {
+      "module": "src/components/viewers/email-viewer/email-viewer.class.ts",
+      "exportName": "ParsedEmail",
+      "kind": "interface",
+      "fingerprint": "c5b6fd7bfd02a2c6b01c"
+    },
+    {
+      "module": "src/components/viewers/highlight-layer/highlight-layer.class.ts",
+      "exportName": "HighlightLayerItem",
+      "kind": "interface",
+      "fingerprint": "c648c63872104c05555e"
+    },
+    {
+      "module": "src/components/viewers/include/include.class.ts",
+      "exportName": "LyraIncludeErrorDetail",
+      "kind": "interface",
+      "fingerprint": "fbf9912fddc9272dbe45"
+    },
+    {
+      "module": "src/components/viewers/page-rail/page-rail.class.ts",
+      "exportName": "LyraPageViewerSnapshot",
+      "kind": "interface",
+      "fingerprint": "e05fcd6f66db3b44aa05"
+    },
+    {
+      "module": "src/components/viewers/page-rail/page-rail.class.ts",
+      "exportName": "LyraPageViewerStateChangeDetail",
+      "kind": "interface",
+      "fingerprint": "69e9e465a299f20ce0aa"
+    },
+    {
+      "module": "src/components/viewers/page-rail/page-rail.class.ts",
+      "exportName": "PageThumbnailRenderHandle",
+      "kind": "interface",
+      "fingerprint": "83177d48420f5fd78bfd"
+    },
+    {
+      "module": "src/components/viewers/page-rail/page-rail.class.ts",
+      "exportName": "PageThumbnailSource",
+      "kind": "interface",
+      "fingerprint": "c6bacd0235d471a2cbd4"
+    },
+    {
+      "module": "src/components/viewers/pdf-viewer/pdf-viewer.class.ts",
+      "exportName": "PdfOutlineItem",
+      "kind": "interface",
+      "fingerprint": "64ffff9df8d1f08f8a1b"
+    },
+    {
+      "module": "src/components/viewers/viewer-diagnostics.ts",
+      "exportName": "LyraViewerDiagnosticEventDetail",
+      "kind": "interface",
+      "fingerprint": "7c4dab07927b6a851fbb"
+    },
+    {
+      "module": "src/components/viewers/viewer-diagnostics.ts",
+      "exportName": "LyraViewerDiagnostic",
+      "kind": "interface",
+      "fingerprint": "5f66be1c504a6cad82ad"
+    },
+    {
+      "module": "src/internal/canvas-color.ts",
+      "exportName": "resolveCanvasColor",
+      "kind": "function",
+      "fingerprint": "eb05ccf9f9ba29a60ab8"
+    },
+    {
+      "module": "src/internal/clipboard.ts",
+      "exportName": "LyraClipboardWriteFailure",
+      "kind": "interface",
+      "fingerprint": "ab2c279138658879b1d8"
+    },
+    {
+      "module": "src/internal/clipboard.ts",
+      "exportName": "LyraClipboardWriteSuccess",
+      "kind": "interface",
+      "fingerprint": "47859e10fad695d08b1a"
+    }
+  ]
+}

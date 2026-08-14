@@ -139,7 +139,8 @@ export const styles = css`
     font-style: italic;
     margin-inline: var(--lr-space-xs);
   }
-  [part='toggle'] {
+  [part='toggle'],
+  [part='toggle-placeholder'] {
     /* Keep the glyph compact while giving the interactive box the shared minimum target size.
        --lr-icon-button-size is a floor, not a fixed size, so lowering it never squashes the
        chevron below its own box. */
@@ -156,11 +157,8 @@ export const styles = css`
     padding: 0;
     color: var(--lr-color-text-quiet);
     border-radius: var(--lr-radius);
-    cursor: pointer;
   }
-  [part='toggle'][hidden] {
-    visibility: hidden;
-  }
+  [part='toggle'] { cursor: pointer; }
   [part='toggle'] .chevron {
     display: inline-flex;
     transform: rotate(0deg);
@@ -172,11 +170,11 @@ export const styles = css`
   :host(:dir(rtl)) [part='toggle'][aria-expanded='false'] .chevron {
     transform: rotate(180deg);
   }
-  [part='toggle']:not([hidden]):hover {
+  [part='toggle']:hover {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
-  [part='toggle']:not([hidden]):active {
+  [part='toggle']:active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     color: var(--lr-color-brand);
   }

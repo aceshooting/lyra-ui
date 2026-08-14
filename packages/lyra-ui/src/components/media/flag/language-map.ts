@@ -71,10 +71,28 @@ export const LANGUAGE_TO_COUNTRY: Record<string, string> = {
  * scanned for the first 2-letter alpha match rather than assuming it's always `parts[1]`.
  */
 export function languageToCountry(language: string): string | undefined {
-  const parts = language.toLowerCase().split(/[-_]/);
-  const base = parts[0]!; // safe: String.split() always yields at least one element
-  const region = parts.slice(1).find((part) => ALPHA2_RE.test(part));
-  if (region) return region;
+  if (typeof language !== 'string') return undefined;
+  const normalized = language.trim().replaceAll('_', '-');
+  if (!normalized) return undefined;
+  try {
+    const locale = new Intl.Locale(normalized);
+    if (locale.region && ALPHA2_RE.test(locale.region)) return locale.region.toLowerCase();
+    return LANGUAGE_TO_COUNTRY[locale.language.toLowerCase()];
+  } catch {
+    // Older engines or malformed input use the bounded structural fallback below.
+  }
+  const parts = normalized.toLowerCase().split('-').slice(0, 16);
+  const base = parts[0]!;
+  // A singleton in the first position starts a private-use tag (`x-ca`). It is not a language
+  // subtag, so neither the following token nor a language-default lookup is meaningful.
+  if (base.length === 1) return undefined;
+  for (const part of parts.slice(1)) {
+    if (!/^[a-z0-9]{1,8}$/.test(part)) break;
+    // A singleton starts a Unicode extension or private-use sequence. Tokens after it are not
+    // language-script-region fields (`en-u-ca-gregory` and `en-x-ca` must not become Canada).
+    if (part.length === 1) break;
+    if (ALPHA2_RE.test(part)) return part;
+  }
   return LANGUAGE_TO_COUNTRY[base];
 }
 

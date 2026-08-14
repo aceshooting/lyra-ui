@@ -54,13 +54,21 @@ export const Sizes: Story = {
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
       ${(['3xs', '2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
-        (size) => html`<lr-chip size=${size} toggleable><span slot="icon">●</span>${size}</lr-chip>`,
+        (size) => html`<lr-chip size=${size} toggleable><span slot="start">●</span>${size}</lr-chip>`,
       )}
     </div>
   `,
 };
 
 export const Removable: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A host `aria-label`, when present, names one aggregate group. The nested remove action keeps a purpose-specific “Remove {visible label}” name, including when the host label is explicitly empty.',
+      },
+    },
+  },
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
       <lr-chip variant="neutral" removable>engineering</lr-chip>
@@ -87,28 +95,28 @@ export const Disabled: Story = {
   `,
 };
 
-export const WithIcon: Story = {
-  name: 'With decorative icon content',
+export const WithStart: Story = {
+  name: 'With decorative start content',
   parameters: {
     docs: {
       description: {
         story:
-          'The icon slot is always visible presentation content whose flattened subtree is inert and aria-hidden. The end slot remains ordinary consumer content in passive/removable mode and follows that presentation contract only beneath a full-surface toggle.',
+          'The start slot is always visible presentation content whose flattened subtree is inert and aria-hidden. The end slot remains ordinary consumer content in passive/removable mode and follows that presentation contract only beneath a full-surface toggle.',
       },
     },
   },
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
       <lr-chip variant="success">
-        <span slot="icon" style="display:inline-block; inline-size:0.5em; block-size:0.5em; border-radius:50%; background:currentColor;"></span>
+        <span slot="start" style="display:inline-block; inline-size:0.5em; block-size:0.5em; border-radius:50%; background:currentColor;"></span>
         Online
       </lr-chip>
       <lr-chip variant="warning" removable>
-        <span slot="icon" style="display:inline-block; inline-size:0.5em; block-size:0.5em; border-radius:50%; background:currentColor;"></span>
+        <span slot="start" style="display:inline-block; inline-size:0.5em; block-size:0.5em; border-radius:50%; background:currentColor;"></span>
         Degraded
       </lr-chip>
       <lr-chip variant="neutral">
-        <svg slot="icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg slot="start" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 2 2 7l10 5 10-5-10-5Z" />
           <path d="M2 17l10 5 10-5" />
           <path d="M2 12l10 5 10-5" />
@@ -173,7 +181,7 @@ export const ToggleSelection: Story = {
     docs: {
       description: {
         story:
-          'Setting `selected` opts the chip into toggle mode, backed by a native `[part=toggle-button]` with keyboard activation and reflected `aria-pressed`. The visible label, icon, and end layers become inert and aria-hidden, so the toggle remains the sole action; do not put independent controls in those slots. Activation emits the cancelable `lr-chip-select` event with the proposed next state before mutation; call `preventDefault()` to keep the current selection. The opt-in survives toggling `selected` back off, so a chip that starts selected (left) stays clickable after the first click. A chip that must be clickable from the outset while starting **unselected** (right) sets `toggleable` explicitly.',
+          '`toggleable` is the sole opt-in for the native `[part=toggle-button]`; `selected` independently supplies its current `aria-pressed` state. The visible label, start, and end layers become inert and aria-hidden, so the toggle remains the sole action; do not put independent controls in those slots. Activation emits the cancelable `lr-chip-select` event with the proposed next state before mutation; call `preventDefault()` to keep the current selection.',
       },
     },
   },
@@ -184,7 +192,7 @@ export const ToggleSelection: Story = {
     };
     return html`
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-        <lr-chip variant="brand" selected value="series-a" @lr-chip-select=${log}>Series A</lr-chip>
+        <lr-chip variant="brand" toggleable selected value="series-a" @lr-chip-select=${log}>Series A</lr-chip>
         <lr-chip variant="brand" toggleable value="category:beta" @lr-chip-select=${log}>Category: Beta</lr-chip>
       </div>
       <p id="chip-toggle-log" style="font-family: monospace; margin-top: 0.5rem;">

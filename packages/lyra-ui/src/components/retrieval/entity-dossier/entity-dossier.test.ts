@@ -247,12 +247,21 @@ describe('provenance-tab conduit events', () => {
   });
 });
 
-it('forwards a host aria-label to the internal lr-tab-group strip', async () => {
+it('keeps host naming distinct from the internal tab strip across dynamic changes', async () => {
   const el = (await fixture(html`<lr-entity-dossier aria-label="Entity detail"></lr-entity-dossier>`)) as LyraEntityDossier;
   el.entity = entity;
   await el.updateComplete;
   const tabs = el.shadowRoot!.querySelector('lr-tab-group')!;
-  expect(tabs.getAttribute('aria-label')).to.equal('Entity detail');
+  expect(el.getAttribute('aria-label')).to.equal('Entity detail');
+  expect(tabs.getAttribute('aria-label')).to.equal(null);
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('');
+  expect(tabs.getAttribute('aria-label')).to.equal(null);
+  el.setAttribute('aria-label', 'Revised entity detail');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Revised entity detail');
+  expect(tabs.getAttribute('aria-label')).to.equal(null);
 });
 
 it('honors a .strings override of a reused key (neighborListLabel) on the relationships tab label', async () => {

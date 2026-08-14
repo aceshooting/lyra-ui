@@ -16,7 +16,9 @@ const items = () => [
 /** Two animation frames, long enough for the overflow controller's `ResizeObserver` callback to
  *  have landed on top of the synchronous measurement it already does in `hostUpdated()`. */
 async function nextFrames(): Promise<void> {
-  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  await new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(resolve))
+  );
 }
 
 function segmentButtons(el: LyraSegmented): HTMLButtonElement[] {
@@ -101,14 +103,14 @@ describe("lr-segmented", () => {
     expect(el.value).to.equal("day");
   });
 
-  it("starts navigation from the actually focused duplicate occurrence when nothing is selected", async () => {
-    const duplicateItems = [
-      { value: "same", label: "First" },
-      { value: "same", label: "Second" },
-      { value: "other", label: "Third" },
+  it("starts navigation from the actually focused occurrence when nothing is selected", async () => {
+    const choices = [
+      { value: "first", label: "First" },
+      { value: "second", label: "Second" },
+      { value: "third", label: "Third" },
     ];
     const el = (await fixture(
-      html`<lr-segmented .items=${duplicateItems}></lr-segmented>`
+      html`<lr-segmented .items=${choices}></lr-segmented>`
     )) as LyraSegmented;
     const second = segmentButtons(el)[1]!;
     second.focus();
@@ -121,8 +123,10 @@ describe("lr-segmented", () => {
     );
     await el.updateComplete;
 
-    expect(el.value).to.equal("other");
-    expect(el.shadowRoot!.activeElement === segmentButtons(el)[2]).to.equal(true);
+    expect(el.value).to.equal("third");
+    expect(el.shadowRoot!.activeElement === segmentButtons(el)[2]).to.equal(
+      true
+    );
   });
 
   it("uses the keyboard event target ahead of controlled selection state", async () => {
@@ -140,7 +144,9 @@ describe("lr-segmented", () => {
     await el.updateComplete;
 
     expect(el.value).to.equal("day");
-    expect(el.shadowRoot!.activeElement === segmentButtons(el)[0]).to.equal(true);
+    expect(el.shadowRoot!.activeElement === segmentButtons(el)[0]).to.equal(
+      true
+    );
   });
 
   it("selects on click and emits lr-change", async () => {
@@ -288,10 +294,10 @@ describe("lr-segmented", () => {
     expect(el.value).to.equal('b"c');
     // Without escaping the value in the attribute-selector lookup, `focusItem()` throws before
     // reaching `.focus()`, so the target button never receives focus even though `value` updated.
-    expect((el.shadowRoot!.activeElement) === (buttons[1])).to.equal(true);
+    expect(el.shadowRoot!.activeElement === buttons[1]).to.equal(true);
   });
 
-  it("keeps duplicate values as distinct rendered occurrences with exactly one checked/tabbable radio", async () => {
+  it("uses first-valid-value-wins so duplicate choices cannot diverge from value events", async () => {
     const duplicateItems = [
       { value: "same", label: "First" },
       { value: "same", label: "Second" },
@@ -300,35 +306,60 @@ describe("lr-segmented", () => {
     const el = (await fixture(
       html`<lr-segmented .items=${duplicateItems} value="same"></lr-segmented>`
     )) as LyraSegmented;
-    let buttons = segmentButtons(el);
-    expect(buttons).to.have.length(3);
+    const buttons = segmentButtons(el);
+    expect(buttons).to.have.length(2);
+    expect(buttons.map((button) => button.textContent?.trim())).to.deep.equal([
+      "First",
+      "Third",
+    ]);
     expect(
       buttons.filter((button) => button.getAttribute("aria-checked") === "true")
     ).to.have.length(1);
     expect(buttons.filter((button) => button.tabIndex === 0)).to.have.length(1);
+  });
 
-    buttons[0]!.focus();
-    buttons[0]!.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "ArrowRight",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
+  it("uses a bounded immutable realm-neutral schema snapshot and isolates hostile records", async () => {
+    const frame = document.createElement("iframe");
+    document.body.append(frame);
+    const foreignArray = new frame.contentWindow!.Array();
+    const hostile = {};
+    Object.defineProperty(hostile, "value", {
+      get(): never {
+        throw new Error("hostile value");
+      },
+    });
+    const source = { value: "safe", label: "Safe" };
+    foreignArray.push(hostile, { value: "", label: "Empty identity" }, source, {
+      value: "later",
+      label: "Later",
+      disabled: false,
+    });
+    const el = (await fixture(
+      html`<lr-segmented .items=${foreignArray}></lr-segmented>`
+    )) as LyraSegmented;
+    frame.remove();
+
+    source.label = "Caller mutation";
+    expect(
+      segmentButtons(el).map((button) => button.dataset["value"])
+    ).to.deep.equal(["safe", "later"]);
+    expect(el.items[0]!.label).to.equal("Safe");
+    expect(Object.isFrozen(el.items)).to.be.true;
+    expect(Object.isFrozen(el.items[0])).to.be.true;
+
+    el.items = Array.from({ length: 260 }, (_, index) => ({
+      value: `value-${index}`,
+      label: `Value ${index}`,
+    }));
     await el.updateComplete;
-    buttons = segmentButtons(el);
-    expect((el.shadowRoot!.activeElement) === (buttons[1])).to.equal(true);
-    expect(buttons[1]!.getAttribute("aria-checked")).to.equal("true");
-    expect(buttons[0]!.getAttribute("aria-checked")).to.equal("false");
+    expect(el.items).to.have.length(256);
+    expect(segmentButtons(el)).to.have.length(256);
   });
 
   it("reconciles and rehomes focus when the selected item is disabled in place", async () => {
     const mutableItems = items();
     const el = (await fixture(
-      html`<lr-segmented
-        .items=${mutableItems}
-        value="week"
-      ></lr-segmented>`
+      html`<lr-segmented .items=${mutableItems} value="week"></lr-segmented>`
     )) as LyraSegmented;
     let buttons = segmentButtons(el);
     buttons[1]!.focus();
@@ -371,7 +402,7 @@ describe("item icon", () => {
     )) as LyraSegmented;
     const button = el.shadowRoot!.querySelector('[part="segment"]')!;
     const icon = button.querySelector('[part="segment-icon"]');
-    expect((icon) != null).to.equal(true);
+    expect(icon != null).to.equal(true);
     expect(icon!.querySelector(".dot")).to.exist;
     const children = Array.from(button.children);
     const labelIndex = children.findIndex(
@@ -401,14 +432,20 @@ describe("item icon", () => {
     el.label = "View choices";
     await el.updateComplete;
 
-    const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="segment-icon"]');
-    const nested = el.shadowRoot!.querySelector<HTMLElement>("#nested-segment-icon")!;
+    const icon = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="segment-icon"]'
+    );
+    const nested = el.shadowRoot!.querySelector<HTMLElement>(
+      "#nested-segment-icon"
+    )!;
     outside.focus();
     nested.focus();
 
     expect(icon?.inert ?? false).to.equal(true);
     expect(root.ownerDocument.activeElement?.id).to.equal("outside");
-    expect(el.shadowRoot!.activeElement?.id ?? null).to.not.equal("nested-segment-icon");
+    expect(el.shadowRoot!.activeElement?.id ?? null).to.not.equal(
+      "nested-segment-icon"
+    );
     await expect(el).to.be.accessible();
   });
 
@@ -449,6 +486,16 @@ describe("item icon", () => {
     await nextFrames();
     expect(base.scrollWidth - base.clientWidth).to.be.at.most(1);
     expect(getComputedStyle(base).maskImage).to.equal("none");
+  });
+
+  it("removes the decorative edge mask under forced colors", () => {
+    const css = styles.cssText.replace(/\s+/g, " ");
+    expect(css).to.contain("@media (forced-colors: active)");
+    const forcedColors = css.slice(
+      css.indexOf("@media (forced-colors: active)")
+    );
+    expect(forcedColors).to.contain("-webkit-mask-image: none");
+    expect(forcedColors).to.contain("mask-image: none");
   });
 
   it("keeps the edge fade opaque when a consumer themes the shadow color translucent", async () => {
@@ -744,11 +791,15 @@ describe("active-state cssprops", () => {
 
     try {
       await sendMouse({ type: "move", position: pointerPosition(target) });
-      expect(getComputedStyle(target).backgroundColor).to.equal("rgba(0, 0, 0, 0)");
+      expect(getComputedStyle(target).backgroundColor).to.equal(
+        "rgba(0, 0, 0, 0)"
+      );
       expect(getComputedStyle(target).color).to.equal(expectedColor);
 
       await sendMouse({ type: "down" });
-      expect(getComputedStyle(target).backgroundColor).to.equal(expectedBackground);
+      expect(getComputedStyle(target).backgroundColor).to.equal(
+        expectedBackground
+      );
       expect(getComputedStyle(target).color).to.equal(expectedColor);
     } finally {
       await resetMouse();
@@ -779,11 +830,15 @@ describe("active-state cssprops", () => {
 
     try {
       await sendMouse({ type: "move", position: pointerPosition(target!) });
-      expect(getComputedStyle(target!).backgroundColor).to.equal("rgba(0, 0, 0, 0)");
+      expect(getComputedStyle(target!).backgroundColor).to.equal(
+        "rgba(0, 0, 0, 0)"
+      );
       expect(getComputedStyle(target!).color).to.equal(expectedHoverColor);
 
       await sendMouse({ type: "down" });
-      expect(getComputedStyle(target!).backgroundColor).to.equal("rgb(12, 34, 56)");
+      expect(getComputedStyle(target!).backgroundColor).to.equal(
+        "rgb(12, 34, 56)"
+      );
       expect(getComputedStyle(target!).color).to.equal("rgb(78, 90, 123)");
       expect(getComputedStyle(checked!).backgroundColor).to.equal(
         expectedCheckedBackground
@@ -864,7 +919,11 @@ describe("track height", () => {
 describe("size", () => {
   async function sizedTrack(size: string): Promise<HTMLElement> {
     const el = (await fixture(
-      html`<lr-segmented size=${size} .items=${items()} value="week"></lr-segmented>`
+      html`<lr-segmented
+        size=${size}
+        .items=${items()}
+        value="week"
+      ></lr-segmented>`
     )) as LyraSegmented;
     await el.updateComplete;
     return el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -925,7 +984,7 @@ describe("size", () => {
     }
   });
 
-  it("grows the rendered track from size=\"s\" to size=\"l\"", async () => {
+  it('grows the rendered track from size="s" to size="l"', async () => {
     const small = await sizedTrack("s");
     const large = await sizedTrack("l");
     expect(large.getBoundingClientRect().height).to.be.greaterThan(
@@ -953,7 +1012,10 @@ describe("size", () => {
         expect(rect.height, `${size} height`).to.be.at.least(24);
       }
       const centers = rects.map((rect) => rect.left + rect.width / 2);
-      expect(centers[1]! - centers[0]!, `${size} adjacent centers`).to.be.at.least(24);
+      expect(
+        centers[1]! - centers[0]!,
+        `${size} adjacent centers`
+      ).to.be.at.least(24);
     }
   });
 });

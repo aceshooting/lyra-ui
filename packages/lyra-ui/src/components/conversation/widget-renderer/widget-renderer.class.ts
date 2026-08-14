@@ -1,13 +1,9 @@
-import {
-  html,
-  nothing,
-  render,
-  type TemplateResult,
-  type PropertyValues,
-} from "lit";
+import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
+import { ref } from "lit/directives/ref.js";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { styleMap } from "lit/directives/style-map.js";
+import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { styles } from "./widget-renderer.styles.js";
 import {
@@ -17,10 +13,8 @@ import {
   type ResolvedElement,
   type WidgetNode,
 } from "./resolve.js";
-import {
-  getDefaultWidgetTypeRegistry,
-  type WidgetTypeRegistry,
-} from "./registry.js";
+import { type WidgetTypeRegistry } from "./registry.js";
+import { DEFAULT_WIDGET_TYPE_REGISTRY } from "./default-registry.js";
 
 const GAP_TOKEN: Record<string, string> = {
   s: "var(--lr-space-s)",
@@ -62,13 +56,26 @@ interface BindingHandlerState {
   handler: EventListener;
 }
 
+function normalizedRenderError(error: unknown): Error {
+  if (error instanceof Error) return error;
+  return new Error("lr-widget-renderer: document resolution failed");
+}
+
 export interface LyraWidgetRendererEventMap {
-  "lr-widget-action": CustomEvent<{ actionId: string; payload: unknown }>;
-  "lr-render-error": CustomEvent<{ error: unknown }>;
+  "lr-widget-action": CustomEvent<{
+    actionId: string;
+    payload: unknown;
+    nodeId: string;
+    nodeKey: string;
+    nodePath: string;
+  }>;
+  "lr-render-error": CustomEvent<{ error: Error }>;
   "lr-widget-state-change": CustomEvent<{
     path: string;
     value: unknown;
     nodeId: string;
+    nodeKey: string;
+    nodePath: string;
     prop: string;
   }>;
 }
@@ -76,31 +83,32 @@ export interface LyraWidgetRendererEventMap {
 /**
  * `<lr-widget-renderer>` — renders an agent-streamed declarative JSON widget tree through an
  * allowlisted `type -> lyra tag` registry (see `registry.ts`/`resolve.ts` for the allowlist
- * enforcement itself; this class only turns an already-resolved tree into DOM). A mapped node's
- * real element is created via `document.createElement()` with every prop assigned as a plain JS
- * property (never `setAttribute`, never `innerHTML`), and reused by key across a re-resolve so a
- * mapped widget's own internal state (an open `<details>`, focus, scroll position) survives a
- * streamed `tree` update. Built-in `row`/`col`/`text` structural nodes render through ordinary
- * nested `html` templates instead.
+ * enforcement itself; this class only turns an already-resolved tree into declarative templates).
+ * Mapped custom-element tags and children are serializable during SSR and keyed identically during
+ * hydration. Primitive mapped props remain property-only by contract: the server emits the stable
+ * element/child shell, then hydration assigns props without converting them into attributes. Lit's
+ * keyed reconciliation reuses the mapped element so focus, scroll position, and internal state
+ * survive a streamed document update.
  *
- * A versioned `document` may supply both the root tree and controlled binding state. An allowlisted
- * prop value shaped as `{ $bind: '/json/pointer', fallback?: primitive }` reads from `state` (or
- * `document.state`); a registry `bindings` entry names the control event that requests a change.
+ * The version-two `document` is the sole tree source. An allowlisted prop value shaped as
+ * `{ $bind: '/json/pointer', fallback?: primitive }` reads from the explicit `bindingState`
+ * property; a registry `bindings` entry names the control event that requests a change.
  * The renderer reports that request through `lr-widget-state-change` and never mutates caller state.
  * Unknown-type and disallowed-prop warnings deduplicate within the effective root/registry
- * generation. State-only re-resolution of that root remains quiet, while replacing the streamed
- * root or registry releases its prior arbitrary warning keys before resolving the new generation.
+ * generation. Binding-state-only re-resolution remains quiet, while replacing the document root
+ * or registry releases its prior warning keys before resolving the new generation.
  * A malformed root or nested node fails closed: the prior rendered tree is cleared and exactly one
  * `lr-render-error` describes the rejected update.
- * The normal `widget-renderer.js` registration entry also installs the eight-component default
- * registry. A lean custom-registry consumer instead imports this side-effect-free class module,
- * calls `defineElement('widget-renderer', LyraWidgetRenderer)`, imports only its mapped component
- * registrations, and assigns the per-instance `registry` property.
+ * The normal `widget-renderer.js` registration entry installs the eight mapped custom elements.
+ * Every renderer owns an explicit immutable registry value, defaulting to the frozen built-in
+ * registry. A lean consumer imports this side-effect-free class module, defines the renderer,
+ * imports only its mapped registrations, and assigns a registry made by
+ * `createWidgetTypeRegistry()`.
  *
  * @customElement lr-widget-renderer
- * @event lr-widget-action - `detail: { actionId, payload }` — the single bubbling action channel.
+ * @event lr-widget-action - `detail: { actionId, payload, nodeId, nodeKey, nodePath }` — the single bubbling action channel.
  * @event lr-render-error - `detail: { error }` — the root or one of its nested nodes was structurally unusable.
- * @event lr-widget-state-change - A bound control requested a controlled state update. `detail: { path, value, nodeId, prop }`; the caller must apply the next `state` value.
+ * @event lr-widget-state-change - A bound control requested a controlled state update. `detail: { path, value, nodeId, nodeKey, nodePath, prop }`; the caller must apply the next `bindingState` value.
  * @csspart base - The root wrapper (`display: contents` — adds no layout box of its own).
  * @csspart row - A built-in `row` node.
  * @csspart col - A built-in `col` node.
@@ -111,19 +119,17 @@ export interface LyraWidgetRendererEventMap {
 export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> {
   static override styles = [LyraElement.styles, styles];
 
-  /** The declarative widget tree to render. `null` (the default) renders an empty base. A malformed
-   * root or nested node clears prior content and emits one `lr-render-error`. */
-  @property({ attribute: false }) tree: WidgetNode | null = null;
-
-  /** Versioned document form. Takes precedence over `tree` and supplies optional binding state. */
+  /** Version-two declarative document. `null` renders an empty base. A malformed root or nested
+   * node clears prior content and emits one `lr-render-error`. */
   @property({ attribute: false }) document: LyraWidgetDocument | null = null;
 
-  /** Controlled binding state override. Falls back to `document.state`. */
-  @property({ attribute: false }) state?: unknown;
+  /** Explicit controlled binding state. `null` is a real state value, never an absence sentinel. */
+  @property({ attribute: false }) bindingState?: unknown;
 
-  /** Per-instance type registry to resolve against instead of the module-level default one
-   *  (`getDefaultWidgetTypeRegistry()`, populated by `registerDefaultWidgetTypes()`). */
-  @property({ attribute: false }) registry?: WidgetTypeRegistry;
+  /** Immutable type registry owned by this renderer. Assign a snapshot returned by
+   * `createWidgetTypeRegistry()` to override the built-ins without affecting another instance. */
+  @property({ attribute: false }) registry: WidgetTypeRegistry =
+    DEFAULT_WIDGET_TYPE_REGISTRY;
 
   @state() private resolved: ResolvedNode | null = null;
 
@@ -132,7 +138,6 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     root: WidgetNode | null;
     registry: WidgetTypeRegistry;
   };
-  private readonly elements = new Map<string, HTMLElement>();
   private readonly actionHandlers = new WeakMap<
     HTMLElement,
     ActionHandlerState
@@ -151,80 +156,44 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     super.willUpdate(changed);
     if (
       !this.hasUpdated ||
-      changed.has("tree") ||
       changed.has("document") ||
-      changed.has("state") ||
+      changed.has("bindingState") ||
       changed.has("registry")
     ) {
-      const registry = this.registry ?? getDefaultWidgetTypeRegistry();
-      const root = this.document?.root ?? this.tree;
-      if (
-        this.warningScope?.root !== root ||
-        this.warningScope.registry !== registry
-      ) {
-        this.warned.clear();
-        this.warningScope = { root, registry };
-      }
-      if (this.document !== null && this.document.version !== "1") {
-        this.resolved = null;
-        this.emit("lr-render-error", {
-          error: new Error("lr-widget-renderer: unsupported document version"),
-        });
-        return;
-      }
-      let next: ResolvedNode | null;
       try {
-        next = resolveTree(root, {
+        const registry = this.registry;
+        const widgetDocument = this.document;
+        let root: WidgetNode | null = null;
+        if (widgetDocument !== null) {
+          if (widgetDocument.version !== "2") {
+            throw new Error("lr-widget-renderer: unsupported document version");
+          }
+          root = widgetDocument.root;
+        }
+        if (
+          this.warningScope?.root !== root ||
+          this.warningScope.registry !== registry
+        ) {
+          this.warned.clear();
+          this.warningScope = { root, registry };
+        }
+        const next = resolveTree(root, {
           registry,
           warned: this.warned,
-          state: this.state ?? this.document?.state,
+          bindingState: this.bindingState,
         });
+        if (widgetDocument !== null && next === null) {
+          throw new Error(
+            "lr-widget-renderer: document resolved to nothing renderable"
+          );
+        }
+        this.resolved = next;
       } catch (error) {
         this.resolved = null;
         this.emit("lr-render-error", {
-          error:
-            error instanceof Error
-              ? error
-              : new Error("lr-widget-renderer: tree resolution failed"),
-        });
-        return;
-      }
-      if (root != null && next === null) {
-        this.emit("lr-render-error", {
-          error: new Error(
-            "lr-widget-renderer: tree resolved to nothing renderable"
-          ),
+          error: normalizedRenderError(error),
         });
       }
-      this.resolved = next;
-    }
-  }
-
-  protected override updated(changed: PropertyValues): void {
-    super.updated(changed);
-    this.pruneElementCache();
-  }
-
-  private collectMappedKeys(node: ResolvedNode | null, out: Set<string>): void {
-    if (!node || node.kind === "text") return;
-    if (node.kind === "mapped") out.add(node.identityKey);
-    for (const child of node.children) this.collectMappedKeys(child, out);
-  }
-
-  /** Removes cached elements (and their action listeners) for keys no longer present in the
-   *  current `resolved` tree, so a long-lived streaming session doesn't grow this cache without
-   *  bound. */
-  private pruneElementCache(): void {
-    const live = new Set<string>();
-    this.collectMappedKeys(this.resolved, live);
-    for (const [key, el] of this.elements) {
-      if (live.has(key)) continue;
-      const state = this.actionHandlers.get(el);
-      if (state) el.removeEventListener(state.event, state.handler);
-      for (const binding of this.bindingHandlers.get(el) ?? []) {
-        el.removeEventListener(binding.event, binding.handler);
-      }
-      this.elements.delete(key);
     }
   }
 
@@ -265,6 +234,9 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
           this.emit("lr-widget-action", {
             actionId: node.actionId,
             payload: node.payload,
+            nodeId: node.nodeId!,
+            nodeKey: node.nodeKey,
+            nodePath: node.nodePath,
           });
         }
       };
@@ -283,17 +255,19 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
       const handler: EventListener = (event) => {
         event.stopPropagation();
         const detail = (event as CustomEvent<unknown>).detail;
-        const detailValue =
-          detail && typeof detail === "object" && "value" in detail
-            ? (detail as { value: unknown }).value
-            : undefined;
-        const value =
-          detailValue ??
-          (el as unknown as Record<string, unknown>)[binding.prop];
+        const hasDetailValue =
+          detail !== null &&
+          typeof detail === "object" &&
+          Object.hasOwn(detail, "value");
+        const value = hasDetailValue
+          ? (detail as { value: unknown }).value
+          : (el as unknown as Record<string, unknown>)[binding.prop];
         this.emit("lr-widget-state-change", {
           path: binding.path,
           value,
-          nodeId: node.key,
+          nodeId: node.nodeId!,
+          nodeKey: node.nodeKey,
+          nodePath: node.nodePath,
           prop: binding.prop,
         });
       };
@@ -303,20 +277,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     this.bindingHandlers.set(el, states);
   }
 
-  /** Creates (or reuses, keyed by `node.key`) the real DOM element for a `mapped` node. Every prop
-   *  is assigned as a plain JS property -- never `setAttribute`, never `innerHTML`. The element's
-   *  own children are rendered into it via a nested `render()` call, so Lit's diffing still governs
-   *  one level down; reusing the same element instance across a streamed `tree` update is what lets
-   *  a mapped widget's own internal state (an open `<details>`, focus, scroll) survive
-   *  re-resolution. */
-  private getOrCreateElement(node: ResolvedElement): HTMLElement | null {
-    if (!node.tag) return null;
-    const existing = this.elements.get(node.identityKey);
-    const el =
-      existing && existing.tagName.toLowerCase() === node.tag
-        ? existing
-        : document.createElement(node.tag);
-    if (el !== existing) this.elements.set(node.identityKey, el);
+  private syncMappedElement(el: HTMLElement, node: ResolvedElement): void {
     const previousKeys = this.assignedProps.get(el) ?? new Set<string>();
     const initialValues =
       this.initialProps.get(el) ?? new Map<string, unknown>();
@@ -335,29 +296,52 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     }
     this.assignedProps.set(el, nextKeys);
     this.initialProps.set(el, initialValues);
-    const slotValue = node.slot ?? "";
-    if (el.getAttribute("slot") !== slotValue) {
-      if (slotValue) el.setAttribute("slot", slotValue);
-      else el.removeAttribute("slot");
-    }
     this.syncActionHandler(el, node);
     this.syncBindingHandlers(el, node);
-    render(
-      html`${repeat(
-        node.children,
-        (child) => this.renderIdentity(child),
-        (child) => this.renderChildValue(child)
-      )}`,
-      el,
-      {
-        host: this,
+  }
+
+  private cleanupMappedElement(el: HTMLElement): void {
+    const action = this.actionHandlers.get(el);
+    if (action) el.removeEventListener(action.event, action.handler);
+    this.actionHandlers.delete(el);
+    for (const binding of this.bindingHandlers.get(el) ?? []) {
+      el.removeEventListener(binding.event, binding.handler);
+    }
+    this.bindingHandlers.delete(el);
+  }
+
+  /** Ref callbacks are ignored by Lit SSR and attach only during browser render/hydration. */
+  private mappedElementRef(node: ResolvedElement): (element?: Element) => void {
+    let attached: HTMLElement | undefined;
+    return (element?: Element): void => {
+      if (!element) {
+        if (attached) this.cleanupMappedElement(attached);
+        attached = undefined;
+        return;
       }
-    );
-    return el;
+      attached = element as HTMLElement;
+      this.syncMappedElement(attached, node);
+    };
+  }
+
+  /** Declarative dynamic tag path: serializable on the server, stable under hydration and keyed
+   * by the same identity as client-only property/listener attachment. */
+  private renderMapped(node: ResolvedElement): TemplateResult {
+    const mappedTag = unsafeStatic(node.tag!);
+    return staticHtml`<${mappedTag}
+      data-widget-node-key=${node.nodeKey}
+      data-widget-node-path=${node.nodePath}
+      slot=${node.slot ?? nothing}
+      ${ref(this.mappedElementRef(node))}
+    >${repeat(
+      node.children,
+      (child) => this.renderIdentity(child),
+      (child) => this.renderChildValue(child)
+    )}</${mappedTag}>`;
   }
 
   private renderIdentity(node: ResolvedNode): string {
-    return node.kind === "text" ? `text:${node.key}` : node.identityKey;
+    return node.nodeKey;
   }
 
   private renderChildValue(node: ResolvedNode): unknown {
@@ -367,7 +351,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
       >`;
     }
     if (node.kind === "mapped") {
-      return this.getOrCreateElement(node) ?? nothing;
+      return this.renderMapped(node);
     }
     const part =
       node.kind === "builtin-row"

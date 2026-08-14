@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A generic content surface that mirrors the public card contracts under the `lr-` prefix. `orientation` switches between vertical sections and horizontal media/body/actions, `image` aliases `media`, dedicated header/footer action slots preserve native controls even on linked cards, and `with-*` hints make those wrappers available during SSR. `appearance`, `interactive`, and `href` retain Lyra\'s stronger surface and activation APIs.',
+          'A generic content surface that mirrors the public card contracts under the `lr-` prefix. `orientation` switches between vertical sections and horizontal media/body/actions, `image` aliases `media`, dedicated header/footer action slots preserve native controls even on linked cards, and `with-*` hints make those wrappers available during SSR. `appearance`, `actionable`, and `href` retain Lyra\'s stronger surface and activation APIs.',
       },
     },
   },
@@ -67,9 +67,9 @@ export const Plain: Story = {
   `,
 };
 
-export const Interactive: Story = {
+export const Actionable: Story = {
   render: () => html`
-    <lr-card interactive style="max-inline-size:20rem;">
+    <lr-card actionable style="max-inline-size:20rem;">
       Hover or focus this card to see the border-color and cursor affordance for a clickable tile.
     </lr-card>
   `,
@@ -89,7 +89,7 @@ export const ProgrammaticActivation: Story = {
     <div>
       <lr-card
         id="programmatic-card"
-        interactive
+        actionable
         style="max-inline-size:20rem;"
         @lr-card-activate=${() => {
           const output = document.getElementById('programmatic-card-status');
@@ -128,22 +128,22 @@ export const IndependentStateTheme: Story = {
       <lr-card appearance="filled">Filled surface</lr-card>
       <lr-card appearance="filled-outlined">Filled-outlined surface</lr-card>
       <lr-card appearance="accent">Accent surface</lr-card>
-      <lr-card interactive>Hover or press the interactive surface</lr-card>
+      <lr-card actionable>Hover or press the interactive surface</lr-card>
     </div>
   `,
 };
 
-/** `interactive` **without** `href` makes the whole card activatable: `[part="base"]` becomes
+/** `actionable` **without** `href` makes the whole card activatable: `[part="base"]` becomes
  *  focusable, Enter/Space activate it, and `lr-card-activate` fires. A click that originates in a
  *  slotted control (the Edit button, the Details link) is left to that control — the card
  *  deliberately carries no `role="button"`, so its own buttons and links stay real, focusable
  *  controls rather than an axe `nested-interactive` violation. */
 export const ActivateWithoutHref: Story = {
-  name: 'interactive (no href) — lr-card-activate',
+  name: 'actionable (no href) — lr-card-activate',
   render: () => html`
     <div>
       <lr-card
-        interactive
+        actionable
         style="max-inline-size:20rem;"
         @lr-card-activate=${() => {
           const out = document.getElementById('card-activate-log');
@@ -174,7 +174,7 @@ export const AsLink: Story = {
   name: 'href (stretched link with independent actions)',
   render: () => html`
     <div>
-      <lr-card href="#linked-card-details" interactive style="max-inline-size:20rem;">
+      <lr-card href="#linked-card-details" style="max-inline-size:20rem;">
         <span slot="header" style="font-weight:600;">Q3 report</span>
         The visible card content follows the real stretched link.
         <button

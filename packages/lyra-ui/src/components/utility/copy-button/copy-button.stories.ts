@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './copy-button.js';
+import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from './copy-button.js';
 
 const meta: Meta = {
   title: 'CopyButton',
@@ -88,7 +89,7 @@ export const Interactive: Story = {
   render: () => html`
     <lr-copy-button
       value="hello world"
-      @lr-copy=${(e: CustomEvent<{ text: string }>) => {
+      @lr-copy=${(e: CustomEvent<LyraClipboardWriteSuccess>) => {
         const out = document.getElementById('copy-button-log');
         if (out) out.textContent = `lr-copy: ${e.detail.text}`;
       }}
@@ -96,7 +97,7 @@ export const Interactive: Story = {
         const out = document.getElementById('copy-button-log');
         if (out) out.textContent = 'lr-error';
       }}
-      @lr-copy-error=${(e: CustomEvent<{ text: string; reason: string }>) => {
+      @lr-copy-error=${(e: CustomEvent<LyraClipboardWriteFailure>) => {
         const out = document.getElementById('copy-button-log');
         if (out) out.textContent = `lr-copy-error: ${e.detail.reason}`;
       }}
@@ -131,7 +132,7 @@ export const CopyFailure: Story = {
           if (original) Object.defineProperty(navigator, 'clipboard', original);
         }, 0);
       }}
-      @lr-copy-error=${(e: CustomEvent<{ reason: string }>) => {
+      @lr-copy-error=${(e: CustomEvent<LyraClipboardWriteFailure>) => {
         const out = document.getElementById('copy-button-error-log');
         if (out) out.textContent = `lr-copy-error: ${e.detail.reason}`;
       }}

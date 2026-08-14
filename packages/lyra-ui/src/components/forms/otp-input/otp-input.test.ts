@@ -169,6 +169,7 @@ it('renders six segments and one focusable control by default', async () => {
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Verification code"></lr-otp-input>`);
   expect(segmentsOf(el)).to.have.lengthOf(6);
   expect(el.effectiveLength).to.equal(6);
+  expect('segmentCount' in el).to.equal(false);
   expect(el.appearance).to.equal('outlined');
   expect(el.autofocus).to.be.false;
   expect(el.autosubmit).to.be.false;
@@ -224,7 +225,96 @@ it('coalesces an adversarial literal run so format cannot render an unbounded ce
   expect(controlOf(el).maxLength).to.equal(1);
   expect(segmentsOf(el)).to.have.lengthOf(1);
   expect(el.shadowRoot!.querySelectorAll('[part~="segment-literal"]')).to.have.lengthOf(1);
+  expect(el.shadowRoot!.querySelector('[part~="segment-literal"]')!.textContent).to.have.lengthOf(4_095);
   expect(fieldOf(el).children.length, 'one segment, one coalesced literal, and one input').to.equal(3);
+});
+
+it('bounds value and format preprocessing before scanning adversarial source strings', async () => {
+  const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Key" length="4"></lr-otp-input>`);
+  el.value = `${'x'.repeat(1_000_000)}1234`;
+  el.format = `${'-'.repeat(1_000_000)}####`;
+  await el.updateComplete;
+
+  expect(el.value).to.equal('');
+  expect(el.effectiveLength).to.equal(4);
+  expect(segmentsOf(el)).to.have.length(4);
+  expect(el.shadowRoot!.querySelectorAll('[part~="segment-literal"]')).to.have.length(0);
+});
+
+it('enforces the exact value-source boundary', () => {
+  const el = document.createElement('lr-otp-input') as LyraOtpInput;
+  el.length = 4;
+
+  el.value = `${'x'.repeat(4_095)}7`;
+  expect(el.value).to.equal('7');
+
+  el.value = `${'x'.repeat(4_096)}7`;
+  expect(el.value).to.equal('');
+});
+
+it('stops value normalization as soon as the effective segment cap is filled', () => {
+  const el = document.createElement('lr-otp-input') as LyraOtpInput;
+  el.length = 4;
+  const originalTest = RegExp.prototype.test;
+  let characterChecks = 0;
+  try {
+    RegExp.prototype.test = function (this: RegExp, value: string): boolean {
+      if (this.source === '[0-9]') characterChecks += 1;
+      return originalTest.call(this, value);
+    };
+    el.value = `1234${'9'.repeat(1_000_000)}`;
+  } finally {
+    RegExp.prototype.test = originalTest;
+  }
+
+  expect(el.value).to.equal('1234');
+  expect(characterChecks).to.equal(4);
+});
+
+it('reuses one bounded format projection until the public format string changes', () => {
+  const el = document.createElement('lr-otp-input') as LyraOtpInput;
+  const withFormatCache = el as unknown as { readonly formattedCells: readonly unknown[] | null };
+  el.format = '##-##';
+  const first = withFormatCache.formattedCells;
+  const second = withFormatCache.formattedCells;
+  expect(second).to.equal(first);
+
+  el.format = '###-###';
+  const replacement = withFormatCache.formattedCells;
+  expect(replacement).to.not.equal(first);
+  expect(replacement).to.have.lengthOf(7);
+});
+
+it('bounds range replacements and the existing native value before invoking setRangeText()', async () => {
+  const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Key" length="4"></lr-otp-input>`);
+  const native = controlOf(el);
+  native.value = '1'.repeat(1_000_000);
+
+  const originalSetRangeText = native.setRangeText;
+  let receivedReplacementLength = 0;
+  let receivedValueLength = 0;
+  native.setRangeText = (function (
+    this: HTMLInputElement,
+    replacement: string,
+    start?: number,
+    end?: number,
+    selectMode?: SelectionMode,
+  ): void {
+    receivedReplacementLength = replacement.length;
+    receivedValueLength = this.value.length;
+    if (start === undefined || end === undefined) Reflect.apply(originalSetRangeText, this, [replacement]);
+    else Reflect.apply(originalSetRangeText, this, [replacement, start, end, selectMode]);
+  }) as HTMLInputElement['setRangeText'];
+
+  try {
+    el.setRangeText(`34${'9'.repeat(1_000_000)}`, 0, 0, 'end');
+  } finally {
+    native.setRangeText = originalSetRangeText;
+  }
+
+  expect(receivedReplacementLength).to.be.at.most(4);
+  expect(receivedValueLength).to.be.at.most(4);
+  expect(el.value).to.equal('3499');
 });
 
 it('supports the mapped appearances and shared size ladder', async () => {
@@ -728,6 +818,42 @@ it('maps a collapsed host selection to the fixed-cell keyboard target', async ()
   expect(el.value).to.equal('1934');
   expect(segmentsOf(el).map((segment) => segment.textContent)).to.deep.equal(['1', '9', '3', '4']);
   expect(activeIndexOf(el)).to.equal(2);
+});
+
+it('synchronizes printable and deletion edits from native Home, End, and pointer-like caret changes', async () => {
+  const setNativeCaret = (el: LyraOtpInput, offset: number, eventType: 'click' | 'keyup' | 'select'): void => {
+    const native = controlOf(el);
+    native.setSelectionRange(offset, offset);
+    native.dispatchEvent(eventType === 'keyup'
+      ? new KeyboardEvent('keyup', { key: offset === 0 ? 'Home' : 'End', bubbles: true, composed: true })
+      : new Event(eventType, { bubbles: true, composed: true }));
+  };
+
+  const home = await fixture<LyraOtpInput>(html`<lr-otp-input length="4" value="1234"></lr-otp-input>`);
+  home.focus();
+  setNativeCaret(home, 0, 'keyup');
+  key(home, '9');
+  await home.updateComplete;
+  expect(home.value).to.equal('9234');
+
+  const end = await fixture<LyraOtpInput>(html`<lr-otp-input length="4" value="1234"></lr-otp-input>`);
+  end.focus();
+  setNativeCaret(end, 4, 'select');
+  key(end, '9');
+  await end.updateComplete;
+  expect(end.value).to.equal('1239');
+
+  const pointer = await fixture<LyraOtpInput>(html`<lr-otp-input length="4" value="1234"></lr-otp-input>`);
+  pointer.focus();
+  setNativeCaret(pointer, 1, 'click');
+  key(pointer, 'Delete');
+  await pointer.updateComplete;
+  expect(segmentsOf(pointer).map((segment) => segment.textContent)).to.deep.equal(['1', '', '3', '4']);
+
+  setNativeCaret(pointer, 0, 'select');
+  key(pointer, 'Backspace');
+  await pointer.updateComplete;
+  expect(segmentsOf(pointer).map((segment) => segment.textContent)).to.deep.equal(['', '', '3', '4']);
 });
 
 it('makes the selection facade safe before the native input renders', () => {

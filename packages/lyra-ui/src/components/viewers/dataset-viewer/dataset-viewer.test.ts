@@ -3,6 +3,7 @@ import './dataset-viewer.js';
 import type { LyraDatasetViewer } from './dataset-viewer.js';
 import { findDocumentRenderer } from '../document-viewer/registry.js';
 import { styles } from './dataset-viewer.styles.js';
+import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 
 const TAB_DATA = 'name\tage\tcity\nAda\t30\tLondon\nGrace\t85\tArlington';
 const GRID_DATASET = 'name,role\nAda,Mathematician\nGrace,Scientist\nAda,Programmer';
@@ -135,6 +136,23 @@ describe('lr-dataset-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-rowcount')).to.equal('3');
     } finally { restore(); }
   });
+  it('preserves pipe delimiters and quoted newlines through the bounded record parser', async () => {
+    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const restore = fetchText('name|notes\nAda|"first | clause\nsecond clause"\nGrace|plain');
+    try {
+      el.src = 'https://example.test/a.psv';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+        items: Record<string, string>[];
+      };
+      expect(list.items).to.deep.equal([
+        { name: 'Ada', notes: 'first | clause\nsecond clause' },
+        { name: 'Grace', notes: 'plain' },
+      ]);
+    } finally {
+      restore();
+    }
+  });
   it('falls back to the count-only caption when name is unset', async () => {
     const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);
@@ -179,22 +197,43 @@ describe('lr-dataset-viewer', () => {
       expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
     } finally { restore(); }
   });
-  it('honors a host aria-label over the computed row-count caption when name is unset', async () => {
+  it('emits malformed header diagnostics consumed by PapaParse header mode', async () => {
+    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const diagnostics: unknown[] = [];
+    el.addEventListener('lr-render-error', (event) => {
+      diagnostics.push((event as CustomEvent<{ error: unknown }>).detail.error);
+    });
+    const restore = fetchText('"na"me",role\nAda,Math');
+    try {
+      el.src = 'https://example.test/malformed-header.csv';
+      await waitUntil(() => diagnostics.length === 1);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+
+      const codes = (diagnostics[0] as Array<{ code?: string }>).map((error) => error.code);
+      expect(codes).to.include('InvalidQuotes');
+      expect(el.shadowRoot!.querySelectorAll('[part="table"]')).to.have.lengthOf(1);
+      expect(el.shadowRoot!.querySelectorAll('[part="error"]')).to.have.lengthOf(0);
+    } finally { restore(); }
+  });
+  it('leaves a host aria-label on the host while retaining a purpose-specific table caption', async () => {
     const el = (await fixture(html`<lr-dataset-viewer aria-label="Team roster"></lr-dataset-viewer>`)) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);
     try {
       el.src = 'https://example.test/a.tsv';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('Team roster');
+      const base = el.shadowRoot!.querySelector('[part="base"]')!;
+      expect(base.getAttribute('role')).to.be.null;
+      expect(base.getAttribute('aria-label')).to.be.null;
+      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('2 rows');
     } finally { restore(); }
   });
-  it('lets an explicit host aria-label take precedence over name', async () => {
+  it('does not reuse an explicit host aria-label as the named table caption', async () => {
     const el = (await fixture(html`<lr-dataset-viewer name="Data" aria-label="Team roster"></lr-dataset-viewer>`)) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);
     try {
       el.src = 'https://example.test/a.tsv';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('Team roster');
+      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('Data: 2 rows');
     } finally { restore(); }
   });
   it('preserves an explicitly empty host aria-label ahead of the name-derived caption', async () => {
@@ -203,9 +242,11 @@ describe('lr-dataset-viewer', () => {
     try {
       el.src = 'https://example.test/a.tsv';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+      const base = el.shadowRoot!.querySelector('[part="base"]')!;
       const table = el.shadowRoot!.querySelector('[part="table"]')!;
-      expect(table.hasAttribute('aria-label')).to.be.true;
-      expect(table.getAttribute('aria-label')).to.equal('');
+      expect(base.hasAttribute('aria-label')).to.be.true;
+      expect(base.getAttribute('aria-label')).to.equal('');
+      expect(table.getAttribute('aria-label')).to.equal('Data: 2 rows');
     } finally { restore(); }
   });
   it('names a persistent region landmark on [part="base"] in every fetch state, not only once loaded', async () => {
@@ -233,10 +274,11 @@ describe('lr-dataset-viewer', () => {
     } finally { restore(); }
   });
 
-  it('names the region from a host aria-label, in preference to name, across fetch states', async () => {
+  it('keeps a non-empty host name on the host across fetch states', async () => {
     const el = (await fixture(html`<lr-dataset-viewer name="Data" aria-label="Team roster"></lr-dataset-viewer>`)) as LyraDatasetViewer;
     const base = () => el.shadowRoot!.querySelector('[part="base"]')!;
-    expect(base().getAttribute('aria-label')).to.equal('Team roster');
+    expect(base().getAttribute('aria-label')).to.be.null;
+    expect(base().getAttribute('role')).to.be.null;
 
     const restore = fetchText('not,a\nvalid');
     try {
@@ -244,8 +286,8 @@ describe('lr-dataset-viewer', () => {
       el.src = 'https://example.test/a.tsv';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
       // error state
-      expect(base().getAttribute('role')).to.equal('region');
-      expect(base().getAttribute('aria-label')).to.equal('Team roster');
+      expect(base().getAttribute('role')).to.be.null;
+      expect(base().getAttribute('aria-label')).to.be.null;
     } finally { restore(); }
   });
 
@@ -411,9 +453,13 @@ describe('lr-dataset-viewer', () => {
       const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       const restore = fetchText(`name,val\n${bigRows}`);
       try {
+        const errorEvent = oneEvent(el, 'lr-render-error');
         el.src = 'https://example.test/toobig.tsv';
+        const event = await errorEvent as CustomEvent<{ error: unknown }>;
         await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
-        expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+        expect(event.detail.error instanceof LyraResourceLimitError).to.be.true;
+        expect(el.shadowRoot!.querySelectorAll('[part="error"]')).to.have.lengthOf(1);
+        expect(el.shadowRoot!.querySelectorAll('[part="table"]')).to.have.lengthOf(0);
       } finally {
         restore();
       }
@@ -741,7 +787,7 @@ describe('lr-dataset-viewer', () => {
       el.src = 'https://example.test/data.tsv';
       await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
       let leaked = 0;
-      for (const name of ['lr-load-more', 'lr-visible-range-changed', 'lr-scroll']) {
+      for (const name of ['lr-load-more', 'lr-visible-range-changed', 'lr-virtual-scroll']) {
         el.addEventListener(name as never, () => { leaked++; });
         el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
       }

@@ -9,16 +9,12 @@ import { isUnsafeSvgCloneAttribute } from '../../../internal/safe-svg.js';
 import { isAbortError, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import type { ResourceCacheLease } from '../../../internal/safe-resource-cache.js';
 import { getIconLibrary, subscribeIconLibrary } from './icon-library.js';
-import {
-  acquireSanitizedIconResource,
-  IconResourceError,
-} from './icon-resource.js';
+import { acquireSanitizedIconResource, IconResourceError } from './icon-resource.js';
 import { styles } from './icon.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_iconLoadError, LYRA_DEFAULT_iconSanitizerMissing, LYRA_DEFAULT_iconTooLarge } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 const PATHS: Record<string, string> = {
   add: 'M12 5v14M5 12h14',
@@ -201,13 +197,16 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
   @property({ reflect: true }) canvas?: LyraIconCanvas;
   /** Compatibility alias for `canvas="auto"`.
    * @deprecated Use `canvas="auto"` instead. */
-  @property({ type: Boolean, reflect: true, attribute: 'auto-width' }) autoWidth = false;
+  @property({ type: Boolean, reflect: true, attribute: 'auto-width' })
+  autoWidth = false;
   /** Swaps the primary and secondary opacity hooks used by duotone SVGs. */
-  @property({ type: Boolean, reflect: true, attribute: 'swap-opacity' }) swapOpacity = false;
+  @property({ type: Boolean, reflect: true, attribute: 'swap-opacity' })
+  swapOpacity = false;
   /** Optional built-in motion treatment; all variants honor `prefers-reduced-motion`. */
   @property({ reflect: true }) animation?: LyraIconAnimation;
   /** Widens the icon box to `--lr-icon-fixed-width` so a column of icons aligns its labels. */
-  @property({ type: Boolean, reflect: true, attribute: 'fixed-width' }) fixedWidth = false;
+  @property({ type: Boolean, reflect: true, attribute: 'fixed-width' })
+  fixedWidth = false;
 
   @state() private fetchState: IconFetchState = { kind: 'idle' };
   @query('svg') private svgEl?: SVGSVGElement;
@@ -329,10 +328,7 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     // Creating it with the SVG namespace produces an inert node that can never
     // upgrade; skip it rather than silently changing its semantics.
     if (element.localName.includes('-')) return null;
-    const copy = this.ownerDocument.createElementNS(
-      'http://www.w3.org/2000/svg',
-      element.localName,
-    );
+    const copy = this.ownerDocument.createElementNS('http://www.w3.org/2000/svg', element.localName);
     for (const attribute of element.attributes) {
       if (isUnsafeSvgCloneAttribute(attribute.name)) continue;
       copy.setAttribute(attribute.name, attribute.value);
@@ -352,9 +348,7 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
   }
 
   private hasRemoteSource(): boolean {
-    return Boolean(
-      this.src || (this.name && this.library && getIconLibrary(this.library)),
-    );
+    return Boolean(this.src || (this.name && this.library && getIconLibrary(this.library)));
   }
 
   private releaseResourceLease(): void {
@@ -437,12 +431,7 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     }
   }
 
-  private async fail(
-    reason: IconErrorReason,
-    generation: number,
-    src: string,
-    error: unknown,
-  ): Promise<void> {
+  private async fail(reason: IconErrorReason, generation: number, src: string, error: unknown): Promise<void> {
     if (!this.isConnected || generation !== this.generation) return;
     this.fetchState = { kind: 'error', reason };
     await this.updateComplete;
@@ -459,17 +448,15 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     return this.localize('iconLoadError');
   }
 
-  /** Applies the accessible-name contract to the fetched node, which Lit does not own and so
-   *  cannot keep in sync through a template binding. */
+  /** Applies presentation semantics to the fetched node. The stable wrapper rendered by
+   * `render()` owns the accessible name through every request state. */
   private applyRemoteA11y(): void {
     const state = this.fetchState;
     if (state.kind !== 'loaded') return;
-    const label = this.accessibleLabel();
     state.node.setAttribute('part', 'svg');
     state.node.setAttribute('focusable', 'false');
-    state.node.setAttribute('aria-hidden', label ? 'false' : 'true');
-    if (label) state.node.setAttribute('aria-label', label);
-    else state.node.removeAttribute('aria-label');
+    state.node.setAttribute('aria-hidden', 'true');
+    state.node.removeAttribute('aria-label');
     for (const use of state.node.querySelectorAll('use')) {
       const parts = new Set((use.getAttribute('part') ?? '').split(/\s+/).filter(Boolean));
       parts.add('use');
@@ -488,27 +475,54 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
    */
   private renderBuiltIn(): TemplateResult {
     const path = this.path || PATHS[this.name] || '';
-    const accessibleLabel = this.accessibleLabel();
-    return html`<svg part="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden=${accessibleLabel ? 'false' : 'true'} aria-label=${accessibleLabel || nothing} focusable="false">${path ? svg`<path d=${path}></path>` : nothing}</svg>${path ? nothing : html`<slot @slotchange=${this.onCustomSlotChange}></slot>`}`;
+    return html`<svg
+        part="svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+        focusable="false"
+      >
+        ${path ? svg`<path d=${path}></path>` : nothing}</svg
+      >${path ? nothing : html`<slot @slotchange=${this.onCustomSlotChange}></slot>`}`;
   }
 
   override render(): TemplateResult {
     const state = this.fetchState;
+    const label = this.accessibleLabel();
+    let content: TemplateResult;
     switch (state.kind) {
       case 'loaded':
-        return html`${state.node}`;
+        content = html`${state.node}`;
+        break;
       case 'error':
-        return html`<span part="error" class="sr-only" aria-hidden="true">${this.errorMessage(state.reason)}</span>`;
+        content = html`<span part="error" class="sr-only" aria-hidden="true">${this.errorMessage(state.reason)}</span>`;
+        break;
       case 'empty':
-        return html`<span part="empty" aria-hidden="true"></span>`;
+        content = html`<span part="empty" aria-hidden="true"></span>`;
+        break;
       case 'loading':
-        // Nothing is drawn while a remote icon resolves: a placeholder glyph would be a flash of
-        // the wrong icon, and the box already holds its size.
-        return html``;
+        content = html``;
+        break;
       case 'idle':
       default:
-        return this.renderBuiltIn();
+        content = this.renderBuiltIn();
+        break;
     }
+    return html`<span
+      class="semantic-owner"
+      role=${label ? 'img' : nothing}
+      aria-label=${label || nothing}
+      aria-hidden=${label ? 'false' : 'true'}
+      >${content}</span
+    >`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lr-icon': LyraIcon; } }
+declare global {
+  interface HTMLElementTagNameMap {
+    'lr-icon': LyraIcon;
+  }
+}

@@ -54,14 +54,14 @@ export const styles = css`
       background-color var(--lr-transition-fast),
       border-color var(--lr-transition-fast);
   }
-  [part='restore-button']:hover {
+  [part='restore-button']:hover:not([aria-disabled='true']) {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
   }
   /* Hover recolors the chrome only; the press additionally fills the pill, mixing its resting
      surface toward the text color so the pressed state is a strictly stronger signal than hover
      rather than a differently-colored one. */
-  [part='restore-button']:active {
+  [part='restore-button']:active:not([aria-disabled='true']) {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));

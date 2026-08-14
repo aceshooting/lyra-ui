@@ -6,7 +6,7 @@ export const styles = css`
     inline-size: var(--lr-size-8em);
     block-size: var(--lr-size-8em);
   }
-  :host([type='linear']) {
+  :host([shape='linear']) {
     inline-size: var(--lr-size-12em);
     block-size: var(--lr-size-1-5em);
   }
@@ -40,17 +40,17 @@ export const styles = css`
     font-family: var(--lr-font);
     text-transform: uppercase;
   }
-  :host([type='linear']) [part='fill'] {
+  :host([shape='linear']) [part='fill'] {
     stroke-linecap: butt;
   }
-  :host([type='linear']) [part='value'],
-  :host([type='linear']) [part='label'] {
+  :host([shape='linear']) [part='value'],
+  :host([shape='linear']) [part='label'] {
     font-size: var(--lr-size-0-5rem);
   }
-  :host([type='linear']) [part='value'] {
+  :host([shape='linear']) [part='value'] {
     text-anchor: end;
   }
-  :host([type='linear']) [part='label'] {
+  :host([shape='linear']) [part='label'] {
     text-anchor: start;
   }
   @media (prefers-reduced-motion: reduce) {

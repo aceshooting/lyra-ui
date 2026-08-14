@@ -229,6 +229,27 @@ export const SsrSlotHints: Story = {
   `,
 };
 
+export const GregorianIsoWithPersianPresentation: Story = {
+  name: 'Gregorian ISO with Persian presentation',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The stored range remains Gregorian ISO while `fa-IR` supplies localized digits and its native formatRange separator; typing the displayed value back is supported.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-date-input
+      locale="fa-IR"
+      mode="range"
+      label="بازه زمانی"
+      value="2026-05-01/2026-05-15"
+      style="max-inline-size: 24rem"
+    ></lr-date-input>
+  `,
+};
+
 export const NarrowLongContent: Story = {
   name: 'Narrow RTL long adornment (320px)',
   parameters: {

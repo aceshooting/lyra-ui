@@ -21,6 +21,7 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_hidePassword, LYRA_DEFAULT_inputLabel, LYRA_DEFAULT_showPassword, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
@@ -38,6 +39,18 @@ export type LyraInputType =
   | 'datetime-local'
   | 'tel'
   | 'url';
+const INPUT_TYPES = new Set<LyraInputType>([
+  'text',
+  'password',
+  'email',
+  'number',
+  'time',
+  'search',
+  'date',
+  'datetime-local',
+  'tel',
+  'url',
+]);
 /** Alias of the canonical six-step size ladder. The `size` property itself accepts
  *  {@linkcode LyraSize}, i.e. these steps *and* the `small`/`medium`/`large` spellings. */
 export type LyraInputSize = LyraSizeStep;
@@ -190,6 +203,14 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  *   Pressed action color.
  * @cssprop [--lr-input-action-active-bg=color-mix(in oklab,var(--lr-color-surface),var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  *   Pressed action background. The same hooks apply to `lr-number-input`'s stepper pair.
+ * @cssprop [--lr-input-time-picker-hover-bg=var(--lr-color-brand-quiet)] - Hover background for
+ *   the browser-native time-picker indicator when `type="time"`.
+ * @cssprop [--lr-input-time-picker-active-bg=var(--lr-color-brand)] - Pressed background for the
+ *   browser-native time-picker indicator when `type="time"`.
+ * @cssprop [--lr-input-time-picker-focus-bg=var(--lr-color-brand-quiet)] - Focus-visible
+ *   background for the native time-picker indicator.
+ * @cssprop [--lr-input-time-picker-focus-ring=var(--lr-focus-ring-color)] - Focus-visible outline
+ *   color for the native time-picker indicator.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  * localized word) to replace it. Caller-supplied content, so it is never localized here.
@@ -215,6 +236,13 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  /** Public WA-compatible intrinsic validator catalog. */
+  static get validators(): LyraFormValidator<LyraInput>[] {
+    return [currentValidityValidator(
+      'required', 'disabled', 'readonly', 'value', 'type', 'pattern', 'min', 'max', 'step',
+      'minlength', 'maxlength',
+    )];
+  }
   // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own sheet
   // so every `--lr-input-*` geometry knob can simply point at the active tier's value -- and so
   // both spellings of every tier (`s` and `small`, …) work with no per-component rule.
@@ -229,7 +257,16 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     super.value = next ?? '';
   }
 
-  @property({ reflect: true }) type: LyraInputType = 'text';
+  private _type: LyraInputType = 'text';
+  /** Native input type. Unsupported runtime strings normalize to `text` at the public boundary so
+   * native validity, type-dependent chrome, and the reflected host state cannot diverge. */
+  @property({ reflect: true })
+  get type(): LyraInputType { return this._type; }
+  set type(next: LyraInputType) {
+    const old = this._type;
+    this._type = INPUT_TYPES.has(next) ? next : 'text';
+    if (old !== this._type) this.requestUpdate('type', old);
+  }
   /** Visual size on the library's one control ladder — shared with `lr-button`/`lr-select`/
    *  `lr-combobox`, so same-tier controls line up in a toolbar row. Accepts both the canonical
    *  `'2xs'`–`'xl'` steps and Web Awesome's/Shoelace's `'small'`/`'medium'`/`'large'` spellings of
@@ -799,7 +836,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
                 aria-pressed=${this.passwordVisible ? 'true' : 'false'}
                 @click=${this.onTogglePasswordVisible}
               >
-                <span part="password-toggle-button"
+                <span part="password-toggle-button" aria-hidden="true" inert
                   >${this.passwordVisible
                     ? html`<slot name="hide-password-icon">${eyeOffIcon()}</slot>`
                     : html`<slot name="show-password-icon">${eyeIcon()}</slot>`}</span
@@ -814,7 +851,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
                 aria-label=${this.localize('clear')}
                 @click=${this.onClear}
               >
-                <slot name="clear-icon">${closeIcon()}</slot>
+                <span aria-hidden="true" inert><slot name="clear-icon">${closeIcon()}</slot></span>
               </button>`
             : nothing}
           ${this.renderControls()}

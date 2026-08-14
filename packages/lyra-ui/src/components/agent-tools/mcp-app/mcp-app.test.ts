@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './mcp-app.js';
-import type { LyraMcpApp } from './mcp-app.class.js';
+import type { LyraMcpApp, McpAppResource } from './mcp-app.class.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
@@ -83,13 +83,36 @@ it('enforces CSP before attacker-controlled comment or script-text head decoys',
   }
 });
 
-it('rejects executable frame URLs instead of navigating them', async () => {
-  const el = (await fixture(html`<lr-mcp-app
-    .resource=${{ uri: 'ui://unsafe', src: 'javascript:alert(1)' }}
-  ></lr-mcp-app>`)) as LyraMcpApp;
-  expect(el.shadowRoot!.querySelectorAll('iframe')).to.have.lengthOf(0);
-  expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent?.trim()).to.not.equal('');
-  expect(el.shadowRoot!.querySelector('[part="error"]')?.getAttribute('role')).to.equal(null);
+it('rejects executable frame URL schemes instead of navigating active documents', async () => {
+  const el = await fixture<LyraMcpApp>(html`<lr-mcp-app></lr-mcp-app>`);
+  for (const src of [
+    'javascript:alert(1)',
+    'data:text/html,<script>parent.postMessage("executed", "*")</script>',
+    'blob:https://example.test/active-document',
+  ]) {
+    el.resource = { uri: `ui://unsafe/${src.split(':')[0]}`, src };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('iframe'), src).to.have.lengthOf(0);
+    expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent?.trim(), src).to.not.equal('');
+    expect(el.shadowRoot!.querySelector('[part="error"]')?.getAttribute('role'), src).to.equal(null);
+  }
+});
+
+it('requires a non-empty resource identity and exactly one executable source at runtime', async () => {
+  const el = await fixture<LyraMcpApp>(html`<lr-mcp-app></lr-mcp-app>`);
+  const invalid = [
+    { html: '<p>Missing identity</p>' },
+    { uri: '   ', html: '<p>Blank identity</p>' },
+    { uri: 'ui://missing/source' },
+    { uri: 'ui://ambiguous/source', html: '<p>Inline</p>', src: 'https://example.test/app' },
+  ] as unknown as McpAppResource[];
+
+  for (const resource of invalid) {
+    el.resource = resource;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('iframe')).to.have.lengthOf(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="error"]')).to.have.lengthOf(1);
+  }
 });
 
 it('routes fresh loading and unavailable states through pre-mounted light-DOM sinks', async () => {
@@ -210,15 +233,14 @@ it('forwards typed message, link, and log requests while rejecting malformed lin
   expect((await warningLog).detail.level).to.equal('warn');
 });
 
-it('builds host-context and optional tool-result message envelopes through the public API', () => {
+it('builds host-context and correlated tool-result message envelopes through the public API', () => {
   const el = document.createElement('lr-mcp-app') as LyraMcpApp;
   const messages: unknown[] = [];
   (el as any).post = (message: unknown) => messages.push(message);
 
   el.postHostContext({ theme: 'dark' });
-  el.postToolResult('request-1', { temperature: 18 });
-  el.postToolResult('request-2', undefined, 'Permission denied');
-  el.postToolResult('request-3');
+  el.postToolResult('request-1', { frameGeneration: 0, result: { temperature: 18 } });
+  el.postToolResult('request-2', { frameGeneration: 0, error: 'Permission denied' });
 
   expect(messages).to.deep.equal([
     {
@@ -241,13 +263,23 @@ it('builds host-context and optional tool-result message envelopes through the p
       requestId: 'request-2',
       error: 'Permission denied',
     },
-    {
-      channel: 'lyra-mcp-app',
-      version: 1,
-      type: 'tool-result',
-      requestId: 'request-3',
-    },
   ]);
+});
+
+it('fails closed on uncorrelated or ambiguous tool-result options at runtime', () => {
+  const el = document.createElement('lr-mcp-app') as LyraMcpApp;
+  const messages: unknown[] = [];
+  (el as any).post = (message: unknown) => messages.push(message);
+  const postToolResult = el.postToolResult as unknown as (
+    requestId: string,
+    options: Record<string, unknown>,
+  ) => void;
+
+  postToolResult.call(el, 'request-1', { result: 'uncorrelated' });
+  postToolResult.call(el, 'request-2', { frameGeneration: 0, result: 'ok', error: 'not ok' });
+  postToolResult.call(el, '', { frameGeneration: 0, result: 'missing request identity' });
+
+  expect(messages).to.deep.equal([]);
 });
 
 it('authenticates remote uniquely-origin sandbox messages by frame window and opaque origin', async () => {
@@ -267,6 +299,15 @@ it('authenticates remote uniquely-origin sandbox messages by frame window and op
 
   window.dispatchEvent(frameMessage(iframe.contentWindow, data, 'null'));
   expect(calls).to.equal(1);
+});
+
+it('never sends the embedding document referrer to a remote app', async () => {
+  const el = await fixture<LyraMcpApp>(html`<lr-mcp-app
+    .resource=${{ uri: 'ui://remote/private', src: 'https://apps.example.test/private' }}
+  ></lr-mcp-app>`);
+  expect(el.shadowRoot!.querySelector('iframe')!.getAttribute('referrerpolicy')).to.equal(
+    'no-referrer',
+  );
 });
 
 it('retargets authenticated frame messages to the adopted owner window and cleans up reconnects', async () => {
@@ -382,6 +423,31 @@ it('replaces the iframe window across resource navigation so the previous opaque
   expect(calls).to.equal(1);
 });
 
+it('ignores a detached previous frame load after replacing the resource', async () => {
+  const el = await fixture<LyraMcpApp>(html`<lr-mcp-app
+    .resource=${{ uri: 'ui://first', html: '<p>First</p>' }}
+  ></lr-mcp-app>`);
+  const oldFrame = el.shadowRoot!.querySelector('iframe')!;
+  const readyUris: string[] = [];
+  el.addEventListener('lr-mcp-ready', (event) => readyUris.push(event.detail.uri));
+
+  el.resource = { uri: 'ui://second', html: '<p>Second</p>' };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="loading"]')).to.have.lengthOf(1);
+  const readyCountBeforeStaleLoad = readyUris.length;
+
+  oldFrame.dispatchEvent(new Event('load'));
+  await el.updateComplete;
+
+  expect(readyUris.length, 'a detached frame must not emit readiness for its replacement').to.equal(
+    readyCountBeforeStaleLoad,
+  );
+  expect(el.shadowRoot!.querySelectorAll('[part="loading"]')).to.have.lengthOf(1);
+
+  el.shadowRoot!.querySelector('iframe')!.dispatchEvent(new Event('load'));
+  expect(readyUris.at(-1)).to.equal('ui://second');
+});
+
 it('keeps the loaded state when only height constraints change', async () => {
   const el = (await fixture(html`
     <lr-mcp-app .resource=${{ uri: 'ui://sizing', html: '<p>Sizing</p>' }}></lr-mcp-app>
@@ -431,6 +497,20 @@ it('is accessible with an app loaded', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('keeps a non-empty host name on the host and preserves explicit-empty frame semantics', async () => {
+  const el = (await fixture(html`<lr-mcp-app
+    aria-label="Weather experience"
+    .resource=${{ uri: 'ui://weather/app', title: 'Weather controls', html: '<p>Weather</p>' }}
+  ></lr-mcp-app>`)) as LyraMcpApp;
+  const frame = el.shadowRoot!.querySelector('iframe')!;
+  expect(el.getAttribute('aria-label')).to.equal('Weather experience');
+  expect(frame.title).to.equal('Weather controls');
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(frame.title).to.equal('');
+});
+
 it('applies per-instance localized strings', async () => {
   const el = (await fixture(html`<lr-mcp-app
     .strings=${{ mcpAppLabel: 'Localized MCP application' }}
@@ -443,7 +523,7 @@ it('applies per-instance localized strings', async () => {
 
 it('renders no srcdoc attribute at all for a src-only resource, so the frame really navigates', async () => {
   const el = (await fixture(html`<lr-mcp-app></lr-mcp-app>`)) as LyraMcpApp;
-  el.resource = { src: 'https://example.test/app.html' };
+  el.resource = { uri: 'ui://remote/src-only', src: 'https://example.test/app.html' };
   await el.updateComplete;
   const frame = el.shadowRoot!.querySelector('iframe') as HTMLIFrameElement;
   // A present-but-empty srcdoc still wins over src per the HTML spec's iframe processing steps,
@@ -454,7 +534,7 @@ it('renders no srcdoc attribute at all for a src-only resource, so the frame rea
 
 it('still renders srcdoc for an inline html resource', async () => {
   const el = (await fixture(html`<lr-mcp-app></lr-mcp-app>`)) as LyraMcpApp;
-  el.resource = { html: '<p>inline</p>' };
+  el.resource = { uri: 'ui://inline/html-only', html: '<p>inline</p>' };
   await el.updateComplete;
   const frame = el.shadowRoot!.querySelector('iframe') as HTMLIFrameElement;
   expect(frame.hasAttribute('srcdoc')).to.be.true;
@@ -499,7 +579,10 @@ it('drops a tool result whose frame generation no longer matches the mounted fra
   };
   const toolResults = (): Record<string, unknown>[] => posted.filter((m) => m['type'] === 'tool-result');
 
-  el.postToolResult('request-1', { temperature: 18 }, undefined, staleGeneration);
+  el.postToolResult('request-1', {
+    frameGeneration: staleGeneration,
+    result: { temperature: 18 },
+  });
   expect(
     toolResults().length,
     "the old resource's result must not be delivered into the newly-loaded app",
@@ -521,13 +604,53 @@ it('drops a tool result whose frame generation no longer matches the mounted fra
   const liveGeneration = (await secondCall).detail.frameGeneration;
   expect(liveGeneration).to.not.equal(staleGeneration);
 
-  el.postToolResult('request-2', { temperature: 19 }, undefined, liveGeneration);
+  el.postToolResult('request-2', {
+    frameGeneration: liveGeneration,
+    result: { temperature: 19 },
+  });
   expect(toolResults().length, 'a result correlated to the live frame still lands').to.equal(1);
   expect(toolResults()[0]!['requestId']).to.equal('request-2');
+});
 
-  // A caller that passes no correlation keeps the pre-existing behavior: post to whatever frame is
-  // currently mounted. The argument is additive, so existing hosts are unaffected.
-  el.postToolResult('request-3', { temperature: 20 });
-  expect(toolResults().length).to.equal(2);
-  expect(toolResults()[1]!['requestId']).to.equal('request-3');
+it('invalidates tool-result correlation when a connected frame is adopted or reconnected', async () => {
+  const el = await fixture<LyraMcpApp>(html`<lr-mcp-app
+    .resource=${{ uri: 'ui://lifecycle', html: '<p>Lifecycle</p>' }}
+  ></lr-mcp-app>`);
+  const frameGeneration = async (): Promise<number> => {
+    const frame = el.shadowRoot!.querySelector('iframe')!;
+    const call = oneEvent(el, 'lr-mcp-tool-call');
+    window.dispatchEvent(frameMessage(
+      frame.contentWindow,
+      {
+        channel: 'lyra-mcp-app',
+        version: 1,
+        type: 'tool-call',
+        requestId: crypto.randomUUID(),
+        name: 'slow_tool',
+        args: {},
+      },
+      'null',
+    ));
+    return (await call).detail.frameGeneration as number;
+  };
+
+  const beforeAdoption = await frameGeneration();
+  el.adoptedCallback();
+  await el.updateComplete;
+  const afterAdoption = await frameGeneration();
+  expect(afterAdoption).to.not.equal(beforeAdoption);
+
+  const parent = el.parentNode!;
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  const afterReconnect = await frameGeneration();
+  expect(afterReconnect).to.not.equal(afterAdoption);
+
+  const posted: unknown[] = [];
+  (el as unknown as { post: (message: unknown) => void }).post = (message) => posted.push(message);
+  el.postToolResult('stale-adoption', { frameGeneration: beforeAdoption, result: 'stale' });
+  el.postToolResult('stale-reconnect', { frameGeneration: afterAdoption, result: 'stale' });
+  el.postToolResult('current', { frameGeneration: afterReconnect, result: 'current' });
+  expect(posted).to.have.lengthOf(1);
 });

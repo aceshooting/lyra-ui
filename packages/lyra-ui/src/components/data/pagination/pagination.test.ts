@@ -30,11 +30,11 @@ async function compactPagination(
   return pagination(template);
 }
 
-it('derives the pageCount and totalPages aliases plus a localized item-range summary', async () => {
+it('exposes totalPages as the sole derived total plus a localized item-range summary', async () => {
   const el = await pagination();
 
-  expect(el.pageCount).to.equal(10);
   expect(el.totalPages).to.equal(10);
+  expect('pageCount' in el).to.be.false;
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('1–10 of 95 items');
 });
 
@@ -268,28 +268,41 @@ it('commits a valid numeric page jump on Enter', async () => {
   expect(input.value).to.equal('1');
 });
 
-it('forwards public focus and blur to the page input', async () => {
-  const el = await compactPagination();
+it('forwards public focus and blur to the current-page control in either format', async () => {
+  for (const format of ['standard', 'compact'] as const) {
+    const el = await pagination(html`
+      <lr-pagination format=${format} total="95" page-size="10" page="3"></lr-pagination>
+    `);
+    const primary = el.shadowRoot!.querySelector<HTMLElement>(
+      format === 'compact' ? '[part="page-input"]' : '[part~="page-current"]'
+    )!;
 
-  el.focus();
-  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('page-input');
-  el.blur();
-  expect(el.shadowRoot!.activeElement === null).to.equal(true);
+    el.focus();
+    expect(el.shadowRoot!.activeElement === primary, format).to.equal(true);
+    el.blur();
+    expect(el.shadowRoot!.activeElement === null, format).to.equal(true);
+  }
 });
 
-it('forwards host click to the page input and suppresses it while effectively disabled', async () => {
-  const el = await compactPagination();
-  const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
-  let clicks = 0;
-  input.addEventListener('click', () => clicks++);
+it('forwards host click to the primary control in either format and suppresses it while disabled', async () => {
+  for (const format of ['standard', 'compact'] as const) {
+    const el = await pagination(html`
+      <lr-pagination format=${format} total="95" page-size="10" page="3"></lr-pagination>
+    `);
+    const primary = el.shadowRoot!.querySelector<HTMLElement>(
+      format === 'compact' ? '[part="page-input"]' : '[part~="page-current"]'
+    )!;
+    let clicks = 0;
+    primary.addEventListener('click', () => clicks++);
 
-  el.click();
-  expect(clicks).to.equal(1);
+    el.click();
+    expect(clicks, format).to.equal(1);
 
-  el.disabled = true;
-  await el.updateComplete;
-  el.click();
-  expect(clicks).to.equal(1);
+    el.disabled = true;
+    await el.updateComplete;
+    el.click();
+    expect(clicks, format).to.equal(1);
+  }
 });
 
 it('keeps previous and next actions at the shared hit-area floor in every size', async () => {
@@ -405,7 +418,7 @@ it('disables every control for empty data, disabled, and loading states', async 
   const el = await pagination(html`<lr-pagination with-summary></lr-pagination>`);
   const controls = () => [...el.shadowRoot!.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button, input')];
 
-  expect(el.pageCount).to.equal(0);
+  expect(el.totalPages).to.equal(0);
   expect(controls().every((control) => control.disabled)).to.equal(true);
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('0 items');
   await expect(el).to.be.accessible();
@@ -526,7 +539,7 @@ it('normalizes NaN/negative pageSize and total to an empty, zero-page state inst
   el.pageSize = NaN;
   el.total = -50;
   await el.updateComplete;
-  expect(el.pageCount).to.equal(0);
+  expect(el.totalPages).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('0 items');
 });
 
@@ -901,6 +914,7 @@ describe('numbered page list', () => {
     const event = await eventPromise;
 
     expect(event.detail).to.deep.equal({ page: 4, pageSize: 10 });
+    expect(Object.isFrozen(event.detail)).to.equal(true);
     expect(el.page).to.equal(1);
   });
 
@@ -996,16 +1010,16 @@ describe('numbered page list', () => {
 
     expect(seen.length).to.be.greaterThan(0);
     expect(
-      seen.every((page) => page >= 1 && page <= el.pageCount && page !== el.page),
+      seen.every((page) => page >= 1 && page <= el.totalPages && page !== el.page),
       'first-page render'
     ).to.equal(true);
 
     seen.length = 0;
-    el.page = el.pageCount;
+    el.page = el.totalPages;
     await el.updateComplete;
     expect(seen.length).to.be.greaterThan(0);
     expect(
-      seen.every((page) => page >= 1 && page <= el.pageCount && page !== el.page),
+      seen.every((page) => page >= 1 && page <= el.totalPages && page !== el.page),
       'last-page render'
     ).to.equal(true);
 
@@ -1151,6 +1165,62 @@ describe('numbered page list', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="pages"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('[part~="page"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('[part~="next-button"]').length).to.equal(1);
+  });
+
+  it('keeps compact previous/next and edge controls in link mode, including inactive boundaries', async () => {
+    const firstPage = await pagination(html`
+      <lr-pagination
+        format="compact"
+        total="50"
+        page-size="10"
+        page="1"
+        with-edges
+        href-template="/p/{page}"
+      ></lr-pagination>
+    `);
+    const first = firstPage.shadowRoot!.querySelector('[part~="first-button"]') as HTMLAnchorElement;
+    const previous = firstPage.shadowRoot!.querySelector('[part~="previous-button"]') as HTMLAnchorElement;
+    const next = firstPage.shadowRoot!.querySelector('[part~="next-button"]') as HTMLAnchorElement;
+    const last = firstPage.shadowRoot!.querySelector('[part~="last-button"]') as HTMLAnchorElement;
+
+    expect(first.localName).to.equal('a');
+    expect(first.hasAttribute('href')).to.equal(false);
+    expect(first.getAttribute('aria-disabled')).to.equal('true');
+    expect(previous.localName).to.equal('a');
+    expect(previous.hasAttribute('href')).to.equal(false);
+    expect(previous.getAttribute('aria-disabled')).to.equal('true');
+    expect(next.getAttribute('href')).to.equal('/p/2');
+    expect(last.getAttribute('href')).to.equal('/p/5');
+    expect(firstPage.shadowRoot!.querySelector('[part="page-input"]') !== null).to.be.true;
+    expect(firstPage.shadowRoot!.querySelector('[part="pages"]') === null).to.be.true;
+
+    const lastPage = await pagination(html`
+      <lr-pagination
+        format="compact"
+        total="50"
+        page-size="10"
+        page="5"
+        with-edges
+        href-template="/p/{page}"
+      ></lr-pagination>
+    `);
+    expect(lastPage.shadowRoot!.querySelector('[part~="first-button"]')!.getAttribute('href')).to.equal('/p/1');
+    expect(lastPage.shadowRoot!.querySelector('[part~="previous-button"]')!.getAttribute('href')).to.equal('/p/4');
+    expect(lastPage.shadowRoot!.querySelector('[part~="next-button"]')!.hasAttribute('href')).to.equal(false);
+    expect(lastPage.shadowRoot!.querySelector('[part~="last-button"]')!.hasAttribute('href')).to.equal(false);
+  });
+
+  it('normalizes foreign format values to the standard behavior and reflected property value', async () => {
+    const el = await pagination(html`<lr-pagination format="unknown" total="50"></lr-pagination>`);
+
+    expect(el.format).to.equal('standard');
+    expect(el.shadowRoot!.querySelector('[part="pages"]') !== null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="page-input"]') === null).to.be.true;
+
+    (el as unknown as { format: string }).format = 'also-unknown';
+    await el.updateComplete;
+    expect(el.format).to.equal('standard');
+    expect(el.getAttribute('format')).to.equal('standard');
   });
 
   it('is accessible as a populated page list, as links, and in the compact layout', async () => {
@@ -1311,7 +1381,7 @@ describe('Web Awesome navigation surface', () => {
     const el = await pagination(html`<lr-pagination total="95"></lr-pagination>`);
     expect(el.page).to.equal(1);
     expect(el.pageSize).to.equal(10);
-    expect(el.pageCount).to.equal(10);
+    expect(el.totalPages).to.equal(10);
     expect(el.withoutNav).to.be.false;
     expect(el.hideSinglePage).to.be.false;
   });
@@ -1328,6 +1398,7 @@ describe('Web Awesome navigation surface', () => {
     await el.updateComplete;
     expect(event.cancelable).to.be.true;
     expect(event.detail).to.deep.equal({ page: 2, pageSize: 10 });
+    expect(Object.isFrozen(event.detail)).to.equal(true);
     expect(changed).to.equal(0);
     expect(el.page).to.equal(1);
   });

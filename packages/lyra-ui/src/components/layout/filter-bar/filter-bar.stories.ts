@@ -6,8 +6,8 @@ import '../../forms/time-range/time-range.js';
 import type { ComboboxSource } from '../../forms/combobox/combobox.class.js';
 import type {
   LyraFilterBar,
-  FilterBarCustomControlAdapter,
-  FilterBarFilterDefinition,
+  LyraFilterBarCustomControlAdapter,
+  LyraFilterBarFilterDefinition,
 } from './filter-bar.js';
 
 const meta: Meta = {
@@ -18,7 +18,7 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-const dashboardFilters: FilterBarFilterDefinition[] = [
+const dashboardFilters: LyraFilterBarFilterDefinition[] = [
   {
     id: 'status',
     label: 'Status',
@@ -118,7 +118,7 @@ export const StrictDateChipFormatting: Story = {
  *  once it's touched (or `reportValidity()` is called) -- see the "search" filter here. */
 export const RequiredFilter: Story = {
   render: () => {
-    const filters: FilterBarFilterDefinition[] = [
+    const filters: LyraFilterBarFilterDefinition[] = [
       { ...dashboardFilters[0], required: true },
       dashboardFilters[1],
     ];
@@ -155,7 +155,7 @@ export const Loading: Story = {
  *  unset -- here `status` always resets back to "Open" while `owners` clears entirely. */
 export const ResetWithDefaults: Story = {
   render: () => {
-    const filters: FilterBarFilterDefinition[] = [
+    const filters: LyraFilterBarFilterDefinition[] = [
       { ...dashboardFilters[0], defaultValue: 'open' },
       dashboardFilters[1],
     ];
@@ -200,7 +200,7 @@ export const LiveEvents: Story = {
  *  the chip clears the field. */
 export const FreeTextSearch: Story = {
   render: () => {
-    const filters: FilterBarFilterDefinition[] = [
+    const filters: LyraFilterBarFilterDefinition[] = [
       { id: 'q', label: 'Search', type: 'text', placeholder: 'Search logs (e.g. GET /api/v1)', debounce: 250 },
       {
         id: 'severity',
@@ -246,18 +246,18 @@ export const FreeTextSearch: Story = {
  * `<lr-filter-bar>`. */
 export const CustomControls: Story = {
   render: () => {
-    const checkboxAdapter: FilterBarCustomControlAdapter = {
+    const checkboxAdapter: LyraFilterBarCustomControlAdapter = {
       valueFromEvent: (event) =>
         (event as CustomEvent<{ checked: boolean }>).detail.checked,
-      emptyValue: false,
+      clearValue: false,
       formatValue: (value) => (value === true ? 'Enabled' : 'Disabled'),
     };
-    const rangeAdapter: FilterBarCustomControlAdapter = {
+    const rangeAdapter: LyraFilterBarCustomControlAdapter = {
       valueFromEvent: (event) => {
         const { start, end } = (event as CustomEvent<{ start: number; end: number }>).detail;
         return `${start}/${end}`;
       },
-      emptyValue: '',
+      clearValue: '',
       formatValue: (value) => (typeof value === 'string' ? value : ''),
     };
     const ownerSource: ComboboxSource = async (query) => {
@@ -268,7 +268,7 @@ export const CustomControls: Story = {
       ];
       return owners.filter((owner) => owner.label.toLowerCase().includes(query.toLowerCase()));
     };
-    const filters: FilterBarFilterDefinition[] = [
+    const filters: LyraFilterBarFilterDefinition[] = [
       {
         id: 'window',
         label: 'Time window',
@@ -321,7 +321,7 @@ export const CustomControls: Story = {
           adapter: {
             valueFromEvent: (event) =>
               (event.target as HTMLElement & { value: string }).value,
-            emptyValue: '',
+            clearValue: '',
           },
           render: (context) => html`
             <lr-combobox
@@ -351,7 +351,7 @@ export const CustomControls: Story = {
  *  unbroken localized active-chip value, matching this library's narrow-panel/dialog contract. */
 export const NarrowAllocation: Story = {
   render: () => {
-    const filters: FilterBarFilterDefinition[] = [
+    const filters: LyraFilterBarFilterDefinition[] = [
       {
         id: 'status',
         label: 'الحالة',
@@ -378,7 +378,7 @@ export const OptionIcons: Story = {
     const dot = (color: string) => html`<span
       style="display:inline-block;inline-size:var(--lr-space-s);block-size:var(--lr-space-s);border-radius:var(--lr-radius-pill);background:${color}"
     ></span>`;
-    const filters: FilterBarFilterDefinition[] = [
+    const filters: LyraFilterBarFilterDefinition[] = [
       {
         id: 'status',
         label: 'Status',

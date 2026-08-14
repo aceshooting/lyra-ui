@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { computeLineDiff, pairOpsForSplit, type DiffOp } from './diff-line-diff.js';
+import { computeLineDiff, pairOpsForSplit, type LyraDiffOp } from './diff-line-diff.js';
 
 describe('computeLineDiff', () => {
   it('produces a real interleaved diff for a one-line change inside a longer block, not all-removed-then-all-added', () => {
@@ -40,7 +40,7 @@ describe('computeLineDiff', () => {
 
 describe('pairOpsForSplit', () => {
   it('pairs a pure-remove hunk against empty placeholders on the right', () => {
-    const ops: DiffOp[] = [
+    const ops: LyraDiffOp[] = [
       { type: 'remove', text: 'a' },
       { type: 'remove', text: 'b' },
     ];
@@ -51,7 +51,7 @@ describe('pairOpsForSplit', () => {
   });
 
   it('pairs a pure-add hunk against empty placeholders on the left', () => {
-    const ops: DiffOp[] = [
+    const ops: LyraDiffOp[] = [
       { type: 'add', text: 'x' },
       { type: 'add', text: 'y' },
     ];
@@ -62,7 +62,7 @@ describe('pairOpsForSplit', () => {
   });
 
   it('pairs an unbalanced 3-remove/1-add replace with placeholders on the shorter side', () => {
-    const ops: DiffOp[] = [
+    const ops: LyraDiffOp[] = [
       { type: 'remove', text: 'a' },
       { type: 'remove', text: 'b' },
       { type: 'remove', text: 'c' },
@@ -76,14 +76,14 @@ describe('pairOpsForSplit', () => {
   });
 
   it('renders the same text on both sides for an equal op', () => {
-    const ops: DiffOp[] = [{ type: 'equal', text: 'same' }];
+    const ops: LyraDiffOp[] = [{ type: 'equal', text: 'same' }];
     expect(pairOpsForSplit(ops)).to.deep.equal([
       { left: { type: 'equal', text: 'same' }, right: { type: 'equal', text: 'same' } },
     ]);
   });
 
   it('flushes a hunk before an equal row and starts a fresh hunk after it', () => {
-    const ops: DiffOp[] = [
+    const ops: LyraDiffOp[] = [
       { type: 'remove', text: 'a' },
       { type: 'equal', text: 'b' },
       { type: 'add', text: 'c' },

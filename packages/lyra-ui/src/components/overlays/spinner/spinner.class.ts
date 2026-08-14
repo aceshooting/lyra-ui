@@ -1,8 +1,8 @@
-import { html, type TemplateResult } from 'lit';
+import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import {
   bindAccessibleTextObserver,
-  composedAccessibleVisibleText,
+  composedAccessibilityText,
 } from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './spinner.styles.js';
@@ -57,6 +57,7 @@ export class LyraSpinner extends LyraElement {
   private cachedVisibleLabelText = '';
   private labelObserver?: MutationObserver;
   private readonly onLabelSlotChange = (event: Event): void => {
+    if (this.labelPlacement !== 'after') return;
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
     this.bindLabelObserverTargets();
@@ -65,6 +66,21 @@ export class LyraSpinner extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.addEventListener('slotchange', this.onLabelSlotChange);
+    this.syncLabelObservation();
+    if (this.labelPlacement !== 'after') return;
+    if (this.hasUpdated) {
+      this.recomputeVisibleLabelText(true, true);
+      this.ownerDocument.defaultView?.queueMicrotask(() => {
+        if (this.isConnected && this.labelPlacement === 'after') this.recomputeVisibleLabelText();
+      });
+    } else this.seedFirstRenderState(() => this.recomputeVisibleLabelText(false));
+  }
+
+  private syncLabelObservation(): void {
+    this.labelObserver?.disconnect();
+    this.labelObserver = undefined;
+    if (!this.isConnected || this.labelPlacement !== 'after') return;
     const MutationObserverCtor = (this.ownerDocument as Document | undefined)?.defaultView
       ?.MutationObserver;
     this.labelObserver = MutationObserverCtor
@@ -73,10 +89,7 @@ export class LyraSpinner extends LyraElement {
           this.recomputeVisibleLabelText();
         })
       : undefined;
-    this.addEventListener('slotchange', this.onLabelSlotChange);
     this.bindLabelObserverTargets();
-    if (this.hasUpdated) this.recomputeVisibleLabelText();
-    else this.seedFirstRenderState(() => this.recomputeVisibleLabelText());
   }
 
   private bindLabelObserverTargets(): void {
@@ -90,27 +103,44 @@ export class LyraSpinner extends LyraElement {
     super.disconnectedCallback();
   }
 
-  private computeVisibleLabelText(): string {
+  private computeVisibleLabelText(preferLightDom = false): string {
     const renderRoot = this.renderRoot as ParentNode | undefined;
     const slot = renderRoot?.querySelector<HTMLSlotElement>('slot');
     const lightDomNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
-    const nodes = slot
-      ? slot.assignedNodes({ flatten: true })
-      : Array.from(lightDomNodes ?? []).filter(
+    const assigned = slot?.assignedNodes({ flatten: true }) ?? [];
+    const direct = Array.from(lightDomNodes ?? []).filter(
           (node) => node.nodeType !== 1 || ((node as Element).getAttribute('slot') ?? '') === '',
         );
+    const nodes = !preferLightDom && assigned.length > 0 ? assigned : direct;
     return nodes
-      .map(composedAccessibleVisibleText)
+      .map((node) => composedAccessibilityText(node, {
+        ancestorBoundary: this,
+        // During cross-document adoption the connected callback can run before layout has
+        // produced boxes or refreshed an old slot assignment in the new realm. The root element's
+        // own authored hidden/inert/ARIA state remains authoritative; the subsequent
+        // slotchange/observer sample restores ordinary composed-ancestor and rendered checks.
+        requireRendered: !preferLightDom,
+        skipRootAncestorValidation: preferLightDom,
+      }))
       .join(' ')
       .replace(/\s+/g, ' ')
       .trim();
   }
 
-  private recomputeVisibleLabelText(): void {
-    const next = this.computeVisibleLabelText();
+  private recomputeVisibleLabelText(request = true, preferLightDom = false): void {
+    const next = this.computeVisibleLabelText(preferLightDom);
     if (next === this.cachedVisibleLabelText) return;
     this.cachedVisibleLabelText = next;
-    this.requestUpdate();
+    if (request) this.requestUpdate();
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (!changed.has('labelPlacement')) return;
+    this.syncLabelObservation();
+    if (!this.hasUpdated) return;
+    if (this.labelPlacement === 'after') this.recomputeVisibleLabelText(false, true);
+    else this.cachedVisibleLabelText = '';
   }
 
   override render(): TemplateResult {

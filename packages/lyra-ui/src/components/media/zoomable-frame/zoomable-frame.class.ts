@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
@@ -13,14 +14,18 @@ import { LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut, L
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type ZoomableFrameLoading = 'eager' | 'lazy';
+export type LyraZoomableFrameLoading = 'eager' | 'lazy';
 
-export const DEFAULT_ZOOM_LEVELS = '25% 50% 75% 100% 125% 150% 175% 200%';
-export const DEFAULT_IFRAME_SANDBOX = 'allow-same-origin';
+const DEFAULT_ZOOM_LEVELS = '25% 50% 75% 100% 125% 150% 175% 200%';
+const DEFAULT_IFRAME_SANDBOX = 'allow-same-origin';
 
 const DEFAULT_ZOOM_LEVEL_VALUES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 const MIN_ZOOM = 0.01;
 const MAX_ZOOM = 1000;
+// `zoomLevels` is consulted by render state and every zoom action. Bound both source scanning and
+// numeric conversion before sorting, then memoize the result per component instance.
+const MAX_ZOOM_LEVEL_SOURCE_CODE_UNITS = 16_384;
+const MAX_ZOOM_LEVEL_TOKENS = 256;
 
 const SANDBOX_TOKENS = new Set([
   'allow-downloads',
@@ -84,7 +89,7 @@ function isLyraThemeClass(value: string): boolean {
 /** Returns a URL suitable for active iframe navigation, or `null` when the scheme is unsafe.
  * Unlike media sinks, iframe navigation deliberately rejects `data:` because it creates an active
  * document. `mailto:` and other navigation-only schemes are rejected as non-embeddable too. */
-export function safeZoomableFrameSrc(value: unknown): string | null {
+function safeZoomableFrameSrc(value: unknown): string | null {
   if (typeof value === 'string' && value.trim().toLowerCase() === 'about:blank') return value.trim();
   return safeDownloadHref(value);
 }
@@ -92,7 +97,7 @@ export function safeZoomableFrameSrc(value: unknown): string | null {
 /** Normalizes the sandbox token list without ever dropping the `sandbox` attribute itself.
  * Unknown tokens are omitted. The dangerous `allow-scripts allow-same-origin` pair is narrowed by
  * dropping `allow-same-origin`, preventing same-origin framed code from removing its own sandbox. */
-export function safeZoomableFrameSandbox(value: unknown): string {
+function safeZoomableFrameSandbox(value: unknown): string {
   if (typeof value !== 'string') return '';
   const tokens = [...new Set(value.toLowerCase().split(/\s+/).filter(token => SANDBOX_TOKENS.has(token)))];
   if (tokens.includes('allow-scripts') && tokens.includes('allow-same-origin')) {
@@ -101,7 +106,7 @@ export function safeZoomableFrameSandbox(value: unknown): string {
   return tokens.join(' ');
 }
 
-function safeLoading(value: unknown): ZoomableFrameLoading {
+function safeLoading(value: unknown): LyraZoomableFrameLoading {
   return value === 'lazy' ? 'lazy' : 'eager';
 }
 
@@ -112,20 +117,28 @@ function safeReferrerPolicy(value: unknown): ReferrerPolicy | null {
     : 'no-referrer';
 }
 
-function parseZoomLevels(value: unknown): number[] {
-  if (typeof value !== 'string') return [...DEFAULT_ZOOM_LEVEL_VALUES];
-  const levels = value
-    .trim()
-    .split(/\s+/)
-    .flatMap(token => {
-      if (!token) return [];
-      const percent = token.endsWith('%');
-      const parsed = Number(percent ? token.slice(0, -1) : token);
-      const level = percent ? parsed / 100 : parsed;
-      return Number.isFinite(level) && level >= MIN_ZOOM && level <= MAX_ZOOM ? [level] : [];
-    });
-  const unique = [...new Set(levels)].sort((a, b) => a - b);
-  return unique.length ? unique : [...DEFAULT_ZOOM_LEVEL_VALUES];
+function parseZoomLevels(value: unknown): readonly number[] {
+  if (typeof value !== 'string') return DEFAULT_ZOOM_LEVEL_VALUES;
+  const source = value.slice(0, MAX_ZOOM_LEVEL_SOURCE_CODE_UNITS);
+  const finalTokenContinues = value.length > MAX_ZOOM_LEVEL_SOURCE_CODE_UNITS &&
+    /\S/u.test(source.at(-1) ?? '') && /\S/u.test(value[MAX_ZOOM_LEVEL_SOURCE_CODE_UNITS] ?? '');
+  const tokenPattern = /\S+/g;
+  const unique = new Set<number>();
+  let tokenCount = 0;
+  let match: RegExpExecArray | null;
+  while (tokenCount < MAX_ZOOM_LEVEL_TOKENS && (match = tokenPattern.exec(source)) !== null) {
+    // Never reinterpret a token whose suffix lies outside the admitted source prefix. For example,
+    // cutting `200%` after `200` must not turn a 2× stop into a 200× stop.
+    if (finalTokenContinues && tokenPattern.lastIndex === source.length) break;
+    tokenCount += 1;
+    const token = match[0];
+    const percent = token.endsWith('%');
+    const parsed = Number(percent ? token.slice(0, -1) : token);
+    const level = percent ? parsed / 100 : parsed;
+    if (Number.isFinite(level) && level >= MIN_ZOOM && level <= MAX_ZOOM) unique.add(level);
+  }
+  if (unique.size === 0) return DEFAULT_ZOOM_LEVEL_VALUES;
+  return Object.freeze([...unique].sort((left, right) => left - right));
 }
 
 export interface LyraZoomableFrameEventMap {
@@ -151,6 +164,11 @@ export interface LyraZoomableFrameEventMap {
  * The scaled iframe is a physical pixel canvas, so its origin stays at physical top-left in both
  * directions. The zoom toolbar remains logical interface chrome and therefore appears at inline-end
  * (physical left in RTL).
+ * `withoutInteraction` makes the browsing context genuinely unavailable: the iframe is native
+ * `inert`, leaves sequential focus, refuses pointer and programmatic activation, and carries no
+ * unsupported `aria-disabled` claim. Focus entry through Tab, pointer, or `focus()` is tracked on
+ * the host as `data-frame-focused` so the shared focus ring remains visible across the browsing-
+ * context boundary.
  *
  * @customElement lr-zoomable-frame
  * @slot zoom-in-icon - Override for the decorative zoom-in glyph. Its flattened subtree is inert
@@ -196,7 +214,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   /** Forwards the native fullscreen opt-in to the iframe. */
   @property({ type: Boolean }) allowfullscreen = false;
   /** Controls native iframe loading behavior. Invalid runtime values fall back to `eager`. */
-  @property() loading: ZoomableFrameLoading = 'eager';
+  @property() loading: LyraZoomableFrameLoading = 'eager';
   /** Native iframe referrer policy. Invalid non-empty values fail closed to `no-referrer`. */
   @property() referrerpolicy = '';
   /** Iframe sandbox tokens. The attribute is always rendered; the script/same-origin pair is
@@ -204,8 +222,10 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   @property() sandbox = DEFAULT_IFRAME_SANDBOX;
   /** Current iframe scale. Programmatic values need not appear in `zoomLevels`. */
   @property({ type: Number, reflect: true }) zoom = 1;
-  /** Space-separated decimal and percentage stops used only by `zoomIn()`/`zoomOut()`. */
-  @property({ attribute: 'zoom-levels' }) zoomLevels = '25% 50% 75% 100% 125% 150% 175% 200%';
+  /** Space-separated decimal and percentage stops used only by `zoomIn()`/`zoomOut()`. The
+   * normalized projection reads at most 16,384 UTF-16 code units and 256 whitespace-delimited
+   * tokens, ignores a token cut by the source ceiling, and is cached until this string changes. */
+  @property({ attribute: 'zoom-levels' }) zoomLevels = DEFAULT_ZOOM_LEVELS;
   /** Removes the zoom toolbar. */
   @property({ type: Boolean, attribute: 'without-controls', reflect: true }) withoutControls = false;
   /** Removes the iframe from sequential focus and disables pointer interaction. */
@@ -214,37 +234,38 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
    * same-origin iframe document. Turning it off restores only the iframe state this component
    * changed; cross-origin access remains untouched. */
   @property({ type: Boolean, attribute: 'with-theme-sync', reflect: true }) withThemeSync = false;
-  /** Accessible name forwarded to the internal iframe's `title`; the localized frame label is the
-   * fallback so the actual accessibility owner is never unnamed. */
+  /** Accessible-name input. A declarative `aria-label` remains on the host while the iframe keeps
+   * a localized purpose title; a property-only value names the iframe. An explicitly empty host
+   * name is preserved as an empty iframe title instead of being replaced through truthiness. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** The internal iframe. Readonly by convention; replaced whenever navigation policy changes. */
   @query('iframe') iframe?: HTMLIFrameElement;
 
-  /** Focus the internal iframe — the component's primary interactive surface. `without-interaction`
-   *  drops it out of the tab order but keeps it programmatically focusable, so this still works
-   *  there; the zoom toolbar is a two-button group with no single primary action, so it is
-   *  deliberately not the forwarding target. */
+  private cachedZoomLevelsSource: unknown = Symbol('uncached zoom levels');
+  private cachedZoomLevels: readonly number[] = DEFAULT_ZOOM_LEVEL_VALUES;
+
+  /** Focus the internal iframe when interaction is enabled and a live frame is connected. */
   override focus(options?: FocusOptions): void {
+    const frame = this.iframe;
+    if (!frame || !this.isConnected || this.withoutInteraction || frame.inert) return;
     const previous = this.ownerDocument.activeElement;
-    this.iframe?.focus(options);
-    // Emitted here as well as from the native listener, de-duplicated by `hasEmittedFocus`, because
-    // Firefox dispatches NO focus/focusin on an <iframe> element for a programmatic focus() -- it
-    // moves focus into the frame's own document instead. Chromium/WebKit fire the native event
-    // synchronously inside the call above, so the flag is already set by the time this runs and this
-    // call is a no-op there; on Firefox it is the only thing that emits.
-    this.emitHostFocus(undefined, previous);
+    const wasFocused = this.frameOwnsFocus(frame);
+    frame.focus(options);
+    if (!wasFocused && this.frameOwnsFocus(frame)) this.emitHostFocus(undefined, previous);
   }
 
   /** Blur the internal iframe. */
   override blur(): void {
-    this.iframe?.blur();
-    this.emitHostBlur(undefined, this.ownerDocument.activeElement);
+    const frame = this.iframe;
+    if (!frame || !this.frameOwnsFocus(frame)) return;
+    frame.blur();
+    if (!this.frameOwnsFocus(frame)) this.emitHostBlur(undefined, this.ownerDocument.activeElement);
   }
 
-  /** Activate the internal iframe, so a host-level `.click()` is not a silent no-op. */
+  /** Activate the internal iframe only while interaction is enabled. */
   override click(): void {
-    this.iframe?.click();
+    if (this.isConnected && !this.withoutInteraction && !this.iframe?.inert) this.iframe?.click();
   }
 
   // Bound to focusin/focusout rather than focus/blur. Firefox does not dispatch focus/blur on an
@@ -258,6 +279,21 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
    *  re-dispatched pair stays balanced when both the native listener and the overridden method fire
    *  for one focus change (Chromium/WebKit) and when only one of them does (Firefox). */
   private hasEmittedFocus = false;
+
+  private frameIsActive(frame: HTMLIFrameElement | undefined = this.iframe): boolean {
+    return Boolean(
+      frame && this.isConnected &&
+      (this.shadowRoot?.activeElement === frame || this.ownerDocument.activeElement === this),
+    );
+  }
+
+  private frameOwnsFocus(frame: HTMLIFrameElement | undefined = this.iframe): boolean {
+    return Boolean(frame && !frame.inert && !this.withoutInteraction && this.frameIsActive(frame));
+  }
+
+  private setFrameFocused(focused: boolean): void {
+    this.toggleAttribute('data-frame-focused', focused);
+  }
 
   private dispatchHostFocusEvent(
     type: 'focus' | 'blur',
@@ -278,12 +314,14 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   private emitHostFocus(source?: FocusEvent, relatedTarget: EventTarget | null = null): void {
     if (this.hasEmittedFocus) return;
     this.hasEmittedFocus = true;
+    this.setFrameFocused(true);
     this.dispatchHostFocusEvent('focus', source, relatedTarget);
   }
 
   private emitHostBlur(source?: FocusEvent, relatedTarget: EventTarget | null = null): void {
     if (!this.hasEmittedFocus) return;
     this.hasEmittedFocus = false;
+    this.setFrameFocused(false);
     this.dispatchHostFocusEvent('blur', source, relatedTarget);
   }
 
@@ -292,13 +330,57 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   // the internal event from escaping the shadow boundary alongside our own re-dispatched one.
   private onFrameFocus = (event: FocusEvent): void => {
     event.stopPropagation();
+    if (!this.frameOwnsFocus(event.currentTarget as HTMLIFrameElement)) return;
     this.emitHostFocus(event);
   };
 
   private onFrameBlur = (event: FocusEvent): void => {
     event.stopPropagation();
+    if (this.frameOwnsFocus(event.currentTarget as HTMLIFrameElement)) return;
     this.emitHostBlur(event);
   };
+
+  // Browsers do not consistently dispatch focusin/focusout on an <iframe> element when keyboard
+  // or pointer focus crosses into its nested browsing context. The owner window does report that
+  // boundary transition. Reconcile after the native event turn, then publish only when the actual
+  // active-element relationship proves the frame gained or lost focus.
+  private focusReconciliationGeneration = 0;
+  private scheduleFrameFocusReconciliation = (): void => {
+    const view = this.ownerDocument.defaultView;
+    if (!view) return;
+    const generation = ++this.focusReconciliationGeneration;
+    view.setTimeout(() => {
+      if (generation !== this.focusReconciliationGeneration || !this.isConnected) return;
+      if (this.frameOwnsFocus()) this.emitHostFocus();
+      else this.emitHostBlur(undefined, this.ownerDocument.activeElement);
+    }, 0);
+  };
+
+  private focusBoundaryDocument?: Document;
+  private onFocusBoundaryKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === 'Tab') this.scheduleFrameFocusReconciliation();
+  };
+
+  private resetFocusBoundaryDocument(): void {
+    this.focusBoundaryDocument?.removeEventListener('keydown', this.onFocusBoundaryKeyDown, true);
+    this.focusBoundaryDocument?.removeEventListener('pointerdown', this.scheduleFrameFocusReconciliation, true);
+    this.focusBoundaryDocument = undefined;
+  }
+
+  private bindFocusBoundaryDocument(): void {
+    let target: Document | null = null;
+    try {
+      target = this.contentDocument;
+    } catch {
+      // A cross-origin document is intentionally opaque. Native iframe focus events and the
+      // owner-document reconciliation path remain authoritative in that case.
+    }
+    if (!target || target === this.focusBoundaryDocument) return;
+    this.resetFocusBoundaryDocument();
+    this.focusBoundaryDocument = target;
+    target.addEventListener('keydown', this.onFocusBoundaryKeyDown, true);
+    target.addEventListener('pointerdown', this.scheduleFrameFocusReconciliation, true);
+  }
 
   private navigationGeneration = 0;
   private needsReconnectFrame = false;
@@ -314,6 +396,11 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.ownerDocument.addEventListener('focusin', this.scheduleFrameFocusReconciliation, true);
+    this.ownerDocument.addEventListener('focusout', this.scheduleFrameFocusReconciliation, true);
+    this.ownerDocument.addEventListener('keydown', this.onFocusBoundaryKeyDown, true);
+    this.ownerDocument.defaultView?.addEventListener('focus', this.scheduleFrameFocusReconciliation);
+    this.ownerDocument.defaultView?.addEventListener('blur', this.scheduleFrameFocusReconciliation);
     const Observer = this.ownerDocument.defaultView?.MutationObserver;
     if (Observer) {
       this.lyraThemeObserver?.disconnect();
@@ -330,11 +417,19 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.focusReconciliationGeneration++;
+    this.ownerDocument.removeEventListener('focusin', this.scheduleFrameFocusReconciliation, true);
+    this.ownerDocument.removeEventListener('focusout', this.scheduleFrameFocusReconciliation, true);
+    this.ownerDocument.removeEventListener('keydown', this.onFocusBoundaryKeyDown, true);
+    this.ownerDocument.defaultView?.removeEventListener('focus', this.scheduleFrameFocusReconciliation);
+    this.ownerDocument.defaultView?.removeEventListener('blur', this.scheduleFrameFocusReconciliation);
     this.navigationGeneration++;
     this.needsReconnectFrame = true;
     // Transient focus state, reset like every other open-state flag: a disconnected host is not
     // focused, and leaving this set would swallow the next genuine `focus` after a reconnect.
     this.hasEmittedFocus = false;
+    this.setFrameFocused(false);
+    this.resetFocusBoundaryDocument();
     this.lyraThemeObserver?.disconnect();
     this.lyraThemeObserver = undefined;
     this.resetThemeSyncState();
@@ -358,7 +453,22 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
       changed.has('src') || changed.has('srcdoc') || changed.has('allowfullscreen') ||
       changed.has('loading') || changed.has('referrerpolicy') || changed.has('sandbox')
     ) {
+      const frame = this.iframe;
+      const wasFocused = this.frameIsActive(frame);
+      frame?.blur();
+      if (wasFocused && !this.frameIsActive(frame)) {
+        this.emitHostBlur(undefined, this.ownerDocument.activeElement);
+      }
+      this.setFrameFocused(false);
+      this.resetFocusBoundaryDocument();
       this.navigationGeneration++;
+    }
+    if (changed.has('withoutInteraction') && this.withoutInteraction) {
+      const frame = this.iframe;
+      const wasFocused = this.frameIsActive(frame);
+      frame?.blur();
+      if (wasFocused) this.emitHostBlur(undefined, this.ownerDocument.activeElement);
+      this.setFrameFocused(false);
     }
   }
 
@@ -389,8 +499,12 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     return finiteRange(this.zoom, 1, MIN_ZOOM, MAX_ZOOM);
   }
 
-  private get availableZoomLevels(): number[] {
-    return parseZoomLevels(this.zoomLevels);
+  private get availableZoomLevels(): readonly number[] {
+    const source: unknown = this.zoomLevels;
+    if (source === this.cachedZoomLevelsSource) return this.cachedZoomLevels;
+    this.cachedZoomLevelsSource = source;
+    this.cachedZoomLevels = parseZoomLevels(source);
+    return this.cachedZoomLevels;
   }
 
   private get hasInlineDocument(): boolean {
@@ -472,7 +586,10 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
       !this.isConnected || !this.hasNavigation || generation !== this.navigationGeneration ||
       navigationSignature !== this.navigationSignature() || source.currentTarget !== this.iframe
     ) return;
-    if (type === 'load') this.syncTheme();
+    if (type === 'load') {
+      this.bindFocusBoundaryDocument();
+      this.syncTheme();
+    }
     this.dispatchFrameEvent(type);
   }
 
@@ -650,7 +767,12 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     const inline = this.hasInlineDocument;
     const src = inline ? null : safeZoomableFrameSrc(this.src);
     const referrerPolicy = safeReferrerPolicy(this.referrerpolicy);
-    const label = this.accessibleLabel || this.localize('zoomableFrameLabel');
+    const explicitHostLabel = hostAriaLabel(this);
+    const label = explicitHostLabel === ''
+      ? ''
+      : explicitHostLabel !== null
+        ? this.localize('zoomableFrameLabel')
+        : this.accessibleLabel ?? this.localize('zoomableFrameLabel');
     const zoom = this.safeZoom;
     const frame = html`<iframe
       part="iframe"
@@ -662,12 +784,13 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
       referrerpolicy=${referrerPolicy ?? nothing}
       sandbox=${safeZoomableFrameSandbox(this.sandbox)}
       tabindex=${this.withoutInteraction ? '-1' : '0'}
-      aria-disabled=${this.withoutInteraction ? 'true' : nothing}
+      .inert=${this.withoutInteraction}
       style="--lr-zoomable-frame-zoom: ${zoom}"
       @load=${(event: Event) => this.onFrameEvent('load', event, generation, navigationSignature)}
       @error=${(event: Event) => this.onFrameEvent('error', event, generation, navigationSignature)}
       @focusin=${this.onFrameFocus}
       @focusout=${this.onFrameBlur}
+      @pointerdown=${this.scheduleFrameFocusReconciliation}
     ></iframe>`;
     return html`${keyed(generation, frame)}${this.renderControls()}`;
   }

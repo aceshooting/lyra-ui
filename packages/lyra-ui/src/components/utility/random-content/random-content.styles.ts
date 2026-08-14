@@ -10,8 +10,13 @@ export const styles = css`
      "display: contents" on the host risks a11y-tree inconsistencies across engines and every
      other component in this family defaults to "display: block". */
   [part='base'] {
-    display: block;
     min-inline-size: 0;
+  }
+  [part='base'][data-multiple] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: var(--lr-random-content-item-alignment, flex-start);
+    gap: var(--lr-random-content-item-gap, var(--lr-space-s));
   }
   [part='pause-button'] {
     display: inline-flex;
@@ -41,8 +46,21 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   ::slotted(*) {
-    animation-duration: var(--animation-duration, var(--lr-animation-duration, var(--lr-random-content-animation-duration, 300ms)));
-    animation-timing-function: var(--animation-easing, var(--lr-animation-easing, var(--lr-random-content-animation-easing, ease)));
+    /* Inline candidates must establish a transformable box for directional entrance effects.
+       inline-block preserves their ordinary inline sizing while the base's flex formatting
+       context owns multi-item layout. */
+    display: inline-block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+    animation-duration: var(
+      --animation-duration,
+      var(--lr-animation-duration, var(--lr-random-content-animation-duration, 300ms))
+    );
+    animation-timing-function: var(
+      --animation-easing,
+      var(--lr-animation-easing, var(--lr-random-content-animation-easing, ease))
+    );
   }
   :host(:where([animation='fade'])) ::slotted(:not([hidden])) {
     animation-name: lr-random-content-fade-in;
@@ -70,7 +88,12 @@ export const styles = css`
   @keyframes lr-random-content-fade-in-up {
     from {
       opacity: 0;
-      transform: translateY(var(--animation-translate, var(--lr-animation-translate, var(--lr-random-content-animation-translate, var(--lr-size-0-5em)))));
+      transform: translateY(
+        var(
+          --animation-translate,
+          var(--lr-animation-translate, var(--lr-random-content-animation-translate, var(--lr-size-0-5em)))
+        )
+      );
     }
     to {
       opacity: 1;
@@ -80,7 +103,11 @@ export const styles = css`
   @keyframes lr-random-content-fade-in-down {
     from {
       opacity: 0;
-      transform: translateY(calc(-1 * var(--animation-translate, var(--lr-animation-translate, var(--lr-random-content-animation-translate, var(--lr-size-0-5em))))));
+      transform: translateY(
+        calc(
+          -1 * var(--animation-translate, var(--lr-animation-translate, var(--lr-random-content-animation-translate, var(--lr-size-0-5em))))
+        )
+      );
     }
     to {
       opacity: 1;
@@ -93,7 +120,12 @@ export const styles = css`
   @keyframes lr-random-content-fade-in-left {
     from {
       opacity: 0;
-      transform: translateX(var(--animation-translate, var(--lr-animation-translate, var(--lr-random-content-animation-translate, var(--lr-size-0-5em)))));
+      transform: translateX(
+        var(
+          --animation-translate,
+          var(--lr-animation-translate, var(--lr-random-content-animation-translate, var(--lr-size-0-5em)))
+        )
+      );
     }
     to {
       opacity: 1;
@@ -103,7 +135,11 @@ export const styles = css`
   @keyframes lr-random-content-fade-in-right {
     from {
       opacity: 0;
-      transform: translateX(calc(-1 * var(--animation-translate, var(--lr-animation-translate, var(--lr-random-content-animation-translate, var(--lr-size-0-5em))))));
+      transform: translateX(
+        calc(
+          -1 * var(--animation-translate, var(--lr-animation-translate, var(--lr-random-content-animation-translate, var(--lr-size-0-5em))))
+        )
+      );
     }
     to {
       opacity: 1;

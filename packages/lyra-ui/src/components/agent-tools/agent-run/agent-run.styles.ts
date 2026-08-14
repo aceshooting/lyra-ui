@@ -126,6 +126,9 @@ export const styles = css`
     font-variant-numeric: tabular-nums;
     font-weight: var(--lr-font-weight-semibold);
   }
+  [part='metric-value'][data-variant='brand'] {
+    color: var(--lr-agent-run-metric-brand-color, var(--lr-color-brand));
+  }
   [part='metric-value'][data-variant='danger'] {
     color: var(--lr-agent-run-metric-danger-color, var(--lr-color-danger));
   }

@@ -1,4 +1,4 @@
-export interface DiffOp {
+export interface LyraDiffOp {
   type: 'equal' | 'add' | 'remove';
   text: string;
 }
@@ -106,11 +106,11 @@ function collectMatches(
  * Runtime remains O(n*m), while peak working memory is linear rather than an eager
  * `(oldLines.length + 1) × (newLines.length + 1)` JavaScript-number matrix.
  */
-export function computeLineDiff(oldLines: string[], newLines: string[]): DiffOp[] {
+export function computeLineDiff(oldLines: string[], newLines: string[]): LyraDiffOp[] {
   const matches: LineMatch[] = [];
   collectMatches(oldLines, 0, oldLines.length, newLines, 0, newLines.length, matches);
 
-  const ops: DiffOp[] = [];
+  const ops: LyraDiffOp[] = [];
   let oldIndex = 0;
   let newIndex = 0;
   for (const [matchedOldIndex, matchedNewIndex] of matches) {
@@ -125,23 +125,23 @@ export function computeLineDiff(oldLines: string[], newLines: string[]): DiffOp[
   return ops;
 }
 
-export interface DiffSplitRow {
-  left: DiffOp | null;
-  right: DiffOp | null;
+export interface LyraDiffSplitRow {
+  left: LyraDiffOp | null;
+  right: LyraDiffOp | null;
 }
 
 /**
- * Regroups an already-computed `DiffOp[]` (never re-diffs) into side-by-side rows: consecutive
+ * Regroups an already-computed `LyraDiffOp[]` (never re-diffs) into side-by-side rows: consecutive
  * `remove`s buffer on the left, consecutive `add`s buffer on the right, and an `equal` op (or the
  * end of the stream) flushes both buffers paired index-wise -- the k-th removed line beside the
  * k-th added line, with the longer run's tail paired against `null` (rendered as an empty
  * placeholder cell, never carrying a `+`/`-` prefix). An `equal` op renders identically on both
  * sides.
  */
-export function pairOpsForSplit(ops: DiffOp[]): DiffSplitRow[] {
-  const rows: DiffSplitRow[] = [];
-  let removeBuffer: DiffOp[] = [];
-  let addBuffer: DiffOp[] = [];
+export function pairOpsForSplit(ops: LyraDiffOp[]): LyraDiffSplitRow[] {
+  const rows: LyraDiffSplitRow[] = [];
+  let removeBuffer: LyraDiffOp[] = [];
+  let addBuffer: LyraDiffOp[] = [];
   const flush = (): void => {
     const max = Math.max(removeBuffer.length, addBuffer.length);
     for (let i = 0; i < max; i++) {

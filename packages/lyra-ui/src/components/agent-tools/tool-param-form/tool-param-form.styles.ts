@@ -7,6 +7,12 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
+  :host(:disabled) [part='base'] {
+    color: var(--lr-color-text-quiet);
+  }
+  :host(:disabled) [part='field'] {
+    cursor: not-allowed;
+  }
   [part='base'] {
     display: flex;
     flex-direction: column;
@@ -31,14 +37,10 @@ export const styles = css`
      one component where "required" is per FIELD rather than per host, which is
      why that sheet carries a second selector keyed on
      [part="field"][data-required] alongside the usual :host([required]) one.
-     It applies to a boolean field's slotted <span part="label"> (inside
-     <lr-checkbox>) too -- see tool-param-form.ts's class doc for why that
-     span still belongs to *this* component's shadow tree for CSS purposes
-     even though it's visually projected into a child element's template. */
+     Boolean and enum labels are owned by their nested <lr-select> instead. */
   ${formControlRequiredMarker}
 
   [part='field'] > lr-select,
-  [part='field'] > lr-checkbox,
   [part='field'] > input.control {
     inline-size: 100%;
     min-inline-size: 0;
@@ -68,7 +70,7 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  :where(input.control):hover:where(:not(:disabled)) {
+  input.control:where(:hover):where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }
   input.control[aria-invalid='true'] {

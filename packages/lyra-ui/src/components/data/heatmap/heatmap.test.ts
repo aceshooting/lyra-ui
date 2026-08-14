@@ -3,12 +3,40 @@ import './heatmap.js';
 import type { CalendarCellPos, LyraHeatmap, MatrixCellPos } from './heatmap.js';
 import {
   MAX_BUCKET_COUNT,
+  MAX_ACCESSIBLE_HEATMAP_CELLS,
+  MAX_HEATMAP_DECORATIONS,
   hexToRgb,
   normalizeBucketCount,
   resolveRgb,
 } from './heatmap.js';
 import { styles } from './heatmap.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+type MatrixData = Extract<LyraHeatmap['data'], { kind: 'matrix' }>;
+type CalendarData = Extract<LyraHeatmap['data'], { kind: 'calendar' }>;
+
+function setMatrixData(el: LyraHeatmap, patch: Partial<Omit<MatrixData, 'kind'>>): void {
+  const previous: MatrixData = el.data.kind === 'matrix'
+    ? el.data
+    : { kind: 'matrix', rowLabels: [], colLabels: [], values: [] };
+  el.data = { ...previous, ...patch, kind: 'matrix' };
+}
+
+function setCalendarData(el: LyraHeatmap, patch: Partial<Omit<CalendarData, 'kind'>>): void {
+  const previous: CalendarData = el.data.kind === 'calendar'
+    ? el.data
+    : { kind: 'calendar', days: [] };
+  el.data = { ...previous, ...patch, kind: 'calendar' };
+}
+
+function calendarData(el: LyraHeatmap): CalendarData {
+  if (el.data.kind !== 'calendar') throw new Error('Expected calendar heatmap data');
+  return el.data;
+}
+
+function effectiveFirstDayOfWeek(el: LyraHeatmap): number {
+  return (el as unknown as { normalizedFirstDayOfWeek: number }).normalizedFirstDayOfWeek;
+}
 
 function sinkElement(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
@@ -19,11 +47,219 @@ function sinkTexts(doc: Document = document): string[] {
   return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
 }
 
+describe('v9 canonical heatmap data and bounded projections', () => {
+  it('exposes only the discriminated data model, with no legacy mode/collection members', async () => {
+    type LegacyMember = Extract<
+      | 'mode'
+      | 'rowLabels'
+      | 'colLabels'
+      | 'values'
+      | 'days'
+      | 'columnX'
+      | 'rowY'
+      | 'firstDayOfWeek'
+      | 'weekdayLabelText'
+      | 'monthLabelText',
+      keyof LyraHeatmap
+    >;
+    const noLegacyTypeMembers: LegacyMember extends never ? true : false = true;
+    const el = await fixture<LyraHeatmap>(html`<lr-heatmap></lr-heatmap>`);
+
+    expect(noLegacyTypeMembers).to.equal(true);
+    expect(el.data).to.deep.equal({ kind: 'matrix', rowLabels: [], colLabels: [], values: [] });
+    for (const member of [
+      'mode', 'rowLabels', 'colLabels', 'values', 'days', 'columnX', 'rowY',
+      'firstDayOfWeek', 'weekdayLabelText', 'monthLabelText',
+    ]) {
+      expect(member in el, member).to.equal(false);
+    }
+  });
+
+  it('treats a supplied "value" caption literally and restores localization only when unset', async () => {
+    const el = await fixture<LyraHeatmap>(html`<lr-heatmap></lr-heatmap>`);
+    el.strings = { heatmapValueLabel: 'Localized value' };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="legend-value-label"]')!.textContent).to.equal('Localized value');
+
+    el.valueLabel = 'value';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="legend-value-label"]')!.textContent).to.equal('value');
+
+    el.valueLabel = undefined;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="legend-value-label"]')!.textContent).to.equal('Localized value');
+  });
+
+  it('restores the live contextual cell-size default after attribute removal and a data-kind switch', async () => {
+    const el = await fixture<LyraHeatmap>(html`
+      <lr-heatmap cell-size="20" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>
+    `);
+    expect(el.cellSize).to.equal(20);
+    el.removeAttribute('cell-size');
+    await el.updateComplete;
+    expect(el.cellSize).to.equal(11);
+
+    el.data = { kind: 'matrix', rowLabels: [], colLabels: [], values: [] };
+    await el.updateComplete;
+    expect(el.cellSize).to.equal(22);
+  });
+
+  it('derives range, count and paint semantics only from the bounded visible matrix rectangle', async () => {
+    const el = await fixture<LyraHeatmap>(html`
+      <lr-heatmap .data=${{
+        kind: 'matrix',
+        rowLabels: ['visible'],
+        colLabels: ['visible'],
+        values: [[1, 10_000], [20_000]],
+      }}></lr-heatmap>
+    `);
+    expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('1');
+    expect(el.shadowRoot!.querySelector('[part="legend-hi"]')!.textContent).to.equal('1');
+    expect(el.getAttribute('aria-label')).to.not.contain('10,000');
+    expect(el.shadowRoot!.querySelector('canvas')!.style.width).to.equal('82px');
+  });
+
+  it('uses one last-wins calendar identity for count, range, selection and events', async () => {
+    const el = await fixture<LyraHeatmap>(html`
+      <lr-heatmap .data=${{
+        kind: 'calendar',
+        days: [
+          { date: '2026-03-01', value: 1 },
+          { date: '2026-03-01', value: 9 },
+        ],
+      }}></lr-heatmap>
+    `);
+    expect(el.getAttribute('aria-label')).to.contain('1');
+    expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('9');
+    const event = new Promise<CustomEvent>((resolve) =>
+      el.addEventListener('lr-cell-click', (value) => resolve(value as CustomEvent), { once: true }),
+    );
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    const rect = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(new MouseEvent('click', {
+      bubbles: true,
+      clientX: rect.left + 30,
+      clientY: rect.top + 18,
+    }));
+    expect((await event).detail).to.deep.equal({ date: '2026-03-01', value: 9 });
+  });
+
+  it('falls back from non-finite, throwing, overlapping and non-monotonic coordinate callbacks', async () => {
+    const values = [Number.NaN, Number.POSITIVE_INFINITY, 2, 1];
+    const el = await fixture<LyraHeatmap>(html`
+      <lr-heatmap .data=${{
+        kind: 'calendar',
+        days: [
+          { date: '2026-03-01', value: 1 },
+          { date: '2026-03-08', value: 2 },
+        ],
+        columnX: (index: number) => {
+          if (index === 2) throw new Error('host callback');
+          return values[index] ?? Number.NaN;
+        },
+        rowY: (index: number) => index === 1 ? Number.NEGATIVE_INFINITY : 16 - index,
+      }}></lr-heatmap>
+    `);
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    expect(Number.parseFloat(canvas.style.width)).to.be.greaterThan(0);
+    expect(Number.parseFloat(canvas.style.height)).to.be.greaterThan(0);
+    expect(Number.isFinite(canvas.width)).to.equal(true);
+    expect(Number.isFinite(canvas.height)).to.equal(true);
+  });
+
+  it('virtualizes dense accessible cells while preserving full grid dimensions and keyboard reachability', async () => {
+    const labels = Array.from({ length: 80 }, (_, index) => String(index));
+    const el = await fixture<LyraHeatmap>(html`
+      <lr-heatmap accessible-cells .data=${{
+        kind: 'matrix',
+        rowLabels: labels,
+        colLabels: labels,
+        values: Array.from({ length: 80 }, () => Array.from({ length: 80 }, () => 1)),
+      }}></lr-heatmap>
+    `);
+    const grid = el.shadowRoot!.querySelector('[part="cells"]')!;
+    expect(grid.getAttribute('aria-rowcount')).to.equal('80');
+    expect(grid.getAttribute('aria-colcount')).to.equal('80');
+    expect(el.shadowRoot!.querySelectorAll('[part="cell"]')).to.have.lengthOf(MAX_ACCESSIBLE_HEATMAP_CELLS);
+
+    let current = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="cell"][tabindex="0"]')!;
+    current.focus();
+    for (let index = 1; index < 80; index++) {
+      current.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      await el.updateComplete;
+      current = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="cell"][tabindex="0"]')!;
+    }
+    expect(current.dataset['cellKey']).to.equal('matrix-0-79');
+    expect(el.shadowRoot!.querySelectorAll('[part="cell"]')).to.have.lengthOf(MAX_ACCESSIBLE_HEATMAP_CELLS);
+  });
+
+  it('caps palette, legend and annotation projections and discloses the bounded result', async () => {
+    const entries = Array.from({ length: 1_000 }, (_, index) => index);
+    const el = await fixture<LyraHeatmap>(html`
+      <lr-heatmap
+        .data=${{ kind: 'matrix', rowLabels: ['r'], colLabels: ['c'], values: [[1]] }}
+        .strings=${{ heatmapDecorationLimit: 'Only the first {count} heatmap decorations are shown.' }}
+        .colorSteps=${entries.map((index) => index % 2 ? '#000' : '#fff')}
+        .legendStops=${entries.map((value) => ({ value, label: String(value) }))}
+        .annotations=${entries.map((value) => ({ row: 0, col: 0, label: String(value) }))}
+      ></lr-heatmap>
+    `);
+    expect(el.shadowRoot!.querySelectorAll('[part="legend-stop"]')).to.have.lengthOf(MAX_HEATMAP_DECORATIONS);
+    expect(el.shadowRoot!.querySelectorAll('[part="legend-annotation"]')).to.have.lengthOf(MAX_HEATMAP_DECORATIONS);
+    expect((el as unknown as { cachedColorSteps: readonly string[] }).cachedColorSteps)
+      .to.have.lengthOf(MAX_HEATMAP_DECORATIONS);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('data-projection-truncated')).to.equal('true');
+    expect(el.shadowRoot!.querySelector('[part="projection-limit"]')!.textContent).to.contain(
+      String(MAX_HEATMAP_DECORATIONS),
+    );
+  });
+
+  it('bounds a century-wide sparse calendar before canvas and accessible-position amplification', async () => {
+    const el = await fixture<LyraHeatmap>(html`
+      <lr-heatmap
+        accessible-cells
+        .strings=${{ heatmapProjectionLimit: 'Only the first {count} heatmap cells are shown.' }}
+        .data=${{
+          kind: 'calendar',
+          days: [
+            { date: '1970-01-01', value: 1 },
+            { date: '2070-01-01', value: 2 },
+          ],
+        }}
+      ></lr-heatmap>
+    `);
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    expect(Number.parseFloat(canvas.style.width)).to.be.lessThan(30_000);
+    expect(el.shadowRoot!.querySelectorAll('[part="cell"]')).to.have.lengthOf(MAX_ACCESSIBLE_HEATMAP_CELLS);
+    expect(el.shadowRoot!.querySelector('[part="projection-limit"]')).to.exist;
+    expect(el.getAttribute('aria-label')).to.contain('Only the first');
+  });
+
+  it('keeps annotation, selection and focus perceptible through independent canvas channels', async () => {
+    const el = await fixture<LyraHeatmap>(html`
+      <lr-heatmap
+        cell-size="22"
+        style="--lr-heatmap-annotation-color: rgb(255, 0, 0); --lr-heatmap-selected-color: rgb(0, 255, 0); --lr-heatmap-focus-ring-color: rgb(0, 0, 255)"
+        .data=${{ kind: 'matrix', rowLabels: ['r'], colLabels: ['c'], values: [[1]] }}
+        .annotations=${[{ row: 0, col: 0 }]}
+        .selectedCell=${{ row: 0, col: 0 }}
+      ></lr-heatmap>
+    `);
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    const ctx = canvas.getContext('2d')!;
+    expect(findPixel(ctx, 59, 19, 24, 24, (r, g, b) => r > 200 && g < 80 && b < 80)).to.equal(true);
+    expect(findPixel(ctx, 62, 22, 18, 18, (r, g, b) => g > 200 && r < 80 && b < 80)).to.equal(true);
+    expect(findPixel(ctx, 65, 25, 12, 12, (r, g, b) => b > 150 && r < 120 && g < 120)).to.equal(true);
+  });
+});
+
 it('rejects unsafe custom color ramps and discrete legend paints', async () => {
   const el = await fixture<LyraHeatmap>(html`<lr-heatmap></lr-heatmap>`);
-  el.values = [[1]];
-  el.rowLabels = ['A'];
-  el.colLabels = ['B'];
+  setMatrixData(el, { values: [[1]] });
+  setMatrixData(el, { rowLabels: ['A'] });
+  setMatrixData(el, { colLabels: ['B'] });
   el.colorSteps = ['red', 'url("data:image/svg+xml,<svg/>")'];
   el.legendStops = [{ value: 1, color: 'red;position:fixed' }];
   await el.updateComplete;
@@ -102,12 +338,12 @@ function expectCloseRgb(actual: [number, number, number], expected: [number, num
 
 it('names the focusable canvas itself as an application while retaining the host group summary', async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-  el.rowLabels = ['Mon', 'Tue'];
-  el.colLabels = ['0h', '1h'];
-  el.values = [
+  setMatrixData(el, { rowLabels: ['Mon', 'Tue'] });
+  setMatrixData(el, { colLabels: ['0h', '1h'] });
+  setMatrixData(el, { values: [
     [1, 2],
     [3, 4],
-  ];
+  ] });
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector('canvas')!;
   expect(el.getAttribute('role')).to.equal('group');
@@ -118,7 +354,7 @@ it('names the focusable canvas itself as an application while retaining the host
 
 it('does not overwrite an author-supplied role/aria-label', async () => {
   const el = (await fixture(
-    html`<lr-heatmap role="application" aria-label="Custom label" .rowLabels=${['a']} .colLabels=${['b']} .values=${[[1]]}></lr-heatmap>`,
+    html`<lr-heatmap role="application" aria-label="Custom label"    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['b'], values: [[1]] }}></lr-heatmap>`,
   )) as LyraHeatmap;
   expect(el.getAttribute('role')).to.equal('application');
   expect(el.getAttribute('aria-label')).to.equal('Custom label');
@@ -126,9 +362,9 @@ it('does not overwrite an author-supplied role/aria-label', async () => {
 
 it('renders numeric min/max legend ticks', async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-  el.rowLabels = ['a'];
-  el.colLabels = ['x', 'y'];
-  el.values = [[3, 9]];
+  setMatrixData(el, { rowLabels: ['a'] });
+  setMatrixData(el, { colLabels: ['x', 'y'] });
+  setMatrixData(el, { values: [[3, 9]] });
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('3');
@@ -137,9 +373,9 @@ it('renders numeric min/max legend ticks', async () => {
 
 it('shows empty legend ticks when there is no real data', async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-  el.rowLabels = ['a'];
-  el.colLabels = ['x'];
-  el.values = [[-1]];
+  setMatrixData(el, { rowLabels: ['a'] });
+  setMatrixData(el, { colLabels: ['x'] });
+  setMatrixData(el, { values: [[-1]] });
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('');
@@ -148,12 +384,12 @@ it('shows empty legend ticks when there is no real data', async () => {
 
 it('renders a canvas sized to the grid dimensions', async () => {
   const el = (await fixture(html`<lr-heatmap cell-size="20"></lr-heatmap>`)) as LyraHeatmap;
-  el.rowLabels = ['a', 'b'];
-  el.colLabels = ['x', 'y', 'z'];
-  el.values = [
+  setMatrixData(el, { rowLabels: ['a', 'b'] });
+  setMatrixData(el, { colLabels: ['x', 'y', 'z'] });
+  setMatrixData(el, { values: [
     [1, 2, 3],
     [4, 5, 6],
-  ];
+  ] });
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
   expect((canvas) != null).to.equal(true);
@@ -161,7 +397,7 @@ it('renders a canvas sized to the grid dimensions', async () => {
 
 it('repaints only the focus-cell dirty rectangles when keyboard focus moves', async () => {
   const el = (await fixture(html`
-    <lr-heatmap .rowLabels=${['A', 'B']} .colLabels=${['X', 'Y']} .values=${[[1, 2], [3, 4]]}></lr-heatmap>
+    <lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['A', 'B'], colLabels: ['X', 'Y'], values: [[1, 2], [3, 4]] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
   type Internals = { drawMatrix(): void };
@@ -181,14 +417,14 @@ it('repaints only the focus-cell dirty rectangles when keyboard focus moves', as
 
 it('treats -1 as a no-data sentinel without throwing', async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-  el.values = [[-1, 2]];
-  el.rowLabels = ['a'];
-  el.colLabels = ['x', 'y'];
+  setMatrixData(el, { values: [[-1, 2]] });
+  setMatrixData(el, { rowLabels: ['a'] });
+  setMatrixData(el, { colLabels: ['x', 'y'] });
   await el.updateComplete;
   expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
 });
 
-it('does not throw a RangeError computing the range label/draw for a very large grid (150k+ cells)', async () => {
+it('bounds a very large matrix projection without throwing a RangeError during range/draw work', async () => {
   // Keep the test's 160k-cell iteration/range pressure while bounding its backing store. At the
   // default 22px size this creates an 8,860 x 8,820 canvas, beyond SwiftShader's common 8,192px
   // texture limit and capable of crashing Chromium's renderer before Mocha can report a result.
@@ -196,21 +432,22 @@ it('does not throw a RangeError computing the range label/draw for a very large 
   el.locale = 'en-US';
   const cols = 400;
   const rows = 400; // 160,000 cells — spreading this into Math.min/Math.max(...flat) blows the call stack.
-  el.rowLabels = Array.from({ length: rows }, (_, r) => `r${r}`);
-  el.colLabels = Array.from({ length: cols }, (_, c) => `c${c}`);
-  el.values = Array.from({ length: rows }, (_, r) =>
+  setMatrixData(el, { rowLabels: Array.from({ length: rows }, (_, r) => `r${r}`) });
+  setMatrixData(el, { colLabels: Array.from({ length: cols }, (_, c) => `c${c}`) });
+  setMatrixData(el, { values: Array.from({ length: rows }, (_, r) =>
     Array.from({ length: cols }, (_, c) => r * cols + c),
-  );
+  ) });
   await el.updateComplete;
   expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
-  expect(el.getAttribute('aria-label')).to.contain('159,999');
+  expect(el.getAttribute('aria-label')).to.contain('9,999');
+  expect(el.shadowRoot!.querySelector('[part="projection-limit"]')).to.exist;
 });
 
 it('treats a NaN cell as no-data instead of leaking whatever color the previous cell painted', async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-  el.rowLabels = ['a'];
-  el.colLabels = ['x', 'y'];
-  el.values = [[5, NaN]];
+  setMatrixData(el, { rowLabels: ['a'] });
+  setMatrixData(el, { colLabels: ['x', 'y'] });
+  setMatrixData(el, { values: [[5, NaN]] });
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
@@ -225,9 +462,9 @@ it('treats a NaN cell as no-data instead of leaking whatever color the previous 
 
 it('is accessible', async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-  el.values = [[1, 2]];
-  el.rowLabels = ['a'];
-  el.colLabels = ['x', 'y'];
+  setMatrixData(el, { values: [[1, 2]] });
+  setMatrixData(el, { rowLabels: ['a'] });
+  setMatrixData(el, { colLabels: ['x', 'y'] });
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
@@ -236,14 +473,14 @@ it('renders an opt-in native button overlay with persistent per-cell semantics',
   const el = (await fixture(html`
     <lr-heatmap
       accessible-cells
-      .rowLabels=${['A', 'B']}
-      .colLabels=${['X', 'Y']}
-      .values=${[
+
+
+
+      .selectedCell=${{ row: 1, col: 0 }}
+     .data=${{ kind: 'matrix', rowLabels: ['A', 'B'], colLabels: ['X', 'Y'], values: [
         [1, 2],
         [3, 4],
-      ]}
-      .selectedCell=${{ row: 1, col: 0 }}
-    ></lr-heatmap>
+      ] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
 
@@ -251,8 +488,8 @@ it('renders an opt-in native button overlay with persistent per-cell semantics',
   expect(cells.length).to.equal(4);
   expect(cells[0]!.tagName).to.equal('BUTTON');
   expect(cells[0]!.getAttribute('aria-label')).to.equal('Row A, Col X: 1');
-  expect(cells[0]!.getAttribute('aria-pressed')).to.equal('false');
-  expect(cells[2]!.getAttribute('aria-pressed')).to.equal('true');
+  expect(cells[0]!.getAttribute('aria-selected')).to.equal('false');
+  expect(cells[2]!.getAttribute('aria-selected')).to.equal('true');
   expect(cells[0]!.getAttribute('tabindex')).to.equal('0');
   expect(cells[1]!.getAttribute('tabindex')).to.equal('-1');
   expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-hidden')).to.equal('true');
@@ -264,16 +501,16 @@ it('keeps the focused accessible cell as the sole roving stop across a same-shap
   const el = (await fixture(html`
     <lr-heatmap
       accessible-cells
-      .rowLabels=${['A']}
-      .colLabels=${['X', 'Y']}
-      .values=${[[1, 2]]}
-    ></lr-heatmap>
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['X', 'Y'], values: [[1, 2]] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
   const cells = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
   cells[1]!.focus();
 
-  el.values = [[3, 4]];
+  setMatrixData(el, { values: [[3, 4]] });
   await el.updateComplete;
 
   expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['cellKey']).to.equal('matrix-0-1');
@@ -287,23 +524,23 @@ it('clamps owned accessible-cell focus when a controlled matrix shrinks', async 
   const el = (await fixture(html`
     <lr-heatmap
       accessible-cells
-      .rowLabels=${['A', 'B']}
-      .colLabels=${['X', 'Y']}
-      .values=${[[1, 2], [3, 4]]}
-    ></lr-heatmap>
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['A', 'B'], colLabels: ['X', 'Y'], values: [[1, 2], [3, 4]] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
   el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')[3]!.focus();
 
-  el.rowLabels = ['A'];
-  el.values = [[1, 2]];
+  setMatrixData(el, { rowLabels: ['A'] });
+  setMatrixData(el, { values: [[1, 2]] });
   await el.updateComplete;
 
   expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['cellKey']).to.equal('matrix-0-1');
   expect(el.shadowRoot!.querySelectorAll('[part="cell"][tabindex="0"]')).to.have.lengthOf(1);
 
-  el.rowLabels = [];
-  el.values = [];
+  setMatrixData(el, { rowLabels: [] });
+  setMatrixData(el, { values: [] });
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
 });
@@ -312,19 +549,18 @@ it('preserves the focused calendar date when a refresh moves it to a different w
   const el = (await fixture(html`
     <lr-heatmap
       accessible-cells
-      mode="calendar"
-      .days=${[{ date: '2026-03-08', value: 8 }]}
-    ></lr-heatmap>
+
+     .data=${{ kind: 'calendar', days: [{ date: '2026-03-08', value: 8 }] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
   const marchEighth = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')]
     .find((cell) => cell.dataset['cellIdentity'] === '2026-03-08')!;
   marchEighth.focus();
 
-  el.days = [
+  setCalendarData(el, { days: [
     { date: '2026-02-01', value: 1 },
     { date: '2026-03-08', value: 9 },
-  ];
+  ] });
   await el.updateComplete;
 
   expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['cellIdentity']).to.equal('2026-03-08');
@@ -338,14 +574,14 @@ it('does not move external focus when an unfocused accessible heatmap refreshes'
   const wrapper = await fixture(html`
     <div>
       <button id="outside-heatmap">Outside</button>
-      <lr-heatmap accessible-cells .rowLabels=${['A']} .colLabels=${['X']} .values=${[[1]]}></lr-heatmap>
+      <lr-heatmap accessible-cells    .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['X'], values: [[1]] }}></lr-heatmap>
     </div>
   `);
   const el = wrapper.querySelector('lr-heatmap') as LyraHeatmap;
   await el.updateComplete;
   wrapper.querySelector<HTMLElement>('#outside-heatmap')!.focus();
 
-  el.values = [[2]];
+  setMatrixData(el, { values: [[2]] });
   await el.updateComplete;
   expect(el.ownerDocument.activeElement?.id).to.equal('outside-heatmap');
 });
@@ -354,10 +590,10 @@ it('moves owned focus from an accessible cell to the canvas when accessible-cell
   const el = (await fixture(html`
     <lr-heatmap
       accessible-cells
-      .rowLabels=${['A']}
-      .colLabels=${['X', 'Y']}
-      .values=${[[1, 2]]}
-    ></lr-heatmap>
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['X', 'Y'], values: [[1, 2]] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
   const cells = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
@@ -373,7 +609,7 @@ it('moves owned focus from an accessible cell to the canvas when accessible-cell
 
 it('moves owned canvas focus to the matching accessible cell when accessible-cells is enabled', async () => {
   const el = (await fixture(html`
-    <lr-heatmap .rowLabels=${['A']} .colLabels=${['X', 'Y']} .values=${[[1, 2]]}></lr-heatmap>
+    <lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['X', 'Y'], values: [[1, 2]] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>('[part="canvas"]')!;
@@ -393,11 +629,11 @@ it('moves owned canvas focus to the matching accessible cell when accessible-cel
 it('falls back to the heatmap base when canvas focus cannot map to an accessible cell', async () => {
   const el = (await fixture(html`
     <lr-heatmap
-      .rowLabels=${['A']}
-      .colLabels=${['X']}
-      .values=${[[1]]}
+
+
+
       .cellInteractive=${() => false}
-    ></lr-heatmap>
+     .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['X'], values: [[1]] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
   el.shadowRoot!.querySelector<HTMLCanvasElement>('[part="canvas"]')!.focus();
@@ -415,10 +651,10 @@ it('does not move external focus across accessible-cells mode changes', async ()
       <button id="outside-mode-change">Outside</button>
       <lr-heatmap
         accessible-cells
-        .rowLabels=${['A']}
-        .colLabels=${['X']}
-        .values=${[[1]]}
-      ></lr-heatmap>
+
+
+
+       .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['X'], values: [[1]] }}></lr-heatmap>
     </div>
   `);
   const el = wrapper.querySelector('lr-heatmap') as LyraHeatmap;
@@ -441,10 +677,10 @@ it('gives adjacent accessible matrix and calendar cells non-overlapping shared m
   const matrix = (await fixture(html`
     <lr-heatmap
       accessible-cells
-      .rowLabels=${['A']}
-      .colLabels=${['X', 'Y']}
-      .values=${[[1, 2]]}
-    ></lr-heatmap>
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['X', 'Y'], values: [[1, 2]] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await matrix.updateComplete;
   const matrixCells = [...matrix.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
@@ -457,9 +693,8 @@ it('gives adjacent accessible matrix and calendar cells non-overlapping shared m
   const calendar = (await fixture(html`
     <lr-heatmap
       accessible-cells
-      mode="calendar"
-      .days=${[{ date: '2026-03-01', value: 7 }]}
-    ></lr-heatmap>
+
+     .data=${{ kind: 'calendar', days: [{ date: '2026-03-01', value: 7 }] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await calendar.updateComplete;
   const calendarCells = [...calendar.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
@@ -478,10 +713,10 @@ it('moves focus through accessible cells with physical (non-mirrored) arrow keys
     <lr-heatmap
       accessible-cells
       dir="rtl"
-      .rowLabels=${['A']}
-      .colLabels=${['X', 'Y']}
-      .values=${[[1, 2]]}
-    ></lr-heatmap>
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['X', 'Y'], values: [[1, 2]] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
   const cells = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
@@ -498,13 +733,13 @@ it('moves focus through accessible cells with physical (non-mirrored) arrow keys
 
 it('renders accessible calendar cells with date announcements', async () => {
   const el = (await fixture(html`
-    <lr-heatmap accessible-cells mode="calendar" .days=${[{ date: '2026-03-01', value: 7 }]}></lr-heatmap>
+    <lr-heatmap accessible-cells  .data=${{ kind: 'calendar', days: [{ date: '2026-03-01', value: 7 }] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
   const cells = el.shadowRoot!.querySelectorAll('[part="cell"]');
   expect(cells.length).to.equal(7);
   expect(cells[0]!.getAttribute('aria-label')).to.contain('Mar 1');
-  expect(cells[0]!.getAttribute('aria-pressed')).to.equal('false');
+  expect(cells[0]!.getAttribute('aria-selected')).to.equal('false');
 });
 
 it('removes the previous MediaQueryList change listener before attaching a new one on a DPR crossing', async () => {
@@ -553,9 +788,9 @@ it('derives cell size from the host width when fit-to-width is set', async () =>
   const el = (await fixture(
     html`<lr-heatmap fit-to-width style="inline-size: 320px"></lr-heatmap>`,
   )) as LyraHeatmap;
-  el.rowLabels = ['a'];
-  el.colLabels = ['x', 'y', 'z', 'w'];
-  el.values = [[1, 2, 3, 4]];
+  setMatrixData(el, { rowLabels: ['a'] });
+  setMatrixData(el, { colLabels: ['x', 'y', 'z', 'w'] });
+  setMatrixData(el, { values: [[1, 2, 3, 4]] });
   await el.updateComplete;
 
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -566,9 +801,9 @@ it('ignores fit-to-width when it is not set (existing fixed-cellSize behavior)',
   const el = (await fixture(
     html`<lr-heatmap cell-size="20" style="inline-size: 320px"></lr-heatmap>`,
   )) as LyraHeatmap;
-  el.rowLabels = ['a'];
-  el.colLabels = ['x', 'y', 'z', 'w'];
-  el.values = [[1, 2, 3, 4]];
+  setMatrixData(el, { rowLabels: ['a'] });
+  setMatrixData(el, { colLabels: ['x', 'y', 'z', 'w'] });
+  setMatrixData(el, { values: [[1, 2, 3, 4]] });
   await el.updateComplete;
 
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -577,11 +812,11 @@ it('ignores fit-to-width when it is not set (existing fixed-cellSize behavior)',
 });
 
 it('calendar mode: renders a canvas sized by the week count', async () => {
-  const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-  el.days = [
+  const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+  setCalendarData(el, { days: [
     { date: '2026-03-01', value: 1 },
     { date: '2026-03-08', value: 5 },
-  ];
+  ] });
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
   expect((canvas) != null).to.equal(true);
@@ -589,45 +824,45 @@ it('calendar mode: renders a canvas sized by the week count', async () => {
 });
 
 it('calendar mode: sets an aria-label describing the day count and value range', async () => {
-  const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-  el.days = [
+  const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+  setCalendarData(el, { days: [
     { date: '2026-03-01', value: 1 },
     { date: '2026-03-02', value: 9 },
-  ];
+  ] });
   await el.updateComplete;
   expect(el.getAttribute('aria-label')).to.equal('Calendar heatmap of 2 days, value range 1–9');
 });
 
 it('calendar mode: shows "no data" in the aria-label with zero days', async () => {
-  const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
+  const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
   await el.updateComplete;
   expect(el.getAttribute('aria-label')).to.equal('Calendar heatmap of 0 days, value range no data');
 });
 
 it('calendar mode: renders numeric min/max legend ticks from days', async () => {
-  const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-  el.days = [
+  const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+  setCalendarData(el, { days: [
     { date: '2026-03-01', value: 2 },
     { date: '2026-03-02', value: 8 },
-  ];
+  ] });
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('2');
   expect(el.shadowRoot!.querySelector('[part="legend-hi"]')!.textContent).to.equal('8');
 });
 
 it('calendar mode: is accessible', async () => {
-  const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-  el.days = [{ date: '2026-03-01', value: 1 }];
+  const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+  setCalendarData(el, { days: [{ date: '2026-03-01', value: 1 }] });
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
 
 it('calendar mode: a single malformed date entry does not blank the whole calendar (regression)', async () => {
-  const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-  el.days = [
+  const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+  setCalendarData(el, { days: [
     { date: '2026-03', value: 5 }, // malformed: missing day
     { date: '2026-03-05', value: 9 },
-  ];
+  ] });
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
   expect(canvas.width).to.be.greaterThan(0);
@@ -635,11 +870,11 @@ it('calendar mode: a single malformed date entry does not blank the whole calend
 });
 
 it('calendar mode: a day missing from `days` entirely (a gap) is painted with the no-data fill, not left transparent', async () => {
-  const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-  el.days = [
+  const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+  setCalendarData(el, { days: [
     { date: '2026-03-01', value: 5 }, // Sunday, week 0, weekday 0
     { date: '2026-03-08', value: 9 }, // Sunday, week 1, weekday 0 — leaves week 0's weekdays 1-6 as gaps
-  ];
+  ] });
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
@@ -668,7 +903,7 @@ describe('bucket-count', () => {
 
   it('normalizes invalid and out-of-range bucket-count attributes before exposing the property', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" bucket-count="${MAX_BUCKET_COUNT + 1}"></lr-heatmap>`,
+      html`<lr-heatmap bucket-count="${MAX_BUCKET_COUNT + 1}" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
     expect(el.bucketCount).to.equal(MAX_BUCKET_COUNT);
 
@@ -686,7 +921,7 @@ describe('bucket-count', () => {
   });
 
   it('normalizes direct bucketCount assignments before drawing', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
 
     el.bucketCount = MAX_BUCKET_COUNT + 1;
     await el.updateComplete;
@@ -707,13 +942,13 @@ describe('bucket-count', () => {
 
   it('calendar mode: a non-numeric bucket-count falls back to the default instead of leaving every cell whatever fillStyle the canvas last had', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" bucket-count="abc"></lr-heatmap>`,
+      html`<lr-heatmap bucket-count="abc" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
     expect(el.bucketCount).to.equal(5);
-    el.days = [
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 }, // Sunday, week 0, weekday 0
       { date: '2026-03-02', value: 9 }, // Monday, week 0, weekday 1 (max value)
-    ];
+    ] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
@@ -728,12 +963,12 @@ describe('bucket-count', () => {
 
   it('calendar mode: a fractional bucket-count is floored instead of producing an out-of-range ramp index', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" bucket-count="4.5"></lr-heatmap>`,
+      html`<lr-heatmap bucket-count="4.5" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.days = [
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 },
       { date: '2026-03-02', value: 9 }, // max value
-    ];
+    ] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
@@ -745,9 +980,9 @@ describe('bucket-count', () => {
 
 it('matrix mode: scale="sqrt" buckets the low value exactly to the ramp\'s lo endpoint, unlike the linear scale', async () => {
   const el = (await fixture(html`<lr-heatmap scale="sqrt"></lr-heatmap>`)) as LyraHeatmap;
-  el.rowLabels = ['a'];
-  el.colLabels = ['x', 'y'];
-  el.values = [[1, 100]];
+  setMatrixData(el, { rowLabels: ['a'] });
+  setMatrixData(el, { colLabels: ['x', 'y'] });
+  setMatrixData(el, { values: [[1, 100]] });
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
@@ -760,20 +995,20 @@ it('matrix mode: scale="sqrt" buckets the low value exactly to the ramp\'s lo en
 
 it('matrix mode (default): is unaffected by the new mode/days properties', async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-  el.rowLabels = ['a'];
-  el.colLabels = ['x', 'y'];
-  el.values = [[3, 9]];
+  setMatrixData(el, { rowLabels: ['a'] });
+  setMatrixData(el, { colLabels: ['x', 'y'] });
+  setMatrixData(el, { values: [[3, 9]] });
   await el.updateComplete;
-  expect(el.mode).to.equal('matrix');
+  expect(el.data.kind).to.equal('matrix');
   expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('3');
 });
 
 describe('per-update-cycle caching (perf)', () => {
   it('does not recompute the value range on a hover-only update that never touches values/days/mode', async () => {
     const el = (await fixture(html`<lr-heatmap cell-size="22"></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[5]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[5]] });
     await el.updateComplete;
 
     let calls = 0;
@@ -799,9 +1034,9 @@ describe('per-update-cycle caching (perf)', () => {
 
   it('does recompute the value range once values actually change', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[5]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[5]] });
     await el.updateComplete;
 
     let calls = 0;
@@ -812,14 +1047,14 @@ describe('per-update-cycle caching (perf)', () => {
       return original();
     };
 
-    el.values = [[9]];
+    setMatrixData(el, { values: [[9]] });
     await el.updateComplete;
     expect(calls).to.equal(1);
   });
 
   it('caches the calendar grid layout and does not rebuild it on a hover-only update', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
     const cached = (el as unknown as { cachedCalendarGrid: unknown }).cachedCalendarGrid;
     expect(cached).to.exist;
@@ -841,15 +1076,15 @@ describe('per-update-cycle caching (perf)', () => {
   });
 
   it('rebuilds the cached calendar grid once `days` actually changes', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
     const before = (el as unknown as { cachedCalendarGrid: unknown }).cachedCalendarGrid;
 
-    el.days = [
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 5 },
       { date: '2026-03-08', value: 9 },
-    ];
+    ] });
     await el.updateComplete;
     const after = (el as unknown as { cachedCalendarGrid: unknown }).cachedCalendarGrid;
     expect(after).to.not.equal(before);
@@ -939,9 +1174,9 @@ it('retheming --lr-heatmap-no-data-fill changes the rendered no-data cell color'
   const el = (await fixture(html`
     <lr-heatmap style="--lr-heatmap-no-data-fill: rgb(0, 200, 0);"></lr-heatmap>
   `)) as LyraHeatmap;
-  el.rowLabels = ['a'];
-  el.colLabels = ['x'];
-  el.values = [[-1]];
+  setMatrixData(el, { rowLabels: ['a'] });
+  setMatrixData(el, { colLabels: ['x'] });
+  setMatrixData(el, { values: [[-1]] });
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
@@ -958,9 +1193,9 @@ it('retheming the ramp with a non-hex CSS color renders that color, not black', 
       style="--lr-heatmap-scale-lo: rgb(0, 128, 0); --lr-heatmap-scale-hi: rgb(0, 128, 0);"
     ></lr-heatmap>
   `)) as LyraHeatmap;
-  el.rowLabels = ['a'];
-  el.colLabels = ['x'];
-  el.values = [[5]];
+  setMatrixData(el, { rowLabels: ['a'] });
+  setMatrixData(el, { colLabels: ['x'] });
+  setMatrixData(el, { values: [[5]] });
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
@@ -974,9 +1209,9 @@ it('retheming the ramp with a non-hex CSS color renders that color, not black', 
 
 it('refreshes the canvas when a theme token changes without changing component data', async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-  el.rowLabels = ['a'];
-  el.colLabels = ['x', 'y'];
-  el.values = [[0, 10]];
+  setMatrixData(el, { rowLabels: ['a'] });
+  setMatrixData(el, { colLabels: ['x', 'y'] });
+  setMatrixData(el, { values: [[0, 10]] });
   await el.updateComplete;
 
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -1002,9 +1237,9 @@ it('retheming with an unparsable custom property value does not throw and does n
     el = (await fixture(html`
       <lr-heatmap style="--lr-heatmap-scale-lo: still-not-a-real-color;"></lr-heatmap>
     `)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[5]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[5]] });
     await el.updateComplete;
   } finally {
     console.warn = originalWarn;
@@ -1024,9 +1259,9 @@ it('retheming --lr-heatmap-label-font changes the canvas font used to draw label
   const el = (await fixture(html`
     <lr-heatmap style="--lr-heatmap-label-font: 16px monospace;"></lr-heatmap>
   `)) as LyraHeatmap;
-  el.rowLabels = ['a'];
-  el.colLabels = ['x'];
-  el.values = [[5]];
+  setMatrixData(el, { rowLabels: ['a'] });
+  setMatrixData(el, { colLabels: ['x'] });
+  setMatrixData(el, { values: [[5]] });
   await el.updateComplete;
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
@@ -1046,7 +1281,7 @@ describe('per-cell hover/focus/click + accessible values', () => {
 
   it('routes keyboard feedback through a light-DOM sink and repeats identical edge announcements', async () => {
     const el = (await fixture(html`
-      <lr-heatmap .rowLabels=${['a']} .colLabels=${['x']} .values=${[[9]]}></lr-heatmap>
+      <lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[9]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const mirror = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
@@ -1066,7 +1301,7 @@ describe('per-cell hover/focus/click + accessible values', () => {
 
   it('re-targets keyboard announcements after cross-document adoption', async () => {
     const el = (await fixture(html`
-      <lr-heatmap .rowLabels=${['a']} .colLabels=${['x']} .values=${[[9]]}></lr-heatmap>
+      <lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[9]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     const iframe = document.createElement('iframe');
     document.body.append(iframe);
@@ -1086,12 +1321,12 @@ describe('per-cell hover/focus/click + accessible values', () => {
 
   it('matrix mode: shows a tooltip with the row/col label and value on hover, hidden on pointerleave', async () => {
     const el = (await fixture(html`<lr-heatmap cell-size="22"></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['Mon', 'Tue'];
-    el.colLabels = ['0h', '1h'];
-    el.values = [
+    setMatrixData(el, { rowLabels: ['Mon', 'Tue'] });
+    setMatrixData(el, { colLabels: ['0h', '1h'] });
+    setMatrixData(el, { values: [
       [3, 7],
       [1, 2],
-    ];
+    ] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
@@ -1117,10 +1352,10 @@ describe('per-cell hover/focus/click + accessible values', () => {
     const el = (await fixture(html`
       <lr-heatmap
         cell-size="22"
-        .rowLabels=${['A']}
-        .colLabels=${['X']}
-        .values=${[[1]]}
-      ></lr-heatmap>
+
+
+
+       .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['X'], values: [[1]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -1147,9 +1382,9 @@ describe('per-cell hover/focus/click + accessible values', () => {
 
   it('matrix mode: hovering outside the grid does not show a tooltip', async () => {
     const el = (await fixture(html`<lr-heatmap cell-size="22"></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[3]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[3]] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
@@ -1162,8 +1397,8 @@ describe('per-cell hover/focus/click + accessible values', () => {
   });
 
   it('calendar mode: shows a tooltip with the date and value on hover', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }]; // Sunday -> week 0, weekday 0
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] }); // Sunday -> week 0, weekday 0
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
@@ -1183,12 +1418,12 @@ describe('per-cell hover/focus/click + accessible values', () => {
 
   it('matrix mode: ArrowRight moves the focused cell and announces it via the live region, starting from the first cell', async () => {
     const el = (await fixture(html`<lr-heatmap cell-size="22"></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['Mon', 'Tue'];
-    el.colLabels = ['0h', '1h'];
-    el.values = [
+    setMatrixData(el, { rowLabels: ['Mon', 'Tue'] });
+    setMatrixData(el, { colLabels: ['0h', '1h'] });
+    setMatrixData(el, { values: [
       [3, 7],
       [1, 2],
-    ];
+    ] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const live = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
@@ -1210,9 +1445,9 @@ describe('per-cell hover/focus/click + accessible values', () => {
 
   it('matrix mode: arrow navigation clamps at the grid edges instead of moving out of bounds', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[9]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[9]] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const live = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
@@ -1224,11 +1459,11 @@ describe('per-cell hover/focus/click + accessible values', () => {
   });
 
   it('calendar mode: arrow keys move the (week, weekday) cursor and announce the date', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 5 }, // Sunday: week 0, weekday 0
       { date: '2026-03-02', value: 9 }, // Monday: week 0, weekday 1
-    ];
+    ] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const live = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
@@ -1243,12 +1478,12 @@ describe('per-cell hover/focus/click + accessible values', () => {
 
   it('matrix mode: emits lr-cell-click with {row, col, value} on click', async () => {
     const el = (await fixture(html`<lr-heatmap cell-size="22"></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['Mon', 'Tue'];
-    el.colLabels = ['0h', '1h'];
-    el.values = [
+    setMatrixData(el, { rowLabels: ['Mon', 'Tue'] });
+    setMatrixData(el, { colLabels: ['0h', '1h'] });
+    setMatrixData(el, { values: [
       [3, 7],
       [1, 2],
-    ];
+    ] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
@@ -1262,9 +1497,9 @@ describe('per-cell hover/focus/click + accessible values', () => {
 
   it('matrix mode: emits lr-cell-click via Enter on the focused cell', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x', 'y'];
-    el.values = [[3, 7]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x', 'y'] });
+    setMatrixData(el, { values: [[3, 7]] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); // focuses (0,0)
@@ -1276,9 +1511,9 @@ describe('per-cell hover/focus/click + accessible values', () => {
 
   it('matrix mode: emits lr-cell-click via Space on the focused cell', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x', 'y'];
-    el.values = [[3, 7]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x', 'y'] });
+    setMatrixData(el, { values: [[3, 7]] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); // focuses (0,0)
@@ -1289,8 +1524,8 @@ describe('per-cell hover/focus/click + accessible values', () => {
   });
 
   it('calendar mode: emits lr-cell-click with {date, value} on click', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
@@ -1303,8 +1538,8 @@ describe('per-cell hover/focus/click + accessible values', () => {
   });
 
   it('calendar mode: emits lr-cell-click via Enter on the focused cell', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); // focuses (week 0, weekday 0)
@@ -1316,7 +1551,7 @@ describe('per-cell hover/focus/click + accessible values', () => {
 
   it('does not re-activate a stale focused cell when clicking outside the grid', async () => {
     const el = (await fixture(
-      html`<lr-heatmap .rowLabels=${['a']} .colLabels=${['b']} .values=${[[1]]}></lr-heatmap>`,
+      html`<lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['b'], values: [[1]] }}></lr-heatmap>`,
     )) as LyraHeatmap;
     const canvas = el.shadowRoot!.querySelector('canvas')!;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
@@ -1329,9 +1564,9 @@ describe('per-cell hover/focus/click + accessible values', () => {
 
   it('is accessible with a hovered tooltip and a focused cell', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x', 'y'];
-    el.values = [[1, 2]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x', 'y'] });
+    setMatrixData(el, { values: [[1, 2]] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -1343,9 +1578,9 @@ describe('per-cell hover/focus/click + accessible values', () => {
 describe('annotation/overlay affordance', () => {
   it('matrix mode: accepts an annotations property and redraws without throwing', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x', 'y'];
-    el.values = [[1, 2]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x', 'y'] });
+    setMatrixData(el, { values: [[1, 2]] });
     el.annotations = [{ row: 0, col: 1, label: 'Peak' }];
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
@@ -1353,9 +1588,9 @@ describe('annotation/overlay affordance', () => {
 
   it('matrix mode: renders a legend-annotation entry (ring swatch + label text) when an annotation has a label', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[1]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[1]] });
     el.annotations = [{ row: 0, col: 0, label: 'Peak' }];
     await el.updateComplete;
     const entry = el.shadowRoot!.querySelector('[part="legend-annotation"]');
@@ -1365,9 +1600,9 @@ describe('annotation/overlay affordance', () => {
 
   it('omits legend-annotation when annotations have no label', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[1]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[1]] });
     el.annotations = [{ row: 0, col: 0 }];
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="legend-annotation"]')) == null).to.be.true;
@@ -1375,16 +1610,16 @@ describe('annotation/overlay affordance', () => {
 
   it('omits legend-annotation when there are no annotations at all', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[1]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[1]] });
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="legend-annotation"]')) == null).to.be.true;
   });
 
   it('calendar mode: accepts date-based annotations, redraws without throwing, and renders their legend label', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     el.annotations = [{ date: '2026-03-01', label: 'Launch' }];
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
@@ -1395,9 +1630,9 @@ describe('annotation/overlay affordance', () => {
 
   it('renders one legend-annotation entry per labeled annotation', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x', 'y'];
-    el.values = [[1, 2]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x', 'y'] });
+    setMatrixData(el, { values: [[1, 2]] });
     el.annotations = [
       { row: 0, col: 0, label: 'Peak' },
       { row: 0, col: 1, label: 'Dip' },
@@ -1411,25 +1646,25 @@ describe('annotation/overlay affordance', () => {
 describe('role="group" fix + cellText formatter + locale bug fix', () => {
   it('sets role="group" on the host instead of role="img"', async () => {
     const el = (await fixture(html`<lr-heatmap
-      .rowLabels=${['R1']}
-      .colLabels=${['C1']}
-      .values=${[[5]]}
-    ></lr-heatmap>`)) as LyraHeatmap;
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['R1'], colLabels: ['C1'], values: [[5]] }}></lr-heatmap>`)) as LyraHeatmap;
     expect(el.getAttribute('role')).to.equal('group');
   });
 
   it('honors late host role/aria-label changes and restores generated defaults after removal', async () => {
     const el = (await fixture(html`<lr-heatmap
-      .rowLabels=${['R1']}
-      .colLabels=${['C1']}
-      .values=${[[5]]}
-    ></lr-heatmap>`)) as LyraHeatmap;
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['R1'], colLabels: ['C1'], values: [[5]] }}></lr-heatmap>`)) as LyraHeatmap;
     await el.updateComplete;
 
     el.setAttribute('role', 'application');
     el.setAttribute('aria-label', 'Late custom');
     await el.updateComplete;
-    el.values = [[9]];
+    setMatrixData(el, { values: [[9]] });
     await el.updateComplete;
     expect(el.getAttribute('role')).to.equal('application');
     expect(el.getAttribute('aria-label')).to.equal('Late custom');
@@ -1449,12 +1684,12 @@ describe('role="group" fix + cellText formatter + locale bug fix', () => {
 
   it('uses a custom cellText formatter for the tooltip and live-region text when provided', async () => {
     const el = (await fixture(html`<lr-heatmap
-      .rowLabels=${['R1']}
-      .colLabels=${['C1']}
-      .values=${[[5]]}
+
+
+
       .cellText=${(pos: { row?: number; col?: number }, value: number) =>
         `custom ${pos.row},${pos.col}: ${value}`}
-    ></lr-heatmap>`)) as LyraHeatmap;
+     .data=${{ kind: 'matrix', rowLabels: ['R1'], colLabels: ['C1'], values: [[5]] }}></lr-heatmap>`)) as LyraHeatmap;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await el.updateComplete;
@@ -1464,10 +1699,10 @@ describe('role="group" fix + cellText formatter + locale bug fix', () => {
 
   it('falls back to the localized template and default English catalog without cellText', async () => {
     const el = (await fixture(html`<lr-heatmap
-      .rowLabels=${['R1']}
-      .colLabels=${['C1']}
-      .values=${[[5]]}
-    ></lr-heatmap>`)) as LyraHeatmap;
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['R1'], colLabels: ['C1'], values: [[5]] }}></lr-heatmap>`)) as LyraHeatmap;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await el.updateComplete;
@@ -1481,9 +1716,8 @@ describe('role="group" fix + cellText formatter + locale bug fix', () => {
     // this day exactly — unlike a mid-week date, which would land the first
     // keypress on an earlier, data-less Sunday instead.
     const el = (await fixture(html`<lr-heatmap
-      mode="calendar"
-      .days=${[{ date: '2026-01-18', value: 3 }]}
-    ></lr-heatmap>`)) as LyraHeatmap;
+
+     .data=${{ kind: 'calendar', days: [{ date: '2026-01-18', value: 3 }] }}></lr-heatmap>`)) as LyraHeatmap;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await el.updateComplete;
@@ -1497,7 +1731,7 @@ describe('role="group" fix + cellText formatter + locale bug fix', () => {
   });
 
   it('derives weekday-axis labels from the runtime locale via Intl, not a hardcoded English array', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
     await el.updateComplete;
     // 2026-01-18 is a Sunday -- an arbitrary but independently-verifiable UTC anchor.
     const firstWeekStart = new Date(Date.UTC(2026, 0, 18));
@@ -1521,8 +1755,8 @@ describe('role="group" fix + cellText formatter + locale bug fix', () => {
 
 describe('columnX override (calendar mode)', () => {
   it('unset: canvas width and cell geometry follow the original evenly-spaced formula (regression)', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }]; // single Sunday -> weekCount 1
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] }); // single Sunday -> weekCount 1
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     // CAL_PAD_LEFT(28) + max(1, weekCount=1) * (CAL_CELL(11) + CAL_GAP(2)) = 28 + 13 = 41.
@@ -1530,12 +1764,12 @@ describe('columnX override (calendar mode)', () => {
   });
 
   it('drawn cell fill and pointer hit-testing both follow a custom columnX function, staying consistent with each other', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 }, // Sunday, week 0, weekday 0
       { date: '2026-03-08', value: 9 }, // Sunday, week 1, weekday 0 (max value)
-    ];
-    el.columnX = (week: number) => 100 + week * 50;
+    ] });
+    setCalendarData(el, { columnX: (week: number) => 100 + week * 50 });
     await el.updateComplete;
 
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -1555,12 +1789,12 @@ describe('columnX override (calendar mode)', () => {
   });
 
   it('a click at the default-formula position misses once columnX moves that column elsewhere', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 },
       { date: '2026-03-08', value: 9 },
-    ];
-    el.columnX = (week: number) => 100 + week * 50;
+    ] });
+    setCalendarData(el, { columnX: (week: number) => 100 + week * 50 });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
@@ -1577,45 +1811,46 @@ describe('columnX override (calendar mode)', () => {
 
 describe('first-day-of-week (calendar mode)', () => {
   it('defaults to 0 (Sunday-anchored), unchanged from before the property existed', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    expect(el.firstDayOfWeek).to.equal(0);
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    expect(calendarData(el).firstDayOfWeek).to.equal(undefined);
+    expect(effectiveFirstDayOfWeek(el)).to.equal(0);
   });
 
   it('falls back to 0 for a non-finite first-day-of-week attribute, instead of NaN propagating into the grid math', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" first-day-of-week="not-a-number"></lr-heatmap>`,
+      html`<lr-heatmap .data=${{ kind: 'calendar', days: [], firstDayOfWeek: Number.NaN }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    expect(el.firstDayOfWeek).to.equal(0);
+    expect(effectiveFirstDayOfWeek(el)).to.equal(0);
   });
 
   it('wraps an out-of-range firstDayOfWeek into [0, 6] via modulo instead of an invalid weekday index', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
 
-    el.firstDayOfWeek = 7; // one past Saturday -> wraps to 0 (Sunday)
+    setCalendarData(el, { firstDayOfWeek: 7 }); // one past Saturday -> wraps to 0 (Sunday)
     await el.updateComplete;
-    expect(el.firstDayOfWeek).to.equal(0);
+    expect(effectiveFirstDayOfWeek(el)).to.equal(0);
 
-    el.firstDayOfWeek = 10; // wraps to 3 (Wednesday)
+    setCalendarData(el, { firstDayOfWeek: 10 }); // wraps to 3 (Wednesday)
     await el.updateComplete;
-    expect(el.firstDayOfWeek).to.equal(3);
+    expect(effectiveFirstDayOfWeek(el)).to.equal(3);
 
-    el.firstDayOfWeek = -1; // wraps to 6 (Saturday)
+    setCalendarData(el, { firstDayOfWeek: -1 }); // wraps to 6 (Saturday)
     await el.updateComplete;
-    expect(el.firstDayOfWeek).to.equal(6);
+    expect(effectiveFirstDayOfWeek(el)).to.equal(6);
 
-    el.firstDayOfWeek = Number.NaN;
+    setCalendarData(el, { firstDayOfWeek: Number.NaN });
     await el.updateComplete;
-    expect(el.firstDayOfWeek).to.equal(0);
+    expect(effectiveFirstDayOfWeek(el)).to.equal(0);
   });
 
   it('renders without throwing for an out-of-range firstDayOfWeek', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar" first-day-of-week="10"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [], firstDayOfWeek: 10 }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 },
       { date: '2026-03-08', value: 9 },
-    ];
+    ] });
     await el.updateComplete;
-    expect(el.firstDayOfWeek).to.equal(3);
+    expect(effectiveFirstDayOfWeek(el)).to.equal(3);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     expect(canvas.width).to.be.greaterThan(0);
     expect(canvas.height).to.be.greaterThan(0);
@@ -1623,12 +1858,12 @@ describe('first-day-of-week (calendar mode)', () => {
 
   it('shifts which week/row a known date lands in, calendar mode', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" first-day-of-week="1"></lr-heatmap>`,
+      html`<lr-heatmap .data=${{ kind: 'calendar', days: [], firstDayOfWeek: 1 }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.days = [
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 }, // Sunday: with a Monday anchor, week 0, weekday 6 (last row of the prior week)
       { date: '2026-03-02', value: 9 }, // Monday: the anchor weekday itself, week 1, weekday 0
-    ];
+    ] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
@@ -1651,18 +1886,18 @@ describe('first-day-of-week (calendar mode)', () => {
 
   it('is a no-op in matrix mode', async () => {
     const el = (await fixture(
-      html`<lr-heatmap first-day-of-week="1" cell-size="22"></lr-heatmap>`,
+      html`<lr-heatmap cell-size="22" .data=${{ kind: 'calendar', days: [], firstDayOfWeek: 1 }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x', 'y'];
-    el.values = [[3, 9]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x', 'y'] });
+    setMatrixData(el, { values: [[3, 9]] });
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('3');
   });
 
   it('weekday-axis labels stay Mon/Wed/Fri (re-anchored to the correct rows) for a non-Sunday firstDayOfWeek', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" first-day-of-week="1"></lr-heatmap>`,
+      html`<lr-heatmap .data=${{ kind: 'calendar', days: [], firstDayOfWeek: 1 }}></lr-heatmap>`,
     )) as LyraHeatmap;
     await el.updateComplete;
     // 2026-01-19 is a Monday -- with firstDayOfWeek=1, buildCalendarGrid() anchors firstWeekStart
@@ -1687,8 +1922,8 @@ describe('first-day-of-week (calendar mode)', () => {
 
 describe('rowY override (calendar mode)', () => {
   it('unset: cell geometry follows the original evenly-spaced formula (regression)', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }]; // single Sunday -> weekCount 1
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] }); // single Sunday -> weekCount 1
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     // CAL_LABEL_H(16) + 7 * (CAL_CELL(11) + CAL_GAP(2)) = 16 + 91 = 107.
@@ -1696,12 +1931,12 @@ describe('rowY override (calendar mode)', () => {
   });
 
   it('drawn cell fill and pointer hit-testing both follow a custom rowY function, staying consistent with each other', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 }, // Sunday, week 0, weekday 0
       { date: '2026-03-03', value: 9 }, // Tuesday, week 0, weekday 2 (max value)
-    ];
-    el.rowY = (weekday: number) => 100 + weekday * 50;
+    ] });
+    setCalendarData(el, { rowY: (weekday: number) => 100 + weekday * 50 });
     await el.updateComplete;
 
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -1721,12 +1956,12 @@ describe('rowY override (calendar mode)', () => {
   });
 
   it('a click at the default-formula position misses once rowY moves that row elsewhere', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 },
       { date: '2026-03-03', value: 9 },
-    ];
-    el.rowY = (weekday: number) => 100 + weekday * 50;
+    ] });
+    setCalendarData(el, { rowY: (weekday: number) => 100 + weekday * 50 });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
@@ -1743,8 +1978,8 @@ describe('rowY override (calendar mode)', () => {
 
 describe('calendar-mode cellSize/fitToWidth (extends the existing matrix-only properties)', () => {
   it('defaults calendar mode\'s cell size to the original 11px when cell-size is unset (no behavior change for existing consumers)', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }]; // single Sunday -> weekCount 1
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] }); // single Sunday -> weekCount 1
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     // CAL_PAD_LEFT(28) + max(1, weekCount=1) * (11 + CAL_GAP(2)) = 41, unchanged.
@@ -1753,9 +1988,9 @@ describe('calendar-mode cellSize/fitToWidth (extends the existing matrix-only pr
 
   it('cell-size resizes calendar mode\'s grid when explicitly set', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" cell-size="20"></lr-heatmap>`,
+      html`<lr-heatmap cell-size="20" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }]; // single Sunday -> weekCount 1
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] }); // single Sunday -> weekCount 1
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     // CAL_PAD_LEFT(28) + max(1, weekCount=1) * (20 + CAL_GAP(2)) = 50.
@@ -1766,14 +2001,14 @@ describe('calendar-mode cellSize/fitToWidth (extends the existing matrix-only pr
 
   it('derives calendar mode\'s cell size from the host width when fit-to-width is set', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" fit-to-width style="inline-size: 320px"></lr-heatmap>`,
+      html`<lr-heatmap fit-to-width style="inline-size: 320px" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.days = [
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 },
       { date: '2026-03-08', value: 2 },
       { date: '2026-03-15', value: 3 },
       { date: '2026-03-22', value: 4 },
-    ];
+    ] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     expect(parseInt(canvas.style.width, 10)).to.equal(320);
@@ -1781,9 +2016,9 @@ describe('calendar-mode cellSize/fitToWidth (extends the existing matrix-only pr
 
   it('ignores fit-to-width in calendar mode when it is not set (existing fixed-cellSize behavior)', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" cell-size="20" style="inline-size: 320px"></lr-heatmap>`,
+      html`<lr-heatmap cell-size="20" style="inline-size: 320px" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     // 28 + 1*(20+2) = 50, independent of host width.
@@ -1794,9 +2029,9 @@ describe('calendar-mode cellSize/fitToWidth (extends the existing matrix-only pr
 describe('cellSize numeric guard', () => {
   it('falls back to the mode-appropriate default when cell-size is non-finite, instead of NaN canvas geometry', async () => {
     const matrix = (await fixture(html`<lr-heatmap cell-size="not-a-number"></lr-heatmap>`)) as LyraHeatmap;
-    matrix.rowLabels = ['a'];
-    matrix.colLabels = ['x', 'y'];
-    matrix.values = [[1, 2]];
+    setMatrixData(matrix, { rowLabels: ['a'] });
+    setMatrixData(matrix, { colLabels: ['x', 'y'] });
+    setMatrixData(matrix, { values: [[1, 2]] });
     await matrix.updateComplete;
     expect(matrix.cellSize).to.equal(22); // DEFAULT_MATRIX_CELL_SIZE
     const matrixCanvas = matrix.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -1804,19 +2039,19 @@ describe('cellSize numeric guard', () => {
     expect(parseInt(matrixCanvas.style.width, 10)).to.equal(104);
 
     const calendar = (await fixture(
-      html`<lr-heatmap mode="calendar" cell-size="not-a-number"></lr-heatmap>`,
+      html`<lr-heatmap cell-size="not-a-number" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    calendar.days = [{ date: '2026-03-01', value: 5 }];
+    setCalendarData(calendar, { days: [{ date: '2026-03-01', value: 5 }] });
     await calendar.updateComplete;
     expect(calendar.cellSize).to.equal(11); // CAL_CELL
   });
 
   it('clamps a zero/negative explicit cell-size to a 1px floor instead of dividing by zero, without throwing', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar" cell-size="0"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [
+    const el = (await fixture(html`<lr-heatmap cell-size="0" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 },
       { date: '2026-03-08', value: 9 },
-    ];
+    ] });
     await el.updateComplete;
     expect(el.cellSize).to.equal(1);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -1837,14 +2072,14 @@ describe('cellInteractive predicate', () => {
   it('matrix mode: a cell for which cellInteractive returns false is skipped by hit-testing and roving focus', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['r0', 'r1']}
-        .colLabels=${['c0', 'c1']}
-        .values=${[
+
+
+
+        .cellInteractive=${(pos: { row?: number; col?: number }) => !(pos.row === 0 && pos.col === 1)}
+       .data=${{ kind: 'matrix', rowLabels: ['r0', 'r1'], colLabels: ['c0', 'c1'], values: [
           [1, 2],
           [3, 4],
-        ]}
-        .cellInteractive=${(pos: { row?: number; col?: number }) => !(pos.row === 0 && pos.col === 1)}
-      ></lr-heatmap>
+        ] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -1882,7 +2117,7 @@ describe('cellInteractive predicate', () => {
 
   it('unset: every cell stays interactive (regression)', async () => {
     const el = (await fixture(html`
-      <lr-heatmap .rowLabels=${['r0']} .colLabels=${['c0', 'c1']} .values=${[[1, 2]]}></lr-heatmap>
+      <lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['r0'], colLabels: ['c0', 'c1'], values: [[1, 2]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -1898,11 +2133,11 @@ describe('cellInteractive predicate', () => {
   it('drops a stale focused cell when a values refresh makes it non-interactive, so Enter emits nothing', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['a']}
-        .colLabels=${['x', 'y']}
-        .values=${[[3, 7]]}
+
+
+
         .cellInteractive=${(_pos: MatrixCellPos | CalendarCellPos, value: number) => value !== 99}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[3, 7]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -1910,7 +2145,7 @@ describe('cellInteractive predicate', () => {
     await el.updateComplete;
     // (0,0)'s value flips to 99, which the predicate above excludes -- the cell that was focused a
     // moment ago is no longer interactive, even though the grid's shape didn't change.
-    el.values = [[99, 7]];
+    setMatrixData(el, { values: [[99, 7]] });
     await el.updateComplete;
     let clicked: unknown;
     el.addEventListener('lr-cell-click', (e) => (clicked = (e as CustomEvent).detail));
@@ -1923,11 +2158,11 @@ describe('colorSteps', () => {
   it('matrix mode, scale="linear": colors cells from the discrete colorSteps array, not the 2-endpoint ramp', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['r0']}
-        .colLabels=${['c0', 'c1', 'c2', 'c3']}
-        .values=${[[0, 33, 66, 100]]}
+
+
+
         .colorSteps=${['#000000', '#3f3f3f', '#7f7f7f', '#ffffff']}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['r0'], colLabels: ['c0', 'c1', 'c2', 'c3'], values: [[0, 33, 66, 100]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -1951,7 +2186,7 @@ describe('colorSteps', () => {
 
   it('unset: the 2-endpoint linear interpolation is unchanged (regression)', async () => {
     const el = (await fixture(html`
-      <lr-heatmap .rowLabels=${['r0']} .colLabels=${['c0']} .values=${[[5]]}></lr-heatmap>
+      <lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['r0'], colLabels: ['c0'], values: [[5]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     expect(el.colorSteps).to.be.undefined;
@@ -1961,7 +2196,7 @@ describe('colorSteps', () => {
 describe('cellColor', () => {
   it('lets a consumer force an exact cell color bypassing the ramp entirely', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.values = [[0, 5]];
+    setMatrixData(el, { values: [[0, 5]] });
     el.cellColor = (pos, value) => (value === 0 ? 'rgb(200, 200, 200)' : undefined);
     await el.updateComplete;
     const internals = el as unknown as { draw(): void };
@@ -1987,14 +2222,14 @@ describe('cellColor resolves CSS custom properties for canvas fillStyle', () => 
       <lr-heatmap
         mode="matrix"
         style="--test-heatmap-color: rgb(10, 20, 30);"
-        .rowLabels=${['a', 'b']}
-        .colLabels=${['x', 'y']}
-        .values=${[
+
+
+
+        .cellColor=${() => 'var(--test-heatmap-color)'}
+       .data=${{ kind: 'matrix', rowLabels: ['a', 'b'], colLabels: ['x', 'y'], values: [
           [1, 2],
           [3, 4],
-        ]}
-        .cellColor=${() => 'var(--test-heatmap-color)'}
-      ></lr-heatmap>
+        ] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -2009,18 +2244,18 @@ describe('cellColor resolves CSS custom properties for canvas fillStyle', () => 
     const el = (await fixture(html`
       <lr-heatmap
         mode="matrix"
-        .rowLabels=${['a', 'b']}
-        .colLabels=${['x', 'y']}
-        .values=${[
-          [1, 2],
-          [3, 4],
-        ]}
+
+
+
         .cellColor=${() =>
           // Missing the required `--` custom-property prefix, so the browser rejects this
           // string outright (unlike an *unresolved* var() reference, e.g. var(--undefined-token),
           // which is still syntactically valid and would silently compute to an inherited color).
           'var(not-a-custom-prop)'}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a', 'b'], colLabels: ['x', 'y'], values: [
+          [1, 2],
+          [3, 4],
+        ] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -2034,14 +2269,14 @@ describe('cellColor resolves CSS custom properties for canvas fillStyle', () => 
     const el = (await fixture(html`
       <lr-heatmap
         mode="matrix"
-        .rowLabels=${['a', 'b']}
-        .colLabels=${['x', 'y']}
-        .values=${[
+
+
+
+        .cellColor=${() => 'rgb(9, 9, 9)'}
+       .data=${{ kind: 'matrix', rowLabels: ['a', 'b'], colLabels: ['x', 'y'], values: [
           [1, 2],
           [3, 4],
-        ]}
-        .cellColor=${() => 'rgb(9, 9, 9)'}
-      ></lr-heatmap>
+        ] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -2056,11 +2291,11 @@ describe('cellColor resolves CSS custom properties for canvas fillStyle', () => 
       <lr-heatmap
         mode="matrix"
         style="--lr-heatmap-no-data-fill: rgb(128, 128, 128);"
-        .rowLabels=${['a']}
-        .colLabels=${['x', 'y']}
-        .values=${[[1, 2]]}
+
+
+
         .cellColor=${(_pos: MatrixCellPos, value: number) => value === 1 ? 'rgb(255, 0, 0)' : 'not-a-color'}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[1, 2]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -2076,12 +2311,12 @@ describe('cellColor resolves CSS custom properties for canvas fillStyle', () => 
 describe('calendar-mode scale (extends the existing matrix-only property)', () => {
   it('scale="sqrt" buckets a low value differently than the default quartile scale for the same skewed value set', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" scale="sqrt"></lr-heatmap>`,
+      html`<lr-heatmap scale="sqrt" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.days = [
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 }, // Sunday, week 0, weekday 0 (low value)
       { date: '2026-03-02', value: 100 }, // Monday, week 0, weekday 1 (heavy value)
-    ];
+    ] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
@@ -2093,11 +2328,11 @@ describe('calendar-mode scale (extends the existing matrix-only property)', () =
   });
 
   it('defaults to the quartile scale (unchanged), not sqrt, for the same skewed value set', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 },
       { date: '2026-03-02', value: 100 },
-    ];
+    ] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
@@ -2111,21 +2346,20 @@ describe('calendar-mode scale (extends the existing matrix-only property)', () =
 
 describe('weekdayLabelText', () => {
   it('is undefined by default', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar" .days=${[]}></lr-heatmap>`)) as LyraHeatmap;
-    expect(el.weekdayLabelText).to.be.undefined;
+    const el = (await fixture(html`<lr-heatmap  .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    expect(calendarData(el).weekdayLabelText).to.be.undefined;
   });
 
   it('is called with the real JS weekday index (1, 3, 5) and its return value replaces the built-in label', async () => {
     const seen: number[] = [];
     const el = (await fixture(html`
       <lr-heatmap
-        mode="calendar"
-        .days=${[{ date: '2026-01-05', value: 3 }]}
-        .weekdayLabelText=${(weekday: number) => {
+
+
+       .data=${{ kind: 'calendar', days: [{ date: '2026-01-05', value: 3 }], weekdayLabelText: (weekday: number) => {
           seen.push(weekday);
           return `W${weekday}`;
-        }}
-      ></lr-heatmap>
+        } }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     // A render callback may be consulted again when the canvas redraws; its semantic contract is
@@ -2136,21 +2370,20 @@ describe('weekdayLabelText', () => {
 
 describe('monthLabelText', () => {
   it('is undefined by default', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar" .days=${[]}></lr-heatmap>`)) as LyraHeatmap;
-    expect(el.monthLabelText).to.be.undefined;
+    const el = (await fixture(html`<lr-heatmap  .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    expect(calendarData(el).monthLabelText).to.be.undefined;
   });
 
   it('is called with the real JS month index and year, and its return value replaces the built-in label', async () => {
     const seen: Array<[number, number]> = [];
     const el = (await fixture(html`
       <lr-heatmap
-        mode="calendar"
-        .days=${[{ date: '2026-03-05', value: 3 }]}
-        .monthLabelText=${(jsMonth: number, year: number) => {
+
+
+       .data=${{ kind: 'calendar', days: [{ date: '2026-03-05', value: 3 }], monthLabelText: (jsMonth: number, year: number) => {
           seen.push([jsMonth, year]);
           return `M${jsMonth}`;
-        }}
-      ></lr-heatmap>
+        } }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     expect(seen).to.deep.equal([[2, 2026]]);
@@ -2161,10 +2394,10 @@ describe('selectedCell', () => {
   it('draws no selection and adds no aria-label suffix by default', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['Mon', 'Tue']}
-        .colLabels=${['00h', '06h']}
-        .values=${[[1, 2], [3, 4]]}
-      ></lr-heatmap>
+
+
+
+       .data=${{ kind: 'matrix', rowLabels: ['Mon', 'Tue'], colLabels: ['00h', '06h'], values: [[1, 2], [3, 4]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     expect(el.selectedCell).to.be.null;
     expect(el.getAttribute('aria-label')).to.not.include('Selected');
@@ -2173,11 +2406,11 @@ describe('selectedCell', () => {
   it('appends a "Selected: ..." description to the host aria-label in matrix mode', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['Mon', 'Tue']}
-        .colLabels=${['00h', '06h']}
-        .values=${[[1, 2], [3, 4]]}
+
+
+
         .selectedCell=${{ row: 1, col: 0 }}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['Mon', 'Tue'], colLabels: ['00h', '06h'], values: [[1, 2], [3, 4]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     expect(el.getAttribute('aria-label')).to.include('Selected: Row Tue, Col 00h: 3.');
@@ -2186,13 +2419,12 @@ describe('selectedCell', () => {
   it('appends a "Selected: ..." description in calendar mode, resolved by date', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        mode="calendar"
-        .days=${[
+
+        .selectedCell=${{ date: '2026-01-05' }}
+       .data=${{ kind: 'calendar', days: [
           { date: '2026-01-04', value: 5 },
           { date: '2026-01-05', value: 7 },
-        ]}
-        .selectedCell=${{ date: '2026-01-05' }}
-      ></lr-heatmap>
+        ] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     expect(el.getAttribute('aria-label')).to.include('Selected: Jan 5: 7.');
@@ -2201,11 +2433,11 @@ describe('selectedCell', () => {
   it('ignores a selectedCell outside the current grid bounds', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['Mon']}
-        .colLabels=${['00h']}
-        .values=${[[1]]}
+
+
+
         .selectedCell=${{ row: 5, col: 9 }}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['Mon'], colLabels: ['00h'], values: [[1]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     expect(el.getAttribute('aria-label')).to.not.include('Selected');
@@ -2214,11 +2446,11 @@ describe('selectedCell', () => {
   it('announces the selected cell through the heatmapSelectedCellLabel template, not a bolted-on suffix', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['Mon', 'Tue']}
-        .colLabels=${['00h', '06h']}
-        .values=${[[1, 2], [3, 4]]}
+
+
+
         .selectedCell=${{ row: 0, col: 0 }}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['Mon', 'Tue'], colLabels: ['00h', '06h'], values: [[1, 2], [3, 4]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
@@ -2232,13 +2464,13 @@ describe('selectedCell', () => {
   it('is left to the consumer -- selectedCell is not reset alongside focusedCell on a grid-shape change', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['Mon', 'Tue']}
-        .colLabels=${['00h']}
-        .values=${[[1], [2]]}
+
+
+
         .selectedCell=${{ row: 1, col: 0 }}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['Mon', 'Tue'], colLabels: ['00h'], values: [[1], [2]] }}></lr-heatmap>
     `)) as LyraHeatmap;
-    el.colLabels = ['00h', '06h'];
+    setMatrixData(el, { colLabels: ['00h', '06h'] });
     await el.updateComplete;
     expect(el.selectedCell).to.deep.equal({ row: 1, col: 0 });
   });
@@ -2246,11 +2478,11 @@ describe('selectedCell', () => {
   it('is accessible with a selected cell', async () => {
     const el = await fixture(html`
       <lr-heatmap
-        .rowLabels=${['Mon', 'Tue']}
-        .colLabels=${['00h', '06h']}
-        .values=${[[1, 2], [3, 4]]}
+
+
+
         .selectedCell=${{ row: 1, col: 0 }}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['Mon', 'Tue'], colLabels: ['00h', '06h'], values: [[1, 2], [3, 4]] }}></lr-heatmap>
     `);
     await expect(el).to.be.accessible();
   });
@@ -2279,9 +2511,9 @@ describe('coverage: color/theme helper edge cases', () => {
           style="--lr-heatmap-scale-lo: lyra-coverage-dedupe-invalid-color; --lr-heatmap-scale-hi: lyra-coverage-dedupe-invalid-color;"
         ></lr-heatmap>
       `)) as LyraHeatmap;
-      el.rowLabels = ['a'];
-      el.colLabels = ['x'];
-      el.values = [[5]];
+      setMatrixData(el, { rowLabels: ['a'] });
+      setMatrixData(el, { colLabels: ['x'] });
+      setMatrixData(el, { values: [[5]] });
       await el.updateComplete;
     } finally {
       console.warn = originalWarn;
@@ -2296,9 +2528,9 @@ describe('coverage: color/theme helper edge cases', () => {
         style="--lr-heatmap-scale-lo: rgba(0, 128, 0, 0.5); --lr-heatmap-scale-hi: rgba(0, 128, 0, 0.5);"
       ></lr-heatmap>
     `)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[5]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[5]] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
@@ -2315,9 +2547,9 @@ describe('coverage: color/theme helper edge cases', () => {
     const el = (await fixture(html`
       <lr-heatmap style="--lr-color-text-quiet: rgb(0, 150, 0);"></lr-heatmap>
     `)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[5]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[5]] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
@@ -2352,9 +2584,9 @@ describe('coverage: color/theme helper edge cases', () => {
 describe('theme watching (via the shared ThemeWatcher controller)', () => {
   it('redraws when an ancestor theme attribute mutates, without a manual refreshTheme() call', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[5]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[5]] });
     await el.updateComplete;
 
     let refreshes = 0;
@@ -2373,9 +2605,9 @@ describe('theme watching (via the shared ThemeWatcher controller)', () => {
 describe('visibility-gated canvas redraws', () => {
   it('redraws canvas-derived labels when the effective locale changes', async () => {
     const el = (await fixture(html`
-      <lr-heatmap mode="calendar" locale="en-US"></lr-heatmap>
+      <lr-heatmap locale="en-US" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>
     `)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
 
     let draws = 0;
@@ -2419,9 +2651,9 @@ describe('visibility-gated canvas redraws', () => {
     let el: LyraHeatmap | undefined;
     try {
       el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-      el.rowLabels = ['row'];
-      el.colLabels = ['column'];
-      el.values = [[1]];
+      setMatrixData(el, { rowLabels: ['row'] });
+      setMatrixData(el, { colLabels: ['column'] });
+      setMatrixData(el, { values: [[1]] });
       await el.updateComplete;
       expect(callback !== undefined, 'the owner-window visibility observer is installed').to.equal(true);
       expect(observed, 'the observer watches the heatmap host').to.equal(true);
@@ -2435,7 +2667,7 @@ describe('visibility-gated canvas redraws', () => {
         realDraw();
       };
 
-      el.values = [[2]];
+      setMatrixData(el, { values: [[2]] });
       await el.updateComplete;
       el.annotations = [{ row: 0, col: 0, label: 'changed while hidden' }];
       await el.updateComplete;
@@ -2488,9 +2720,9 @@ describe('visibility-gated canvas redraws', () => {
     let el: LyraHeatmap | undefined;
     try {
       el = (await fixture(html`<lr-heatmap cell-size="20"></lr-heatmap>`)) as LyraHeatmap;
-      el.rowLabels = ['row'];
-      el.colLabels = ['column'];
-      el.values = [[1]];
+      setMatrixData(el, { rowLabels: ['row'] });
+      setMatrixData(el, { colLabels: ['column'] });
+      setMatrixData(el, { values: [[1]] });
       el.cellColor = (_pos, value) => (value === 1 ? 'rgb(1, 2, 3)' : 'rgb(4, 5, 6)');
       await el.updateComplete;
 
@@ -2507,7 +2739,7 @@ describe('visibility-gated canvas redraws', () => {
         [{ target: el, isIntersecting: false } as IntersectionObserverEntry],
         records[0]!.observer,
       );
-      el.values = [[2]];
+      setMatrixData(el, { values: [[2]] });
       await el.updateComplete;
 
       const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -2547,9 +2779,9 @@ describe('coverage: draw guard branches', () => {
 
   it('drawMatrix(): no-ops when the canvas 2D context is unavailable', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[1]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[1]] });
     await el.updateComplete;
     const original = HTMLCanvasElement.prototype.getContext;
     // @ts-expect-error -- force a null 2D context to exercise the defensive early return
@@ -2563,9 +2795,9 @@ describe('coverage: draw guard branches', () => {
 
   it('drawMatrix(): falls back to a 1x device pixel ratio when window.devicePixelRatio is falsy', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[5]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[5]] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const originalDescriptor = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
@@ -2584,9 +2816,9 @@ describe('coverage: draw guard branches', () => {
     const el = (await fixture(
       html`<lr-heatmap fit-to-width style="display: none" cell-size="10"></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x', 'y'];
-    el.values = [[1, 2]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x', 'y'] });
+    setMatrixData(el, { values: [[1, 2]] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     // clientWidth is 0 while hidden -> falls back to PAD_LEFT(60) + 2*cellSize(10) = 80.
@@ -2597,9 +2829,9 @@ describe('coverage: draw guard branches', () => {
 describe('owner-window drawing runtime after adoption', () => {
   it('rebinds observers, DPR queries, frames, computed styles, and scratch canvases to the current owner', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['row'];
-    el.colLabels = ['column'];
-    el.values = [[1]];
+    setMatrixData(el, { rowLabels: ['row'] });
+    setMatrixData(el, { colLabels: ['column'] });
+    setMatrixData(el, { values: [[1]] });
     el.colorSteps = ['red', 'blue'];
     await el.updateComplete;
 
@@ -2776,16 +3008,16 @@ describe('owner-window drawing runtime after adoption', () => {
 
 describe('coverage: selectedCellDescription resolves to "" for an unresolvable selectedCell', () => {
   it('calendar mode: selectedCell without a date', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     el.selectedCell = { row: 0, col: 0 };
     await el.updateComplete;
     expect(el.getAttribute('aria-label')).to.not.include('Selected');
   });
 
   it('calendar mode: selectedCell date outside the built grid', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     el.selectedCell = { date: '2099-01-01' };
     await el.updateComplete;
     expect(el.getAttribute('aria-label')).to.not.include('Selected');
@@ -2793,9 +3025,9 @@ describe('coverage: selectedCellDescription resolves to "" for an unresolvable s
 
   it('matrix mode: selectedCell missing both row and col', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[5]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[5]] });
     el.selectedCell = {};
     await el.updateComplete;
     expect(el.getAttribute('aria-label')).to.not.include('Selected');
@@ -2806,11 +3038,10 @@ describe('coverage: calendar full-draw cellColor/colorSteps/focus-ring', () => {
   it('calendar mode: a cellColor override is used for the matching day during a full draw', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        mode="calendar"
         .cellColor=${(_pos: unknown, value: number) => (value === 5 ? 'rgb(255, 0, 255)' : undefined)}
-      ></lr-heatmap>
+       .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>
     `)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
@@ -2823,12 +3054,12 @@ describe('coverage: calendar full-draw cellColor/colorSteps/focus-ring', () => {
 
   it('calendar mode: colorSteps buckets a day linearly across the discrete steps during a full draw', async () => {
     const el = (await fixture(html`
-      <lr-heatmap mode="calendar" .colorSteps=${['#ff0000', '#00ff00', '#0000ff']}></lr-heatmap>
+      <lr-heatmap .colorSteps=${['#ff0000', '#00ff00', '#0000ff']} .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>
     `)) as LyraHeatmap;
-    el.days = [
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 }, // week 0, weekday 0 -- range low end
       { date: '2026-03-08', value: 100 }, // week 1, weekday 0 -- range high end
-    ];
+    ] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
@@ -2840,8 +3071,8 @@ describe('coverage: calendar full-draw cellColor/colorSteps/focus-ring', () => {
   });
 
   it('calendar mode: a full redraw (not just the focus-ring fast path) also strokes the keyboard focus ring while focusedCell is set', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); // sets focusedCell (fast path)
@@ -2867,9 +3098,9 @@ describe('coverage: calendar full-draw cellColor/colorSteps/focus-ring', () => {
 describe('coverage: focus-ring fast-path repaint color/overlay branches', () => {
   it('matrix mode: respects scale="sqrt" when computing the repainted cell color', async () => {
     const el = (await fixture(html`<lr-heatmap scale="sqrt"></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x', 'y'];
-    el.values = [[1, 100]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x', 'y'] });
+    setMatrixData(el, { values: [[1, 100]] });
     await el.updateComplete; // full draw already happened -> canvasHasContent = true
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); // focuses (0,0) via the fast path
@@ -2884,9 +3115,9 @@ describe('coverage: focus-ring fast-path repaint color/overlay branches', () => 
     const el = (await fixture(
       html`<lr-heatmap .colorSteps=${['#ff0000', '#00ff00', '#0000ff']}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x', 'y'];
-    el.values = [[1, 100]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x', 'y'] });
+    setMatrixData(el, { values: [[1, 100]] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -2902,9 +3133,9 @@ describe('coverage: focus-ring fast-path repaint color/overlay branches', () => 
 
   it('matrix mode: repainting a de-focused cell still strokes its annotation ring', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x', 'y'];
-    el.values = [[5, 6]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x', 'y'] });
+    setMatrixData(el, { values: [[5, 6]] });
     el.annotations = [{ row: 0, col: 0, label: 'Peak' }];
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -2920,11 +3151,11 @@ describe('coverage: focus-ring fast-path repaint color/overlay branches', () => 
   });
 
   it('calendar mode: respects scale="sqrt" when computing the repainted cell color', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar" scale="sqrt"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [
+    const el = (await fixture(html`<lr-heatmap scale="sqrt" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 },
       { date: '2026-03-02', value: 100 },
-    ];
+    ] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
@@ -2937,12 +3168,12 @@ describe('coverage: focus-ring fast-path repaint color/overlay branches', () => 
 
   it('calendar mode: respects colorSteps when computing the repainted cell color', async () => {
     const el = (await fixture(html`
-      <lr-heatmap mode="calendar" .colorSteps=${['#ff0000', '#00ff00', '#0000ff']}></lr-heatmap>
+      <lr-heatmap .colorSteps=${['#ff0000', '#00ff00', '#0000ff']} .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>
     `)) as LyraHeatmap;
-    el.days = [
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 1 },
       { date: '2026-03-08', value: 100 },
-    ];
+    ] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
@@ -2956,11 +3187,11 @@ describe('coverage: focus-ring fast-path repaint color/overlay branches', () => 
   });
 
   it('calendar mode: repainting a de-focused cell still strokes its annotation and selected rings', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 5 }, // week 0, weekday 0
       { date: '2026-03-02', value: 9 }, // week 0, weekday 1
-    ];
+    ] });
     el.annotations = [{ date: '2026-03-01', label: 'Launch' }];
     el.selectedCell = { date: '2026-03-01' };
     await el.updateComplete;
@@ -2980,9 +3211,9 @@ describe('coverage: focus-ring fast-path repaint color/overlay branches', () => 
 describe('coverage: matrix full-draw annotation validity guards', () => {
   it('an annotation missing row/col, or pointing out of range, is skipped without throwing', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[5]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[5]] });
     el.annotations = [
       { date: '2026-01-01', label: 'Calendar-shaped, ignored in matrix mode' }, // row/col both null
       { row: 99, col: 99, label: 'Out of range' }, // valid shape, out of bounds
@@ -2997,9 +3228,9 @@ describe('coverage: matrix full-draw annotation validity guards', () => {
 describe('coverage: roving focus with no interactive cells at all', () => {
   it('matrix mode: ArrowRight is a no-op when every cell is excluded via cellInteractive', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x', 'y'];
-    el.values = [[1, 2]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x', 'y'] });
+    setMatrixData(el, { values: [[1, 2]] });
     el.cellInteractive = () => false;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -3010,8 +3241,8 @@ describe('coverage: roving focus with no interactive cells at all', () => {
   });
 
   it('calendar mode: ArrowDown is a no-op when every cell is excluded via cellInteractive', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     el.cellInteractive = () => false;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -3025,9 +3256,9 @@ describe('coverage: roving focus with no interactive cells at all', () => {
 describe('coverage: miscellaneous cell-text/navigation/accessible-cells branches', () => {
   it('matrix mode: hover tooltip shows the localized no-data text for a -1 sentinel cell', async () => {
     const el = (await fixture(html`<lr-heatmap cell-size="22"></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[-1]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[-1]] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
@@ -3040,11 +3271,11 @@ describe('coverage: miscellaneous cell-text/navigation/accessible-cells branches
   });
 
   it('calendar mode: ArrowLeft/ArrowRight move the focused cell by a whole week', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [
       { date: '2026-03-01', value: 5 }, // week 0, weekday 0
       { date: '2026-03-08', value: 9 }, // week 1, weekday 0
-    ];
+    ] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const live = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
@@ -3061,21 +3292,20 @@ describe('coverage: miscellaneous cell-text/navigation/accessible-cells branches
     expect(live.textContent).to.equal('Mar 1: 5');
   });
 
-  it('calendar mode: accessible-cells marks the selected day (by date) as aria-pressed="true"', async () => {
+  it('calendar mode: accessible-cells marks the selected day (by date) as aria-selected="true"', async () => {
     const el = (await fixture(html`
       <lr-heatmap
         accessible-cells
-        mode="calendar"
-        .days=${[{ date: '2026-03-01', value: 5 }]}
+
         .selectedCell=${{ date: '2026-03-01' }}
-      ></lr-heatmap>
+       .data=${{ kind: 'calendar', days: [{ date: '2026-03-01', value: 5 }] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const cells = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
     const match = cells.find((c) => c.dataset.cellKey === 'calendar-0-0');
     expect((match) != null).to.equal(true);
-    expect(match!.getAttribute('aria-pressed')).to.equal('true');
-    expect(cells.filter((c) => c !== match).every((c) => c.getAttribute('aria-pressed') === 'false')).to.equal(true);
+    expect(match!.getAttribute('aria-selected')).to.equal('true');
+    expect(cells.filter((c) => c !== match).every((c) => c.getAttribute('aria-selected') === 'false')).to.equal(true);
   });
 
   it('accessible-cells: renders zero cells (and no throw) for an empty grid with no focused cell', async () => {
@@ -3086,10 +3316,9 @@ describe('coverage: miscellaneous cell-text/navigation/accessible-cells branches
 
   it('samePos(): treats a stale hoverCell from the previous mode as different from a same-tick new-mode hit test', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[1]];
-    el.days = [{ date: '2026-03-01', value: 5 }]; // pre-populate so the calendar grid is already built
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[1]] });
     await el.updateComplete;
 
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -3100,22 +3329,17 @@ describe('coverage: miscellaneous cell-text/navigation/accessible-cells branches
     await el.updateComplete;
     expect((el as unknown as { hoverCell: unknown }).hoverCell).to.deep.equal({ row: 0, col: 0 });
 
-    // Switch mode WITHOUT awaiting -- this.mode already reads 'calendar' synchronously (a plain
-    // property write), but willUpdate() (which resets hoverCell to null on a mode change) hasn't
+    // Switch data kind WITHOUT awaiting -- data.kind already reads 'calendar' synchronously, but
+    // willUpdate() (which resets hoverCell to null on a kind change) hasn't
     // run yet, since Lit's update is scheduled, not synchronous. A pointermove dispatched right now
     // hit-tests against the NEW mode while hoverCell still holds the OLD mode's MatrixCellPos,
     // forcing samePos() to compare mismatched cell shapes.
-    el.mode = 'calendar';
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     canvas.dispatchEvent(
       new PointerEvent('pointermove', { clientX: rect.left + 33, clientY: rect.top + 21, bubbles: true }),
     );
-    // A calendar cursor also carries its resolved ISO `date` (see `CalendarCellPos.date`);
-    // `samePos()` deliberately still compares only week/weekday.
-    expect((el as unknown as { hoverCell: unknown }).hoverCell).to.deep.equal({
-      week: 0,
-      weekday: 0,
-      date: '2026-03-01',
-    });
+    await el.updateComplete;
+    expect((el as unknown as { hoverCell: unknown }).hoverCell).to.equal(null);
     await el.updateComplete;
   });
 });
@@ -3143,7 +3367,7 @@ describe('legendStops', () => {
 
   it('left unset, renders byte-identical lo/hi gradient legend markup', async () => {
     const el = (await fixture(html`
-      <lr-heatmap .rowLabels=${['a']} .colLabels=${['x', 'y']} .values=${[[3, 9]]}></lr-heatmap>
+      <lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[3, 9]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
@@ -3155,15 +3379,15 @@ describe('legendStops', () => {
   it('renders one legend-stop per stop, in order and in its own color, instead of the lo/hi gradient', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['a']}
-        .colLabels=${['x', 'y']}
-        .values=${[[3, 9]]}
+
+
+
         .legendStops=${[
           { value: 0, color: 'rgb(255, 0, 0)' },
           { value: 50, color: 'rgb(0, 128, 0)' },
           { value: 100, color: 'rgb(0, 0, 255)' },
         ]}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[3, 9]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
@@ -3187,14 +3411,14 @@ describe('legendStops', () => {
     const el = (await fixture(html`
       <lr-heatmap
         locale="de-DE"
-        .rowLabels=${['a']}
-        .colLabels=${['x', 'y']}
-        .values=${[[3, 9]]}
+
+
+
         .legendStops=${[
           { value: 1234.5, color: '#ff0000' },
           { value: 2345.6, color: '#00ff00', label: 'busiest' },
         ]}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[3, 9]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const labels = [...el.shadowRoot!.querySelectorAll('[part="legend-stop-label"]')].map((n) => n.textContent);
@@ -3212,24 +3436,24 @@ describe('legendStops', () => {
     const plain = (await fixture(html`
       <lr-heatmap
         cell-size="22"
-        .rowLabels=${['a', 'b', 'c']}
-        .colLabels=${['x', 'y', 'z']}
-        .values=${values}
+
+
+
         .cellColor=${cellColor}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a', 'b', 'c'], colLabels: ['x', 'y', 'z'], values: values }}></lr-heatmap>
     `)) as LyraHeatmap;
     const withStops = (await fixture(html`
       <lr-heatmap
         cell-size="22"
-        .rowLabels=${['a', 'b', 'c']}
-        .colLabels=${['x', 'y', 'z']}
-        .values=${values}
+
+
+
         .cellColor=${cellColor}
         .legendStops=${[
           { value: 0, color: 'rgb(0, 128, 0)' },
           { value: 9, color: 'rgb(255, 0, 0)' },
         ]}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a', 'b', 'c'], colLabels: ['x', 'y', 'z'], values: values }}></lr-heatmap>
     `)) as LyraHeatmap;
     await plain.updateComplete;
     await withStops.updateComplete;
@@ -3244,15 +3468,15 @@ describe('legendStops', () => {
   it('renders labeled annotations alongside the stops', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['a']}
-        .colLabels=${['x', 'y']}
-        .values=${[[3, 9]]}
+
+
+
         .annotations=${[{ row: 0, col: 1, label: 'Peak load' }]}
         .legendStops=${[
           { value: 0, color: 'rgb(255, 0, 0)' },
           { value: 9, color: 'rgb(0, 0, 255)' },
         ]}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[3, 9]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
@@ -3265,14 +3489,14 @@ describe('legendStops', () => {
   it('stays accessible with legendStops set', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['a']}
-        .colLabels=${['x', 'y']}
-        .values=${[[3, 9]]}
+
+
+
         .legendStops=${[
           { value: 0, color: 'rgb(255, 0, 0)' },
           { value: 9, color: 'rgb(0, 0, 255)' },
         ]}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[3, 9]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     await expect(el).to.be.accessible();
@@ -3280,7 +3504,7 @@ describe('legendStops', () => {
 
   it('repaints when legendStops changes on a live element', async () => {
     const el = (await fixture(html`
-      <lr-heatmap .rowLabels=${['a']} .colLabels=${['x', 'y']} .values=${[[3, 9]]}></lr-heatmap>
+      <lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[3, 9]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     el.legendStops = [{ value: 0, color: 'rgb(255, 0, 0)' }];
@@ -3292,15 +3516,15 @@ describe('legendStops', () => {
   it('renders a caption-only stop (no `color`) with its label and no swatch element at all', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['a']}
-        .colLabels=${['x', 'y']}
-        .values=${[[3, 9]]}
+
+
+
         .legendStops=${[
           { value: 0, label: 'none' },
           { value: 50, color: 'rgb(0, 128, 0)' },
           { value: 100, label: 'off scale' },
         ]}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[3, 9]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
@@ -3327,11 +3551,11 @@ describe('legendStops', () => {
   it('treats an empty-string color as caption-only instead of painting a transparent swatch box', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['a']}
-        .colLabels=${['x', 'y']}
-        .values=${[[3, 9]]}
+
+
+
         .legendStops=${[{ value: 0, color: '', label: 'none' }]}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[3, 9]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="legend-swatch"]').length).to.equal(0);
@@ -3342,11 +3566,11 @@ describe('legendStops', () => {
     const el = (await fixture(html`
       <lr-heatmap
         locale="de-DE"
-        .rowLabels=${['a']}
-        .colLabels=${['x', 'y']}
-        .values=${[[3, 9]]}
+
+
+
         .legendStops=${[{ value: 1234.5 }]}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[3, 9]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="legend-stop-label"]')!.textContent).to.equal('1.234,5');
@@ -3356,11 +3580,11 @@ describe('legendStops', () => {
   it('stays accessible with a caption-only legend stop', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['a']}
-        .colLabels=${['x', 'y']}
-        .values=${[[3, 9]]}
+
+
+
         .legendStops=${[{ value: 0, label: 'none' }, { value: 9, color: 'rgb(0, 0, 255)' }]}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[3, 9]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     await expect(el).to.be.accessible();
@@ -3370,10 +3594,10 @@ describe('legendStops', () => {
     const gradient = (await fixture(html`
       <lr-heatmap
         value-label="events"
-        .rowLabels=${['a']}
-        .colLabels=${['x', 'y']}
-        .values=${[[3, 9]]}
-      ></lr-heatmap>
+
+
+
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[3, 9]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await gradient.updateComplete;
     expect(gradient.shadowRoot!.querySelector('[part="legend-value-label"]')!.textContent).to.equal(
@@ -3383,11 +3607,11 @@ describe('legendStops', () => {
     const withStops = (await fixture(html`
       <lr-heatmap
         value-label="events"
-        .rowLabels=${['a']}
-        .colLabels=${['x', 'y']}
-        .values=${[[3, 9]]}
+
+
+
         .legendStops=${[{ value: 0, label: 'none' }]}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[3, 9]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await withStops.updateComplete;
     expect(withStops.shadowRoot!.querySelector('[part="legend-value-label"]')!.textContent).to.equal(
@@ -3402,13 +3626,13 @@ it('wraps long legend-stop, value-label, and annotation text inside a 320px allo
     <div style="inline-size: 320px; max-inline-size: 320px;">
       <lr-heatmap
         style="inline-size: 100%;"
-        .rowLabels=${['row']}
-        .colLabels=${['column']}
-        .values=${[[1]]}
+
+
+
         .valueLabel=${token}
         .legendStops=${[{ value: 1, color: 'rgb(1, 2, 3)', label: token }]}
         .annotations=${[{ row: 0, col: 0, label: token }]}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['row'], colLabels: ['column'], values: [[1]] }}></lr-heatmap>
     </div>
   `)) as HTMLElement;
   const el = wrapper.querySelector('lr-heatmap') as LyraHeatmap;
@@ -3432,9 +3656,9 @@ describe('maxCellSize / minCellSize (fit-to-width clamps)', () => {
 
   it('calendar mode: max-cell-size caps the fit-to-width cell size, leaving the host remainder unfilled', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" fit-to-width max-cell-size="26" style="inline-size: 320px"></lr-heatmap>`,
+      html`<lr-heatmap fit-to-width max-cell-size="26" style="inline-size: 320px" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.days = FOUR_WEEKS;
+    setCalendarData(el, { days: FOUR_WEEKS });
     await el.updateComplete;
     expect(el.maxCellSize).to.equal(26);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -3446,9 +3670,9 @@ describe('maxCellSize / minCellSize (fit-to-width clamps)', () => {
     const el = (await fixture(
       html`<lr-heatmap fit-to-width max-cell-size="26" style="inline-size: 320px"></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x', 'y', 'z', 'w'];
-    el.values = [[1, 2, 3, 4]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x', 'y', 'z', 'w'] });
+    setMatrixData(el, { values: [[1, 2, 3, 4]] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     // Uncapped this would fill the host exactly (320). Capped: PAD_LEFT(60) + 4 * 26 = 164.
@@ -3457,17 +3681,17 @@ describe('maxCellSize / minCellSize (fit-to-width clamps)', () => {
 
   it('calendar mode: min-cell-size raises the floor above the built-in 4px', async () => {
     const narrow = (await fixture(
-      html`<lr-heatmap mode="calendar" fit-to-width style="inline-size: 60px"></lr-heatmap>`,
+      html`<lr-heatmap fit-to-width style="inline-size: 60px" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    narrow.days = FOUR_WEEKS;
+    setCalendarData(narrow, { days: FOUR_WEEKS });
     await narrow.updateComplete;
     // (60 - 28) / 4 - 2 = 6 -> above the built-in 4px floor, so nothing is clamped yet.
     expect(parseInt((narrow.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).style.width, 10)).to.equal(60);
 
     const floored = (await fixture(
-      html`<lr-heatmap mode="calendar" fit-to-width min-cell-size="16" style="inline-size: 60px"></lr-heatmap>`,
+      html`<lr-heatmap fit-to-width min-cell-size="16" style="inline-size: 60px" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    floored.days = FOUR_WEEKS;
+    setCalendarData(floored, { days: FOUR_WEEKS });
     await floored.updateComplete;
     expect(floored.minCellSize).to.equal(16);
     // 28 + 4 * (16 + 2) = 100.
@@ -3478,9 +3702,9 @@ describe('maxCellSize / minCellSize (fit-to-width clamps)', () => {
     const el = (await fixture(
       html`<lr-heatmap fit-to-width min-cell-size="18" style="inline-size: 100px"></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['v', 'w', 'x', 'y', 'z'];
-    el.values = [[1, 2, 3, 4, 5]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['v', 'w', 'x', 'y', 'z'] });
+    setMatrixData(el, { values: [[1, 2, 3, 4, 5]] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     // (100 - 60) / 5 = 8 raw, floored to 18: PAD_LEFT(60) + 5 * 18 = 150.
@@ -3489,9 +3713,9 @@ describe('maxCellSize / minCellSize (fit-to-width clamps)', () => {
 
   it('leaves both modes byte-identical when neither clamp is set', async () => {
     const calendar = (await fixture(
-      html`<lr-heatmap mode="calendar" fit-to-width style="inline-size: 320px"></lr-heatmap>`,
+      html`<lr-heatmap fit-to-width style="inline-size: 320px" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    calendar.days = FOUR_WEEKS;
+    setCalendarData(calendar, { days: FOUR_WEEKS });
     await calendar.updateComplete;
     expect(calendar.maxCellSize).to.equal(undefined);
     expect(calendar.minCellSize).to.equal(undefined);
@@ -3500,9 +3724,9 @@ describe('maxCellSize / minCellSize (fit-to-width clamps)', () => {
     const matrix = (await fixture(
       html`<lr-heatmap fit-to-width style="inline-size: 320px"></lr-heatmap>`,
     )) as LyraHeatmap;
-    matrix.rowLabels = ['a'];
-    matrix.colLabels = ['x', 'y', 'z', 'w'];
-    matrix.values = [[1, 2, 3, 4]];
+    setMatrixData(matrix, { rowLabels: ['a'] });
+    setMatrixData(matrix, { colLabels: ['x', 'y', 'z', 'w'] });
+    setMatrixData(matrix, { values: [[1, 2, 3, 4]] });
     await matrix.updateComplete;
     expect(parseInt((matrix.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).style.width, 10)).to.equal(320);
   });
@@ -3511,9 +3735,9 @@ describe('maxCellSize / minCellSize (fit-to-width clamps)', () => {
     const el = (await fixture(
       html`<lr-heatmap cell-size="20" max-cell-size="8" min-cell-size="40" style="inline-size: 320px"></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x', 'y', 'z', 'w'];
-    el.values = [[1, 2, 3, 4]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x', 'y', 'z', 'w'] });
+    setMatrixData(el, { values: [[1, 2, 3, 4]] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     // The explicit cell-size still wins outright: 60 + 4 * 20 = 140.
@@ -3522,9 +3746,9 @@ describe('maxCellSize / minCellSize (fit-to-width clamps)', () => {
 
   it('repaints the canvas when max-cell-size or min-cell-size changes on a live element', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" fit-to-width style="inline-size: 320px"></lr-heatmap>`,
+      html`<lr-heatmap fit-to-width style="inline-size: 320px" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.days = FOUR_WEEKS;
+    setCalendarData(el, { days: FOUR_WEEKS });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     expect(parseInt(canvas.style.width, 10)).to.equal(320);
@@ -3542,9 +3766,9 @@ describe('maxCellSize / minCellSize (fit-to-width clamps)', () => {
 
   it('lets the ceiling win when it is set below the floor, matching finiteRange\'s own precedence', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" fit-to-width max-cell-size="10" min-cell-size="30" style="inline-size: 320px"></lr-heatmap>`,
+      html`<lr-heatmap fit-to-width max-cell-size="10" min-cell-size="30" style="inline-size: 320px" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.days = FOUR_WEEKS;
+    setCalendarData(el, { days: FOUR_WEEKS });
     await el.updateComplete;
     // 28 + 4 * (10 + 2) = 76.
     expect(parseInt((el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).style.width, 10)).to.equal(76);
@@ -3552,9 +3776,9 @@ describe('maxCellSize / minCellSize (fit-to-width clamps)', () => {
 
   it('treats a non-finite clamp as unset instead of producing NaN canvas geometry', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" fit-to-width max-cell-size="not-a-number" min-cell-size="" style="inline-size: 320px"></lr-heatmap>`,
+      html`<lr-heatmap fit-to-width max-cell-size="not-a-number" min-cell-size="" style="inline-size: 320px" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.days = FOUR_WEEKS;
+    setCalendarData(el, { days: FOUR_WEEKS });
     await el.updateComplete;
     expect(el.maxCellSize).to.equal(undefined);
     expect(el.minCellSize).to.equal(undefined);
@@ -3563,9 +3787,9 @@ describe('maxCellSize / minCellSize (fit-to-width clamps)', () => {
 
   it('never lets min-cell-size drop the effective floor below the built-in 4px safety minimum', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" fit-to-width min-cell-size="0" style="inline-size: 40px"></lr-heatmap>`,
+      html`<lr-heatmap fit-to-width min-cell-size="0" style="inline-size: 40px" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.days = FOUR_WEEKS;
+    setCalendarData(el, { days: FOUR_WEEKS });
     await el.updateComplete;
     expect(el.minCellSize).to.equal(4);
     // (40 - 28) / 4 - 2 = 1 -> still clamped up to the built-in 4: 28 + 4 * (4 + 2) = 52.
@@ -3574,9 +3798,9 @@ describe('maxCellSize / minCellSize (fit-to-width clamps)', () => {
 
   it('stays accessible with both clamps applied', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" fit-to-width max-cell-size="26" min-cell-size="12" style="inline-size: 320px"></lr-heatmap>`,
+      html`<lr-heatmap fit-to-width max-cell-size="26" min-cell-size="12" style="inline-size: 320px" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.days = FOUR_WEEKS;
+    setCalendarData(el, { days: FOUR_WEEKS });
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
@@ -3604,11 +3828,10 @@ describe('CalendarCellPos.date', () => {
   it('gives cellText the ISO date for a cell with data AND for a sparse gap cell', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        mode="calendar"
         accessible-cells
-        .days=${SPARSE_DAYS}
+
         .cellText=${(pos: MatrixCellPos | CalendarCellPos) => (pos as CalendarCellPos).date}
-      ></lr-heatmap>
+       .data=${{ kind: 'calendar', days: SPARSE_DAYS }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const labels = labelsByKey(el);
@@ -3626,13 +3849,12 @@ describe('CalendarCellPos.date', () => {
     const seen: (string | undefined)[] = [];
     const el = (await fixture(html`
       <lr-heatmap
-        mode="calendar"
-        .days=${SPARSE_DAYS}
+
         .cellColor=${(pos: MatrixCellPos | CalendarCellPos) => {
           seen.push((pos as CalendarCellPos).date);
           return undefined;
         }}
-      ></lr-heatmap>
+       .data=${{ kind: 'calendar', days: SPARSE_DAYS }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     seen.length = 0;
@@ -3652,13 +3874,12 @@ describe('CalendarCellPos.date', () => {
     const seen: (string | undefined)[] = [];
     const el = (await fixture(html`
       <lr-heatmap
-        mode="calendar"
-        .days=${SPARSE_DAYS}
+
         .cellColor=${(pos: MatrixCellPos | CalendarCellPos) => {
           seen.push((pos as CalendarCellPos).date);
           return undefined;
         }}
-      ></lr-heatmap>
+       .data=${{ kind: 'calendar', days: SPARSE_DAYS }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -3674,12 +3895,11 @@ describe('CalendarCellPos.date', () => {
   it('gives cellInteractive the ISO date, so a consumer can exclude dates by value', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        mode="calendar"
         accessible-cells
-        .days=${SPARSE_DAYS}
+
         .cellInteractive=${(pos: MatrixCellPos | CalendarCellPos) =>
           (pos as CalendarCellPos).date <= '2026-03-07'}
-      ></lr-heatmap>
+       .data=${{ kind: 'calendar', days: SPARSE_DAYS }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     // Exactly the first week column survives the predicate.
@@ -3697,7 +3917,7 @@ describe('CalendarCellPos.date', () => {
 
   it('carries the date on the hover/keyboard cursor, and matrix positions still carry none', async () => {
     const el = (await fixture(html`
-      <lr-heatmap mode="calendar" .days=${SPARSE_DAYS}></lr-heatmap>
+      <lr-heatmap  .data=${{ kind: 'calendar', days: SPARSE_DAYS }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -3706,7 +3926,7 @@ describe('CalendarCellPos.date', () => {
     expect((el as unknown as { focusedCell: CalendarCellPos }).focusedCell.date).to.equal('2026-03-01');
 
     const matrix = (await fixture(html`
-      <lr-heatmap .rowLabels=${['a']} .colLabels=${['x', 'y']} .values=${[[1, 2]]}></lr-heatmap>
+      <lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[1, 2]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await matrix.updateComplete;
     const matrixCanvas = matrix.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -3717,7 +3937,7 @@ describe('CalendarCellPos.date', () => {
 
   it('keeps `date` out of samePos(), so a repaint diff never churns on it', async () => {
     const el = (await fixture(html`
-      <lr-heatmap mode="calendar" .days=${SPARSE_DAYS}></lr-heatmap>
+      <lr-heatmap  .data=${{ kind: 'calendar', days: SPARSE_DAYS }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const samePos = (el as unknown as {
@@ -3735,7 +3955,7 @@ describe('CalendarCellPos.date', () => {
 
   it('does not change lr-cell-click\'s detail shape', async () => {
     const el = (await fixture(html`
-      <lr-heatmap mode="calendar" .days=${SPARSE_DAYS}></lr-heatmap>
+      <lr-heatmap  .data=${{ kind: 'calendar', days: SPARSE_DAYS }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -3752,11 +3972,10 @@ describe('CalendarCellPos.date', () => {
   it('stays accessible with a date-driven cellText on the accessible-cell overlay', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        mode="calendar"
         accessible-cells
-        .days=${SPARSE_DAYS}
+
         .cellText=${(pos: MatrixCellPos | CalendarCellPos) => `Day ${(pos as CalendarCellPos).date}`}
-      ></lr-heatmap>
+       .data=${{ kind: 'calendar', days: SPARSE_DAYS }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     await expect(el).to.be.accessible();
@@ -3766,20 +3985,20 @@ describe('CalendarCellPos.date', () => {
 describe('mouse-hover feedback (states-hover-missing-with-focus-visible)', () => {
   it('gives the default (non-accessible-cells) canvas surface a pointer cursor', async () => {
     const el = (await fixture(html`
-      <lr-heatmap .rowLabels=${['A']} .colLabels=${['X']} .values=${[[1]]}></lr-heatmap>
+      <lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['X'], values: [[1]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     expect(getComputedStyle(canvas).cursor).to.equal('pointer');
   });
 
-  it('turns off canvas pointer-events once accessible-cells takes over hit-testing, so its cursor never shows', async () => {
+  it('keeps canvas hit-testing behind the bounded accessible projection for non-rendered cells', async () => {
     const el = (await fixture(html`
-      <lr-heatmap accessible-cells .rowLabels=${['A']} .colLabels=${['X']} .values=${[[1]]}></lr-heatmap>
+      <lr-heatmap accessible-cells    .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['X'], values: [[1]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-    expect(getComputedStyle(canvas).pointerEvents).to.equal('none');
+    expect(getComputedStyle(canvas).pointerEvents).to.equal('auto');
   });
 
   // :hover cannot be synthesized in this test runner (no real pointer), so per this repo's
@@ -3811,10 +4030,9 @@ describe('.strings overrides (remaining localize() keys)', () => {
   it('honors a heatmapCalendarLabel override in the host aria-label in calendar mode', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        mode="calendar"
-        .days=${[{ date: '2026-03-01', value: 5 }]}
+
         .strings=${{ heatmapCalendarLabel: 'CAL-LABEL-MARKER days={days}' }}
-      ></lr-heatmap>
+       .data=${{ kind: 'calendar', days: [{ date: '2026-03-01', value: 5 }] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     expect(el.getAttribute('aria-label')).to.contain('CAL-LABEL-MARKER days=1');
@@ -3823,11 +4041,11 @@ describe('.strings overrides (remaining localize() keys)', () => {
   it('honors a heatmapMatrixLabel override in the host aria-label in matrix mode', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['a']}
-        .colLabels=${['x', 'y']}
-        .values=${[[1, 2]]}
+
+
+
         .strings=${{ heatmapMatrixLabel: 'MATRIX-LABEL-MARKER rows={rows} cols={cols}' }}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[1, 2]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     expect(el.getAttribute('aria-label')).to.contain('MATRIX-LABEL-MARKER rows=1 cols=2');
@@ -3836,12 +4054,12 @@ describe('.strings overrides (remaining localize() keys)', () => {
   it('honors a heatmapSelectedCellLabel override, appended to the host aria-label for a persistently selected cell', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['a']}
-        .colLabels=${['x']}
-        .values=${[[5]]}
+
+
+
         .selectedCell=${{ row: 0, col: 0 }}
         .strings=${{ heatmapSelectedCellLabel: 'SELECTED-MARKER: {cell}' }}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[5]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     expect(el.getAttribute('aria-label')).to.contain('SELECTED-MARKER:');
@@ -3849,12 +4067,12 @@ describe('.strings overrides (remaining localize() keys)', () => {
 
   it('honors a heatmapDefaultRowLabel override in the hover tooltip when rowLabels omits an entry', async () => {
     const el = (await fixture(html`
-      <lr-heatmap cell-size="22" .colLabels=${['x']} .values=${[[5]]}></lr-heatmap>
+      <lr-heatmap cell-size="22"   .data=${{ kind: 'matrix', rowLabels: [], colLabels: ['x'], values: [[5]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     // A length-1 sparse array (a real hole at index 0, not the empty array) so the grid still has
     // exactly one row -- rowLabels.length drives hitTestMatrix()'s row count -- but
     // rowLabels[0] is genuinely undefined, the exact condition matrixCellText() falls back on.
-    el.rowLabels = new Array(1);
+    setMatrixData(el, { rowLabels: new Array(1) });
     el.strings = { heatmapDefaultRowLabel: 'ROWMARKER{n}' };
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -3871,10 +4089,10 @@ describe('.strings overrides (remaining localize() keys)', () => {
 
   it('honors a heatmapDefaultColLabel override in the hover tooltip when colLabels omits an entry', async () => {
     const el = (await fixture(html`
-      <lr-heatmap cell-size="22" .rowLabels=${['a']} .values=${[[5]]}></lr-heatmap>
+      <lr-heatmap cell-size="22"   .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: [], values: [[5]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     // Same "length-1 sparse array" technique as the row-label test above, mirrored for columns.
-    el.colLabels = new Array(1);
+    setMatrixData(el, { colLabels: new Array(1) });
     el.strings = { heatmapDefaultColLabel: 'COLMARKER{n}' };
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -3892,11 +4110,11 @@ describe('.strings overrides (remaining localize() keys)', () => {
     const el = (await fixture(html`
       <lr-heatmap
         cell-size="22"
-        .rowLabels=${['a']}
-        .colLabels=${['x']}
-        .values=${[[5]]}
+
+
+
         .strings=${{ heatmapMatrixCellLabel: 'CELLMARKER row={row} col={col} value={value}' }}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[5]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -3913,11 +4131,10 @@ describe('.strings overrides (remaining localize() keys)', () => {
   it('honors a heatmapCalendarCellLabel override in the hover tooltip in calendar mode', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        mode="calendar"
         .strings=${{ heatmapCalendarCellLabel: 'DAYMARKER {date} => {value}' }}
-      ></lr-heatmap>
+       .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>
     `)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
@@ -3939,13 +4156,13 @@ describe('.strings overrides (remaining localize() keys)', () => {
 describe('cell paint overrides across both modes', () => {
   const matrix = () => html`
     <lr-heatmap
-      .rowLabels=${['A', 'B']}
-      .colLabels=${['X', 'Y']}
-      .values=${[
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['A', 'B'], colLabels: ['X', 'Y'], values: [
         [1, -1],
         [NaN, 8],
-      ]}
-    ></lr-heatmap>
+      ] }}></lr-heatmap>
   `;
 
   it('a cellColor override wins over every ramp path in matrix mode', async () => {
@@ -3992,13 +4209,12 @@ describe('cell paint overrides across both modes', () => {
   it('calendar mode paints overrides, sqrt buckets and sparse gaps without throwing', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        mode="calendar"
-        .days=${[
+
+       .data=${{ kind: 'calendar', days: [
           { date: '2026-01-01', value: 0 },
           { date: '2026-01-05', value: 12 },
           { date: '2026-02-01', value: -1 },
-        ]}
-      ></lr-heatmap>
+        ] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const positions: unknown[] = [];
@@ -4021,13 +4237,13 @@ describe('accessible cell overlay edge paths', () => {
   const overlay = () => html`
     <lr-heatmap
       accessible-cells
-      .rowLabels=${['A', 'B']}
-      .colLabels=${['X', 'Y']}
-      .values=${[
+
+
+
+     .data=${{ kind: 'matrix', rowLabels: ['A', 'B'], colLabels: ['X', 'Y'], values: [
         [1, 2],
         [3, 4],
-      ]}
-    ></lr-heatmap>
+      ] }}></lr-heatmap>
   `;
 
   it('ignores focus, click and arrow keys on a cell whose key resolves to nothing', async () => {
@@ -4090,7 +4306,7 @@ describe('accessible cell overlay edge paths', () => {
     expect(empty.shadowRoot!.querySelectorAll('[part="cell"]').length).to.equal(0);
 
     const emptyCalendar = (await fixture(
-      html`<lr-heatmap mode="calendar" accessible-cells .days=${[]}></lr-heatmap>`,
+      html`<lr-heatmap accessible-cells  .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
     await emptyCalendar.updateComplete;
     expect(emptyCalendar.shadowRoot!.querySelectorAll('[part="cell"]').length).to.equal(0);
@@ -4100,11 +4316,11 @@ describe('accessible cell overlay edge paths', () => {
     const el = (await fixture(html`
       <lr-heatmap
         accessible-cells
-        .rowLabels=${['A', 'B', 'C']}
-        .colLabels=${['X']}
-        .values=${[[1], [2], [3]]}
+
+
+
         .cellInteractive=${(pos: { row: number }) => pos.row === 0}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['A', 'B', 'C'], colLabels: ['X'], values: [[1], [2], [3]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const cells = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
@@ -4119,15 +4335,14 @@ describe('accessible cell overlay edge paths', () => {
 it('annotations without a resolvable date or match are skipped in calendar mode', async () => {
   const el = (await fixture(html`
     <lr-heatmap
-      mode="calendar"
-      .days=${[{ date: '2026-01-01', value: 3 }]}
+
       .annotations=${[
         { date: '2026-01-01', label: 'kept' },
         { label: 'no date at all' },
         { date: 'not-a-date', label: 'unparseable' },
         { date: '2030-12-31', label: 'outside the rendered range' },
       ]}
-    ></lr-heatmap>
+     .data=${{ kind: 'calendar', days: [{ date: '2026-01-01', value: 3 }] }}></lr-heatmap>
   `)) as LyraHeatmap;
   await el.updateComplete;
   expect((el.shadowRoot!.querySelector('canvas')) != null, 'renders despite the unusable annotations').to.equal(true);
@@ -4193,9 +4408,9 @@ describe('coverage: additional edge-path gaps', () => {
       }) as unknown as MediaQueryList) as typeof window.matchMedia;
     try {
       const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-      el.rowLabels = ['a'];
-      el.colLabels = ['b'];
-      el.values = [[1]];
+      setMatrixData(el, { rowLabels: ['a'] });
+      setMatrixData(el, { colLabels: ['b'] });
+      setMatrixData(el, { values: [[1]] });
       await el.updateComplete;
       expect(listener, 'the DPR MediaQueryList registers a change listener').to.not.equal(undefined);
       expect(() => listener!({} as MediaQueryListEvent)).to.not.throw();
@@ -4236,8 +4451,8 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('calendar mode: a selectedCell without a date never matches the focused cell (isSelectedPos)', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     el.selectedCell = { row: 0, col: 0 };
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -4248,8 +4463,8 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('repaintFocusRing(): defensively returns false for a matrix-shaped previous cell while in calendar mode', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
     // A matrix-shaped `previous` while in calendar mode never happens via the public API --
     // willUpdate() resets focusedCell to null on every mode change -- but the guard exists for
@@ -4262,7 +4477,7 @@ describe('coverage: additional edge-path gaps', () => {
 
   it('repaintFocusRing(): defensively returns false for a calendar-shaped previous cell while in matrix mode', async () => {
     const el = (await fixture(
-      html`<lr-heatmap .rowLabels=${['a']} .colLabels=${['x']} .values=${[[1]]}></lr-heatmap>`,
+      html`<lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[1]] }}></lr-heatmap>`,
     )) as LyraHeatmap;
     await el.updateComplete;
     const instrumented = el as unknown as {
@@ -4273,7 +4488,7 @@ describe('coverage: additional edge-path gaps', () => {
 
   it('repaintMatrixFocusCell(): no-ops for a position outside the current grid bounds (defensive)', async () => {
     const el = (await fixture(
-      html`<lr-heatmap .rowLabels=${['a']} .colLabels=${['x']} .values=${[[1]]}></lr-heatmap>`,
+      html`<lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[1]] }}></lr-heatmap>`,
     )) as LyraHeatmap;
     await el.updateComplete;
     const instrumented = el as unknown as { repaintMatrixFocusCell(pos: MatrixCellPos | null): void };
@@ -4282,7 +4497,7 @@ describe('coverage: additional edge-path gaps', () => {
 
   it('repaintMatrixFocusCell(): no-ops when the canvas 2D context is unavailable', async () => {
     const el = (await fixture(
-      html`<lr-heatmap .rowLabels=${['a']} .colLabels=${['x']} .values=${[[1]]}></lr-heatmap>`,
+      html`<lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[1]] }}></lr-heatmap>`,
     )) as LyraHeatmap;
     await el.updateComplete;
     const original = HTMLCanvasElement.prototype.getContext;
@@ -4302,7 +4517,7 @@ describe('coverage: additional edge-path gaps', () => {
 
   it('repaintMatrixFocusCell(): no-ops when computed style is unavailable', async () => {
     const el = (await fixture(
-      html`<lr-heatmap .rowLabels=${['a']} .colLabels=${['x']} .values=${[[1]]}></lr-heatmap>`,
+      html`<lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[1]] }}></lr-heatmap>`,
     )) as LyraHeatmap;
     await el.updateComplete;
     const original = window.getComputedStyle;
@@ -4323,8 +4538,8 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('repaintCalendarFocusCell(): no-ops for a position outside the current grid bounds (defensive)', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
     const instrumented = el as unknown as { repaintCalendarFocusCell(pos: CalendarCellPos | null): void };
     expect(() =>
@@ -4333,8 +4548,8 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('repaintCalendarFocusCell(): no-ops when the canvas 2D context is unavailable', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
     const original = HTMLCanvasElement.prototype.getContext;
     // @ts-expect-error -- force a null 2D context to exercise the defensive early return
@@ -4351,8 +4566,8 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('repaintCalendarFocusCell(): no-ops when computed style is unavailable', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
     const original = window.getComputedStyle;
     window.getComputedStyle = ((target: Element, pseudo?: string | null) =>
@@ -4372,9 +4587,9 @@ describe('coverage: additional edge-path gaps', () => {
 
   it('matrix mode: the keyboard focus-ring fast-repaint path re-applies a cellColor() override', async () => {
     const el = (await fixture(html`<lr-heatmap cell-size="22"></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a'];
-    el.colLabels = ['x'];
-    el.values = [[5]];
+    setMatrixData(el, { rowLabels: ['a'] });
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[5]] });
     el.cellColor = () => 'rgb(1, 2, 3)';
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -4387,9 +4602,9 @@ describe('coverage: additional edge-path gaps', () => {
 
   it('matrix mode: the keyboard focus-ring fast-repaint path handles a sparse/no-data cell and a null value range', async () => {
     const el = (await fixture(html`<lr-heatmap cell-size="22"></lr-heatmap>`)) as LyraHeatmap;
-    el.rowLabels = ['a', 'b']; // row 'b' has no entry in `values` at all (sparse).
-    el.colLabels = ['x'];
-    el.values = [[-1]]; // the one real value is itself no-data, so cachedValueRange is null.
+    setMatrixData(el, { rowLabels: ['a', 'b'] }); // row 'b' has no entry in `values` at all (sparse).
+    setMatrixData(el, { colLabels: ['x'] });
+    setMatrixData(el, { values: [[-1]] }); // the one real value is itself no-data, so cachedValueRange is null.
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
@@ -4402,8 +4617,8 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('calendar mode: the keyboard focus-ring fast-repaint path re-applies a cellColor() override', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }]; // Sunday -> week 0, weekday 0
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] }); // Sunday -> week 0, weekday 0
     el.cellColor = () => 'rgb(1, 2, 3)';
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -4415,8 +4630,8 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('calendar mode: the keyboard focus-ring fast-repaint path handles a null value range (every day is no-data)', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: -1 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: -1 }] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
@@ -4429,9 +4644,9 @@ describe('coverage: additional edge-path gaps', () => {
 
   it('calendar mode: falls back to the CAL_PAD_LEFT + weekCount*(cellSize+gap) formula for fitToWidth when the host has no measured width (e.g. display: none)', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" fit-to-width style="display: none" cell-size="10"></lr-heatmap>`,
+      html`<lr-heatmap fit-to-width style="display: none" cell-size="10" .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`,
     )) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 1 }];
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 1 }] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     // clientWidth is 0 while hidden -> falls back to CAL_PAD_LEFT(28) + 1*(10+2) = 40.
@@ -4439,8 +4654,8 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('calendar mode: hovering outside the grid span on either axis shows no tooltip', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
@@ -4460,8 +4675,8 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('weekdayLabels(): passes undefined (not an empty string) to Intl.DateTimeFormat when effectiveLocale resolves empty', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-01-01', value: 1 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-01-01', value: 1 }] });
     await el.updateComplete;
     Object.defineProperty(el, 'effectiveLocale', { configurable: true, get: () => '' });
     try {
@@ -4472,8 +4687,8 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('calendarCellText(): passes undefined (not an empty string) to toLocaleString when effectiveLocale resolves empty', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] });
     await el.updateComplete;
     Object.defineProperty(el, 'effectiveLocale', { configurable: true, get: () => '' });
     try {
@@ -4502,8 +4717,8 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('drawCalendar(): no-ops when the canvas 2D context is unavailable', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-01-01', value: 1 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-01-01', value: 1 }] });
     await el.updateComplete;
     const original = HTMLCanvasElement.prototype.getContext;
     // @ts-expect-error -- force a null 2D context to exercise the defensive early return
@@ -4516,8 +4731,8 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('drawCalendar(): no-ops when computed style is unavailable', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-01-01', value: 1 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-01-01', value: 1 }] });
     await el.updateComplete;
     const original = window.getComputedStyle;
     window.getComputedStyle = ((target: Element, pseudo?: string | null) =>
@@ -4532,8 +4747,8 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('drawCalendar(): falls back to a 1x device pixel ratio when window.devicePixelRatio is falsy', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-01-01', value: 5 }];
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-01-01', value: 5 }] });
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const originalDescriptor = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
@@ -4549,8 +4764,8 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('calendar mode: arrow navigation clamps at the grid edges (week direction) instead of moving out of bounds', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = [{ date: '2026-03-01', value: 5 }]; // single day -> weekCount 1
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2026-03-01', value: 5 }] }); // single day -> weekCount 1
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const live = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
@@ -4563,7 +4778,7 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('calendar mode: hovering over an empty (zero-day) grid does not show a tooltip', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new PointerEvent('pointermove', { clientX: 30, clientY: 20, bubbles: true }));
@@ -4575,10 +4790,9 @@ describe('coverage: additional edge-path gaps', () => {
   it('calendar mode: a cell for which cellInteractive returns false is skipped by hit-testing', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        mode="calendar"
-        .days=${[{ date: '2026-03-01', value: 5 }]}
+
         .cellInteractive=${() => false}
-      ></lr-heatmap>
+       .data=${{ kind: 'calendar', days: [{ date: '2026-03-01', value: 5 }] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -4592,11 +4806,11 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it("calendarDateAt(): falls back to grid-geometry arithmetic for a position outside the cached grid (stale cursor after `days` shrinks)", async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
-    el.days = Array.from({ length: 30 }, (_, i) => ({
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(el, { days: Array.from({ length: 30 }, (_, i) => ({
       date: `2026-01-${String(i + 1).padStart(2, '0')}`,
       value: i,
-    }));
+    })) });
     await el.updateComplete;
     const before = (el as unknown as { cachedCalendarDateByPos: string[] }).cachedCalendarDateByPos;
     const outOfRangeIndex = before.length + 10;
@@ -4609,11 +4823,11 @@ describe('coverage: additional edge-path gaps', () => {
   it('valueAt(): resolves a missing values row to -1 for a custom cellText callback (sparse matrix data)', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['R1', 'R2']}
-        .colLabels=${['C1']}
-        .values=${[[5]]}
+
+
+
         .cellText=${(_pos: MatrixCellPos | CalendarCellPos, value: number) => `v:${value}`}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['R1', 'R2'], colLabels: ['C1'], values: [[5]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); // focuses (0,0)
@@ -4625,7 +4839,7 @@ describe('coverage: additional edge-path gaps', () => {
 
   it('matrix mode: emits lr-cell-click with value -1 for a sparse row missing from `values`', async () => {
     const el = (await fixture(html`
-      <lr-heatmap cell-size="22" .rowLabels=${['R1', 'R2']} .colLabels=${['C1']} .values=${[[5]]}></lr-heatmap>
+      <lr-heatmap cell-size="22"    .data=${{ kind: 'matrix', rowLabels: ['R1', 'R2'], colLabels: ['C1'], values: [[5]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -4641,11 +4855,11 @@ describe('coverage: additional edge-path gaps', () => {
   it('emitCellClick(): no-ops when called directly for a non-interactive position (defensive re-check)', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['a']}
-        .colLabels=${['x']}
-        .values=${[[1]]}
+
+
+
         .cellInteractive=${() => false}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[1]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     let clicked: unknown;
@@ -4678,7 +4892,7 @@ describe('coverage: additional edge-path gaps', () => {
 
   it('matrix mode: a non-arrow, non-activation key is ignored', async () => {
     const el = (await fixture(
-      html`<lr-heatmap .rowLabels=${['a']} .colLabels=${['x']} .values=${[[1]]}></lr-heatmap>`,
+      html`<lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[1]] }}></lr-heatmap>`,
     )) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -4689,7 +4903,7 @@ describe('coverage: additional edge-path gaps', () => {
   });
 
   it('calendar mode: keydown is a no-op on an empty (zero-day) grid', async () => {
-    const el = (await fixture(html`<lr-heatmap mode="calendar"></lr-heatmap>`)) as LyraHeatmap;
+    const el = (await fixture(html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     expect(() =>
@@ -4702,7 +4916,7 @@ describe('coverage: additional edge-path gaps', () => {
 
   it('calendar mode: a non-arrow, non-activation key is ignored', async () => {
     const el = (await fixture(
-      html`<lr-heatmap mode="calendar" .days=${[{ date: '2026-03-01', value: 5 }]}></lr-heatmap>`,
+      html`<lr-heatmap  .data=${{ kind: 'calendar', days: [{ date: '2026-03-01', value: 5 }] }}></lr-heatmap>`,
     )) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -4715,12 +4929,11 @@ describe('coverage: additional edge-path gaps', () => {
   it('calendar mode: ArrowUp moves the weekday cursor backward', async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        mode="calendar"
-        .days=${[
+
+       .data=${{ kind: 'calendar', days: [
           { date: '2026-03-01', value: 5 }, // Sunday: week0 weekday0
           { date: '2026-03-02', value: 9 }, // Monday: week0 weekday1
-        ]}
-      ></lr-heatmap>
+        ] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
@@ -4737,11 +4950,11 @@ describe('coverage: additional edge-path gaps', () => {
   it("resolveColorStep(): falls back to the given fallback when the probe's computed color cannot be read", async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        .rowLabels=${['a']}
-        .colLabels=${['x', 'y']}
-        .values=${[[1, 2]]}
+
+
+
         .colorSteps=${['red', 'blue']}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x', 'y'], values: [[1, 2]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const original = window.getComputedStyle;
@@ -4762,7 +4975,7 @@ describe('coverage: additional edge-path gaps', () => {
 
   it('resolveCanvasColor(): falls back when the var()-probe computed color cannot be read', async () => {
     const el = (await fixture(
-      html`<lr-heatmap .rowLabels=${['a']} .colLabels=${['x']} .values=${[[1]]}></lr-heatmap>`,
+      html`<lr-heatmap    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[1]] }}></lr-heatmap>`,
     )) as LyraHeatmap;
     el.cellColor = () => 'var(--lr-color-brand)';
     await el.updateComplete;
@@ -4781,7 +4994,7 @@ describe('coverage: additional edge-path gaps', () => {
 
   it('focusAccessibleCell(): no-ops for a null position (defensive)', async () => {
     const el = (await fixture(html`
-      <lr-heatmap accessible-cells .rowLabels=${['a']} .colLabels=${['x']} .values=${[[1]]}></lr-heatmap>
+      <lr-heatmap accessible-cells    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[1]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     expect(() =>
@@ -4791,7 +5004,7 @@ describe('coverage: additional edge-path gaps', () => {
 
   it('focusAccessibleCell(): no-ops when the shadow root is unavailable (defensive optional chain)', async () => {
     const el = (await fixture(html`
-      <lr-heatmap accessible-cells .rowLabels=${['a']} .colLabels=${['x']} .values=${[[1]]}></lr-heatmap>
+      <lr-heatmap accessible-cells    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[1]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     Object.defineProperty(el, 'shadowRoot', { configurable: true, get: () => null });
@@ -4805,7 +5018,7 @@ describe('coverage: additional edge-path gaps', () => {
 
   it('onAccessibleCellKeyDown(): no-ops when the event target has no cell-key dataset (defensive)', async () => {
     const el = (await fixture(html`
-      <lr-heatmap accessible-cells .rowLabels=${['a']} .colLabels=${['x']} .values=${[[1]]}></lr-heatmap>
+      <lr-heatmap accessible-cells    .data=${{ kind: 'matrix', rowLabels: ['a'], colLabels: ['x'], values: [[1]] }}></lr-heatmap>
     `)) as LyraHeatmap;
     await el.updateComplete;
     const fakeButton = document.createElement('button');

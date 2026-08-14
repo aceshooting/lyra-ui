@@ -1,8 +1,9 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { query, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './compare-panel.styles.js';
+import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_comparePanel, LYRA_DEFAULT_compareResponseA, LYRA_DEFAULT_compareResponseB, LYRA_DEFAULT_compareVoteBetter, LYRA_DEFAULT_compareVoteBothBad, LYRA_DEFAULT_compareVoteLabel, LYRA_DEFAULT_compareVoteRecorded, LYRA_DEFAULT_compareVoteTie } from '../../../internal/default-strings.generated.js';
@@ -19,6 +20,8 @@ export interface LyraComparePanelEventMap {
  * `<lr-compare-panel>` — side-by-side A/B output comparison with a winner
  * vote (LMSYS-arena / LangSmith-pairwise style): two slotted panes, a vote
  * bar, synchronized reading.
+ * A host may commit `itemId` and its controlled `vote` in either assignment order. Changing only
+ * `itemId` clears the prior vote; an explicit vote in the same update is preserved.
  *
  * @customElement lr-compare-panel
  * @slot a - The first output (any content — a chat message, markdown, a viewer).
@@ -70,8 +73,6 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     labelB: { attribute: 'label-b', noAccessor: true },
     vote: { reflect: true, noAccessor: true },
     itemId: { attribute: 'item-id', noAccessor: true },
-    hideTie: { type: Boolean, attribute: 'hide-tie', noAccessor: true },
-    hideBothBad: { type: Boolean, attribute: 'hide-both-bad', noAccessor: true },
     syncScroll: { type: Boolean, attribute: 'sync-scroll', noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
   };
@@ -86,8 +87,6 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   private _labelB = '';
   private _vote: CompareVote | null = null;
   private _itemId = '';
-  private _hideTie = false;
-  private _hideBothBad = false;
   private _syncScroll = false;
   private _disabled = false;
   private pendingScrollReset = false;
@@ -96,6 +95,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   private syncScrollRafOwner?: Window;
   private syncScrollRafDocument?: Document;
   private ownerRealmGeneration = 0;
+  private voteAssignedInCommit = false;
 
   get labelA(): string {
     return this._labelA;
@@ -119,6 +119,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     return this._vote;
   }
   set vote(next: CompareVote | null) {
+    this.voteAssignedInCommit = true;
     const old = this._vote;
     this._vote = next ?? null;
     if (this._vote) this.setAttribute('vote', this._vote);
@@ -133,29 +134,15 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     const old = this._itemId;
     this._itemId = next ?? '';
     if (old !== this._itemId) {
-      this.vote = null;
       this.pendingScrollReset = true;
     }
     this.requestUpdate('itemId', old);
   }
 
-  get hideTie(): boolean {
-    return this._hideTie;
-  }
-  set hideTie(next: boolean) {
-    const old = this._hideTie;
-    this._hideTie = Boolean(next);
-    this.requestUpdate('hideTie', old);
-  }
-
-  get hideBothBad(): boolean {
-    return this._hideBothBad;
-  }
-  set hideBothBad(next: boolean) {
-    const old = this._hideBothBad;
-    this._hideBothBad = Boolean(next);
-    this.requestUpdate('hideBothBad', old);
-  }
+  /** Vote choices shown in the canonical `a`, `b`, `tie`, `both-bad` order.
+   *  JS-only so the positive choice list stays typed instead of relying on a
+   *  lossy comma-separated attribute representation. */
+  @property({ attribute: false }) allowedVotes: readonly CompareVote[] = ['a', 'b', 'tie', 'both-bad'];
 
   get syncScroll(): boolean {
     return this._syncScroll;
@@ -185,7 +172,8 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.resetScrollSyncFrame();
   }
 
@@ -222,6 +210,20 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     // listener ran, so it correctly reports the vote against the *original* pair.
     if (this.itemId === itemId) this.vote = choice;
     this.liveRegion?.announce(this.localize('compareVoteRecorded', undefined, { label }), { force: true });
+  }
+
+  private voteButton(choice: CompareVote, label: string): TemplateResult | typeof nothing {
+    if (!Array.isArray(this.allowedVotes) || !this.allowedVotes.includes(choice)) return nothing;
+    return html`<button
+      part="vote-button"
+      type="button"
+      ?disabled=${this.disabled}
+      aria-pressed=${this.vote === choice ? 'true' : 'false'}
+      ?data-selected=${this.vote === choice}
+      @click=${() => this.castVote(choice)}
+    >
+      ${label}
+    </button>`;
   }
 
   private onPaneScroll = (source: 'a' | 'b'): (() => void) => {
@@ -262,8 +264,14 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     };
   };
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has('itemId') && !this.voteAssignedInCommit) this.vote = null;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.voteAssignedInCommit = false;
     if (changed.has('syncScroll') && !this.syncScroll) this.resetScrollSyncFrame();
     if (this.pendingScrollReset) {
       this.pendingScrollReset = false;
@@ -276,7 +284,11 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     const labelAText = this.labelA || this.localize('compareResponseA');
     const labelBText = this.labelB || this.localize('compareResponseB');
     return html`
-      <div part="base" role="group" aria-label=${this.getAttribute('aria-label') || this.localize('comparePanel')}>
+      <div
+        part="base"
+        role=${overallSemanticRole(this, 'group') ?? nothing}
+        aria-label=${overallSemanticLabel(this, this.localize('comparePanel')) ?? nothing}
+      >
         <div part="prompt" ?hidden=${!this.hasPromptSlot}>
           <slot name="prompt" @slotchange=${this.onPromptSlotChange}></slot>
         </div>
@@ -291,50 +303,10 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
           </div>
         </div>
         <div part="vote-bar" role="group" aria-label=${this.localize('compareVoteLabel')}>
-          <button
-            part="vote-button"
-            type="button"
-            ?disabled=${this.disabled}
-            aria-pressed=${this.vote === 'a' ? 'true' : 'false'}
-            ?data-selected=${this.vote === 'a'}
-            @click=${() => this.castVote('a')}
-          >
-            ${this.localize('compareVoteBetter', undefined, { label: labelAText })}
-          </button>
-          <button
-            part="vote-button"
-            type="button"
-            ?disabled=${this.disabled}
-            aria-pressed=${this.vote === 'b' ? 'true' : 'false'}
-            ?data-selected=${this.vote === 'b'}
-            @click=${() => this.castVote('b')}
-          >
-            ${this.localize('compareVoteBetter', undefined, { label: labelBText })}
-          </button>
-          ${!this.hideTie
-            ? html`<button
-                part="vote-button"
-                type="button"
-                ?disabled=${this.disabled}
-                aria-pressed=${this.vote === 'tie' ? 'true' : 'false'}
-                ?data-selected=${this.vote === 'tie'}
-                @click=${() => this.castVote('tie')}
-              >
-                ${this.localize('compareVoteTie')}
-              </button>`
-            : nothing}
-          ${!this.hideBothBad
-            ? html`<button
-                part="vote-button"
-                type="button"
-                ?disabled=${this.disabled}
-                aria-pressed=${this.vote === 'both-bad' ? 'true' : 'false'}
-                ?data-selected=${this.vote === 'both-bad'}
-                @click=${() => this.castVote('both-bad')}
-              >
-                ${this.localize('compareVoteBothBad')}
-              </button>`
-            : nothing}
+          ${this.voteButton('a', this.localize('compareVoteBetter', undefined, { label: labelAText }))}
+          ${this.voteButton('b', this.localize('compareVoteBetter', undefined, { label: labelBText }))}
+          ${this.voteButton('tie', this.localize('compareVoteTie'))}
+          ${this.voteButton('both-bad', this.localize('compareVoteBothBad'))}
         </div>
       </div>
       <lr-live-region part="live-region" mode="polite"></lr-live-region>

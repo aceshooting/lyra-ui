@@ -34,10 +34,10 @@ it('re-reads the root font size on every call so rem tracks zoom and base-size c
 
 it('resolves em against the host element own font size', async () => {
   const host = await fixture<HTMLElement>(html`<div style="font-size: 10px">host</div>`);
-  expect(resolveCssLength('3em', host)).to.equal(30);
+  expect(resolveCssLength('3em', { host })).to.equal(30);
 
   host.style.fontSize = '25px';
-  expect(resolveCssLength('3em', host)).to.equal(75);
+  expect(resolveCssLength('3em', { host })).to.equal(75);
 });
 
 it('falls back to the root font size for em when no host is supplied', () => {
@@ -49,7 +49,7 @@ it('falls back to the root font size for em when no host is supplied', () => {
 it('falls back to the root font size for em when the host has no computed style', () => {
   document.documentElement.style.fontSize = '16px';
   const detached = document.createElement('div');
-  expect(resolveCssLength('2em', detached)).to.equal(32);
+  expect(resolveCssLength('2em', { host: detached })).to.equal(32);
 });
 
 it('resolves rem and em from the host owner document rather than the ambient document', async () => {
@@ -62,8 +62,8 @@ it('resolves rem and em from the host owner document rather than the ambient doc
     const host = frameDocument.createElement('div');
     host.style.fontSize = '12px';
     frameDocument.body.append(host);
-    expect(resolveCssLength('2rem', host)).to.equal(20);
-    expect(resolveCssLength('2em', host)).to.equal(24);
+    expect(resolveCssLength('2rem', { host })).to.equal(20);
+    expect(resolveCssLength('2em', { host })).to.equal(24);
   } finally {
     frameDocument.documentElement.style.fontSize = previousRootSize;
     frame.remove();
@@ -75,9 +75,9 @@ it('fails closed for relative units when the host owner document has no browsing
   const host = ownerless.createElement('div');
   host.style.fontSize = '20px';
   ownerless.body.append(host);
-  expect(resolveCssLength('2rem', host)).to.be.undefined;
-  expect(resolveCssLength('2em', host)).to.be.undefined;
-  expect(resolveCssLength('2px', host)).to.equal(2);
+  expect(resolveCssLength('2rem', { host })).to.be.undefined;
+  expect(resolveCssLength('2em', { host })).to.be.undefined;
+  expect(resolveCssLength('2px', { host })).to.equal(2);
 });
 
 it('tolerates surrounding whitespace and unit casing', () => {
@@ -108,10 +108,27 @@ it('returns undefined for non-finite numbers', () => {
   expect(resolveCssLength(Number.NEGATIVE_INFINITY)).to.be.undefined;
 });
 
-it('returns undefined for units that have no meaning against an element own size', () => {
+it('resolves percentages only with an explicit reference size', () => {
   expect(resolveCssLength('50%')).to.be.undefined;
-  expect(resolveCssLength('80vw')).to.be.undefined;
-  expect(resolveCssLength('80vh')).to.be.undefined;
+  expect(resolveCssLength('50%', { percentBase: 640 })).to.equal(320);
+  expect(resolveCssLength('-12.5%', { percentBase: 80 })).to.equal(-10);
+  expect(resolveCssLength('50%', { percentBase: Number.NaN })).to.be.undefined;
+});
+
+it('resolves viewport units against explicit dimensions without depending on the ambient realm', () => {
+  const viewportBasis = { inlineSize: 1_200, blockSize: 800 };
+  expect(resolveCssLength('25vw', { viewportBasis })).to.equal(300);
+  expect(resolveCssLength('25vh', { viewportBasis })).to.equal(200);
+});
+
+it('resolves viewport units against a supplied Window or the live ambient viewport', () => {
+  expect(resolveCssLength('50vw', { viewportBasis: window })).to.equal(window.innerWidth / 2);
+  expect(resolveCssLength('50vh', { viewportBasis: window })).to.equal(window.innerHeight / 2);
+  expect(resolveCssLength('80vw')).to.equal(window.innerWidth * 0.8);
+  expect(resolveCssLength('80vh')).to.equal(window.innerHeight * 0.8);
+});
+
+it('returns undefined for unsupported CSS units and expressions', () => {
   expect(resolveCssLength('40ch')).to.be.undefined;
   expect(resolveCssLength('12pt')).to.be.undefined;
   expect(resolveCssLength('10cm')).to.be.undefined;

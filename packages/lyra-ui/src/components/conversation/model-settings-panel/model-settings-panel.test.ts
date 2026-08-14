@@ -15,11 +15,11 @@ function slider(el: LyraModelSettingsPanel): LyraSlider {
 
 // -- Prop forwarding ---------------------------------------------------------
 
-it('forwards provider/catalog/model-value/allow-custom to the internal lr-model-select', async () => {
+it('forwards provider/catalog/model/allow-custom to the internal lr-model-select', async () => {
   const el = (await fixture(html`
     <lr-model-settings-panel
       provider="ollama"
-      model-value="mistral"
+      model="mistral"
       allow-custom
       .catalog=${CATALOG}
     ></lr-model-settings-panel>
@@ -30,6 +30,8 @@ it('forwards provider/catalog/model-value/allow-custom to the internal lr-model-
   expect(select.value).to.equal('mistral');
   expect(select.allowCustom).to.be.true;
   expect(select.catalog).to.deep.equal(CATALOG);
+  expect(el.model).to.equal('mistral');
+  expect(el.hasAttribute('model-value')).to.be.false;
 });
 
 it('forwards temperature and its min/max/step to the internal lr-slider', async () => {
@@ -120,7 +122,7 @@ it('wraps the compact layout rows onto separate lines rather than overflowing a 
   const container = document.createElement('div');
   container.style.inlineSize = '320px';
   const el = (await fixture(
-    html`<lr-model-settings-panel layout="compact" .catalog=${CATALOG} model-value="mistral"></lr-model-settings-panel>`,
+    html`<lr-model-settings-panel layout="compact" .catalog=${CATALOG} model="mistral"></lr-model-settings-panel>`,
     { parentNode: container },
   )) as LyraModelSettingsPanel;
   await el.updateComplete;
@@ -239,6 +241,55 @@ it('does not derive NaN from a finite subnormal temperature step', async () => {
   expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.textContent).to.equal('1');
 });
 
+it('derives one finite domain for the panel and slider and clamps child events before emission', async () => {
+  const el = (await fixture(html`
+    <lr-model-settings-panel
+      .temperature=${1}
+      .temperatureMin=${Number.POSITIVE_INFINITY}
+      .temperatureMax=${Number.NaN}
+      .temperatureStep=${Number.POSITIVE_INFINITY}
+    ></lr-model-settings-panel>
+  `)) as LyraModelSettingsPanel;
+  const child = slider(el);
+  expect(child.min).to.equal(0);
+  expect(child.max).to.equal(2);
+  expect(child.step).to.equal(0);
+
+  const changed = oneEvent(el, 'lr-change');
+  child.dispatchEvent(new CustomEvent('lr-change', {
+    bubbles: true,
+    composed: true,
+    detail: { value: Number.POSITIVE_INFINITY },
+  }));
+  const event = await changed as CustomEvent<ModelSettingsChangeDetail>;
+  expect(event.detail.temperature).to.equal(0);
+  expect(el.temperature).to.equal(0);
+  await el.updateComplete;
+  await child.updateComplete;
+  expect(child.valueAsNumber).to.equal(0);
+});
+
+it('bounds huge finite visible values while retaining the exact accessible value', async () => {
+  const el = (await fixture(html`
+    <lr-model-settings-panel
+      style="inline-size: 319px"
+      .temperature=${1e308}
+      .temperatureMin=${0}
+      .temperatureMax=${1e308}
+      .temperatureStep=${0}
+    ></lr-model-settings-panel>
+  `)) as LyraModelSettingsPanel;
+  const readout = el.shadowRoot!.querySelector('[part="temperature-value"]') as HTMLElement;
+  const child = slider(el);
+  await child.updateComplete;
+  const thumb = child.shadowRoot!.querySelector('[part~="thumb"]')!;
+
+  expect(readout.textContent!.length).to.be.lessThan(24);
+  expect(readout.textContent).to.match(/E|e/);
+  expect(thumb.getAttribute('aria-valuenow')).to.equal(String(1e308));
+  expect(el.scrollWidth).to.be.at.most(el.clientWidth + 1);
+});
+
 it('contains a long localized temperature label in a 320px allocation', async () => {
   const container = document.createElement('div');
   container.style.inlineSize = '320px';
@@ -269,13 +320,13 @@ it('re-emits a consolidated lr-change with the full settings shape when the mode
   select.dispatchEvent(new CustomEvent('lr-change', { detail: { value: 'mistral', inCatalog: true }, bubbles: true }));
   const { detail } = (await listener) as CustomEvent<ModelSettingsChangeDetail>;
 
-  expect(detail).to.deep.equal({ modelValue: 'mistral', inCatalog: true, temperature: 0.6 });
-  expect(el.modelValue).to.equal('mistral');
+  expect(detail).to.deep.equal({ model: 'mistral', inCatalog: true, temperature: 0.6 });
+  expect(el.model).to.equal('mistral');
 });
 
 it('re-emits a consolidated lr-change with the full settings shape when the temperature changes', async () => {
   const el = (await fixture(html`
-    <lr-model-settings-panel model-value="mistral" .catalog=${CATALOG}></lr-model-settings-panel>
+    <lr-model-settings-panel model="mistral" .catalog=${CATALOG}></lr-model-settings-panel>
   `)) as LyraModelSettingsPanel;
 
   const listener = oneEvent(el, 'lr-change');
@@ -283,13 +334,13 @@ it('re-emits a consolidated lr-change with the full settings shape when the temp
   s.dispatchEvent(new CustomEvent('lr-change', { detail: { value: 1.3 }, bubbles: true }));
   const { detail } = (await listener) as CustomEvent<ModelSettingsChangeDetail>;
 
-  expect(detail).to.deep.equal({ modelValue: 'mistral', inCatalog: true, temperature: 1.3 });
+  expect(detail).to.deep.equal({ model: 'mistral', inCatalog: true, temperature: 1.3 });
   expect(el.temperature).to.equal(1.3);
 });
 
 it('emits one consolidated lr-change for one bubbling model-select lr-change', async () => {
   const el = (await fixture(html`
-    <lr-model-settings-panel model-value="llama3.1" .catalog=${CATALOG}></lr-model-settings-panel>
+    <lr-model-settings-panel model="llama3.1" .catalog=${CATALOG}></lr-model-settings-panel>
   `)) as LyraModelSettingsPanel;
   let count = 0;
   el.addEventListener('lr-change', () => count++);
@@ -308,7 +359,7 @@ it('emits one consolidated lr-change for one bubbling model-select lr-change', a
 
 it('emits one consolidated lr-change for one bubbling slider lr-change', async () => {
   const el = (await fixture(html`
-    <lr-model-settings-panel model-value="mistral" .catalog=${CATALOG}></lr-model-settings-panel>
+    <lr-model-settings-panel model="mistral" .catalog=${CATALOG}></lr-model-settings-panel>
   `)) as LyraModelSettingsPanel;
   let count = 0;
   el.addEventListener('lr-change', () => count++);
@@ -325,9 +376,9 @@ it('emits one consolidated lr-change for one bubbling slider lr-change', async (
   expect(count).to.equal(1);
 });
 
-it('computes inCatalog fresh from the current catalog/modelValue rather than trusting a stale child event', async () => {
+it('computes inCatalog fresh from the current catalog/model rather than trusting a stale child event', async () => {
   const el = (await fixture(html`
-    <lr-model-settings-panel model-value="ancient-model" .catalog=${CATALOG}></lr-model-settings-panel>
+    <lr-model-settings-panel model="ancient-model" .catalog=${CATALOG}></lr-model-settings-panel>
   `)) as LyraModelSettingsPanel;
 
   const listener = oneEvent(el, 'lr-change');
@@ -335,7 +386,7 @@ it('computes inCatalog fresh from the current catalog/modelValue rather than tru
   s.dispatchEvent(new CustomEvent('lr-change', { detail: { value: 0.2 }, bubbles: true }));
   const { detail } = (await listener) as CustomEvent<ModelSettingsChangeDetail>;
 
-  // modelValue was never in CATALOG, so inCatalog must be false even though
+  // model was never in CATALOG, so inCatalog must be false even though
   // the event that triggered this was the temperature slider's, not the
   // model-select's own lr-change.
   expect(detail.inCatalog).to.be.false;
@@ -343,7 +394,7 @@ it('computes inCatalog fresh from the current catalog/modelValue rather than tru
 
 it('reports inCatalog false when catalog is empty/unset', async () => {
   const el = (await fixture(
-    html`<lr-model-settings-panel model-value="anything"></lr-model-settings-panel>`,
+    html`<lr-model-settings-panel model="anything"></lr-model-settings-panel>`,
   )) as LyraModelSettingsPanel;
 
   const listener = oneEvent(el, 'lr-change');
@@ -358,7 +409,7 @@ it('recognizes an object-shaped catalog entry (id/label) for inCatalog', async (
     { id: 'o3', label: 'o3' },
   ];
   const el = (await fixture(html`
-    <lr-model-settings-panel model-value="gpt-4.1" .catalog=${objectCatalog}></lr-model-settings-panel>
+    <lr-model-settings-panel model="gpt-4.1" .catalog=${objectCatalog}></lr-model-settings-panel>
   `)) as LyraModelSettingsPanel;
 
   const listener = oneEvent(el, 'lr-change');
@@ -369,8 +420,12 @@ it('recognizes an object-shaped catalog entry (id/label) for inCatalog', async (
 
 // -- String localization ---------------------------------------------------
 
-it('defaults the temperature caption/slider accessible name and model-select placeholder to English', async () => {
+it('renders localized visible model/temperature labels and keeps the model prompt as a placeholder', async () => {
   const el = (await fixture(html`<lr-model-settings-panel></lr-model-settings-panel>`)) as LyraModelSettingsPanel;
+  const select = modelSelect(el);
+  await select.updateComplete;
+  expect(select.label).to.equal('Model');
+  expect(select.shadowRoot!.querySelector('[part="form-control-label"]')?.textContent?.trim()).to.equal('Model');
   expect(el.shadowRoot!.querySelector('[part="temperature-label"]')!.textContent).to.equal('Temperature');
   const temperatureSlider = slider(el);
   await temperatureSlider.updateComplete;
@@ -381,10 +436,15 @@ it('defaults the temperature caption/slider accessible name and model-select pla
   expect(modelSelect(el).placeholder).to.equal('Select a model…');
 });
 
-it('honors a strings override for temperature/selectModel', async () => {
+it('honors a strings override for model/temperature/selectModel', async () => {
   const el = (await fixture(html`
-    <lr-model-settings-panel .strings=${{ temperature: 'Température', selectModel: 'Choisir un modèle…' }}></lr-model-settings-panel>
+    <lr-model-settings-panel .strings=${{
+      model: 'Modèle',
+      temperature: 'Température',
+      selectModel: 'Choisir un modèle…',
+    }}></lr-model-settings-panel>
   `)) as LyraModelSettingsPanel;
+  expect(modelSelect(el).label).to.equal('Modèle');
   expect(el.shadowRoot!.querySelector('[part="temperature-label"]')!.textContent).to.equal('Température');
   const temperatureSlider = slider(el);
   await temperatureSlider.updateComplete;
@@ -393,6 +453,46 @@ it('honors a strings override for temperature/selectModel', async () => {
     'Température',
   );
   expect(modelSelect(el).placeholder).to.equal('Choisir un modèle…');
+});
+
+it('contains auxiliary native input/change events from both composed controls', async () => {
+  const wrapper = await fixture(html`<div>
+    <lr-model-settings-panel .catalog=${CATALOG}></lr-model-settings-panel>
+  </div>`);
+  const el = wrapper.querySelector('lr-model-settings-panel') as LyraModelSettingsPanel;
+  let inputs = 0;
+  let changes = 0;
+  wrapper.addEventListener('input', () => inputs++);
+  wrapper.addEventListener('change', () => changes++);
+
+  modelSelect(el).dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+  modelSelect(el).dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+  slider(el).dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+  slider(el).dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+
+  expect(inputs).to.equal(0);
+  expect(changes).to.equal(0);
+});
+
+it('blocks genuine child changes when capture disables the panel in the same dispatch', async () => {
+  const el = (await fixture(html`
+    <lr-model-settings-panel .catalog=${CATALOG}></lr-model-settings-panel>
+  `)) as LyraModelSettingsPanel;
+  let changes = 0;
+  el.addEventListener('lr-change', () => changes++);
+  el.addEventListener('lr-input', () => {
+    el.disabled = true;
+  }, { capture: true, once: true });
+
+  slider(el).dispatchEvent(new CustomEvent('lr-input', {
+    bubbles: true,
+    composed: true,
+    detail: { value: 1.7 },
+  }));
+
+  expect(el.disabled).to.be.true;
+  expect(el.temperature).to.equal(1);
+  expect(changes).to.equal(0);
 });
 
 // -- Accessibility -------------------------------------------------------
@@ -406,7 +506,7 @@ it('is accessible with a populated catalog and non-default temperature', async (
   const el = (await fixture(html`
     <lr-model-settings-panel
       provider="ollama"
-      model-value="mistral"
+      model="mistral"
       .catalog=${CATALOG}
       temperature="1.5"
     ></lr-model-settings-panel>

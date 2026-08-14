@@ -1,3 +1,10 @@
+Viewer loading contract: `lr-archive-viewer`, `lr-calendar-viewer`, `lr-contact-viewer`,
+`lr-csv-viewer`, `lr-dataset-viewer`, `lr-docx-viewer`, `lr-email-viewer`, `lr-html-viewer`,
+`lr-notebook-viewer`, `lr-spreadsheet-viewer`, `lr-svg-viewer`, and `lr-xml-viewer` use one shared
+visible `[part="spinner"]` treatment. Its localized label is ordinary readable text (including
+without CSS), its decorative ring stops under reduced motion, and `[part="base"]` exposes explicit
+`aria-busy="true"|"false"` while transition announcements remain in the shared document-level sink.
+
 ## `lr-document-preview`
 
 A format-dispatching viewer for one document/attachment, plus the visual state machine for an async
@@ -9,15 +16,15 @@ Format dispatch is intentionally minimal: only `text/*`/`application/json` (a pl
 that) and `image/*` (a contained `<img>`) render inline. Everything else — PDF, office documents,
 video, audio, or any unrecognized MIME type — falls back to a generic "can't preview this" state: a
 file glyph, a short message, and (when `src` is set) a native `<a download>` link. This is a
-deliberate ceiling, not a gap: the component ships a dispatch *shell*, not a format registry. The
+deliberate ceiling, not a gap: the component ships a dispatch _shell_, not a format registry. The
 `unsupported` slot is the escape hatch for every format left out of the built-in three.
 
 `status="converting"` is a second, independent axis from format dispatch. This component doesn't know
 your backend's conversion API shape and owns none of the actual polling/fetch — a host converting a
 non-natively-previewable format server-side (e.g. `.docx` → `.pdf`) polls its own backend and updates
-`status`/`progress`/`src` here as that proceeds; this component only *visualizes* that state (an
+`status`/`progress`/`src` here as that proceeds; this component only _visualizes_ that state (an
 indeterminate spinner, or a determinate one once `progress` is supplied). The one piece of async work
-this component *does* own is fetching a `text/*`/`application/json` `src` itself — there's no other
+this component _does_ own is fetching a `text/*`/`application/json` `src` itself — there's no other
 way to get a `<pre>`'s text content from a URL — gated behind a generation-counter guard
 (`lr-tool-result-view`'s `resolve()` uses the identical pattern) so a `src` reassigned mid-fetch
 can't have a stale response clobber a newer one.
@@ -29,10 +36,11 @@ excludes `data:` (following a `data:text/html` URL can create an active document
 inert media/fetch data). A `src` that fails its sink's check never reaches `fetch()`/`<img>`/the
 anchor: the text preview renders `[part="error"]` with `"Document URL is not allowed."`, the image
 preview silently falls back to the download fallback **directly** — not the generic
-download-or-`unsupported`-slot one, so `<slot name="unsupported">` content is *not* consulted on the
+download-or-`unsupported`-slot one, so `<slot name="unsupported">` content is _not_ consulted on the
 image path — and the generic fallback simply omits `[part="download-link"]` entirely.
 
 **Properties:**
+
 - `src: string = ''` — URL to fetch (for `text`/`application/json`) or display (`image`, or as the
   generic fallback's download `href`). Optional — gracefully absent while, e.g., a conversion is
   still in progress. Validated per-sink before use — see the URL-safety note above; an unsafe/
@@ -76,6 +84,7 @@ matched back to its owning `LyraHighlight` by reference) into view; resolves `fa
 matches, the anchor isn't `region`, or the format isn't currently `image`.
 
 **Events:**
+
 - `lr-download` — `detail: { src, filename }` — fired when the generic-download fallback's link is
   activated. The browser download itself needs no JS (a plain `<a download>` handles it); this is
   purely for a host that wants to observe/log the download.
@@ -85,7 +94,7 @@ matches, the anchor isn't `region`, or the format isn't currently `image`.
 - `lr-highlight-activate` — `detail: { id }` — a region highlight was clicked or activated via
   Enter/Space (image format only).
 
-**Slots:** `unsupported` — escape hatch: when populated, its content renders *instead of* the generic
+**Slots:** `unsupported` — escape hatch: when populated, its content renders _instead of_ the generic
 download fallback for any `mime-type` this component doesn't natively support. Ignored while
 `mime-type` resolves to `text`/`image` dispatch, or while `status` is `"converting"`/`"error"`.
 
@@ -94,7 +103,7 @@ download fallback for any `mime-type` this component doesn't natively support. I
 numeric progress is known — used both for `status="converting"` and this component's own in-flight
 text fetch), `error` (ordinary visible shadow text used both for `status="error"` and a failed text
 fetch; error transitions use the shared document-level assertive sink), `download-link` (only
-rendered when `src` is set *and* passes the link-safe scheme allowlist — see the URL-safety note
+rendered when `src` is set _and_ passes the link-safe scheme allowlist — see the URL-safety note
 above; excludes `data:` even though the other two sinks allow it), `highlight-layer` (wrapper around
 every rendered region highlight, image format only), `region-highlight` (one region highlight,
 `data-tone`, `data-active`; image format only), `region-highlight-target` (transparent activation
@@ -162,9 +171,10 @@ keeps `[part="error"]` as ordinary visible text and appends later error transiti
 document-level assertive sink.
 
 **Known gotchas:**
+
 - `status="converting"`/`status="error"` always win over format dispatch, regardless of
   `mimeType`/`src` — a `text`/`image` source is not shown until `status` returns to `"idle"`/`"ready"`.
-- The component's own text/JSON `fetch(src)` is a *different* async operation from the host-driven
+- The component's own text/JSON `fetch(src)` is a _different_ async operation from the host-driven
   `status="converting"` conversion. A failed fetch fires `lr-render-error` and renders
   `[part="error"]` on its own; it never sets `status="error"` itself.
 - changing `src` aborts the superseded text fetch as well as ignoring any stale completion; removing
@@ -203,13 +213,16 @@ A host `aria-label` names the nested dialog by attribute presence, including an 
 value, without suppressing the visible `name` heading.
 
 **Properties:**
+
 - `open: boolean = false` (reflected) — opens or closes the viewer dialog.
 - `name: string = ''` — display name passed to the renderer and used as the dialog heading.
 - `mimeType: string = ''` (attribute `mime-type`) — MIME type used for exact renderer dispatch.
 - `src: string = ''` — source URL passed to the selected renderer or the fallback preview.
 - `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry override;
-  the module-level registry is used when unset. A throwing consumer matcher or renderer is
-  contained as the localized error state rather than escaping the update.
+  when unset, the instance owns an immutable snapshot of the built-ins registered when it was
+  constructed. A later module import/registration cannot mutate an existing viewer. A throwing
+  consumer matcher or renderer is contained as the localized error state rather than escaping the
+  update.
 - `alt?: string` — media alt text forwarded to the resolved renderer, for image-like renderers.
   Unset lets the renderer derive its fallback; an explicit `''` preserves decorative media.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — declarative scroll-to-anchor
@@ -220,6 +233,7 @@ value, without suppressing the visible `name` heading.
   renderer.
 
 **Events:**
+
 - `lr-close` — `detail: DocumentViewerCloseReason`, the viewer shell dialog's dismissal reason.
   The event is emitted after the viewer sets `open` to `false`. A registered renderer may compose
   its own descendant dialog; closing that inner dialog keeps its normal `lr-dialog-close` path and
@@ -245,12 +259,18 @@ polite and assertive sinks, respectively;
 size of `[part="body"]` before the dialog body scrolls internally.
 
 **Renderer registry exports:**
+
 - `DocumentFile` — `{ name: string; mimeType: string; src: string }`, the value passed to renderers.
-- `DocumentRendererDefinition` — optional `render(file)`, `matches(file)`, and lazy `load()` hooks.
-- `DocumentRendererRegistry` — `Map<string, DocumentRendererDefinition>`.
-- `registerDocumentRenderer(key, definition)` — adds or replaces a default-registry entry.
-- `findDocumentRenderer(file, registry?)` — checks an exact MIME-type key, then the first matching
-  `matches()` entry in registration order.
+- `DocumentRendererDefinition` — a validated discriminated direct `{ render, matches?,
+capabilities? }` or lazy `{ load, matches?, capabilities? }` definition; exactly one of `render`
+  and `load` is required.
+- `DocumentRendererRegistry` — `ReadonlyMap<string, DocumentRendererDefinition>`.
+- `createDocumentRendererRegistry(overrides?)` — returns a truly immutable built-in snapshot plus
+  optional per-instance overrides. MIME keys are trimmed, lowercased, and reduced to their essence.
+- `registerDocumentRenderer(key, definition)` — adds or replaces a built-in-builder entry for
+  registry snapshots created later; it never mutates existing instances.
+- `findDocumentRenderer(file, registry?)` — checks normalized MIME essence (case-insensitive and
+  parameter-independent), then the first matching `matches()` entry in registration order.
 - `loadDocumentRenderer(definition)` — resolves and identity-caches a lazy definition; rejected loads
   are retried on the next call.
 
@@ -263,15 +283,17 @@ size of `[part="body"]` before the dialog body scrolls internally.
 ></lr-document-viewer>
 ```
 
-Register a renderer once during application setup. The definition may load a heavy optional viewer
-only when a matching document is opened:
+Construct and inject a renderer registry per application/viewer. The definition may load a heavy
+optional viewer only when a matching document is opened:
 
 ```ts
-import { registerDocumentRenderer } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js';
+import { createDocumentRendererRegistry } from "@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js";
 
-registerDocumentRenderer('application/x-example', {
-  render: (file) => `Preview: ${file.name}`,
-});
+const registry = createDocumentRendererRegistry([
+  ["application/x-example", { render: (file) => `Preview: ${file.name}` }],
+]);
+
+html`<lr-document-viewer .registry=${registry}></lr-document-viewer>`;
 ```
 
 When no renderer matches, the viewer renders `<lr-document-preview>`, which handles text and images
@@ -313,9 +335,11 @@ like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back throu
 (wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
 painted marks.
 
-**Events:** `lr-render-error` with `detail.error` when fetching, conversion, sanitization, or a
-non-fatal Mammoth conversion message occurs. `lr-search-change` (`detail: { query, matchCount,
-activeIndex }`) — from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
+**Events:** `lr-render-error` with `detail.error` only when fetching, conversion, or sanitization
+fails terminally. Non-fatal Mammoth conversion messages emit `lr-viewer-diagnostic` instead;
+`detail.diagnostic` is readonly `{ code: 'docx-conversion-message', severity: 'warning', fatal:
+false, source: 'mammoth', cause }`. `lr-search-change` (`detail: { query, matchCount, activeIndex
+}`) — from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 `lr-highlight-activate` (`detail: { id }`) — a painted `text-quote` highlight was clicked or its
 resolved keyboard action was activated.
 `lr-text-select` (`detail: { text, anchor, rects }`) — fired on selection end inside the rendered
@@ -355,7 +379,11 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the document.
 
 ```html
-<lr-docx-viewer src="/files/report.docx" name="report.docx" max-height="32rem"></lr-docx-viewer>
+<lr-docx-viewer
+  src="/files/report.docx"
+  name="report.docx"
+  max-height="32rem"
+></lr-docx-viewer>
 ```
 
 ## `lr-email-viewer`
@@ -384,6 +412,7 @@ localized show/hide toggle. `false` (the default) preserves the full body render
 `scrollToAnchor()` operate on rendered message text and emit the shared search/anchor events.
 
 **Events:**
+
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-attachment-open` — `detail: { attachment: { filename, mimeType, content? } }`, `content` a
   `Uint8Array` of the decoded attachment — an attachment button was activated.
@@ -392,7 +421,7 @@ localized show/hide toggle. `false` (the default) preserves the full body render
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
-  DOMRect[] }`) — fired after a selection ends inside the rendered message.
+DOMRect[] }`) — fired after a selection ends inside the rendered message.
 
 `lr-highlight-activate` is not part of this viewer's event contract: painted text highlights are
 passive and cannot be activated.
@@ -421,7 +450,9 @@ matching `.eml` filenames in `<lr-document-viewer>`. Fail-closed behavior is exp
 ## `lr-calendar-viewer`
 
 Fetches and parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as
-plain text, including its title, start/end time, location, and description. No HTML is injected.
+plain text, including its title, start/end time, location, and description. RFC 5545 `DATE` values
+remain all-day dates rather than fabricated midnight times, and an all-day `DTEND` is displayed as
+the exclusive boundary it represents (14–17 renders as 14–16). No HTML is injected.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
@@ -434,13 +465,14 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 `scrollToAnchor()` operate on rendered event text and emit `lr-search-change`/`lr-anchor-result`.
 
 **Events:**
+
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
   whenever rendered-calendar search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
-  DOMRect[] }`) — fired after a selection ends inside the rendered calendar.
+DOMRect[] }`) — fired after a selection ends inside the rendered calendar.
 
 `lr-highlight-activate` is not part of this viewer's event contract: painted text highlights are
 passive and cannot be activated.
@@ -457,16 +489,17 @@ size of `[part="body"]`; also settable via the `max-height` property, which writ
 `text/calendar` and falls back to matching `.ics` filenames in `<lr-document-viewer>`.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
-`documentPreviewResourceTooLarge` message instead of the calendar.
+`documentPreviewResourceTooLarge` message instead of the calendar. The accepted model is further
+capped at 250 events and 2 MiB of rendered event text; this keeps the complete accepted document in
+the DOM so search, selection and anchors remain truthful without the former 10,000-event eager tree.
 
 ## `lr-archive-viewer`
 
-Lists entry names and human-readable uncompressed sizes inside a `.zip` archive using the optional
-`jszip` peer. It is listing-only: entry content is never rendered or previewed. Each entry's size is
-read straight from JSZip's local file header (`uncompressedSize`) when available, falling back to
-fully decompressing only the rare entry missing that header field. Before JSZip materializes its
-entry graph, the viewer checks the ZIP central directory against its 10,000-entry and 100 MB
-declared-expansion ceilings. The list composes
+Lists entry names and human-readable declared uncompressed sizes inside a `.zip` archive. It is
+listing-only: entry content is never inflated, rendered, or previewed, and the component has no
+runtime archive-parser dependency. One owned central-directory parser validates local-header
+bounds, supported compression methods, entry names, and the 10,000-entry/100 MB declared-expansion
+ceilings, then returns the immutable metadata used directly by the listing. The list composes
 `<lr-virtual-list>` for large archives.
 
 **Properties:** `src: string = ''` and `name: string = ''` — a host-level `aria-label` takes
@@ -512,9 +545,8 @@ falling back to that same token would render as unhighlighted.
 
 **Exports:** `ArchiveEntry` — `{ name: string; dir: boolean; size: number }`.
 
-**Optional peer dependency:** install `jszip` with `pnpm add jszip`. The lazy registry registers
-`application/zip` and `application/x-zip-compressed`, with a `.zip` filename fallback, and imports
-the viewer only when a matching archive is opened. Both registrations declare
+The lazy registry registers `application/zip` and `application/x-zip-compressed`, with a `.zip`
+filename fallback, and imports the viewer only when a matching archive is opened. Both registrations declare
 `capabilities: { anchors: ['text-quote', 'fragment'], search: true, textSelect: true }` — sibling to
 `load`, not inside it, so feature detection can read the capabilities without paying for the lazy
 import. Opening a `.zip` through `<lr-document-viewer>` forwards `anchor`/`highlights` to the mounted
@@ -607,8 +639,9 @@ Best-effort client-side PPTX viewer backed by the optional `@aiden0z/pptx-render
 localized fidelity notice is always visible because animations, equations, embedded objects,
 speaker notes, and several advanced effects are not rendered.
 
-**Properties:** `src: string = ''`, `name: string = ''`, `label: string = ''`, and `maxHeight:
-string = ''` (attribute `max-height`). A host
+**Properties:** `src: string = ''`, `name: string = ''`, `label: string = ''`, `page: number = 1`
+(reflected, one-based current slide), and `maxHeight: string = ''` (attribute `max-height`). Assigning
+`page` while ready navigates to that slide. A host
 `aria-label` takes precedence over
 `label` and `name`. `maxHeight` caps the scrollable `[part="container"]`; invalid CSS `max-height`
 values, declaration breaks, and `url()` are ignored. `highlights`, `activeHighlightId`, `anchor`,
@@ -616,20 +649,37 @@ and `anchorKinds`
 (`['text-quote', 'fragment']`) provide the shared text-viewer contract when the renderer exposes
 DOM text.
 
-**Methods:** `goToSlide(index)` returns a promise and navigates the mounted presentation.
-`search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and `scrollToAnchor()` are
-available for renderer output that exposes DOM text.
+**Methods:** `goToSlide(index)` returns a promise and navigates the mounted presentation using the
+renderer's zero-based index. `renderPageThumbnailToContainer(page, container, options?)` renders a
+one-based, width-bounded DOM/SVG slide preview and resolves to a caller-owned disposable handle (or
+`false` when unavailable/invalid); it generation-checks asynchronous preview resources after they
+settle.
+`search(query)` searches the renderer's complete presentation model, not its windowed DOM, retains
+at most 10,000 validated results, navigates the matching slide, and paints a renderer-owned node
+overlay. `searchNext()`, `searchPrevious()`, and `clearSearch()` navigate/dispose those model
+results. `scrollToAnchor()` remains available for renderer output that exposes DOM text.
 
 **Events:**
+
 - `lr-load` — `detail: { slideCount }` — fired after a presentation opens.
 - `lr-slide-change` — `detail: { index, count }` — fired when the active slide changes.
-- `lr-render-error` with `detail.error` when fetching or rendering fails.
+- `lr-page-viewer-state-change` — `detail.snapshot` is the same atomic readonly value exposed by
+  `pageViewerSnapshot`: `{ identity, status, page, pageCount }`. `identity` changes at the start of
+  every load so a rail can discard same-count replacement thumbnails without inferring identity
+  from `src`.
+- `lr-render-error` with `detail.error` only when fetching/opening fails or a post-load peer event is
+  explicitly classified fatal.
+- `lr-viewer-diagnostic` — `detail.diagnostic` is a readonly structured slide/node/search
+  diagnostic with stable `code`, `severity`, `fatal`, `source`, `cause`, and correlated `page` or
+  `nodeId` when valid. Recoverable events keep the mounted deck usable and do not also emit
+  `lr-render-error`; fatal events enter the localized error state, destroy the adapter, and emit the
+  terminal event once.
 - `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
   whenever rendered-presentation search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
-  DOMRect[] }`) — fired after a selection ends inside the rendered presentation.
+DOMRect[] }`) — fired after a selection ends inside the rendered presentation.
 
 `lr-highlight-activate` is not part of this viewer's event contract: painted renderer-text
 highlights are passive and cannot be activated.
@@ -658,10 +708,21 @@ renderer opens the archive; exceeding either ceiling surfaces the localized
 expose its complete recommended ZIP-limits capability within Lyra's safety ceilings. Missing,
 malformed, or more-permissive limits make the peer unavailable and the viewer fails closed.
 
+The peer instance is immediately wrapped in a validated `PptxViewerAdapter`; the component observes
+only readonly slide metadata, complete-model search/navigation/highlight/thumbnail capabilities and
+normalized correlated events. Raw renderer DOM windowing and event payloads do not become component
+state.
+`PptxViewerAdapter`, `PptxViewerAdapterEvent`, `PptxTextSearchResult`, and
+`PptxSearchHighlightHandle`/`PptxThumbnailHandle` are exported from the granular PPTX loader module.
+The shared diagnostic
+types are `LyraViewerDiagnostic`, `LyraViewerDiagnosticCode`, `LyraViewerDiagnosticSeverity`, and
+`LyraViewerDiagnosticEventDetail`.
+
 ## `lr-svg-viewer`
 
 Fetches an SVG document, sanitizes it with the optional `dompurify` peer, and renders it inline.
-The inline profile removes author `<style>`/`style`, SVG animation elements, and external
+The shared `passive-svg` profile (the same post-sanitization engine used for embedded viewer markup)
+removes author `<style>`/`style`, SVG animation elements, and external
 resource or paint-server references before insertion, preventing fetched SVG content from escaping
 the viewer's paint box or starting secondary requests. Local `url(#id)` paint servers and embedded
 raster data remain available.
@@ -717,6 +778,9 @@ rendered region highlight), `region-highlight` (one region highlight, `data-tone
 (one action in that list),
 `frame-viewport`/`frame-content`/`frame-controls`/`frame-zoom-in`/`frame-zoom-out`/`frame-reset`
 (forwarded from the internal `<lr-pan-zoom>` while `zoomable`).
+The passive rendered image owns `role="img"`; the body upgrades to a named `region` only when zoom
+controls or interactive region highlights are present. The spinner always includes visible
+localized loading text alongside its decorative ring, and the ring stops under reduced motion.
 
 **Themeable custom properties:** `--lr-svg-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
@@ -724,7 +788,7 @@ of `[part="body"]`; also settable via the `max-height` property, which writes th
 border color of the `[part='region-highlight']` matching `activeHighlightId`, distinct from the
 resting highlight border so the active region can be recolored without touching the rest. It is an
 inline `var()` fallback at the point of use rather than a `:host` declaration, so it can be set on
-the element *or on any ancestor*: `::part(region-highlight)[data-active]` is invalid CSS — Shadow
+the element _or on any ancestor_: `::part(region-highlight)[data-active]` is invalid CSS — Shadow
 Parts forbids an attribute selector after `::part()` — so re-pointing a shared `--lr-color-*` token,
 and repainting everything else reading it, was previously the only way. Unset, it falls back to
 exactly the tokens the rule used before. The tone-specific resting border and hover tint use
@@ -753,13 +817,14 @@ precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 `scrollToAnchor()` operate on sanitized HTML text and emit the shared search/anchor events.
 
 **Events:**
+
 - `lr-render-error` with `detail.error` when fetching or sanitizing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
   whenever rendered-document search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
-  DOMRect[] }`) — fired after a selection ends inside the rendered document.
+DOMRect[] }`) — fired after a selection ends inside the rendered document.
 
 `lr-highlight-activate` is not part of this viewer's event contract: painted sanitized-text
 highlights are passive and cannot be activated.
@@ -799,7 +864,7 @@ rather than a phantom success, and a header-row target scrolls with the same
 `max-height`); invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
 Host `aria-label` names the table by attribute presence, including an explicitly empty value;
 `name` and the localized row-count caption are fallbacks. The same computed name (host `aria-label`,
-else `name`) also names a persistent `role="region"` landmark on `[part='base']` in *every* fetch
+else `name`) also names a persistent `role="region"` landmark on `[part='base']` in _every_ fetch
 state — idle, loading, empty, error, loaded — so a landmark-navigating screen-reader user reaches the
 viewer before it has any rows, not only after a successful non-empty load. With neither set,
 `[part='base']` stays a plain wrapper rather than an unnamed region. The outer region carries the
@@ -813,9 +878,10 @@ every body cell's raw string value, ordered row then column (empty/whitespace qu
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and cursor.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails. PapaParse
-diagnostics also emit this event when the recoverable partial table remains rendered, so malformed
-or extra cells are never silently presented as a clean parse.
+**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails. Up to 100
+PapaParse diagnostics also emit this event when the recoverable partial table remains rendered, so
+malformed or extra cells are never silently presented as a clean parse; exceeding that diagnostic
+budget is a resource-limit error instead.
 `lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
@@ -845,9 +911,10 @@ component's stylesheet through; a custom property inherits across that boundary 
 
 **Optional peer dependency:** `papaparse`.
 
-Remote resources are capped at 25 MB, and the parsed table at 10,000 rows and 1,000 columns (the
-same shared default as `lr-csv-viewer`/`lr-spreadsheet-viewer`); exceeding either surfaces the
-localized `documentPreviewResourceTooLarge` message instead of the table.
+Remote resources are capped at 25 MB. A quote-aware scan stops before PapaParse at 10,000 data rows,
+1,000 fields in any row, 1,000,000 aggregate cells (including the header), or more than 100 parser
+diagnostics; streaming record callbacks enforce the same ceilings again. Exceeding any ceiling
+surfaces the localized `documentPreviewResourceTooLarge` message instead of a partial table.
 
 ## `lr-contact-viewer`
 
@@ -857,7 +924,9 @@ but never rendered — the card's heading uses `FN` (falling back to a localized
 label when `FN` is absent).
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
-`documentPreviewResourceTooLarge` message instead of the contacts.
+`documentPreviewResourceTooLarge` message instead of the contacts. Parsing retains at most 250
+contacts and 2 MiB of rendered contact text, keeping the complete accepted model searchable and
+anchorable without a 10,000-card eager DOM tree.
 
 **Properties:** `src: string = ''`, `name: string = ''`,
 `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose every
@@ -872,13 +941,14 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 `scrollToAnchor()` operate on rendered contact text and emit the shared search/anchor events.
 
 **Events:**
+
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
   whenever rendered-contact search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
-  DOMRect[] }`) — fired after a selection ends inside the rendered contacts.
+DOMRect[] }`) — fired after a selection ends inside the rendered contacts.
 
 `lr-highlight-activate` is not part of this viewer's event contract: painted contact-text
 highlights are passive and cannot be activated.
@@ -891,8 +961,11 @@ The three shared text-viewer events bubble and compose and are non-cancelable.
 **Themeable custom properties:** `--lr-contact-viewer-max-height` (default `none`) — maximum block
 size of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
 
-**Exports:** `parseVCards()` and the `VCardName`, `VCardTypedValue`, `VCardAddress`, and `VCardContact`
-types.
+**Exports:** `parseVCards(text, maxContactsOrOptions?)` and the `ParseVCardsOptions`, `VCardName`,
+`VCardTypedValue`, `VCardAddress`, and `VCardContact` types. The parser accepts vCard 2.1/3.0/4.0,
+line folding, 2.1 bare types, quoted parameters and quoted-printable charset values. Its numeric
+limit is floored and clamped to `0…250`; malformed framing/profiles/parameters fail closed, while an
+actually empty document returns no contacts.
 
 ## `lr-pdf-viewer`
 
@@ -904,16 +977,16 @@ paint through one `<lr-highlight-layer>` per page, stacked between the canvas an
 (canvas → highlights → text layer) so starting a text selection over a cited passage keeps working.
 Pointer activation is hit-tested at the page-wrapper level (the text layer on top intercepts most
 direct pointer events); keyboard activation reaches the highlight layer's own roving-tabindex rects
-directly, since z-stacking doesn't affect tab order. Residual: a click that *ends a text-selection
-drag* over a highlighted passage never activates it — the selection-in-progress check exists exactly
+directly, since z-stacking doesn't affect tab order. Residual: a click that _ends a text-selection
+drag_ over a highlighted passage never activates it — the selection-in-progress check exists exactly
 to tell that apart from a genuine activation click.
 
 **Properties:** `src: string = ''` and `name: string = ''`. `page: number = 1` is the one-based
 current page and
 `zoom: number = 1` is clamped to `0.25`–`4`. `maxHeight: string = ''` (attribute `max-height`) is a
 CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size of the virtualized
- page list — declaratively, writing it inline on `[part="base"]`; invalid CSS `max-height` values,
- declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] = ['page',
+page list — declaratively, writing it inline on `[part="base"]`; invalid CSS `max-height` values,
+declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] = ['page',
 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
 anchor-target contract). The other inherited anchor-target properties are `highlights:
 LyraHighlight[] = []` (property only; reassign after mutation), `activeHighlightId: string | null =
@@ -923,6 +996,7 @@ and are rejected rather than clamped; region rectangles also require finite coor
 nonnegative dimensions.
 
 **Events:**
+
 - `lr-render-error` — `detail: { error }` — fetching, parsing, or rendering (page canvas or text
   layer) failed.
 - `lr-load` — `detail: { pageCount }` — the document reached `ready`. `page` is reset to `1` first.
@@ -930,7 +1004,7 @@ nonnegative dimensions.
   as `page` assignments and `nextPage()`/`previousPage()`/`goToPage()`.
 - `lr-zoom-change` — `detail: { zoom }`.
 - `lr-search-change` — `detail: { query, matchCount, activeIndex }` — from `search()`/`searchNext()`/
-  `searchPrevious()`/`clearSearch()`. A `src` change resets search state *silently* (no event), since
+  `searchPrevious()`/`clearSearch()`. A `src` change resets search state _silently_ (no event), since
   match page/offset coordinates only mean anything for the document they were found in.
 - `lr-highlight-activate` — `detail: { id }` — a painted highlight was clicked or activated via
   Enter/Space. On a pointer hit-test, the last entry of `highlights` covering the point wins.
@@ -939,11 +1013,15 @@ nonnegative dimensions.
   when it is a `text-quote`.
 - `lr-anchor-result` — `detail: { found }` — fired after an `anchor` assignment or a
   `scrollToAnchor()` call.
+- `lr-page-viewer-state-change` — `detail.snapshot` is the same immutable atomic state exposed by
+  `pageViewerSnapshot` (`identity`, `status`, `page`, `pageCount`). `identity` changes for every load,
+  including same-count replacements.
 
 **Methods:** `nextPage()`, `previousPage()`, `zoomIn()`, and `zoomOut()` update the corresponding
 controlled state within its supported range. `getPageText(page)` resolves the raw reading-order text
 of one page (per-page LRU-cached, 64 pages), rejecting on no loaded document or an out-of-range page.
-`renderPageThumbnail(page, canvas, options?)` renders `page` into a caller-owned `canvas` at
+`pageViewerSnapshot` is a synchronously readable readonly lifecycle/page/count snapshot for page
+rails and other late subscribers. `renderPageThumbnail(page, canvas, options?)` renders `page` into a caller-owned `canvas` at
 `options.width` CSS px (default 96), devicePixelRatio-aware, resolving `false` when not ready or out
 of range. `goToPage(page)` scrolls the virtualized list to `page`, resolving `true` once mounted (or
 `false` for an out-of-range value, without changing `page`). `getOutline()` resolves the document's
@@ -1041,6 +1119,8 @@ placeholders), `rows`, `spinner`, and
 `error`. `data-row`, `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the
 internal `<lr-virtual-list>` and forwarded via
 `exportparts`, so `lr-spreadsheet-viewer::part(cell)` reaches them from a consumer stylesheet.
+The spinner always includes visible localized loading text alongside its decorative ring; the text
+remains understandable without CSS or animation and the ring stops under reduced motion.
 
 **Themeable custom properties:** `--lr-spreadsheet-viewer-highlight-color` (default
 `var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The component writes it
@@ -1086,7 +1166,9 @@ behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step ba
 (wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
 painted marks.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing reports an error.
+**Events:** `lr-render-error` with `detail.error` when fetching or parsing reports an error. Up to
+100 recoverable PapaParse diagnostics may accompany the rendered grid; exceeding that budget is a
+resource-limit error instead.
 `lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
@@ -1114,9 +1196,11 @@ inherits across that boundary instead.
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.
 
-Remote resources are capped at 25 MB, and the parsed table at 10,000 rows and 1,000 columns;
-exceeding any of these surfaces the localized `documentPreviewResourceTooLarge` message instead of
-the table.
+Remote resources are capped at 25 MB. A quote-aware scan stops before PapaParse at 10,000 raw rows
+(the first row consumes the same budget whether or not `has-header-row` displays it as a header),
+1,000 columns in any row, 1,000,000 aggregate cells, or more than 100 parser diagnostics; streaming
+row callbacks enforce the same ceilings again. Exceeding any ceiling surfaces the localized
+`documentPreviewResourceTooLarge` message instead of a partial grid.
 
 ---
 
@@ -1135,6 +1219,7 @@ all of it on every load). The host always carries explicit `aria-busy="true"|"fa
 the source is loading and being sanitized. Build error UI from `lr-include-error`.
 
 **Properties:**
+
 - `src: string = ''` (reflected) — source of the fragment. `#id` clones the matching same-page
   template content or element children without fetching or moving the source nodes.
   `/partial.html#id` fetches `/partial.html` without its hash, sanitizes the complete response, then
@@ -1163,6 +1248,7 @@ operate on the included text. A successful replacement explicitly recomputes any
 against the new fragment rather than leaving results from the previous content.
 
 **Events:**
+
 - `lr-load` — `detail: { src }` — the fragment was sanitized and written into the light DOM.
 - `lr-include-error` — `detail: { status, reason, error? }`. `reason` is a `LyraIncludeErrorReason`:
   `'blocked-url'` (`src` failed the allowlist; `fetch()` never ran), `'network'` (`fetch()` rejected),
@@ -1183,7 +1269,7 @@ against the new fragment rather than leaving results from the previous content.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
-  DOMRect[] }`) — fired after a selection ends inside the included content.
+DOMRect[] }`) — fired after a selection ends inside the included content.
 
 `lr-highlight-activate` is not part of this component's event contract: included-text highlights
 are passive and cannot be activated.
@@ -1211,10 +1297,10 @@ retried; a stale response never paints over a newer `src`.
   Loading navigation…
 </lr-include>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/viewers/include/include.js';
+  import "@aceshooting/lyra-ui/components/viewers/include/include.js";
 
-  const include = document.querySelector('#navigation');
-  include.addEventListener('lr-include-error', (event) => {
+  const include = document.querySelector("#navigation");
+  include.addEventListener("lr-include-error", (event) => {
     console.error(event.detail.reason, event.detail.status);
   });
   await include.reload();
@@ -1231,7 +1317,9 @@ positioned ancestor.
 **Properties:** `items: HighlightLayerItem[] = []` (attribute: false), `activeId: string | null =
 null` (attribute `active-id`), and `interactive: boolean = true` (reflected) — gates click/keyboard
 activation. A rectangle is eligible only when `x`/`y`/`width`/`height` are finite numbers and both
-dimensions are nonnegative; invalid rectangles are omitted from paint, focus, and activation.
+dimensions are nonnegative; invalid rectangles are omitted from paint, focus, and activation. When
+`interactive=false`, the base is `aria-hidden` pure paint with no group role, accessible name, or
+controls. If every rectangle is invalid, no shadow subtree is rendered.
 
 **Methods:** `flash(id)` briefly re-triggers the flash styling for an already-rendered rect (e.g. a
 re-click of the same source citation).
@@ -1259,7 +1347,8 @@ tone independently, defaulting to the corresponding Lyra quiet background and fo
 ## `lr-page-rail`
 
 A virtualized vertical thumbnail rail for page-addressed documents, with per-page highlight heat
-markers. Two modes: **wired** (`viewer`/`for` supply a live page source, e.g. `<lr-pdf-viewer>` —
+markers. Two modes: **wired** (`viewer`/`for` supply a live page source, e.g. `<lr-pdf-viewer>` or
+`<lr-pptx-viewer>` —
 thumbnails render lazily as rows materialize, and the rail tracks page/count from the viewer's own
 events) and **mediated** (`page-count`/`page` are host-bound directly, rows render a placeholder
 glyph — still a fully functional pager). In wired mode the viewer's `page` is the single source of
@@ -1269,7 +1358,13 @@ truth.
 `for: string = ''` — an id selector alternative to setting `viewer` directly. `pageCount: number = 0`
 (attribute `page-count`) and `page: number = 1` (reflected) — mediated-mode page state.
 `highlights: LyraHighlight[] = []` (attribute: false) — drives the per-page heat markers.
-`thumbWidth: number = 96` (attribute `thumb-width`) and `label: string = ''`.
+`thumbWidth: number = 96` (attribute `thumb-width`) and `label: string = ''`. A wired
+`PageThumbnailSource` provides its one-based `page`, optionally exposes the atomic
+`pageViewerSnapshot`/`lr-page-viewer-state-change` protocol, and supplies at least one lazy preview
+method: the original `renderPageThumbnail(page, canvas, options?)` for bitmap/canvas sources, or
+`renderPageThumbnailToContainer(page, container, options?)` for renderer-owned DOM/SVG previews.
+The latter resolves to a `PageThumbnailRenderHandle`; the rail disposes it whenever its row,
+viewer, allocation width, status, or document identity changes.
 
 **Events:** `lr-page-select` — a page row was activated (click, or Enter/Space on a focused row).
 `detail: { page }`. In wired mode the rail also sets `viewer.page` itself.
@@ -1280,8 +1375,9 @@ Rapid consecutive shrinks supersede an in-flight repair, so focus lands on the l
 numeric type-ahead buffer is cleared on detach.
 
 **CSS parts:** `base` (the rail), `pages` (the embedded `<lr-virtual-list>`), `page` (one page
-button), `page-current` (the button for the current `page`), `thumbnail` (the thumbnail canvas
-wrapper), `page-number` (the visible page number), `heat` (the heat-marker cluster), `heat-dot` (one
+button), `page-current` (the button for the current `page`), `thumbnail` (the thumbnail canvas/DOM
+preview wrapper), `thumbnail-target` (the canvas or renderer-owned DOM preview target), `page-number`
+(the visible page number), `heat` (the heat-marker cluster), `heat-dot` (one
 heat marker), `heat-dot-accent`, `heat-dot-success`, `heat-dot-warning`, `heat-dot-danger` and
 `heat-dot-neutral` (the tone-specific name on each marker), and `heat-dot-overflow` (the `+n`
 marker).
@@ -1323,9 +1419,13 @@ Cells are virtualized through `lr-virtual-list`. `node-path` anchors resolve `pa
 index; `fragment` anchors resolve a cell's own `id`. No execution, no kernels, no editing, no
 ipywidgets.
 
-**Properties:** `src: string = ''` — URL to fetch and parse as a notebook; ignored once `notebook` is
-set. `notebook?: object | string` (property only) — an already-parsed notebook document, or its raw
-JSON text; wins over `src` and is parsed (and validated) synchronously. `name: string = ''` —
+**Properties:** `src: string = ''` — URL to fetch and parse as a notebook; ignored while `notebook`
+is present. `notebook?: object | string` (property only) — an already-parsed notebook document, or
+its raw JSON text; presence wins over `src` (including an empty string) and is parsed synchronously.
+Assigning `undefined` clears inline authority and immediately reloads the already configured `src`,
+or exposes the idle state when no URL exists. `source: LyraNotebookViewerSource` is a readonly
+discriminated snapshot (`{ kind: 'inline', value }`, `{ kind: 'url', url }`, or `null`).
+`name: string = ''` —
 accessible label, and matched against a `fragment` anchor's cell id. `outputCollapseLines: number =
 40` (attribute `output-collapse-lines`) — a plain-text output longer than this many lines renders
 collapsed behind a toggle; `0` disables collapsing. `maxHeight: string = ''` (attribute
@@ -1364,10 +1464,13 @@ scrollable preformatted surface for a raw cell), `outputs`, `output`
 (`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
 an error output), `error-output-label` (the label introducing an error output's traceback),
 `output-toggle`, `error`, `spinner`.
+The document-level spinner always includes visible localized loading text alongside its decorative
+ring; the text remains understandable without CSS or animation and the ring stops under reduced
+motion.
 
 Every cell-level part above is rendered into the embedded `<lr-virtual-list>`'s own shadow root and
 forwarded back out through `exportparts`, so `lr-notebook-viewer::part(cell)` and friends work from
-a consumer stylesheet. The three state variants are separate part *names* rather than attribute
+a consumer stylesheet. The three state variants are separate part _names_ rather than attribute
 selectors, because Shadow Parts forbids an attribute selector after `::part()` —
 `::part(cell)[data-active]` is invalid CSS, so use `::part(cell-active)`. The `data-*` attributes
 remain on the elements for scripting.
@@ -1404,16 +1507,19 @@ sections, and processing instructions, preserved in their original mixed-child s
 Namespace-literal: qualified names render exactly as authored, with no namespace-URI-aware
 matching. Every document type declaration is rejected before `DOMParser`, preventing external
 entity access and browser-specific internal-entity expansion. Not `lr-json-viewer` (JS values); not `lr-html-viewer`
-(sanitized *rendered* HTML). No XPath/XSLT evaluation, no editing, no schema validation.
+(sanitized _rendered_ HTML). No XPath/XSLT evaluation, no editing, no schema validation.
 
 **Properties:** `src: string = ''` — URL to fetch and parse; ignored once `xml` is set. `xml?:
 string` (property only) — raw XML text to parse and render; wins over `src`, and setting it parses
-synchronously. `name: string = ''` — accessible label. `collapsedDepth?: number` (attribute
+synchronously. Assigning `undefined` relinquishes inline authority and immediately resumes an
+already configured `src`, or exposes idle when none exists. `source: LyraXmlViewerSource` is the
+readonly discriminated effective authority (`{ kind: 'inline', value }`, `{ kind: 'url', url }`, or
+`null`). `name: string = ''` — accessible label. `collapsedDepth?: number` (attribute
 `collapsed-depth`) — elements at or beyond this nesting depth (root = 0) start collapsed. `copyable:
 boolean = false` (reflected) — shows copy-to-clipboard affordances, one for the whole document plus
 one per element. `maxHeight: string = ''` (attribute `max-height`). `anchorKinds: readonly
 LyraAnchorKind[] = ['node-path']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
-contract) — each numeric path segment is the 0-based index within the parent's *element* children,
+contract) — each numeric path segment is the 0-based index within the parent's _element_ children,
 and an optional trailing string segment `'@attrName'` addresses one existing, nonempty-named
 attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
 
@@ -1436,7 +1542,11 @@ adds `data-active-highlight` to the matching row. Entries are deduplicated by `i
 anchor kind or path this document cannot resolve is dropped whole rather than painted at some
 coarser granularity, and an entry inside a collapsed subtree paints once that subtree is expanded.
 
-**Events:** `lr-copy` — `detail: { text }`. `lr-search-change` — `detail: { query, matchCount,
+**Events:** `lr-copy` — emitted only after the owning realm's clipboard write fulfills, with
+`detail: { ok: true, text }`. Clipboard absence, synchronous throws, and rejected writes instead
+show the localized `copyFailed` label and emit generic `lr-error` plus `lr-copy-error` with
+`detail: { ok: false, text, reason, error }`; `reason` is `'unsupported'`, `'denied'`, or `'failed'`.
+`lr-search-change` — `detail: { query, matchCount,
 activeIndex }`. `lr-render-error` — `detail: { error }`, fetching or parsing failed, including a
 parse error or exceeding the node cap. `lr-anchor-result` — non-cancelable; `detail: { found:
 boolean }`, fired after an `anchor` assignment or a `scrollToAnchor()` call is applied.
@@ -1455,13 +1565,15 @@ tree, rather than resolving indistinguishably from the bare element path),
 `toggle` (an element's expand/collapse button, hidden but present for row alignment on leaf/empty
 elements), `highlight-action` (the focusable button a resolved `highlights` entry adds to its element
 row), `error`, `spinner`.
+The spinner always includes visible localized loading text alongside its decorative ring; the text
+remains understandable without CSS or animation and the ring stops under reduced motion.
 
 **Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`) — maximum block size
 of the scrollable body; also settable via the `max-height` property.
 `--lr-xml-viewer-active-match-color` (default `var(--lr-color-warning)`) — the solid outline on the
-`[part='node']` holding the *current* search match, leaving every other match on its dashed
+`[part='node']` holding the _current_ search match, leaving every other match on its dashed
 `--lr-xml-viewer-match-color` outline. It is an inline `var()` fallback at the point of use rather
-than a `:host` declaration, so it can be set on the element *or on any ancestor*:
+than a `:host` declaration, so it can be set on the element _or on any ancestor_:
 `::part(node)[data-active-match]` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()` — so distinguishing the active match previously meant re-pointing the shared
 `--lr-color-warning` token, which recolored every other match (and every other warning surface)
@@ -1487,14 +1599,14 @@ latter, so a neutral highlight tinted with it would render as unhighlighted.
 by `activeHighlightId`, and `--lr-xml-viewer-active-attribute-color` (default `var(--lr-color-brand)`)
 outlines the `[part='attribute']` an attribute-addressing `node-path` anchor resolved to.
 
-`[part='toggle']`'s glyph box stays compact (`1.25rem`) while its *interactive* box takes the shared
+`[part='toggle']`'s glyph box stays compact (`1.25rem`) while its _interactive_ box takes the shared
 minimum target size as a floor via `--lr-icon-button-size`. That token is a floor, not a fixed size,
 so lowering it never squashes the chevron below its own box — the visible glyph keeps its size while
 the hit target follows the token, and it can never fall under the accessible minimum from this
 component's own rules.
 
 ```ts
-const viewer = document.querySelector('lr-xml-viewer');
+const viewer = document.querySelector("lr-xml-viewer");
 viewer.xml = payload;
 viewer.collapsedDepth = 2;
 viewer.copyable = true;
@@ -1540,8 +1652,11 @@ scrolls that pane to its corresponding highlight, while the original `lr-highlig
 continues bubbling unchanged. The shared `anchor` property drives both panes. In diff mode, split
 columns already share one scroll container.
 
-**Events:** `lr-copy` (`detail: { text }`), `lr-download` (`detail: { src, filename }`),
-`lr-highlight-activate` (`detail: { id }`), and `lr-render-error` (`detail: { error }`).
+**Events:** `lr-copy` fires only after clipboard fulfillment (`detail: { ok: true, text }`). A
+clipboard failure bubbles `lr-error` plus `lr-copy-error`
+(`detail: { ok: false, text, reason, error }`) unchanged from `lr-diff-view`. Also emits
+`lr-download` (`detail: { src, filename }`), `lr-highlight-activate` (`detail: { id }`), and
+`lr-render-error` (`detail: { error }`).
 
 **Slots:** none.
 
@@ -1550,17 +1665,20 @@ columns already share one scroll container.
 **Themeable custom properties:** `--lr-document-compare-pane-max-height` (default
 `var(--lr-size-24rem)`) — maximum block size of a `side-by-side` pane before it scrolls internally.
 
-## `lr-geojson-view`
+## `lr-geojson-viewer`
 
-Internal document-registry bridge that fetches, validates, and renders a GeoJSON file through
-`<lr-map>`'s `dataLayers` — not a documented public tag: excluded from the README/llms family
-tables, present in the generated manifest since a defined custom element is technically reachable.
-The document registry matches `application/geo+json` and `.geojson` filenames.
+Document-registry bridge that fetches, validates, and renders a GeoJSON file through `<lr-map>`'s
+`dataLayers`. The canonical class is `LyraGeoJsonViewer`; the pre-v9 `lr-geojson-view` tag and
+`LyraGeojsonView` class name remain compatibility aliases. The document registry renders the
+canonical tag and matches `application/geo+json` and `.geojson` filenames.
 
 Validates the parsed JSON is a `Feature`/`FeatureCollection`/bare geometry (one of `Point`,
 `LineString`, `Polygon`, `MultiPoint`, `MultiLineString`, `MultiPolygon`, `GeometryCollection`) before
 rendering; anything else renders the localized `geojsonViewInvalid` error. On success, it walks every
-coordinate to compute a bounding box and fits a `center`/`zoom` to it (a Web-Mercator-fit
+value and object key first, rejecting more than 50,000 graph units, nesting beyond 64 levels, more
+than 2 Mi UTF-16 units of aggregate keys/string values, or more than 4 Mi UTF-16 units of formatted
+metadata before serialization or peer handoff. It then walks every coordinate under a separate
+10,000-position ceiling to compute a bounding box and fits a `center`/`zoom` to it (a Web-Mercator-fit
 approximation weighting latitude span ~2x, with 40% padding), then hands the parsed value to
 `<lr-map>` as a single `dataLayers` entry (`sourceId: 'lr-geojson'`). When the optional
 `maplibre-gl` peer isn't installed, it falls back to a status line plus a `<lr-json-viewer
@@ -1580,13 +1698,14 @@ text-viewer contract adds `highlights`, `activeHighlightId`, `anchor`, and
 text, independent of whether the optional map peer is available.
 
 **Events:**
+
 - `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure.
 - `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
   whenever serialized-metadata search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
-  DOMRect[] }`) — fired after a selection ends inside the serialized metadata.
+DOMRect[] }`) — fired after a selection ends inside the serialized metadata.
 
 `lr-highlight-activate` is not part of this registry bridge's event contract: serialized-metadata
 highlights are passive and cannot be activated.
@@ -1609,8 +1728,9 @@ body text: `error` is `--lr-color-danger` (matching `lr-docx-viewer`/`lr-email-v
 but working state, since the `lr-json-viewer` fallback below it still renders the data, not a failure
 -- and `status` is the quiet `--lr-color-text-quiet` metadata tone.
 
-Registered by importing `geojson-view/geojson-view.js` directly — not part of the root barrel, the
-same as `lr-map`/`lr-graph`, since it depends on the same optional `maplibre-gl` peer. Remote
+The canonical tag is registered by importing `geojson-viewer/geojson-viewer.js`; the permanent
+compatibility tag and old deep route remain available through `geojson-view/geojson-view.js`.
+Remote
 resources are capped at 25 MB; exceeding it surfaces the localized `documentPreviewResourceTooLarge`
 message instead of the map. Lyra supports MapLibre v5 and v6; consumers must import its CSS.
 MapLibre v5's standard build includes its worker, while v6 is ESM-only, requires WebGL2, and needs

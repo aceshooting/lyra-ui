@@ -9,7 +9,11 @@ export * from './document-viewer/document-viewer.js';
 export * from './docx-viewer/docx-viewer.js';
 export * from './ebook-viewer/ebook-viewer.js';
 export * from './email-viewer/email-viewer.js';
-export * from './geojson-view/geojson-view.js';
+export * from './geojson-view/geojson-viewer.js';
+export {
+  LyraGeojsonView,
+  type LyraGeojsonViewEventMap,
+} from './geojson-view/geojson-view.js';
 export * from './highlight-layer/highlight-layer.js';
 export * from './html-viewer/html-viewer.js';
 export * from './include/include.js';

@@ -4,7 +4,7 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    --lr-av-player-transcript-height: var(--lr-size-16rem);
+    --_lr-av-player-transcript-height: var(--lr-size-16rem);
   }
   [part='base'] {
     display: flex;
@@ -28,8 +28,12 @@ export const styles = css`
     position: relative;
     display: inline-flex;
     align-items: center;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='rate-select'] {
+    inline-size: 100%;
+    max-inline-size: 100%;
     appearance: none;
     padding-inline: var(--lr-space-s) var(--lr-space-l);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -64,8 +68,12 @@ export const styles = css`
   .rate-select-chevron svg {
     transform: rotate(90deg);
   }
-  [part='timeline'] {
+  .timeline-positioner {
     position: relative;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  [part='timeline'] {
     block-size: var(--lr-size-3rem);
     /* The time axis stays physically LTR under RTL, matching native media controls -- a
        documented exception. */
@@ -89,6 +97,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='timeline'][aria-disabled='true'] {
+    cursor: default;
+  }
   [part='timeline'] canvas {
     display: block;
     inline-size: 100%;
@@ -99,8 +110,9 @@ export const styles = css`
      highlight-marker tones without hijacking the shared --lr-color-success/warning/danger/brand
      tokens used everywhere else in their theme. Unset, each falls back to the same color-mix()
      this rendered before the hatch existed, so the default rendering is unchanged. */
-  /* Each tone sets --lr-av-player-marker-fill rather than background directly, and the one
-     background declaration below reads it. That indirection is what lets the hover/active rules
+  /* Each tone sets a private marker-fill default, while the public
+     --lr-av-player-marker-fill remains an inherited/direct-host override at the use site. That
+     indirection is what lets the hover/active rules
      mix from whichever fill the marker actually has: a background-mix written against the untoned
      default would flatten every toned marker to brand the moment the pointer touched it, and a
      per-tone hover/active pair would be ten near-identical rules. The public
@@ -113,22 +125,31 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     cursor: pointer;
-    --lr-av-player-marker-fill: var(--lr-av-player-marker-bg, color-mix(in srgb, var(--lr-color-brand) 35%, transparent));
-    background: var(--lr-av-player-marker-fill);
+    --_lr-av-player-marker-fill: var(--lr-av-player-marker-bg, color-mix(in srgb, var(--lr-color-brand) 35%, transparent));
+    background: var(--lr-av-player-marker-fill, var(--_lr-av-player-marker-fill));
+  }
+  .timeline-markers {
+    position: absolute;
+    inset: 0;
+    direction: ltr;
+    pointer-events: none;
+  }
+  .timeline-markers [part='timeline-marker'] {
+    pointer-events: auto;
   }
   /* Was filter: brightness(1.2), which multiplies every channel: it lightened a dark marker,
      darkened nothing at all on a fully saturated one, did nothing whatsoever to a pure-white fill,
      and -- because filter applies to the subtree -- dragged the marker's own label with it. */
   [part='timeline-marker']:hover {
-    background: color-mix(in oklab, var(--lr-av-player-marker-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: color-mix(in oklab, var(--lr-av-player-marker-fill, var(--_lr-av-player-marker-fill)), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
   [part='timeline-marker']:active {
-    background: color-mix(in oklab, var(--lr-av-player-marker-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(in oklab, var(--lr-av-player-marker-fill, var(--_lr-av-player-marker-fill)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
-  [part='timeline-marker'][data-tone='success'] { --lr-av-player-marker-fill: var(--lr-av-player-marker-success-bg, color-mix(in srgb, var(--lr-color-success) 35%, transparent)); }
-  [part='timeline-marker'][data-tone='warning'] { --lr-av-player-marker-fill: var(--lr-av-player-marker-warning-bg, color-mix(in srgb, var(--lr-color-warning) 35%, transparent)); }
-  [part='timeline-marker'][data-tone='danger'] { --lr-av-player-marker-fill: var(--lr-av-player-marker-danger-bg, color-mix(in srgb, var(--lr-color-danger) 35%, transparent)); }
-  [part='timeline-marker'][data-tone='neutral'] { --lr-av-player-marker-fill: var(--lr-av-player-marker-neutral-bg, color-mix(in srgb, var(--lr-color-text) 25%, transparent)); }
+  [part='timeline-marker'][data-tone='success'] { --_lr-av-player-marker-fill: var(--lr-av-player-marker-success-bg, color-mix(in srgb, var(--lr-color-success) 35%, transparent)); }
+  [part='timeline-marker'][data-tone='warning'] { --_lr-av-player-marker-fill: var(--lr-av-player-marker-warning-bg, color-mix(in srgb, var(--lr-color-warning) 35%, transparent)); }
+  [part='timeline-marker'][data-tone='danger'] { --_lr-av-player-marker-fill: var(--lr-av-player-marker-danger-bg, color-mix(in srgb, var(--lr-color-danger) 35%, transparent)); }
+  [part='timeline-marker'][data-tone='neutral'] { --_lr-av-player-marker-fill: var(--lr-av-player-marker-neutral-bg, color-mix(in srgb, var(--lr-color-text) 25%, transparent)); }
   [part='timeline-marker'][data-active] {
     outline: var(--lr-border-width-medium) solid var(--lr-av-player-marker-active-color, var(--lr-color-brand));
     outline-offset: calc(-1 * var(--lr-border-width-medium));
@@ -138,7 +159,7 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='transcript'] {
-    --lr-virtual-list-height: var(--lr-av-player-transcript-height);
+    --lr-virtual-list-height: var(--lr-av-player-transcript-height, var(--_lr-av-player-transcript-height));
   }
   /* The cue parts below are emitted by renderCue() but committed into <lr-virtual-list>'s OWN shadow
      root, so a bare [part='cue'] selector here can never reach them -- it would resolve against this
@@ -188,7 +209,7 @@ export const styles = css`
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
   lr-virtual-list::part(cue-time) {
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-color-text);
     font-size: var(--lr-font-size-xs);
     margin-inline-end: var(--lr-space-2xs);
   }
@@ -205,5 +226,27 @@ export const styles = css`
     color: var(--lr-color-danger);
     padding: var(--lr-space-l);
     text-align: center;
+  }
+
+  @media (forced-colors: active) {
+    [part='rate-select']:hover {
+      border-style: double;
+      outline: var(--lr-border-width-thin) solid Highlight;
+    }
+    [part='timeline-marker'] {
+      border: var(--lr-border-width-thin) solid CanvasText;
+      forced-color-adjust: auto;
+    }
+    [part='timeline-marker'][data-tone='success'] { border-style: double; }
+    [part='timeline-marker'][data-tone='warning'] { border-style: dashed; }
+    [part='timeline-marker'][data-tone='danger'] { border-style: dotted; }
+    [part='timeline-marker'][data-tone='neutral'] {
+      border-style: solid;
+      outline: var(--lr-border-width-thin) dashed CanvasText;
+      outline-offset: calc(-1 * var(--lr-border-width-medium));
+    }
+    [part='timeline-marker'][data-active] {
+      outline: var(--lr-border-width-medium) solid Highlight;
+    }
   }
 `;

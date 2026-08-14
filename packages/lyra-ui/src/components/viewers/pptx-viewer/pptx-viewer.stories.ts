@@ -21,7 +21,14 @@ const fixtureUrl = new URL('./fixtures/table-stale-frame.pptx', import.meta.url)
 
 export const RealFixture: Story = {
   name: 'Real PPTX fixture',
-  render: () => html`<lr-pptx-viewer style="display:block; min-height:24rem;" src=${fixtureUrl} name="Table fixture"></lr-pptx-viewer>`,
+  render: () => html`<lr-pptx-viewer
+    style="display:block; min-height:24rem;"
+    src=${fixtureUrl}
+    name="Table fixture"
+    page="1"
+    @lr-page-viewer-state-change=${(event: CustomEvent) => console.info('PPTX page state', event.detail)}
+    @lr-viewer-diagnostic=${(event: CustomEvent) => console.warn('PPTX diagnostic', event.detail)}
+  ></lr-pptx-viewer>`,
 };
 
 export const MissingSource: Story = {

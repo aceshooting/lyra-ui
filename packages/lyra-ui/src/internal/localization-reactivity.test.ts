@@ -5,9 +5,30 @@ import {
   resolveLyraDirection,
   resolveLyraLocale,
   setLyraLocale,
+  subscribeLyraLocale,
 } from './localization.js';
+import { registerLyraExactLocale } from './localization-runtime.js';
+import { LyraElement } from './lyra-element.js';
 import '../components/data/sparkline/sparkline.js';
 import type { LyraSparkline } from '../components/data/sparkline/sparkline.js';
+
+class LocalizationRenderProbe extends LyraElement {
+  protected static override readonly defaultStrings = Object.freeze({ noData: 'No data' });
+  renderCalls = 0;
+
+  protected override render() {
+    this.renderCalls += 1;
+    return html`<span>${this.localize('noData')}</span>`;
+  }
+}
+
+if (!customElements.get('x-localization-render-probe')) {
+  customElements.define('x-localization-render-probe', LocalizationRenderProbe);
+}
+
+function probeText(probe: LocalizationRenderProbe): string {
+  return probe.shadowRoot?.textContent?.trim() ?? '';
+}
 
 function uniqueLocale(label: string): string {
   return `${label}${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
@@ -77,6 +98,115 @@ it('re-renders a regional locale when its base catalog is registered after mount
   await el.updateComplete;
 
   expect(renderedLabel(el)).to.equal('Base locale loaded');
+});
+
+it('does not re-render connected localized hosts for an unrelated catalog registration', async () => {
+  const locale = uniqueLocale('usedscope');
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      ${Array.from({ length: 2_000 }, () => html`
+        <x-localization-render-probe locale=${locale}></x-localization-render-probe>
+      `)}
+    </div>
+  `);
+  const probes = [...wrapper.querySelectorAll('x-localization-render-probe')] as LocalizationRenderProbe[];
+  await Promise.all(probes.map((probe) => probe.updateComplete));
+  const before = probes.map((probe) => probe.renderCalls);
+
+  registerLyraLocale(uniqueLocale('unusedscope'), { noData: 'Unused locale' });
+  await Promise.resolve();
+  await Promise.all(probes.map((probe) => probe.updateComplete));
+
+  expect(probes.map((probe) => probe.renderCalls)).to.deep.equal(before);
+});
+
+it('filters lazy catalog delivery by each host ancestor locale candidate chain', async () => {
+  const base = uniqueLocale('ancestorbase');
+  const unrelated = uniqueLocale('ancestorother');
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <section lang=${base}-region>
+        <x-localization-render-probe></x-localization-render-probe>
+      </section>
+      <section lang=${unrelated}>
+        <x-localization-render-probe></x-localization-render-probe>
+      </section>
+    </div>
+  `);
+  const probes = [...wrapper.querySelectorAll('x-localization-render-probe')] as LocalizationRenderProbe[];
+  await Promise.all(probes.map((probe) => probe.updateComplete));
+  const before = probes.map((probe) => probe.renderCalls);
+
+  registerLyraLocale(base, { noData: 'Matching ancestor loaded' });
+  await probes[0].updateComplete;
+  await Promise.resolve();
+
+  expect(probeText(probes[0])).to.equal('Matching ancestor loaded');
+  expect(probes[0].renderCalls).to.equal(before[0]! + 1);
+  expect(probes[1].renderCalls).to.equal(before[1]);
+});
+
+it('keeps exact-only pseudo catalog delivery isolated from its bare base language', async () => {
+  const base = 'qps';
+  const exact = 'qps-XA';
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <x-localization-render-probe locale=${base}></x-localization-render-probe>
+      <x-localization-render-probe locale=${exact}></x-localization-render-probe>
+    </div>
+  `);
+  const probes = [...wrapper.querySelectorAll('x-localization-render-probe')] as LocalizationRenderProbe[];
+  await Promise.all(probes.map((probe) => probe.updateComplete));
+  const before = probes.map((probe) => probe.renderCalls);
+
+  registerLyraExactLocale(exact, { noData: 'Exact pseudo loaded' });
+  await probes[1].updateComplete;
+  await Promise.resolve();
+
+  expect(probeText(probes[0])).to.equal('No data');
+  expect(probeText(probes[1])).to.equal('Exact pseudo loaded');
+  expect(probes[0].renderCalls).to.equal(before[0]);
+  expect(probes[1].renderCalls).to.equal(before[1]! + 1);
+});
+
+it('updates a bare language host when a newly registered regional catalog becomes its fallback', async () => {
+  const base = 'qrx';
+  const probe = await fixture<LocalizationRenderProbe>(html`
+    <x-localization-render-probe locale=${base}></x-localization-render-probe>
+  `);
+  const before = probe.renderCalls;
+
+  registerLyraLocale(`${base}-ZZ`, { noData: 'Regional fallback loaded' });
+  await probe.updateComplete;
+
+  expect(probeText(probe)).to.equal('Regional fallback loaded');
+  expect(probe.renderCalls).to.equal(before + 1);
+});
+
+it('updates a component after a public active subscriber fails', async () => {
+  const previous = getLyraLocale();
+  const locale = uniqueLocale('isolation');
+  registerLyraLocale(locale, { noData: 'Component still updated' });
+  const probe = await fixture<LocalizationRenderProbe>(html`
+    <x-localization-render-probe></x-localization-render-probe>
+  `);
+  const stop = subscribeLyraLocale(() => {
+    throw new Error('public subscriber failure');
+  });
+  let thrown: unknown;
+  try {
+    try {
+      setLyraLocale(locale);
+    } catch (error) {
+      thrown = error;
+    }
+    await probe.updateComplete;
+    expect(thrown).to.be.instanceOf(AggregateError);
+    expect(probeText(probe)).to.equal('Component still updated');
+  } finally {
+    stop();
+    setLyraLocale(previous);
+  }
 });
 
 it('resolves locale and direction through a shadow root in the host owner document', () => {

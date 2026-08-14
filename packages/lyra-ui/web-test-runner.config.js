@@ -141,18 +141,25 @@ const mouseCommandPlugin = {
 };
 
 const reducedMotionPreferences = new Set(['reduce', 'no-preference']);
+const forcedColorsPreferences = new Set(['active', 'none']);
 const mediaCommandPlugin = {
   name: 'lyra-media-command',
   async executeCommand({ command, payload, session }) {
-    if (command !== 'set-reduced-motion') return;
+    if (command !== 'set-reduced-motion' && command !== 'set-forced-colors') return;
     if (session.browser.type !== 'playwright') {
       throw new Error(`Media commands do not support browser type ${session.browser.type}.`);
     }
-    if (!reducedMotionPreferences.has(payload)) {
-      throw new Error('Reduced motion must be "reduce" or "no-preference".');
+    if (command === 'set-reduced-motion') {
+      if (!reducedMotionPreferences.has(payload)) {
+        throw new Error('Reduced motion must be "reduce" or "no-preference".');
+      }
+      await session.browser.getPage(session.id).emulateMedia({ reducedMotion: payload });
+      return true;
     }
-
-    await session.browser.getPage(session.id).emulateMedia({ reducedMotion: payload });
+    if (!forcedColorsPreferences.has(payload)) {
+      throw new Error('Forced colors must be "active" or "none".');
+    }
+    await session.browser.getPage(session.id).emulateMedia({ forcedColors: payload });
     return true;
   },
 };

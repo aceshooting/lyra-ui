@@ -83,7 +83,7 @@ export const styles = css`
      how high its own z-index is: that z-index only orders siblings inside the row's own context.
      The last row always looks correct, which is why a small fixture never catches it.
 
-     :focus-within lifts the row while something inside it holds focus. An open lr-menu is included
+     :focus-within lifts the row while something inside it holds focus. An open lr-dropdown is included
      explicitly as well: opening a menu can trigger a virtual measurement/render pass after the
      menu moves focus, and that pass can transiently drop focus to <body> while the fixed popup
      remains open. Keying the layer to the popup's own durable open state prevents that valid
@@ -92,7 +92,7 @@ export const styles = css`
      The value deliberately matches [part='group'] below rather than exceeding it, so the two land
      on the same layer and DOM order decides: groups render before the rows, so an active row wins
      while the group header remains non-interactive decoration. */
-  [part='row']:where(:focus-within, :has(lr-menu[open])) {
+  [part='row']:where(:focus-within, :has(lr-dropdown[open])) {
     z-index: var(--lr-layer-content);
   }
   /* lr-thread-list's renderItem callback is rendered inside this shadow root, so descendant
@@ -142,11 +142,8 @@ export const styles = css`
     position: sticky;
     inset-block-start: 0;
     z-index: var(--lr-layer-content);
-    /* The group content a consumer copies in here is frequently interactive (a collapse toggle, a
-       menu), but this is a *copy* of a row that already exists in the list, so interactivity is
-       opt-in: a consumer that wants the pinned copy clickable sets
-       lr-virtual-list::part(sticky-group) { pointer-events: auto; }. Left as-is, clicks and hover
-       fall through to the rows underneath. */
+    /* This is an inert, aria-hidden visual copy of a real row. Pointer input passes through so the
+       copy never creates a mouse-only action while its semantic/keyboard owner is virtualized. */
     pointer-events: none;
   }
   /* Scrolled above the first group there is nothing to pin. The band stays in the DOM anyway so its

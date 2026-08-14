@@ -69,6 +69,17 @@ it('applies group required and disabled states when server rendering provides no
   expect(wasBarred, 'disabled still bars the required violation').to.be.true;
 });
 
+it('treats missing ancestry discovery as standalone during nested SSR construction', () => {
+  const radio = document.createElement('lr-radio') as LyraRadio;
+  Object.defineProperty(radio, 'closest', { configurable: true, value: undefined });
+  const internals = radio as unknown as {
+    currentGroup(): unknown;
+    syncFormState(): void;
+  };
+  expect(internals.currentGroup()).to.equal(null);
+  expect(() => internals.syncFormState()).to.not.throw();
+});
+
 it('emits one cancelable group-owned lr-invalid alias when its aggregate validity fails a check', async () => {
   const group = (await fixture(html`
     <lr-radio-group required label="Choice">
@@ -211,7 +222,7 @@ it('accepts an owned radio-shaped invalid target from another realm without inst
 
 it('renders radio semantics and explicit false states', async () => {
   const el = (await fixture(html`<lr-radio>One</lr-radio>`)) as LyraRadio;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.getAttribute('role')).to.equal('radio');
   expect(base.getAttribute('aria-checked')).to.equal('false');
   expect(base.getAttribute('aria-disabled')).to.equal('false');
@@ -714,7 +725,7 @@ it('dims the base part via the :disabled pseudo-class when disabled only through
     </form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-radio') as LyraRadio;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
   expect(el.disabled).to.be.false;
   expect(el.effectiveDisabled).to.be.true;
@@ -962,11 +973,13 @@ it('owns only radios in its default option slot, excluding support subtrees and 
   await outer.updateComplete;
 
   expect(outerRadio.effectiveDisabled).to.be.true;
-  expect(outerRadio.name).to.equal('outer');
+  expect(outerRadio.name).to.equal('author');
+  expect(outerRadio.effectiveName).to.equal('outer');
   expect(helper.effectiveDisabled, 'a support-slot control remains standalone').to.be.false;
   expect(helper.name).to.equal('helper-name');
   expect(inner.effectiveDisabled, 'a nested group owns its own radio').to.be.false;
-  expect(inner.name).to.equal('inner');
+  expect(inner.name).to.equal('inner-name');
+  expect(inner.effectiveName).to.equal('inner');
 
   helper.click();
   expect(helper.checked, 'an excluded support radio still selects itself').to.be.true;
@@ -1106,7 +1119,8 @@ it('synchronously reconciles both groups when a checked radio moves between name
 
   destination.append(moved);
 
-  expect(moved.name).to.equal('destination');
+  expect(moved.name).to.equal('author-name');
+  expect(moved.effectiveName).to.equal('destination');
   expect(moved.effectiveRequired).to.be.true;
   expect(remaining.effectiveRequired).to.be.true;
   expect(remaining.validity.valid, 'an owned child is not the group validity proxy').to.be.true;
@@ -1133,7 +1147,8 @@ it('releases group-imposed state while its group is disconnected and reapplies i
   const radio = group.querySelector('lr-radio') as LyraRadio;
   await Promise.all([group.updateComplete, radio.updateComplete]);
   expect(radio.effectiveDisabled).to.be.true;
-  expect(radio.name).to.equal('group-name');
+  expect(radio.name).to.equal('author-name');
+  expect(radio.effectiveName).to.equal('group-name');
 
   group.remove();
   expect(radio.effectiveDisabled).to.be.false;
@@ -1142,10 +1157,11 @@ it('releases group-imposed state while its group is disconnected and reapplies i
 
   wrapper.append(group);
   expect(radio.effectiveDisabled).to.be.true;
-  expect(radio.name).to.equal('group-name');
+  expect(radio.name).to.equal('author-name');
+  expect(radio.effectiveName).to.equal('group-name');
 });
 
-it('restores author-provided names when a group name clears or a radio leaves its ownership', async () => {
+it('preserves author-provided names while effective group authority changes', async () => {
   const group = (await fixture(html`
     <lr-radio-group name="group-name">
       <lr-radio name="author-name" value="a">A</lr-radio>
@@ -1153,22 +1169,55 @@ it('restores author-provided names when a group name clears or a radio leaves it
   `)) as LyraRadioGroup;
   const radio = group.querySelector('lr-radio') as LyraRadio;
   await group.updateComplete;
-  expect(radio.name).to.equal('group-name');
+  expect(radio.name).to.equal('author-name');
+  expect(radio.effectiveName).to.equal('group-name');
 
   group.name = '';
   await group.updateComplete;
   expect(radio.name).to.equal('author-name');
   expect(radio.getAttribute('name')).to.equal('author-name');
+  expect(radio.effectiveName).to.equal('author-name');
 
   group.name = 'second-group-name';
   await group.updateComplete;
-  expect(radio.name).to.equal('second-group-name');
+  expect(radio.name).to.equal('author-name');
+  expect(radio.effectiveName).to.equal('second-group-name');
 
   radio.remove();
   await new Promise((resolve) => queueMicrotask(resolve));
   await radio.updateComplete;
   expect(radio.name).to.equal('author-name');
   expect(radio.getAttribute('name')).to.equal('author-name');
+});
+
+it('projects effective group name and size without overwriting late authored child state', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <lr-radio-group name="aggregate" size="l">
+        <lr-radio name="author" size="s" value="a">A</lr-radio>
+      </lr-radio-group>
+    </div>
+  `);
+  const group = wrapper.querySelector('lr-radio-group') as LyraRadioGroup;
+  const radio = group.querySelector('lr-radio') as LyraRadio;
+  await Promise.all([group.updateComplete, radio.updateComplete]);
+  expect(radio.name).to.equal('author');
+  expect(radio.size).to.equal('s');
+  expect(radio.effectiveName).to.equal('aggregate');
+  expect(radio.effectiveSize).to.equal('l');
+
+  radio.name = 'late-author';
+  radio.size = 'xs';
+  await Promise.all([group.updateComplete, radio.updateComplete]);
+  expect(radio.name).to.equal('late-author');
+  expect(radio.size).to.equal('xs');
+  expect(radio.effectiveName).to.equal('aggregate');
+  expect(radio.effectiveSize).to.equal('l');
+
+  wrapper.append(radio);
+  await radio.updateComplete;
+  expect(radio.effectiveName).to.equal('late-author');
+  expect(radio.effectiveSize).to.equal('xs');
 });
 
 it('keeps the author name through a direct move between already-connected named groups', async () => {
@@ -1185,7 +1234,8 @@ it('keeps the author name through a direct move between already-connected named 
   destination.append(radio);
   await new Promise((resolve) => setTimeout(resolve, 0));
   await Promise.all([destination.updateComplete, source.updateComplete, radio.updateComplete]);
-  expect(radio.name).to.equal('destination');
+  expect(radio.name).to.equal('author-name');
+  expect(radio.effectiveName).to.equal('destination');
 
   destination.name = '';
   await destination.updateComplete;
@@ -1274,10 +1324,10 @@ it('reconciles appended and removed radios and releases group-imposed state', as
   expect(group.getAttribute('name')).to.equal('choice');
   expect(added.effectiveDisabled).to.be.true;
   expect(
-    added.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-required'),
+    added.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-required'),
     'disabled radios do not own the group validity constraint',
   ).to.equal('false');
-  expect(added.shadowRoot!.querySelector('[part="base"]')!.getAttribute('tabindex')).to.equal('-1');
+  expect(added.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('tabindex')).to.equal('-1');
 
   const removedEvent = oneEvent(slot, 'slotchange');
   removed.remove();
@@ -1664,7 +1714,7 @@ describe('lr-radio-group size', () => {
     expect(large.getBoundingClientRect().height).to.be.greaterThan(small.getBoundingClientRect().height);
   });
 
-  it('propagates size to plain/button options and updates dynamic children', async () => {
+  it('projects effective size to plain/button options and updates dynamic children', async () => {
     const el = (await fixture(html`
       <lr-radio-group name="plan" label="Plan" size="l">
         <lr-radio value="a">Alpha</lr-radio>
@@ -1673,7 +1723,8 @@ describe('lr-radio-group size', () => {
     `)) as LyraRadioGroup;
     await el.updateComplete;
     const options = [...el.querySelectorAll('lr-radio, lr-radio-button')] as LyraRadio[];
-    expect(options.map((radio) => radio.size)).to.deep.equal(['l', 'l']);
+    expect(options.map((radio) => radio.size)).to.deep.equal(['m', 'm']);
+    expect(options.map((radio) => radio.effectiveSize)).to.deep.equal(['l', 'l']);
 
     const added = document.createElement('lr-radio') as LyraRadio;
     added.value = 'c';
@@ -1681,12 +1732,13 @@ describe('lr-radio-group size', () => {
     el.append(added);
     await new Promise((resolve) => setTimeout(resolve, 0));
     await added.updateComplete;
-    expect(added.size).to.equal('l');
+    expect(added.size).to.equal('m');
+    expect(added.effectiveSize).to.equal('l');
 
     el.size = 's';
     await el.updateComplete;
     await Promise.all([...el.querySelectorAll('lr-radio, lr-radio-button')].map((radio) => radio.updateComplete));
-    expect([...el.querySelectorAll('lr-radio, lr-radio-button')].map((radio) => radio.size)).to.deep.equal(['s', 's', 's']);
+    expect([...el.querySelectorAll('lr-radio, lr-radio-button')].map((radio) => radio.effectiveSize)).to.deep.equal(['s', 's', 's']);
   });
 
   it('renders "small"/"large" at the same geometry as "s"/"l"', async () => {
@@ -1705,10 +1757,12 @@ describe('lr-radio-group size', () => {
       </lr-radio-group>
     `)) as LyraRadioGroup;
     await el.updateComplete;
-    expect((el.querySelector('lr-radio') as LyraRadio).size).to.equal('l');
+    const option = el.querySelector('lr-radio') as LyraRadio;
+    expect(option.size).to.equal('s');
+    expect(option.effectiveSize).to.equal('l');
   });
 
-  it('restores group size when an owned option is resized later', async () => {
+  it('preserves a late authored size while the group remains visually authoritative', async () => {
     const el = (await fixture(html`
       <lr-radio-group name="plan" label="Plan" size="l">
         <lr-radio value="a">Alpha</lr-radio>
@@ -1718,7 +1772,8 @@ describe('lr-radio-group size', () => {
     option.size = 's';
     await new Promise((resolve) => setTimeout(resolve, 0));
     await option.updateComplete;
-    expect(option.size).to.equal('l');
+    expect(option.size).to.equal('s');
+    expect(option.effectiveSize).to.equal('l');
   });
 
   it('is accessible at a non-default tier', async () => {
@@ -2514,6 +2569,49 @@ describe('lr-radio-group branch-coverage edge cases', () => {
     expect(b.checked).to.be.false;
   });
 
+  it('excludes hidden, inert, and aria-disabled ancestor subtrees from roving navigation', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group label="Choice">
+        <lr-radio value="a" checked>A</lr-radio>
+        <span inert><lr-radio value="b">B</lr-radio></span>
+        <span aria-hidden=" TRUE "><lr-radio value="c">C</lr-radio></span>
+        <span aria-disabled=" true "><lr-radio value="d">D</lr-radio></span>
+        <lr-radio value="e">E</lr-radio>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    const [a, b, c, d, e] = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+    await group.updateComplete;
+
+    const changed = oneEvent(group, 'change');
+    a.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'ArrowDown', bubbles: true, composed: true, cancelable: true,
+    }));
+    await changed;
+    expect(e.checked).to.be.true;
+    expect([b, c, d].every((radio) => !radio.checked)).to.be.true;
+  });
+
+  it('observes live ancestor availability changes and keeps exactly one available roving stop', async () => {
+    const group = (await fixture(html`
+      <lr-radio-group label="Choice">
+        <span id="first-wrap"><lr-radio value="a" checked>A</lr-radio></span>
+        <span id="second-wrap"><lr-radio value="b">B</lr-radio></span>
+      </lr-radio-group>
+    `)) as LyraRadioGroup;
+    const [a, b] = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+    const firstWrap = group.querySelector<HTMLElement>('#first-wrap')!;
+    await group.updateComplete;
+
+    firstWrap.setAttribute('aria-hidden', ' TRUE ');
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    await group.updateComplete;
+    const tabStops = [a, b].filter(
+      (radio) => radio.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!.tabIndex === 0,
+    );
+    expect(tabStops.length).to.equal(1);
+    expect(tabStops[0]?.value).to.equal('b');
+  });
+
   it('ignores a composed keydown retargeted to a nested inner group that owns no radios itself', async () => {
     const outer = (await fixture(html`
       <lr-radio-group label="Outer">
@@ -2638,6 +2736,29 @@ describe('lr-radio-group branch-coverage edge cases', () => {
     ).to.equal('a');
     expect(a.checked).to.be.true;
     expect(b.checked).to.be.false;
+  });
+
+  it('lets the group remain the sole reset owner during a real form reset', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-radio-group name="choice" value="a">
+          <lr-radio value="a">A</lr-radio>
+          <lr-radio value="b">B</lr-radio>
+        </lr-radio-group>
+      </form>
+    `)) as HTMLFormElement;
+    const group = form.querySelector('lr-radio-group') as LyraRadioGroup;
+    const [a, b] = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+    await group.updateComplete;
+
+    b.click();
+    expect(group.value).to.equal('b');
+    form.reset();
+
+    expect(group.value).to.equal('a');
+    expect(a.checked).to.be.true;
+    expect(b.checked).to.be.false;
+    expect(new FormData(form).get('choice')).to.equal('a');
   });
 
   it('formStateRestoreCallback clears the selection for a non-string restored state', async () => {

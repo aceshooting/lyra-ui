@@ -1,8 +1,14 @@
 import type { PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
-import { LyraChart, lockChartType, type Series } from './chart.class.js';
+import {
+  LyraChart,
+  lockChartType,
+  type LyraChartConfiguration,
+  type Series,
+} from './chart.class.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import {
   binValues,
   normalizeHistogramBinCount,
@@ -11,7 +17,7 @@ import {
 import { styles } from './histogram.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_histogramFrequency, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_histogramFrequency, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -32,7 +38,11 @@ export class LyraHistogram extends LyraChart {
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
     histogramFrequency: LYRA_DEFAULT_histogramFrequency,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -43,33 +53,51 @@ export class LyraHistogram extends LyraChart {
   // here (mirrors `LyraChart.styles`) since the inherited `renderDataTable()`
   // relies on it to visually hide the fallback `<table>`/description when
   // `showDataTable` is false.
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
   override type = 'bar' as const;
 
   @property({ converter: { fromAttribute: (value) => normalizeHistogramBinCount(value) } })
   bins = 10;
   @property({ attribute: false }) values: number[] = [];
-  /** Dataset label used for the legend/tooltip/accessible summary. Falls back to a localized "Frequency" when unset. */
-  @property() override label = '';
+  /** Dataset label used for the legend, tooltip, table, and summary. */
+  @property({ attribute: 'series-label' }) seriesLabel = '';
 
   /**
    * Appends raw finite samples to `values`. The inherited signature is retained so histogram
    * remains substitutable for `LyraChart`; its category label has no meaning for rebinned samples.
    */
-  override appendData(_label: string, values: (number | null)[], maxPoints: number = 0): void {
+  appendSamples(values: readonly (number | null)[], maxSamples: number = 0): void {
     const appended = values.filter((value): value is number =>
       typeof value === 'number' && Number.isFinite(value),
     );
     const combined = [...this.values, ...appended];
-    const limit = Number.isFinite(maxPoints) ? Math.max(0, Math.floor(maxPoints)) : 0;
+    const limit = Number.isFinite(maxSamples) ? Math.max(0, Math.floor(maxSamples)) : 0;
     this.values = limit > 0 ? combined.slice(-limit) : combined;
+  }
+
+  protected override normalizeEffectiveConfig(
+    config: LyraChartConfiguration | undefined,
+  ): LyraChartConfiguration | undefined {
+    if (!config) return undefined;
+    // Histogram owns its bar controller and derives every category/datum from `values`/`bins`.
+    // Preserve advanced options/plugins while preventing raw fixed keys from turning it into a
+    // different chart or silently replacing the derived distribution.
+    const normalized = { ...config };
+    delete normalized.type;
+    delete normalized.data;
+    return normalized;
+  }
+
+  /** @deprecated Use `appendSamples(values, maxSamples?)`. */
+  override appendData(_label: string, values: (number | null)[], maxPoints: number = 0): void {
+    this.appendSamples(values, maxPoints);
   }
 
   protected override chartContentChanged(changed: PropertyValues): boolean {
     return (
       super.chartContentChanged(changed) ||
-      ['values', 'bins', 'label'].some((name) => changed.has(name))
+      ['values', 'bins', 'seriesLabel'].some((name) => changed.has(name))
     );
   }
 }
@@ -126,7 +154,7 @@ Object.defineProperty(LyraHistogram.prototype, 'datasets', {
   get(this: LyraHistogram): Series[] {
     return [
       {
-        label: this.label || this.localize('histogramFrequency'),
+        label: this.seriesLabel || this.localize('histogramFrequency'),
         data: binnedBuckets(this).map((b) => b.count),
       },
     ];

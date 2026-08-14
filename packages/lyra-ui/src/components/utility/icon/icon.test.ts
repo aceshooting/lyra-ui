@@ -17,7 +17,7 @@ it('uses mapped defaults and reflects name changes', async () => {
 
 it('renders a named SVG path as a decorative icon', async () => {
   const el = (await fixture(html`<lr-icon name="search"></lr-icon>`)) as LyraIcon;
-  expect((el.shadowRoot!.querySelector('path')) != null).to.equal(true);
+  expect(el.shadowRoot!.querySelector('path') != null).to.equal(true);
   expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-hidden')).to.equal('true');
 });
 
@@ -26,21 +26,25 @@ it('is accessible when given a label', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('forwards the host accessible name to the shadow SVG, including late changes', async () => {
+it('forwards the host accessible name to one stable semantic owner, including late changes', async () => {
   const el = (await fixture(html`<lr-icon name="search" aria-label="Find"></lr-icon>`)) as LyraIcon;
   const svg = el.shadowRoot!.querySelector('svg')!;
+  const owner = el.shadowRoot!.querySelector('.semantic-owner')!;
 
-  expect(svg.getAttribute('aria-label')).to.equal('Find');
-  expect(svg.getAttribute('aria-hidden')).to.equal('false');
+  expect(owner.getAttribute('role')).to.equal('img');
+  expect(owner.getAttribute('aria-label')).to.equal('Find');
+  expect(owner.getAttribute('aria-hidden')).to.equal('false');
+  expect(svg.getAttribute('aria-hidden')).to.equal('true');
 
   el.setAttribute('aria-label', 'Search');
   await el.updateComplete;
-  expect(svg.getAttribute('aria-label')).to.equal('Search');
+  expect(owner.getAttribute('aria-label')).to.equal('Search');
 
   el.removeAttribute('aria-label');
   await el.updateComplete;
-  expect(svg.hasAttribute('aria-label')).to.be.false;
-  expect(svg.getAttribute('aria-hidden')).to.equal('true');
+  expect(owner.hasAttribute('aria-label')).to.be.false;
+  expect(owner.hasAttribute('role')).to.be.false;
+  expect(owner.getAttribute('aria-hidden')).to.equal('true');
 });
 
 it('renders custom SVG nodes inside the shadow SVG', async () => {
@@ -64,7 +68,7 @@ it('does not clone hyphenated light-DOM custom elements into the SVG namespace',
     </lr-icon>
   `);
   await (el as LyraIcon).updateComplete;
-  expect((el.shadowRoot!.querySelector('svg > x-icon-test-node')) == null).to.be.true;
+  expect(el.shadowRoot!.querySelector('svg > x-icon-test-node') == null).to.be.true;
   expect(el.shadowRoot!.querySelector('svg > path')).to.exist;
 });
 
@@ -88,7 +92,9 @@ it('strips event-handler and href attributes when cloning slotted custom SVG con
 
 it('tracks assigned SVG attribute and descendant mutations only while connected', async () => {
   const el = (await fixture(html`
-    <lr-icon><g><path d="M1 1"></path></g></lr-icon>
+    <lr-icon
+      ><g><path d="M1 1"></path></g
+    ></lr-icon>
   `)) as LyraIcon;
   const parent = el.parentElement!;
   const sourceGroup = el.querySelector('g')!;
@@ -183,9 +189,7 @@ function svgResponse(body: string, ok = true): Response {
 }
 
 /** Stubs `window.fetch`, returning the restore function every caller runs from a `finally`. */
-function stubFetch(
-  handler: (url: string, init?: RequestInit) => Promise<Response>,
-): () => void {
+function stubFetch(handler: (url: string, init?: RequestInit) => Promise<Response>): () => void {
   const original = window.fetch;
   window.fetch = ((input: RequestInfo | URL, init?: RequestInit) =>
     handler(String(input), init)) as typeof window.fetch;
@@ -194,8 +198,7 @@ function stubFetch(
   };
 }
 
-const partCount = (el: LyraIcon, selector: string): number =>
-  el.shadowRoot!.querySelectorAll(selector).length;
+const partCount = (el: LyraIcon, selector: string): number => el.shadowRoot!.querySelectorAll(selector).length;
 
 describe('lr-icon icon libraries', () => {
   afterEach(() => {
@@ -215,9 +218,7 @@ describe('lr-icon icon libraries', () => {
     const resolver = (name: string) => `https://icons.test/${name}.svg`;
     registerIconLibrary('test-lib', { resolver });
     expect(getIconLibrary('test-lib')?.name).to.equal('test-lib');
-    expect(getIconLibrary('test-lib')?.resolver('star', '', '')).to.equal(
-      'https://icons.test/star.svg',
-    );
+    expect(getIconLibrary('test-lib')?.resolver('star', '', '')).to.equal('https://icons.test/star.svg');
     unregisterIconLibrary('test-lib');
     expect(getIconLibrary('test-lib')).to.equal(undefined);
   });
@@ -229,7 +230,9 @@ describe('lr-icon icon libraries', () => {
       return Promise.resolve(svgResponse(CIRCLE_SVG));
     });
     try {
-      registerIconLibrary('test-lib', { resolver: (name) => `https://icons.test/${name}.svg` });
+      registerIconLibrary('test-lib', {
+        resolver: (name) => `https://icons.test/${name}.svg`,
+      });
       const el = (await fixture(html`<lr-icon library="test-lib" name="star"></lr-icon>`)) as LyraIcon;
       await waitUntil(() => partCount(el, '[part="svg"] circle') === 1);
       expect(requested).to.deep.equal(['https://icons.test/star.svg']);
@@ -340,9 +343,7 @@ describe('lr-icon icon libraries', () => {
 
       expect(ambientRequests).to.equal(0);
       expect(firstRequests).to.deep.equal(['https://first-owner.test/app/icons/shared.svg']);
-      expect(secondRequests).to.deep.equal([
-        'https://second-owner.test/dashboard/icons/shared.svg',
-      ]);
+      expect(secondRequests).to.deep.equal(['https://second-owner.test/dashboard/icons/shared.svg']);
       expect(first.shadowRoot!.querySelectorAll('[part="svg"] circle').length).to.equal(1);
       expect(second.shadowRoot!.querySelectorAll('[part="svg"] rect').length).to.equal(1);
 
@@ -389,7 +390,7 @@ describe('lr-icon icon libraries', () => {
     delete flag['__lrIconXss'];
     const malicious =
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
-      '<script>window.__lrIconXss = "script";<\/script>' +
+      '<script>window.__lrIconXss = "script";</script>' +
       '<circle cx="12" cy="12" r="5" onload="window.__lrIconXss = \'onload\'"></circle>' +
       '<a href="javascript:window.__lrIconXss = \'href\'"><rect width="4" height="4"></rect></a>' +
       '</svg>';
@@ -404,6 +405,36 @@ describe('lr-icon icon libraries', () => {
       expect(flag['__lrIconXss']).to.equal(undefined);
     } finally {
       delete flag['__lrIconXss'];
+      restore();
+    }
+  });
+
+  it('strips every external SVG resource sink while retaining local fragment references', async () => {
+    const remote =
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
+      '<defs><path id="local" d="M0 0h1v1z"/></defs>' +
+      '<use id="same" href="#local"/><use id="external" href="https://tracker.test/a.svg#x"/>' +
+      '<image id="image" xlink:href="https://tracker.test/pixel.png"/>' +
+      '<path id="paint" fill="url(https://tracker.test/paint.svg#x)" style="filter:url(https://tracker.test/f.svg#x)"/>' +
+      '<style>@import url(https://tracker.test/icon.css); path{stroke:url(https://tracker.test/s.svg#x)}</style>' +
+      '</svg>';
+    const restore = stubFetch(() => Promise.resolve(svgResponse(remote)));
+    try {
+      const el = (await fixture(html`<lr-icon src="https://icons.test/resources.svg"></lr-icon>`)) as LyraIcon;
+      await waitUntil(() => partCount(el, '[part="svg"]') === 1);
+      const same = el.shadowRoot!.querySelector('#same')!;
+      const external = el.shadowRoot!.querySelector('#external')!;
+      const image = el.shadowRoot!.querySelector('#image');
+      const paint = el.shadowRoot!.querySelector('#paint')!;
+      expect(same.getAttribute('href')).to.equal('#local');
+      expect(external.hasAttribute('href')).to.be.false;
+      expect(image?.hasAttribute('href') ?? false).to.be.false;
+      expect(image?.hasAttributeNS('http://www.w3.org/1999/xlink', 'href') ?? false).to.be.false;
+      expect(paint.hasAttribute('fill')).to.be.false;
+      expect(paint.hasAttribute('style')).to.be.false;
+      expect(el.shadowRoot!.querySelectorAll('style').length).to.equal(0);
+      expect(el.shadowRoot!.innerHTML.includes('tracker.test')).to.be.false;
+    } finally {
       restore();
     }
   });
@@ -440,9 +471,7 @@ describe('lr-icon icon libraries', () => {
       expect(alert.textContent!.trim().length > 0).to.be.true;
       expect(alert.textContent!.includes('404')).to.be.false;
       expect(alert.textContent!.includes('Not Found')).to.be.false;
-      const sink = document.querySelector<HTMLElement>(
-        `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
-      )!;
+      const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
       expect(sink.parentElement === document.body).to.be.true;
       expect(sink.childElementCount).to.equal(1);
       expect(sink.textContent).to.equal(alert.textContent);
@@ -456,9 +485,7 @@ describe('lr-icon icon libraries', () => {
     const restore = stubFetch(() => Promise.resolve(svgResponse('', false)));
     try {
       const el = (await fixture(html`<lr-icon hidden></lr-icon>`)) as LyraIcon;
-      const sink = document.querySelector<HTMLElement>(
-        `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
-      )!;
+      const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
       const errored = oneEvent(el, 'lr-error');
       el.src = 'https://icons.test/hidden-missing.svg';
       await errored;
@@ -479,9 +506,7 @@ describe('lr-icon icon libraries', () => {
       const errored = oneEvent(el, 'lr-error');
       el.src = 'https://icons.test/missing.svg';
       await errored;
-      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim()).to.equal(
-        'Icone indisponible',
-      );
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim()).to.equal('Icone indisponible');
     } finally {
       restore();
     }
@@ -527,7 +552,9 @@ describe('lr-icon icon libraries', () => {
       const el = (await fixture(html`<lr-icon library="late-lib" name="search"></lr-icon>`)) as LyraIcon;
       expect(partCount(el, 'svg > path')).to.equal(1);
       const loaded = oneEvent(el, 'lr-load');
-      registerIconLibrary('late-lib', { resolver: (name) => `https://icons.test/${name}.svg` });
+      registerIconLibrary('late-lib', {
+        resolver: (name) => `https://icons.test/${name}.svg`,
+      });
       await loaded;
       expect(partCount(el, '[part="svg"] circle')).to.equal(1);
     } finally {
@@ -536,15 +563,17 @@ describe('lr-icon icon libraries', () => {
   });
 
   it('re-resolves when a library is re-registered with a different resolver', async () => {
-    const restore = stubFetch((url) =>
-      Promise.resolve(svgResponse(url.includes('/v2/') ? RECT_SVG : CIRCLE_SVG)),
-    );
+    const restore = stubFetch((url) => Promise.resolve(svgResponse(url.includes('/v2/') ? RECT_SVG : CIRCLE_SVG)));
     try {
-      registerIconLibrary('swap-lib', { resolver: (name) => `https://icons.test/${name}.svg` });
+      registerIconLibrary('swap-lib', {
+        resolver: (name) => `https://icons.test/${name}.svg`,
+      });
       const el = (await fixture(html`<lr-icon library="swap-lib" name="star"></lr-icon>`)) as LyraIcon;
       await waitUntil(() => partCount(el, '[part="svg"] circle') === 1);
       const loaded = oneEvent(el, 'lr-load');
-      registerIconLibrary('swap-lib', { resolver: (name) => `https://icons.test/v2/${name}.svg` });
+      registerIconLibrary('swap-lib', {
+        resolver: (name) => `https://icons.test/v2/${name}.svg`,
+      });
       await loaded;
       expect(partCount(el, '[part="svg"] rect')).to.equal(1);
       expect(partCount(el, '[part="svg"] circle')).to.equal(0);
@@ -556,7 +585,9 @@ describe('lr-icon icon libraries', () => {
   it('falls back to the built-in glyph set when a library is unregistered', async () => {
     const restore = stubFetch(() => Promise.resolve(svgResponse(CIRCLE_SVG)));
     try {
-      registerIconLibrary('revert-lib', { resolver: (name) => `https://icons.test/${name}.svg` });
+      registerIconLibrary('revert-lib', {
+        resolver: (name) => `https://icons.test/${name}.svg`,
+      });
       const el = (await fixture(html`<lr-icon library="revert-lib" name="search"></lr-icon>`)) as LyraIcon;
       await waitUntil(() => partCount(el, '[part="svg"] circle') === 1);
       unregisterIconLibrary('revert-lib');
@@ -603,12 +634,7 @@ describe('lr-icon icon libraries', () => {
         },
       });
       const el = (await fixture(html`
-        <lr-icon
-          library="async-lib"
-          name="star"
-          family="classic"
-          variant="regular"
-        ></lr-icon>
+        <lr-icon library="async-lib" name="star" family="classic" variant="regular"></lr-icon>
       `)) as LyraIcon;
       await waitUntil(() => resolverCalls.length === 1);
       el.family = 'sharp';
@@ -646,12 +672,8 @@ describe('lr-icon icon libraries', () => {
       });
     });
     try {
-      const first = (await fixture(
-        html`<lr-icon src="https://icons.test/shared.svg"></lr-icon>`,
-      )) as LyraIcon;
-      const second = (await fixture(
-        html`<lr-icon src="https://icons.test/shared.svg"></lr-icon>`,
-      )) as LyraIcon;
+      const first = (await fixture(html`<lr-icon src="https://icons.test/shared.svg"></lr-icon>`)) as LyraIcon;
+      const second = (await fixture(html`<lr-icon src="https://icons.test/shared.svg"></lr-icon>`)) as LyraIcon;
       await waitUntil(() => calls === 1);
       first.remove();
       expect(signal?.aborted).to.equal(false);
@@ -679,18 +701,12 @@ describe('lr-icon icon libraries', () => {
         resolver: () => 'https://icons.test/canonical.svg',
         mutator: (svg) => svg.setAttribute('data-owner', 'b'),
       });
-      const first = (await fixture(
-        html`<lr-icon library="mutator-a" name="star"></lr-icon>`,
-      )) as LyraIcon;
-      const second = (await fixture(
-        html`<lr-icon library="mutator-b" name="star"></lr-icon>`,
-      )) as LyraIcon;
+      const first = (await fixture(html`<lr-icon library="mutator-a" name="star"></lr-icon>`)) as LyraIcon;
+      const second = (await fixture(html`<lr-icon library="mutator-b" name="star"></lr-icon>`)) as LyraIcon;
       await waitUntil(() => partCount(first, '[part="svg"]') === 1);
       await waitUntil(() => partCount(second, '[part="svg"]') === 1);
 
-      const plain = (await fixture(
-        html`<lr-icon src="https://icons.test/canonical.svg"></lr-icon>`,
-      )) as LyraIcon;
+      const plain = (await fixture(html`<lr-icon src="https://icons.test/canonical.svg"></lr-icon>`)) as LyraIcon;
       await waitUntil(() => partCount(plain, '[part="svg"]') === 1);
       const firstSvg = first.shadowRoot!.querySelector('[part="svg"]')!;
       const secondSvg = second.shadowRoot!.querySelector('[part="svg"]')!;
@@ -717,9 +733,7 @@ describe('lr-icon icon libraries', () => {
       failed.src = 'https://icons.test/retry.svg';
       await errored;
 
-      const retried = (await fixture(
-        html`<lr-icon src="https://icons.test/retry.svg"></lr-icon>`,
-      )) as LyraIcon;
+      const retried = (await fixture(html`<lr-icon src="https://icons.test/retry.svg"></lr-icon>`)) as LyraIcon;
       await waitUntil(() => partCount(retried, '[part="svg"] rect') === 1);
       expect(calls).to.equal(2);
     } finally {
@@ -757,14 +771,56 @@ describe('lr-icon icon libraries', () => {
       )) as LyraIcon;
       await waitUntil(() => partCount(el, '[part="svg"]') === 1);
       const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
-      expect(svg.getAttribute('aria-label')).to.equal('Favorite');
-      expect(svg.getAttribute('aria-hidden')).to.equal('false');
+      const owner = el.shadowRoot!.querySelector('.semantic-owner')!;
+      expect(owner.getAttribute('role')).to.equal('img');
+      expect(owner.getAttribute('aria-label')).to.equal('Favorite');
+      expect(svg.getAttribute('aria-hidden')).to.equal('true');
       await expect(el).to.be.accessible();
 
       el.label = '';
       await el.updateComplete;
-      expect(svg.hasAttribute('aria-label')).to.be.false;
-      expect(svg.getAttribute('aria-hidden')).to.equal('true');
+      expect(owner.hasAttribute('aria-label')).to.be.false;
+      expect(owner.getAttribute('aria-hidden')).to.equal('true');
+    } finally {
+      restore();
+    }
+  });
+
+  it('keeps the same named semantic owner through loading, loaded, empty, and error states', async () => {
+    let resolveSlow: ((response: Response) => void) | undefined;
+    const slow = new Promise<Response>((resolve) => {
+      resolveSlow = resolve;
+    });
+    const restore = stubFetch((url) => {
+      if (url.endsWith('/slow.svg')) return slow;
+      if (url.endsWith('/empty.svg')) return Promise.resolve(svgResponse('   '));
+      return Promise.resolve(svgResponse('', false));
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-icon src="https://icons.test/slow.svg" label="Remote status"></lr-icon>`,
+      )) as LyraIcon;
+      await aTimeout(0);
+      const owner = el.shadowRoot!.querySelector('.semantic-owner')!;
+      expect(owner.getAttribute('role')).to.equal('img');
+      expect(owner.getAttribute('aria-label')).to.equal('Remote status');
+      expect(el.shadowRoot!.querySelectorAll('[part="svg"]').length).to.equal(0);
+
+      resolveSlow?.(svgResponse(CIRCLE_SVG));
+      await waitUntil(() => partCount(el, '[part="svg"]') === 1);
+      expect(el.shadowRoot!.querySelector('.semantic-owner') === owner).to.be.true;
+      expect(owner.getAttribute('aria-label')).to.equal('Remote status');
+
+      el.src = 'https://icons.test/empty.svg';
+      await waitUntil(() => partCount(el, '[part="empty"]') === 1);
+      expect(el.shadowRoot!.querySelector('.semantic-owner') === owner).to.be.true;
+      expect(owner.getAttribute('aria-label')).to.equal('Remote status');
+
+      const errored = oneEvent(el, 'lr-error');
+      el.src = 'https://icons.test/error.svg';
+      await errored;
+      expect(el.shadowRoot!.querySelector('.semantic-owner') === owner).to.be.true;
+      expect(owner.getAttribute('aria-label')).to.equal('Remote status');
     } finally {
       restore();
     }
@@ -938,9 +994,7 @@ describe('lr-icon presentation knobs', () => {
   it('implements fixed, intrinsic, square, roomy, and deprecated auto-width canvases', async () => {
     const icon = async (attributes = ''): Promise<LyraIcon> =>
       (await fixture(
-        html`<lr-icon name="search" style="font-size: 20px" .canvas=${
-          attributes || undefined
-        }></lr-icon>`,
+        html`<lr-icon name="search" style="font-size: 20px" .canvas=${attributes || undefined}></lr-icon>`,
       )) as LyraIcon;
     const plain = await icon();
     const fixed = await icon('fixed');
@@ -1009,25 +1063,38 @@ describe('lr-icon presentation knobs', () => {
 
   it('defaults an icon animation cycle to the mirrored one-second duration token', async function () {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) this.skip();
-    const el = (await fixture(
-      html`<lr-icon name="search" animation="spin"></lr-icon>`,
-    )) as LyraIcon;
+    const el = (await fixture(html`<lr-icon name="search" animation="spin"></lr-icon>`)) as LyraIcon;
     const svg = el.shadowRoot!.querySelector<SVGSVGElement>('[part~="svg"]')!;
     expect(getComputedStyle(svg).animationDuration).to.equal('1s');
   });
 
+  it('uses the beat scale hook exactly once for default and custom peaks', async function () {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) this.skip();
+    const el = (await fixture(html`<lr-icon name="search" animation="beat"></lr-icon>`)) as LyraIcon;
+    const svg = el.shadowRoot!.querySelector<SVGSVGElement>('[part~="svg"]')!;
+    const middleTransform = (): string => {
+      const animation = svg.getAnimations()[0];
+      const frames = (animation?.effect as KeyframeEffect | undefined)?.getKeyframes() ?? [];
+      return String(frames.find((frame) => frame.offset === 0.5)?.transform ?? '');
+    };
+    expect(middleTransform()).to.match(/1\.25/);
+    expect(middleTransform()).not.to.match(/1\.5625/);
+
+    el.style.setProperty('--beat-scale', '1.4');
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(middleTransform()).to.match(/1\.4/);
+  });
+
   it('stops icon animations under prefers-reduced-motion', async () => {
-    const el = (await fixture(
-      html`<lr-icon name="search" animation="spin"></lr-icon>`,
-    )) as LyraIcon;
+    const el = (await fixture(html`<lr-icon name="search" animation="spin"></lr-icon>`)) as LyraIcon;
     const svg = el.shadowRoot!.querySelector<SVGSVGElement>('[part~="svg"]')!;
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
       expect(getComputedStyle(svg).animationName).to.equal('none');
       return;
     }
 
-    const reducedRule = el.shadowRoot!.adoptedStyleSheets
-      .flatMap((sheet) => [...sheet.cssRules])
+    const reducedRule = el
+      .shadowRoot!.adoptedStyleSheets.flatMap((sheet) => [...sheet.cssRules])
       .find(
         (rule): rule is CSSMediaRule =>
           rule instanceof CSSMediaRule &&

@@ -1,14 +1,15 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import {
   type LyraPhoneInput,
-  type PhoneNumberAdapter,
+  type LyraPhoneNumberAdapter,
   loadLibphonenumberAdapter,
 } from './phone-input.js';
 import './phone-input.js';
 import '../button/button.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { styles } from './phone-input.styles.js';
 
-const adapter: PhoneNumberAdapter = {
+const adapter: LyraPhoneNumberAdapter = {
   countries: [
     { code: 'LU', callingCode: '352' },
     { code: 'FR', callingCode: '33' },
@@ -109,6 +110,86 @@ it('reconciles country, visible selection, canonical value, and FormData when co
   el.adapter = undefined;
   await el.updateComplete;
   expect(el.country).to.equal('');
+});
+
+it('uses one valid catalog country for every initial projection and parser call', async () => {
+  const parsedCountries: Array<string | undefined> = [];
+  const localAdapter: LyraPhoneNumberAdapter = {
+    countries: adapter.countries,
+    parse(input, country) {
+      parsedCountries.push(country);
+      return { status: 'valid', e164: '+33621123456', formatted: input, country: 'LU' };
+    },
+  };
+  const el = await fixture<LyraPhoneInput>(html`
+    <lr-phone-input
+      country="LU"
+      default-country="LU"
+      .countries=${[{ code: 'FR', callingCode: '33' }]}
+      .adapter=${localAdapter}
+    ></lr-phone-input>
+  `);
+  el.value = '621123456';
+  await el.updateComplete;
+
+  const select = el.shadowRoot!.querySelector<HTMLSelectElement>('[part="country-select"]')!;
+  expect(el.country).to.equal('FR');
+  expect(select.value).to.equal('FR');
+  expect(el.shadowRoot!.querySelector('[part="country-code"]')!.textContent!.trim()).to.equal('FR');
+  expect(el.shadowRoot!.querySelector('[part="calling-code"]')!.textContent!.trim()).to.equal('+33');
+  expect(parsedCountries.at(-1)).to.equal('FR');
+  expect(el.country, 'an out-of-catalog detected country cannot split the projection').to.equal('FR');
+});
+
+it('treats an explicitly empty countries catalog as authoritative over adapter metadata', async () => {
+  const parsedCountries: Array<string | undefined> = [];
+  const localAdapter: LyraPhoneNumberAdapter = {
+    countries: adapter.countries,
+    parse(_input, country) {
+      parsedCountries.push(country);
+      return { status: 'incomplete' };
+    },
+  };
+  const el = await fixture<LyraPhoneInput>(html`
+    <lr-phone-input
+      default-country="LU"
+      .countries=${[]}
+      .adapter=${localAdapter}
+    ></lr-phone-input>
+  `);
+  el.value = '123';
+  await el.updateComplete;
+
+  const select = el.shadowRoot!.querySelector<HTMLSelectElement>('[part="country-select"]')!;
+  expect(el.country).to.equal('');
+  expect(select.disabled).to.be.true;
+  expect([...select.options].map((option) => option.value)).to.deep.equal(['']);
+  expect(el.shadowRoot!.querySelector('[part="calling-code"]') === null).to.be.true;
+  expect(parsedCountries.at(-1)).to.equal(undefined);
+});
+
+it('owns frozen snapshots of explicit and adapter-provided country catalogs', async () => {
+  const explicit = [{ code: 'LU', callingCode: '352', label: 'Luxembourg' }];
+  const automatic = [{ code: 'FR', callingCode: '33', label: 'France' }];
+  const localAdapter: LyraPhoneNumberAdapter = {
+    countries: automatic,
+    parse: () => ({ status: 'empty' }),
+  };
+  const el = await fixture<LyraPhoneInput>(html`
+    <lr-phone-input .countries=${explicit} .adapter=${localAdapter}></lr-phone-input>
+  `);
+  explicit[0]!.label = 'Forged';
+  explicit.push({ code: 'DE', callingCode: '49', label: 'Germany' });
+  automatic[0]!.label = 'Forged adapter';
+  expect(el.countries).to.deep.equal([{ code: 'LU', callingCode: '352', label: 'Luxembourg' }]);
+  expect(Object.isFrozen(el.countries)).to.be.true;
+  expect(Object.isFrozen(el.countries![0])).to.be.true;
+
+  el.countries = undefined;
+  await el.updateComplete;
+  const options = [...el.shadowRoot!.querySelectorAll<HTMLOptionElement>('[part="country-select"] option')];
+  expect(options.map((option) => option.value)).to.deep.equal(['FR']);
+  expect(options[0]!.textContent).to.contain('France');
 });
 
 it('suppresses host click/focus in the same task that fieldset disablement starts', async () => {
@@ -744,6 +825,9 @@ it('lets every explicit label source outrank the generic fallback name', async (
   el.accessibleLabel = 'Contact number';
   await el.updateComplete;
   expect(input.getAttribute('aria-label')).to.equal('Contact number');
+  el.accessibleLabel = '';
+  await el.updateComplete;
+  expect(input.getAttribute('aria-label'), 'an explicitly empty host label still wins').to.equal('');
 
   // Clearing every source falls back to the same localized name again, never to no name at all.
   el.accessibleLabel = null;
@@ -929,31 +1013,43 @@ it('lets an explicit countries list take precedence over the adapter, applies cu
   expect(optionValues).to.deep.equal(['LU', 'FR']);
 });
 
-it('synthesizes a single country row from default-country when no countries or adapter are supplied', async () => {
+it('keeps an empty automatic catalog empty when no adapter metadata is available', async () => {
   const el = (await fixture(html`
     <lr-phone-input label="Phone number" default-country="LU"></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
   const select = el.shadowRoot!.querySelector('[part="country-select"]') as HTMLSelectElement;
 
-  expect(select.options.length).to.equal(1);
-  expect(select.options[0]!.value).to.equal('LU');
-  // The synthesized row has no calling code, so the "+NN" prefix span is
-  // omitted entirely rather than rendering an empty "+".
+  expect(el.country).to.equal('');
+  expect(select.disabled).to.be.true;
+  expect([...select.options].map((option) => option.value)).to.deep.equal(['']);
   expect((el.shadowRoot!.querySelector('[part="calling-code"]')) == null).to.be.true;
 });
 
-it('falls back to the raw code when Intl.DisplayNames rejects a malformed synthesized country code', async () => {
+it('rejects malformed catalog rows and hostile getters without aborting the remaining catalog', async () => {
+  const hostile = {} as { code: string; callingCode: string };
+  Object.defineProperty(hostile, 'code', {
+    get() {
+      throw new Error('hostile code getter');
+    },
+  });
   const el = (await fixture(html`
-    <lr-phone-input label="Phone number" default-country="LUX"></lr-phone-input>
+    <lr-phone-input
+      label="Phone number"
+      .countries=${[
+        { code: 'LU' },
+        hostile,
+        { code: 'FR', callingCode: 'not-a-code' },
+        { code: 'be', callingCode: '+32' },
+      ] as unknown as Array<{ code: string; callingCode: string }>}
+    ></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
   const select = el.shadowRoot!.querySelector('[part="country-select"]') as HTMLSelectElement;
 
-  // "LUX" isn't a well-formed 2-letter region subtag, so
-  // `Intl.DisplayNames.prototype.of` throws and `countryName()` falls back
-  // to the raw (synthesized, unfiltered) code.
-  expect(select.options[0]!.textContent).to.include('LUX');
+  expect([...select.options].map((option) => option.value)).to.deep.equal(['BE']);
+  expect(el.country).to.equal('BE');
+  expect(el.shadowRoot!.querySelector('[part="calling-code"]')!.textContent!.trim()).to.equal('+32');
 });
 
 it('falls back to the raw code if Intl.DisplayNames.prototype.of ever returns a nullish value', async () => {
@@ -963,7 +1059,11 @@ it('falls back to the raw code if Intl.DisplayNames.prototype.of ever returns a 
   };
   try {
     const el = (await fixture(html`
-      <lr-phone-input label="Phone number" default-country="LU"></lr-phone-input>
+      <lr-phone-input
+        label="Phone number"
+        default-country="LU"
+        .countries=${[{ code: 'LU', callingCode: '352' }]}
+      ></lr-phone-input>
     `)) as LyraPhoneInput;
     await el.updateComplete;
     const select = el.shadowRoot!.querySelector('[part="country-select"]') as HTMLSelectElement;
@@ -971,7 +1071,7 @@ it('falls back to the raw code if Intl.DisplayNames.prototype.of ever returns a 
     // `getDisplayNames(...).of('LU')` was stubbed to return `undefined`; the
     // `?? row.code` fallback in `countryName()` must still resolve to 'LU'
     // rather than rendering "undefined".
-    expect(select.options[0]!.textContent).to.equal('LU');
+    expect(select.options[0]!.textContent).to.equal('LU (+352)');
   } finally {
     Intl.DisplayNames.prototype.of = original;
   }
@@ -1004,9 +1104,9 @@ it('normalizes a nullish value assignment to the empty string instead of throwin
 });
 
 it('coerces an adapter result claiming "valid" status without a proper E.164 value into invalid', async () => {
-  const badAdapter: PhoneNumberAdapter = {
+  const badAdapter = {
     parse: (input) => ({ status: 'valid', formatted: input === '123' ? 'nope' : undefined, country: 'LU' }),
-  };
+  } as unknown as LyraPhoneNumberAdapter;
   const el = (await fixture(
     html`<lr-phone-input label="Phone number" .adapter=${badAdapter}></lr-phone-input>`,
   )) as LyraPhoneInput;
@@ -1027,8 +1127,8 @@ it('coerces an adapter result claiming "valid" status without a proper E.164 val
   expect(el.inputValue).to.equal('456');
 });
 
-it('falls back to the no-adapter heuristic when the adapter throws', async () => {
-  const throwingAdapter: PhoneNumberAdapter = {
+it('fails closed when an adapter throws instead of accepting a value through the fallback parser', async () => {
+  const throwingAdapter: LyraPhoneNumberAdapter = {
     parse: () => {
       throw new Error('adapter exploded');
     },
@@ -1042,8 +1142,79 @@ it('falls back to the no-adapter heuristic when the adapter throws', async () =>
   input.value = '+352621123456';
   input.dispatchEvent(new InputEvent('input', { bubbles: true }));
 
-  expect(el.phoneStatus).to.equal('valid');
-  expect(el.value).to.equal('+352621123456');
+  expect(el.phoneStatus).to.equal('invalid');
+  expect(el.value).to.equal('');
+  expect(el.validity.typeMismatch).to.be.true;
+});
+
+it('fails closed on unknown discriminators and hostile parse-result getters', async () => {
+  const results: unknown[] = [
+    { status: 'mystery', e164: '+352621123456' },
+    Object.defineProperty({}, 'status', {
+      get() {
+        throw new Error('hostile status getter');
+      },
+    }),
+  ];
+  const badAdapter = {
+    parse: () => results.shift(),
+  } as unknown as LyraPhoneNumberAdapter;
+  const el = await fixture<LyraPhoneInput>(html`
+    <lr-phone-input required .adapter=${badAdapter}></lr-phone-input>
+  `);
+
+  for (const inputValue of ['123', '456']) {
+    el.input!.value = inputValue;
+    el.input!.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    expect(el.phoneStatus).to.equal('invalid');
+    expect(el.value).to.equal('');
+    expect(el.validity.typeMismatch).to.be.true;
+  }
+});
+
+it('forwards readonly/autofocus to the telephone input and locks every user mutation', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <lr-phone-input
+        name="phone"
+        readonly
+        autofocus
+        required
+        default-country="LU"
+        .adapter=${adapter}
+        value="+352621123456"
+      ></lr-phone-input>
+    </form>
+  `);
+  const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
+  await el.updateComplete;
+  const input = el.input!;
+  const select = el.shadowRoot!.querySelector<HTMLSelectElement>('[part="country-select"]')!;
+  expect(input.readOnly).to.be.true;
+  expect(input.autofocus).to.be.true;
+  expect(select.disabled, 'the country selector has no native readonly mode').to.be.true;
+  expect(el.validity.valid, 'readonly bars constraint validation').to.be.true;
+  expect(new FormData(form).get('phone')).to.equal('+352621123456');
+
+  const originalValue = el.value;
+  const originalCountry = el.country;
+  input.value = '000000';
+  input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  select.value = 'FR';
+  select.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(el.value).to.equal(originalValue);
+  expect(el.country).to.equal(originalCountry);
+  el.focus();
+  expect(el.shadowRoot!.activeElement === input, 'readonly remains focusable/copyable').to.be.true;
+});
+
+it('encodes a non-color forced-colors affordance for country hover and press', () => {
+  const css = styles.cssText;
+  const forced = css.slice(css.indexOf('@media (forced-colors: active)'));
+  expect(forced).to.include("[part='country-select']:not(:disabled):hover + [part='country-trigger']");
+  expect(forced).to.match(/hover[^}]*outline-style:\s*dashed/s);
+  expect(forced).to.match(/active[^}]*outline-style:\s*solid/s);
+  expect(forced).to.include('Highlight');
 });
 
 it('leaves selection getters and setters as safe no-ops before the internal input has rendered', () => {
@@ -1367,6 +1538,32 @@ describe('lr-phone-input implicit form submission', () => {
     await el.updateComplete;
     let submits = 0;
     form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
+    enterOn(el);
+    expect(submits).to.equal(1);
+  });
+
+  it('submits the ElementInternals form owner when the control is outside that form', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <form id="external-phone-form"></form>
+        <lr-phone-input
+          form="external-phone-form"
+          name="tel"
+          value="+35226123456"
+          label="Phone"
+        ></lr-phone-input>
+      </div>
+    `);
+    const form = wrapper.querySelector('form')!;
+    const el = wrapper.querySelector('lr-phone-input') as LyraPhoneInput;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submits += 1;
+    });
+
+    expect(el.form === form).to.be.true;
     enterOn(el);
     expect(submits).to.equal(1);
   });

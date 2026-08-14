@@ -12,7 +12,7 @@ export async function loadSvgSanitizerDeps(
   try {
     // Tolerates either a `{ default }` ESM interop shape or the module itself already being the
     // API -- different bundler/interop configurations resolve DOMPurify's CJS package either way
-    // (matches archive-loader.ts/spreadsheet-loader.ts's identical dual-shape tolerance).
+    // (matches docx-loader.ts/spreadsheet-loader.ts's identical dual-shape tolerance).
     const module = await importDompurify();
     return resolveOptionalPeerCapability(module, isHtmlSanitizer);
   } catch (error) {

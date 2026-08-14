@@ -39,6 +39,16 @@ export const styles = css`
     overflow: auto;
   }
 
+  [part='tool-result-error'] {
+    display: grid;
+    gap: var(--lr-space-xs);
+    color: var(--lr-color-danger);
+  }
+
+  [part='audio-control'] {
+    max-inline-size: 100%;
+  }
+
   [part~='audio'] {
     inline-size: 100%;
   }

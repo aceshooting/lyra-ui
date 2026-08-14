@@ -45,6 +45,7 @@ import '../components/viewers/dataset-viewer/dataset-viewer.class.js';
 import '../components/viewers/document-compare/document-compare.class.js';
 import '../components/viewers/document-preview/document-preview.class.js';
 import '../components/viewers/geojson-view/geojson-view.class.js';
+import '../components/viewers/geojson-view/geojson-viewer.class.js';
 import '../components/viewers/notebook-viewer/notebook-viewer.class.js';
 import '../components/viewers/page-rail/page-rail.class.js';
 import '../components/viewers/pdf-viewer/pdf-viewer.class.js';
@@ -53,9 +54,10 @@ import '../components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.js';
 import '../components/viewers/svg-viewer/svg-viewer.class.js';
 
 it('keeps every affected class-module import out of the custom-element registry', () => {
-  const registered = [...ROOT_BARREL_TAGS, ...ROOT_BARREL_OPTIONAL_PEER_TAGS].filter((name) =>
-    customElements.get(name),
-  );
+  const registered = [
+    ...ROOT_BARREL_TAGS,
+    ...ROOT_BARREL_OPTIONAL_PEER_TAGS,
+  ].filter((name) => customElements.get(name));
   expect(registered).to.deep.equal([]);
   expect(LyraEmpty.prototype).to.be.instanceOf(Object);
 });

@@ -10,11 +10,6 @@ import { nextId } from '../../../internal/a11y.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { styles } from './graph-query-builder.styles.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
-import '../../forms/select/select.class.js';
-import '../../forms/combobox/option.class.js';
-import '../../forms/input/input.class.js';
-import '../../overlays/chip/chip.class.js';
-import '../../overlays/chip/chip-group.class.js';
 import {
   getFormOwner,
   installCustomErrorProperty,
@@ -35,9 +30,9 @@ export type GraphQueryDirection = 'out' | 'in' | 'both';
 /** One pickable relationship or node type, as offered to this component's type pickers via
  *  `relationshipTypeOptions`/`nodeTypeOptions`. */
 export interface GraphQueryTypeOption {
-  value: string;
+  readonly value: string;
   /** Display label. Falls back to `value` when omitted. */
-  label?: string;
+  readonly label?: string;
 }
 
 /**
@@ -58,83 +53,168 @@ export interface GraphQueryTypeOption {
 export interface GraphQuery {
   /** The anchor entity id the traversal starts from. Required for the query to be valid/runnable
    *  -- see `checkValidity()`. */
-  startId: string;
+  readonly startId: string;
   /** An optional specific target entity id ("find a path to this node"). Empty means any
    *  reachable node satisfying the other filters. */
-  endId: string;
+  readonly endId: string;
   /** Relationship (edge) type values to traverse. Empty means any relationship type. */
-  relationshipTypes: string[];
+  readonly relationshipTypes: readonly string[];
   /** Node type values the traversal may pass through. Empty means any node type. */
-  nodeTypes: string[];
-  direction: GraphQueryDirection;
+  readonly nodeTypes: readonly string[];
+  readonly direction: GraphQueryDirection;
   /** Minimum path length, inclusive. */
-  minHops: number;
+  readonly minHops: number;
   /** Maximum path length, inclusive. Must be `>= minHops` -- see `checkValidity()`. */
-  maxHops: number;
+  readonly maxHops: number;
 }
 
 /** One named, host-persisted query. `id` is assigned by the host (e.g. on `lr-query-save`) --
  *  this component never generates ids itself, the same controlled-list convention every other
  *  Lyra component with a host-owned collection follows. */
 export interface GraphQuerySavedItem {
-  id: string;
-  name: string;
-  query: GraphQuery;
+  readonly id: string;
+  readonly name: string;
+  readonly query: GraphQuery;
 }
 
-const EMPTY_VALUE: GraphQuery = {
+/** Frozen payload shared by the run request and accepted notification. */
+export interface GraphQueryRunDetail {
+  readonly query: GraphQuery;
+}
+
+/** Frozen payload shared by the save request and accepted notification. */
+export interface GraphQuerySaveDetail {
+  readonly name: string;
+  readonly query: GraphQuery;
+}
+
+/** Frozen payload shared by the load request and accepted notification. */
+export interface GraphQueryLoadDetail {
+  readonly id: string;
+  readonly query: GraphQuery;
+}
+
+/** Frozen payload shared by the delete request and accepted notification. */
+export interface GraphQueryDeleteDetail {
+  readonly id: string;
+}
+
+const MAX_TYPES = 500;
+const MAX_SAVED_QUERIES = 200;
+const MAX_TEXT = 256;
+const EMPTY_STRINGS: readonly string[] = Object.freeze([]);
+const EMPTY_VALUE: GraphQuery = Object.freeze({
   startId: '',
   endId: '',
-  relationshipTypes: [],
-  nodeTypes: [],
+  relationshipTypes: EMPTY_STRINGS,
+  nodeTypes: EMPTY_STRINGS,
   direction: 'both',
   minHops: 1,
   maxHops: 1,
-};
-const EMPTY_OPTIONS: GraphQueryTypeOption[] = [];
-const EMPTY_SAVED: GraphQuerySavedItem[] = [];
+});
+const EMPTY_OPTIONS: readonly GraphQueryTypeOption[] = Object.freeze([]);
+const EMPTY_SAVED: readonly GraphQuerySavedItem[] = Object.freeze([]);
 
-function stringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return [...new Set(value.filter((entry): entry is string => typeof entry === 'string'))];
+/** Reads only own data properties so a hostile provider getter cannot reject a Lit update. */
+function ownValue(record: object, key: string): unknown {
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(record, key);
+    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function boundedString(value: unknown): string {
+  return typeof value === 'string' ? value.slice(0, MAX_TEXT) : '';
+}
+
+function stringArray(value: unknown): readonly string[] {
+  if (!Array.isArray(value)) return EMPTY_STRINGS;
+  return Object.freeze([
+    ...new Set(
+      value
+        .slice(0, MAX_TYPES)
+        .filter((entry): entry is string => typeof entry === 'string')
+        .map((entry) => boundedString(entry))
+        .filter(Boolean)
+    ),
+  ]);
 }
 
 function normalizeGraphQuery(value: unknown): GraphQuery {
   const record =
-    value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
-  const direction = record['direction'];
-  return {
-    startId: typeof record['startId'] === 'string' ? record['startId'] : '',
-    endId: typeof record['endId'] === 'string' ? record['endId'] : '',
-    relationshipTypes: stringArray(record['relationshipTypes']),
-    nodeTypes: stringArray(record['nodeTypes']),
+    value !== null && typeof value === 'object' && !Array.isArray(value) ? value : EMPTY_VALUE;
+  const direction = ownValue(record, 'direction');
+  return Object.freeze({
+    startId: boundedString(ownValue(record, 'startId')),
+    endId: boundedString(ownValue(record, 'endId')),
+    relationshipTypes: stringArray(ownValue(record, 'relationshipTypes')),
+    nodeTypes: stringArray(ownValue(record, 'nodeTypes')),
     direction: direction === 'out' || direction === 'in' || direction === 'both' ? direction : 'both',
     minHops: finiteInteger(
-      typeof record['minHops'] === 'number' ? record['minHops'] : EMPTY_VALUE.minHops,
+      typeof ownValue(record, 'minHops') === 'number' ? ownValue(record, 'minHops') as number : EMPTY_VALUE.minHops,
       EMPTY_VALUE.minHops,
       1,
       20
     ),
     maxHops: finiteInteger(
-      typeof record['maxHops'] === 'number' ? record['maxHops'] : EMPTY_VALUE.maxHops,
+      typeof ownValue(record, 'maxHops') === 'number' ? ownValue(record, 'maxHops') as number : EMPTY_VALUE.maxHops,
       EMPTY_VALUE.maxHops,
       1,
       20
     ),
-  };
+  });
+}
+
+function normalizeTypeOptions(value: unknown): readonly GraphQueryTypeOption[] {
+  if (!Array.isArray(value)) return EMPTY_OPTIONS;
+  const values = new Set<string>();
+  const result: GraphQueryTypeOption[] = [];
+  for (const candidate of value.slice(0, MAX_TYPES)) {
+    if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
+    const optionValue = boundedString(ownValue(candidate, 'value'));
+    if (!optionValue || values.has(optionValue)) continue;
+    values.add(optionValue);
+    const label = boundedString(ownValue(candidate, 'label'));
+    result.push(Object.freeze({ value: optionValue, ...(label ? { label } : {}) }));
+  }
+  return Object.freeze(result);
+}
+
+function normalizeSavedQueries(value: unknown): readonly GraphQuerySavedItem[] {
+  if (!Array.isArray(value)) return EMPTY_SAVED;
+  const ids = new Set<string>();
+  const result: GraphQuerySavedItem[] = [];
+  for (const candidate of value.slice(0, MAX_SAVED_QUERIES)) {
+    if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
+    const id = boundedString(ownValue(candidate, 'id'));
+    if (!id || ids.has(id)) continue;
+    ids.add(id);
+    result.push(Object.freeze({
+      id,
+      name: boundedString(ownValue(candidate, 'name')),
+      query: normalizeGraphQuery(ownValue(candidate, 'query')),
+    }));
+  }
+  return Object.freeze(result);
 }
 
 export interface LyraGraphQueryBuilderEventMap {
   'lr-invalid': CustomEvent<undefined>;
-  'lr-input': CustomEvent<{ value: GraphQuery }>;
+  'lr-input': CustomEvent<{ readonly value: GraphQuery }>;
   'lr-validity-change': CustomEvent<{
-    valid: boolean;
-    errors: Record<string, string>;
+    readonly valid: boolean;
+    readonly errors: Readonly<Record<string, string>>;
   }>;
-  'lr-query-run': CustomEvent<{ query: GraphQuery }>;
-  'lr-query-save': CustomEvent<{ name: string; query: GraphQuery }>;
-  'lr-query-load': CustomEvent<{ id: string; query: GraphQuery }>;
-  'lr-query-delete': CustomEvent<{ id: string }>;
+  'lr-before-query-run': CustomEvent<GraphQueryRunDetail>;
+  'lr-query-run': CustomEvent<GraphQueryRunDetail>;
+  'lr-before-query-save': CustomEvent<GraphQuerySaveDetail>;
+  'lr-query-save': CustomEvent<GraphQuerySaveDetail>;
+  'lr-before-query-load': CustomEvent<GraphQueryLoadDetail>;
+  'lr-query-load': CustomEvent<GraphQueryLoadDetail>;
+  'lr-before-query-delete': CustomEvent<GraphQueryDeleteDetail>;
+  'lr-query-delete': CustomEvent<GraphQueryDeleteDetail>;
 }
 
 /**
@@ -181,10 +261,14 @@ export interface LyraGraphQueryBuilderEventMap {
  * `valueMissing` rule. Host `focus()`/`click()` reach the first rendered field, and `blur()`
  * releases whichever nested field owns deep focus.
  *
- * **Accessible name:** the region (`role="group"`) is named by, in order, a host-level
- * `aria-label` attribute, the `label` property, or the localized `graphQueryBuilderLabel` default
- * -- mirroring `<lr-query-builder>`'s identical `role="group"` region, whose own `aria-label`
- * attribute similarly wins over its internal default.
+ * Run, save, load, and delete use the same two-phase action contract: a cancelable
+ * `lr-before-query-*` request precedes any local effect, followed by a non-cancelable
+ * `lr-query-*` accepted notification. Vetoing a request suppresses its accepted notification;
+ * for save it also preserves the draft name, and for load it preserves the current `value`.
+ *
+ * **Accessible name:** a host-level `aria-label` wins. Otherwise the region (`role="group"`) is
+ * labelled by the same visible label element that renders the `label` slot/property/localized
+ * default, so visible and announced names cannot diverge.
  *
  * @customElement lr-graph-query-builder
  * @slot actions - Extra host controls rendered in the footer beside the Run button.
@@ -192,15 +276,25 @@ export interface LyraGraphQueryBuilderEventMap {
  * @slot hint - Supporting text for the complete form control.
  * @slot error - Error text for the complete form control.
  * @event lr-input - `detail: { value }` — any field changed; the full current query.
- * @event lr-validity-change - `detail: { valid, errors }` — fired only on an actual change.
- * @event lr-query-run - The Run button was activated and `reportValidity()` passed. `detail: { query }`.
- * @event lr-query-save - The Save button was activated with a non-empty name. `detail: { name, query }`
- * — the host is responsible for assigning an id and appending the entry to `savedQueries`.
- * @event lr-query-load - A saved query's Load button was activated (`value` has already been
- * replaced with it by the time this fires). `detail: { id, query }`.
- * @event lr-query-delete - A saved query's delete button was activated. `detail: { id }` — the
- * host is responsible for removing the matching entry from `savedQueries`.
- * @event lr-invalid - The complete query builder failed a validity check.
+ * @event lr-validity-change - Frozen `detail: { valid, errors }` from effective native validity,
+ *   including custom errors and validation barring; fired only on an actual change.
+ * @event lr-before-query-run - Cancelable request emitted after `reportValidity()` passes, before
+ *   accepting Run. Frozen `detail: { query }`; vetoing it suppresses `lr-query-run`.
+ * @event lr-query-run - Non-cancelable accepted Run notification. Frozen `detail: { query }`.
+ * @event lr-before-query-save - Cancelable save request with frozen `detail: { name, query }`.
+ *   Vetoing it preserves the draft name and suppresses `lr-query-save`.
+ * @event lr-query-save - Non-cancelable accepted Save notification. Frozen
+ *   `detail: { name, query }`; the host assigns an id and appends to `savedQueries`.
+ * @event lr-before-query-load - Cancelable load request with frozen `detail: { id, query }`,
+ *   emitted before `value` changes. Vetoing it preserves the current query.
+ * @event lr-query-load - Non-cancelable accepted Load notification emitted after `value` changes.
+ *   Frozen `detail: { id, query }` contains the accepted query.
+ * @event lr-before-query-delete - Cancelable delete request with frozen `detail: { id }`.
+ *   Vetoing it suppresses `lr-query-delete`.
+ * @event lr-query-delete - Non-cancelable accepted Delete notification. Frozen
+ *   `detail: { id }`; the host removes the matching entry from `savedQueries`.
+ * @event lr-invalid - Cancelable alias when the complete builder fails native validity; vetoing it
+ *   also suppresses the native invalid default.
  * @csspart base - The outer wrapper around every section.
  * @csspart label - Visible label for the complete form control.
  * @csspart hint - Supporting text for the complete form control.
@@ -305,15 +399,42 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     disabled: { type: Boolean, reflect: true, noAccessor: true },
   };
 
-  /** Pickable relationship types offered by the relationship-type "add" picker. */
+  /** Clone-owned, bounded pickable relationship types offered by the "add" picker. */
+  private _relationshipTypeOptions: readonly GraphQueryTypeOption[] = EMPTY_OPTIONS;
   @property({ attribute: false })
-  relationshipTypeOptions: GraphQueryTypeOption[] = EMPTY_OPTIONS;
-  /** Pickable node types offered by the node-type "add" picker. */
-  @property({ attribute: false }) nodeTypeOptions: GraphQueryTypeOption[] = EMPTY_OPTIONS;
-  /** Host-persisted saved queries. Controlled -- this component never mutates this array itself,
-   *  it only emits `lr-query-save`/`lr-query-delete` requests for the host to act on. Applying a
-   *  deletion requested from the focused row restores focus to the nearest survivor or save input. */
-  @property({ attribute: false }) savedQueries: GraphQuerySavedItem[] = EMPTY_SAVED;
+  get relationshipTypeOptions(): readonly GraphQueryTypeOption[] {
+    return this._relationshipTypeOptions;
+  }
+  set relationshipTypeOptions(value: readonly GraphQueryTypeOption[]) {
+    const previous = this._relationshipTypeOptions;
+    this._relationshipTypeOptions = normalizeTypeOptions(value);
+    this.requestUpdate('relationshipTypeOptions', previous);
+  }
+  /** Clone-owned, bounded pickable node types offered by the node-type "add" picker. */
+  private _nodeTypeOptions: readonly GraphQueryTypeOption[] = EMPTY_OPTIONS;
+  @property({ attribute: false })
+  get nodeTypeOptions(): readonly GraphQueryTypeOption[] {
+    return this._nodeTypeOptions;
+  }
+  set nodeTypeOptions(value: readonly GraphQueryTypeOption[]) {
+    const previous = this._nodeTypeOptions;
+    this._nodeTypeOptions = normalizeTypeOptions(value);
+    this.requestUpdate('nodeTypeOptions', previous);
+  }
+  /** Clone-owned, bounded host-persisted saved queries. Controlled -- this component never mutates
+   *  this array itself; accepted `lr-query-save`/`lr-query-delete` notifications tell the host when
+   *  to act. Applying an accepted deletion from the focused row restores focus to the nearest
+   *  survivor or save input. */
+  private _savedQueries: readonly GraphQuerySavedItem[] = EMPTY_SAVED;
+  @property({ attribute: false })
+  get savedQueries(): readonly GraphQuerySavedItem[] {
+    return this._savedQueries;
+  }
+  set savedQueries(value: readonly GraphQuerySavedItem[]) {
+    const previous = this._savedQueries;
+    this._savedQueries = normalizeSavedQueries(value);
+    this.requestUpdate('savedQueries', previous);
+  }
   /** Upper bound (inclusive) offered by the minimum/maximum hop selects. Sanitized to a finite
    *  integer in `[1, 20]`, falling back to `6`. */
   @property({ attribute: 'hop-limit', type: Number }) hopLimit = 6;
@@ -366,7 +487,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     this.internals = this.safeAttachInternals();
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init: { cancelable: true }) => this.emit('lr-invalid', undefined, init));
     this.syncFormState();
   }
 
@@ -472,10 +593,26 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     return this.disabled || this._fieldsetDisabled;
   }
 
-  /** The current validation errors, keyed by the csspart name of the field they apply to
-   *  (`'start-input'` | `'max-hops'`). Mirrors the last `lr-validity-change` event's `errors`. */
-  get errors(): Record<string, string> {
-    return { ...this._errors };
+  /** The current effective validation errors. Intrinsic errors are keyed by their field part;
+   *  a caller-supplied custom validity message is keyed by the whole-control `base` part. */
+  get errors(): Readonly<Record<string, string>> {
+    return this.publicValidityErrors();
+  }
+
+  private publicValidityErrors(): Readonly<Record<string, string>> {
+    const errors: Record<string, string> = { ...this._errors };
+    if (this.willValidate && this.validity.customError) errors['base'] = this.validationMessage;
+    return Object.freeze(errors);
+  }
+
+  private publishValiditySnapshot(): void {
+    if (!this.isConnected) return;
+    const valid = !this.willValidate || this.validity.valid;
+    const errors = valid ? Object.freeze({}) : this.publicValidityErrors();
+    const key = JSON.stringify({ valid, errors });
+    if (key === this.lastValidityKey) return;
+    this.lastValidityKey = key;
+    this.emit('lr-validity-change', Object.freeze({ valid, errors }));
   }
 
   /** @internal */
@@ -519,6 +656,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
       this.validityController.setValidity(flags, message);
     }
     this.syncValidityCustomStates();
+    this.publishValiditySnapshot();
   }
 
   /**
@@ -580,12 +718,12 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
    * matching a native control, where only another `setCustomValidity('')` clears it.
    *
    * The message is caller-supplied content, so it is used verbatim and never localized here. It is
-   * whole-control state and deliberately does not land in `errors`, which is keyed by the csspart
-   * of the field a message belongs to.
+   * whole-control state and lands in `errors.base`, keyed to the complete control's `base` part.
    */
   setCustomValidity(message: string): void {
     this.validityController.setCustomValidity(message ?? '');
     this.syncValidityCustomStates();
+    this.publishValiditySnapshot();
   }
 
   formResetCallback(): void {
@@ -664,7 +802,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     // Set before the `value` assignment, whose setter republishes the custom states.
     this.hasInteracted = true;
     this.value = next;
-    this.emit('lr-input', { value: { ...this._value } });
+    this.emit('lr-input', Object.freeze({ value: this._value }));
   }
 
   private addRelationshipType(type: string): void {
@@ -696,7 +834,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     });
   }
 
-  private captureChipRemovalFocus(group: 'relationship' | 'node-type', value: string, selected: string[]): void {
+  private captureChipRemovalFocus(group: 'relationship' | 'node-type', value: string, selected: readonly string[]): void {
     const active = this.shadowRoot?.activeElement as HTMLElement | null;
     const expectedPart = group === 'relationship' ? 'relationship-chips' : 'node-type-chips';
     if (
@@ -724,26 +862,37 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   private runQuery(): void {
     if (this.effectiveDisabled) return;
     if (!this.reportValidity()) return;
-    this.emit('lr-query-run', { query: { ...this._value } });
+    const detail: GraphQueryRunDetail = Object.freeze({ query: normalizeGraphQuery(this._value) });
+    if (this.emit('lr-before-query-run', detail, { cancelable: true }).defaultPrevented) return;
+    this.emit('lr-query-run', detail);
   }
 
   private saveQuery(): void {
     if (this.effectiveDisabled) return;
     const name = this.saveName.trim();
     if (!name) return;
-    this.emit('lr-query-save', { name, query: { ...this._value } });
+    const detail: GraphQuerySaveDetail = Object.freeze({ name, query: normalizeGraphQuery(this._value) });
+    if (this.emit('lr-before-query-save', detail, { cancelable: true }).defaultPrevented) return;
     this.saveName = '';
+    this.emit('lr-query-save', detail);
   }
 
   private loadQuery(item: GraphQuerySavedItem): void {
     if (this.effectiveDisabled) return;
+    const requested: GraphQueryLoadDetail = Object.freeze({
+      id: item.id,
+      query: normalizeGraphQuery(item.query),
+    });
+    if (this.emit('lr-before-query-load', requested, { cancelable: true }).defaultPrevented) return;
     this.setValue({ ...EMPTY_VALUE, ...item.query });
-    this.emit('lr-query-load', { id: item.id, query: { ...this._value } });
+    this.emit('lr-query-load', requested);
   }
 
   private deleteQuery(item: GraphQuerySavedItem): void {
     if (this.effectiveDisabled) return;
-    this.emit('lr-query-delete', { id: item.id });
+    const detail: GraphQueryDeleteDetail = Object.freeze({ id: item.id });
+    if (this.emit('lr-before-query-delete', detail, { cancelable: true }).defaultPrevented) return;
+    this.emit('lr-query-delete', detail);
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -754,7 +903,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     if (active?.getAttribute('part') !== 'saved-delete-button') return;
     const focusedId = active.closest<HTMLElement>('[data-query-id]')?.dataset['queryId'];
     if (!focusedId || this.savedQueries.some((item) => item.id === focusedId)) return;
-    const previous = (changed.get('savedQueries') as GraphQuerySavedItem[] | undefined) ?? [];
+    const previous = (changed.get('savedQueries') as readonly GraphQuerySavedItem[] | undefined) ?? [];
     const index = previous.findIndex((item) => item.id === focusedId);
     const target = this.savedQueries[Math.min(Math.max(index, 0), this.savedQueries.length - 1)];
     this.pendingRemovalFocus = { kind: 'saved', targetId: target?.id };
@@ -763,14 +912,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('value') || changed.has('_errors')) {
-      const valid = Object.keys(this._errors).length === 0;
-      const key = JSON.stringify({ valid, errors: this._errors });
-      if (key !== this.lastValidityKey) {
-        this.lastValidityKey = key;
-        this.emit('lr-validity-change', { valid, errors: { ...this._errors } });
-      }
-    }
+    this.publishValiditySnapshot();
     const pending = this.pendingRemovalFocus;
     if (!pending) return;
     this.pendingRemovalFocus = undefined;
@@ -829,14 +971,14 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     else if (slot.name === 'error') this.hasErrorSlot = hasContent;
   };
 
-  private labelForType(options: GraphQueryTypeOption[], value: string): string {
+  private labelForType(options: readonly GraphQueryTypeOption[], value: string): string {
     return options.find((o) => o.value === value)?.label ?? value;
   }
 
   private renderTypeFilter(
     kind: 'relationship' | 'node-type',
-    options: GraphQueryTypeOption[],
-    selected: string[],
+    options: readonly GraphQueryTypeOption[],
+    selected: readonly string[],
     add: (type: string) => void,
     remove: (type: string) => void,
     disabled: boolean
@@ -890,14 +1032,20 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     const value = this._value;
     const hasStartError = this.touchedFields.has('start-input') && Boolean(this._errors['start-input']);
     const hasHopError = this.touchedFields.has('max-hops') && Boolean(this._errors['max-hops']);
-    const regionLabel = this.getAttribute('aria-label') || this.label || this.localize('graphQueryBuilderLabel');
+    const hostLabel = this.getAttribute('aria-label');
     const hasHint = this.hasHintSlot || Boolean(this.hint);
     const hasError = this.hasErrorSlot || Boolean(this.errorText);
     const describedBy = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ');
     const hopNumber = getNumberFormat(this.effectiveLocale);
 
     return html`
-      <div part="base" role="group" aria-label=${regionLabel} aria-describedby=${describedBy || nothing}>
+      <div
+        part="base"
+        role="group"
+        aria-label=${hostLabel ?? nothing}
+        aria-labelledby=${hostLabel === null ? this.labelId : nothing}
+        aria-describedby=${describedBy || nothing}
+      >
         <div part="label" id=${this.labelId}>
           <slot name="label" @slotchange=${this.onChromeSlotChange}
             >${this.label || this.localize('graphQueryBuilderLabel')}</slot

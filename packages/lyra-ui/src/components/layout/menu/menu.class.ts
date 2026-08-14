@@ -1,36 +1,37 @@
-import { html, type TemplateResult, type PropertyValues } from "lit";
-import { property } from "lit/decorators.js";
-import type { Placement } from "@floating-ui/dom";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { place } from "../../../internal/positioner.js";
-import { rtlAwarePlacement } from "../../../internal/rtl.js";
-import { nextId, resolveAccessibleTrigger } from "../../../internal/a11y.js";
-import {
-  acquireAriaOwnership,
-  type AriaOwnershipLease,
-} from "../../../internal/aria-ownership.js";
-import type { LyraSize } from "../../../internal/variants.js";
+import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import type { Placement } from '@floating-ui/dom';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { place } from '../../../internal/positioner.js';
+import { rtlAwarePlacement } from '../../../internal/rtl.js';
+import { nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import {
   collectFocusableElements,
   composedContains,
   deepActiveElement,
-} from "../../../internal/overlay-manager.js";
-import { styles } from "./menu.styles.js";
-import { LyraMenuItem } from "./menu-item.class.js";
-import type { ContainedMenuOwner, MenuFocusTarget } from "./menu-shared.js";
-import { composedAccessibilityText } from "../../../internal/accessibility-visibility.js";
-import "./menu-item.class.js";
+} from '../../../internal/overlay-manager.js';
+import { styles } from './menu.styles.js';
+import type { LyraMenuItem } from './menu-item.class.js';
+import {
+  menuItemOwner,
+  submenuPanelController,
+  type ContainedMenuOwner,
+  type MenuFocusTarget,
+  type MenuItemOwned,
+  type MenuItemOwner,
+  type SubmenuPanelController,
+} from './menu-shared.js';
+import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
+import { isHtmlElement } from '../../../internal/dom-guards.js';
+import { tag } from '../../../internal/prefix.js';
+import './menu-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_menuLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
-export type { MenuFocusTarget } from "./menu-shared.js";
-
-export interface MenuSelectDetail {
-  value: string;
-}
+export type { MenuFocusTarget } from './menu-shared.js';
 
 /** WA-compatible selection detail. The complete item keeps `value`, checkbox state, and any
  * consumer metadata available without translating the activation into a lossy string. */
@@ -40,7 +41,7 @@ export interface MenuItemSelectDetail {
 
 /** Where a submenu prefers to sit: beside its parent row, on the inline-end side. Resolved
  *  through `rtlAwarePlacement` and then flipped by `place()` when it does not fit. */
-const SUBMENU_PLACEMENT: Placement = "right-start";
+const SUBMENU_PLACEMENT: Placement = 'right-start';
 
 /** How long the pointer must rest on a submenu parent before its submenu opens, in ms. Short
  *  enough not to feel sticky, long enough that sweeping the cursor down a list opens nothing. */
@@ -52,122 +53,45 @@ const SUBMENU_OPEN_DELAY = 150;
  *  in transit neither dismisses the open one nor opens the sibling. */
 const SUBMENU_CLOSE_DELAY = 300;
 
+function isLyraMenuItemElement(value: unknown): value is LyraMenuItem {
+  if (!isHtmlElement(value)) return false;
+  return (
+    value.localName === tag('menu-item') ||
+    value.localName === tag('dropdown-item')
+  );
+}
+
+function isLyraMenuElement(value: unknown): value is LyraMenu {
+  return isHtmlElement(value) && value.localName === tag('menu');
+}
+
 interface OwnedTimeout {
   owner: Window;
   handle: number;
 }
 
 export interface LyraMenuEventMap {
-  "lr-show": CustomEvent<undefined>;
-  "lr-hide": CustomEvent<undefined>;
-  "lr-menu-select": CustomEvent<MenuSelectDetail>;
-  "lr-select": CustomEvent<MenuItemSelectDetail>;
+  'lr-select': CustomEvent<MenuItemSelectDetail>;
 }
 /**
- * `<lr-menu>` — a menu of `<lr-menu-item>` actions. With a consumer-supplied
- * `trigger` (typically an icon button), it is an anchored dropdown: click the
- * trigger, a positioned menu appears, and clicking an item both performs the
- * action *and* closes the menu. With no trigger or `anchor`, the exact mapped
- * `<sl-menu>` authoring shape instead renders as an inline, always-visible
- * standalone menu with one roving keyboard entry point.
+ * `<lr-menu>` — the inline semantic controller mapped from `<sl-menu>`. It owns the
+ * `role="menu"` list, real roving focus, wrapping Arrow/Home/End navigation, typeahead, and the
+ * single canonical `lr-select` event. Wrap it in `<lr-dropdown>` when a trigger, positioned popup,
+ * open state, lifecycle events, or imperative overlay methods are required; those concerns belong
+ * to the dropdown shell rather than being duplicated on the menu.
  *
- * **ARIA pattern — `role="menu"`/`role="menuitem"` with real roving DOM
- * focus, not a listbox.** Two coherent, mutually-exclusive shapes were
- * available here: (a) `role="listbox"`/`role="option"` with
- * `aria-activedescendant`, the pattern `<lr-select>`'s trigger-button +
- * popup listbox uses, where DOM focus never leaves the trigger; or (b)
- * `role="menu"`/`role="menuitem"` with real focus moving between actual
- * focusable rows, the WAI-ARIA "menu button" pattern. This picks (b):
- * `<lr-menu-item>` rows are real, independently-focusable elements (see
- * that class's own doc), which is the more natural fit for a menu
- * specifically — unlike a listbox's rows, a menu's rows are conventionally
- * button-/link-shaped, and every well-known native/OS menu (and this
- * family's own `<lr-tree>`/`<lr-tree-item>` pair, which this component's
- * roving-tabindex plumbing directly mirrors) already moves real focus rather
- * than merely a virtual `aria-activedescendant` pointer. `role`/`tabIndex`
- * are consistently the menu-button shape throughout — never mixed with
- * listbox/option.
+ * An `<lr-menu-item>` with `<lr-menu slot="submenu">` uses a private, symbol-keyed presentation
+ * controller. ArrowRight steps into the submenu and ArrowLeft returns (mirrored under RTL),
+ * Enter/Space open the branch, Escape and outside pointer dismissal close only the innermost
+ * branch, hover uses an intent delay, and at most one submenu per level stays open. This internal
+ * shell does not add root-menu attributes, methods, parts, or lifecycle events.
  *
- * Interaction contract (mirrors the WAI-ARIA APG "menu button" pattern):
- * - Click the trigger (or Enter/Space on it, via the trigger's own native
- *   `click` activation) toggles the menu, moving focus to the first
- *   non-disabled item on open.
- * - ArrowDown/ArrowUp on the trigger while closed also open it, focusing the
- *   first/last non-disabled item respectively.
- * - Once open, ArrowDown/ArrowUp move the roving focus among non-disabled
- *   items (wrapping past either end — the recommended, and more common,
- *   menu-widget behavior, unlike `<lr-select>`'s clamped listbox nav).
- *   Home/End jump to the first/last non-disabled item. Enter/Space activate
- *   the focused item. Escape closes and returns focus to the trigger. A
- *   printable keypress runs type-ahead: roving focus jumps to the next
- *   non-disabled item whose text starts with the accumulated buffer, cycling
- *   from just after the active item (mirrors `<lr-select>`'s identical
- *   listbox type-ahead). All of the above (except Escape and Tab) only
- *   respond to keydowns from a real `<lr-menu-item>` target, so a slotted
- *   non-item control (e.g. a date input) keeps its own full default keyboard
- *   behavior.
- * - Tab never traps focus and never calls `preventDefault()` — the browser's
- *   own Tab navigation always proceeds untouched. It closes the menu only
- *   when focus is on its way *out* of the popup: with a focusable in the
- *   `header`/`footer` region on the far side of the keypress, the menu stays
- *   open so native Tab can carry focus there instead. With neither region
- *   filled, Tab closes exactly as it always has. Tabbing past the popup's
- *   last focusable in either direction closes it too, including from slotted
- *   non-item content — which previously left the menu open while focus
- *   walked away.
- * - Escape from `header`/`footer` content closes the menu and refocuses the
- *   trigger unconditionally, mirroring `<lr-popover>`'s handling of arbitrary
- *   popup content. `closeOnEscapeAnywhere` governs only the *legacy* shape —
- *   non-item content slotted into the **default** slot — and defaults to
- *   `false`, so existing consumers keep today's behavior unchanged.
- * - An `<lr-menu-item>` with an `<lr-menu slot="submenu">` opens that nested
- *   menu beside itself. ArrowRight steps into it and focuses its first item;
- *   ArrowLeft closes it and returns focus to the parent row — both swap under
- *   RTL, since they are inline-direction moves. Enter/Space open it too
- *   (a submenu parent is a disclosure, never an action, so it fires no
- *   selection event). Escape inside a submenu closes only that submenu: the
- *   innermost open menu is the one holding focus and the first `<lr-menu>` on
- *   the event's path, so it handles the key and every ancestor declines.
- *   Hovering a submenu parent opens it after a short intent delay and leaving
- *   closes it after a longer one, which is the tolerance that lets the cursor
- *   cut diagonally across the rows in between. At most one submenu per level
- *   is open at a time, and closing a menu closes everything below it. A
- *   selection made in a submenu arrives as the outer menu's own
- *   `lr-menu-select` — one consolidated event for the whole tree.
- * - A click outside both the trigger and the open popup closes it (mirrors
- *   `<lr-select>`'s `onDocPointer` exactly) — this does *not* refocus the
- *   trigger, since the outside click itself already moved focus somewhere
- *   the user chose; Escape and a committed selection *do* refocus the
- *   trigger, since those are dismissals with nowhere else for focus to go.
- *
- * `show(focus?)` and `hide(options?)` are the public imperative pair, for the cases the trigger
- * can't express: a slotted "Apply"/"Done" button inside the menu, a keyboard shortcut, a parent
- * restoring UI state. `hide({ focusTrigger: true })` is the one that also returns DOM focus to the
- * trigger — use it whenever the interaction that closed the menu hasn't already put focus
- * somewhere the user chose. Writing `open` directly still works and is fully equivalent apart from
- * the focus moves: the roving-tabindex reset is centralized in `updated()`, so `el.open = false`
- * never leaves a stale `tabindex="0"` tab stop on the last active item.
- *
- * The trigger element itself is read from the `trigger` slot's first assigned element. The shared
- * ARIA ownership controller applies `aria-haspopup="menu"`, `aria-expanded`, and a relationship to
- * the real popup both to that public trigger and, when it is a wrapper/custom element, to the
- * composed descendant that actually receives focus. Because a light-DOM target cannot expose a
- * shadow-private relationship directly in current browsers, the controller normalizes that edge
- * to this public menu host while retaining the real popup as the component's source. Replacement,
- * disconnect, late author writes, and nested owners restore or compose their exact baselines.
- *
- * The popup is always rendered (never `display:none`) so `.focus()` calls on
- * its content work synchronously the instant it opens — visually hidden via
- * `visibility`/`opacity` instead (identical to `<lr-select>`'s own
- * `[part="listbox"]`). `visibility` is an inherited CSS property that
- * pierces the `<slot>` projection boundary, so every closed-state
- * `<lr-menu-item>` is automatically excluded from sequential (Tab-key)
- * navigation with no separate JS bookkeeping.
+ * Selection is always one cancelable `lr-select` carrying the complete item. A nested selection
+ * bubbles through every ancestor without translation or re-emission; preventing it anywhere keeps
+ * the current branch open. Item-to-menu activation uses private owner plumbing, so neither
+ * `lr-menu-item-select` nor `lr-menu-select` is part of the public contract.
  *
  * @customElement lr-menu
- * @slot trigger - The consumer's own trigger element (typically an icon
- * button). Clicking it toggles the menu; it's positioned against via
- * `internal/positioner.js`'s `place()`.
  * @slot - `<lr-menu-item>` elements, plus optionally plain `<hr>` dividers
  * between groups (native `<hr>` already carries an implicit `separator`
  * role, matching what `role="menu"` expects between item groups). Arbitrary
@@ -180,26 +104,9 @@ export interface LyraMenuEventMap {
  * not). Collapses to no box at all while unfilled.
  * @slot footer - Same as `header`, rendered below the items — an
  * "Apply"/"Done" button, a link to a fuller settings page, a count.
- * @event lr-show - The menu is about to open, however `open` became true. Cancelable —
- *   `preventDefault()` leaves it closed. Not fired for markup that renders open from the start,
- *   nor by a menu inside an `lr-dropdown`, whose owner runs the lifecycle instead.
- * @event lr-hide - The menu is about to close. Cancelable on the same terms as `lr-show`, except
- *   on disconnect, where a veto could not be honoured.
- * @event lr-menu-select - A `<lr-menu-item>` was activated. `detail: {
- * value }` — the consolidated re-fire of that item's own
- * `lr-menu-item-select` (see `<lr-menu-item>`'s doc for why listening
- * here, rather than on every item, is the recommended approach). It is
- * not cancelable; prevent the matching cancelable `lr-select` event to stop
- * closing and focus return, or set `stay-open-on-select` on a containing dropdown. A
- * selection inside a submenu surfaces through this same event on the
- * outermost menu, closing the whole chain behind it; a submenu's own
- * `lr-show`/`lr-hide` deliberately stop at the row that owns it, so they are
- * never mistaken for this menu opening or closing.
  * @event lr-select - WA-compatible selection event carrying `detail: { item }`. Cancelable;
  *   preventing it keeps the current menu/submenu chain open. Emitted once by the menu that owns
  *   the activated item and allowed to bubble through ancestors without translation/re-emission.
- * @csspart trigger - The wrapper around the `trigger` slot (the positioning anchor).
- * @csspart popup - The positioned floating panel.
  * @csspart header - The wrapper around the `header` slot, above the list and
  * outside `role="menu"`. `display: none` while the slot is unfilled.
  * @csspart list - The `role="menu"` container wrapping the default slot.
@@ -211,48 +118,20 @@ export interface LyraMenuEventMap {
 export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    menuLabel: LYRA_DEFAULT_menuLabel,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      menuLabel: LYRA_DEFAULT_menuLabel,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
 
-  /** Whether an anchored/trigger-owned popup is open. A triggerless, unanchored standalone menu
-   * remains visible so an exact `<sl-menu>` to `<lr-menu>` tag rename preserves its presentation. */
-  private _open = false;
-  /** Whether this anchored menu is open. Every post-mount write runs the synchronous lifecycle
-   * preflight before committing state; initial markup and contained-owner synchronization stay
-   * silent. */
-  @property({ type: Boolean, reflect: true })
-  get open(): boolean {
-    return this._open;
-  }
-  set open(next: boolean) {
-    const normalized = Boolean(next);
-    if (normalized === this._open) return;
-    if (!this.hasUpdated || this.dropdownContained) {
-      this.commitOpen(normalized);
-      return;
-    }
-    if (!this.isConnected) {
-      if (!normalized) this.emit("lr-hide");
-      this.commitOpen(normalized);
-      return;
-    }
-    this.requestOpen(normalized);
-  }
+  @state() private presentationOpen = false;
+  private submenuAnchor: HTMLElement | null = null;
+  private submenuStateChange: ((open: boolean) => void) | null = null;
 
-  /**
-   * Optional placement override forwarded to `place()`. Defaults to whatever `place()` itself
-   * defaults to. A `left`/`right` side is resolved through `rtlAwarePlacement` semantics (see
-   * `internal/rtl.ts`) so e.g. `placement="left-start"` still anchors to the menu's trailing edge
-   * under RTL rather than pinning to the physical left.
-   */
-  @property({ reflect: true }) placement?: Placement;
-
-  /** Accessible name for the `role="menu"` popup — override with something
+  /** Accessible name for the `role="menu"` list — override with something
    *  specific (e.g. "Row actions") when a page has more than one menu.
    *  Localized (`menuLabel`) when left at its default. A host-level
    *  `aria-label` attribute takes precedence over both this prop and the
@@ -260,35 +139,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  matching `lr-select`/`lr-model-select`'s established
    *  `this.getAttribute('aria-label') ?? <computed default>` precedence
    *  (see `effectiveLabel`). */
-  @property() label = "Menu";
-
-  /** Extends the Escape-closes-and-refocuses-trigger behavior to keydown
-   *  events originating from non-item content slotted into the **default**
-   *  slot, i.e. rendered within `[part="list"]` alongside the
-   *  `<lr-menu-item>`s. Default `false` leaves Escape from such content with
-   *  full default keyboard behavior, matching every existing consumer.
-   *  Arrow/Home/End/Enter/Space stay scoped to real `<lr-menu-item>` targets
-   *  regardless of this property — only Escape is affected.
-   *
-   *  It has no bearing on the `header`/`footer` slots, which sit outside
-   *  `[part="list"]` and always close on Escape. Prefer those for composed
-   *  controls: they are keyboard-reachable and ARIA-valid, whereas arbitrary
-   *  content inside `role="menu"` is an `aria-required-children` violation. */
-  @property({ type: Boolean, attribute: "close-on-escape-anywhere" })
-  closeOnEscapeAnywhere = false;
-
-  /**
-   * Positions the popup against this element instead of the `trigger` slot's assigned element,
-   * and makes it the target `hide({ focusTrigger: true })` returns focus to. Property-only: an
-   * element reference has no attribute form.
-   *
-   * `<lr-menu-item>` sets it to itself on the menu assigned to its `submenu` slot, which is what
-   * turns this instance into a submenu — the anchor is also what switches the default placement
-   * from below the trigger to beside the anchoring row, and what keeps a pointerdown on that row
-   * from reading as an outside click. Setting it by hand anchors a menu to any element, for a
-   * trigger this component cannot slot (a canvas hit region, a table cell).
-   */
-  @property({ attribute: false }) anchor: HTMLElement | null = null;
+  @property() label = 'Menu';
 
   /** @internal Supplies only the menu interaction engine inside another component's popup. */
   @property({ type: Boolean, attribute: false }) dropdownContained = false;
@@ -296,15 +147,36 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   /** @internal Owner of a contained engine's open/focus-return lifecycle. */
   dropdownOwner: ContainedMenuOwner | null = null;
 
+  /** @internal Open state supplied by the containing dropdown shell. */
+  private _dropdownOpen = false;
+  @property({ type: Boolean, attribute: false })
+  get dropdownOpen(): boolean {
+    return this._dropdownOpen;
+  }
+  set dropdownOpen(next: boolean) {
+    const normalized = Boolean(next);
+    if (normalized === this._dropdownOpen) return;
+    const old = this._dropdownOpen;
+    this._dropdownOpen = normalized;
+    this.presentationOpen = normalized;
+    this.requestUpdate('dropdownOpen', old);
+  }
+
   /** @internal Renders the menu role inside a contained engine when its outer popup owns a
    * different semantic role (for example, a dialog containing an action menu). */
-  @property({ type: Boolean, attribute: false }) dropdownRendersMenuRole = false;
+  @property({ type: Boolean, attribute: false }) dropdownRendersMenuRole =
+    false;
 
   /** @internal Mirrors the mapped dropdown's default-close policy. */
-  @property({ type: Boolean, attribute: false }) dropdownStayOpenOnSelect = false;
+  @property({ type: Boolean, attribute: false }) dropdownStayOpenOnSelect =
+    false;
 
   /** @internal Density propagated by the mapped dropdown to its directly owned items. */
   @property({ attribute: false }) dropdownSize: LyraSize | undefined;
+
+  /** @internal Accessible-name fallback supplied by a containing dropdown. The menu's own
+   * host `aria-label` and explicit `label` remain authoritative. */
+  @property({ attribute: false }) dropdownLabel: string | undefined;
 
   // Plain instance fields, not @state() -- render()'s template never reads
   // either (items render via the plain default <slot>; there is no
@@ -315,61 +187,69 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private items: LyraMenuItem[] = [];
   private activeIndex = -1;
 
-  private triggerEl?: HTMLElement;
-  private triggerAria?: AriaOwnershipLease;
-  private accessibleTriggerAria?: AriaOwnershipLease;
   private cleanup?: () => void;
   private itemStateObserver?: MutationObserver;
   private pointerDocument?: Document;
-  private openRequestTarget?: boolean;
-  private pendingFocus: MenuFocusTarget = "first";
+  private pendingFocus: MenuFocusTarget = 'first';
   private submenuOpenTimer?: OwnedTimeout;
   private submenuCloseTimer?: OwnedTimeout;
-  private readonly generatedHostId = nextId("menu");
-  private readonly listId = nextId("menu-list");
+  private readonly listId = nextId('menu-list');
+  private readonly owningMenu: MenuItemOwner = {
+    activate: (item) => this.onOwnedItemSelect(item),
+  };
   // Standard menu type-ahead, mirroring lr-select's identical listbox
   // trio: printable keystrokes accumulate into this buffer and reset ~500ms
   // after the last one, so "d" then "e" narrows to "de" instead of
   // restarting the search on every keystroke.
-  private typeAheadBuffer = "";
+  private typeAheadBuffer = '';
   private typeAheadTimer?: OwnedTimeout;
+
+  /** @internal Symbol-keyed so submenu overlay mechanics never become a second public menu API. */
+  readonly [submenuPanelController] = this.createSubmenuController();
+
+  private createSubmenuController(): SubmenuPanelController {
+    const menu = this;
+    return {
+      get open(): boolean {
+        return menu.submenuAnchor !== null && menu.presentationOpen;
+      },
+      attach(anchor, onStateChange): void {
+        if (menu.submenuAnchor && menu.submenuAnchor !== anchor)
+          menu.closePresentation();
+        menu.submenuAnchor = anchor;
+        menu.submenuStateChange = onStateChange;
+        menu.syncPresentationState();
+        menu.requestUpdate();
+      },
+      detach(anchor): void {
+        if (menu.submenuAnchor !== anchor) return;
+        menu.closePresentation();
+        menu.submenuAnchor = null;
+        menu.submenuStateChange = null;
+        menu.cleanup?.();
+        menu.cleanup = undefined;
+        menu.syncPresentationState();
+        menu.requestUpdate();
+      },
+      async show(focus = 'first'): Promise<void> {
+        if (!menu.submenuAnchor) return;
+        menu.openPresentation(focus);
+        await menu.updateComplete;
+      },
+      async hide(options): Promise<void> {
+        menu.closePresentation(options);
+        await menu.updateComplete;
+      },
+    };
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (!this.id) this.id = this.generatedHostId;
     if (this.hasUpdated) {
-      const slot = this.renderRoot.querySelector<HTMLSlotElement>("slot:not([name])");
+      const slot =
+        this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
       if (slot) this.syncItemsFromSlot(slot);
-      const triggerSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="trigger"]');
-      if (triggerSlot) this.syncTriggerFromSlot(triggerSlot);
     }
-  }
-
-  /** Runs the cancelable lifecycle before changing the property, reflected attribute, focus
-   * target, or type-ahead session. Same-target writes from inside the preflight coalesce with the
-   * active request instead of recursively dispatching the same event. */
-  private requestOpen(next: boolean, beforeCommit?: () => void): boolean {
-    if (next === this._open || this.openRequestTarget === next) return false;
-    this.openRequestTarget = next;
-    const prevented = this.emit(next ? "lr-show" : "lr-hide", undefined, {
-      cancelable: true,
-    }).defaultPrevented;
-    this.openRequestTarget = undefined;
-    if (prevented) {
-      this.toggleAttribute("open", this._open);
-      return false;
-    }
-    beforeCommit?.();
-    this.commitOpen(next);
-    return true;
-  }
-
-  private commitOpen(next: boolean): void {
-    if (next === this._open) return;
-    const old = this._open;
-    this._open = next;
-    if (!next) this.resetTypeAhead();
-    this.requestUpdate("open", old);
   }
 
   protected override firstUpdated(changed: PropertyValues): void {
@@ -380,30 +260,31 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // attributes, so seed them once from the real slots after the first render.
     this.syncRegionState();
     this.syncPresentationState();
-    this.syncTriggerA11y();
   }
 
-  /** A mapped Shoelace menu without a trigger is an inline menu, not a closed popup. */
+  /** A root mapped menu is inline; only an owning menu item installs the private submenu shell. */
   private get hasStandalonePresentation(): boolean {
-    return (
-      !this.dropdownContained &&
-      !this.anchor &&
-      this.getAttribute("slot") !== "submenu" &&
-      !this.triggerEl
-    );
+    return !this.dropdownContained && !this.submenuAnchor;
+  }
+
+  private get interactionOpen(): boolean {
+    return this.hasStandalonePresentation || this.presentationOpen;
   }
 
   /** Keeps the inline mapped shape visible and gives it one keyboard entry point. */
   private syncPresentationState(): void {
     const standalone = this.hasStandalonePresentation;
-    this.toggleAttribute("data-standalone", standalone);
+    this.toggleAttribute('data-inline', standalone);
+    this.toggleAttribute('data-submenu', this.submenuAnchor !== null);
+    this.toggleAttribute('data-contained', this.dropdownContained);
     if (standalone) {
-      const active = this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
+      const active =
+        this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
       if (!active || !this.isNavigable(active)) {
         const first = this.items.find((item) => this.isNavigable(item));
         this.activeIndex = first ? this.items.indexOf(first) : -1;
       }
-    } else if (!this.open) {
+    } else if (!this.presentationOpen) {
       this.activeIndex = -1;
     }
     this.applyRovingTabIndex();
@@ -429,90 +310,55 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         .querySelector<HTMLSlotElement>(selector)
         ?.assignedElements({ flatten: true }).length ?? 0;
     this.toggleAttribute(
-      "data-has-header",
+      'data-has-header',
       assigned('slot[name="header"]') > 0
     );
     this.toggleAttribute(
-      "data-has-footer",
+      'data-has-footer',
       assigned('slot[name="footer"]') > 0
     );
-    this.toggleAttribute("data-list-empty", assigned("slot:not([name])") === 0);
+    this.toggleAttribute('data-list-empty', assigned('slot:not([name])') === 0);
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has("open") || changed.has("dropdownContained")) {
+    if (
+      changed.has('presentationOpen') ||
+      changed.has('dropdownOpen') ||
+      changed.has('dropdownContained')
+    ) {
       this.cleanup?.();
       this.cleanup = undefined;
-      // All open-driven side effects (positioning, the click-outside
-      // listener, and moving focus into the menu) live here rather than in
-      // show()/hide() so they fire however `open` became true -- via
-      // show()/hide()'s own user-interaction paths, or a consumer/test
-      // setting `el.open` directly, which bypasses both. Mirrors lr-select,
-      // whose lr-show/lr-hide veto point likewise runs one step earlier, in
-      // willUpdate().
-      if (this.open) {
-        if (!this.dropdownContained) {
+      if (this.presentationOpen) {
+        if (this.submenuAnchor) {
           this.bindDocumentPointer();
-        } else {
-          this.unbindDocumentPointer();
-        }
-        // Both reposition() and focusRoving() no-op gracefully if triggerEl/
-        // items aren't populated yet -- for markup that renders `open` true
-        // from the start, the trigger/default slots' *own* slotchange events
-        // (queued as microtasks) can still be pending at this point, ahead of
-        // Lit's synchronous first update. onTriggerSlotChange/
-        // onItemsSlotChange below re-run these same two calls once that
-        // catches up, so this always resolves correctly either way.
-        if (!this.dropdownContained) this.reposition();
+          this.reposition();
+        } else this.unbindDocumentPointer();
         this.focusRoving(this.pendingFocus);
       } else {
         this.unbindDocumentPointer();
-        // The roving state is reset here, not in hide(), for the same reason every other
-        // open-driven side effect lives here: `open` can become false through hide(), through a
-        // consumer writing `el.open = false` directly, or through disconnectedCallback()'s
-        // teardown reset -- and a closed menu must never leave a stale `tabindex="0"` tab stop on
-        // whichever item happened to be active. Focus restoration deliberately stays in hide()
-        // (see its doc): it is a user-intent-driven dismissal, and routing it through here would
-        // also fire it on the disconnectedCallback() path, stealing focus during teardown.
+        this.resetTypeAhead();
         this.activeIndex = -1;
         this.applyRovingTabIndex();
-        // Closing a menu closes everything it owns: a submenu left open would keep its own
-        // outside-click listener and, on reopen, come back already expanded.
         this.clearSubmenuTimers();
         this.closeSubmenus();
       }
-      if (!this.dropdownContained) this.syncTriggerA11y();
-    } else if (!this.dropdownContained && this.open && (changed.has("placement") || changed.has("anchor"))) {
-      // A placement change while already open must move the popup immediately --
-      // otherwise the Floating UI subscription established at open time keeps
-      // running with the stale placement baked into its computePosition options,
-      // and the new value only takes effect on the *next* open. reposition()
-      // tears down and re-subscribes, so re-invoking it here is safe.
-      this.reposition();
     }
-    if (changed.has("anchor") || changed.has("dropdownContained")) {
+    if (changed.has('dropdownContained')) {
       this.syncPresentationState();
     }
-    if (changed.has("dropdownSize")) this.applyDropdownSize();
+    if (changed.has('dropdownSize')) this.applyDropdownSize();
   }
 
   private reposition(): void {
     this.cleanup?.();
     this.cleanup = undefined;
     const popup = this.renderRoot.querySelector(
-      '[part="popup"]'
+      '.submenu-surface'
     ) as HTMLElement | null;
-    // An anchored (submenu) menu positions against its anchoring row; everything else against the
-    // slotted trigger. A submenu also defaults to sitting *beside* that row rather than below it,
-    // which `rtlAwarePlacement` mirrors under RTL and `place()`'s flip() moves to the other side
-    // when the preferred one would overflow.
-    const anchorEl = this.anchor ?? this.triggerEl;
-    const requested =
-      this.placement ?? (this.anchor ? SUBMENU_PLACEMENT : undefined);
-    if (anchorEl && popup) {
-      const placement = requested && rtlAwarePlacement(requested, this);
-      this.cleanup = place(anchorEl, popup, placement ? { placement } : {});
+    if (this.submenuAnchor && popup) {
+      const placement = rtlAwarePlacement(SUBMENU_PLACEMENT, this);
+      this.cleanup = place(this.submenuAnchor, popup, { placement });
     }
   }
 
@@ -522,34 +368,34 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.cleanup = undefined;
     this.clearOwnedTimeout(this.typeAheadTimer);
     this.typeAheadTimer = undefined;
-    this.typeAheadBuffer = "";
+    this.typeAheadBuffer = '';
     this.clearSubmenuTimers();
     this.itemStateObserver?.disconnect();
     this.itemStateObserver = undefined;
     this.unbindDocumentPointer();
-    this.releaseTriggerA11y();
-    // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
-    // `updated()`'s `open`-driven branch -- without this, `open` stays
-    // `true` across the disconnect/reconnect and `changed.has('open')` never
-    // fires again, leaving the menu rendered open with no positioning and
-    // no outside-click listener.
-    this.open = false;
+    for (const item of this.items) this.releaseItemOwner(item);
+    this._dropdownOpen = false;
+    this.presentationOpen = false;
+    this.submenuStateChange?.(false);
   }
 
   private bindDocumentPointer(): void {
     const owner = this.ownerDocument;
     if (this.pointerDocument === owner) return;
     this.unbindDocumentPointer();
-    owner.addEventListener("pointerdown", this.onDocPointer);
+    owner.addEventListener('pointerdown', this.onDocPointer);
     this.pointerDocument = owner;
   }
 
   private unbindDocumentPointer(): void {
-    this.pointerDocument?.removeEventListener("pointerdown", this.onDocPointer);
+    this.pointerDocument?.removeEventListener('pointerdown', this.onDocPointer);
     this.pointerDocument = undefined;
   }
 
-  private scheduleOwnedTimeout(callback: () => void, delay: number): OwnedTimeout | undefined {
+  private scheduleOwnedTimeout(
+    callback: () => void,
+    delay: number
+  ): OwnedTimeout | undefined {
     const owner = this.ownerDocument.defaultView;
     if (!owner) return undefined;
     return { owner, handle: owner.setTimeout(callback, delay) };
@@ -559,22 +405,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     if (timer) timer.owner.clearTimeout(timer.handle);
   }
 
-  /**
-   * Opens the menu, moving roving focus to the first (or, with `'last'`, the last) non-disabled
-   * item. Public so a consumer can open the menu from something other than the `trigger`-slotted
-   * element -- a keyboard shortcut, a context-menu gesture, a parent component restoring UI
-   * state -- without reproducing `pendingFocus`'s bookkeeping by hand. Deliberately thin:
-   * `updated()` remains the single owner of positioning, the outside-click listener, the
-   * `lr-show`/`lr-hide` events, and the initial focus move, so `el.open = true` behaves
-   * identically apart from the focus target.
-   *
-   * `'none'` opens without moving DOM focus at all, for pointer-driven opening (a hovered
-   * submenu) where pulling focus out from under the keyboard would be wrong -- and would strand
-   * it on a hidden element as soon as the pointer moved on. On an already-open menu this applies
-   * the focus target and nothing else, so ArrowRight can step into a submenu the pointer opened
-   * a moment earlier.
-   */
-  show(focus: MenuFocusTarget = "first"): void {
+  /** @internal Focuses a contained dropdown menu through the shell that owns its lifecycle. */
+  focusContained(focus: MenuFocusTarget = 'first'): void {
     if (this.dropdownContained && this.dropdownOwner) {
       if (this.dropdownOwner.open) {
         this.pendingFocus = focus;
@@ -584,130 +416,41 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         if (this.dropdownOwner.open) this.pendingFocus = focus;
         void transition;
       }
-      return;
     }
-    if (this.open) {
-      this.pendingFocus = focus;
-      this.focusRoving(focus);
-      return;
-    }
-    this.requestOpen(true, () => {
-      this.pendingFocus = focus;
-    });
   }
 
-  /**
-   * Closes the menu. A no-op when already closed.
-   *
-   * `options.focusTrigger` returns DOM focus to the `trigger`-slotted element -- or, for an
-   * anchored menu (a submenu), to its `anchor`, which is the row that opened it. Synchronously. Pass
-   * it for a dismissal with nowhere else for focus to land -- a slotted "Apply"/"Done" button
-   * inside the menu, a keyboard shortcut, Escape-like handling of your own. Leave it unset when
-   * the interaction that closed the menu has already put focus somewhere the user chose (an
-   * outside click, a Tab out) -- see the class doc's interaction contract.
-   *
-   * Deliberately thin, and deliberately *not* the owner of the roving-tabindex reset: that lives
-   * in `updated()` so a bare `el.open = false` gets it too.
-   */
-  hide(options?: { focusTrigger?: boolean }): void {
+  private openPresentation(focus: MenuFocusTarget = 'first'): void {
+    if (this.dropdownContained && this.dropdownOwner) {
+      this.focusContained(focus);
+      return;
+    }
+    this.pendingFocus = focus;
+    if (this.presentationOpen) this.focusRoving(focus);
+    else {
+      this.presentationOpen = true;
+      this.submenuStateChange?.(true);
+    }
+  }
+
+  private closePresentation(options?: { focusTrigger?: boolean }): void {
     if (this.dropdownContained && this.dropdownOwner) {
       void this.dropdownOwner.hide(options);
       return;
     }
-    if (!this.open) return;
-    if (this.requestOpen(false) && options?.focusTrigger) {
-      const trigger = this.triggerEl ?? this.anchor;
-      if (trigger) resolveAccessibleTrigger(trigger).focus();
+    if (!this.presentationOpen) return;
+    this.presentationOpen = false;
+    this.submenuStateChange?.(false);
+    if (options?.focusTrigger && this.submenuAnchor) {
+      resolveAccessibleTrigger(this.submenuAnchor).focus();
     }
   }
 
   private onDocPointer = (e: PointerEvent): void => {
     const path = e.composedPath();
     if (path.includes(this)) return;
-    // An anchored menu's anchor is its trigger, and lives outside this element -- pressing it
-    // must not read as an outside click, or the submenu closes on pointerdown and reopens on the
-    // click that follows.
-    if (this.anchor && path.includes(this.anchor)) return;
-    this.hide();
+    if (this.submenuAnchor && path.includes(this.submenuAnchor)) return;
+    this.closePresentation();
   };
-
-  private onTriggerClick = (): void => {
-    this.syncTriggerA11y();
-    this.open ? this.hide() : this.show();
-  };
-
-  private onTriggerKeyDown = (e: KeyboardEvent): void => {
-    this.syncTriggerA11y();
-    // A safety net for a menu with zero navigable items: focus never leaves
-    // the trigger in that edge case (see focusRoving()), so onListKeyDown's
-    // own Escape handling would otherwise never run.
-    if (e.key === "Escape" && this.open) {
-      e.preventDefault();
-      this.hide({ focusTrigger: true });
-      return;
-    }
-    if (this.open) return;
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault();
-        this.show("first");
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        this.show("last");
-        break;
-      default:
-        return;
-    }
-  };
-
-  private onTriggerSlotChange = (e: Event): void => {
-    this.syncTriggerFromSlot(e.target as HTMLSlotElement);
-  };
-
-  private syncTriggerFromSlot(slot: HTMLSlotElement): void {
-    const assigned = slot.assignedElements({ flatten: true });
-    const next = assigned[0] as HTMLElement | undefined;
-    if (next !== this.triggerEl) {
-      this.triggerEl = next;
-      this.syncPresentationState();
-    }
-    this.syncTriggerA11y();
-    // Covers the "open from the start" race documented on reposition()'s
-    // call in updated() -- a no-op resubscribe once already positioned.
-    if (this.open) this.reposition();
-  }
-
-  /** Own both the public slotted trigger contract and the element that actually receives focus.
-   * Element-reference relationships keep the shadow-private popup resolvable across roots. */
-  private syncTriggerA11y(): void {
-    const trigger = this.triggerEl ?? null;
-    const popup = this.renderRoot.querySelector<HTMLElement>('[part~="popup"]');
-    const contribution = {
-      attributes: {
-        "aria-haspopup": "menu",
-        "aria-expanded": this.open ? "true" : "false",
-      },
-      controls: popup ? [popup] : [],
-    };
-    if (this.triggerAria) this.triggerAria.update(trigger, contribution);
-    else this.triggerAria = acquireAriaOwnership(trigger, contribution);
-
-    const accessibleTrigger = trigger ? resolveAccessibleTrigger(trigger) : null;
-    const distinctAccessibleTrigger = accessibleTrigger !== trigger ? accessibleTrigger : null;
-    if (this.accessibleTriggerAria) {
-      this.accessibleTriggerAria.update(distinctAccessibleTrigger, contribution);
-    } else {
-      this.accessibleTriggerAria = acquireAriaOwnership(distinctAccessibleTrigger, contribution);
-    }
-  }
-
-  private releaseTriggerA11y(): void {
-    this.accessibleTriggerAria?.release();
-    this.accessibleTriggerAria = undefined;
-    this.triggerAria?.release();
-    this.triggerAria = undefined;
-  }
 
   private onItemsSlotChange = (e: Event): void => {
     this.syncItemsFromSlot(e.target as HTMLSlotElement);
@@ -715,29 +458,43 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   private syncItemsFromSlot(slot: HTMLSlotElement): void {
     this.itemStateObserver?.disconnect();
+    const previousItems = this.items;
     // A bounds check can't survive membership changes: adding, removing or
     // reordering items while open shifts survivors to new indices, so an
     // in-range activeIndex starts pointing at a different item. Re-resolve by
     // identity instead.
     const previouslyActive =
       this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
+    const focusedBefore = deepActiveElement(this.ownerDocument);
+    const activeItemLostFocus =
+      Boolean(previouslyActive) &&
+      (focusedBefore === null ||
+        focusedBefore === this.ownerDocument.body ||
+        focusedBefore === previouslyActive ||
+        composedContains(previouslyActive!, focusedBefore));
     this.items = slot
       .assignedElements({ flatten: true })
-      .filter((el): el is LyraMenuItem => el instanceof LyraMenuItem);
+      .filter(isLyraMenuItemElement);
+    for (const item of previousItems) {
+      if (!this.items.includes(item)) this.releaseItemOwner(item);
+    }
+    for (const item of this.items) this.acquireItemOwner(item);
     this.applyDropdownSize();
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    const MutationObserverCtor =
+      this.ownerDocument.defaultView?.MutationObserver;
     if (MutationObserverCtor) {
       const owner = this.ownerDocument;
       let observer: MutationObserver;
       observer = new MutationObserverCtor(() => {
-        if (this.itemStateObserver !== observer || this.ownerDocument !== owner) return;
+        if (this.itemStateObserver !== observer || this.ownerDocument !== owner)
+          return;
         this.onItemStateChange();
       });
       this.itemStateObserver = observer;
       for (const item of this.items) {
         this.itemStateObserver.observe(item, {
           attributes: true,
-          attributeFilter: ["disabled", "hidden", "aria-hidden", "inert"],
+          attributeFilter: ['disabled', 'hidden', 'aria-hidden', 'inert'],
         });
       }
     }
@@ -746,12 +503,18 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       : -1;
     this.syncPresentationState();
     this.syncRegionState();
-    if (this.open) {
+    if (this.interactionOpen) {
       if (this.activeIndex === -1) {
         // Nothing left to preserve: the active item is gone, or nothing had
         // claimed the roving focus yet (the "open from the start" race that
         // onTriggerSlotChange's reposition() call also covers).
         this.focusRoving(this.pendingFocus);
+        if (
+          activeItemLostFocus &&
+          !this.items.some((item) => this.isNavigable(item))
+        ) {
+          this.rehomeZeroSurvivorFocus();
+        }
       } else if (!this.contains(this.ownerDocument.activeElement)) {
         // Reordering an item moves the node, which blurs it and drops focus out
         // to <body> -- beyond reach of the list keydown handler, leaving an open
@@ -762,6 +525,19 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     }
   }
 
+  private acquireItemOwner(item: LyraMenuItem): void {
+    (item as unknown as Partial<MenuItemOwned>)[menuItemOwner]?.(
+      this.owningMenu
+    );
+  }
+
+  private releaseItemOwner(item: LyraMenuItem): void {
+    (item as unknown as Partial<MenuItemOwned>)[menuItemOwner]?.(
+      null,
+      this.owningMenu
+    );
+  }
+
   /** `inert` counts alongside disabled/hidden because an inert element *refuses* focus: stepping
    *  onto one leaves `focus()` a silent no-op, so roving focus is stranded on whatever held it
    *  (or on `<body>`) and every later key press dies. `closest` covers an inert ancestor, which
@@ -770,9 +546,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     return (
       !item.interactionDisabled &&
       !item.hidden &&
-      item.getAttribute("aria-hidden") !== "true" &&
+      item.getAttribute('aria-hidden') !== 'true' &&
       !item.inert &&
-      !item.closest("[inert]")
+      !item.closest('[inert]')
     );
   }
 
@@ -789,6 +565,13 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       !this.isNavigable(this.items[this.activeIndex]!)
     ) {
       const current = this.activeIndex;
+      const displaced = this.items[current]!;
+      const focused = deepActiveElement(this.ownerDocument);
+      const displacedHadFocus =
+        focused === null ||
+        focused === this.ownerDocument.body ||
+        focused === displaced ||
+        composedContains(displaced, focused);
       const next =
         navigable.find((item) => this.items.indexOf(item) > current) ??
         navigable.find((item) => this.items.indexOf(item) < current);
@@ -797,30 +580,46 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       } else {
         this.activeIndex = -1;
         this.applyRovingTabIndex();
+        if (displacedHadFocus) this.rehomeZeroSurvivorFocus();
       }
       return;
     }
     this.applyRovingTabIndex();
   };
 
-  private onItemSelect = (e: Event): void => {
-    // A nested submenu's own items are its business: its list handler already consumed and
-    // re-fired the event, and stopping it a second time here would be stopping our own re-fire.
-    // Path-based rather than a lookup in `items`, which is only populated once the default slot
-    // has fired its first slotchange -- a selection can legitimately arrive before that.
-    if (this.isForeignEvent(e)) return;
-    const item = e.target;
-    if (!(item instanceof LyraMenuItem)) return;
-    // The item's own lr-menu-item-select bubbles+composes (LyraElement.emit()'s defaults) --
-    // without stopping it here it would keep bubbling straight through this component under its
-    // own, undocumented name, right behind the consolidated lr-menu-select below.
-    e.stopPropagation();
-    const selectEvent = this.emit("lr-select", { item }, { cancelable: true });
-    this.emit("lr-menu-select", { value: item.value });
-    if (!selectEvent.defaultPrevented && !this.dropdownStayOpenOnSelect) {
-      this.hide({ focusTrigger: true });
+  /** Never leave real DOM focus on a removed/inert final row. Trigger-owned menus close and return
+   * focus through their public owner contract; a standalone menu falls back to its role owner. */
+  private rehomeZeroSurvivorFocus(): void {
+    if (this.dropdownContained && this.dropdownOwner) {
+      void this.dropdownOwner.hide({ focusTrigger: true });
+      return;
     }
-  };
+    if (this.submenuAnchor) {
+      this.closePresentation({ focusTrigger: true });
+      return;
+    }
+    const list = this.renderRoot.querySelector<HTMLElement>('[part~="list"]');
+    if (!list) return;
+    list.tabIndex = -1;
+    list.focus({ preventScroll: true });
+  }
+
+  private onOwnedItemSelect(item: HTMLElement): void {
+    if (!isLyraMenuItemElement(item) || !this.items.includes(item)) return;
+    const selectEvent = this.emit('lr-select', { item }, { cancelable: true });
+    if (!selectEvent.defaultPrevented && !this.dropdownStayOpenOnSelect) {
+      this.dismissAfterSelection(true);
+    }
+  }
+
+  private dismissAfterSelection(focusTrigger: boolean): void {
+    this.closeSubmenus();
+    if (this.dropdownContained) {
+      if (this.dropdownOwner) void this.dropdownOwner.hide({ focusTrigger });
+    } else if (this.submenuAnchor) {
+      this.closePresentation({ focusTrigger });
+    }
+  }
 
   /** Flips exactly one non-disabled item's `tabIndex` to `0` (the roving
    *  target) and every other item's to `-1` -- see `<lr-menu-item>`'s doc
@@ -832,14 +631,13 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   }
 
   /** Moves the roving focus (and real DOM focus) to the first/last
-   *  non-disabled item. A no-op when there are none -- focus then simply
-   *  stays on the trigger (see onTriggerKeyDown's Escape safety net). */
+   *  non-disabled item. A no-op when there are none. */
   private focusRoving(which: MenuFocusTarget): void {
-    if (which === "none") return;
+    if (which === 'none') return;
     const navigable = this.items.filter((i) => this.isNavigable(i));
     if (!navigable.length) return;
     const item =
-      which === "first" ? navigable[0] : navigable[navigable.length - 1];
+      which === 'first' ? navigable[0] : navigable[navigable.length - 1];
     if (!item) return; // navigable is non-empty (checked above), so item is always defined
     this.setActiveItem(item);
   }
@@ -882,7 +680,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     let owner: LyraMenuItem | undefined;
     for (const node of e.composedPath()) {
       if (node === this) break;
-      if (node instanceof LyraMenuItem) owner = node;
+      if (isLyraMenuItemElement(node)) owner = node;
     }
     return owner;
   }
@@ -900,7 +698,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private isForeignEvent(e: Event): boolean {
     for (const node of e.composedPath()) {
       if (node === this) return false;
-      if (node instanceof LyraMenu) return true;
+      if (isLyraMenuElement(node)) return true;
     }
     return false;
   }
@@ -916,7 +714,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  there is already set to match before focus moves. */
   private onListFocusIn = (e: FocusEvent): void => {
     const target = e.target;
-    if (!(target instanceof LyraMenuItem)) return;
+    if (!isLyraMenuItemElement(target)) return;
     const index = this.items.indexOf(target);
     if (index === -1 || index === this.activeIndex) return;
     this.activeIndex = index;
@@ -932,15 +730,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // is that submenu's to handle, and driving both menus from one keypress would move two roving
     // highlights (or close two menus) at once.
     if (this.isForeignEvent(e)) return;
-    const isItemTarget = e.target instanceof LyraMenuItem;
-    // Escape alone can be opted in (via closeOnEscapeAnywhere) to close the
-    // menu from slotted non-item content too, e.g. a slotted form control --
-    // every other key below stays scoped to real LyraMenuItem targets so it
-    // never hijacks keydown from arbitrary slotted content (the bug the
-    // instanceof guard below exists to prevent).
-    if (e.key === "Escape" && (isItemTarget || this.closeOnEscapeAnywhere)) {
+    const isItemTarget = isLyraMenuItemElement(e.target);
+    if (e.key === 'Escape' && isItemTarget && !this.hasStandalonePresentation) {
       e.preventDefault();
-      this.hide({ focusTrigger: true });
+      this.closePresentation({ focusTrigger: true });
       return;
     }
     if (!isItemTarget) return;
@@ -952,24 +745,24 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // -- the physical key that opens a submenu on the right opens nothing when submenus grow to
     // the left. Everything else on this switch is block-direction or direction-free.
     const intoSubmenuKey =
-      this.effectiveDirection === "rtl" ? "ArrowLeft" : "ArrowRight";
+      this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
 
     switch (e.key) {
-      case "ArrowRight":
-      case "ArrowLeft":
+      case 'ArrowRight':
+      case 'ArrowLeft':
         if (e.key === intoSubmenuKey) {
           if (current?.hasSubmenu && this.isNavigable(current)) {
             e.preventDefault();
             this.closeSubmenus(current);
-            current.openSubmenu("first");
+            current.openSubmenu('first');
           }
-        } else if (this.anchor) {
+        } else if (this.submenuAnchor) {
           // Only a submenu has anywhere to go back to; in a root menu this key stays untouched.
           e.preventDefault();
-          this.hide({ focusTrigger: true });
+          this.closePresentation({ focusTrigger: true });
         }
         break;
-      case "ArrowDown":
+      case 'ArrowDown':
         e.preventDefault();
         if (navigable.length) {
           const next =
@@ -979,7 +772,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
           if (next) this.setActiveItem(next); // modulo navigable.length keeps the index in-bounds
         }
         break;
-      case "ArrowUp":
+      case 'ArrowUp':
         e.preventDefault();
         if (navigable.length) {
           const prevIndex =
@@ -988,17 +781,17 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
           if (prev) this.setActiveItem(prev); // prevIndex is in [0, navigable.length - 1]
         }
         break;
-      case "Home":
+      case 'Home':
         e.preventDefault();
         if (navigable.length) this.setActiveItem(navigable[0]!); // safe: navigable non-empty
         break;
-      case "End":
+      case 'End':
         e.preventDefault();
         if (navigable.length)
           this.setActiveItem(navigable[navigable.length - 1]!); // safe: navigable non-empty
         break;
-      case "Enter":
-      case " ":
+      case 'Enter':
+      case ' ':
         // Mirrors lr-tree calling current.select() from its own delegated
         // keydown handler, rather than each row wiring its own keydown.
         e.preventDefault();
@@ -1006,12 +799,12 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         // moves into it, exactly as the into-submenu arrow key does.
         if (current?.hasSubmenu) {
           this.closeSubmenus(current);
-          current.openSubmenu("first");
+          current.openSubmenu('first');
         } else current?.select();
         break;
-      // Tab is deliberately absent here: it is owned by onPopupKeyDown below,
+      // Tab is deliberately absent here: a private submenu surface handles it below,
       // which sees keydowns from the header/footer regions too and so can tell
-      // "Tab moves within the popup" apart from "Tab leaves the popup". 'Tab'
+      // "Tab moves within the surface" apart from "Tab leaves the surface". 'Tab'
       // is longer than one character, so the type-ahead default arm ignores it.
       default:
         if (e.key.length === 1 && !e.altKey && !e.ctrlKey && !e.metaKey) {
@@ -1022,7 +815,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   };
 
   /**
-   * Pointer intent for submenus, bound to `[part='popup']` rather than to each row: an open
+   * Pointer intent for submenus, bound to the menu surface rather than to each row: an open
    * submenu is DOM-nested inside the row that opened it, so a `pointerover` anywhere within that
    * submenu still resolves to the parent row here (see `ownItemFromEvent`) and reads as "still
    * inside this branch". That, plus the close delay being longer than the open delay, is what
@@ -1032,7 +825,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    * keyboard.
    */
   private onPopupPointerOver = (e: PointerEvent): void => {
-    if (!this.open) return;
+    if (!this.interactionOpen) return;
     const hovered = this.ownItemFromEvent(e);
     this.clearOwnedTimeout(this.submenuOpenTimer);
     this.submenuOpenTimer = undefined;
@@ -1053,9 +846,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     }
     this.submenuOpenTimer = this.scheduleOwnedTimeout(() => {
       this.submenuOpenTimer = undefined;
-      if (!this.open || !this.items.includes(hovered)) return;
+      if (!this.interactionOpen || !this.items.includes(hovered)) return;
       this.closeSubmenus(hovered);
-      hovered.openSubmenu("none");
+      hovered.openSubmenu('none');
     }, SUBMENU_OPEN_DELAY);
   };
 
@@ -1089,25 +882,17 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     if (this.dropdownStayOpenOnSelect) event.preventDefault();
     queueMicrotask(() => {
       if (event.defaultPrevented) return;
-      this.hide();
-      // The child first returns focus to its anchoring row. Restoring after that leaves focus on
-      // the root trigger instead of on a row inside a popup that is about to disappear.
-      this.scheduleAfterUpdate(
-        () => this.triggerEl?.focus(),
-        "menu-focus-return"
-      );
+      this.dismissAfterSelection(true);
     });
   };
 
-  private popupPart(
-    name: "popup" | "header" | "list" | "footer"
-  ): HTMLElement | null {
+  private popupPart(name: 'header' | 'list' | 'footer'): HTMLElement | null {
     return this.renderRoot.querySelector<HTMLElement>(`[part="${name}"]`);
   }
 
   /**
-   * Whether a Tab/Shift+Tab keypress would move focus out of `[part='popup']` altogether, rather
-   * than to another focusable inside it. The popup's Tab sequence is
+   * Whether a Tab/Shift+Tab keypress would move focus out of the private submenu surface
+   * altogether, rather than to another focusable inside it. Its Tab sequence is
    * `[header focusables, the list, footer focusables]`, and the list contributes exactly one stop
    * -- the roving `tabindex="0"` item.
    *
@@ -1120,9 +905,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    * walked out of the popup while the menu stayed open).
    */
   private tabWouldLeavePopup(e: KeyboardEvent): boolean {
-    const header = this.popupPart("header");
-    const footer = this.popupPart("footer");
-    const listEl = this.popupPart("list");
+    const header = this.popupPart('header');
+    const footer = this.popupPart('footer');
+    const listEl = this.popupPart('list');
     const backwards = e.shiftKey;
     const active = deepActiveElement(this.ownerDocument) as HTMLElement | null;
     const headerStops = header ? collectFocusableElements(header) : [];
@@ -1147,32 +932,31 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         ? true
         : listStops.length === 0 && footerStops.length === 0;
     }
-    if (!(e.target instanceof LyraMenuItem) && hasNeighbor(listStops))
+    if (!isLyraMenuItemElement(e.target) && hasNeighbor(listStops))
       return false;
     return backwards ? headerStops.length === 0 : footerStops.length === 0;
   }
 
   /**
-   * Bound to `[part='popup']` rather than `[part='list']` so it also sees keydowns from the
+   * Bound to the private submenu surface rather than `[part='list']` so it also sees keydowns from the
    * `header`/`footer` regions, which sit outside the `role="menu"` list.
    *
-   * Escape from those regions closes unconditionally, matching `<lr-popover>`'s own handling of
-   * arbitrary popup content. `closeOnEscapeAnywhere` keeps governing only the legacy case --
-   * non-item content still slotted into the *default* slot -- so Escape bubbling up from inside
-   * the list is left entirely to `onListKeyDown`.
+   * Escape from those regions closes the submenu. Escape bubbling up from inside the list stays
+   * with `onListKeyDown`, which can distinguish this submenu from an inline root menu.
    */
   private onPopupKeyDown = (e: KeyboardEvent): void => {
-    const listEl = this.popupPart("list");
-    if (e.key === "Escape") {
+    const listEl = this.popupPart('list');
+    if (e.key === 'Escape') {
       if (listEl && e.composedPath().includes(listEl)) return;
+      if (this.hasStandalonePresentation) return;
       e.preventDefault();
-      this.hide({ focusTrigger: true });
+      this.closePresentation({ focusTrigger: true });
       return;
     }
     // No preventDefault for Tab, in either branch -- the browser's own default
-    // navigation is left to proceed untouched, only the (now-stale) open menu
-    // closes, and only when Tab is actually leaving the popup.
-    if (e.key === "Tab" && this.tabWouldLeavePopup(e)) this.hide();
+    // navigation is left to proceed untouched; only the private submenu closes, and only when Tab
+    // is actually leaving its surface.
+    if (e.key === 'Tab' && this.tabWouldLeavePopup(e)) this.closePresentation();
   };
 
   /** Standard WAI-ARIA APG menu-button type-ahead: moves the roving focus to
@@ -1183,7 +967,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.clearOwnedTimeout(this.typeAheadTimer);
     this.typeAheadBuffer += char.toLocaleLowerCase(this.effectiveLocale);
     this.typeAheadTimer = this.scheduleOwnedTimeout(() => {
-      this.typeAheadBuffer = "";
+      this.typeAheadBuffer = '';
     }, 500);
 
     const navigable = this.items.filter((i) => this.isNavigable(i));
@@ -1209,7 +993,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private resetTypeAhead(): void {
     this.clearOwnedTimeout(this.typeAheadTimer);
     this.typeAheadTimer = undefined;
-    this.typeAheadBuffer = "";
+    this.typeAheadBuffer = '';
   }
 
   /** What type-ahead matches against: the row's accessible name where it has one, its text
@@ -1220,69 +1004,55 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   }
 
   /** Resolves `label`'s effective text: a host-level `aria-label` attribute wins first
-   *  (unset by default, so this is a no-op for every existing consumer); otherwise an
-   *  explicit `label` override wins verbatim; left at the built-in default it instead
-   *  routes through `this.localize()` so a locale/`.strings` override applies without
-   *  requiring `label` itself to be set. */
+   *  (unset by default, so this is a no-op for every existing consumer), then an explicit menu
+   *  `label`, then a containing dropdown's label. With none of those supplied, it routes through
+   *  `this.localize()` so a locale/`.strings` override applies without requiring `label` itself
+   *  to be set. */
   private get effectiveLabel(): string {
-    return (
-      this.getAttribute("aria-label") ??
-      this.localize("menuLabel", this.label === "Menu" ? undefined : this.label)
-    );
+    const hostLabel = this.getAttribute('aria-label');
+    if (hostLabel !== null) return hostLabel;
+    if (this.label !== 'Menu') return this.label;
+    if (this.dropdownLabel !== undefined) return this.dropdownLabel;
+    return this.localize('menuLabel');
+  }
+
+  private renderContents(): TemplateResult {
+    return html`
+      <div part="header">
+        <slot name="header" @slotchange=${this.onRegionSlotChange}></slot>
+      </div>
+      <div
+        part="list"
+        id=${this.listId}
+        role="menu"
+        aria-label=${this.effectiveLabel}
+        @keydown=${this.onListKeyDown}
+        @focusin=${this.onListFocusIn}
+        @pointerover=${this.onPopupPointerOver}
+        @pointerleave=${this.onPopupPointerLeave}
+        @lr-menu-item-state-change=${this.onItemStateChange}
+        @lr-select=${this.onNestedSelect}
+      >
+        <slot @slotchange=${this.onItemsSlotChange}></slot>
+      </div>
+      <div part="footer">
+        <slot name="footer" @slotchange=${this.onRegionSlotChange}></slot>
+      </div>
+    `;
   }
 
   override render(): TemplateResult {
-    if (this.dropdownContained) {
-      // The default dropdown popup owns role="menu", so assigned items flatten directly beneath
-      // it. If the consumer chooses another popup role, keep a real inner menu owner instead of
-      // orphaning menuitem descendants beneath (for example) a dialog.
-      const content = html`<slot
-          @slotchange=${this.onItemsSlotChange}
-          @keydown=${this.onListKeyDown}
-          @focusin=${this.onListFocusIn}
-          @pointerover=${this.onPopupPointerOver}
-          @pointerleave=${this.onPopupPointerLeave}
-          @lr-menu-item-select=${this.onItemSelect}
-          @lr-menu-item-state-change=${this.onItemStateChange}
-          @lr-select=${this.onNestedSelect}
-        ></slot>`;
-      return this.dropdownRendersMenuRole
-        ? html`<div role="menu" aria-label=${this.effectiveLabel}>${content}</div>`
-        : content;
-    }
+    if (!this.submenuAnchor) return this.renderContents();
     return html`
       <div
-        part="trigger"
-        @click=${this.onTriggerClick}
-        @keydown=${this.onTriggerKeyDown}
-      >
-        <slot name="trigger" @slotchange=${this.onTriggerSlotChange}></slot>
-      </div>
-      <div
-        part="popup"
+        class=${this.presentationOpen
+          ? 'submenu-surface open'
+          : 'submenu-surface'}
         @keydown=${this.onPopupKeyDown}
         @pointerover=${this.onPopupPointerOver}
         @pointerleave=${this.onPopupPointerLeave}
       >
-        <div part="header">
-          <slot name="header" @slotchange=${this.onRegionSlotChange}></slot>
-        </div>
-        <div
-          part="list"
-          id=${this.listId}
-          role="menu"
-          aria-label=${this.effectiveLabel}
-          @keydown=${this.onListKeyDown}
-          @focusin=${this.onListFocusIn}
-          @lr-menu-item-select=${this.onItemSelect}
-          @lr-menu-item-state-change=${this.onItemStateChange}
-          @lr-select=${this.onNestedSelect}
-        >
-          <slot @slotchange=${this.onItemsSlotChange}></slot>
-        </div>
-        <div part="footer">
-          <slot name="footer" @slotchange=${this.onRegionSlotChange}></slot>
-        </div>
+        ${this.renderContents()}
       </div>
     `;
   }
@@ -1290,6 +1060,6 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-menu": LyraMenu;
+    'lr-menu': LyraMenu;
   }
 }

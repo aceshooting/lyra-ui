@@ -1,7 +1,11 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './file-icon.js';
 import type { LyraFileIcon } from './file-icon.js';
-import { getFileTypeMetadata, registerFileTypeMetadata } from './file-type-metadata.js';
+import {
+  createFileTypeMetadataRegistry,
+  getFileTypeMetadata,
+  type LyraFileTypeMetadataEntry,
+} from './file-type-metadata.js';
 
 describe('file type metadata', () => {
   it('covers every presentation category', () => {
@@ -20,14 +24,54 @@ describe('file type metadata', () => {
   });
 
   it('supports custom MIME mappings', () => {
-    registerFileTypeMetadata('application/x-lr-demo', {
-      label: 'Demo',
-      icon: 'code',
-      category: 'code',
-      extensions: ['.lyra'],
-    });
-    expect(getFileTypeMetadata('application/x-lr-demo').label).to.equal('Demo');
-    expect(getFileTypeMetadata('application/octet-stream', 'example.lyra').label).to.equal('Demo');
+    const registry = createFileTypeMetadataRegistry([{
+      mimeTypes: 'application/x-lr-demo',
+      metadata: { label: 'Demo', icon: 'code', category: 'code', extensions: ['.lyra'] },
+    }]);
+    expect(registry.resolve('application/x-lr-demo').label).to.equal('Demo');
+    expect(registry.resolve('application/octet-stream', 'example.lyra').label).to.equal('Demo');
+  });
+
+  it('uses bounded longest-suffix lookup for punctuation and multi-dot extensions', () => {
+    const registry = createFileTypeMetadataRegistry([
+      { mimeTypes: 'application/x-short', metadata: { label: 'GZip', icon: 'archive', category: 'archive', extensions: ['.gz'] } },
+      { mimeTypes: 'application/x-long', metadata: { label: 'Tarball', icon: 'archive', category: 'archive', extensions: ['.tar.gz'] } },
+      { mimeTypes: 'text/x-cpp', metadata: { label: 'C++', icon: 'code', category: 'code', extensions: ['.c++'] } },
+      { mimeTypes: 'text/x-dash', metadata: { label: 'Dash', icon: 'code', category: 'code', extensions: ['.foo-bar'] } },
+    ]);
+    expect(registry.resolve('', 'bundle.tar.gz').label).to.equal('Tarball');
+    expect(registry.resolve('', 'source.c++').label).to.equal('C++');
+    expect(registry.resolve('', 'name.foo-bar').label).to.equal('Dash');
+  });
+
+  it('is immune to prototype keys and snapshots/freezes caller records', () => {
+    const extensions = ['.safe'];
+    const metadata = { label: 'Safe', icon: 'code', category: 'code', extensions } as const;
+    const entries: LyraFileTypeMetadataEntry[] = [
+      { mimeTypes: ['__proto__', 'constructor', 'application/x-safe'], metadata },
+    ];
+    const registry = createFileTypeMetadataRegistry(entries);
+    extensions.push('.mutated');
+    entries.length = 0;
+    const resolved = registry.resolve('application/x-safe');
+    expect(resolved.label).to.equal('Safe');
+    expect(resolved.extensions).to.deep.equal(['.safe']);
+    expect(Object.isFrozen(resolved)).to.be.true;
+    expect(Object.isFrozen(resolved.extensions)).to.be.true;
+    expect(registry.resolve('__proto__').category).to.equal('generic');
+    expect(registry.resolve('', 'x.mutated').category).to.equal('generic');
+  });
+
+  it('reconciles replacement extensions and uses deterministic last-entry collision wins', () => {
+    const registry = createFileTypeMetadataRegistry([
+      { mimeTypes: 'application/x-demo', metadata: { label: 'Old', icon: 'file', category: 'generic', extensions: ['.old', '.same'] } },
+      { mimeTypes: 'application/x-other', metadata: { label: 'Other', icon: 'text', category: 'document', extensions: ['.same'] } },
+      { mimeTypes: 'application/x-demo', metadata: { label: 'New', icon: 'code', category: 'code', extensions: ['.new'] } },
+    ]);
+    expect(registry.resolve('application/x-demo').label).to.equal('New');
+    expect(registry.resolve('', 'x.old').category).to.equal('generic');
+    expect(registry.resolve('', 'x.same').label).to.equal('Other');
+    expect(registry.resolve('', 'x.new').label).to.equal('New');
   });
 
   it('gives an explicit MIME type precedence over a conflicting filename extension', () => {
@@ -39,9 +83,44 @@ describe('file type metadata', () => {
 
 describe('lr-file-icon', () => {
   it('renders localized labels and is accessible', async () => {
-    const el = await fixture(html`<lr-file-icon mime-type="application/pdf" variant="label" .strings=${{ fileTypePdf: 'PDF personnalisé' }}></lr-file-icon>`);
+    const el = await fixture(html`<lr-file-icon mime-type="application/pdf" mode="label" .strings=${{ fileTypePdf: 'PDF personnalisé' }}></lr-file-icon>`);
     expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('PDF personnalisé');
     await expect(el).to.be.accessible();
+  });
+
+  it('projects consumer metadata label and description verbatim through an injected registry', async () => {
+    const registry = createFileTypeMetadataRegistry([{
+      mimeTypes: 'application/x-analysis',
+      metadata: {
+        label: 'My authored label',
+        description: 'My authored description',
+        icon: 'code',
+        category: 'code',
+        extensions: ['.analysis'],
+      },
+    }]);
+    const el = await fixture<LyraFileIcon>(html`
+      <lr-file-icon mime-type="application/x-analysis" mode="label" .registry=${registry}></lr-file-icon>
+    `);
+    expect(el.shadowRoot!.querySelector('[part="icon"]')!.textContent).to.equal('My authored label');
+    expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('My authored label');
+    expect(el.shadowRoot!.querySelector('[part="description"]')!.textContent).to.equal('My authored description');
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-describedby')).to.equal('metadata-description');
+    const description = el.shadowRoot!.querySelector('[part="description"]') as HTMLElement;
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--lr-color-text-quiet)';
+    el.shadowRoot!.append(probe);
+    expect(getComputedStyle(description).color).to.equal(getComputedStyle(probe).color);
+    probe.remove();
+  });
+
+  it('normalizes invalid mode and preserves an explicit empty host aria-label', async () => {
+    const el = await fixture<LyraFileIcon>(html`
+      <lr-file-icon mime-type="application/pdf" mode="unknown" aria-label=""></lr-file-icon>
+    `);
+    expect(el.mode).to.equal('icon');
+    expect(el.getAttribute('mode')).to.equal('icon');
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
   });
 
   it('supports decorative presentation', async () => {
@@ -51,7 +130,7 @@ describe('lr-file-icon', () => {
   });
 
   it('shows a formatted size and folds it into the accessible name', async () => {
-    const el = await fixture(html`<lr-file-icon mime-type="application/pdf" variant="label" bytes="2415919"></lr-file-icon>`);
+    const el = await fixture(html`<lr-file-icon mime-type="application/pdf" mode="label" bytes="2415919"></lr-file-icon>`);
     expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.equal('2.3 MB');
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF (2.3 MB)');
   });
@@ -62,7 +141,7 @@ describe('lr-file-icon', () => {
         aria-label="Author file description"
         label="Visible file label"
         mime-type="application/pdf"
-        variant="label"
+        mode="label"
         bytes="2415919"
       ></lr-file-icon>
     `);
@@ -73,13 +152,13 @@ describe('lr-file-icon', () => {
 
   it('formats the size number with the effective locale', async () => {
     const el = await fixture(html`
-      <lr-file-icon lang="ar-EG" mime-type="application/pdf" variant="label" bytes="2415919"></lr-file-icon>
+      <lr-file-icon lang="ar-EG" mime-type="application/pdf" mode="label" bytes="2415919"></lr-file-icon>
     `);
     expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.contain('٢٫٣');
   });
 
   it('renders no size part when bytes is unset', async () => {
-    const el = await fixture(html`<lr-file-icon mime-type="application/pdf" variant="label"></lr-file-icon>`);
+    const el = await fixture(html`<lr-file-icon mime-type="application/pdf" mode="label"></lr-file-icon>`);
     expect((el.shadowRoot!.querySelector('[part="size"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF');
   });
@@ -89,7 +168,7 @@ describe('lr-file-icon', () => {
     // in the library. The rename is not aliased, so a stale attribute must be inert rather than
     // half-working.
     const el = (await fixture(
-      html`<lr-file-icon mime-type="application/pdf" variant="label" size="2415919"></lr-file-icon>`,
+      html`<lr-file-icon mime-type="application/pdf" mode="label" size="2415919"></lr-file-icon>`,
     )) as LyraFileIcon;
     expect('size' in el, 'size is gone from the instance').to.be.false;
     expect(el.bytes).to.equal(0);
@@ -99,7 +178,7 @@ describe('lr-file-icon', () => {
 
   it('renders no "NaN B" size part when bytes is set to an invalid value', async () => {
     const el = (await fixture(
-      html`<lr-file-icon mime-type="application/pdf" variant="label" bytes="not-a-number"></lr-file-icon>`,
+      html`<lr-file-icon mime-type="application/pdf" mode="label" bytes="not-a-number"></lr-file-icon>`,
     )) as LyraFileIcon;
     expect(Number.isNaN(el.bytes)).to.be.true;
     expect((el.shadowRoot!.querySelector('[part="size"]')) == null).to.be.true;
@@ -122,7 +201,7 @@ describe('lr-file-icon', () => {
 
   it('hides the complete label badge subtree from accessibility APIs when decorative', async () => {
     const el = await fixture(html`
-      <lr-file-icon mime-type="application/pdf" variant="label" bytes="2415919" decorative></lr-file-icon>
+      <lr-file-icon mime-type="application/pdf" mode="label" bytes="2415919" decorative></lr-file-icon>
     `);
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-hidden')).to.equal('true');
@@ -137,7 +216,7 @@ describe('lr-file-icon', () => {
         <lr-file-icon
           style="max-inline-size: 100%"
           mime-type="application/pdf"
-          variant="label"
+          mode="label"
           label=${'Document'.repeat(200)}
           bytes="2415919"
         ></lr-file-icon>

@@ -9,7 +9,7 @@ export * from './code-block/code-block.js';
 export { LyraCodeBlockCore } from './code-block/code-block-core.js';
 export type { LyraCodeBlockCoreEventMap, ShikiLanguageInput } from './code-block/code-block-core.js';
 export * from './conversation-item/conversation-item.js';
-export * from './generation-status/generation-status.js';
+export * from './generation-metrics/generation-metrics.js';
 export * from './handoff-divider/handoff-divider.js';
 export * from './markdown/markdown.js';
 export { LyraMarkdownCore } from './markdown/markdown-core.js';

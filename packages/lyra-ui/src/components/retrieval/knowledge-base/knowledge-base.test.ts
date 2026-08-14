@@ -4,6 +4,7 @@ import type { LyraKnowledgeBase, KnowledgeSource } from './knowledge-base.js';
 import type { LyraTable } from '../../data/table/table.class.js';
 import type { LyraMenu } from '../../layout/menu/menu.class.js';
 import type { LyraMenuItem } from '../../layout/menu/menu-item.class.js';
+import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
 import type { LyraStat } from '../../data/stat/stat.class.js';
 
 const sources: KnowledgeSource[] = [
@@ -47,6 +48,10 @@ function menuFor(el: LyraKnowledgeBase, rowIndex: number): LyraMenu {
   return [...tableEl(el).shadowRoot!.querySelectorAll('lr-menu')][rowIndex] as LyraMenu;
 }
 
+function dropdownFor(el: LyraKnowledgeBase, rowIndex: number): LyraDropdown {
+  return [...tableEl(el).shadowRoot!.querySelectorAll('lr-dropdown')][rowIndex] as LyraDropdown;
+}
+
 function menuItems(menu: LyraMenu): LyraMenuItem[] {
   return [...menu.querySelectorAll('lr-menu-item')] as LyraMenuItem[];
 }
@@ -69,19 +74,25 @@ describe('lr-knowledge-base', () => {
 
     el.label = 'Research library';
     await el.updateComplete;
+    await tableEl(el).updateComplete;
     expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('Research library');
-    expect(tableEl(el).getAttribute('aria-label')).to.equal('Research library');
+    expect(tableEl(el).getAttribute('aria-label')).to.equal(null);
+    expect(tableEl(el).accessibleLabel).to.equal('Research library');
   });
 
-  it('a host aria-label wins over label/localized default for the table accessible name, without changing the visible heading text', async () => {
+  it('keeps a host name distinct from the table name and visible heading', async () => {
     const el = (await fixture(
       html`<lr-knowledge-base aria-label="Team A sources" label="Research library"></lr-knowledge-base>`,
     )) as LyraKnowledgeBase;
-    expect(tableEl(el).getAttribute('aria-label')).to.equal('Team A sources');
+    const table = tableEl(el);
+    await table.updateComplete;
+    expect(el.getAttribute('aria-label')).to.equal('Team A sources');
+    expect(table.getAttribute('aria-label')).to.equal(null);
+    expect(table.accessibleLabel).to.equal('Research library');
     expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('Research library');
   });
 
-  it('preserves an explicitly empty host aria-label at the nested grid and restores label after removal', async () => {
+  it('keeps explicit-empty and dynamic host naming distinct from the nested grid', async () => {
     const el = (await fixture(
       html`<lr-knowledge-base
         aria-label="Team A sources"
@@ -92,19 +103,30 @@ describe('lr-knowledge-base', () => {
     const table = tableEl(el);
     await table.updateComplete;
     const grid = table.shadowRoot!.querySelector<HTMLElement>('[part="table"]')!;
-    expect(table.getAttribute('aria-label')).to.equal('Team A sources');
-    expect(grid.getAttribute('aria-label')).to.equal('Team A sources');
+    expect(el.getAttribute('aria-label')).to.equal('Team A sources');
+    expect(table.getAttribute('aria-label')).to.equal(null);
+    expect(table.accessibleLabel).to.equal('Research library');
+    expect(grid.getAttribute('aria-label')).to.equal('Research library');
 
     el.setAttribute('aria-label', '');
     await el.updateComplete;
     await table.updateComplete;
-    expect(table.getAttribute('aria-label')).to.equal('');
-    expect(grid.getAttribute('aria-label')).to.equal('');
+    expect(el.getAttribute('aria-label')).to.equal('');
+    expect(table.getAttribute('aria-label')).to.equal(null);
+    expect(grid.getAttribute('aria-label')).to.equal('Research library');
+
+    el.setAttribute('aria-label', 'Revised sources');
+    await el.updateComplete;
+    await table.updateComplete;
+    expect(el.getAttribute('aria-label')).to.equal('Revised sources');
+    expect(table.getAttribute('aria-label')).to.equal(null);
+    expect(grid.getAttribute('aria-label')).to.equal('Research library');
 
     el.removeAttribute('aria-label');
     await el.updateComplete;
     await table.updateComplete;
-    expect(table.getAttribute('aria-label')).to.equal('Research library');
+    expect(el.getAttribute('aria-label')).to.equal(null);
+    expect(table.getAttribute('aria-label')).to.equal(null);
     expect(grid.getAttribute('aria-label')).to.equal('Research library');
   });
 
@@ -272,6 +294,7 @@ describe('lr-knowledge-base', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="heading"]')).to.exist;
     const menu = menuFor(el, 0);
+    await menu.updateComplete;
     const listener = oneEvent(el, 'lr-source-delete');
     activate(menuItems(menu).find((i) => i.value === 'delete')!);
     const event = (await listener) as CustomEvent<{ sourceId: string }>;
@@ -288,10 +311,11 @@ describe('lr-knowledge-base', () => {
     const el = (await fixture(html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`)) as LyraKnowledgeBase;
     await el.updateComplete;
     const menu = menuFor(el, 0);
+    const dropdown = dropdownFor(el, 0);
     const trigger = tableEl(el).shadowRoot!.querySelectorAll('[part="actions-trigger"]')[0] as HTMLButtonElement;
     trigger.click();
     await menu.updateComplete;
-    expect(menu.open).to.be.true;
+    expect(dropdown.open).to.be.true;
     await expect(el).to.be.accessible();
   });
 
@@ -315,13 +339,12 @@ it('formats document and summary counts with the effective locale', async () => 
   expect(summary.map((stat) => stat.value)).to.deep.equal(['١', '١', '٠', '٠']);
 });
 
-it('suppresses the raw child menu-select event after translating it', async () => {
+it('suppresses the canonical child menu selection after translating it', async () => {
   const el = (await fixture(html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`)) as LyraKnowledgeBase;
   let leaked = 0;
-  el.addEventListener('lr-menu-select', () => leaked++);
-  menuFor(el, 0).dispatchEvent(
-    new CustomEvent('lr-menu-select', { detail: { value: 'sync' }, bubbles: true, composed: true }),
-  );
-  await el.updateComplete;
+  el.addEventListener('lr-select', () => leaked++);
+  const sourceEvent = oneEvent(el, 'lr-source-sync');
+  activate(menuItems(menuFor(el, 0)).find((item) => item.value === 'sync')!);
+  await sourceEvent;
   expect(leaked).to.equal(0);
 });

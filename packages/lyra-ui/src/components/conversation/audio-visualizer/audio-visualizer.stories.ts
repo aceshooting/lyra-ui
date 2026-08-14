@@ -43,7 +43,7 @@ export const AmbientDuration: Story = {
 };
 
 export const WaveformWithLevel: Story = {
-  render: () => html`<lr-audio-visualizer variant="waveform" level="0.6" state="speaking"></lr-audio-visualizer>`,
+  render: () => html`<lr-audio-visualizer mode="waveform" level="0.6" state="speaking"></lr-audio-visualizer>`,
 };
 
 export const CurrentColorTheme: Story = {

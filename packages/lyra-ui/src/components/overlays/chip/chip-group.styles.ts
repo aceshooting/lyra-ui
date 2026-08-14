@@ -19,6 +19,9 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    justify-content: center;
     padding: var(--lr-size-0-25rem) var(--lr-space-s);
     border: var(--lr-border-width-thin) dashed var(--lr-color-border);
     border-radius: var(--lr-radius-pill);

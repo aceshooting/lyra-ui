@@ -5,13 +5,13 @@ import '../flow-controls/flow-controls.js';
 import '../flow-minimap/flow-minimap.js';
 import type { FlowNode, FlowEdge, LyraFlowCanvas } from './flow-canvas.js';
 
-const nodes: FlowNode[] = [
-  { id: 'fetch', position: { x: 0, y: 0 }, data: { label: 'Fetch data' } },
-  { id: 'summarize', position: { x: 240, y: 0 }, data: { label: 'Summarize' } },
-  { id: 'notify', position: { x: 480, y: 0 }, data: { label: 'Notify' } },
+const nodes: readonly FlowNode[] = [
+  { id: 'fetch', type: 'source', position: { x: 0, y: 0 }, data: { label: 'Fetch data' } },
+  { id: 'summarize', type: 'transform', position: { x: 240, y: 0 }, data: { label: 'Summarize' } },
+  { id: 'notify', type: 'sink', position: { x: 480, y: 0 }, data: { label: 'Notify' } },
 ];
 
-const edges: FlowEdge[] = [
+const edges: readonly FlowEdge[] = [
   { id: 'fetch-summarize', source: 'fetch', target: 'summarize', label: 'then' },
   { id: 'summarize-notify', source: 'summarize', target: 'notify' },
 ];
@@ -169,13 +169,13 @@ export const NarrowAllocation: Story = {
   `,
 };
 
-export const RetintedCurrentNode: Story = {
-  name: 'Retinted current node outline',
+export const RetintedSelectedNode: Story = {
+  name: 'Retinted selected node outline',
   parameters: {
     docs: {
       description: {
         story:
-          '`--lr-flow-canvas-node-selected-outline-color` recolors the current (`aria-current`) node outline on its own. `::part(node)[aria-current]` is invalid CSS, so without this property the outline could only be restyled by overriding the library-wide `--lr-color-brand` token. Unset, it renders exactly as before.',
+          '`--lr-flow-canvas-node-selected-outline-color` recolors the selected node outline on its own. Selection is exposed by each hidden node control\'s `aria-pressed` state and by the wrapper\'s `data-selected` marker. Unset, it renders exactly as before.',
       },
     },
   },
@@ -218,7 +218,7 @@ export const RetintedEdgeTones: Story = {
         .edges=${[
           { id: 'fetch-summarize', source: 'fetch', target: 'summarize', label: 'success', tone: 'success' },
           { id: 'summarize-notify', source: 'summarize', target: 'notify', label: 'danger', tone: 'danger' },
-        ] satisfies FlowEdge[]}
+        ] satisfies readonly FlowEdge[]}
       ></lr-flow-canvas>
     </div>
   `,

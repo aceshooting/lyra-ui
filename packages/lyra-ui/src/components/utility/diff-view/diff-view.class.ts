@@ -2,14 +2,15 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
-} from '../../../internal/announcer.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import type { LyraCopyErrorReason } from '../copy-button/copy-button.class.js';
-import { computeLineDiff, pairOpsForSplit, type DiffOp, type DiffSplitRow } from './diff-line-diff.js';
+import {
+  writeClipboardText,
+  type LyraClipboardWriteFailure,
+  type LyraClipboardWriteSuccess,
+} from '../../../internal/clipboard.js';
+import { computeLineDiff, pairOpsForSplit, type LyraDiffOp, type LyraDiffSplitRow } from './diff-line-diff.js';
 import {
   loadShikiHighlighterCore,
   SHIKI_THEMES,
@@ -22,19 +23,11 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyDiff, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_diffViewHiddenLines, LYRA_DEFAULT_diffViewNewLabel, LYRA_DEFAULT_diffViewOldLabel, LYRA_DEFAULT_diffViewTooLarge } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 /** How long the "Copied!" confirmation state lasts before reverting -- matches
  *  `lr-copy-button`'s own `COPY_CONFIRM_MS`. */
 const COPY_CONFIRM_MS = 1500;
 
 type CopyStatus = 'rest' | 'success' | 'error';
-
-class ClipboardUnsupportedError extends Error {
-  constructor() {
-    super('The Clipboard API is unavailable in this context.');
-    this.name = 'ClipboardUnsupportedError';
-  }
-}
 
 /** Split into logical lines while normalizing all three line-ending conventions (CRLF, lone CR,
  *  LF). A raw `text.split('\n')` leaves a trailing `\r` on every CRLF line -- which makes two files
@@ -42,16 +35,21 @@ class ClipboardUnsupportedError extends Error {
  *  payload, and (with `white-space: pre-wrap`) renders a spurious blank line after each row -- and
  *  collapses a lone-CR (classic-Mac) document into a single giant line. Used at BOTH the diff and
  *  the shiki-tokenize call sites so their line counts stay in lockstep. */
-const splitLines = (text: string): string[] => text.split(/\r\n|\r|\n/);
+const splitLines = (text: string): string[] => (text === '' ? [] : text.split(/\r\n|\r|\n/));
+
+// Line count alone does not bound Hirschberg's O(n*m) work or the strings handed to the
+// highlighter. These ceilings apply even when maxLines is explicitly relaxed.
+const MAX_DIFF_CHARACTERS = 1_000_000;
+const MAX_DIFF_COMPARISONS = 4_000_000;
 
 export interface LyraDiffViewEventMap {
-  'lr-copy': CustomEvent<{ text: string }>;
+  'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-error': CustomEvent<undefined>;
-  'lr-copy-error': CustomEvent<{ text: string; reason: LyraCopyErrorReason; error: unknown }>;
+  'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
 }
 
 /** The internal diff rendering layout -- `'unified'` (the default) is one interleaved column,
- *  `'split'` is two side-by-side columns derived from the same `DiffOp[]`. */
+ *  `'split'` is two side-by-side columns derived from the same `LyraDiffOp[]`. */
 export type LyraDiffViewLayout = 'unified' | 'split';
 
 /**
@@ -62,11 +60,12 @@ export type LyraDiffViewLayout = 'unified' | 'split';
  * invention (no Web Awesome equivalent).
  *
  * @customElement lr-diff-view
- * @event lr-copy - Fired on copy-button activation. `detail: { text: string }` (the full
- *   unified-diff text, including attempts whose clipboard write then fails).
+ * @event lr-copy - Fired after clipboard writing fulfills. The frozen shared outcome detail is
+ *   `{ ok: true, text }`, where `text` is the full unified diff.
  * @event lr-error - The clipboard write failed. A bubbling, composed, non-cancelable event with
  *   no detail.
- * @event lr-copy-error - The clipboard write failed. `detail: { text, reason, error }`, where
+ * @event lr-copy-error - The clipboard write failed. The frozen shared outcome detail is
+ *   `{ ok: false, text, reason, error }`, where
  *   `reason` is `'unsupported' | 'denied' | 'failed'`.
  * @csspart base - The root wrapper.
  * @csspart line - A single line. Carries `data-type="equal"|"add"|"remove"|"empty"|"fold"`
@@ -114,7 +113,7 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   @property({ type: Boolean }) copyable = false;
 
   /** `'unified'` (the default) renders today's single interleaved `<pre>`; `'split'` renders two
-   *  side-by-side columns derived from the same `DiffOp[]` (see `pairOpsForSplit()`). */
+   *  side-by-side columns derived from the same `LyraDiffOp[]` (see `pairOpsForSplit()`). */
   @property({ reflect: true }) layout: LyraDiffViewLayout = 'unified';
 
   /** A shiki-recognized language id. Highlighting activates only when this has a matching entry in
@@ -134,7 +133,8 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   @property({ type: Number, attribute: 'context-lines' }) contextLines?: number;
 
   /** Maximum lines accepted on either input side before rendering a bounded fallback. Defaults
-   *  to `5000`. Set to `Infinity` explicitly to opt back into unbounded diffing. */
+   *  to `5000`. `Infinity` relaxes this line-count limit; aggregate text and comparison work
+   *  remain bounded. */
   @property({ type: Number, attribute: 'max-lines' }) maxLines = 5000;
 
   @state() private copyStatus: CopyStatus = 'rest';
@@ -147,9 +147,8 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   @state() private highlightedOldLines: string[] | null = null;
   @state() private highlightedNewLines: string[] | null = null;
   private highlightToken = 0;
-  private loadHighlighterCore: (
-    languages: Record<string, ShikiLanguageInput>,
-  ) => Promise<ShikiHighlighterCore | null> = loadShikiHighlighterCore;
+  private loadHighlighterCore: (languages: Record<string, ShikiLanguageInput>) => Promise<ShikiHighlighterCore | null> =
+    loadShikiHighlighterCore;
 
   private copyTimer?: { owner: Window; handle: number; generation: number };
   /** Invalidates clipboard outcomes when another activation, source change, disconnect, or
@@ -158,13 +157,13 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
 
   // The O(n*m) LCS computation only needs rerunning when the compared texts or their ceiling
   // changes. A render triggered purely by copy feedback toggling reuses the same result.
-  private diffOps: DiffOp[] = [];
+  private diffOps: LyraDiffOp[] = [];
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (
       this.hasUpdated &&
-      (changed.has('oldText') || changed.has('newText'))
+      (changed.has('oldText') || changed.has('newText') || changed.has('copyable') || changed.has('maxLines'))
     ) {
       this.resetCopyFeedback();
     }
@@ -172,10 +171,14 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
       const oldLines = splitLines(this.oldText);
       const newLines = splitLines(this.newText);
       const maxLines =
-        this.maxLines === Number.POSITIVE_INFINITY
-          ? Number.POSITIVE_INFINITY
-          : finiteCount(this.maxLines, 5000);
-      this.diffTooLarge = oldLines.length > maxLines || newLines.length > maxLines;
+        this.maxLines === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : finiteCount(this.maxLines, 5000);
+      const characterCount = this.oldText.length + this.newText.length;
+      const comparisons = oldLines.length * newLines.length;
+      this.diffTooLarge =
+        oldLines.length > maxLines ||
+        newLines.length > maxLines ||
+        characterCount > MAX_DIFF_CHARACTERS ||
+        comparisons > MAX_DIFF_COMPARISONS;
       this.diffOps = this.diffTooLarge ? [] : computeLineDiff(oldLines, newLines);
     }
     if (
@@ -204,7 +207,8 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
     this.copyAnnouncementSink = undefined;
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     // A disconnected node can be adopted without receiving another disconnect notification.
     this.resetCopyFeedback();
     this.copyAnnouncementSink?.release();
@@ -275,17 +279,21 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
 
   /** Computes which `equal` ops a fold marker should hide, keyed by object identity (not array
    *  index) so the same result works for both `renderUnified()`'s flat op sequence and
-   *  `renderSplit()`'s `pairOpsForSplit()` rows -- an equal op's `DiffOp` object is the exact same
+   *  `renderSplit()`'s `pairOpsForSplit()` rows -- an equal op's `LyraDiffOp` object is the exact same
    *  reference in both places. `foldBefore` maps the first visible op *after* a hidden run to how
    *  many lines that run hid (the marker renders immediately before that op); a run hidden all the
    *  way to the end of the diff has no "next op" to key off, so its count surfaces separately as
    *  `trailingFold`. Only maximal `equal` runs are ever folded -- `add`/`remove` ops are always
    *  visible. A run that is both the very first and very last thing in the diff (i.e. `oldText` and
    *  `newText` are identical) is never folded: there is no adjacent change to give context around. */
-  private computeFolds(): { visible: Set<DiffOp>; foldBefore: Map<DiffOp, number>; trailingFold: number } {
+  private computeFolds(): {
+    visible: Set<LyraDiffOp>;
+    foldBefore: Map<LyraDiffOp, number>;
+    trailingFold: number;
+  } {
     const ops = this.diffOps;
-    const visible = new Set<DiffOp>(ops);
-    const foldBefore = new Map<DiffOp, number>();
+    const visible = new Set<LyraDiffOp>(ops);
+    const foldBefore = new Map<LyraDiffOp, number>();
     let trailingFold = 0;
     const ctx =
       this.contextLines == null || !Number.isFinite(this.contextLines) || this.contextLines < 0
@@ -343,38 +351,32 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
       .join('\n');
   }
 
-  private failureReason(error: unknown): LyraCopyErrorReason {
-    if (error instanceof ClipboardUnsupportedError) return 'unsupported';
-    const name = error !== null && typeof error === 'object'
-      ? (error as { name?: unknown }).name
-      : undefined;
-    if (name === 'NotAllowedError' || name === 'SecurityError') return 'denied';
-    return 'failed';
-  }
-
   private isCurrentCopy(generation: number, owner: Window): boolean {
-    return this.isConnected
-      && generation === this.copyGeneration
-      && this.ownerDocument.defaultView === owner;
+    return (
+      this.isConnected &&
+      this.copyable &&
+      !this.diffTooLarge &&
+      generation === this.copyGeneration &&
+      this.ownerDocument.defaultView === owner
+    );
   }
 
   private showCopyStatus(status: Exclude<CopyStatus, 'rest'>, generation: number): void {
     const owner = this.ownerDocument.defaultView;
     if (!owner || !this.isCurrentCopy(generation, owner)) return;
     this.copyStatus = status;
-    this.copyAnnouncementSink?.announce(
-      status === 'success' ? this.localize('copied') : this.localize('copyFailed'),
-    );
+    this.copyAnnouncementSink?.announce(status === 'success' ? this.localize('copied') : this.localize('copyFailed'));
     this.cancelCopyTimer();
     let handle = 0;
     handle = owner.setTimeout(() => {
       const timer = this.copyTimer;
       if (
-        timer?.owner !== owner
-        || timer.handle !== handle
-        || timer.generation !== generation
-        || !this.isCurrentCopy(generation, owner)
-      ) return;
+        timer?.owner !== owner ||
+        timer.handle !== handle ||
+        timer.generation !== generation ||
+        !this.isCurrentCopy(generation, owner)
+      )
+        return;
       this.copyTimer = undefined;
       this.copyStatus = 'rest';
     }, COPY_CONFIRM_MS);
@@ -382,26 +384,23 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   }
 
   private async copy(): Promise<void> {
+    if (!this.copyable || this.diffTooLarge) return;
     const generation = ++this.copyGeneration;
     this.cancelCopyTimer();
     this.copyStatus = 'rest';
     const text = this.unifiedText;
-    this.emit('lr-copy', { text });
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     if (!owner) return;
-    try {
-      const clipboard = owner.navigator.clipboard;
-      if (typeof clipboard?.writeText !== 'function') throw new ClipboardUnsupportedError();
-      await clipboard.writeText(text);
-    } catch (error) {
-      if (!this.isCurrentCopy(generation, owner)) return;
+    const outcome = await writeClipboardText(owner, text);
+    if (!this.isCurrentCopy(generation, owner)) return;
+    if (!outcome.ok) {
       this.showCopyStatus('error', generation);
       this.emit('lr-error');
-      this.emit('lr-copy-error', { text, reason: this.failureReason(error), error });
+      this.emit('lr-copy-error', outcome);
       return;
     }
-    if (!this.isCurrentCopy(generation, owner)) return;
     this.showCopyStatus('success', generation);
+    this.emit('lr-copy', outcome);
   }
 
   private onCopyClick = (): void => {
@@ -446,9 +445,10 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
     const leftCells: TemplateResult[] = [];
     const rightCells: TemplateResult[] = [];
     for (const row of splitRows) {
-      // An `equal` row's `left`/`right` are the exact same `DiffOp` reference (see
+      // An `equal` row's `left`/`right` are the exact same `LyraDiffOp` reference (see
       // `pairOpsForSplit()`), so folding either side is equivalent -- checked once via `row.left`.
-      const foldOp = row.left && row.left.type === 'equal' ? row.left : row.right && row.right.type === 'equal' ? row.right : null;
+      const foldOp =
+        row.left && row.left.type === 'equal' ? row.left : row.right && row.right.type === 'equal' ? row.right : null;
       const fold = foldOp ? foldBefore.get(foldOp) : undefined;
       if (fold !== undefined) {
         leftCells.push(this.foldMarker(fold));
@@ -479,7 +479,7 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   }
 
   private renderSplitCell(
-    op: DiffSplitRow['left'],
+    op: LyraDiffSplitRow['left'],
     lineIndex: number,
     highlightedLines: string[] | null,
   ): TemplateResult {
@@ -491,7 +491,9 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
 
   override render(): TemplateResult {
     if (this.diffTooLarge) {
-      return html`<div part="base"><div part="limit">${this.localize('diffViewTooLarge')}</div></div>`;
+      return html`<div part="base">
+        <div part="limit">${this.localize('diffViewTooLarge')}</div>
+      </div>`;
     }
     return html`
       <div part="base">
@@ -499,22 +501,18 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
           ? html`<button
               part="copy-button"
               type="button"
-              aria-label=${
-                this.copyStatus === 'success'
-                  ? this.localize('copied')
-                  : this.copyStatus === 'error'
-                    ? this.localize('copyFailed')
-                    : this.localize('copyDiff')
-              }
+              aria-label=${this.copyStatus === 'success'
+                ? this.localize('copied')
+                : this.copyStatus === 'error'
+                ? this.localize('copyFailed')
+                : this.localize('copyDiff')}
               @click=${this.onCopyClick}
             >
-              ${
-                this.copyStatus === 'success'
-                  ? this.localize('copied')
-                  : this.copyStatus === 'error'
-                    ? this.localize('copyFailed')
-                    : this.localize('copy')
-              }
+              ${this.copyStatus === 'success'
+                ? this.localize('copied')
+                : this.copyStatus === 'error'
+                ? this.localize('copyFailed')
+                : this.localize('copy')}
             </button>`
           : nothing}
         ${this.layout === 'split' ? this.renderSplit() : this.renderUnified()}

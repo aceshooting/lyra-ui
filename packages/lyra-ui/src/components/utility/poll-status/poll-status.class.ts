@@ -13,13 +13,10 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pollInactive, LYRA_DEFAULT_pollPause, LYRA_DEFAULT_pollPaused, LYRA_DEFAULT_pollPausedAnnounce, LYRA_DEFAULT_pollRefreshing, LYRA_DEFAULT_pollRefreshingAnnounce, LYRA_DEFAULT_pollResume, LYRA_DEFAULT_pollResumedAnnounce } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 export interface LyraPollStatusEventMap {
   'lr-poll-due': CustomEvent<undefined>;
-  'lr-pause-change': CustomEvent<boolean>;
+  'lr-pause-change': CustomEvent<{ readonly paused: boolean }>;
 }
-
-const TICK_MS = 1000;
 
 /**
  * `<lr-poll-status>` — a "next scheduled refresh" countdown with a built-in pause control: a
@@ -33,7 +30,8 @@ const TICK_MS = 1000;
  *
  * @customElement lr-poll-status
  * @event lr-poll-due - Fired once when the countdown reaches zero (not fired while `paused`).
- * @event lr-pause-change - Fired when `paused` changes via the built-in button. `detail: boolean`.
+ * @event lr-pause-change - Fired when `paused` changes via the built-in button.
+ *   `detail: { paused: boolean }`.
  * @csspart base - The root wrapper.
  * @csspart indicator - The pulsing status dot.
  * @csspart countdown - The localized `M:SS` text, or the refreshing, paused, or inactive state.
@@ -68,7 +66,12 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
 
   /** Whether the poll cycle is running at all. While false, the component
    *  clears due/countdown semantics and disables its pause action. */
-  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) active = true;
+  @property({
+    type: Boolean,
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
+  active = true;
 
   /** User-toggled pause -- while `true`, the countdown display freezes and `lr-poll-due` never
    *  fires. `false` (the default). */
@@ -82,6 +85,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   private tickerGeneration = 0;
   private targetAt = 0;
   private deadlineConsumed = false;
+  private pausedRemainingMs?: number;
 
   /** True only until the component's first completed update -- gates the pause/resume
    *  announcement below so mounting with `paused`'s default `false` value never announces
@@ -109,7 +113,8 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.disarmTicker();
     if (this.isConnected && this.active && !this.paused && this.nextInMs != null && !this.deadlineConsumed) {
       this.armTicker();
@@ -134,10 +139,22 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
         this.deadlineConsumed = false;
         this.due = false;
         this.remainingMs = nextInMs;
+        this.pausedRemainingMs = this.paused ? nextInMs : undefined;
       } else {
         this.deadlineConsumed = false;
         this.due = false;
         this.remainingMs = 0;
+        this.pausedRemainingMs = undefined;
+      }
+    }
+    if (changed.has('paused')) {
+      if (this.paused && this.nextInMs != null && !this.deadlineConsumed) {
+        this.pausedRemainingMs = Math.max(0, this.targetAt - Date.now());
+        this.remainingMs = this.pausedRemainingMs;
+      } else if (!this.paused && changed.get('paused') === true && this.pausedRemainingMs !== undefined) {
+        this.targetAt = Date.now() + this.pausedRemainingMs;
+        this.remainingMs = this.pausedRemainingMs;
+        this.pausedRemainingMs = undefined;
       }
     }
     if (changed.has('active') && !this.active) {
@@ -194,6 +211,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
       this.deadlineConsumed = false;
       this.due = false;
       this.remainingMs = 0;
+      this.pausedRemainingMs = undefined;
       return;
     }
     const nextInMs = finiteDuration(this.nextInMs, 0, 0);
@@ -201,6 +219,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     this.deadlineConsumed = false;
     this.due = false;
     this.remainingMs = nextInMs;
+    this.pausedRemainingMs = this.paused ? nextInMs : undefined;
     if (this.isConnected && this.active && !this.paused) this.armTicker();
   }
 
@@ -213,7 +232,17 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     const ownerWindow = ownerDocument.defaultView;
     if (!ownerWindow) return;
     const generation = this.tickerGeneration;
-    const handle = ownerWindow.setInterval(() => {
+    this.scheduleTick(ownerWindow, ownerDocument, generation);
+  }
+
+  private scheduleTick(ownerWindow: Window, ownerDocument: Document, generation: number): void {
+    const remaining = Math.max(0, this.targetAt - Date.now());
+    this.remainingMs = remaining;
+    const seconds = Math.ceil(remaining / 1000);
+    const untilDisplayBoundary = remaining === 0 ? 0 : remaining - Math.max(0, seconds - 1) * 1000;
+    const delay = remaining === 0 ? 0 : Math.max(1, Math.min(remaining, untilDisplayBoundary));
+    let handle = 0;
+    handle = ownerWindow.setTimeout(() => {
       if (
         this.tickTimer !== handle ||
         this.tickTimerOwner !== ownerWindow ||
@@ -232,11 +261,15 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
       if (this.remainingMs === 0 && !this.due) {
         this.deadlineConsumed = true;
         this.due = true;
+        this.pausedRemainingMs = undefined;
         this.disarmTicker();
         this.emit('lr-poll-due');
         this.announce(this.localize('pollRefreshingAnnounce'));
+      } else {
+        this.tickTimer = undefined;
+        this.scheduleTick(ownerWindow, ownerDocument, generation);
       }
-    }, TICK_MS);
+    }, delay);
     this.tickTimer = handle;
     this.tickTimerOwner = ownerWindow;
     this.tickTimerDocument = ownerDocument;
@@ -245,7 +278,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   private disarmTicker(): void {
     this.tickerGeneration += 1;
     if (this.tickTimer !== undefined) {
-      this.tickTimerOwner?.clearInterval(this.tickTimer);
+      this.tickTimerOwner?.clearTimeout(this.tickTimer);
     }
     this.tickTimer = undefined;
     this.tickTimerOwner = undefined;
@@ -262,7 +295,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   private togglePause = (): void => {
     if (!this.active) return;
     this.paused = !this.paused;
-    this.emit('lr-pause-change', this.paused);
+    this.emit('lr-pause-change', Object.freeze({ paused: this.paused }));
   };
 
   private formatCountdown(): string {
@@ -274,7 +307,10 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     const seconds = totalSeconds % 60;
     const locale = this.effectiveLocale;
     const minuteText = getNumberFormat(locale, { useGrouping: false }).format(minutes);
-    const secondText = getNumberFormat(locale, { minimumIntegerDigits: 2, useGrouping: false }).format(seconds);
+    const secondText = getNumberFormat(locale, {
+      minimumIntegerDigits: 2,
+      useGrouping: false,
+    }).format(seconds);
     return `${minuteText}:${secondText}`;
   }
 
@@ -290,7 +326,9 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
           aria-label=${this.localize(this.paused ? 'pollResume' : 'pollPause')}
           ?disabled=${!this.active}
           @click=${this.togglePause}
-        >${this.paused ? playIcon() : pauseIcon()}</button>
+        >
+          ${this.paused ? playIcon() : pauseIcon()}
+        </button>
         <lr-live-region></lr-live-region>
       </div>
     `;

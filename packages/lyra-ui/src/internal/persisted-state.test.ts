@@ -45,7 +45,7 @@ describe('persisted-state', () => {
 
   // Unset-regression: with no storage key configured (the default for every consumer that has
   // not opted into persistence), neither function may read, write, or throw. This is the
-  // component-level guarantee lr-app-rail/lr-split rely on to stay byte-for-byte unchanged.
+  // component-level guarantee lr-app-rail/lr-multi-split rely on to stay byte-for-byte unchanged.
   it('is a no-op for an undefined key on both read and write', () => {
     const before = localStorage.length;
     expect(readPersistedState(undefined, isAnything)).to.equal(null);

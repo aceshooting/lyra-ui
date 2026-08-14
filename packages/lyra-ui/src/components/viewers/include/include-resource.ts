@@ -9,6 +9,7 @@ import {
   type ResourceCacheLease,
 } from '../../../internal/safe-resource-cache.js';
 import { loadHtmlSanitizer } from '../html-viewer/dompurify-loader.js';
+import { sanitizePassiveMarkup } from '../passive-markup.js';
 
 export type LyraIncludeMode = 'cors' | 'no-cors' | 'same-origin';
 export type IncludeResourceErrorReason =
@@ -21,7 +22,7 @@ export type IncludeResourceErrorReason =
 export const MAX_INCLUDE_BYTES = 2 * 1024 * 1024;
 
 const INCLUDE_CACHE_ENTRIES = 32;
-const SANITIZE_PROFILE = 'html-v1';
+const SANITIZE_PROFILE = 'transclusion-v2';
 type IncludeOwner = OwnerFetchTarget['view'];
 let resourcesByOwner = new WeakMap<IncludeOwner, BoundedResourceCache<string>>();
 
@@ -83,7 +84,7 @@ export function acquireSanitizedIncludeResource(
 
       const sanitizer = await loadHtmlSanitizer();
       if (!sanitizer) throw new IncludeResourceError('missing-sanitizer', 0);
-      return String(sanitizer.sanitize(raw));
+      return sanitizePassiveMarkup(sanitizer, raw, owner.document, 'transclusion');
     },
     { cache },
   );

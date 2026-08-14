@@ -5,14 +5,20 @@ import { tokens } from './tokens.styles.js';
 import { palette } from './tokens/palette.styles.js';
 import { resolveIntlLocale } from './intl-cache.js';
 import {
+  observeInheritedContext,
+  recordInheritedDirectionRead,
+  recordInheritedLocaleRead,
+} from './inherited-context-observer.js';
+import {
+  canonicalizeLyraLocale,
   enableLyraLocaleCache,
   invalidateLyraLocaleCache,
-  peekLyraDirection,
   peekLyraLocale,
   resolveLyraDirection,
   resolveLyraString,
   resolveLyraLocale,
-  subscribeLyraLocale,
+  snapshotLyraLocaleStrings,
+  subscribeLyraLocaleForHost,
 } from './localization-runtime.js';
 import type { LyraLocaleStrings } from './localization.js';
 
@@ -62,27 +68,6 @@ export const SLOT_PRESENCE_UNRESOLVED = Symbol('lr-slot-presence-unresolved');
 
 const REACTIVE_HOST_ATTRIBUTES = ['aria-label', 'aria-describedby', 'lang', 'dir'] as const;
 const DIRECTION_HOST_ATTRIBUTES = ['class', 'style'] as const;
-const INHERITED_CONTEXT_ATTRIBUTES = ['locale', 'lang', 'dir', 'class', 'style'] as const;
-
-function composedParentElement(element: Element): Element | null {
-  if (element.parentElement) return element.parentElement;
-  const root = element.getRootNode();
-  const candidate = (root as { nodeType?: number; host?: unknown }).host;
-  return root.nodeType === 11 && candidate !== null && typeof candidate === 'object' &&
-    typeof (candidate as Element).getAttribute === 'function'
-    ? candidate as Element
-    : null;
-}
-
-const STYLE_DIRECTION_PATTERN = /(?:^|[;\s])direction\s*:\s*([^;]+)/i;
-
-/** Extracts the declared `direction:` value from a raw inline `style` attribute string, or
- *  `undefined` if it doesn't declare one -- used to tell whether a `style` mutation actually
- *  touched `direction` (added, removed, or changed its value) rather than merely happening to
- *  co-occur with an unrelated declaration that already mentions the word. */
-function styleDirectionDeclaration(styleText: string): string | undefined {
-  return STYLE_DIRECTION_PATTERN.exec(styleText)?.[1]?.trim();
-}
 
 /**
  * Shared base for every Lyra component. Supplies the design-token layer
@@ -112,8 +97,22 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   /** Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used. */
   @property({ reflect: true }) locale = '';
 
-  /** Per-instance message overrides, useful for application-specific wording. */
-  @property({ attribute: false }) strings: LyraLocaleStrings = {};
+  private stringsValue: LyraLocaleStrings = snapshotLyraLocaleStrings({});
+
+  /**
+   * Immutable, bounded per-instance message overrides, useful for application-specific wording.
+   * Assignment snapshots own data-string/plural entries; malformed/accessor entries are omitted
+   * and later caller mutation cannot alter rendered copy without a new assignment.
+   */
+  @property({ attribute: false })
+  get strings(): LyraLocaleStrings {
+    return this.stringsValue;
+  }
+  set strings(value: LyraLocaleStrings) {
+    const previous = this.stringsValue;
+    this.stringsValue = snapshotLyraLocaleStrings(value);
+    this.requestUpdate('strings', previous);
+  }
 
   private stopLocaleSubscription?: () => void;
   private pendingLoadController?: AbortController;
@@ -123,7 +122,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   private afterUpdateCallbacks?: Map<string, () => void>;
   /** Callbacks that came due while detached, replayed on reconnect. */
   private deferredAfterUpdate?: Map<string, () => void>;
-  private inheritedContextObserver?: MutationObserver;
+  private stopInheritedContextObservation?: () => void;
   /** `undefined` until the first connect decides it, then true only between that connect and the
    *  first update of an element whose shadow DOM a server already rendered. See
    *  {@link seedFirstRenderState}. */
@@ -171,8 +170,9 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     // previous tree must not carry over.
     enableLyraLocaleCache(this);
     invalidateLyraLocaleCache(this);
-    this.observeInheritedContext();
-    this.stopLocaleSubscription = subscribeLyraLocale(() => this.requestUpdate());
+    this.stopInheritedContextObservation?.();
+    this.stopInheritedContextObservation = observeInheritedContext(this);
+    this.stopLocaleSubscription = subscribeLyraLocaleForHost(this, () => this.requestUpdate());
     const deferred = this.deferredAfterUpdate;
     if (deferred) {
       this.deferredAfterUpdate = undefined;
@@ -185,10 +185,20 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     this.pendingLoadController = undefined;
     this.stopLocaleSubscription?.();
     this.stopLocaleSubscription = undefined;
-    this.inheritedContextObserver?.disconnect();
-    this.inheritedContextObserver = undefined;
+    this.stopInheritedContextObservation?.();
+    this.stopInheritedContextObservation = undefined;
     invalidateLyraLocaleCache(this);
     super.disconnectedCallback();
+  }
+
+  /**
+   * Shared adoption hook for components that retain owner-realm resources. Subclasses override
+   * this callback and call `super.adoptedCallback()` just as they do for connect/disconnect; the
+   * base invalidation prevents locale or direction state resolved in the former document from
+   * surviving until an unrelated update.
+   */
+  adoptedCallback(): void {
+    invalidateLyraLocaleCache(this);
   }
 
   /**
@@ -220,106 +230,6 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       // cascade; CSS itself handles the visual update, so no render is required here.
       invalidateLyraLocaleCache(this);
     }
-  }
-
-  /**
-   * `class`/`style` sit in {@link INHERITED_CONTEXT_ATTRIBUTES} so a CSS-only ancestor direction
-   * change (`.rtl-context { direction: rtl }`, an inline `style="direction: rtl"`) is still
-   * picked up with no `dir` attribute anywhere — see the "reads computed direction live after
-   * ancestor style and class changes" test. But `class`/`style` also cover every OTHER reason an
-   * ancestor's inline style or class list might change, most of which have nothing to do with
-   * direction or locale (an overlay's own `--lr-overlay-stack-index` custom property, a consumer's
-   * unrelated theming class, …). A MutationObserver callback is its own microtask, scheduled
-   * independently of Lit's update batching, so an unconditional `requestUpdate()` here could land
-   * inside another in-flight update's `updated()`/`hostUpdated()` window purely because of a
-   * direction-irrelevant style write on some unrelated ancestor — Lit's dev-mode "scheduled an
-   * update after an update completed" warning, for a re-render that was never actually warranted.
-   * Comparing the freshly resolved direction/locale against the last
-   * observed pair keeps the feature intact while dropping every spurious trigger.
-   */
-  private observeInheritedContext(): void {
-    this.inheritedContextObserver?.disconnect();
-    const Observer = this.ownerDocument?.defaultView?.MutationObserver;
-    if (!Observer) return;
-    let lastLocale: string | undefined;
-    let lastDirection: 'ltr' | 'rtl' | undefined;
-    let checkQueued = false;
-    let recheckDirection = false;
-    const check = () => {
-      checkQueued = false;
-      const resolveDirection = recheckDirection;
-      recheckDirection = false;
-      // Catch up on whatever the host's own last render already resolved (a free cache read, no
-      // `getComputedStyle()`) before this check runs its own — a `willUpdate()`/render pass that
-      // reads `effectiveLocale`/`effectiveDirection` populates the same memo `resolveLyraLocale()`/
-      // `resolveLyraDirection()` below consult, so this is nearly always already warm by the time
-      // an ancestor mutation fires. A host that never reads either getter leaves the memo (and so
-      // `last*` here) permanently unset, which is fine: nothing in its own output depends on
-      // direction/locale, so there is nothing for a `requestUpdate()` to correct.
-      lastLocale ??= peekLyraLocale(this);
-      if (resolveDirection) lastDirection ??= peekLyraDirection(this);
-      const priorLocale = lastLocale;
-      const priorDirection = lastDirection;
-      invalidateLyraLocaleCache(this);
-      const locale = resolveLyraLocale(this);
-      lastLocale = locale;
-      const localeChanged = priorLocale !== undefined && locale !== priorLocale;
-      // `resolveLyraDirection()` forces a synchronous `getComputedStyle()` read (see
-      // `inheritedDirection()`), which is far more than a cheap ancestor-attribute walk: reading
-      // computed style on ANY element forces the browser to flush pending style work for the whole
-      // document, including custom-property inheritance that a Lit host's own in-flight update (an
-      // unrelated `style.setProperty()` write, say) hasn't committed the *consuming* markup for
-      // yet. Observed in practice: a sibling's forced read here made Chromium permanently drop a
-      // `<lr-chip-group>`'s own `--lr-chip-group-overflow-expanded-color` cssprop resolution for
-      // its `[part="overflow-indicator"]`, reproducing 100% of the time. Only pay for that flush
-      // when the mutation could plausibly have changed direction at all: an explicit `dir`
-      // attribute, a `class` change (opaque -- may match any stylesheet rule), or a `style` change
-      // whose *declared* `direction` value actually differs (see `styleDirectionDeclaration()` --
-      // not a raw substring check, which would false-positive on every unrelated write to an
-      // ancestor that also happens to declare `direction`). A locale-only/unrelated-property style
-      // mutation skips it entirely, keeping `lastDirection` as the last known-good value.
-      let directionChanged = false;
-      if (resolveDirection) {
-        const direction = resolveLyraDirection(this);
-        directionChanged = priorDirection !== undefined && direction !== priorDirection;
-        lastDirection = direction;
-      }
-      if (localeChanged || directionChanged) this.requestUpdate();
-    };
-    const observer = new Observer((records) => {
-      for (const record of records) {
-        if (record.attributeName === 'dir' || record.attributeName === 'class') {
-          recheckDirection = true;
-          break;
-        }
-        if (record.attributeName === 'style') {
-          const target = record.target as Element;
-          const before = record.oldValue ?? '';
-          const after = target.getAttribute('style') ?? '';
-          // Compare the *declared* `direction` value, not raw substring presence: an ancestor that
-          // already declares `direction: ltr` alongside an unrelated property write (a sibling's
-          // own cssprop, say) would otherwise always look "changed" merely because both the old and
-          // new style text happen to contain the word "direction".
-          if (styleDirectionDeclaration(before) !== styleDirectionDeclaration(after)) {
-            recheckDirection = true;
-            break;
-          }
-        }
-      }
-      if (checkQueued) return;
-      checkQueued = true;
-      queueMicrotask(check);
-    });
-    let ancestor = composedParentElement(this);
-    while (ancestor) {
-      observer.observe(ancestor, {
-        attributes: true,
-        attributeOldValue: true,
-        attributeFilter: [...INHERITED_CONTEXT_ATTRIBUTES],
-      });
-      ancestor = composedParentElement(ancestor);
-    }
-    this.inheritedContextObserver = observer;
   }
 
   /**
@@ -449,7 +359,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     fallback?: string,
     values?: Record<string, string | number>,
   ): string {
-    return resolveLyraString(
+    const message = resolveLyraString(
       this,
       key,
       this.strings,
@@ -457,11 +367,16 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       values,
       (this.constructor as typeof LyraElement).defaultStrings,
     );
+    recordInheritedLocaleRead(this, peekLyraLocale(this));
+    return message;
   }
 
-  /** The raw effective locale used for message-catalog lookup and propagation to child controls. */
+  /** The canonical public locale used for message-catalog lookup and propagation to child controls. */
   protected get effectiveMessageLocale(): string {
-    return this.locale || resolveLyraLocale(this);
+    if (this.locale) return canonicalizeLyraLocale(this.locale);
+    const locale = resolveLyraLocale(this);
+    recordInheritedLocaleRead(this, locale);
+    return locale;
   }
 
   /** The canonical, structurally valid locale used for locale-sensitive platform APIs. */
@@ -476,12 +391,19 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
 
   /** The effective text direction, including inherited CSS direction. */
   protected get effectiveDirection(): 'ltr' | 'rtl' {
-    return resolveLyraDirection(this);
+    const direction = resolveLyraDirection(this);
+    recordInheritedDirectionRead(this, direction);
+    return direction;
   }
 
   override addEventListener<K extends keyof Events & string>(
     type: K,
     listener: (this: this, event: Events[K]) => unknown,
+    options?: boolean | AddEventListenerOptions,
+  ): void;
+  override addEventListener<K extends keyof HTMLElementEventMap>(
+    type: K,
+    listener: (this: this, event: HTMLElementEventMap[K]) => unknown,
     options?: boolean | AddEventListenerOptions,
   ): void;
   override addEventListener(
@@ -500,6 +422,11 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   override removeEventListener<K extends keyof Events & string>(
     type: K,
     listener: (this: this, event: Events[K]) => unknown,
+    options?: boolean | EventListenerOptions,
+  ): void;
+  override removeEventListener<K extends keyof HTMLElementEventMap>(
+    type: K,
+    listener: (this: this, event: HTMLElementEventMap[K]) => unknown,
     options?: boolean | EventListenerOptions,
   ): void;
   override removeEventListener(

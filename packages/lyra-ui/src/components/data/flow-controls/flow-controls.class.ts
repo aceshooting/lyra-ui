@@ -2,8 +2,9 @@ import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type P
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame } from '../../../internal/variants.js';
-import { tag } from '../../../internal/prefix.js';
-import type { FlowStructureSnapshot } from '../flow-canvas/flow-canvas.class.js';
+import type { LyraOrientation } from '../../../internal/shared-unions.js';
+import type { FlowStructureSnapshot } from '../flow-canvas/flow-types.js';
+import { FlowCanvasCompanionController } from '../flow-canvas/flow-companion-controller.js';
 import { styles } from './flow-controls.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -17,6 +18,17 @@ interface FlowCanvasLike extends HTMLElement {
   zoomOut(): void;
   fit(options?: { padding?: number }): void;
   locked: boolean;
+}
+
+function isFlowCanvasLike(element: HTMLElement): element is FlowCanvasLike {
+  const candidate = element as Partial<FlowCanvasLike>;
+  return (
+    typeof candidate.registerCompanion === 'function' &&
+    typeof candidate.zoomIn === 'function' &&
+    typeof candidate.zoomOut === 'function' &&
+    typeof candidate.fit === 'function' &&
+    typeof candidate.locked === 'boolean'
+  );
 }
 
 const GLYPH_VIEW_BOX = '0 0 24 24';
@@ -60,10 +72,6 @@ const lockClosedGlyph = () =>
   glyphSvg(svg`<rect x="4" y="11" width="16" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path>`);
 const lockOpenGlyph = () =>
   glyphSvg(svg`<rect x="4" y="11" width="16" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 7.4-2"></path>`);
-
-/** Container treatment for `<lr-flow-controls>`'s root. The library-wide {@linkcode LyraFrame}
- *  vocabulary under this component's own export name. */
-export type FlowControlsAppearance = LyraFrame;
 
 /**
  * `<lr-flow-controls>` — the canvas's button cluster: zoom in/out, fit, and interaction lock, so
@@ -109,7 +117,17 @@ export class LyraFlowControls extends LyraElement {
    *  re-subscribes; a target that mounts later is picked up too. */
   @property() for = '';
   /** Layout axis of the button cluster. */
-  @property({ reflect: true }) orientation: 'vertical' | 'horizontal' = 'vertical';
+  private _orientation: LyraOrientation = 'vertical';
+  @property({ reflect: true })
+  get orientation(): LyraOrientation {
+    return this._orientation;
+  }
+  set orientation(value: LyraOrientation) {
+    const previous = this._orientation;
+    const next: LyraOrientation = value === 'horizontal' ? 'horizontal' : 'vertical';
+    this._orientation = next;
+    if (next !== previous || value !== next) this.requestUpdate('orientation', previous);
+  }
   /** Omits the lock/unlock toggle button entirely, for canvases that never expose an interaction
    *  lock. */
   @property({ type: Boolean, attribute: 'hide-lock' }) hideLock = false;
@@ -124,40 +142,25 @@ export class LyraFlowControls extends LyraElement {
   @state() private locked = false;
   private canvasEl?: FlowCanvasLike;
   private unsubscribe?: () => void;
-  private lockObserver?: MutationObserver;
-  private lockObserverDocument?: Document;
-  /** Watches target lifecycle so late, removed, and same-id replacement canvases are reconciled. */
-  private canvasWatcher?: MutationObserver;
-  private canvasWatcherDocument?: Document;
-  private ownerRealmGeneration = 0;
+  private readonly companionController = new FlowCanvasCompanionController<FlowCanvasLike>(
+    this,
+    isFlowCanvasLike,
+    (next) => this.attachCanvas(next),
+  );
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.watchForCanvas();
-    this.resolveAndAttach();
+    this.companionController.connect();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.resetOwnerRealmWork();
+    this.companionController.disconnect();
   }
 
-  adoptedCallback(): void {
-    this.resetOwnerRealmWork();
-  }
-
-  private resetOwnerRealmWork(): void {
-    this.ownerRealmGeneration += 1;
-    this.unsubscribe?.();
-    this.unsubscribe = undefined;
-    this.lockObserver?.disconnect();
-    this.lockObserver = undefined;
-    this.lockObserverDocument = undefined;
-    this.lockObserverDocument = undefined;
-    this.canvasWatcher?.disconnect();
-    this.canvasWatcher = undefined;
-    this.canvasWatcherDocument = undefined;
-    this.canvasEl = undefined;
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.companionController.adopt();
   }
 
   // Guarded by `hasUpdated` -- `connectedCallback()` already ran the initial `resolveAndAttach()`
@@ -168,96 +171,32 @@ export class LyraFlowControls extends LyraElement {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (this.hasUpdated && changed.has('for')) {
-      this.resolveAndAttach();
+      this.companionController.targetIdChanged();
     }
   }
 
-  private resolveCanvas(): FlowCanvasLike | null {
-    if (this.for) {
-      const root = this.getRootNode() as Document | ShadowRoot;
-      const byId = root.getElementById?.(this.for);
-      if (byId && byId.tagName.toLowerCase() === tag('flow-canvas')) return byId as unknown as FlowCanvasLike;
-    }
-    const ancestor = this.closest(tag('flow-canvas'));
-    return (ancestor as unknown as FlowCanvasLike) ?? null;
-  }
-
-  private resolveAndAttach(): void {
-    const canvas = this.resolveCanvas() ?? undefined;
-    if (canvas === this.canvasEl) return;
+  private attachCanvas(canvas: FlowCanvasLike | null): void {
     this.unsubscribe?.();
     this.unsubscribe = undefined;
-    this.lockObserver?.disconnect();
-    this.lockObserver = undefined;
     this.snapshot = null;
     this.locked = false;
-    this.canvasEl = canvas;
+    this.canvasEl = canvas ?? undefined;
     if (!canvas) return;
-    const ownerDocument = this.ownerDocument;
-    const generation = this.ownerRealmGeneration;
     this.locked = canvas.locked;
     this.unsubscribe = canvas.registerCompanion((snapshot) => {
-      if (
-        this.ownerRealmGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument ||
-        this.canvasEl !== canvas
-      ) {
-        return;
-      }
+      if (!this.isConnected || this.canvasEl !== canvas) return;
       this.snapshot = snapshot;
+      this.locked = snapshot.locked;
     });
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    const observer = new MutationObserverCtor(() => {
-      if (
-        this.lockObserver !== observer ||
-        this.lockObserverDocument !== ownerDocument ||
-        this.ownerRealmGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument ||
-        this.canvasEl !== canvas
-      ) {
-        return;
-      }
-      this.locked = canvas.locked;
-    });
-    this.lockObserver = observer;
-    this.lockObserverDocument = ownerDocument;
-    observer.observe(canvas, { attributes: true, attributeFilter: ['locked'] });
-  }
-
-  private watchForCanvas(): void {
-    const ownerDocument = this.ownerDocument;
-    if (this.canvasWatcher && this.canvasWatcherDocument === ownerDocument) return;
-    this.canvasWatcher?.disconnect();
-    this.canvasWatcher = undefined;
-    this.canvasWatcherDocument = undefined;
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!this.isConnected || !MutationObserverCtor) return;
-    const root = this.getRootNode() as Document | ShadowRoot;
-    const generation = this.ownerRealmGeneration;
-    const observer = new MutationObserverCtor(() => {
-      if (
-        this.canvasWatcher !== observer ||
-        this.canvasWatcherDocument !== ownerDocument ||
-        this.ownerRealmGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument ||
-        this.getRootNode() !== root
-      ) {
-        return;
-      }
-      this.resolveAndAttach();
-    });
-    this.canvasWatcher = observer;
-    this.canvasWatcherDocument = ownerDocument;
-    observer.observe(root, { childList: true, subtree: true });
   }
 
   private toggleLock = (): void => {
     if (!this.canvasEl) return;
-    this.canvasEl.locked = !this.canvasEl.locked;
+    const locked = !this.canvasEl.locked;
+    this.canvasEl.locked = locked;
+    // The authoritative snapshot follows on the canvas's next coalesced frame. Reflect this
+    // control's own committed action immediately so aria-pressed never lags a click by a frame.
+    this.locked = locked;
   };
 
   override render(): TemplateResult {

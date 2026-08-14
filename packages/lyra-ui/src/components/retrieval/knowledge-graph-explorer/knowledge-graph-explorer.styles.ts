@@ -7,7 +7,7 @@ export const styles = css`
   /* An explicit height on the host has to actually bound the rendered explorer. Without this chain
      the column only ever sized itself from its content -- chiefly the composed graph's own
      intrinsic svg/canvas aspect ratio -- so a host height either left a dead gap below the graph or
-     was overflowed by it. The same block-size: 100% propagation lr-split and lr-widget use.
+     was overflowed by it. The same block-size: 100% propagation lr-multi-split and lr-widget use.
      min-block-size: 0 lets the graph below shrink past its intrinsic size instead of forcing the
      column taller than its allocation; with no height on the host both percentages resolve to auto
      and the content-sized behaviour is unchanged. */

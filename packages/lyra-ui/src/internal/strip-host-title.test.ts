@@ -33,3 +33,43 @@ it('keeps the title property in sync across repeated re-assignment without the a
   expect(el.title).to.equal('second');
   expect(el.hasAttribute('title')).to.be.false;
 });
+
+it('strips same-value host title reauthoring synchronously without clearing the stored property', async () => {
+  const el = (await fixture(html`<lr-demo-strip-host-title title="same"></lr-demo-strip-host-title>`)) as Ctl;
+  expect(el.hasAttribute('title')).to.be.false;
+
+  el.setAttribute('title', 'same');
+
+  expect(el.title).to.equal('same');
+  expect(el.hasAttribute('title')).to.be.false;
+});
+
+it('strips different-value host title reauthoring synchronously after updating the property', async () => {
+  const el = (await fixture(html`<lr-demo-strip-host-title title="first"></lr-demo-strip-host-title>`)) as Ctl;
+
+  el.setAttribute('title', 'second');
+
+  expect(el.title).to.equal('second');
+  expect(el.hasAttribute('title')).to.be.false;
+});
+
+it('normalizes a declarative title during a late custom-element upgrade', async () => {
+  const localName = tag('demo-strip-host-title-late');
+  const unresolved = document.createElement(localName);
+  unresolved.setAttribute('title', 'hydrated');
+  document.body.append(unresolved);
+  try {
+    class LateCtl extends StripHostTitleAttribute(LyraElement) {
+      @property() title = '';
+      render() {
+        return html``;
+      }
+    }
+    customElements.define(localName, LateCtl);
+    await (unresolved as LateCtl).updateComplete;
+    expect((unresolved as LateCtl).title).to.equal('hydrated');
+    expect(unresolved.hasAttribute('title')).to.be.false;
+  } finally {
+    unresolved.remove();
+  }
+});

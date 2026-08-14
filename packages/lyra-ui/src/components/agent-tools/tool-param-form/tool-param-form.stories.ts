@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './tool-param-form.js';
-import type { LyraToolParamForm, ToolParamFormSchema } from './tool-param-form.js';
+import type { LyraToolParamForm, FlatToolParamSchema } from './tool-param-form.js';
 
 const meta: Meta = {
   title: 'ToolParamForm',
@@ -11,7 +11,7 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-const weatherSchema: ToolParamFormSchema = {
+const weatherSchema: FlatToolParamSchema = {
   type: 'object',
   properties: {
     city: {
@@ -21,9 +21,9 @@ const weatherSchema: ToolParamFormSchema = {
       autocomplete: 'address-level2',
       spellcheck: false,
       autocapitalize: 'words',
-      autocorrect: 'off',
-      inputmode: 'text',
-      enterkeyhint: 'next',
+      autoCorrect: 'off',
+      inputMode: 'text',
+      enterKeyHint: 'next',
     },
     units: {
       type: 'string',
@@ -211,7 +211,51 @@ export const EmptySchema: Story = {
   `,
 };
 
-const enumHeavySchema: ToolParamFormSchema = {
+export const MalformedSchemaFailsClosed: Story = {
+  name: 'Malformed provider schema fails closed',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A malformed leaf is reported as a schema-shape error rather than crashing the update or being mislabeled as value serialization.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-tool-param-form
+      style="max-width:24rem"
+      .schema=${{
+        type: 'object',
+        properties: { malformed: null },
+      } as unknown as FlatToolParamSchema}
+    ></lr-tool-param-form>
+  `,
+};
+
+export const SchemaFieldLimit: Story = {
+  name: 'Bounded provider schema',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A 101-field provider schema mounts only the bounded 100-field prefix and exposes a localized form-wide limit error.',
+      },
+    },
+  },
+  render: () => {
+    const properties = Object.fromEntries(
+      Array.from({ length: 101 }, (_, index) => [`field_${index + 1}`, { type: 'string' as const }]),
+    );
+    return html`
+      <lr-tool-param-form
+        style="display:block;max-width:24rem;max-height:24rem;overflow:auto"
+        .schema=${{ type: 'object', properties } satisfies FlatToolParamSchema}
+      ></lr-tool-param-form>
+    `;
+  },
+};
+
+const enumHeavySchema: FlatToolParamSchema = {
   type: 'object',
   properties: {
     priority: { type: 'string', enum: ['low', 'normal', 'high', 'urgent'], default: 'normal' },
@@ -257,7 +301,7 @@ export const Narrow320: Story = {
             'required_approval_mode',
             'acknowledge_risk',
           ],
-        } satisfies ToolParamFormSchema}
+        } satisfies FlatToolParamSchema}
       ></lr-tool-param-form>
     </div>
   `,

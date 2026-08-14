@@ -80,12 +80,6 @@ const SLIDE_SNAPSHOT_KEYS = [
   "ariaHidden",
 ] as const satisfies readonly (keyof SlideSnapshot)[];
 
-const falseDefaultBooleanFromAttributeConverter = {
-  fromAttribute(value: string | null): boolean {
-    return value !== null && value !== "false";
-  },
-};
-
 export interface LyraCarouselEventMap {
   "lr-slide-change": CustomEvent<{ index: number; slide: HTMLElement }>;
 }
@@ -93,9 +87,7 @@ export interface LyraCarouselEventMap {
 /**
  * `<lr-carousel>` — a scroll-snap carousel for arbitrary slotted content. Its Web Awesome and
  * Shoelace-compatible surface supports optional navigation and pagination, multiple slides per
- * page, horizontal or vertical movement, autoplay, looping, and opt-in mouse dragging. The older
- * Lyra `index`/`showIndicators` names remain synchronized aliases of
- * `currentSlide`/`pagination`.
+ * page, horizontal or vertical movement, autoplay, looping, and opt-in mouse dragging.
  * Manual active-page changes are announced through a pre-mounted light-DOM live region even while
  * autoplay is enabled. Only timer-driven advances stay silent, and neither initial connection nor
  * reconnection replays the current page. Changes made while the carousel or a composed ancestor is
@@ -127,7 +119,6 @@ export interface LyraCarouselEventMap {
  * @csspart base - Compatibility name for the carousel landmark; use `carousel`.
  * @csspart carousel - The carousel landmark. It is the same node as `base`.
  * @csspart scroll-container - The keyboard-focusable scroll-snap viewport.
- * @csspart viewport - Lyra compatibility name for `scroll-container` on the same node.
  * @csspart track - Lyra extension wrapping the slotted slides and eligible inert loop snapshots.
  * @csspart controls - Lyra extension wrapping enabled navigation and pagination.
  * @csspart navigation - The previous/next navigation wrapper.
@@ -136,16 +127,12 @@ export interface LyraCarouselEventMap {
  * @csspart navigation-button-next - Next navigation button.
  * @csspart navigation-button--previous - Shoelace name for the previous navigation button.
  * @csspart navigation-button--next - Shoelace name for the next navigation button.
- * @csspart previous-button - Lyra compatibility name for `navigation-button-previous`.
- * @csspart next-button - Lyra compatibility name for `navigation-button-next`.
  * @csspart previous-glyph - Wrapper around the previous-icon slot.
  * @csspart next-glyph - Wrapper around the next-icon slot.
  * @csspart pagination - The pagination wrapper.
  * @csspart pagination-item - A pagination button.
  * @csspart pagination-item-active - The active pagination button.
  * @csspart pagination-item--active - Shoelace name for the active pagination button.
- * @csspart indicators - Lyra compatibility name for `pagination`.
- * @csspart indicator - Lyra compatibility name for `pagination-item`.
  * @csspart indicator-dot - Compact visible dot inside a pagination button.
  * @cssprop [--aspect-ratio=16/9] - Aspect ratio inherited by each slide.
  * @cssprop --scroll-hint - Logical padding that reveals the nearest adjacent slides.
@@ -206,16 +193,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.setCurrentSlideState(value);
   }
 
-  /** Compatibility alias for `currentSlide`.
-   * @default 0 */
-  @property({ type: Number, reflect: true })
-  get index(): number {
-    return this._currentSlide;
-  }
-  set index(value: number) {
-    this.setCurrentSlideState(finiteInteger(value, 0));
-  }
-
   @property({ type: Boolean, reflect: true }) loop = false;
   @property({ type: Boolean, reflect: true }) autoplay = false;
   @property({ type: Number, attribute: "autoplay-interval" })
@@ -232,19 +209,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.setPaginationState(Boolean(value));
   }
 
-  /** Compatibility alias for `pagination`.
-   * @default false */
-  @property({
-    attribute: "show-indicators",
-    converter: falseDefaultBooleanFromAttributeConverter,
-  })
-  get showIndicators(): boolean {
-    return this._pagination;
-  }
-  set showIndicators(value: boolean) {
-    this.setPaginationState(Boolean(value));
-  }
-
   @property() orientation: LyraCarouselOrientation = "horizontal";
   @property({ type: Boolean, attribute: "mouse-dragging", reflect: true })
   mouseDragging = false;
@@ -252,16 +216,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   @property({ type: Number, attribute: "slides-per-move" }) slidesPerMove = 1;
   /** Live count of assigned slides.
    * @default 0 */
-  @property({ type: Number, reflect: true })
   get slides(): number {
     return this._slides;
-  }
-  set slides(value: number) {
-    const old = this._slides;
-    const next = finiteInteger(value, 0, 0);
-    if (old === next) return;
-    this._slides = next;
-    this.requestUpdate("slides", old);
   }
   @property({ attribute: "accessible-label" }) accessibleLabel = "";
   @property({ attribute: "aria-label" }) private hostAccessibleLabel:
@@ -314,12 +270,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   constructor() {
     super();
     // Accessor-backed defaults do not pass through a class-field setter. Seed their first
-    // reflection explicitly so `currentSlide`/`index`/`slides` honor the same reflected-default
+    // reflection explicitly so the accessor-backed reactive defaults honor the same contract
     // contract as ordinary Lit fields without duplicating their state.
     this.requestUpdate("currentSlide", undefined);
-    this.requestUpdate("index", undefined);
     this.requestUpdate("pagination", undefined);
-    this.requestUpdate("slides", undefined);
   }
 
   override attributeChangedCallback(
@@ -421,8 +375,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         this.observerDocument !== ownerDocument ||
         this.observerGeneration !== generation ||
         !this.isConnected ||
-        this.ownerDocument !== ownerDocument ||
-        !this.loop
+        this.ownerDocument !== ownerDocument
       ) {
         return;
       }
@@ -443,7 +396,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
           : false;
       });
       if (!snapshotChanged) return;
-      this.loopClonesDirty = true;
+      if (this.loop) this.loopClonesDirty = true;
+      this.syncSlides();
       this.requestUpdate();
     });
     this.observer = observer;
@@ -467,7 +421,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     super.willUpdate(changed);
     if (
       (changed.has("currentSlide") ||
-        changed.has("index") ||
         changed.has("slidesPerPage")) &&
       this.slideSlot
     ) {
@@ -502,7 +455,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     if (
       !this.adoptingScrolledSlide &&
       (changed.has("currentSlide") ||
-        changed.has("index") ||
         changed.has("slidesPerPage") ||
         changed.has("orientation") ||
         !this.hasAlignedOnce)
@@ -524,7 +476,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       this.manualPending = true;
     }
     this.requestUpdate("currentSlide", old);
-    this.requestUpdate("index", old);
   }
 
   private setPaginationState(value: boolean): void {
@@ -532,7 +483,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     if (old === value) return;
     this._pagination = value;
     this.requestUpdate("pagination", old);
-    this.requestUpdate("showIndicators", old);
   }
 
   private onMotionPreferenceChange = (event: MediaQueryListEvent): void => {
@@ -588,6 +538,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   private pageTargets(count = this.slideElements().length): number[] {
     if (count === 0) return [];
+    if (this.loop) return Array.from({ length: count }, (_unused, index) => index);
     const max = this.maxStartIndex(count);
     const move = this.moveSize(count);
     const targets: number[] = [0];
@@ -804,7 +755,11 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     ) {
       this.viewport?.focus();
     }
-    if (this.slides !== count) this.slides = count;
+    if (this._slides !== count) {
+      const previous = this._slides;
+      this._slides = count;
+      this.requestUpdate('slides', previous);
+    }
     this.loopClonesDirty = true;
     this.syncSlides();
     this.syncLoopClones();
@@ -939,11 +894,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   /** Moves to the requested slide. */
   goToSlide(index: number, behavior: ScrollBehavior = "smooth"): void {
     this.changeTo(index, behavior);
-  }
-
-  /** Compatibility alias for `goToSlide()`. */
-  goTo(index: number, behavior: ScrollBehavior = "smooth"): void {
-    this.goToSlide(index, behavior);
   }
 
   /** Appends a carousel item. */
@@ -1239,15 +1189,17 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   };
 
   private onViewportPointerDown = (event: PointerEvent): void => {
-    this.takeOverViewport();
     if (
       !this.mouseDragging ||
       event.pointerType !== "mouse" ||
+      !event.isPrimary ||
       event.button !== 0 ||
-      this.dragPointerId !== undefined
+      this.dragPointerId !== undefined ||
+      this.pointerTargetsInteractiveContent(event)
     ) {
       return;
     }
+    this.takeOverViewport();
     const viewport = this.viewport;
     if (!viewport) return;
     this.dragPointerId = event.pointerId;
@@ -1268,6 +1220,30 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     }
     this.restartAutoplay();
   };
+
+  private pointerTargetsInteractiveContent(event: PointerEvent): boolean {
+    const slides = new Set(this.slideElements());
+    for (const target of event.composedPath()) {
+      if (!(target instanceof Element)) continue;
+      if (target === this || target === this.viewport || slides.has(target as HTMLElement)) continue;
+      const name = target.localName;
+      if (
+        name === 'a' ||
+        name === 'button' ||
+        name === 'input' ||
+        name === 'label' ||
+        name === 'select' ||
+        name === 'textarea' ||
+        target.hasAttribute('contenteditable') ||
+        (name.includes('-') && target.getRootNode() !== this.shadowRoot)
+      ) return true;
+      const role = target.getAttribute('role')?.trim().toLowerCase();
+      if (role && ['button', 'checkbox', 'combobox', 'link', 'radio', 'slider', 'spinbutton', 'switch', 'textbox'].includes(role)) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   private onViewportPointerMove = (event: PointerEvent): void => {
     if (event.pointerId !== this.dragPointerId) return;
@@ -1387,21 +1363,23 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     if (perPage === 1) {
       return "100%";
     }
-    return `calc(${100 / perPage}% - var(--slide-gap, var(--lr-space-m)))`;
+    return `calc((100% - (${perPage - 1} * var(--slide-gap, var(--lr-space-m)))) / ${perPage})`;
   }
 
   override render(): TemplateResult {
     const count = this.slideElements().length;
     const current = this.normalizedIndex(count);
     const pageTargets = this.pageTargets(count);
-    const currentPage = pageTargets.reduce(
-      (nearest, target, pageIndex) =>
-        Math.abs(target - current) <
-        Math.abs(pageTargets[nearest]! - current)
-          ? pageIndex
-          : nearest,
-      0
-    );
+    const exactCurrentPage = pageTargets.indexOf(current);
+    const currentPage = exactCurrentPage >= 0
+      ? exactCurrentPage
+      : pageTargets.reduce(
+          (nearest, target, pageIndex) =>
+            Math.abs(target - current) < Math.abs(pageTargets[nearest]! - current)
+              ? pageIndex
+              : nearest,
+          0,
+        );
     const hasNavigation =
       this.navigation && count > this.pageSize(count);
     const hasPagination = this.pagination && pageTargets.length > 1;
@@ -1425,7 +1403,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       @focusout=${this.onViewportFocusOut}
     >
       <div
-        part="viewport scroll-container"
+        part="scroll-container"
         role="group"
         aria-label=${label}
         tabindex="0"
@@ -1458,7 +1436,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
             ${hasNavigation
               ? html`<div part="navigation">
                   <button
-                    part="previous-button navigation-button navigation-button-previous navigation-button--previous"
+                    part="navigation-button navigation-button-previous navigation-button--previous"
                     type="button"
                     aria-label=${this.localize("previous")}
                     ?disabled=${!this.loop && current === 0}
@@ -1470,7 +1448,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
                     )}
                   </button>
                   <button
-                    part="next-button navigation-button navigation-button-next navigation-button--next"
+                    part="navigation-button navigation-button-next navigation-button--next"
                     type="button"
                     aria-label=${this.localize("next")}
                     ?disabled=${!this.loop &&
@@ -1486,15 +1464,15 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
               : nothing}
             ${hasPagination
               ? html`<div
-                  part="indicators pagination"
+                  part="pagination"
                   role="group"
                   aria-label=${this.localize("carouselIndicators")}
                 >
                   ${pageTargets.map(
                     (target, pageIndex) => html`<button
                       part=${pageIndex === currentPage
-                        ? "indicator pagination-item pagination-item-active pagination-item--active"
-                        : "indicator pagination-item"}
+                        ? "pagination-item pagination-item-active pagination-item--active"
+                        : "pagination-item"}
                       type="button"
                       aria-label=${this.localize("carouselGoTo", undefined, {
                         index: numberFormat.format(target + 1),

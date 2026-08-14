@@ -46,7 +46,7 @@ import type { LyraCheckpointEventMap } from './components/conversation/checkpoin
 import type { LyraCodeBlockCoreEventMap } from './components/conversation/code-block/code-block-core.class.js';
 import type { LyraCodeBlockEventMap } from './components/conversation/code-block/code-block.class.js';
 import type { LyraConversationItemEventMap } from './components/conversation/conversation-item/conversation-item.class.js';
-import type { LyraGenerationStatusEventMap } from './components/conversation/generation-status/generation-status.class.js';
+import type { LyraGenerationMetricsEventMap } from './components/conversation/generation-metrics/generation-metrics.class.js';
 import type { LyraMarkdownCoreEventMap } from './components/conversation/markdown/markdown-core.class.js';
 import type { LyraMarkdownEventMap } from './components/conversation/markdown/markdown.class.js';
 import type { LyraMessageActionsEventMap } from './components/conversation/message-actions/message-actions.class.js';
@@ -74,7 +74,7 @@ import type { LyraFlowCanvasEventMap } from './components/data/flow-canvas/flow-
 import type { LyraGraphQueryBuilderEventMap } from './components/data/graph-query-builder/graph-query-builder.class.js';
 import type { LyraHeatmapEventMap } from './components/data/heatmap/heatmap.class.js';
 import type { LyraPaginationEventMap } from './components/data/pagination/pagination.class.js';
-import type { LyraQueryBuilderEventMap } from './components/data/query-builder/query-builder.class.js';
+import type { LyraConditionBuilderEventMap } from './components/data/condition-builder/condition-builder.class.js';
 import type { LyraTableEventMap } from './components/data/table/table.class.js';
 import type { LyraTreeItemEventMap } from './components/data/tree/tree-item.class.js';
 import type { LyraTreeEventMap } from './components/data/tree/tree.class.js';
@@ -144,7 +144,7 @@ import type { LyraLightboxEventMap } from './components/media/lightbox/lightbox.
 import type { LyraMapEventMap } from './components/media/map/map.class.js';
 import type { LyraMediaCardEventMap } from './components/media/media-card/media-card.class.js';
 import type { LyraPanZoomEventMap } from './components/media/pan-zoom/pan-zoom.class.js';
-import type { LyraPlaybackEventMap } from './components/media/playback/playback.class.js';
+import type { LyraSequencePlaybackEventMap } from './components/media/sequence-playback/sequence-playback.class.js';
 import type { LyraVideoPlaylistEventMap } from './components/media/video-playlist/video-playlist.class.js';
 import type { LyraAlertEventMap } from './components/overlays/alert/alert.class.js';
 import type { LyraTagEventMap } from './components/overlays/badge/tag.class.js';
@@ -237,11 +237,11 @@ export type LyraAddEvent =
   | LyraTokenInputEventMap['lr-add'];
 
 /**
- * `lr-add-condition` — dispatched by `<lr-query-builder>`.
+ * `lr-add-condition` — dispatched by `<lr-condition-builder>`.
  *
- * Detail type: `LyraQueryBuilderEventMap['lr-add-condition']`.
+ * Detail type: `LyraConditionBuilderEventMap['lr-add-condition']`.
  */
-export type LyraAddConditionEvent = LyraQueryBuilderEventMap['lr-add-condition'];
+export type LyraAddConditionEvent = LyraConditionBuilderEventMap['lr-add-condition'];
 
 /**
  * `lr-after-collapse` — dispatched by 3 components: `<lr-accordion>`, `<lr-tree-item>`,
@@ -1332,7 +1332,7 @@ export type LyraInitialFocusEvent = LyraDialogEventMap['lr-initial-focus'];
 /**
  * `lr-input` — dispatched by 19 components: `<lr-agent-workspace>`, `<lr-chat-composer>`,
  * `<lr-checkbox>`, `<lr-color-picker>`, `<lr-filter-bar>`, `<lr-graph-query-builder>`,
- * `<lr-input>`, `<lr-prompt-input>`, `<lr-query-builder>`, `<lr-radio-group>`, `<lr-radio>`,
+ * `<lr-condition-builder>`, `<lr-input>`, `<lr-prompt-input>`, `<lr-radio-group>`, `<lr-radio>`,
  * `<lr-rubric-form>`, `<lr-select>`, `<lr-slider>`, `<lr-switch>`, `<lr-textarea>`,
  * `<lr-time-input>`, `<lr-time-range>`, `<lr-tool-param-form>`.
  *
@@ -1348,7 +1348,7 @@ export type LyraInputEvent =
   | LyraGraphQueryBuilderEventMap['lr-input']
   | LyraInputEventMap['lr-input']
   | LyraPromptInputEventMap['lr-input']
-  | LyraQueryBuilderEventMap['lr-input']
+  | LyraConditionBuilderEventMap['lr-input']
   | LyraRadioEventMap['lr-input']
   | LyraRadioGroupEventMap['lr-input']
   | LyraRubricFormEventMap['lr-input']
@@ -1893,7 +1893,7 @@ export type LyraPathRequestEvent = LyraKnowledgeGraphExplorerEventMap['lr-path-r
 
 /**
  * `lr-pause` — dispatched by 3 components: `<lr-animated-image>`, `<lr-av-player>`,
- * `<lr-playback>`.
+ * `<lr-sequence-playback>`.
  *
  * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraAnimatedImageEventMap['lr-pause']`.
@@ -1901,7 +1901,7 @@ export type LyraPathRequestEvent = LyraKnowledgeGraphExplorerEventMap['lr-path-r
 export type LyraPauseEvent =
   | LyraAnimatedImageEventMap['lr-pause']
   | LyraAvPlayerEventMap['lr-pause']
-  | LyraPlaybackEventMap['lr-pause'];
+  | LyraSequencePlaybackEventMap['lr-pause'];
 
 /**
  * `lr-pause-change` — dispatched by 2 components: `<lr-poll-status>`, `<lr-random-content>`.
@@ -1930,7 +1930,7 @@ export type LyraPinChangeEvent = LyraKnowledgeGraphExplorerEventMap['lr-pin-chan
 
 /**
  * `lr-play` — dispatched by 3 components: `<lr-animated-image>`, `<lr-av-player>`,
- * `<lr-playback>`.
+ * `<lr-sequence-playback>`.
  *
  * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraAnimatedImageEventMap['lr-play']`.
@@ -1938,7 +1938,7 @@ export type LyraPinChangeEvent = LyraKnowledgeGraphExplorerEventMap['lr-pin-chan
 export type LyraPlayEvent =
   | LyraAnimatedImageEventMap['lr-play']
   | LyraAvPlayerEventMap['lr-play']
-  | LyraPlaybackEventMap['lr-play'];
+  | LyraSequencePlaybackEventMap['lr-play'];
 
 /**
  * `lr-point-click` — dispatched by 3 components: `<lr-box-plot>`, `<lr-chart>`, `<lr-lite-chart>`.
@@ -2130,11 +2130,11 @@ export type LyraRemoveEvent =
   | LyraTokenInputEventMap['lr-remove'];
 
 /**
- * `lr-remove-condition` — dispatched by `<lr-query-builder>`.
+ * `lr-remove-condition` — dispatched by `<lr-condition-builder>`.
  *
- * Detail type: `LyraQueryBuilderEventMap['lr-remove-condition']`.
+ * Detail type: `LyraConditionBuilderEventMap['lr-remove-condition']`.
  */
-export type LyraRemoveConditionEvent = LyraQueryBuilderEventMap['lr-remove-condition'];
+export type LyraRemoveConditionEvent = LyraConditionBuilderEventMap['lr-remove-condition'];
 
 /**
  * `lr-rename` — dispatched by `<lr-conversation-item>`.
@@ -2706,11 +2706,11 @@ export type LyraStartEvent = LyraAnimationEventMap['lr-start'];
 export type LyraStateChangeEvent = LyraPushToTalkEventMap['lr-state-change'];
 
 /**
- * `lr-step` — dispatched by `<lr-playback>`.
+ * `lr-sequence-step` — dispatched by `<lr-sequence-playback>`.
  *
- * Detail type: `LyraPlaybackEventMap['lr-step']`.
+ * Detail type: `LyraSequencePlaybackEventMap['lr-sequence-step']`.
  */
-export type LyraStepEvent = LyraPlaybackEventMap['lr-step'];
+export type LyraSequenceStepEvent = LyraSequencePlaybackEventMap['lr-sequence-step'];
 
 /**
  * `lr-step-select` — dispatched by `<lr-stepper>`.
@@ -2728,7 +2728,7 @@ export type LyraStepperOrientationChangeEvent = LyraStepperEventMap['lr-stepper-
 
 /**
  * `lr-stop` — dispatched by 5 components: `<lr-agent-workspace>`, `<lr-browser-frame>`,
- * `<lr-chat-composer>`, `<lr-generation-status>`, `<lr-prompt-input>`.
+ * `<lr-chat-composer>`, `<lr-generation-metrics>`, `<lr-prompt-input>`.
  *
  * A union of 5 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraAgentWorkspaceEventMap['lr-stop']`.
@@ -2737,7 +2737,7 @@ export type LyraStopEvent =
   | LyraAgentWorkspaceEventMap['lr-stop']
   | LyraBrowserFrameEventMap['lr-stop']
   | LyraChatComposerEventMap['lr-stop']
-  | LyraGenerationStatusEventMap['lr-stop']
+  | LyraGenerationMetricsEventMap['lr-stop']
   | LyraPromptInputEventMap['lr-stop'];
 
 /**
@@ -3375,7 +3375,7 @@ export interface LyraGlobalEventMap {
   'lr-stall': LyraStallEvent;
   'lr-start': LyraStartEvent;
   'lr-state-change': LyraStateChangeEvent;
-  'lr-step': LyraStepEvent;
+  'lr-sequence-step': LyraSequenceStepEvent;
   'lr-step-select': LyraStepSelectEvent;
   'lr-stepper-orientation-change': LyraStepperOrientationChangeEvent;
   'lr-stop': LyraStopEvent;

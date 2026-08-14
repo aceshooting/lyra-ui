@@ -1,11 +1,5 @@
 import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
-import {
-  AUTOLOADER_PENDING_ATTRIBUTE,
-  discover,
-  start,
-  stop,
-  type AutoloadableTagName,
-} from './autoloader.js';
+import { AUTOLOADER_PENDING_ATTRIBUTE, discover, start, stop, type AutoloadableTagName } from './autoloader.js';
 import { setAutoloaderLoaderForTesting } from './internal/autoloader-loaders.js';
 
 const overriddenTags = new Set<AutoloadableTagName>();
@@ -88,9 +82,10 @@ describe('autoloader', () => {
     });
     override(
       tag,
-      async () => class extends HTMLElement {
-        readonly updateComplete = updateComplete;
-      },
+      async () =>
+        class extends HTMLElement {
+          readonly updateComplete = updateComplete;
+        }
     );
     const root = await fixture<HTMLElement>(html`<div><lr-kbd></lr-kbd></div>`);
     const element = root.querySelector(tag)!;
@@ -120,25 +115,31 @@ describe('autoloader', () => {
     const root = await fixture<HTMLElement>(html`<div></div>`);
     await start(root);
 
-    const first = document.createElement(tag) as HTMLElement & { finishUpdate(): void };
+    const first = document.createElement(tag) as HTMLElement & {
+      finishUpdate(): void;
+    };
     root.append(first);
     await aTimeout(0);
-    const second = document.createElement(tag) as HTMLElement & { finishUpdate(): void };
+    const second = document.createElement(tag) as HTMLElement & {
+      finishUpdate(): void;
+    };
     root.append(second);
     await aTimeout(0);
     expect(first.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
     expect(second.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
 
-    resolveConstructor(class extends HTMLElement {
-      private resolveUpdate!: () => void;
-      readonly updateComplete = new Promise<void>((resolve) => {
-        this.resolveUpdate = resolve;
-      });
+    resolveConstructor(
+      class extends HTMLElement {
+        private resolveUpdate!: () => void;
+        readonly updateComplete = new Promise<void>((resolve) => {
+          this.resolveUpdate = resolve;
+        });
 
-      finishUpdate(): void {
-        this.resolveUpdate();
+        finishUpdate(): void {
+          this.resolveUpdate();
+        }
       }
-    });
+    );
     await customElements.whenDefined(tag);
 
     first.finishUpdate();
@@ -159,22 +160,27 @@ describe('autoloader', () => {
       childLoads += 1;
       return constructorForTag();
     });
-    customElements.define(hostTag, class extends HTMLElement {
-      private resolveUpdate!: () => void;
-      readonly updateComplete = new Promise<void>((resolve) => {
-        this.resolveUpdate = resolve;
-      });
+    customElements.define(
+      hostTag,
+      class extends HTMLElement {
+        private resolveUpdate!: () => void;
+        readonly updateComplete = new Promise<void>((resolve) => {
+          this.resolveUpdate = resolve;
+        });
 
-      finishUpdate(): void {
-        const shadow = this.attachShadow({ mode: 'open' });
-        shadow.append(document.createElement(childTag));
-        this.resolveUpdate();
+        finishUpdate(): void {
+          const shadow = this.attachShadow({ mode: 'open' });
+          shadow.append(document.createElement(childTag));
+          this.resolveUpdate();
+        }
       }
-    });
+    );
     const root = await fixture<HTMLElement>(html`<div></div>`);
     await start(root);
 
-    const host = document.createElement(hostTag) as HTMLElement & { finishUpdate(): void };
+    const host = document.createElement(hostTag) as HTMLElement & {
+      finishUpdate(): void;
+    };
     root.append(host);
     await aTimeout(0);
     expect(host.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
@@ -248,13 +254,57 @@ describe('autoloader', () => {
     }
   });
 
+  it('stops observing an open shadow root after its host leaves the caller subtree', async () => {
+    const tag = 'lr-agent-eval-dashboard';
+    let loads = 0;
+    let loadedEvents = 0;
+    override(tag, async () => {
+      loads += 1;
+      return constructorForTag();
+    });
+    const root = await fixture<HTMLElement>(html`<div><section></section></div>`);
+    const host = root.querySelector('section')!;
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+    root.addEventListener('lr-autoload-loaded', () => {
+      loadedEvents += 1;
+    });
+
+    try {
+      await start(root, { events: true });
+      host.remove();
+      await aTimeout(0);
+
+      shadow.append(document.createElement(tag));
+      await aTimeout(0);
+      expect(loads).to.equal(0);
+      expect(loadedEvents).to.equal(0);
+      expect(typeof registry.get(tag)).to.equal('undefined');
+
+      root.append(host);
+      await registry.whenDefined(tag);
+      await aTimeout(0);
+      expect(loads).to.equal(1);
+      expect(loadedEvents).to.equal(1);
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
   it('defines into the scoped registry associated with an open shadow root', async () => {
     const tag = 'lr-activity-feed';
     override(tag, async () => constructorForTag());
     const host = await fixture<HTMLElement>(html`<section></section>`);
     const shadow = host.attachShadow({ mode: 'open' });
     const registry = createScopedRegistry();
-    Object.defineProperty(shadow, 'customElementRegistry', { configurable: true, value: registry });
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
     shadow.append(document.createElement(tag));
     try {
       expect(await discover(host)).to.deep.equal([tag]);
@@ -291,9 +341,17 @@ describe('autoloader', () => {
     const updateComplete = new Promise<void>((resolve) => {
       resolveUpdate = resolve;
     });
-    const element = document.createElement(tag) as HTMLElement & { readonly updateComplete: Promise<void> };
-    Object.defineProperty(element, 'updateComplete', { configurable: true, value: updateComplete });
-    Object.defineProperty(shadow, 'customElementRegistry', { configurable: true, value: registry });
+    const element = document.createElement(tag) as HTMLElement & {
+      readonly updateComplete: Promise<void>;
+    };
+    Object.defineProperty(element, 'updateComplete', {
+      configurable: true,
+      value: updateComplete,
+    });
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
     registry.define(tag, constructorForTag());
     shadow.append(element);
 
@@ -318,7 +376,10 @@ describe('autoloader', () => {
     override(tag, async () => constructorForTag());
     const detachedDocument = document.implementation.createHTMLDocument('autoloader-events');
     const registry = createScopedRegistry();
-    Object.defineProperty(detachedDocument, 'customElements', { configurable: true, value: registry });
+    Object.defineProperty(detachedDocument, 'customElements', {
+      configurable: true,
+      value: registry,
+    });
     detachedDocument.body.append(detachedDocument.createElement(tag));
     const loadedEvent = oneEvent(detachedDocument, 'lr-autoload-loaded');
 
@@ -401,7 +462,7 @@ describe('autoloader', () => {
 
     const errorEvent = oneEvent(root, 'lr-autoload-error');
     root.append(document.createElement(tag));
-    const error = await errorEvent as CustomEvent<{ tag: string }>;
+    const error = (await errorEvent) as CustomEvent<{ tag: string }>;
     expect(error.detail.tag).to.equal(tag);
     await aTimeout(0);
 
@@ -483,6 +544,117 @@ describe('autoloader', () => {
         message = error instanceof Error ? error.message : String(error);
       }
       expect(message).to.include('optionalPeers');
+    }
+  });
+
+  it('rejects a deeply nested open-shadow tree at the configured iterative depth ceiling', async () => {
+    const root = document.createDocumentFragment();
+    let parent: DocumentFragment | ShadowRoot = root;
+    for (let depth = 0; depth < 300; depth += 1) {
+      const host = document.createElement('div');
+      parent.append(host);
+      parent = host.attachShadow({ mode: 'open' });
+    }
+
+    let error: unknown;
+    try {
+      await discover(root, { maxDepth: 64 });
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error instanceof Error).to.equal(true);
+    expect(error instanceof RangeError, 'not recursive stack exhaustion').to.equal(false);
+    expect((error as Error).message).to.include('maxDepth');
+  });
+
+  it('caps concurrent first-update discovery work', async () => {
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+    registry.define('lr-tag', constructorForTag());
+    let active = 0;
+    let maximum = 0;
+    try {
+      for (let index = 0; index < 24; index += 1) {
+        const element = document.createElement('lr-tag');
+        Object.defineProperty(element, 'updateComplete', {
+          configurable: true,
+          get() {
+            active += 1;
+            maximum = Math.max(maximum, active);
+            return new Promise<void>((resolve) => {
+              setTimeout(() => {
+                active -= 1;
+                resolve();
+              }, 5);
+            });
+          },
+        });
+        shadow.append(element);
+      }
+
+      await discover(host, { maxConcurrency: 4 });
+      expect(maximum).to.be.at.most(4);
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('reports an observer-driven traversal ceiling without launching partial discovery', async () => {
+    const tag = 'lr-badge';
+    let loads = 0;
+    override(tag, async () => {
+      loads += 1;
+      return constructorForTag();
+    });
+    const root = await fixture<HTMLElement>(html`<div></div>`);
+    const shadow = root.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+    let detail: { limit?: string; maximum?: number } | undefined;
+    root.addEventListener('lr-autoload-traversal-error', (event) => {
+      detail = (event as CustomEvent<{ limit: string; maximum: number }>).detail;
+    });
+    try {
+      await start(root, { events: true, maxElements: 3 });
+
+      const subtree = document.createElement('section');
+      subtree.append(document.createElement(tag), ...Array.from({ length: 4 }, () => document.createElement('span')));
+      shadow.append(subtree);
+      await aTimeout(20);
+
+      expect(detail?.limit).to.equal('maxElements');
+      expect(detail?.maximum).to.equal(3);
+      expect(loads).to.equal(0);
+      expect(registry.get(tag)).to.equal(undefined);
+      expect(subtree.querySelector(tag)!.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('rejects invalid traversal and concurrency ceilings before walking the tree', async () => {
+    for (const options of [
+      { maxElements: -1 },
+      { maxRoots: Number.NaN },
+      { maxDepth: Number.POSITIVE_INFINITY },
+      { maxWork: 1.5 },
+      { maxConcurrency: 0 },
+    ]) {
+      let error: unknown;
+      try {
+        await discover(document.createDocumentFragment(), options);
+      } catch (caught) {
+        error = caught;
+      }
+      expect(error instanceof RangeError).to.equal(true);
     }
   });
 
@@ -568,7 +740,9 @@ it('makes default discovery safe in a document-less worker', async () => {
       errorName?: string;
       importError?: string;
     }>((resolve, reject) => {
-      worker.addEventListener('message', (event) => resolve(event.data), { once: true });
+      worker.addEventListener('message', (event) => resolve(event.data), {
+        once: true,
+      });
       worker.addEventListener('error', () => reject(new Error('The document-less autoloader probe failed to run')), {
         once: true,
       });

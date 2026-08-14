@@ -35,6 +35,20 @@ it('renders a themed badge and tag alias', async () => {
   await expect(el.querySelector('lr-badge')!).to.be.accessible();
 });
 
+it('honors inherited and direct public badge hooks without host defaults shadowing them', async () => {
+  const wrapper = await fixture(html`
+    <div style="--lr-badge-background: rgb(1, 2, 3); --lr-badge-radius: 7px">
+      <lr-badge>Inherited</lr-badge>
+      <lr-badge style="--lr-badge-background: rgb(4, 5, 6); --lr-badge-radius: 9px">Direct</lr-badge>
+    </div>
+  `);
+  const [inherited, direct] = Array.from(wrapper.querySelectorAll('lr-badge')) as LyraBadge[];
+  expect(getComputedStyle(base(inherited!)).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(base(inherited!)).borderRadius).to.equal('7px');
+  expect(getComputedStyle(base(direct!)).backgroundColor).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(base(direct!)).borderRadius).to.equal('9px');
+});
+
 it("owns status semantics on the badge host without creating a second semantic owner", async () => {
   const el = (await fixture(
     html`<lr-badge>Deployment complete</lr-badge>`
@@ -122,9 +136,7 @@ it("preserves every valid upstream variant and size spelling as the observable p
 it('defaults size to "m" and offers the same 2xs-xl scale as its sibling lr-chip', async () => {
   const el = (await fixture(html`<lr-badge>Default</lr-badge>`)) as LyraBadge;
   expect(el.size).to.equal('m');
-  expect(getComputedStyle(el).getPropertyValue('--lr-badge-font-size').trim()).to.equal(
-    getComputedStyle(el).getPropertyValue('--lr-font-size-sm').trim(),
-  );
+  expect(getComputedStyle(base(el)).fontSize).to.equal(resolved(el, 'font-size', '--lr-font-size-sm'));
 });
 
 it('resizes the badge surface when size is set to a smaller or larger tier', async () => {
@@ -288,7 +300,7 @@ describe('attention', () => {
     expect(animation.animationName).to.not.equal('none');
     expect(animation.animationIterationCount).to.equal('infinite');
     expect(animation.animationDuration).to.equal(
-      resolved(el, 'animation-duration', '--lr-badge-attention-duration'),
+      getComputedStyle(el).getPropertyValue('--_lr-badge-attention-duration').trim(),
     );
   });
 
@@ -333,7 +345,7 @@ it('supports the mapped pulse boolean and --pulse-color hook', async () => {
   `)) as LyraBadge;
   expect(el.pulse).to.be.true;
   expect(el.hasAttribute('pulse')).to.be.true;
-  expect(resolved(el, 'color', '--lr-badge-pulse-color')).to.equal('rgb(1, 2, 3)');
+  expect(resolved(el, 'color', '--pulse-color')).to.equal('rgb(1, 2, 3)');
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
     expect(getComputedStyle(base(el)).animationName).to.equal('lr-badge-pulse');
   }

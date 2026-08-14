@@ -65,6 +65,23 @@ it('computes an accessible name including the (typeLabel-preferred) type when se
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Marie Curie, person');
 });
 
+it('keeps explicit-empty and dynamic host naming distinct from the entity button', async () => {
+  const el = (await fixture(html`
+    <lr-entity-chip aria-label="Author entity" label="Marie Curie" type="person"></lr-entity-chip>
+  `)) as LyraEntityChip;
+  const button = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(el.getAttribute('aria-label')).to.equal('Author entity');
+  expect(button.getAttribute('aria-label')).to.equal('Marie Curie, person');
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('');
+  expect(button.getAttribute('aria-label')).to.equal('Marie Curie, person');
+  el.setAttribute('aria-label', 'Revised entity');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Revised entity');
+  expect(button.getAttribute('aria-label')).to.equal('Marie Curie, person');
+});
+
 it('falls back to the localized untitled-entity name when `label` is unset, so the button is never nameless', async () => {
   const el = (await fixture(html`<lr-entity-chip entity-id="e1"></lr-entity-chip>`)) as LyraEntityChip;
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Untitled entity');

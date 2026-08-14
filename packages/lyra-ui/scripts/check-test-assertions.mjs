@@ -78,13 +78,25 @@ function findExpectCall(node) {
   return undefined;
 }
 
-function allRelatedTypes(type, seen = new Set()) {
+export function allRelatedTypes(type, seen = new Set()) {
   if (!type || seen.has(type)) return [];
   seen.add(type);
   const related = [type];
-  if (type.isUnionType() || type.isIntersectionType())
-    related.push(...type.getTypes().flatMap((part) => allRelatedTypes(part, seen)));
-  related.push(...(type.getBaseTypes() ?? []).flatMap((base) => allRelatedTypes(base, seen)));
+  // The unstable TypeScript sync API can expose a tuple reference whose composite/base accessors
+  // throw even though the top-level type remains usable. Retain that type and degrade only the
+  // broken relationship traversal; ordinary checker-operation failures still fail closed.
+  try {
+    if (type.isUnionType() || type.isIntersectionType()) {
+      related.push(...type.getTypes().flatMap((part) => allRelatedTypes(part, seen)));
+    }
+  } catch {
+    // The top-level type is already retained above.
+  }
+  try {
+    related.push(...(type.getBaseTypes() ?? []).flatMap((base) => allRelatedTypes(base, seen)));
+  } catch {
+    // The top-level type is already retained above.
+  }
   return related;
 }
 
@@ -398,7 +410,7 @@ export function policyAccountingFailures(result, expectedTestFileCount) {
 export function runTestAssertionPolicy({
   cwd = packageDir,
   projectFile = configFile,
-  expectedTestFileCount = 362,
+  expectedTestFileCount = 369,
   includeFile = defaultTestFileFilter,
 } = {}) {
   const api = new API({ cwd });

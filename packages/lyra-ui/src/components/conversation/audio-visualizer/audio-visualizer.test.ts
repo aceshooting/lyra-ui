@@ -45,6 +45,12 @@ function waitFrame(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
 
+function usableAudioStream(): MediaStream {
+  return {
+    getAudioTracks: () => [{ readyState: 'live' } as MediaStreamTrack],
+  } as MediaStream;
+}
+
 /** Waits until no frame has been scheduled for two consecutive frames (mirrors the `settle` helper
  *  used by the draw-loop-scheduling tests below), or gives up after `frames` frames. */
 async function settleRaf(el: LyraAudioVisualizer, frames = 20): Promise<void> {
@@ -74,14 +80,29 @@ async function withForcedReducedMotion(fn: () => Promise<void>): Promise<void> {
   }
 }
 
-it('defaults to state=idle, variant=bars, bar-count=5, gain=1, level=null, stream=null', async () => {
+it('defaults to state=idle, mode=bars, bar-count=5, gain=1, level=null, stream=null', async () => {
   const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
   expect(el.state).to.equal('idle');
-  expect(el.variant).to.equal('bars');
+  expect(el.mode).to.equal('bars');
   expect(el.barCount).to.equal(5);
   expect(el.gain).to.equal(1);
   expect(el.level).to.be.null;
   expect(el.stream).to.be.null;
+});
+
+it('normalizes invalid state/mode attribute and direct-property writes to their defaults', async () => {
+  const el = (await fixture(html`
+    <lr-audio-visualizer state="unknown" mode="unknown"></lr-audio-visualizer>
+  `)) as LyraAudioVisualizer;
+  expect(el.state).to.equal('idle');
+  expect(el.mode).to.equal('bars');
+  (el as unknown as { state: string; mode: string }).state = 'invalid';
+  (el as unknown as { state: string; mode: string }).mode = 'invalid';
+  await el.updateComplete;
+  expect(el.state).to.equal('idle');
+  expect(el.mode).to.equal('bars');
+  expect(el.getAttribute('state')).to.equal('idle');
+  expect(el.getAttribute('mode')).to.equal('bars');
 });
 
 it('chains willUpdate() to super.willUpdate() so a mixin layered under LyraElement would still run', async () => {
@@ -143,6 +164,16 @@ it('lets an author-supplied role/aria-label win, and lets the label prop overrid
     html`<lr-audio-visualizer label="On air"></lr-audio-visualizer>`,
   )) as LyraAudioVisualizer;
   expect(withLabelProp.getAttribute('aria-label')).to.equal('On air');
+});
+
+it('preserves an explicitly empty aria-label across state changes', async () => {
+  const el = (await fixture(
+    html`<lr-audio-visualizer aria-label=""></lr-audio-visualizer>`,
+  )) as LyraAudioVisualizer;
+  expect(el.getAttribute('aria-label')).to.equal('');
+  el.state = 'speaking';
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('');
 });
 
 it('preserves a role supplied after mount across later reactive updates', async () => {
@@ -313,7 +344,7 @@ describe('reduced motion behaves at 320px', () => {
     const el = (await fixture(
       html`<lr-audio-visualizer
         state="speaking"
-        variant="waveform"
+        mode="waveform"
         style="inline-size: 320px"
       ></lr-audio-visualizer>`,
     )) as LyraAudioVisualizer;
@@ -450,13 +481,87 @@ describe('AudioContext resume on stream attach', () => {
     (window as unknown as { AudioContext: unknown }).AudioContext = FakeAudioContext;
     try {
       const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
-      el.stream = {} as unknown as MediaStream;
+      el.stream = usableAudioStream();
       await el.updateComplete;
       const ctx = (el as unknown as { audioCtx?: FakeAudioContext }).audioCtx;
       expect(ctx !== undefined).to.equal(true);
       expect(ctx!.resumeCalls).to.be.greaterThan(0);
       expect(ctx!.state).to.equal('running');
       expect((el as unknown as { hasLiveSignal: boolean }).hasLiveSignal).to.be.true;
+    } finally {
+      (window as unknown as { AudioContext: unknown }).AudioContext = original;
+    }
+  });
+});
+
+describe('transactional stream attachment', () => {
+  class TransactionAudioContext extends EventTarget {
+    static constructions = 0;
+    static closes = 0;
+    state: 'suspended' | 'running' | 'closed' = 'suspended';
+
+    constructor() {
+      super();
+      TransactionAudioContext.constructions += 1;
+    }
+
+    createMediaStreamSource(): never {
+      throw new DOMException('No usable source', 'InvalidStateError');
+    }
+
+    createAnalyser(): never {
+      throw new Error('unreachable');
+    }
+
+    resume(): Promise<void> {
+      return Promise.resolve();
+    }
+
+    suspend(): Promise<void> {
+      return Promise.resolve();
+    }
+
+    close(): Promise<void> {
+      TransactionAudioContext.closes += 1;
+      this.state = 'closed';
+      return Promise.resolve();
+    }
+  }
+
+  it('does not construct Web Audio while detached or for an empty stream', async () => {
+    const original = window.AudioContext;
+    TransactionAudioContext.constructions = 0;
+    (window as unknown as { AudioContext: unknown }).AudioContext = TransactionAudioContext;
+    try {
+      const detached = document.createElement('lr-audio-visualizer') as LyraAudioVisualizer;
+      detached.stream = usableAudioStream();
+      (detached as unknown as { syncAnalyser(): void }).syncAnalyser();
+      expect(TransactionAudioContext.constructions).to.equal(0);
+
+      const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+      el.stream = new MediaStream();
+      await el.updateComplete;
+      expect(TransactionAudioContext.constructions).to.equal(0);
+      expect((el as unknown as { audioCtx?: unknown }).audioCtx).to.be.undefined;
+    } finally {
+      (window as unknown as { AudioContext: unknown }).AudioContext = original;
+    }
+  });
+
+  it('closes and clears every partial graph when source construction fails', async () => {
+    const original = window.AudioContext;
+    TransactionAudioContext.constructions = 0;
+    TransactionAudioContext.closes = 0;
+    (window as unknown as { AudioContext: unknown }).AudioContext = TransactionAudioContext;
+    try {
+      const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+      el.stream = usableAudioStream();
+      await el.updateComplete;
+      expect(TransactionAudioContext.constructions).to.equal(1);
+      expect(TransactionAudioContext.closes).to.equal(1);
+      expect((el as unknown as { audioCtx?: unknown }).audioCtx).to.be.undefined;
+      expect((el as unknown as { sourceNode?: unknown }).sourceNode).to.be.undefined;
+      expect((el as unknown as { analyser?: unknown }).analyser).to.be.undefined;
     } finally {
       (window as unknown as { AudioContext: unknown }).AudioContext = original;
     }
@@ -595,7 +700,7 @@ describe('AudioContext constructor fallback', () => {
     w.webkitAudioContext = FakeWebkitAudioContext;
     try {
       const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
-      el.stream = {} as unknown as MediaStream;
+      el.stream = usableAudioStream();
       await el.updateComplete;
       const ctx = (el as unknown as { audioCtx?: unknown }).audioCtx;
       expect(ctx).to.be.instanceOf(FakeWebkitAudioContext);
@@ -612,7 +717,7 @@ describe('AudioContext constructor fallback', () => {
     delete w.webkitAudioContext;
     try {
       const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
-      el.stream = {} as unknown as MediaStream;
+      el.stream = usableAudioStream();
       await el.updateComplete;
       expect((el as unknown as { audioCtx?: unknown }).audioCtx).to.be.undefined;
     } finally {
@@ -656,14 +761,14 @@ describe('stream lifecycle: reattach and clear', () => {
     (window as unknown as { AudioContext: unknown }).AudioContext = TrackingFakeAudioContext;
     try {
       const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
-      el.stream = {} as unknown as MediaStream;
+      el.stream = usableAudioStream();
       await el.updateComplete;
       const ctx = (el as unknown as { audioCtx?: TrackingFakeAudioContext }).audioCtx;
       expect(ctx !== undefined).to.equal(true);
       expect(ctx!.disconnectCalls).to.equal(0); // first attach: nothing to disconnect yet
 
       // Reattach a new stream while one is already connected: disconnects the previous source.
-      el.stream = {} as unknown as MediaStream;
+      el.stream = usableAudioStream();
       await el.updateComplete;
       expect(ctx!.disconnectCalls).to.equal(1);
       expect(ctx!.state).to.equal('running');
@@ -720,7 +825,7 @@ describe('live analyser draw loop', () => {
     (window as unknown as { AudioContext: unknown }).AudioContext = FakeRunningAudioContext;
     try {
       const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
-      el.stream = {} as unknown as MediaStream;
+      el.stream = usableAudioStream();
       await el.updateComplete;
       await waitFrame();
       await waitFrame();
@@ -735,17 +840,17 @@ describe('live analyser draw loop', () => {
     }
   });
 
-  it('draws waveform samples directly from analyser time-domain data when variant is waveform', async () => {
+  it('draws waveform samples directly from analyser time-domain data when mode is waveform', async () => {
     const original = window.AudioContext;
     (window as unknown as { AudioContext: unknown }).AudioContext = FakeRunningAudioContext;
     try {
       const el = (await fixture(
-        html`<lr-audio-visualizer variant="waveform"></lr-audio-visualizer>`,
+        html`<lr-audio-visualizer mode="waveform"></lr-audio-visualizer>`,
       )) as LyraAudioVisualizer;
-      el.stream = {} as unknown as MediaStream;
+      el.stream = usableAudioStream();
       await el.updateComplete;
       const analyser = (el as unknown as { analyser?: { fftSize: number } }).analyser;
-      expect(analyser?.fftSize).to.equal(2048); // waveform variant requests a finer FFT
+      expect(analyser?.fftSize).to.equal(2048); // waveform mode requests a finer FFT
       const amps = (el as unknown as { currentAmplitudes: (nowMs: number) => number[] }).currentAmplitudes(0);
       expect(amps).to.have.length(128); // frequencyBinCount from the fake analyser
       expect(amps.some((a) => a !== 0)).to.be.true;
@@ -802,9 +907,9 @@ describe('ambient amplitude branches not covered by idle/thinking tests', () => 
     expect(ambientAmplitudes(speaking, 100, true)[0]).to.equal(0.3);
   });
 
-  it('uses WAVEFORM_SAMPLES (64) instead of bar-count for the waveform variant', async () => {
+  it('uses WAVEFORM_SAMPLES (64) instead of bar-count for waveform mode', async () => {
     const el = (await fixture(
-      html`<lr-audio-visualizer variant="waveform" bar-count="7"></lr-audio-visualizer>`,
+      html`<lr-audio-visualizer mode="waveform" bar-count="7"></lr-audio-visualizer>`,
     )) as LyraAudioVisualizer;
     const amps = ambientAmplitudes(el, 0, false);
     expect(amps).to.have.length(64);
@@ -820,10 +925,10 @@ describe('ambient amplitude branches not covered by idle/thinking tests', () => 
   });
 });
 
-describe('level-driven amplitude: waveform variant', () => {
-  it('fills WAVEFORM_SAMPLES entries instead of bar-count when variant is waveform', async () => {
+describe('level-driven amplitude: waveform mode', () => {
+  it('fills WAVEFORM_SAMPLES entries instead of bar-count when mode is waveform', async () => {
     const el = (await fixture(
-      html`<lr-audio-visualizer variant="waveform" level="0.3"></lr-audio-visualizer>`,
+      html`<lr-audio-visualizer mode="waveform" level="0.3"></lr-audio-visualizer>`,
     )) as LyraAudioVisualizer;
     const amps = (el as unknown as { currentAmplitudes: (nowMs: number) => number[] }).currentAmplitudes(0);
     expect(amps).to.have.length(64);
@@ -1035,7 +1140,7 @@ describe('owner-window runtime after adoption', () => {
       expect(canvas.height).to.equal(20);
       expect(computedStyleCalls).to.be.greaterThan(0);
 
-      el.stream = {} as MediaStream;
+      el.stream = usableAudioStream();
       await el.updateComplete;
       expect(audioContextCreations).to.equal(1);
       expect(frameRequest(el)?.owner === frameWindow).to.equal(true);
@@ -1063,6 +1168,21 @@ describe('owner-window runtime after adoption', () => {
 });
 
 describe('resolveColors()', () => {
+  it('inherits public color and duration hooks from an ancestor', async () => {
+    const wrapper = await fixture(html`
+      <div style="--lr-audio-visualizer-color: rgb(1, 2, 3); --lr-audio-visualizer-quiet-color: rgb(4, 5, 6); --lr-audio-visualizer-ambient-duration: 700ms;">
+        <lr-audio-visualizer></lr-audio-visualizer>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-audio-visualizer') as LyraAudioVisualizer;
+    const internals = el as unknown as {
+      resolveColors: () => { active: string; quiet: string };
+      resolveAmbientDuration: () => number;
+    };
+    expect(internals.resolveColors()).to.deep.equal({ active: 'rgb(1, 2, 3)', quiet: 'rgb(4, 5, 6)' });
+    expect(internals.resolveAmbientDuration()).to.equal(700);
+  });
+
   it('picks up custom-property overrides instead of falling back to the hardcoded defaults', async () => {
     const el = (await fixture(html`
       <lr-audio-visualizer
@@ -1102,10 +1222,8 @@ describe('resolveColors()', () => {
   });
 
   it('falls back to the hardcoded defaults when the custom properties resolve empty', async () => {
-    // The component's own :host styles always set --lr-audio-visualizer-color(/-quiet-color) via
-    // var(--lr-color-brand) etc., so under normal token loading getPropertyValue() never returns
-    // an empty string -- the `|| fallback` only fires if the whole custom-property chain resolves
-    // to nothing. Stubbing getComputedStyle() is the only way to simulate that from a test.
+    // Both public hooks and their private token-backed defaults are empty only in an incomplete
+    // style environment. Stubbing getComputedStyle() exercises the final canvas-safe fallback.
     const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     const original = window.getComputedStyle;
     window.getComputedStyle = (() => ({
@@ -1162,9 +1280,9 @@ describe('waveform draw with a single sample (division-by-zero guard)', () => {
     (window as unknown as { AudioContext: unknown }).AudioContext = SingleSampleAudioContext;
     try {
       const el = (await fixture(
-        html`<lr-audio-visualizer variant="waveform"></lr-audio-visualizer>`,
+        html`<lr-audio-visualizer mode="waveform"></lr-audio-visualizer>`,
       )) as LyraAudioVisualizer;
-      el.stream = {} as unknown as MediaStream;
+      el.stream = usableAudioStream();
       await el.updateComplete;
       expect(() => (el as unknown as { draw: (nowMs: number) => void }).draw(0)).to.not.throw();
     } finally {
@@ -1218,8 +1336,8 @@ describe('draw() defensive branches', () => {
     }
   });
 
-  it('draws the waveform variant path (lineWidth/stroked path) without throwing', async () => {
-    const el = (await fixture(html`<lr-audio-visualizer variant="waveform"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+  it('draws the waveform mode path (lineWidth/stroked path) without throwing', async () => {
+    const el = (await fixture(html`<lr-audio-visualizer mode="waveform"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     expect(() => (el as unknown as { draw: (nowMs: number) => void }).draw(0)).to.not.throw();
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     expect(canvas.width).to.be.greaterThan(0);

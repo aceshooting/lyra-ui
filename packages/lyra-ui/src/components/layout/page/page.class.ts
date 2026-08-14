@@ -1,6 +1,14 @@
-import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
+import {
+  html,
+  nothing,
+  svg,
+  type PropertyValues,
+  type SVGTemplateResult,
+  type TemplateResult,
+} from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
+import { isAriaTrue } from '../../../internal/accessibility-visibility.js';
 import {
   acquireAriaOwnership,
   type AriaOwnershipLease,
@@ -9,13 +17,15 @@ import { resolveCssLength } from '../../../internal/css-length.js';
 import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
+import {
+  activateOverlay,
+  type OverlayHandle,
+} from '../../../internal/overlay-manager.js';
 import { styles } from './page.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_navigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_skipToContent } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 const DEFAULT_MOBILE_BREAKPOINT = '768px';
 
@@ -24,6 +34,14 @@ export type PageView = 'mobile' | 'desktop';
 
 /** The logical edge that owns navigation in either Page presentation. */
 export type PageNavigationPlacement = 'start' | 'end';
+
+interface CustomToggleOwnership {
+  accessible: HTMLElement;
+  accessibleAria?: AriaOwnershipLease;
+  accessibleAuthoredLabel: string | null;
+  hostAria: AriaOwnershipLease;
+  hostAuthoredLabel: string | null;
+}
 
 function navigationIcon(): SVGTemplateResult {
   return svg`
@@ -66,13 +84,16 @@ export interface LyraPageEventMap {
  * `menu`, and `aside`. A token only disables that region; unrelated sticky regions keep working.
  * Slotted controls carrying `data-toggle-nav` toggle the mobile drawer, matching the documented
  * light-DOM Page pattern without adding a stale `nav-state` property.
- * A custom `navigation-toggle` and the composed descendant that actually receives focus receive
- * component-owned `aria-haspopup="dialog"`, `aria-expanded`, a localized label when unnamed, and
- * a relationship sourced from the real drawer. Current browsers expose the Page host for that
- * inward shadow relationship. Replacement, removal, and disconnect restore exact authored
- * baselines, including writes made while ownership was active.
+ * Every custom `navigation-toggle` and each composed descendant that actually receives focus
+ * receive component-owned `aria-haspopup="dialog"`, synchronized `aria-expanded`, a localized
+ * label when unnamed, and a relationship sourced from the real drawer. Current browsers expose
+ * the Page host for that inward shadow relationship. Replacement, removal, and disconnect restore
+ * exact authored baselines, including writes made while ownership was active. Disabled,
+ * `aria-disabled`, hidden, or inert assigned controls do not toggle the drawer.
  *
  * @customElement lr-page
+ * @attr {string} disable-sticky - Whitespace-separated Page regions whose sticky positioning is
+ *   disabled: `banner`, `header`, `subheader`, `menu`, and `aside`.
  * @slot - Main content.
  * @slot aside - Complementary content beside the main region.
  * @slot banner - A page-wide notice above the header.
@@ -84,7 +105,7 @@ export interface LyraPageEventMap {
  * @slot navigation - Primary navigation content.
  * @slot navigation-footer - Content after the navigation links.
  * @slot navigation-header - Content before the navigation links.
- * @slot navigation-toggle - A custom control that toggles mobile navigation and receives the
+ * @slot navigation-toggle - Custom controls that toggle mobile navigation and each receive the
  * managed ARIA relationship described above.
  * @slot navigation-toggle-icon - Replaces the default toggle's menu glyph as inert, decorative
  *   visual content.
@@ -173,7 +194,8 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   @property({ reflect: true }) view: PageView = 'desktop';
 
   /** Whether mobile navigation is open. Desktop navigation remains visible independently. */
-  @property({ type: Boolean, attribute: 'nav-open', reflect: true }) navOpen = false;
+  @property({ type: Boolean, attribute: 'nav-open', reflect: true }) navOpen =
+    false;
 
   /** Allocation breakpoint. Bare numbers/px, `rem`, and `em` use the shared CSS-length resolver;
    * invalid values fall back to `768px`. */
@@ -184,27 +206,41 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   navigationPlacement: PageNavigationPlacement = 'start';
 
   /** Hides the default mobile toggle. Slotted `data-toggle-nav` controls remain available. */
-  @property({ type: Boolean, attribute: 'disable-navigation-toggle', reflect: true })
+  @property({
+    type: Boolean,
+    attribute: 'disable-navigation-toggle',
+    reflect: true,
+  })
   disableNavigationToggle = false;
 
   /** Host-level accessible-name override forwarded to the internal navigation landmark. */
-  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-label' }) private accessibleLabel:
+    | string
+    | null = null;
 
   private readonly mainId = nextId('page-main');
   private readonly navigationId = nextId('page-navigation');
   private readonly drawerId = nextId('page-drawer');
   private readonly skipTargetId = nextId('page-skip-target');
   private readonly skipLabelId = nextId('page-skip-label');
+  /** SSR-reachable native fragment relationship; private so it does not invent another IDL API. */
+  @property({ attribute: 'id', reflect: true }) private fragmentTargetId:
+    | string
+    | null = this.getAttribute('id') || this.skipTargetId;
+  /** SSR-reachable native focusability for the fragment target. */
+  @property({ attribute: 'tabindex', reflect: true }) private fragmentTabIndex:
+    | string
+    | null = this.getAttribute('tabindex') ?? '-1';
   private resizeObserver?: ResizeObserver;
   private resizeView?: Window;
   private overlayHandle?: OverlayHandle;
   private navigationTriggerOwner?: HTMLElement;
   private customToggle?: HTMLElement;
-  private customToggleAuthoredLabel: string | null = null;
-  private accessibleCustomToggle?: HTMLElement;
-  private accessibleCustomToggleAuthoredLabel: string | null = null;
-  private customToggleAria?: AriaOwnershipLease;
-  private accessibleCustomToggleAria?: AriaOwnershipLease;
+  private customToggles: HTMLElement[] = [];
+  private readonly customToggleOwnership = new Map<
+    HTMLElement,
+    CustomToggleOwnership
+  >();
 
   @query('[part~="main"]') private mainElement?: HTMLElement;
   @query('[part~="drawer"]') private drawerElement?: HTMLElement;
@@ -214,8 +250,6 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     // A URL fragment cannot resolve to an id inside a shadow root. Make the host the real,
     // per-instance native fragment target while the click handler below moves focus to the
     // semantic main landmark inside. Preserve an author-supplied host id/tabindex.
-    if (!this.id) this.id = this.skipTargetId;
-    if (!this.hasAttribute('tabindex')) this.tabIndex = -1;
     this.measureAllocation();
     this.observeAllocation();
     if (this.hasUpdated && this.view === 'mobile' && this.navOpen) {
@@ -223,7 +257,8 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
       else this.syncOverlay();
       queueMicrotask(() => this.overlayHandle?.focusInitial());
     }
-    if (this.hasUpdated) queueMicrotask(() => this.isConnected && this.syncCustomToggle());
+    if (this.hasUpdated)
+      queueMicrotask(() => this.isConnected && this.syncCustomToggle());
   }
 
   override disconnectedCallback(): void {
@@ -242,9 +277,22 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     this.observeAllocation();
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has('fragmentTargetId') && !this.fragmentTargetId) {
+      this.fragmentTargetId = this.skipTargetId;
+    }
+    if (changed.has('fragmentTabIndex') && this.fragmentTabIndex === null) {
+      this.fragmentTabIndex = '-1';
+    }
+  }
+
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    if (changed.has('mobileBreakpoint') && changed.get('mobileBreakpoint') !== undefined) {
+    if (
+      changed.has('mobileBreakpoint') &&
+      changed.get('mobileBreakpoint') !== undefined
+    ) {
       this.measureAllocation();
     }
     const deactivatingOverlay =
@@ -270,8 +318,10 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     const ResizeObserverConstructor = view?.ResizeObserver;
     if (ResizeObserverConstructor) {
       this.resizeObserver ??= new ResizeObserverConstructor((entries) => {
-        const entry = entries.find((candidate) => candidate.target === this) ?? entries[0];
-        const inlineSize = entry?.contentBoxSize?.[0]?.inlineSize ?? entry?.contentRect.width;
+        const entry =
+          entries.find((candidate) => candidate.target === this) ?? entries[0];
+        const inlineSize =
+          entry?.contentBoxSize?.[0]?.inlineSize ?? entry?.contentRect.width;
         if (inlineSize !== undefined) this.applyMeasuredInlineSize(inlineSize);
       });
       this.resizeObserver.observe(this);
@@ -294,20 +344,27 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
    * so reconnect and deterministic browser contracts exercise the same classification path. */
   private applyMeasuredInlineSize(width: number): void {
     if (!Number.isFinite(width) || width < 0) return;
-    const resolved = resolveCssLength(this.mobileBreakpoint, this);
-    const fallback = resolveCssLength(DEFAULT_MOBILE_BREAKPOINT, this) ?? 768;
-    const breakpoint = Math.max(0, resolved !== undefined && Number.isFinite(resolved) ? resolved : fallback);
+    const resolved = resolveCssLength(this.mobileBreakpoint, { host: this });
+    const fallback =
+      resolveCssLength(DEFAULT_MOBILE_BREAKPOINT, { host: this }) ?? 768;
+    const breakpoint = Math.max(
+      0,
+      resolved !== undefined && Number.isFinite(resolved) ? resolved : fallback
+    );
     const next: PageView = width <= breakpoint ? 'mobile' : 'desktop';
     if (next !== this.view) this.view = next;
   }
 
   private syncOverlay(changed?: PropertyValues<this>): void {
-    const shouldBeActive = this.isConnected && this.view === 'mobile' && this.navOpen;
+    const shouldBeActive =
+      this.isConnected && this.view === 'mobile' && this.navOpen;
     if (shouldBeActive) {
       if (this.overlayHandle?.isActive()) {
         this.overlayHandle.resume();
         if (this.navigationTriggerOwner) {
-          this.overlayHandle.updateRestoreFocusTo(this.resolveNavigationRestoreTarget);
+          this.overlayHandle.updateRestoreFocusTo(
+            this.resolveNavigationRestoreTarget
+          );
         }
         return;
       }
@@ -348,7 +405,9 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     }
     const builtIn = this.disableNavigationToggle
       ? null
-      : this.renderRoot.querySelector<HTMLElement>('[part~="navigation-toggle"]');
+      : this.renderRoot.querySelector<HTMLElement>(
+          '[part~="navigation-toggle"]'
+        );
     if (builtIn && isComposedFocusAvailable(builtIn)) return builtIn;
     return this.mainElement && isComposedFocusAvailable(this.mainElement)
       ? this.mainElement
@@ -356,69 +415,136 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   };
 
   private syncCustomToggle(): void {
-    const slot = this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="navigation-toggle"]');
-    const candidate = slot?.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+    const slot = this.shadowRoot?.querySelector<HTMLSlotElement>(
+      'slot[name="navigation-toggle"]'
+    );
     // With no assigned light-DOM node, assignedElements({ flatten: true }) may return the fallback
     // shadow button. That control is rendered declaratively and must not enter the custom-toggle
-    // ownership lifecycle below.
-    const next = candidate?.getRootNode() === this.shadowRoot ? undefined : candidate;
+    // ownership lifecycle below. Every assigned custom control is otherwise an equal trigger:
+    // leaving later controls actionable but semantically stale would create conflicting disclosure
+    // buttons for the same drawer.
+    const nextToggles = (
+      slot?.assignedElements({ flatten: true }) ?? []
+    ).filter(
+      (candidate): candidate is HTMLElement =>
+        candidate.nodeType === 1 && candidate.getRootNode() !== this.shadowRoot
+    );
     const previous = this.customToggle;
-    if (next !== previous) {
-      this.customToggle = next;
-      this.customToggleAuthoredLabel = next?.hasAttribute('aria-label')
-        ? next.getAttribute('aria-label') ?? ''
-        : null;
-    }
-    const accessible = next ? resolveAccessibleTrigger(next) : undefined;
-    if (accessible !== this.accessibleCustomToggle) {
-      this.accessibleCustomToggle = accessible;
-      this.accessibleCustomToggleAuthoredLabel = accessible?.hasAttribute('aria-label')
-        ? accessible.getAttribute('aria-label') ?? ''
-        : null;
-    }
-    const localizedLabel = this.localize(this.navOpen ? 'closeNavigation' : 'openNavigation');
-    const drawer = this.drawerElement;
-    const hostContribution = {
-      attributes: {
-        'aria-haspopup': 'dialog',
-        'aria-expanded': this.navOpen ? 'true' : 'false',
-        'aria-label': this.customToggleAuthoredLabel ?? localizedLabel,
-      },
-      controls: drawer ? [drawer] : [],
-    };
-    if (this.customToggleAria) this.customToggleAria.update(next ?? null, hostContribution);
-    else this.customToggleAria = acquireAriaOwnership(next ?? null, hostContribution);
+    this.customToggles = nextToggles;
+    this.customToggle = nextToggles[0];
 
-    const distinctAccessible = accessible !== next ? accessible ?? null : null;
-    const accessibleContribution = {
-      attributes: {
-        'aria-haspopup': 'dialog',
-        'aria-expanded': this.navOpen ? 'true' : 'false',
-        'aria-label':
-          this.accessibleCustomToggleAuthoredLabel ?? this.customToggleAuthoredLabel ?? localizedLabel,
-      },
-      controls: drawer ? [drawer] : [],
-    };
-    if (this.accessibleCustomToggleAria) {
-      this.accessibleCustomToggleAria.update(distinctAccessible, accessibleContribution);
-    } else {
-      this.accessibleCustomToggleAria = acquireAriaOwnership(distinctAccessible, accessibleContribution);
+    for (const [host, ownership] of this.customToggleOwnership) {
+      if (nextToggles.includes(host)) continue;
+      ownership.accessibleAria?.release();
+      ownership.hostAria.release();
+      this.customToggleOwnership.delete(host);
     }
-    if (this.navOpen && previous && this.navigationTriggerOwner === previous) {
-      this.navigationTriggerOwner = next;
-      this.overlayHandle?.updateRestoreFocusTo(this.resolveNavigationRestoreTarget);
+
+    const localizedLabel = this.localize(
+      this.navOpen ? 'closeNavigation' : 'openNavigation'
+    );
+    const drawer = this.drawerElement;
+
+    for (const host of nextToggles) {
+      const accessible = resolveAccessibleTrigger(host);
+      let ownership = this.customToggleOwnership.get(host);
+      if (!ownership) {
+        ownership = {
+          accessible,
+          accessibleAuthoredLabel: accessible.hasAttribute('aria-label')
+            ? accessible.getAttribute('aria-label') ?? ''
+            : null,
+          hostAria: acquireAriaOwnership(null, {}),
+          hostAuthoredLabel: host.hasAttribute('aria-label')
+            ? host.getAttribute('aria-label') ?? ''
+            : null,
+        };
+        this.customToggleOwnership.set(host, ownership);
+      } else if (accessible !== ownership.accessible) {
+        ownership.accessibleAria?.release();
+        ownership.accessibleAria = undefined;
+        ownership.accessible = accessible;
+        ownership.accessibleAuthoredLabel = accessible.hasAttribute(
+          'aria-label'
+        )
+          ? accessible.getAttribute('aria-label') ?? ''
+          : null;
+      }
+
+      ownership.hostAria.update(host, {
+        attributes: {
+          'aria-haspopup': 'dialog',
+          'aria-expanded': this.navOpen ? 'true' : 'false',
+          'aria-label': ownership.hostAuthoredLabel ?? localizedLabel,
+        },
+        controls: drawer ? [drawer] : [],
+      });
+
+      const distinctAccessible = accessible === host ? null : accessible;
+      const accessibleContribution = {
+        attributes: {
+          'aria-haspopup': 'dialog',
+          'aria-expanded': this.navOpen ? 'true' : 'false',
+          'aria-label':
+            ownership.accessibleAuthoredLabel ??
+            ownership.hostAuthoredLabel ??
+            localizedLabel,
+        },
+        controls: drawer ? [drawer] : [],
+      };
+      if (ownership.accessibleAria) {
+        ownership.accessibleAria.update(
+          distinctAccessible,
+          accessibleContribution
+        );
+      } else {
+        ownership.accessibleAria = acquireAriaOwnership(
+          distinctAccessible,
+          accessibleContribution
+        );
+      }
+    }
+
+    if (
+      this.navOpen &&
+      this.navigationTriggerOwner &&
+      !nextToggles.includes(this.navigationTriggerOwner)
+    ) {
+      this.navigationTriggerOwner = this.customToggle;
+      this.overlayHandle?.updateRestoreFocusTo(
+        this.resolveNavigationRestoreTarget
+      );
+    } else if (
+      this.navOpen &&
+      previous &&
+      this.navigationTriggerOwner === previous
+    ) {
+      this.overlayHandle?.updateRestoreFocusTo(
+        this.resolveNavigationRestoreTarget
+      );
     }
   }
 
   private releaseCustomToggleA11y(): void {
-    this.accessibleCustomToggleAria?.release();
-    this.accessibleCustomToggleAria = undefined;
-    this.customToggleAria?.release();
-    this.customToggleAria = undefined;
+    for (const ownership of this.customToggleOwnership.values()) {
+      ownership.accessibleAria?.release();
+      ownership.hostAria.release();
+    }
+    this.customToggleOwnership.clear();
     this.customToggle = undefined;
-    this.customToggleAuthoredLabel = null;
-    this.accessibleCustomToggle = undefined;
-    this.accessibleCustomToggleAuthoredLabel = null;
+    this.customToggles = [];
+  }
+
+  private isUnavailableCustomToggle(trigger: HTMLElement): boolean {
+    const accessible = resolveAccessibleTrigger(trigger);
+    return [trigger, accessible].some(
+      (candidate) =>
+        candidate.hasAttribute('hidden') ||
+        candidate.hasAttribute('inert') ||
+        candidate.matches(':disabled') ||
+        isAriaTrue(candidate.getAttribute('aria-hidden')) ||
+        isAriaTrue(candidate.getAttribute('aria-disabled'))
+    );
   }
 
   private rememberTriggerAndToggle(trigger: HTMLElement): void {
@@ -439,9 +565,15 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
       .find(
         (candidate): candidate is HTMLElement =>
           (candidate as Partial<Node> | null)?.nodeType === 1 &&
-          (candidate as Element).getAttribute('slot') === 'navigation-toggle',
+          (candidate as Element).getAttribute('slot') === 'navigation-toggle'
       );
-    if (trigger) this.rememberTriggerAndToggle(trigger);
+    if (
+      trigger &&
+      this.customToggles.includes(trigger) &&
+      !this.isUnavailableCustomToggle(trigger)
+    ) {
+      this.rememberTriggerAndToggle(trigger);
+    }
   };
 
   private readonly onPageClick = (event: MouseEvent): void => {
@@ -452,22 +584,22 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
       path.some(
         (candidate) =>
           (candidate as Partial<Node> | null)?.nodeType === 1 &&
-          (candidate as Element).getAttribute('slot') === 'navigation-toggle',
+          (candidate as Element).getAttribute('slot') === 'navigation-toggle'
       )
     ) {
       return;
     }
-    const trigger = path
-      .find(
-        (candidate): candidate is HTMLElement =>
-          (candidate as Partial<Node> | null)?.nodeType === 1 &&
-          (candidate as Element).hasAttribute('data-toggle-nav'),
-      );
+    const trigger = path.find(
+      (candidate): candidate is HTMLElement =>
+        (candidate as Partial<Node> | null)?.nodeType === 1 &&
+        (candidate as Element).hasAttribute('data-toggle-nav')
+    );
     if (trigger) this.rememberTriggerAndToggle(trigger);
   };
 
   private readonly onBackdropClick = (event: MouseEvent): void => {
-    if (event.target === event.currentTarget) this.overlayHandle?.dismissBackdrop();
+    if (event.target === event.currentTarget)
+      this.overlayHandle?.dismissBackdrop();
   };
 
   private readonly onSkipClick = (event: MouseEvent): void => {
@@ -481,7 +613,11 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
    *  hideNavigation(), toggleNavigation(), and the built-in drawer dismissals that call them. */
   private requestNavOpen(next: boolean): void {
     if (this.navOpen === next) return;
-    if (this.emit('lr-nav-toggle', { open: next }, { cancelable: true }).defaultPrevented) return;
+    if (
+      this.emit('lr-nav-toggle', { open: next }, { cancelable: true })
+        .defaultPrevented
+    )
+      return;
     this.navOpen = next;
   }
 
@@ -507,10 +643,12 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     const rect = element.getBoundingClientRect();
     if (!Number.isFinite(rect.top) || !Number.isFinite(rect.bottom)) return 0;
     const view = element.ownerDocument.defaultView;
-    const candidateHeight = view?.innerHeight ?? element.ownerDocument.documentElement.clientHeight;
+    const candidateHeight =
+      view?.innerHeight ?? element.ownerDocument.documentElement.clientHeight;
     if (!Number.isFinite(candidateHeight) || candidateHeight <= 0) return 0;
     const viewportHeight = finiteRange(candidateHeight, 0, 0);
-    const visible = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+    const visible =
+      Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
     return finiteRange(visible, 0, 0, viewportHeight);
   }
 
@@ -522,12 +660,14 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
       <div part="base page" @click=${this.onPageClick}>
         <a
           part="skip-to-content"
-          href=${`#${this.id || this.skipTargetId}`}
+          href=${`#${this.fragmentTargetId || this.skipTargetId}`}
           aria-labelledby=${this.skipLabelId}
           @click=${this.onSkipClick}
         >
           <span id=${this.skipLabelId} aria-hidden="true" inert>
-            <slot name="skip-to-content">${this.localize('skipToContent')}</slot>
+            <slot name="skip-to-content"
+              >${this.localize('skipToContent')}</slot
+            >
           </span>
         </a>
 
@@ -546,7 +686,9 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
                 aria-haspopup="dialog"
                 aria-expanded=${this.navOpen ? 'true' : 'false'}
                 aria-controls=${this.drawerId}
-                aria-label=${this.localize(this.navOpen ? 'closeNavigation' : 'openNavigation')}
+                aria-label=${this.localize(
+                  this.navOpen ? 'closeNavigation' : 'openNavigation'
+                )}
                 @click=${this.onDefaultToggleClick}
               >
                 <span part="navigation-toggle-icon" aria-hidden="true" inert>
@@ -571,10 +713,18 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
               tabindex=${overlayOpen ? '-1' : nothing}
               ?inert=${mobile && !this.navOpen}
             >
-              <nav id=${this.navigationId} part="navigation navigation-desktop" aria-label=${navigationLabel}>
-                <div part="navigation-header"><slot name="navigation-header"></slot></div>
+              <nav
+                id=${this.navigationId}
+                part="navigation navigation-desktop"
+                aria-label=${navigationLabel}
+              >
+                <div part="navigation-header">
+                  <slot name="navigation-header"></slot>
+                </div>
                 <slot name="navigation"></slot>
-                <div part="navigation-footer"><slot name="navigation-footer"></slot></div>
+                <div part="navigation-footer">
+                  <slot name="navigation-footer"></slot>
+                </div>
               </nav>
             </div>
           </div>

@@ -158,12 +158,10 @@
       "lr-flow-controls",
       "lr-flow-minimap",
       "lr-flow-node",
-      "lr-flow-run-overlay",
       "lr-format-bytes",
       "lr-format-date",
       "lr-format-number",
       "lr-gauge",
-      "lr-generation-status",
       "lr-geojson-view",
       "lr-graph",
       "lr-graph-legend",
@@ -220,7 +218,6 @@
       "lr-pdf-viewer",
       "lr-phone-input",
       "lr-pie-chart",
-      "lr-playback",
       "lr-polar-area-chart",
       "lr-policy-summary",
       "lr-poll-status",
@@ -234,7 +231,6 @@
       "lr-provenance-panel",
       "lr-push-to-talk",
       "lr-qr-code",
-      "lr-query-builder",
       "lr-radar-chart",
       "lr-radio",
       "lr-radio-group",
@@ -270,7 +266,6 @@
       "lr-span-waterfall",
       "lr-sparkline",
       "lr-spinner",
-      "lr-split",
       "lr-spreadsheet-viewer",
       "lr-stack-trace",
       "lr-stat",
@@ -319,28 +314,24 @@
       "lr-xml-viewer",
       "lr-zoomable-frame"
     ],
-    "published-experimental": [
-      "lr-date-input",
-      "lr-date-picker"
-    ],
-    "mapped-experimental": [
-      "lr-data-grid"
-    ],
-    "introduced-mapped-experimental": [
-      "lr-video",
-      "lr-video-playlist"
-    ],
-    "compatibility-stable": [
-      "lr-native-time-input"
-    ],
+    "published-experimental": ["lr-date-input", "lr-date-picker"],
+    "mapped-experimental": ["lr-data-grid"],
+    "introduced-mapped-experimental": ["lr-video", "lr-video-playlist"],
+    "compatibility-stable": ["lr-native-time-input"],
     "introduced-stable": [
       "lr-alert",
+      "lr-condition-builder",
+      "lr-flow-run-status",
+      "lr-generation-metrics",
+      "lr-geojson-viewer",
       "lr-menu-label",
+      "lr-multi-split",
       "lr-otp-input",
       "lr-page",
       "lr-pan-zoom",
       "lr-popup",
       "lr-radio-button",
+      "lr-sequence-playback",
       "lr-split-panel",
       "lr-tab",
       "lr-tab-group",
@@ -350,45 +341,6 @@
     ]
   },
   "deprecations": [
-    {
-      "tag": "lr-chat-composer",
-      "kind": "slot",
-      "name": "leading",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "slot",
-        "name": "start",
-        "usage": "slot=\"start\""
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "The start slot follows the shared adornment vocabulary; leading remains available as a compatibility alias during the deprecation window."
-    },
-    {
-      "tag": "lr-chat-composer",
-      "kind": "slot",
-      "name": "trailing",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "slot",
-        "name": "end",
-        "usage": "slot=\"end\""
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "The end slot follows the shared adornment vocabulary; trailing remains available as a compatibility alias during the deprecation window."
-    },
-    {
-      "tag": "lr-conversation-item",
-      "kind": "slot",
-      "name": "leading",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "slot",
-        "name": "start",
-        "usage": "slot=\"start\""
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "The start slot follows the shared adornment vocabulary; leading remains available as a compatibility alias during the deprecation window."
-    },
     {
       "tag": "lr-date-input",
       "kind": "part",

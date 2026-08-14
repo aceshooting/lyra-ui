@@ -8,7 +8,7 @@ export const styles = css`
        --icon-size (component-prefixed per this library's own convention) --
        both chain through the existing icon-button-size token rather than a
        new bespoke literal, so the toggle reads at the same scale as
-       lr-playback's own play/pause button. */
+       lr-sequence-playback's own play/pause button. */
     --lr-animated-image-control-box-size: var(--control-box-size, var(--lr-icon-button-size));
     --lr-animated-image-icon-size: var(
       --icon-size,
@@ -96,11 +96,9 @@ export const styles = css`
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
-     -- (0,1,0) total, functionally identical selection to \`[part='play-button']:hover:not(:disabled)\`
-     ((0,3,0)) but now losing (on the pseudo-element tiebreak) to a consumer's own
-     \`::part(play-button):hover\` override ((0,1,1)) without that consumer needing !important. Same
-     bug shape lr-attachment-trigger's \`.trigger-button\` hover rule was already fixed for. */
+  /* Keep internal state qualifiers low-specificity so sibling rules in this sheet remain easy to
+     compose. Consumer ::part() authority follows the shadow cascade, independently of this
+     selector's specificity. */
   :where([part='play-button']):hover:where(:not(:disabled)) {
     background: color-mix(in srgb, var(--lr-color-surface) 100%, transparent);
   }

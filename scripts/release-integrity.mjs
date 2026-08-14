@@ -7,38 +7,40 @@ import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-
-const REQUIRED_PLATFORM_JOB_MATRIX = Object.freeze([
-  { browser: 'firefox', nodeVersion: 20, shards: [[1, 1]] },
-  { browser: 'chromium', nodeVersion: 22, shards: [[1, 2], [2, 2]] },
-  { browser: 'chrome', nodeVersion: 22, shards: [[1, 1]] },
-  { browser: 'edge', nodeVersion: 22, shards: [[1, 1]] },
-  { browser: 'firefox', nodeVersion: 22, shards: [[1, 4], [2, 4], [3, 4], [4, 4]] },
-  { browser: 'safari', nodeVersion: 20, shards: [[1, 1]] },
-  { browser: 'safari', nodeVersion: 22, shards: [[1, 1]] },
-]);
-
-const REQUIRED_PLATFORM_CI_JOBS = Object.freeze(
-  REQUIRED_PLATFORM_JOB_MATRIX.flatMap(({ browser, nodeVersion, shards }) =>
-    shards.map(([index, total]) => `${browser} / Node ${nodeVersion} / shard ${index}/${total}`),
-  ),
+const qualificationManifest = JSON.parse(
+  readFileSync(path.join(repoRoot, '.github', 'release-qualification.json'), 'utf8'),
 );
+if (
+  qualificationManifest?.schemaVersion !== 1 ||
+  !qualificationManifest.workflows?.ci ||
+  !qualificationManifest.workflows?.fullEngine
+) {
+  throw new Error('.github/release-qualification.json has an unsupported schema');
+}
+const ciQualification = qualificationManifest.workflows.ci;
+const fullEngineQualification = qualificationManifest.workflows.fullEngine;
+for (const [label, workflow] of [
+  ['CI', ciQualification],
+  ['full-engine', fullEngineQualification],
+]) {
+  if (
+    typeof workflow.name !== 'string' ||
+    typeof workflow.path !== 'string' ||
+    typeof workflow.event !== 'string' ||
+    typeof workflow.headBranch !== 'string' ||
+    !Array.isArray(workflow.requiredJobs) ||
+    workflow.requiredJobs.length === 0 ||
+    workflow.requiredJobs.some((name) => typeof name !== 'string' || name.length === 0) ||
+    new Set(workflow.requiredJobs).size !== workflow.requiredJobs.length
+  ) {
+    throw new Error(`.github/release-qualification.json has an invalid ${label} contract`);
+  }
+}
 
-export const REQUIRED_CI_JOBS = Object.freeze([
-  'lint',
-  'static-checks',
-  'build-and-coverage',
-  'packed-consumer',
-  'docs-and-storybook',
-  'visual-regression',
-  ...REQUIRED_PLATFORM_CI_JOBS,
+export const REQUIRED_CI_JOBS = Object.freeze([...ciQualification.requiredJobs]);
+export const REQUIRED_FULL_ENGINE_JOBS = Object.freeze([
+  ...fullEngineQualification.requiredJobs,
 ]);
-
-export const REQUIRED_FULL_ENGINE_JOBS = Object.freeze(
-  ['firefox', 'webkit'].flatMap((browser) =>
-    [1, 2, 3, 4].map((shard) => `${browser} / shard ${shard}/4`),
-  ),
-);
 
 const RELEASE_PACKAGES = Object.freeze({
   'lyra-ui': '@aceshooting/lyra-ui',
@@ -148,14 +150,14 @@ export function evaluateCiRun({ run, jobs, sha }) {
     run,
     jobs,
     sha,
-    workflowName: 'CI',
-    workflowPath: '.github/workflows/ci.yml',
+    workflowName: ciQualification.name,
+    workflowPath: ciQualification.path,
     requiredJobs: REQUIRED_CI_JOBS,
     runLabel: 'CI',
     requiredJobLabel: 'CI',
     workflowDescription: 'CI workflow',
-    requiredEvent: 'push',
-    requiredHeadBranch: 'main',
+    requiredEvent: ciQualification.event,
+    requiredHeadBranch: ciQualification.headBranch,
   });
 }
 
@@ -164,14 +166,14 @@ export function evaluateFullEngineRun({ run, jobs, sha }) {
     run,
     jobs,
     sha,
-    workflowName: 'Full browser-engine suite',
-    workflowPath: '.github/workflows/full-engine.yml',
+    workflowName: fullEngineQualification.name,
+    workflowPath: fullEngineQualification.path,
     requiredJobs: REQUIRED_FULL_ENGINE_JOBS,
     runLabel: 'Full browser-engine suite',
     requiredJobLabel: 'full-engine',
     workflowDescription: 'full-engine workflow',
-    requiredEvent: 'workflow_dispatch',
-    requiredHeadBranch: 'main',
+    requiredEvent: fullEngineQualification.event,
+    requiredHeadBranch: fullEngineQualification.headBranch,
   });
 }
 

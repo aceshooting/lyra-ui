@@ -127,6 +127,12 @@ export const styles = css`
     overflow-wrap: anywhere;
     font-family: var(--lr-stack-trace-font);
   }
+
+  [part='limit'] {
+    margin: 0;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+  }
   [part='copy-button'] {
     font: inherit;
     font-size: var(--lr-font-size-xs);

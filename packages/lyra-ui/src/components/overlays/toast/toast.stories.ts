@@ -10,7 +10,7 @@ const meta: Meta = {
   parameters: {
     docs: {
       description: {
-        component: 'Click a button to fire a toast via the `toast()` helper — the ergonomic entry point that lazily mounts one `<lr-toast>` region per placement on `document.body`. All six logical placements stay inside the usable safe-area rectangle, including centered placements with asymmetric inline insets.',
+        component: 'Click a button to fire a toast via the `toast()` helper — the ergonomic entry point that lazily mounts one `<lr-toast>` region per owner document and placement. The shared `LyraToastOptions` supports safe icon payloads/factories, actions, and explicit owner-document routing. All six logical placements stay inside the usable safe-area rectangle.',
       },
     },
   },
@@ -89,13 +89,7 @@ export const WithIcon: Story = {
   render: () => html`
     <div style="display:flex; gap:1rem;">
       <button
-        @click=${() =>
-          toast({ message: 'Upload complete', variant: 'success', withIcon: true }).item.then((item) => {
-            const icon = document.createElement('span');
-            icon.slot = 'icon';
-            icon.textContent = '✓';
-            item.appendChild(icon);
-          })}
+        @click=${() => toast({ message: 'Upload complete', variant: 'success', icon: '✓' })}
       >
         Success + icon
       </button>
@@ -106,20 +100,14 @@ export const WithIcon: Story = {
 export const WithIconAndAction: Story = {
   render: () => html`
     <button
-      @click=${async () => {
-        const { item } = toast({
+      @click=${() => {
+        toast({
           message: 'File deleted',
           variant: 'danger',
           duration: 0,
-          withIcon: true,
+          icon: (ownerDocument) => ownerDocument.createTextNode('!'),
           action: { label: 'Undo', onClick: (toastItem) => toastItem.hide() },
         });
-        const toastItem = await item;
-        const icon = document.createElement('span');
-        icon.slot = 'icon';
-        icon.setAttribute('aria-hidden', 'true');
-        icon.textContent = '!';
-        toastItem.append(icon);
       }}
     >
       Danger + icon + action

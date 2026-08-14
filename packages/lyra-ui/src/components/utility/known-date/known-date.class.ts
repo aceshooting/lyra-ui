@@ -11,37 +11,30 @@ import {
   nextId,
 } from '../../../internal/a11y.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { styles } from './known-date.styles.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { isImplicitSubmission, submitOnEnter } from '../../../internal/submit-on-enter.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { currentValidityValidator, type LyraFormValidator } from '../../forms/form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_dateInputInvalid, LYRA_DEFAULT_dateInputMaxMessage, LYRA_DEFAULT_dateInputMinMessage, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_knownDateDay, LYRA_DEFAULT_knownDateMonth, LYRA_DEFAULT_knownDateYear } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
-/** The canonical step a `<lr-known-date>` size resolves to. The library-wide
- *  {@linkcode LyraSizeStep} ladder under this component's own export name; the `size` property
- *  itself takes the wider {@linkcode LyraSize}, which also accepts `small`/`medium`/`large`. */
-export type LyraKnownDateSize = LyraSizeStep;
 export type LyraKnownDateField = 'day' | 'month' | 'year';
 export type LyraKnownDateAppearance = Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'>;
 
 /** The three raw field strings exposed by `<lr-known-date>`. */
-export interface DateParts {
+export interface LyraKnownDateParts {
   day: string;
   month: string;
   year: string;
 }
 
-const EMPTY_PARTS: Readonly<DateParts> = { day: '', month: '', year: '' };
-
-/** Lyra-prefixed alias for consumers that keep all imported public types namespaced. */
-export type LyraKnownDateParts = DateParts;
+const EMPTY_PARTS: Readonly<LyraKnownDateParts> = { day: '', month: '', year: '' };
 
 /** Parse `YYYY-MM-DD` into a local Date, or null if invalid (calendar-invalid
  *  combinations like Feb 30 are rejected, not silently rolled over). Local
@@ -226,8 +219,7 @@ function addCompatibilityDetail<T extends Event>(event: T, detail: LyraKnownDate
  * @cssprop [--lr-known-date-invalid-border-color=var(--lr-color-danger)] - Border color of each
  *   `field-input` while `:host([data-invalid])` is set.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker, rendered after
- * the fieldset `legend` here rather than after the inner label span, so it follows the whole label
- * rather than sitting inside it. Set it to `''` to suppress the marker, or to any other quoted
+ * the shared `form-control-label` marker contract. Set it to `''` to suppress the marker, or to any other quoted
  * string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never
  * localized here.
  * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Color of that marker,
@@ -253,6 +245,11 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     knownDateYear: LYRA_DEFAULT_knownDateYear,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  /** Public WA-compatible intrinsic validator catalog. */
+  static get validators(): LyraFormValidator<LyraKnownDate>[] {
+    return [currentValidityValidator('required', 'disabled', 'readonly', 'value', 'min', 'max')];
+  }
 
   // The shared ladder sits before this component's own sheet so the per-tier `--lr-form-control-*`
   // knobs are already declared by the time the `--lr-known-date-field-*` surface reads them.
@@ -294,17 +291,14 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   /** Overrides the fieldset's computed accessible name (normally the `<legend>`'s content). Applied
    *  as `aria-label` on the `part="fieldset"` element, which owns the role -- not just the host. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
-  /** Visible + accessible per-field label for the day field. Routes through
-   *  `this.localize('knownDateDay', ...)`. */
-  @property({ attribute: 'day-label' }) dayLabel = 'Day';
-  /** Visible + accessible per-field label for the month field. Routes through
-   *  `this.localize('knownDateMonth', ...)`. */
-  @property({ attribute: 'month-label' }) monthLabel = 'Month';
-  /** Visible + accessible per-field label for the year field. Routes through
-   *  `this.localize('knownDateYear', ...)`. */
-  @property({ attribute: 'year-label' }) yearLabel = 'Year';
+  /** Visible + accessible day label. `undefined` localizes the default; supplied text is literal. */
+  @property({ attribute: 'day-label' }) dayLabel?: string;
+  /** Visible + accessible month label. `undefined` localizes the default; supplied text is literal. */
+  @property({ attribute: 'month-label' }) monthLabel?: string;
+  /** Visible + accessible year label. `undefined` localizes the default; supplied text is literal. */
+  @property({ attribute: 'year-label' }) yearLabel?: string;
 
-  private _parts: DateParts = { ...EMPTY_PARTS };
+  private _parts: LyraKnownDateParts = { ...EMPTY_PARTS };
   // Set on the first blur that leaves the whole control (not a field-to-field
   // Tab); gates the touched-only invalid presentation, same as every other
   // lyra form control.
@@ -410,9 +404,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
       ancestor = composedParentElement(ancestor);
     }
 
-    const errorBranches = Array.from(this.children).filter(
-      (element) => element.getAttribute('slot') === 'error',
-    );
+    const errorBranches = Array.from(this.children).filter((element) => element.getAttribute('slot') === 'error');
     const forwardedSlots = errorBranches.flatMap((branch) => [
       ...(branch.localName === 'slot' ? [branch as HTMLSlotElement] : []),
       ...branch.querySelectorAll<HTMLSlotElement>('slot'),
@@ -469,15 +461,15 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   }
 
   /** The three raw day/month/year field strings. Assigning a complete valid set updates `value`. */
-  get parts(): DateParts {
+  get parts(): LyraKnownDateParts {
     return this._parts;
   }
 
-  set parts(next: DateParts) {
+  set parts(next: LyraKnownDateParts) {
     this.setParts(next, true);
   }
 
-  private setParts(next: Partial<DateParts> | null | undefined, programmatic: boolean): void {
+  private setParts(next: Partial<LyraKnownDateParts> | null | undefined, programmatic: boolean): void {
     const old = this._parts;
     this._parts = {
       day: String(next?.day ?? ''),
@@ -552,15 +544,15 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   }
 
   private get effectiveDayLabel(): string {
-    return this.localize('knownDateDay', this.dayLabel === 'Day' ? undefined : this.dayLabel);
+    return this.dayLabel === undefined ? this.localize('knownDateDay') : this.dayLabel;
   }
 
   private get effectiveMonthLabel(): string {
-    return this.localize('knownDateMonth', this.monthLabel === 'Month' ? undefined : this.monthLabel);
+    return this.monthLabel === undefined ? this.localize('knownDateMonth') : this.monthLabel;
   }
 
   private get effectiveYearLabel(): string {
-    return this.localize('knownDateYear', this.yearLabel === 'Year' ? undefined : this.yearLabel);
+    return this.yearLabel === undefined ? this.localize('knownDateYear') : this.yearLabel;
   }
 
   private labelFor(field: LyraKnownDateField): string {
@@ -749,9 +741,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   };
 
   private visibleErrorText(): string {
-    const slottedElements = Array.from(this.children).filter(
-      (element) => element.getAttribute('slot') === 'error',
-    );
+    const slottedElements = Array.from(this.children).filter((element) => element.getAttribute('slot') === 'error');
     if (slottedElements.length > 0) {
       return slottedElements
         .map((element) => this.accessibleVisibleText(element))
@@ -772,14 +762,11 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     const visibilityHidden = isAccessibilityVisibilityHidden(element);
     const accessibleLabel = visibilityHidden ? null : element.getAttribute('aria-label');
     if (accessibleLabel?.trim()) return accessibleLabel;
-    const assigned =
-      element.localName === 'slot'
-        ? (element as HTMLSlotElement).assignedNodes({ flatten: true })
-        : [];
+    const assigned = element.localName === 'slot' ? (element as HTMLSlotElement).assignedNodes({ flatten: true }) : [];
     const children = assigned.length > 0 ? assigned : Array.from(element.childNodes);
-    return children.map((child) =>
-      child.nodeType === 3 && visibilityHidden ? '' : this.accessibleVisibleText(child),
-    ).join(' ');
+    return children
+      .map((child) => (child.nodeType === 3 && visibilityHidden ? '' : this.accessibleVisibleText(child)))
+      .join(' ');
   }
 
   private announceVisibleError(): void {
@@ -903,8 +890,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     const active = activeElementIn(this.shadowRoot);
     const staysInsideControl =
       e.isTrusted &&
-      (this.isRenderedFieldTarget(related) ||
-        (active !== e.target && this.isRenderedFieldTarget(active)));
+      (this.isRenderedFieldTarget(related) || (active !== e.target && this.isRenderedFieldTarget(active)));
     if (staysInsideControl) return;
     // A field's own `?disabled=${this.effectiveDisabled}` binding turning true force-blurs it if
     // it was focused -- a platform reaction to disablement, not a user interaction, so it must not

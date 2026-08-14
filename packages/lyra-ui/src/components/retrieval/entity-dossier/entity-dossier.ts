@@ -7,5 +7,7 @@ import '../chunk-inspector/chunk-inspector.js';
 import '../provenance-panel/provenance-panel.js';
 import '../../data/stat/stat.js';
 import '../../layout/tab-group/tab-group.js';
+import '../../layout/tab-group/tab-panel.js';
+import '../../layout/tab-group/tab.js';
 import '../../overlays/empty/empty.js';
 defineElement('entity-dossier', LyraEntityDossier);

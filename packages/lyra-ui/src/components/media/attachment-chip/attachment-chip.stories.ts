@@ -67,7 +67,7 @@ export const Statuses: Story = {
           name="notes.txt"
           bytes="512"
           mime-type="text/plain"
-          status="done"
+          status="success"
         ></lr-attachment-chip>
       </div>
     `;
@@ -86,26 +86,26 @@ export const FromRealFile: Story = {
   },
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:40rem;">
-      <lr-attachment-chip .file=${samplePngFile('site-photo.png')} status="done"></lr-attachment-chip>
+      <lr-attachment-chip .file=${samplePngFile('site-photo.png')} status="success"></lr-attachment-chip>
       <lr-attachment-chip .file=${sampleTextFile('export.csv', 15360)} status="pending"></lr-attachment-chip>
     </div>
   `,
 };
 
 export const ClickToPreview: Story = {
-  name: 'Click an uploaded file to preview and download',
+  name: 'Request a preview for an uploaded file',
   parameters: {
     docs: {
       description: {
         story:
-          'A real `File` supplies its existing MIME type to `lr-document-viewer`; activating the preview action opens the dialog and the dialog footer provides the native download action. No second format field or MIME-detection function is needed.',
+          'A real `File` supplies its existing MIME type in the cancelable `lr-preview-request` detail. The chip stays presentation/event-only; the host composes whichever viewer or overlay it wants.',
       },
     },
   },
   render: () => html`
     <lr-attachment-chip
       .file=${sampleTextFile('uploaded-notes.txt', 128)}
-      status="done"
+      status="success"
     ></lr-attachment-chip>
   `,
 };
@@ -126,7 +126,7 @@ export const FromServerMetadata: Story = {
       bytes="184320"
       mime-type="image/png"
       thumbnail-src="data:image/png;base64,${PNG_1X1_RED_BASE64}"
-      status="done"
+      status="success"
     ></lr-attachment-chip>
   `,
 };
@@ -175,7 +175,7 @@ export const NotRemovable: Story = {
       name="roof-photo.jpg"
       bytes="2415919"
       mime-type="image/jpeg"
-      status="done"
+      status="success"
       .removable=${false}
     ></lr-attachment-chip>
   `,
@@ -193,7 +193,7 @@ export const Compact: Story = {
   },
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:32rem;">
-      <lr-attachment-chip compact .file=${samplePngFile('site-photo.png')} status="done"></lr-attachment-chip>
+      <lr-attachment-chip compact .file=${samplePngFile('site-photo.png')} status="success"></lr-attachment-chip>
       <lr-attachment-chip compact .file=${sampleTextFile('notes.txt', 2048)} status="pending"></lr-attachment-chip>
     </div>
   `,
@@ -215,7 +215,7 @@ export const ThumbnailOnly: Story = {
         compact
         thumbnail-only
         .file=${samplePngFile('site-photo.png')}
-        status="done"
+        status="success"
       ></lr-attachment-chip>
       <lr-attachment-chip
         compact
@@ -253,7 +253,7 @@ export const ComposerTray: Story = {
   },
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:32rem; padding:0.5rem; border:1px dashed var(--lr-color-border); border-radius:0.5rem;">
-      <lr-attachment-chip name="roof-photo.jpg" bytes="2415919" mime-type="image/jpeg" status="done"></lr-attachment-chip>
+      <lr-attachment-chip name="roof-photo.jpg" bytes="2415919" mime-type="image/jpeg" status="success"></lr-attachment-chip>
       <lr-attachment-chip name="dataset.csv" bytes="9830400" mime-type="text/csv" status="uploading" progress="58"></lr-attachment-chip>
       <lr-attachment-chip name="invoice.pdf" bytes="102400" mime-type="application/pdf" status="error"></lr-attachment-chip>
       <lr-attachment-chip name="notes.txt" bytes="512" mime-type="text/plain" status="pending"></lr-attachment-chip>
@@ -265,16 +265,16 @@ export const Events: Story = {
   render: () => html`
     <div>
       <lr-attachment-chip
-        id="att-9"
+        attachment-id="att-9"
         name="invoice.pdf"
         bytes="102400"
         mime-type="application/pdf"
         status="error"
-        @lr-remove=${(e: CustomEvent<{ id: string }>) => {
+        @lr-remove=${(e: CustomEvent<{ attachmentId: string }>) => {
           const out = document.getElementById('attachment-chip-log');
           if (out) out.textContent = `lr-remove: ${JSON.stringify(e.detail)}`;
         }}
-        @lr-retry=${(e: CustomEvent<{ id: string }>) => {
+        @lr-retry=${(e: CustomEvent<{ attachmentId: string }>) => {
           const out = document.getElementById('attachment-chip-log');
           if (out) out.textContent = `lr-retry: ${JSON.stringify(e.detail)}`;
         }}

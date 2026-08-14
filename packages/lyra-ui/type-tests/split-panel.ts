@@ -41,7 +41,7 @@ void orientation;
 void primary;
 
 panel.addEventListener('lr-reposition', (event) => {
-  const detail: undefined = event.detail;
+  const detail: null = event.detail;
   void detail;
 });
 

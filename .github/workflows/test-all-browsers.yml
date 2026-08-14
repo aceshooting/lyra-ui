@@ -22,11 +22,11 @@ jobs:
     outputs:
       browsers: ${{ steps.split.outputs.browsers }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: split
-        run: |
-          IFS=',' read -r -a browsers <<< "${{ inputs.browsers }}"
-          json=$(printf '%s\n' "${browsers[@]}" | jq -R 'gsub("^\\s+|\\s+$";"")' | jq -sc .)
-          echo "browsers=$json" >> "$GITHUB_OUTPUT"
+        env:
+          BROWSERS_INPUT: ${{ inputs.browsers }}
+        run: node scripts/plan-test-browsers.mjs >> "$GITHUB_OUTPUT"
 
   test:
     needs: plan
@@ -51,4 +51,6 @@ jobs:
       # Reuses test_all_browsers.sh's existing per-browser install-name mapping (edge -> msedge,
       # safari -> webkit) and build/run logic rather than duplicating it inline.
       - name: Run browser test sweep
-        run: ./scripts/test_all_browsers.sh --browsers "${{ matrix.browser }}"
+        env:
+          TEST_BROWSER: ${{ matrix.browser }}
+        run: ./scripts/test_all_browsers.sh --browsers "$TEST_BROWSER"

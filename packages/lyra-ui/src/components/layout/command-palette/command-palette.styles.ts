@@ -143,6 +143,13 @@ export const styles = css`
       var(--lr-color-brand-quiet)
     );
   }
+  :where([part="command"][data-active="true"]):active:where(:not(:disabled)) {
+    background: color-mix(
+      in oklab,
+      var(--lr-command-palette-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part="command"]:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
@@ -181,5 +188,13 @@ export const styles = css`
     padding: var(--lr-space-l);
     color: var(--lr-color-text-quiet);
     text-align: center;
+  }
+
+  @media (forced-colors: active) {
+    [part="command"][data-active="true"] {
+      outline: var(--lr-border-width-medium) solid currentColor;
+      outline-offset: calc(-1 * var(--lr-border-width-medium));
+      font-weight: var(--lr-font-weight-semibold);
+    }
   }
 `;

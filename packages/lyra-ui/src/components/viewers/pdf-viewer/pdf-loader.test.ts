@@ -8,10 +8,33 @@ function fakePdfJsModule(): { getDocument: () => unknown; GlobalWorkerOptions: {
 }
 
 describe('loadPdfJsDeps()', () => {
-  it('resolves the injected module and configures its worker URL', async () => {
+  it('resolves the injected module and configures its worker from the peer module resolver', async () => {
     const fake = fakePdfJsModule();
-    expect(await loadPdfJsDeps(() => Promise.resolve(fake))).to.equal(fake);
-    expect(fake.GlobalWorkerOptions.workerSrc).to.contain('pdf.worker.min.mjs');
+    expect(await loadPdfJsDeps(
+      () => Promise.resolve(fake),
+      () => 'https://cdn.example.test/pdf.worker.min.mjs',
+    )).to.equal(fake);
+    expect(fake.GlobalWorkerOptions.workerSrc).to.equal('https://cdn.example.test/pdf.worker.min.mjs');
+  });
+
+  it('does not overwrite a consumer-configured PDF.js worker', async () => {
+    const fake = fakePdfJsModule();
+    fake.GlobalWorkerOptions.workerSrc = 'https://app.example.test/pdf.worker.mjs';
+    let resolverCalls = 0;
+    await loadPdfJsDeps(
+      () => Promise.resolve(fake),
+      () => { resolverCalls++; return 'https://cdn.example.test/pdf.worker.min.mjs'; },
+    );
+    expect(fake.GlobalWorkerOptions.workerSrc).to.equal('https://app.example.test/pdf.worker.mjs');
+    expect(resolverCalls).to.equal(0);
+  });
+
+  it('fails closed instead of assigning an unresolved or active-content worker URL', async () => {
+    for (const candidate of ['pdfjs-dist/build/pdf.worker.min.mjs', 'javascript:alert(1)', 'data:text/javascript,postMessage(1)']) {
+      const fake = fakePdfJsModule();
+      await loadPdfJsDeps(() => Promise.resolve(fake), () => candidate);
+      expect(fake.GlobalWorkerOptions.workerSrc, candidate).to.equal('');
+    }
   });
 
   it('returns null and logs the import error when pdfjs-dist is unavailable', async () => {

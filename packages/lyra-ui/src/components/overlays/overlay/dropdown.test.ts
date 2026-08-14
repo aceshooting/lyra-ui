@@ -25,12 +25,14 @@ async function basic(extra = ''): Promise<LyraDropdown> {
   `) as Promise<LyraDropdown>;
 }
 
-it('owns direct dropdown items through one contained lr-menu engine without replacing the dropdown popup', async () => {
+it('keeps the positioning shell neutral while the generated menu owns role and name', async () => {
   const el = await basic();
   const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   const engine = el.shadowRoot!.querySelector('lr-menu[part~="menu"]') as LyraMenu | null;
+  const menuRole = engine?.shadowRoot?.querySelector('[role="menu"]');
 
-  expect(popup.getAttribute('role')).to.equal('menu');
+  expect(popup.getAttribute('role')).to.equal(null);
+  expect(popup.getAttribute('aria-label')).to.equal(null);
   expect(popup.getAttribute('part')?.split(/\s+/)).to.include.members([
     'popup',
     'base',
@@ -38,10 +40,11 @@ it('owns direct dropdown items through one contained lr-menu engine without repl
     'panel',
   ]);
   expect(engine?.localName).to.equal('lr-menu');
-  expect((engine?.shadowRoot?.querySelector('[role="menu"]')) === (null)).to.equal(true);
+  expect(menuRole?.getAttribute('role')).to.equal('menu');
+  expect(menuRole?.getAttribute('aria-label')).to.equal('Row actions');
 });
 
-it('keeps a real menu owner when popup-role changes the outer surface to a dialog', async () => {
+it('normalizes the additive inherited popup-role instead of corrupting dropdown semantics', async () => {
   const el = (await fixture(html`
     <lr-dropdown popup-role="dialog" aria-label="Actions dialog">
       <button slot="trigger">Actions</button>
@@ -50,9 +53,15 @@ it('keeps a real menu owner when popup-role changes the outer surface to a dialo
   `)) as LyraDropdown;
   const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   const engine = el.shadowRoot!.querySelector('lr-menu[part~="menu"]') as LyraMenu;
+  const triggerButton = el.querySelector('button')!;
+  const menuRole = engine.shadowRoot!.querySelector('[role="menu"]')!;
 
-  expect(popup.getAttribute('role')).to.equal('dialog');
-  expect(engine.shadowRoot!.querySelector('[role="menu"]')).to.exist;
+  expect(el.popupRole).to.equal('menu');
+  expect(el.getAttribute('popup-role')).to.equal('menu');
+  expect(popup.getAttribute('role')).to.equal(null);
+  expect(popup.getAttribute('aria-label')).to.equal(null);
+  expect(triggerButton.getAttribute('aria-haspopup')).to.equal('menu');
+  expect(menuRole.getAttribute('aria-label')).to.equal('Actions dialog');
   await expect(el).to.be.accessible();
 });
 
@@ -76,8 +85,60 @@ it('releases a live consumer menu structurally without standalone lifecycle even
   await new Promise<void>((resolve) => queueMicrotask(resolve));
   await menu.updateComplete;
 
-  expect(menu.open).to.equal(false);
+  expect(menu.dropdownOpen).to.equal(false);
   expect(events).to.deep.equal([]);
+});
+
+it('restores every author-owned consumer-menu field when containment ends', async () => {
+  const el = document.createElement('lr-dropdown') as LyraDropdown;
+  const button = document.createElement('button');
+  button.slot = 'trigger';
+  button.textContent = 'Actions';
+  const menu = document.createElement('lr-menu') as LyraMenu;
+  menu.dropdownContained = true;
+  menu.dropdownRendersMenuRole = true;
+  menu.dropdownStayOpenOnSelect = true;
+  menu.dropdownSize = 'large';
+  menu.dropdownLabel = 'Original fallback';
+  menu.dropdownOpen = true;
+  el.append(button, menu);
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    expect(menu.dropdownOwner === el).to.equal(true);
+    expect(menu.dropdownSize).to.equal('m');
+    expect(menu.dropdownLabel).to.equal('Menu');
+    expect(menu.dropdownOpen).to.equal(false);
+
+    menu.slot = 'retired';
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    await menu.updateComplete;
+    expect(menu.dropdownOwner).to.equal(null);
+    expect(menu.dropdownContained).to.equal(true);
+    expect(menu.dropdownRendersMenuRole).to.equal(true);
+    expect(menu.dropdownStayOpenOnSelect).to.equal(true);
+    expect(menu.dropdownSize).to.equal('large');
+    expect(menu.dropdownLabel).to.equal('Original fallback');
+    expect(menu.dropdownOpen).to.equal(true);
+  } finally {
+    el.remove();
+  }
+});
+
+it('exposes the current menu and an imperative trigger focus method across reconnect', async () => {
+  const el = await basic();
+  const engine = el.shadowRoot!.querySelector('lr-menu[part~="menu"]') as LyraMenu;
+  expect(el.getMenu() === engine).to.equal(true);
+  el.focusOnTrigger();
+  expect(document.activeElement === trigger(el)).to.equal(true);
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  expect(el.getMenu() === engine).to.equal(true);
+  el.focusOnTrigger({ preventScroll: true });
+  expect(document.activeElement === trigger(el)).to.equal(true);
 });
 
 it('uses the mapped distance=0 default without changing an explicit distance', async () => {
@@ -238,7 +299,7 @@ it('normalizes disabled plus open initial markup to closed in either attribute o
     expect(el.open, `case ${index}`).to.equal(false);
     expect(el.hasAttribute('open'), `case ${index}`).to.equal(false);
     expect(popup.hasAttribute('data-hidden'), `case ${index}`).to.equal(true);
-    expect(engine.open, `case ${index}`).to.equal(false);
+    expect(engine.dropdownOpen, `case ${index}`).to.equal(false);
   }
 });
 
@@ -282,7 +343,7 @@ it('propagates the dropdown size to mapped items without changing the shared ite
   expect(item.size).to.equal('small');
 });
 
-it('accepts a consumer-supplied lr-menu as the owned content without adding a second menu role', async () => {
+it('accepts a consumer-supplied lr-menu as the sole menu role owner', async () => {
   const el = (await fixture(html`
     <lr-dropdown>
       <button slot="trigger">Actions</button>
@@ -309,9 +370,92 @@ it('accepts a consumer-supplied lr-menu as the owned content without adding a se
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelectorAll('lr-menu[part~="menu"]').length).to.equal(0);
-  expect((supplied.shadowRoot!.querySelector('[role="menu"]')) === (null)).to.equal(true);
+  expect(supplied.shadowRoot!.querySelector('[role="menu"]')?.getAttribute('aria-label')).to.equal('Actions');
   expect(selectCount).to.equal(1);
   expect(legacyAliasCount).to.equal(0);
+});
+
+it('preserves a consumer menu header/list/footer, live regions, focus order, and supplied name', async () => {
+  const el = (await fixture(html`
+    <lr-dropdown aria-label="Dropdown fallback" style="--show-duration:0ms;--hide-duration:0ms">
+      <button id="actions-trigger" slot="trigger">Actions</button>
+      <lr-menu label="Filter actions">
+        <input id="filter" slot="header" aria-label="Filter actions" />
+        <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+        <button id="apply" slot="footer">Apply</button>
+      </lr-menu>
+    </lr-dropdown>
+  `)) as LyraDropdown;
+  const supplied = el.querySelector('lr-menu') as LyraMenu;
+  await el.show();
+  await supplied.updateComplete;
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+  await waitUntil(
+    () => !popup.hasAttribute('data-hidden'),
+    'the contained menu becomes focusable after placement',
+  );
+  const list = supplied.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
+  const header = supplied.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+  const footer = supplied.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+  const filter = supplied.querySelector('#filter') as HTMLInputElement;
+  const apply = supplied.querySelector('#apply') as HTMLButtonElement;
+
+  expect(popup.getAttribute('role')).to.equal(null);
+  expect(list.getAttribute('role')).to.equal('menu');
+  expect(list.getAttribute('aria-label')).to.equal('Filter actions');
+  expect(filter.assignedSlot?.name).to.equal('header');
+  expect(apply.assignedSlot?.name).to.equal('footer');
+  expect(getComputedStyle(header).display).to.not.equal('none');
+  expect(getComputedStyle(footer).display).to.not.equal('none');
+
+  const item = supplied.querySelector('lr-dropdown-item') as LyraDropdownItem;
+  item.focus();
+  expect(document.activeElement?.getAttribute('value')).to.equal('rename');
+  const tab = new KeyboardEvent('keydown', {
+    key: 'Tab',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  });
+  item.dispatchEvent(tab);
+  await supplied.updateComplete;
+  expect(tab.defaultPrevented).to.equal(false);
+  expect(el.open).to.equal(true);
+  apply.focus();
+  expect(document.activeElement?.id).to.equal('apply');
+
+  filter.slot = 'retired';
+  const replacement = document.createElement('input');
+  replacement.id = 'replacement-filter';
+  replacement.slot = 'header';
+  replacement.setAttribute('aria-label', 'Replacement filter');
+  supplied.append(replacement);
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await supplied.updateComplete;
+  expect(replacement.assignedSlot?.name).to.equal('header');
+  expect(filter.assignedSlot?.name ?? null).to.equal(null);
+  await expect(el).to.be.accessible();
+});
+
+it('uses the dropdown label only as a consumer menu fallback', async () => {
+  const el = (await fixture(html`
+    <lr-dropdown aria-label="Dropdown actions">
+      <button slot="trigger">Actions</button>
+      <lr-menu><lr-dropdown-item value="rename">Rename</lr-dropdown-item></lr-menu>
+    </lr-dropdown>
+  `)) as LyraDropdown;
+  const supplied = el.querySelector('lr-menu') as LyraMenu;
+  await el.updateComplete;
+  await supplied.updateComplete;
+  const list = supplied.shadowRoot!.querySelector('[role="menu"]')!;
+  expect(list.getAttribute('aria-label')).to.equal('Dropdown actions');
+
+  supplied.label = 'Supplied actions';
+  await supplied.updateComplete;
+  expect(list.getAttribute('aria-label')).to.equal('Supplied actions');
+  supplied.setAttribute('aria-label', 'Host-owned actions');
+  await supplied.updateComplete;
+  expect(list.getAttribute('aria-label')).to.equal('Host-owned actions');
 });
 
 it('rejoins the contained menu engine after an open dropdown is reparented', async () => {
@@ -321,18 +465,18 @@ it('rejoins the contained menu engine after an open dropdown is reparented', asy
   await el.updateComplete;
   const engine = el.shadowRoot!.querySelector('lr-menu[part~="menu"]') as LyraMenu;
   await engine.updateComplete;
-  expect(engine.open).to.equal(true);
+  expect(engine.dropdownOpen).to.equal(true);
 
   el.remove();
-  expect(engine.open).to.equal(false);
+  expect(engine.dropdownOpen).to.equal(false);
   fixtureParent.append(el);
   await el.updateComplete;
   await new Promise<void>((resolve) => queueMicrotask(resolve));
   await engine.updateComplete;
 
   expect(el.open).to.equal(true);
-  expect(engine.open).to.equal(true);
-  engine.show('last');
+  expect(engine.dropdownOpen).to.equal(true);
+  engine.focusContained('last');
   await waitUntil(
     () => document.activeElement?.getAttribute('value') === 'delete',
     'the reconnected popup restores its selected roving item after placement',

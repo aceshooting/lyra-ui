@@ -57,6 +57,7 @@ export const WithEvidence: Story = {
   render: () => html`
     <lr-grounding-summary
       label="Answer grounding"
+      heading-level="2"
       .assessment=${assessmentWithConfidenceAndWarnings}
       .citations=${citations}
       @lr-citation-select=${(e: CustomEvent<{ citation: Citation }>) => console.log('lr-citation-select', e.detail)}

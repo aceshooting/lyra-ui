@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  findOpaqueReviewTokens,
   findUnboundAnnouncerTimerHosts,
   findNulByteLines,
   findUnboundAnnouncementSinks,
@@ -9,6 +10,21 @@ import {
   findShadowLiveRegionMarkup,
   isSafeIntlLocaleExpression,
 } from './check-source-policy.mjs';
+
+test('shipped-source hygiene rejects opaque review IDs without flagging public standards', () => {
+  const source = [
+    '// C-012 and O-318 are private review bookkeeping.',
+    'const prose = "Resolved under C-789.";',
+    '// WCAG 2.5.8, ISO-8601, SHA-256, and v9.0.0 are public identifiers.',
+  ].join('\n');
+
+  assert.deepEqual(findOpaqueReviewTokens(source), [
+    { line: 1, token: 'C-012' },
+    { line: 1, token: 'O-318' },
+    { line: 2, token: 'C-789' },
+  ]);
+  assert.deepEqual(findOpaqueReviewTokens('WCAG 2.5.8; ISO-8601; SHA-256; issue 123'), []);
+});
 
 test('Announcer timer policy requires an owner-window binding', () => {
   const unsafe = `

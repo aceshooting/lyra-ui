@@ -32,6 +32,8 @@ export type CalloutAppearance = LyraAppearance;
 export type CalloutSize = LyraSize;
 export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
 
+const CALLOUT_VARIANTS = new Set<CalloutVariant>(['brand', 'neutral', 'success', 'warning', 'danger']);
+
 function isComposedWithin(owner: Element, candidate: Element): boolean {
   let current: Element | null = candidate;
   while (current) {
@@ -338,7 +340,21 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     const text = this.announcementText();
     if (!force && text === this.lastAnnouncementText) return;
     this.lastAnnouncementText = text;
-    (this.variant === 'danger' ? this.assertiveSink : this.politeSink)?.announce(text);
+    (this.effectiveContextualVariant === 'danger' ? this.assertiveSink : this.politeSink)?.announce(text);
+  }
+
+  /** Resolve the same contextual tone that the inherited CSS vocabulary paints. An explicit local
+   * attribute wins; otherwise the nearest composed semantic ancestor wins, with brand as the
+   * standalone fallback. This remains live across moves, adoption, and reconnects. */
+  private get effectiveContextualVariant(): CalloutVariant {
+    if (this.hasAttribute('variant')) return this.variant;
+    let ancestor = composedParentElement(this);
+    while (ancestor) {
+      const candidate = ancestor.getAttribute('variant') as CalloutVariant | null;
+      if (candidate && CALLOUT_VARIANTS.has(candidate)) return candidate;
+      ancestor = composedParentElement(ancestor);
+    }
+    return 'brand';
   }
   private close = (): void => {
     const repair = captureComposedFocusRepair(this, nearestExternalFocusTarget(this));
@@ -354,7 +370,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     const headingLevel = resolveHeadingLevel(this.headingLevel);
     return html`<div part="base" role=${label ? 'group' : nothing}
       aria-label=${label || nothing}>
-      <span part="icon" ?hidden=${!this.slotPresence.has('icon')}><slot name="icon"></slot></span>
+      <span part="icon" aria-hidden="true" inert ?hidden=${!this.slotPresence.has('icon')}><slot name="icon"></slot></span>
       <div part="content">
         <div
           part="heading"
@@ -364,7 +380,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
         >${this.heading}<slot name="heading"></slot></div>
         <div part="message"><slot></slot></div>
       </div>
-      <button type="button" part="close-button" ?hidden=${!this.closable} aria-label=${this.localize('close')} @click=${this.close}><span part="close-icon" aria-hidden="true">×</span></button>
+      <button type="button" part="close-button" ?hidden=${!this.closable} aria-label=${this.localize('close')} @click=${this.close}><span part="close-icon" aria-hidden="true" inert>×</span></button>
     </div>`;
   }
 }

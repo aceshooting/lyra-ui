@@ -6,7 +6,7 @@ export const styles = css`
     inline-size: 100%;
     min-inline-size: 0;
   }
-  :host([variant='ring']) {
+  :host([shape='ring']) {
     display: inline-block;
     inline-size: var(--lr-size-8em);
     block-size: var(--lr-size-8em);
@@ -17,7 +17,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-xs);
   }
-  :host([variant='ring']) [part='base'] {
+  :host([shape='ring']) [part='base'] {
     inline-size: 100%;
     block-size: 100%;
   }
@@ -127,24 +127,24 @@ export const styles = css`
   /* The ring is a fixed 8em square, so a legend under it would be clipped by the host's own block
      size. Only under show-legend does the host stop being that square: the ring keeps its declared
      size and the key flows beneath it. */
-  :host([variant='ring'][show-legend]) {
+  :host([shape='ring'][show-legend]) {
     block-size: auto;
   }
-  :host([variant='ring'][show-legend]) svg[part='base'] {
+  :host([shape='ring'][show-legend]) svg[part='base'] {
     inline-size: var(--lr-size-8em);
     block-size: var(--lr-size-8em);
   }
 
   /* --- ring variant -------------------------------------------------- */
-  :host([variant='ring']) svg[part='base'] {
+  :host([shape='ring']) svg[part='base'] {
     display: block;
     overflow: visible;
   }
-  :host([variant='ring']) [part='track'] {
+  :host([shape='ring']) [part='track'] {
     fill: none;
     stroke: color-mix(in srgb, var(--lr-color-border) 30%, transparent);
   }
-  :host([variant='ring']) [part='segment'] {
+  :host([shape='ring']) [part='segment'] {
     fill: none;
     stroke: var(--lr-color-border);
     /* Butt (not round) caps -- round caps on tightly-packed segmented arcs
@@ -154,26 +154,71 @@ export const styles = css`
       stroke-dasharray var(--lr-transition-base),
       stroke-dashoffset var(--lr-transition-base);
   }
-  :host([variant='ring']) [part='segment'][data-tone='brand'] {
+  :host([shape='ring']) [part='segment'][data-tone='brand'] {
     stroke: var(--lr-color-brand);
   }
-  :host([variant='ring']) [part='segment'][data-tone='success'] {
+  :host([shape='ring']) [part='segment'][data-tone='success'] {
     stroke: var(--lr-color-success);
   }
-  :host([variant='ring']) [part='segment'][data-tone='warning'] {
+  :host([shape='ring']) [part='segment'][data-tone='warning'] {
     stroke: var(--lr-color-warning);
   }
-  :host([variant='ring']) [part='segment'][data-tone='danger'] {
+  :host([shape='ring']) [part='segment'][data-tone='danger'] {
     stroke: var(--lr-color-danger);
   }
-  :host([variant='ring']) [part='segment'][style*='--lr-context-meter-segment-color'] {
+  :host([shape='ring']) [part='segment'][style*='--lr-context-meter-segment-color'] {
     stroke: var(--lr-context-meter-segment-color);
   }
-  :host([variant='ring']) [part='label'] {
-    text-anchor: middle;
-    fill: var(--lr-color-text-quiet);
+  :host([shape='ring']) [part='label'] {
+    overflow: hidden;
+  }
+  :host([shape='ring']) .ring-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-2xs);
+    line-height: var(--lr-line-height-compact);
+    text-align: center;
     text-transform: uppercase;
+  }
+
+  @media (forced-colors: active) {
+    [part='segment'],
+    [part='legend-swatch'] {
+      forced-color-adjust: none;
+      background: CanvasText;
+      border: var(--lr-border-width-thin) solid Canvas;
+    }
+    [part='segment'][data-tone='success'],
+    [part='legend-swatch'][data-tone='success'] {
+      border-style: dashed;
+    }
+    [part='segment'][data-tone='warning'],
+    [part='legend-swatch'][data-tone='warning'] {
+      border-style: dotted;
+    }
+    [part='segment'][data-tone='danger'],
+    [part='legend-swatch'][data-tone='danger'] {
+      border-style: double;
+    }
+    :host([shape='ring']) [part='segment'] {
+      fill: none;
+      stroke: CanvasText;
+    }
+    :host([shape='ring']) [part='segment'][data-tone='success'] {
+      stroke-dasharray: 8 3;
+    }
+    :host([shape='ring']) [part='segment'][data-tone='warning'] {
+      stroke-dasharray: 2 3;
+    }
+    :host([shape='ring']) [part='segment'][data-tone='danger'] {
+      stroke-dasharray: 8 2 2 2;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

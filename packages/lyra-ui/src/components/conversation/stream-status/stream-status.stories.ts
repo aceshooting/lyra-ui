@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { ref } from 'lit/directives/ref.js';
 import './stream-status.js';
 import type { LyraStreamStatus } from './stream-status.js';
 
@@ -11,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A streaming-connection status indicator with heartbeat-aware stall detection. The host drives `phase` for `idle`/`connecting`/`streaming`, and calls `recordActivity()` on every real content chunk (never on a transport keep-alive ping) while streaming — go too long without a call and this component declares itself `stalled` on its own, firing `lr-stall`; a later `recordActivity()` call (or a direct host reassignment) recovers it, firing `lr-recover`.',
+          'A streaming-connection status indicator with heartbeat-aware stall detection. The host owns `connectionState` for `idle`/`connecting`/`streaming`; the readonly `phase` adds the component-owned `stalled` result. Call `recordActivity()` for real content (never keep-alive pings), or `markStalled()` for an explicit semantic stall.',
       },
     },
   },
@@ -22,28 +23,35 @@ type Story = StoryObj;
 const buttonStyle =
   'font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lr-color-border); border-radius:0.375rem; background:var(--lr-color-surface); cursor:pointer;';
 
+const markInitiallyStalled = (element?: Element): void => {
+  if (element?.localName !== 'lr-stream-status') return;
+  const status = element as LyraStreamStatus;
+  status.connectionState = 'streaming';
+  status.markStalled();
+};
+
 export const Phases: Story = {
   render: () => html`
     <div style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start;">
       <div>
         <p style="margin:0 0 0.375rem; font-size:0.8125rem; color:var(--lr-color-text-quiet);">idle</p>
-        <lr-stream-status phase="idle"></lr-stream-status>
+        <lr-stream-status connection-state="idle"></lr-stream-status>
       </div>
       <div>
         <p style="margin:0 0 0.375rem; font-size:0.8125rem; color:var(--lr-color-text-quiet);">
           connecting
         </p>
-        <lr-stream-status phase="connecting"></lr-stream-status>
+        <lr-stream-status connection-state="connecting"></lr-stream-status>
       </div>
       <div>
         <p style="margin:0 0 0.375rem; font-size:0.8125rem; color:var(--lr-color-text-quiet);">
           streaming
         </p>
-        <lr-stream-status phase="streaming"></lr-stream-status>
+        <lr-stream-status connection-state="streaming"></lr-stream-status>
       </div>
       <div>
         <p style="margin:0 0 0.375rem; font-size:0.8125rem; color:var(--lr-color-text-quiet);">stalled</p>
-        <lr-stream-status phase="stalled">
+        <lr-stream-status ${ref(markInitiallyStalled)}>
           <button slot="actions" style=${buttonStyle}>Retry</button>
         </lr-stream-status>
       </div>
@@ -65,13 +73,13 @@ export const ThemedPhaseDots: Story = {
     <div
       style="display:flex; flex-wrap:wrap; gap:1.5rem; --lr-stream-status-dot-color:var(--lr-color-success); --lr-stream-status-dot-opacity:0.75;"
     >
-      <lr-stream-status phase="connecting"></lr-stream-status>
-      <lr-stream-status phase="streaming"></lr-stream-status>
-      <lr-stream-status phase="stalled">
+      <lr-stream-status connection-state="connecting"></lr-stream-status>
+      <lr-stream-status connection-state="streaming"></lr-stream-status>
+      <lr-stream-status ${ref(markInitiallyStalled)}>
         <button slot="actions" style=${buttonStyle}>Retry</button>
       </lr-stream-status>
       <lr-stream-status
-        phase="stalled"
+        ${ref(markInitiallyStalled)}
         style="--lr-stream-status-dot-color:var(--lr-color-danger); --lr-stream-status-dot-opacity:1;"
       >
         <button slot="actions" style=${buttonStyle}>Direct override</button>
@@ -84,7 +92,7 @@ export const Narrow320: Story = {
   name: 'Narrow (320px), long stalled message and actions',
   render: () => html`
     <div style="inline-size:320px; max-inline-size:100%; box-sizing:border-box; border:1px dashed var(--lr-color-border); padding:8px;">
-      <lr-stream-status phase="stalled" style="inline-size:100%;">
+      <lr-stream-status ${ref(markInitiallyStalled)} style="inline-size:100%;">
         ConnectionRecoveryExplanationWithoutNaturalBreaksConnectionRecoveryExplanationWithoutNaturalBreaks
         <button slot="actions" style=${buttonStyle}>Cancel</button>
         <button slot="actions" style=${buttonStyle}>Retry</button>
@@ -110,12 +118,12 @@ export const LiveDemo: Story = {
       const root = rootFor(event);
       const status = root.querySelector<LyraStreamStatus>('lr-stream-status')!;
       const generation = ++connectGeneration;
-      status.phase = 'connecting';
-      line(root, 'phase = "connecting"');
+      status.connectionState = 'connecting';
+      line(root, 'connectionState = "connecting"');
       setTimeout(() => {
         if (!status.isConnected || generation !== connectGeneration) return;
-        status.phase = 'streaming';
-        line(root, 'phase = "streaming"');
+        status.connectionState = 'streaming';
+        line(root, 'connectionState = "streaming"');
       }, 600);
     };
     const onActivity = (event: Event): void => {
@@ -126,8 +134,8 @@ export const LiveDemo: Story = {
     const onStop = (event: Event): void => {
       const root = rootFor(event);
       connectGeneration += 1;
-      root.querySelector<LyraStreamStatus>('lr-stream-status')!.phase = 'idle';
-      line(root, 'phase = "idle" (host stopped the stream)');
+      root.querySelector<LyraStreamStatus>('lr-stream-status')!.connectionState = 'idle';
+      line(root, 'connectionState = "idle" (host stopped the stream)');
     };
 
     return html`
@@ -162,7 +170,7 @@ export const LiveDemo: Story = {
 
 export const CustomStalledMessage: Story = {
   render: () => html`
-    <lr-stream-status phase="stalled">
+    <lr-stream-status ${ref(markInitiallyStalled)}>
       Taking longer than usual — the model may be thinking through a complex request.
       <button slot="actions" style=${buttonStyle}>Cancel</button>
       <button slot="actions" style=${buttonStyle}>Retry</button>
@@ -173,7 +181,7 @@ export const CustomStalledMessage: Story = {
 export const DefaultStalledMessage: Story = {
   name: 'Default stalled message (nothing slotted)',
   render: () => html`
-    <lr-stream-status phase="stalled">
+    <lr-stream-status ${ref(markInitiallyStalled)}>
       <button slot="actions" style=${buttonStyle}>Retry</button>
     </lr-stream-status>
   `,
@@ -189,5 +197,5 @@ export const ReducedMotion: Story = {
       },
     },
   },
-  render: () => html`<lr-stream-status phase="streaming"></lr-stream-status>`,
+  render: () => html`<lr-stream-status connection-state="streaming"></lr-stream-status>`,
 };

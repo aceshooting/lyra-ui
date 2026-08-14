@@ -5,4 +5,14 @@
  * supported entry points, and they are covered by semver. The `internal/` modules they forward to
  * are not — that tree is free to move.
  */
-export * from '../internal/positioner.js';
+export { place, trackRect, virtualAnchorFromRect } from '../internal/positioner.js';
+export type {
+  PlacementResult,
+  PlaceAutoSize,
+  PlaceBoundary,
+  PlaceFlipFallbackStrategy,
+  PlaceOptions,
+  PlaceStrategy,
+  PlaceSync,
+  VirtualAnchor,
+} from '../internal/positioner.js';

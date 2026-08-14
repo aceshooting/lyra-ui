@@ -1,8 +1,8 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './branch-picker.js';
 import type { LyraBranchPicker } from './branch-picker.js';
-import { styles } from './branch-picker.styles.js';
 
 it('defaults to index 0, count 1, and renders nothing while count < 2', async () => {
   const el = (await fixture(html`<lr-branch-picker></lr-branch-picker>`)) as LyraBranchPicker;
@@ -82,6 +82,13 @@ it('respects a custom label override', async () => {
     html`<lr-branch-picker index="0" count="2" label="Edits"></lr-branch-picker>`,
   )) as LyraBranchPicker;
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Edits');
+});
+
+it('preserves an explicitly empty host aria-label on the semantic group', async () => {
+  const el = (await fixture(
+    html`<lr-branch-picker count="2" aria-label=""></lr-branch-picker>`,
+  )) as LyraBranchPicker;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
 });
 
 it('focus() delegates to the enabled chevron button', async () => {
@@ -217,15 +224,41 @@ it('chains updated() to super.updated() so a mixin layered under LyraElement wou
   }
 });
 
-it('wraps the previous/next hover rule in :where() so a consumer ::part(...):hover override can win without !important', () => {
-  // :hover can't be synthesized on a real fixture in this test runner (no synthetic-pseudo-class
-  // API), so the established convention for this exact rule shape is a stylesheet-source assertion
-  // -- see attachment-trigger.test.ts's own ':where(' check for the identical carve-out.
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  const hoverRule = css.match(/[^}]*:hover:where\(:not\(:disabled\)\)[^{]*\{[^}]*\}/g);
-  expect(hoverRule, 'expected a :where()-wrapped hover rule for previous/next-button').to.exist;
-  expect(hoverRule!.join(' ')).to.contain(":where([part='previous-button'])");
-  expect(hoverRule!.join(' ')).to.contain(":where([part='next-button'])");
+it('renders hover feedback on enabled chevrons without repainting disabled controls', async () => {
+  const el = (await fixture(html`<lr-branch-picker count="3" index="0"></lr-branch-picker>`)) as LyraBranchPicker;
+  const previous = el.shadowRoot!.querySelector('[part="previous-button"]') as HTMLButtonElement;
+  const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
+  try {
+    const previousRest = getComputedStyle(previous).backgroundColor;
+    let rect = previous.getBoundingClientRect();
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(previous).backgroundColor).to.equal(previousRest);
+
+    const nextRest = getComputedStyle(next).backgroundColor;
+    rect = next.getBoundingClientRect();
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(next).backgroundColor).to.not.equal(nextRest);
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('does not announce an index transition that happened while detached', async () => {
+  const wrapper = (await fixture(html`<div><lr-branch-picker count="3"></lr-branch-picker></div>`)) as HTMLElement;
+  const el = wrapper.querySelector('lr-branch-picker') as LyraBranchPicker;
+  wrapper.removeChild(el);
+  el.index = 1;
+  wrapper.appendChild(el);
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const text = el.shadowRoot!.querySelector('lr-live-region')!.shadowRoot!.querySelector('[part="region"]')!.textContent;
+  expect(text).to.equal('');
 });
 
 it('blur() releases whichever step button held focus', async () => {

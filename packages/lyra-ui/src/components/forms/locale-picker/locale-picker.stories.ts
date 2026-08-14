@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LyraLocalePicker, LyraLocalePickerSize } from './locale-picker.js';
+import type { LyraLocalePicker } from './locale-picker.js';
 import './locale-picker.js';
 
 const meta: Meta = {
@@ -30,6 +30,14 @@ export const CustomCatalog: Story = {
       label="Language"
       .locales=${[{ tag: 'fr' }, { tag: 'de' }, { tag: 'es', label: 'Español (coming soon)' }]}
     ></lr-locale-picker>
+  `,
+};
+
+/** `undefined` selects registry discovery; an explicit empty array is an authoritative empty
+ * catalog and never silently falls back to registry rows. */
+export const EmptyCatalog: Story = {
+  render: () => html`
+    <lr-locale-picker label="No locales available" .locales=${[]}></lr-locale-picker>
   `,
 };
 
@@ -107,7 +115,7 @@ export const Narrow: Story = {
 
 export const Sizes: Story = {
   render: () => {
-    const sizes: LyraLocalePickerSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
+    const sizes = ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'] as const;
     return html`
       <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
         ${sizes.map(

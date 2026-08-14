@@ -141,6 +141,22 @@ it('uses the label prop as the nav landmark accessible name', async () => {
   expect(el.shadowRoot!.querySelector('[part="base"], [part="panel"]')!.getAttribute('aria-label')).to.equal('Main');
 });
 
+it('honors every supplied label literally before consulting localization', async () => {
+  const explicit = (await fixture(html`
+    <lr-app-rail label="Navigation" .strings=${{ navigation: 'Navigation localisée' }}></lr-app-rail>
+  `)) as LyraAppRail;
+  expect(explicit.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Navigation');
+
+  const fallback = (await fixture(html`
+    <lr-app-rail .strings=${{ navigation: 'Navigation localisée' }}></lr-app-rail>
+  `)) as LyraAppRail;
+  expect(fallback.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Navigation localisée');
+
+  fallback.setAttribute('aria-label', '');
+  await fallback.updateComplete;
+  expect(fallback.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+});
+
 it('hides app-rail-item labels visually in icon-only mode while retaining their accessible names', async () => {
   const el = (await fixture(html`
     <lr-app-rail mode="icon-only">
@@ -1042,6 +1058,60 @@ describe('resizable', () => {
     expect(el.railWidthPx).to.equal(190); // clamped to minRailWidthPx
   });
 
+  it('admits only a primary left-button resize and commits once on genuine pointerup', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lr-app-rail>`,
+    )) as LyraAppRail;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    resizer.setPointerCapture = () => {};
+    const requests: number[] = [];
+    const commits: number[] = [];
+    el.addEventListener('lr-rail-resize-request', (event) => requests.push(event.detail.widthPx));
+    el.addEventListener('lr-rail-resize', (event) => commits.push(event.detail.widthPx));
+
+    resizer.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 70, button: 2, buttons: 2, isPrimary: true, bubbles: true,
+    }));
+    resizer.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 71, button: 0, buttons: 1, isPrimary: false, bubbles: true,
+    }));
+    expect(el.dragging).to.be.false;
+
+    resizer.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 72, button: 0, buttons: 1, isPrimary: true, clientX: 0, bubbles: true,
+    }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 72, clientX: 40 }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 72, clientX: 40 }));
+    expect(requests).to.deep.equal([280]);
+    expect(commits).to.deep.equal([]);
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 72 }));
+    expect(commits).to.deep.equal([280]);
+    expect(el.dragging).to.be.false;
+
+    resizer.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 73, button: 0, buttons: 1, isPrimary: true, clientX: 0, bubbles: true,
+    }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 73, clientX: 20 }));
+    window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 73 }));
+    expect(commits).to.deep.equal([280]);
+  });
+
+  it('does not consume or emit a boundary keyboard resize no-op', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail resizable rail-width-px="440" min-rail-width-px="190" max-rail-width-px="440"></lr-app-rail>`,
+    )) as LyraAppRail;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    let requests = 0;
+    let commits = 0;
+    el.addEventListener('lr-rail-resize-request', () => requests += 1);
+    el.addEventListener('lr-rail-resize', () => commits += 1);
+    const event = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+    resizer.dispatchEvent(event);
+    expect(event.defaultPrevented).to.be.false;
+    expect(requests).to.equal(0);
+    expect(commits).to.equal(0);
+  });
+
   it('lets listeners veto proposed pointer and keyboard widths without committing or persisting them', async () => {
     const storageKey = 'app-rail-vetoed-resize-request';
     const storageFullKey = `lr-app-rail:${storageKey}`;
@@ -1076,7 +1146,7 @@ describe('resizable', () => {
     resizer.setPointerCapture = () => {};
 
     try {
-      resizer.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 86, clientX: 0, bubbles: true }));
+      resizer.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 86, clientX: 0, bubbles: true, isPrimary: true }));
       window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 86, clientX: 40 }));
       await el.updateComplete;
       expect(el.railWidthPx).to.equal(240);
@@ -1143,7 +1213,7 @@ describe('resizable', () => {
     // throws InvalidPointerId from the native capture method. Pointer-capture behavior is covered
     // by real-pointer tests; this state/transition test stubs only that browser primitive.
     resizer.setPointerCapture = () => {};
-    resizer.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, bubbles: true }));
+    resizer.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, bubbles: true, isPrimary: true }));
     await el.updateComplete;
     expect(el.dragging).to.be.true;
     expect(getComputedStyle(base).transitionProperty).to.equal('none');
@@ -1183,7 +1253,7 @@ describe('resizable', () => {
       const resizerTrack = resizer.querySelector('[part="resizer-track"]') as HTMLElement;
       resizer.setPointerCapture = () => {};
       resizerTrack.dispatchEvent(
-        new frameWindow.PointerEvent('pointerdown', { pointerId: 71, clientX: 0, bubbles: true }),
+        new frameWindow.PointerEvent('pointerdown', { pointerId: 71, clientX: 0, bubbles: true, isPrimary: true }),
       );
 
       window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 71, clientX: 40 }));
@@ -1221,7 +1291,7 @@ describe('resizable', () => {
     let events = 0;
     el.addEventListener('lr-rail-resize', () => (events += 1));
     resizer.dispatchEvent(
-      new PointerEvent('pointerdown', { pointerId: 41, clientX: 0, bubbles: true }),
+      new PointerEvent('pointerdown', { pointerId: 41, clientX: 0, bubbles: true, isPrimary: true }),
     );
 
     el.resizable = false;
@@ -1241,7 +1311,7 @@ describe('resizable', () => {
     const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
     resizer.setPointerCapture = () => {};
     resizer.dispatchEvent(
-      new PointerEvent('pointerdown', { pointerId: 42, clientX: 0, bubbles: true }),
+      new PointerEvent('pointerdown', { pointerId: 42, clientX: 0, bubbles: true, isPrimary: true }),
     );
 
     el.mode = 'icon-only';

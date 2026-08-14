@@ -11,23 +11,35 @@ function assertiveAnnouncements(): string[] {
   return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
 }
 
+function politeAnnouncements(): string[] {
+  const sink = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  );
+  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
+
 interface FakeModules {
   size: number;
   get(row: number, col: number): number;
 }
 
 interface FakeQrCodeApi {
-  create: (value: string, options: { errorCorrectionLevel: string }) => { modules: FakeModules };
+  create: (value: string, options: { errorCorrectionLevel: string }) => unknown;
 }
 
 const RED_IMAGE_DATA =
   'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="10" height="10"%3E%3Crect width="10" height="10" fill="%23ff0000"/%3E%3C/svg%3E';
 
-/** A trivial 1×1-module symbol whose single dark module always spans the exact geometric center
- *  of the rendered canvas, regardless of `size` -- convenient for pixel sampling in tests without
- *  hand-computing quiet-zone offsets. */
+/** A trivial 1×1-module symbol whose single dark module spans the full rendered canvas. */
 function fakeModules(dark: boolean): FakeModules {
   return { size: 1, get: () => (dark ? 1 : 0) };
+}
+
+function mixedModules(): FakeModules {
+  return {
+    size: 2,
+    get: (row, col) => (row === 1 && col === 1 ? 1 : 0),
+  };
 }
 
 function fakeApi(create: FakeQrCodeApi['create']): FakeQrCodeApi {
@@ -39,8 +51,16 @@ function installFakeLoader(el: LyraQrCode, api: FakeQrCodeApi | null): void {
 }
 
 async function waitForPart(el: LyraQrCode, part: string): Promise<void> {
-  await waitUntil(() => el.shadowRoot!.querySelector(`[part="${part}"]`) !== null);
+  const selector = part === 'canvas' ? 'canvas:not([hidden])' : `[part="${part}"]`;
+  await waitUntil(() => el.shadowRoot!.querySelector(selector) !== null);
   await el.updateComplete;
+}
+
+function semanticInternals(el: LyraQrCode): ElementInternals {
+  const internals = (el as unknown as { accessibilityInternals?: ElementInternals })
+    .accessibilityInternals;
+  expect(internals !== undefined).to.equal(true);
+  return internals!;
 }
 
 describe('lr-qr-code', () => {
@@ -57,11 +77,18 @@ describe('lr-qr-code', () => {
     const originalWarn = console.warn;
     console.warn = () => {};
     try {
-      const loaded = await LyraQrCode.preload();
+      const preloadResult: Promise<boolean> = LyraQrCode.preload();
+      const loaded = await preloadResult;
       expect(typeof loaded).to.equal('boolean');
     } finally {
       console.warn = originalWarn;
     }
+  });
+
+  it('exposes generate() as a synchronous void trigger', async () => {
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+    const result: void = el.generate();
+    expect(result).to.equal(undefined);
   });
 
   it('defaults value/label/size/radius/errorCorrection to their documented values', async () => {
@@ -91,7 +118,9 @@ describe('lr-qr-code', () => {
     const empty = el.shadowRoot!.querySelector('[part="empty"]');
     expect((empty) != null).to.equal(true);
     expect(empty!.textContent).to.equal('No data');
-    expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
+    expect(el.canvas.hidden).to.equal(true);
+    expect(el.canvas === el.shadowRoot!.querySelector('canvas')).to.equal(true);
+    expect(el.getAttribute('aria-busy')).to.equal('false');
     expect(el.shadowRoot!.querySelector('[role="img"]') == null).to.be.true;
     expect(calls).to.equal(0);
   });
@@ -102,6 +131,42 @@ describe('lr-qr-code', () => {
     el.value = 'hello';
     await waitForPart(el, 'loading');
     expect(el.shadowRoot!.querySelector('[part="loading"]')!.textContent).to.equal('Loading…');
+    expect(el.canvas.hidden).to.equal(true);
+    expect(el.getAttribute('aria-busy')).to.equal('true');
+  });
+
+  it('publishes honest initial busy semantics without announcing a mount', async () => {
+    const el = document.createElement('lr-qr-code') as LyraQrCode;
+    (el as unknown as { loadLibrary: () => Promise<FakeQrCodeApi | null> }).loadLibrary = () =>
+      new Promise(() => {});
+    el.value = 'declarative pending';
+    await fixture(el);
+    await waitForPart(el, 'loading');
+    expect(el.getAttribute('aria-busy')).to.equal('true');
+    expect(semanticInternals(el).role).to.equal('img');
+    expect(semanticInternals(el).ariaLabel).to.equal('declarative pending');
+    expect(politeAnnouncements()).to.deep.equal([]);
+  });
+
+  it('announces only a post-mount loading transition and publishes true/false busy on the host', async () => {
+    const el = document.createElement('lr-qr-code') as LyraQrCode;
+    installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+    el.value = 'ready first';
+    await fixture(el);
+    await waitForPart(el, 'canvas');
+    expect(el.getAttribute('aria-busy')).to.equal('false');
+    expect(politeAnnouncements()).to.deep.equal([]);
+
+    let resolveLoad!: (api: FakeQrCodeApi | null) => void;
+    (el as unknown as { loadLibrary: () => Promise<FakeQrCodeApi | null> }).loadLibrary = () =>
+      new Promise((resolve) => { resolveLoad = resolve; });
+    el.value = 'next value';
+    await waitForPart(el, 'loading');
+    expect(el.getAttribute('aria-busy')).to.equal('true');
+    expect(politeAnnouncements()).to.deep.equal(['Loading…']);
+    resolveLoad(fakeApi(() => ({ modules: fakeModules(true) })));
+    await waitForPart(el, 'canvas');
+    expect(el.getAttribute('aria-busy')).to.equal('false');
   });
 
   it('shows the missing-library error when the optional peer fails to load', async () => {
@@ -112,6 +177,7 @@ describe('lr-qr-code', () => {
     const error = el.shadowRoot!.querySelector('[part="error"]')!;
     expect(error.getAttribute('role')).to.equal(null);
     expect(error.textContent).to.equal('This component needs the optional "qrcode" package installed to render QR codes.');
+    expect(el.getAttribute('aria-busy')).to.equal('false');
     expect(assertiveAnnouncements()).to.deep.equal([
       'This component needs the optional "qrcode" package installed to render QR codes.',
     ]);
@@ -139,6 +205,60 @@ describe('lr-qr-code', () => {
     ]);
   });
 
+  const malformedMatrixCases: ReadonlyArray<readonly [string, () => unknown]> = [
+    ['a null create result', () => null],
+    ['a missing modules object', () => ({})],
+    ['a zero size', () => ({ modules: { size: 0, get: () => 0 } })],
+    ['a fractional size', () => ({ modules: { size: 1.5, get: () => 0 } })],
+    ['a non-finite size', () => ({ modules: { size: Number.NaN, get: () => 0 } })],
+    ['more than the QR version-40 maximum', () => ({ modules: { size: 178, get: () => 0 } })],
+    ['a missing module reader', () => ({ modules: { size: 1 } })],
+    ['a non-bit module value', () => ({ modules: { size: 1, get: () => '1' } })],
+    ['a throwing module reader', () => ({ modules: { size: 1, get: () => { throw new Error('hostile'); } } })],
+    ['a hostile size getter', () => ({ modules: Object.defineProperty({}, 'size', { get(): never { throw new Error('hostile'); } }) })],
+  ];
+
+  for (const [name, result] of malformedMatrixCases) {
+    it(`fails closed through the localized error state for ${name}`, async () => {
+      const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+      installFakeLoader(el, fakeApi(result));
+      el.value = 'malformed peer result';
+      await waitForPart(el, 'error');
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
+        'This value could not be encoded as a QR code.',
+      );
+      expect(el.getAttribute('aria-busy')).to.equal('false');
+      expect(el.canvas.hidden).to.equal(true);
+    });
+  }
+
+  it('clones the validated matrix once so peer mutation and hostile later reads cannot alter redraws', async () => {
+    const bits = [0, 0, 0, 1];
+    let reads = 0;
+    const peerModules: FakeModules = {
+      size: 2,
+      get(row, col) {
+        reads++;
+        return bits[row * 2 + col]!;
+      },
+    };
+    const el = (await fixture(html`
+      <lr-qr-code size="40" style="color: #000; background-color: #fff"></lr-qr-code>
+    `)) as LyraQrCode;
+    installFakeLoader(el, fakeApi(() => ({ modules: peerModules })));
+    el.value = 'owned snapshot';
+    await waitForPart(el, 'canvas');
+    expect(reads).to.equal(4);
+    bits.fill(1);
+    peerModules.get = () => { throw new Error('must not be read after normalization'); };
+    expect(() => el.refreshTheme()).to.not.throw();
+    expect(reads).to.equal(4);
+    const lightCenter = Math.round(el.canvas.width * 0.25);
+    expect([
+      ...el.canvas.getContext('2d')!.getImageData(lightCenter, lightCenter, 1, 1).data.slice(0, 3),
+    ]).to.deep.equal([255, 255, 255]);
+  });
+
   it('ignores a pending peer-load result if the element is disconnected before it resolves', async () => {
     const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     let resolveLoad!: (api: FakeQrCodeApi | null) => void;
@@ -152,7 +272,7 @@ describe('lr-qr-code', () => {
     resolveLoad(fakeApi(() => ({ modules: fakeModules(true) })));
     await aTimeout(20);
     expect(el.isConnected).to.be.false;
-    expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
+    expect(el.canvas.hidden).to.equal(true);
   });
 
   it('ignores a stale generate() call if the generation advances while the peer loader is still pending', async () => {
@@ -191,7 +311,7 @@ describe('lr-qr-code', () => {
     el.value = 'hello';
     await el.updateComplete;
     await aTimeout(20);
-    expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
+    expect(el.canvas.hidden).to.equal(true);
   });
 
   it('discards an error result if the generation advances synchronously while create() throws', async () => {
@@ -227,14 +347,14 @@ describe('lr-qr-code', () => {
     el.remove();
     resolveLoad(fakeApi(() => ({ modules: fakeModules(true) })));
     await aTimeout(20);
-    expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
+    expect(el.canvas.hidden).to.equal(true);
 
     parent.append(el);
     await waitForPart(el, 'canvas');
     expect(loads).to.equal(2);
   });
 
-  it('renders a canvas sized to `size` CSS px with a DPR-scaled backing store', async () => {
+  it('renders a canvas sized to `size` CSS px with the pinned fixed-2x backing store', async () => {
     const el = (await fixture(html`
       <lr-qr-code
         size="90"
@@ -248,11 +368,10 @@ describe('lr-qr-code', () => {
     el.value = 'hello';
     await waitForPart(el, 'canvas');
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-    const dpr = window.devicePixelRatio || 1;
     expect(parseInt(canvas.style.width, 10)).to.equal(90);
     expect(parseInt(canvas.style.height, 10)).to.equal(90);
-    expect(canvas.width).to.equal(Math.round(90 * dpr));
-    expect(canvas.height).to.equal(Math.round(90 * dpr));
+    expect(canvas.width).to.equal(180);
+    expect(canvas.height).to.equal(180);
   });
 
   it('normalizes error-correction: lowercase valid letters upper-case, invalid values fall back to H', async () => {
@@ -287,7 +406,7 @@ describe('lr-qr-code', () => {
     expect(el.size).to.equal(128);
   });
 
-  it('resolves the accessible name from `value` by default', async () => {
+  it('uses the host as the single semantic owner and resolves its default name from `value`', async () => {
     const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(
       el,
@@ -295,9 +414,11 @@ describe('lr-qr-code', () => {
     );
     el.value = 'https://example.test';
     await waitForPart(el, 'canvas');
-    const canvas = el.shadowRoot!.querySelector('canvas')!;
-    expect(canvas.getAttribute('role')).to.equal('img');
-    expect(canvas.getAttribute('aria-label')).to.equal('https://example.test');
+    expect(semanticInternals(el).role).to.equal('img');
+    expect(semanticInternals(el).ariaLabel).to.equal('https://example.test');
+    expect(el.canvas.getAttribute('role')).to.equal(null);
+    expect(el.canvas.getAttribute('aria-label')).to.equal(null);
+    expect(el.canvas.getAttribute('aria-hidden')).to.equal('true');
   });
 
   it('`label` overrides `value` for the accessible name', async () => {
@@ -308,10 +429,10 @@ describe('lr-qr-code', () => {
     );
     el.value = 'https://example.test';
     await waitForPart(el, 'canvas');
-    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.equal('My QR code');
+    expect(semanticInternals(el).ariaLabel).to.equal('My QR code');
   });
 
-  it('forwards a host `aria-label` onto the canvas when `label` is unset', async () => {
+  it('preserves an author host `aria-label` without duplicating it onto the canvas', async () => {
     const el = (await fixture(html`<lr-qr-code aria-label="Host label"></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(
       el,
@@ -319,10 +440,12 @@ describe('lr-qr-code', () => {
     );
     el.value = 'https://example.test';
     await waitForPart(el, 'canvas');
-    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.equal('Host label');
+    expect(el.getAttribute('aria-label')).to.equal('Host label');
+    expect(semanticInternals(el).ariaLabel).to.equal('https://example.test');
+    expect(el.canvas.getAttribute('aria-label')).to.equal(null);
   });
 
-  it('a host `aria-label` wins over `label` on the canvas when both are set', async () => {
+  it('keeps host `aria-label` authoritative over the internals label fallback', async () => {
     const el = (await fixture(
       html`<lr-qr-code label="Label fallback" aria-label="Host label"></lr-qr-code>`,
     )) as LyraQrCode;
@@ -332,10 +455,12 @@ describe('lr-qr-code', () => {
     );
     el.value = 'https://example.test';
     await waitForPart(el, 'canvas');
-    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.equal('Host label');
+    expect(el.getAttribute('aria-label')).to.equal('Host label');
+    expect(semanticInternals(el).ariaLabel).to.equal('Label fallback');
+    expect(el.canvas.getAttribute('aria-label')).to.equal(null);
   });
 
-  it('preserves an explicit empty host aria-label on the ready canvas, updates it live, and restores the label fallback after removal', async () => {
+  it('preserves an explicit empty host aria-label, updates it live, and keeps internals as the fallback', async () => {
     const el = (await fixture(
       html`<lr-qr-code label="Label fallback" aria-label=""></lr-qr-code>`,
     )) as LyraQrCode;
@@ -345,17 +470,18 @@ describe('lr-qr-code', () => {
     );
     el.value = 'https://example.test';
     await waitForPart(el, 'canvas');
-    const canvas = () => el.shadowRoot?.querySelector('canvas');
-
-    expect(canvas()?.getAttribute('aria-label')).to.equal('');
+    expect(el.getAttribute('aria-label')).to.equal('');
+    expect(semanticInternals(el).ariaLabel).to.equal('Label fallback');
 
     el.setAttribute('aria-label', 'Live QR label');
     await el.updateComplete;
-    expect(canvas()?.getAttribute('aria-label')).to.equal('Live QR label');
+    expect(el.getAttribute('aria-label')).to.equal('Live QR label');
+    expect(el.canvas.getAttribute('aria-label')).to.equal(null);
 
     el.removeAttribute('aria-label');
     await el.updateComplete;
-    expect(canvas()?.getAttribute('aria-label')).to.equal('Label fallback');
+    expect(el.getAttribute('aria-label')).to.equal(null);
+    expect(semanticInternals(el).ariaLabel).to.equal('Label fallback');
   });
 
   it('refreshTheme() redraws from the cached matrix without recalling loadLibrary/create', async () => {
@@ -382,21 +508,30 @@ describe('lr-qr-code', () => {
     expect(createCalls).to.equal(1);
   });
 
-  it('re-arms the DPR media query and redraws when the DPR change handler fires', async () => {
-    const el = (await fixture(html`<lr-qr-code size="90"></lr-qr-code>`)) as LyraQrCode;
+  it('keeps a fixed 2x backing for size 127 independently of live DPR', async () => {
+    const el = (await fixture(html`<lr-qr-code size="127"></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(
       el,
       fakeApi(() => ({ modules: fakeModules(true) })),
     );
     el.value = 'hello';
     await waitForPart(el, 'canvas');
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-    expect(parseInt(canvas.style.width, 10)).to.equal(90);
-    expect(() => (el as unknown as { onDprChange(): void }).onDprChange()).to.not.throw();
-    expect(parseInt(canvas.style.width, 10)).to.equal(90);
+    const canvas = el.canvas;
+    const originalDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+    try {
+      for (const dpr of [1, 1.25, 2.625, 4]) {
+        Object.defineProperty(window, 'devicePixelRatio', { value: dpr, configurable: true });
+        (el as unknown as { draw(): void }).draw();
+        expect(canvas.width).to.equal(254);
+        expect(canvas.height).to.equal(254);
+      }
+    } finally {
+      if (originalDpr) Object.defineProperty(window, 'devicePixelRatio', originalDpr);
+      else delete (window as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+    }
   });
 
-  it('uses the adopted owner realm for observers, DPR, styles, images, and cleanup', async () => {
+  it('uses the adopted owner realm for observers, styles, images, and cleanup', async () => {
     const iframe = document.createElement('iframe');
     document.body.append(iframe);
     const frameDocument = iframe.contentDocument!;
@@ -405,8 +540,6 @@ describe('lr-qr-code', () => {
       frameWindow,
       'IntersectionObserver',
     );
-    const originalMatchMedia = Object.getOwnPropertyDescriptor(frameWindow, 'matchMedia');
-    const originalDpr = Object.getOwnPropertyDescriptor(frameWindow, 'devicePixelRatio');
     const originalImage = Object.getOwnPropertyDescriptor(frameWindow, 'Image');
     let observerConstructions = 0;
     let observerDisconnects = 0;
@@ -431,33 +564,6 @@ describe('lr-qr-code', () => {
       value: OwnerIntersectionObserver,
     });
 
-    let dprQuery = '';
-    let dprListenerAdds = 0;
-    let dprListenerRemoves = 0;
-    Object.defineProperty(frameWindow, 'devicePixelRatio', { value: 2, configurable: true });
-    Object.defineProperty(frameWindow, 'matchMedia', {
-      configurable: true,
-      value: (query: string) => {
-        dprQuery = query;
-        return {
-          matches: true,
-          media: query,
-          onchange: null,
-          addListener(): void {},
-          removeListener(): void {},
-          addEventListener(): void {
-            if (query.startsWith('(resolution:')) dprListenerAdds += 1;
-          },
-          removeEventListener(): void {
-            if (query.startsWith('(resolution:')) dprListenerRemoves += 1;
-          },
-          dispatchEvent(): boolean {
-            return true;
-          },
-        } as MediaQueryList;
-      },
-    });
-
     const NativeOwnerImage = frameWindow.Image;
     let ownerImageConstructions = 0;
     const OwnerImage = new Proxy(NativeOwnerImage, {
@@ -477,15 +583,15 @@ describe('lr-qr-code', () => {
     try {
       document.body.append(el);
       await el.updateComplete;
+      const initialCanvas = el.canvas;
       frameDocument.adoptNode(el);
       frameDocument.body.append(el);
       el.value = 'owner realm';
       await waitForPart(el, 'canvas');
       const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      expect(canvas === initialCanvas).to.equal(true);
       expect(observerConstructions).to.equal(1);
       expect(observedInOwnerRealm).to.be.true;
-      expect(dprQuery).to.equal('(resolution: 2dppx)');
-      expect(dprListenerAdds).to.equal(1);
       expect(canvas.width).to.equal(80);
       expect(canvas.height).to.equal(80);
 
@@ -529,15 +635,10 @@ describe('lr-qr-code', () => {
         delete (frameWindow as unknown as { IntersectionObserver?: typeof IntersectionObserver })
           .IntersectionObserver;
       }
-      if (originalMatchMedia) Object.defineProperty(frameWindow, 'matchMedia', originalMatchMedia);
-      else delete (frameWindow as unknown as { matchMedia?: typeof matchMedia }).matchMedia;
-      if (originalDpr) Object.defineProperty(frameWindow, 'devicePixelRatio', originalDpr);
-      else delete (frameWindow as unknown as { devicePixelRatio?: number }).devicePixelRatio;
       if (originalImage) Object.defineProperty(frameWindow, 'Image', originalImage);
       else delete (frameWindow as unknown as { Image?: typeof Image }).Image;
       iframe.remove();
       expect(observerDisconnects).to.equal(1);
-      expect(dprListenerRemoves).to.equal(1);
     }
   });
 
@@ -656,6 +757,24 @@ describe('lr-qr-code', () => {
     });
   }
 
+  it('paints a one-module symbol to every full-canvas edge without injecting a quiet zone', async () => {
+    const el = (await fixture(html`
+      <lr-qr-code size="40" style="color: #000; background-color: #fff"></lr-qr-code>
+    `)) as LyraQrCode;
+    installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+    el.value = 'full canvas';
+    await waitForPart(el, 'canvas');
+    const ctx = el.canvas.getContext('2d')!;
+    for (const [x, y] of [
+      [0, 0],
+      [el.canvas.width - 1, 0],
+      [0, el.canvas.height - 1],
+      [el.canvas.width - 1, el.canvas.height - 1],
+    ]) {
+      expect([...ctx.getImageData(x!, y!, 1, 1).data.slice(0, 3)]).to.deep.equal([0, 0, 0]);
+    }
+  });
+
   it('paints the resolved fill/background colors correctly when both are valid', async () => {
     const el = (await fixture(html`
       <lr-qr-code
@@ -665,18 +784,17 @@ describe('lr-qr-code', () => {
     `)) as LyraQrCode;
     installFakeLoader(
       el,
-      fakeApi(() => ({ modules: fakeModules(true) })),
+      fakeApi(() => ({ modules: mixedModules() })),
     );
     el.value = 'hello';
     await waitForPart(el, 'canvas');
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
-    // Center of the canvas always falls inside the single dark module of a 1x1-module symbol.
-    const center = Math.round(canvas.width / 2);
-    const darkPixel = ctx.getImageData(center, center, 1, 1).data;
+    const darkCenter = Math.round(canvas.width * 0.75);
+    const darkPixel = ctx.getImageData(darkCenter, darkCenter, 1, 1).data;
     expect([...darkPixel.slice(0, 3)]).to.deep.equal([0, 0, 0]);
-    // Top-left corner is always inside the quiet zone (background).
-    const bgPixel = ctx.getImageData(1, 1, 1, 1).data;
+    const bgCenter = Math.round(canvas.width * 0.25);
+    const bgPixel = ctx.getImageData(bgCenter, bgCenter, 1, 1).data;
     expect([...bgPixel.slice(0, 3)]).to.deep.equal([255, 255, 255]);
   });
 
@@ -684,28 +802,30 @@ describe('lr-qr-code', () => {
     const el = (await fixture(html`
       <lr-qr-code size="90" style="color: rgb(255, 0, 0); background-color: rgb(0, 255, 0)"></lr-qr-code>
     `)) as LyraQrCode;
-    installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+    installFakeLoader(el, fakeApi(() => ({ modules: mixedModules() })));
     el.value = 'hello';
     await waitForPart(el, 'canvas');
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
-    const center = Math.round(canvas.width / 2);
-    expect([...ctx.getImageData(center, center, 1, 1).data.slice(0, 3)]).to.deep.equal([255, 0, 0]);
-    expect([...ctx.getImageData(1, 1, 1, 1).data.slice(0, 3)]).to.deep.equal([0, 255, 0]);
+    const darkCenter = Math.round(canvas.width * 0.75);
+    const lightCenter = Math.round(canvas.width * 0.25);
+    expect([...ctx.getImageData(darkCenter, darkCenter, 1, 1).data.slice(0, 3)]).to.deep.equal([255, 0, 0]);
+    expect([...ctx.getImageData(lightCenter, lightCenter, 1, 1).data.slice(0, 3)]).to.deep.equal([0, 255, 0]);
   });
 
   it('supports the mapped fill/background property aliases', async () => {
     const el = (await fixture(html`
       <lr-qr-code size="90" fill="#ff0000" background="#00ff00"></lr-qr-code>
     `)) as LyraQrCode;
-    installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+    installFakeLoader(el, fakeApi(() => ({ modules: mixedModules() })));
     el.value = 'hello';
     await waitForPart(el, 'canvas');
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
-    const center = Math.round(canvas.width / 2);
-    expect([...ctx.getImageData(center, center, 1, 1).data.slice(0, 3)]).to.deep.equal([255, 0, 0]);
-    expect([...ctx.getImageData(1, 1, 1, 1).data.slice(0, 3)]).to.deep.equal([0, 255, 0]);
+    const darkCenter = Math.round(canvas.width * 0.75);
+    const lightCenter = Math.round(canvas.width * 0.25);
+    expect([...ctx.getImageData(darkCenter, darkCenter, 1, 1).data.slice(0, 3)]).to.deep.equal([255, 0, 0]);
+    expect([...ctx.getImageData(lightCenter, lightCenter, 1, 1).data.slice(0, 3)]).to.deep.equal([0, 255, 0]);
     expect(getComputedStyle(el).color).to.not.equal('rgb(255, 0, 0)');
     expect(getComputedStyle(el).backgroundColor).to.not.equal('rgb(0, 255, 0)');
   });
@@ -738,9 +858,9 @@ describe('lr-qr-code', () => {
     await el.updateComplete;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
-    const dpr = window.devicePixelRatio || 1;
-    const center = Math.round(50 * dpr);
-    const padded = Math.round(27 * dpr);
+    const backingScale = canvas.width / el.size;
+    const center = Math.round(50 * backingScale);
+    const padded = Math.round(27 * backingScale);
     expect([...ctx.getImageData(center, center, 1, 1).data.slice(0, 3)]).to.deep.equal([255, 0, 0]);
     expect([...ctx.getImageData(padded, center, 1, 1).data.slice(0, 3)]).to.deep.equal([0, 0, 255]);
     expect(correction).to.equal('H');
@@ -771,11 +891,11 @@ describe('lr-qr-code', () => {
     expect(() => (el as unknown as { draw(): void }).draw()).to.not.throw();
   });
 
-  it('falls back to the default fill/background hex when the CSS custom property resolves empty', async () => {
+  it('falls back to black fill and a transparent background when computed host colors are empty', async () => {
     const el = (await fixture(html`<lr-qr-code size="40"></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(
       el,
-      fakeApi(() => ({ modules: fakeModules(true) })),
+      fakeApi(() => ({ modules: mixedModules() })),
     );
     const originalGetComputedStyle = window.getComputedStyle;
     window.getComputedStyle = ((target: Element, pseudo?: string | null) => {
@@ -787,11 +907,12 @@ describe('lr-qr-code', () => {
       await waitForPart(el, 'canvas');
       const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
       const ctx = canvas.getContext('2d')!;
-      const center = Math.round(canvas.width / 2);
-      const darkPixel = ctx.getImageData(center, center, 1, 1).data;
+      const darkCenter = Math.round(canvas.width * 0.75);
+      const darkPixel = ctx.getImageData(darkCenter, darkCenter, 1, 1).data;
       expect([...darkPixel.slice(0, 3)]).to.deep.equal([0, 0, 0]);
-      const bgPixel = ctx.getImageData(1, 1, 1, 1).data;
-      expect([...bgPixel.slice(0, 3)]).to.deep.equal([255, 255, 255]);
+      const lightCenter = Math.round(canvas.width * 0.25);
+      const bgPixel = ctx.getImageData(lightCenter, lightCenter, 1, 1).data;
+      expect(bgPixel[3]).to.equal(0);
     } finally {
       window.getComputedStyle = originalGetComputedStyle;
     }
@@ -895,36 +1016,67 @@ describe('lr-qr-code', () => {
     const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     await el.updateComplete;
     expect(() => (el as unknown as { draw(): void }).draw()).to.not.throw();
-    expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
+    expect(el.canvas.hidden).to.equal(true);
   });
 
-  it('no-ops draw() when the canvas element has not rendered yet for the current load state', async () => {
+  it('keeps the public canvas identity stable across loading, ready, empty, and reconnect', async () => {
     const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     await el.updateComplete;
-    // Bypasses the normal generate()/Lit-render flow: forces `ready` state directly, then calls
-    // draw() synchronously before Lit's async render has had a chance to create the <canvas>.
-    (el as unknown as { loadState: unknown }).loadState = { kind: 'ready', modules: fakeModules(true) };
-    expect((el.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
-    expect(() => (el as unknown as { draw(): void }).draw()).to.not.throw();
+    const canvas = el.canvas;
+    let resolveLoad!: (api: FakeQrCodeApi | null) => void;
+    (el as unknown as { loadLibrary: () => Promise<FakeQrCodeApi | null> }).loadLibrary = () =>
+      new Promise((resolve) => { resolveLoad = resolve; });
+    el.value = 'stable';
+    await waitForPart(el, 'loading');
+    expect(el.canvas === canvas).to.equal(true);
+    resolveLoad(fakeApi(() => ({ modules: fakeModules(true) })));
+    await waitForPart(el, 'canvas');
+    expect(el.canvas === canvas).to.equal(true);
+    el.value = '';
+    await waitForPart(el, 'empty');
+    expect(el.canvas === canvas).to.equal(true);
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+    expect(el.canvas === canvas).to.equal(true);
   });
 
-  it('falls back to a DPR of 1 when window.devicePixelRatio is falsy', async () => {
-    const el = (await fixture(html`<lr-qr-code size="40"></lr-qr-code>`)) as LyraQrCode;
-    installFakeLoader(
-      el,
-      fakeApi(() => ({ modules: fakeModules(true) })),
-    );
-    el.value = 'hello';
-    await waitForPart(el, 'canvas');
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-    Object.defineProperty(window, 'devicePixelRatio', { value: 0, configurable: true });
-    try {
-      (el as unknown as { draw(): void }).draw();
-      expect(canvas.width).to.equal(40);
-      expect(canvas.height).to.equal(40);
-    } finally {
-      delete (window as unknown as { devicePixelRatio?: number }).devicePixelRatio;
-    }
+  it('uses exact fixed-2x allocation ordinarily and caps extreme total pixels uniformly', () => {
+    const allocate = (
+      LyraQrCode as unknown as {
+        canvasAllocation(size: number): {
+          cssWidth: number;
+          cssHeight: number;
+          pixelWidth: number;
+          pixelHeight: number;
+          scale: number;
+          scaleX: number;
+          scaleY: number;
+        };
+      }
+    ).canvasAllocation;
+    expect(allocate(127)).to.deep.equal({
+      cssWidth: 127,
+      cssHeight: 127,
+      pixelWidth: 254,
+      pixelHeight: 254,
+      scale: 2,
+      scaleX: 2,
+      scaleY: 2,
+    });
+    expect(allocate(127.5).pixelWidth).to.equal(255);
+    expect(allocate(127.5).pixelHeight).to.equal(255);
+    const capped = allocate(2048);
+    expect(capped.pixelWidth).to.be.at.most(4096);
+    expect(capped.pixelHeight).to.be.at.most(4096);
+    expect(capped.pixelWidth * capped.pixelHeight).to.be.at.most(8_388_608);
+    expect(capped.scaleX).to.equal(capped.pixelWidth / 2048);
+    expect(capped.scaleY).to.equal(capped.pixelHeight / 2048);
+    const hostile = allocate(Number.POSITIVE_INFINITY);
+    expect(Number.isFinite(hostile.scale)).to.equal(true);
+    expect(hostile.pixelWidth).to.equal(2);
+    expect(hostile.pixelHeight).to.equal(2);
   });
 
   it('no-ops without throwing when the rendering canvas cannot produce a 2D context', async () => {
@@ -944,23 +1096,21 @@ describe('lr-qr-code', () => {
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     expect(canvas.width).to.be.greaterThan(0);
     // Sanity: the real context works again now that the stub is restored.
-    expect(canvas.getContext('2d')).to.exist;
+    expect(canvas.getContext('2d') !== null).to.equal(true);
   });
 
-  it('paints only the background when the encoded symbol has zero modules', async () => {
-    const el = (await fixture(html`
-      <lr-qr-code size="40" style="--lr-qr-code-fill: #000; --lr-qr-code-background: #fff;"></lr-qr-code>
-    `)) as LyraQrCode;
+  it('rejects a zero-size peer matrix through the localized error state', async () => {
+    const el = (await fixture(html`<lr-qr-code size="40"></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(
       el,
       fakeApi(() => ({ modules: { size: 0, get: () => 0 } })),
     );
     el.value = 'hello';
-    await waitForPart(el, 'canvas');
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-    const ctx = canvas.getContext('2d')!;
-    const pixel = ctx.getImageData(1, 1, 1, 1).data;
-    expect([...pixel.slice(0, 3)]).to.deep.equal([255, 255, 255]);
+    await waitForPart(el, 'error');
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
+      'This value could not be encoded as a QR code.',
+    );
+    expect(el.canvas.hidden).to.equal(true);
   });
 
   it('draws rounded modules via roundRect and skips light modules when radius > 0 on a mixed symbol', async () => {
@@ -977,14 +1127,13 @@ describe('lr-qr-code', () => {
     await waitForPart(el, 'canvas');
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
-    const dpr = window.devicePixelRatio || 1;
-    // size=40, moduleCount=2, quiet zone 4 modules/side => moduleSize = 40/10 = 4px; offset = 16px.
-    // Module (1,1) (dark) spans [20,24)x[20,24), center (22,22). Module (0,0) (light) spans
-    // [16,20)x[16,20), center (18,18).
-    const darkCenter = Math.round(22 * dpr);
+    const backingScale = canvas.width / el.size;
+    // The full canvas is the 2x2 matrix: module (1,1) centers at CSS (30,30), while the light
+    // module (0,0) centers at CSS (10,10).
+    const darkCenter = Math.round(30 * backingScale);
     const darkPixel = ctx.getImageData(darkCenter, darkCenter, 1, 1).data;
     expect([...darkPixel.slice(0, 3)]).to.deep.equal([0, 0, 0]);
-    const lightCenter = Math.round(18 * dpr);
+    const lightCenter = Math.round(10 * backingScale);
     const lightPixel = ctx.getImageData(lightCenter, lightCenter, 1, 1).data;
     expect([...lightPixel.slice(0, 3)]).to.deep.equal([255, 255, 255]);
   });

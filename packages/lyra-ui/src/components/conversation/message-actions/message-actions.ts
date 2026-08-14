@@ -1,4 +1,5 @@
 export * from './message-actions.class.js';
+export * from './toolbar-actions.js';
 import { LyraMessageActions } from './message-actions.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 import '../../utility/copy-button/copy-button.js';

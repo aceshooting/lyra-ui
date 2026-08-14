@@ -1,4 +1,3 @@
-export * from './archive-loader.js';
 export * from './archive-viewer.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 import '../../layout/virtual-list/virtual-list.js';

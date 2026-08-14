@@ -2,7 +2,7 @@ import { html, type ComplexAttributeConverter, type PropertyValues, type Templat
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
+import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './split-panel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -13,6 +13,10 @@ import { LYRA_DEFAULT_resizeDivider } from '../../../internal/default-strings.ge
 const DEFAULT_POSITION = 50;
 const DEFAULT_SNAP_THRESHOLD = 12;
 const KEYBOARD_STEP_PERCENT = 1;
+// String snap points are interaction configuration, not an unbounded data channel. The source
+// prefix and accepted-token count are independent ceilings: malformed text is cheap to skip, and
+// a dense valid string cannot make every pointer move allocate or resolve an arbitrary list.
+const MAX_SNAP_SOURCE_CODE_UNITS = 16_384;
 const MAX_SNAP_TOKENS = 256;
 const POSITION_EPSILON = 0.000_1;
 
@@ -29,6 +33,10 @@ export interface SnapFunctionParams {
 }
 
 export type SnapFunction = (options: SnapFunctionParams) => number;
+
+/** A snap function that returns the proposed position unchanged. */
+export const SNAP_NONE: SnapFunction = ({ pos }) => pos;
+
 /** Component-qualified alias of `SnapFunction`, for consumers that prefer the longer name. The
  *  parameter object keeps its single canonical name, `SnapFunctionParams`. */
 export type SplitPanelSnapFunction = SnapFunction;
@@ -54,7 +62,7 @@ export interface LyraSplitPanelEventMap {
   /** Emitted before a pointer or keyboard interaction repositions the divider. */
   'lr-reposition-request': CustomEvent<SplitPanelRepositionDetail>;
   /** Emitted whenever a pointer or keyboard interaction repositions the divider. */
-  'lr-reposition': CustomEvent<undefined>;
+  'lr-reposition': CustomEvent<null>;
 }
 
 interface DragState {
@@ -66,6 +74,112 @@ interface DragState {
 interface DividerSourceSnapshot {
   inert: string | null;
   appliedInert: string | null;
+}
+
+interface NormalizedSnapToken {
+  readonly repeated: boolean;
+  readonly value: number;
+  readonly unit: 'px' | '%';
+}
+
+interface SnapLengthScan {
+  readonly end: number;
+  readonly recognized: boolean;
+  readonly token?: Omit<NormalizedSnapToken, 'repeated'>;
+}
+
+function isAsciiDigit(code: number): boolean {
+  return code >= 48 && code <= 57;
+}
+
+function matchesAsciiToken(source: string, index: number, token: string): boolean {
+  if (index + token.length > source.length) return false;
+  for (let offset = 0; offset < token.length; offset += 1) {
+    const sourceCode = source.charCodeAt(index + offset);
+    const foldedSourceCode = sourceCode >= 65 && sourceCode <= 90 ? sourceCode + 32 : sourceCode;
+    if (foldedSourceCode !== token.charCodeAt(offset)) return false;
+  }
+  return true;
+}
+
+function isSnapWhitespace(code: number): boolean {
+  return code >= 9 && code <= 13 || code === 32 || code === 160 || code === 5_760 ||
+    code >= 8_192 && code <= 8_202 || code === 8_232 || code === 8_233 || code === 8_239 ||
+    code === 8_287 || code === 12_288 || code === 65_279;
+}
+
+function skipSnapWhitespace(source: string, start: number): number {
+  let cursor = start;
+  while (cursor < source.length && isSnapWhitespace(source.charCodeAt(cursor))) cursor += 1;
+  return cursor;
+}
+
+/** Scans one decimal px/% length. A failed numeric run returns its furthest consumed index so the
+ * caller never retries each suffix of a grammar-looking malformed token. */
+function scanSnapLength(source: string, start: number): SnapLengthScan {
+  let cursor = start;
+  if (isAsciiDigit(source.charCodeAt(cursor))) {
+    while (isAsciiDigit(source.charCodeAt(cursor))) cursor += 1;
+    if (source.charCodeAt(cursor) === 46 && isAsciiDigit(source.charCodeAt(cursor + 1))) {
+      cursor += 2;
+      while (isAsciiDigit(source.charCodeAt(cursor))) cursor += 1;
+    }
+  } else if (source.charCodeAt(cursor) === 46 && isAsciiDigit(source.charCodeAt(cursor + 1))) {
+    cursor += 2;
+    while (isAsciiDigit(source.charCodeAt(cursor))) cursor += 1;
+  } else {
+    return { end: start + 1, recognized: false };
+  }
+
+  const numberEnd = cursor;
+  let unit: 'px' | '%' | undefined;
+  if (source.charCodeAt(cursor) === 37) {
+    unit = '%';
+    cursor += 1;
+  } else if (matchesAsciiToken(source, cursor, 'px')) {
+    unit = 'px';
+    cursor += 2;
+  }
+  if (unit === undefined) return { end: Math.max(start + 1, numberEnd), recognized: false };
+
+  const numericValue = Number(source.slice(start, numberEnd));
+  return {
+    end: cursor,
+    recognized: true,
+    token: Number.isFinite(numericValue) ? Object.freeze({ value: numericValue, unit }) : undefined,
+  };
+}
+
+function normalizeSnapTokens(value: string): readonly NormalizedSnapToken[] {
+  const source = value.slice(0, MAX_SNAP_SOURCE_CODE_UNITS);
+  const tokens: NormalizedSnapToken[] = [];
+  let index = 0;
+  while (index < source.length && tokens.length < MAX_SNAP_TOKENS) {
+    if (matchesAsciiToken(source, index, 'repeat(')) {
+      const innerStart = skipSnapWhitespace(source, index + 7);
+      const scanned = scanSnapLength(source, innerStart);
+      if (scanned.recognized) {
+        const close = skipSnapWhitespace(source, scanned.end);
+        if (source.charCodeAt(close) === 41) {
+          if (scanned.token) tokens.push(Object.freeze({ repeated: true, ...scanned.token }));
+          index = close + 1;
+          continue;
+        }
+        // A malformed repeat wrapper still contains the plain length the previous loose grammar
+        // accepted, but it is normalized once rather than reparsed on every pointer move.
+        if (scanned.token) tokens.push(Object.freeze({ repeated: false, ...scanned.token }));
+      }
+      index = Math.max(index + 7, scanned.end);
+      continue;
+    }
+
+    const scanned = scanSnapLength(source, index);
+    if (scanned.recognized && scanned.token) {
+      tokens.push(Object.freeze({ repeated: false, ...scanned.token }));
+    }
+    index = Math.max(index + 1, scanned.end);
+  }
+  return Object.freeze(tokens);
 }
 
 function nearlyEqual(left: number | undefined, right: number | undefined): boolean {
@@ -136,6 +250,8 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   private dividerSourceObserver?: MutationObserver;
   private dividerSourceObserverDocument?: Document;
   private dividerSourceObserverGeneration = 0;
+  private normalizedSnapSource?: string;
+  private cachedNormalizedSnapTokens: readonly NormalizedSnapToken[] = Object.freeze([]);
 
   @query('[part~="base"]') private baseElement?: HTMLElement;
   @query('[part~="divider"]') private dividerElement?: HTMLElement;
@@ -261,8 +377,10 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   }
 
   private _snap: string | SnapFunction = '';
-  /** Space-separated pixel/percent snap points, `repeat(...)`, or a snap callback. Assigning the
-   * Web Awesome `undefined` spelling restores the inert empty-string read default. */
+  /** Space-separated pixel/percent snap points, `repeat(...)`, or a snap callback. String
+   * preprocessing reads at most 16,384 UTF-16 code units and retains at most 256 finite valid
+   * tokens, caching their numeric value/unit projection until the source changes. Assigning the Web Awesome `undefined`
+   * spelling restores the inert empty-string read default. */
   @property({ reflect: true, converter: snapConverter })
   get snap(): string | SnapFunction {
     return this._snap;
@@ -440,7 +558,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     ) {
       return false;
     }
-    this.emit('lr-reposition');
+    this.emit('lr-reposition', null);
     return true;
   }
 
@@ -597,12 +715,17 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     this.syncDividerSources();
   };
 
-  private resolveSnapLength(value: string, size: number): number | undefined {
-    const match = /^((?:\d+(?:\.\d+)?|\.\d+))(px|%)$/i.exec(value.trim());
-    if (!match) return undefined;
-    const amount = finiteNumber(Number.parseFloat(match[1]!), Number.NaN);
-    if (!Number.isFinite(amount) || amount < 0) return undefined;
-    return match[2]!.toLowerCase() === '%' ? (amount / 100) * size : amount;
+  private resolveNormalizedSnapLength(token: NormalizedSnapToken, size: number): number | undefined {
+    const resolved = token.unit === '%' ? token.value / 100 * size : token.value;
+    return Number.isFinite(resolved) && resolved >= 0 ? resolved : undefined;
+  }
+
+  private get normalizedSnapTokens(): readonly NormalizedSnapToken[] {
+    const source = typeof this.snap === 'string' ? this.snap : '';
+    if (source === this.normalizedSnapSource) return this.cachedNormalizedSnapTokens;
+    this.normalizedSnapSource = source;
+    this.cachedNormalizedSnapTokens = normalizeSnapTokens(source);
+    return this.cachedNormalizedSnapTokens;
   }
 
   private applySnap(position: number, size: number): number {
@@ -620,22 +743,16 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
       }
     }
 
-    const tokens = this.snap.match(
-      /repeat\(\s*(?:\d+(?:\.\d+)?|\.\d+)(?:px|%)\s*\)|(?:\d+(?:\.\d+)?|\.\d+)(?:px|%)/gi,
-    );
-    if (!tokens?.length) return position;
+    const tokens = this.normalizedSnapTokens;
+    if (tokens.length === 0) return position;
 
     let nearest = position;
     let nearestDistance = Number.POSITIVE_INFINITY;
-    for (const token of tokens.slice(0, MAX_SNAP_TOKENS)) {
-      const repeated = token.toLowerCase().startsWith('repeat(');
-      const rawLength = repeated
-        ? token.slice(token.indexOf('(') + 1, token.lastIndexOf(')'))
-        : token;
-      const point = this.resolveSnapLength(rawLength, size);
+    for (const token of tokens) {
+      const point = this.resolveNormalizedSnapLength(token, size);
       if (point == null || point < 0) continue;
 
-      const candidates = repeated
+      const candidates = token.repeated
         ? [
             Math.floor(position / point) * point,
             Math.round(position / point) * point,

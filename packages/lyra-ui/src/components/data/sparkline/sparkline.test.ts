@@ -9,6 +9,7 @@ it('publishes the documented Sparkline defaults and reflected closed sets', asyn
   expect(el.data).to.equal('');
   expect(el.label).to.equal('');
   expect(el.trend).to.equal(undefined);
+  expect(el.mark).to.equal('line');
 
   el.appearance = 'gradient';
   el.curve = 'natural';
@@ -17,6 +18,27 @@ it('publishes the documented Sparkline defaults and reflected closed sets', asyn
   expect(el.getAttribute('appearance')).to.equal('gradient');
   expect(el.getAttribute('curve')).to.equal('natural');
   expect(el.getAttribute('trend')).to.equal('positive');
+  expect(el.getAttribute('mark')).to.equal('line');
+});
+
+it('keeps values property-only and normalizes foreign runtime data safely', async () => {
+  const el = (await fixture(html`<lr-sparkline values="[1,2,3]"></lr-sparkline>`)) as LyraSparkline;
+  expect(el.values).to.deep.equal([]);
+  expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(0);
+
+  (el as unknown as { values: unknown }).values = null;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(0);
+});
+
+it('normalizes and reflects a foreign mark token to line', async () => {
+  const el = (await fixture(html`
+    <lr-sparkline mark="area" appearance="solid" data="1 2 3"></lr-sparkline>
+  `)) as LyraSparkline;
+  await el.updateComplete;
+  expect(el.mark).to.equal('line');
+  expect(el.getAttribute('mark')).to.equal('line');
+  expect(el.shadowRoot!.querySelector('[part~="fill"]')).to.exist;
 });
 
 it('parses space-separated data, uses label verbatim, and exposes the public part aliases', async () => {
@@ -142,14 +164,14 @@ it('forwards a host aria-label to the semantic SVG', async () => {
 });
 
 it('renders one bar per value in bar mode', async () => {
-  const el = (await fixture(`<lr-sparkline type="bar"></lr-sparkline>`)) as LyraSparkline;
+  const el = (await fixture(`<lr-sparkline mark="bar"></lr-sparkline>`)) as LyraSparkline;
   el.values = [4, 8, 2];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(3);
 });
 
-it('renders a filled area in area mode', async () => {
-  const el = (await fixture(`<lr-sparkline type="area"></lr-sparkline>`)) as LyraSparkline;
+it('renders a filled area through line geometry and solid appearance', async () => {
+  const el = (await fixture(`<lr-sparkline mark="line" appearance="solid"></lr-sparkline>`)) as LyraSparkline;
   el.values = [1, 2, 3];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part~="area"]')).to.exist;
@@ -157,7 +179,7 @@ it('renders a filled area in area mode', async () => {
 });
 
 it('centers flat data instead of collapsing to the bottom edge', async () => {
-  const bar = (await fixture(`<lr-sparkline type="bar"></lr-sparkline>`)) as LyraSparkline;
+  const bar = (await fixture(`<lr-sparkline mark="bar"></lr-sparkline>`)) as LyraSparkline;
   bar.values = [5, 5, 5, 5];
   await bar.updateComplete;
   const rects = [...bar.shadowRoot!.querySelectorAll('[part="bar"]')];
@@ -166,7 +188,7 @@ it('centers flat data instead of collapsing to the bottom edge', async () => {
     expect(Number(rect.getAttribute('height'))).to.be.greaterThan(0);
   }
 
-  const area = (await fixture(`<lr-sparkline type="area"></lr-sparkline>`)) as LyraSparkline;
+  const area = (await fixture(`<lr-sparkline mark="line" appearance="solid"></lr-sparkline>`)) as LyraSparkline;
   area.values = [5, 5, 5, 5];
   await area.updateComplete;
   const areaPath = area.shadowRoot!.querySelector('[part~="area"]')!;
@@ -201,7 +223,7 @@ it('maps full-range finite values to finite top, middle, and bottom points', asy
 
 it('clamps bar height instead of going negative when a value is below an explicit min', async () => {
   const el = (await fixture(
-    `<lr-sparkline type="bar" min="3"></lr-sparkline>`,
+    `<lr-sparkline mark="bar" min="3"></lr-sparkline>`,
   )) as LyraSparkline;
   el.values = [1, 5, 8];
   await el.updateComplete;
@@ -214,7 +236,7 @@ it('clamps bar height instead of going negative when a value is below an explici
 
 it('clamps bar y/height instead of overflowing when a value is above an explicit max', async () => {
   const el = (await fixture(
-    `<lr-sparkline type="bar" max="3"></lr-sparkline>`,
+    `<lr-sparkline mark="bar" max="3"></lr-sparkline>`,
   )) as LyraSparkline;
   el.values = [1, 5, 8];
   await el.updateComplete;
@@ -295,7 +317,7 @@ it('does not throw on very large data arrays', async () => {
 });
 
 it('caps the number of bars rendered for very large data arrays', async () => {
-  const el = (await fixture(`<lr-sparkline type="bar"></lr-sparkline>`)) as LyraSparkline;
+  const el = (await fixture(`<lr-sparkline mark="bar"></lr-sparkline>`)) as LyraSparkline;
   el.values = Array.from({ length: 150000 }, (_, i) => i);
   await el.updateComplete;
   const count = el.shadowRoot!.querySelectorAll('[part="bar"]').length;
@@ -304,7 +326,7 @@ it('caps the number of bars rendered for very large data arrays', async () => {
 });
 
 it('respects explicit min/max overrides for point placement', async () => {
-  const auto = (await fixture(`<lr-sparkline type="bar"></lr-sparkline>`)) as LyraSparkline;
+  const auto = (await fixture(`<lr-sparkline mark="bar"></lr-sparkline>`)) as LyraSparkline;
   auto.values = [0, 10];
   await auto.updateComplete;
   const autoHeights = [...auto.shadowRoot!.querySelectorAll('[part="bar"]')].map((r) =>
@@ -313,7 +335,7 @@ it('respects explicit min/max overrides for point placement', async () => {
   expect(autoHeights[1]).to.be.closeTo(100, 0.5);
 
   const explicit = (await fixture(
-    `<lr-sparkline type="bar" min="0" max="100"></lr-sparkline>`,
+    `<lr-sparkline mark="bar" min="0" max="100"></lr-sparkline>`,
   )) as LyraSparkline;
   explicit.values = [0, 10];
   await explicit.updateComplete;
@@ -383,7 +405,7 @@ it('is accessible', async () => {
 
 it('caps the number of points built for a line chart with a huge values array', async () => {
   const values = Array.from({ length: 5000 }, (_, i) => i);
-  const el = (await fixture(html`<lr-sparkline type="line" .values=${values}></lr-sparkline>`)) as LyraSparkline;
+  const el = (await fixture(html`<lr-sparkline mark="line" .values=${values}></lr-sparkline>`)) as LyraSparkline;
   const path = el.shadowRoot!.querySelector('[part="line"]')!;
   const commandCount = (path.getAttribute('d')!.match(/[ML]/g) ?? []).length;
   expect(commandCount).to.be.at.most(500);
@@ -391,7 +413,7 @@ it('caps the number of points built for a line chart with a huge values array', 
 
 it('always includes the final sample when decimating', async () => {
   const values = Array.from({ length: 777 }, (_, i) => i);
-  const el = (await fixture(html`<lr-sparkline type="bar" .values=${values}></lr-sparkline>`)) as LyraSparkline;
+  const el = (await fixture(html`<lr-sparkline mark="bar" .values=${values}></lr-sparkline>`)) as LyraSparkline;
   const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
   const lastBar = bars[bars.length - 1] as SVGRectElement;
   // The last drawn bar's x should correspond to the series' actual final
@@ -404,9 +426,9 @@ it('always includes the final sample when decimating', async () => {
 });
 
 it('narrows bar width as bar count grows so bars do not overlap', async () => {
-  const few = (await fixture(html`<lr-sparkline type="bar" .values=${[1, 2, 3]}></lr-sparkline>`)) as LyraSparkline;
+  const few = (await fixture(html`<lr-sparkline mark="bar" .values=${[1, 2, 3]}></lr-sparkline>`)) as LyraSparkline;
   const many = (await fixture(
-    html`<lr-sparkline type="bar" .values=${Array.from({ length: 60 }, (_, i) => i)}></lr-sparkline>`,
+    html`<lr-sparkline mark="bar" .values=${Array.from({ length: 60 }, (_, i) => i)}></lr-sparkline>`,
   )) as LyraSparkline;
   const fewWidth = Number(few.shadowRoot!.querySelector('[part="bar"]')!.getAttribute('width'));
   const manyWidth = Number(many.shadowRoot!.querySelector('[part="bar"]')!.getAttribute('width'));
@@ -424,7 +446,7 @@ it('scales against the full pre-decimation value range, not just whatever the sa
   // (all-zero) point down toward the bottom of the plot instead.
   const values = Array.from({ length: 600 }, () => 0);
   values[3] = 1000;
-  const el = (await fixture(html`<lr-sparkline type="bar" .values=${values}></lr-sparkline>`)) as LyraSparkline;
+  const el = (await fixture(html`<lr-sparkline mark="bar" .values=${values}></lr-sparkline>`)) as LyraSparkline;
   const bar = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
   const y = Number(bar.getAttribute('y'));
   expect(y).to.be.closeTo(100, 1); // VIEW = 100; a 0 value against a real [0, 1000] range sits at the bottom

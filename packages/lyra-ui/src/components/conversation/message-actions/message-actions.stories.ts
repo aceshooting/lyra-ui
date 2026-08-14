@@ -29,7 +29,7 @@ export const AllBuiltins: Story = {
 
 export const WithSlottedBranchPicker: Story = {
   render: () => html`
-    <lr-message-actions copy-text="Response text" reveal-on-hover .controls=${['copy', 'regenerate', 'feedback']}>
+    <lr-message-actions copy-text="Response text" reveal-on-interaction .controls=${['copy', 'regenerate', 'feedback']}>
       <lr-branch-picker index="1" count="3"></lr-branch-picker>
     </lr-message-actions>
   `,
@@ -52,11 +52,11 @@ export const UnavailableSlottedControl: Story = {
   `,
 };
 
-export const RevealOnHover: Story = {
+export const RevealOnInteraction: Story = {
   render: () => html`
     <lr-chat-message data-role="assistant">
       This response has a hover-revealed action bar.
-      <lr-message-actions slot="actions" reveal-on-hover copy-text="hi" .controls=${['copy', 'regenerate']}>
+      <lr-message-actions slot="actions" reveal-on-interaction copy-text="hi" .controls=${['copy', 'regenerate']}>
       </lr-message-actions>
     </lr-chat-message>
   `,

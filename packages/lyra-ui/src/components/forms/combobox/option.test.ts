@@ -465,6 +465,31 @@ it('shows the checked icon only for a selected option', async () => {
   expect(checkedIcon.querySelector('svg')?.getAttribute('aria-hidden')).to.equal('true');
 });
 
+it('keeps adversarial interactive start/end adornments inside inert presentation wrappers', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <button id="outside" type="button">Outside</button>
+      <lr-option value="a">
+        <button id="start-action" slot="start" type="button">Start action</button>
+        Alpha
+        <a id="end-action" slot="end" href="#end">End action</a>
+      </lr-option>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-option') as LyraOption;
+  const outside = wrapper.querySelector<HTMLButtonElement>('#outside')!;
+  const start = wrapper.querySelector<HTMLButtonElement>('#start-action')!;
+  const end = wrapper.querySelector<HTMLAnchorElement>('#end-action')!;
+  await el.updateComplete;
+  const presentations = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[aria-hidden="true"][inert]')];
+  expect(presentations.length).to.be.at.least(2);
+
+  outside.focus();
+  start.focus();
+  end.focus();
+  expect(wrapper.ownerDocument.activeElement?.id).to.equal('outside');
+});
+
 it('keeps defaultSelected attribute state separate from the live selected property', async () => {
   const el = (await fixture(html`<lr-option value="a" selected>Alpha</lr-option>`)) as LyraOption;
 

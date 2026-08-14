@@ -51,7 +51,7 @@ it('emits controlled metric, slice, and run selection events', async () => {
   expect((await runPending).detail).to.deep.equal({ run: runs[0] });
 });
 
-it('has a localized empty state and a named populated region', async () => {
+it('has a localized empty state and one populated overall owner', async () => {
   const empty = (await fixture(
     html`<lr-rag-eval-dashboard
       .strings=${{ ragEvalDashboardEmpty: 'Aucune évaluation disponible' }}
@@ -63,7 +63,19 @@ it('has a localized empty state and a named populated region', async () => {
   const populated = (await fixture(
     html`<lr-rag-eval-dashboard aria-label="RAG quality" .metrics=${metrics} .runs=${runs}></lr-rag-eval-dashboard>`,
   )) as LyraRagEvalDashboard;
-  expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('RAG quality');
+  expect(populated.getAttribute('aria-label')).to.equal('RAG quality');
+  expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(null);
+  expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal(null);
+  populated.setAttribute('aria-label', '');
+  await populated.updateComplete;
+  expect(populated.getAttribute('aria-label')).to.equal('');
+  expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+  expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('region');
+  populated.setAttribute('aria-label', 'Revised RAG quality');
+  await populated.updateComplete;
+  expect(populated.getAttribute('aria-label')).to.equal('Revised RAG quality');
+  expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(null);
+  expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal(null);
   await expect(populated).shadowDom.to.be.accessible();
 });
 

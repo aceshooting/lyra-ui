@@ -72,7 +72,11 @@ describe('lr-include', () => {
 
   it('fetches, sanitizes, and emits lr-load with the resolved src', async () => {
     const original = window.fetch;
-    window.fetch = (() => Promise.resolve(response('<h1>Safe</h1><script>alert(1)</script>'))) as typeof window.fetch;
+    window.fetch = (() => Promise.resolve(response(`
+      <style>@import url(https://example.test/escape.css); lr-include { display:none }</style>
+      <h1 style="background:url(https://example.test/pixel.png)">Safe</h1>
+      <img src="https://example.test/image.png"><script>alert(1)</script>
+    `))) as typeof window.fetch;
     try {
       const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
       const loadPromise = oneEvent(el, 'lr-load');
@@ -83,6 +87,9 @@ describe('lr-include', () => {
       // own children, projected through the shadow root's default <slot>.
       expect((el.querySelector('script')) == null).to.equal(true);
       expect(el.querySelector('h1')!.textContent).to.equal('Safe');
+      expect(el.querySelectorAll('style').length).to.equal(0);
+      expect(el.querySelector('h1')!.hasAttribute('style')).to.equal(false);
+      expect(el.querySelector('img')!.hasAttribute('src')).to.equal(false);
       expect(el.getAttribute('aria-busy')).to.equal('false');
     } finally { window.fetch = original; }
   });
@@ -513,8 +520,9 @@ describe('lr-include', () => {
     const fixtureRoot = await fixture<HTMLDivElement>(html`
       <div>
         <template id="include-template">
-          <label for="template-field">Template field</label>
-          <input id="template-field" />
+          <h2 id="template-heading">Template heading</h2>
+          <p aria-labelledby="template-heading">Template field</p>
+          <input id="removed-control" />
           <script>window.__includeScriptShouldNotRun = true;<\/script>
         </template>
         <lr-include>Fallback one</lr-include>
@@ -532,18 +540,18 @@ describe('lr-include', () => {
 
       expect(fetches).to.equal(0);
       expect(template.content.querySelectorAll('input').length).to.equal(1);
-      expect(first.querySelectorAll('input').length).to.equal(1);
-      expect(second.querySelectorAll('input').length).to.equal(1);
+      expect(first.querySelectorAll('input').length).to.equal(0);
+      expect(second.querySelectorAll('input').length).to.equal(0);
       expect(first.querySelectorAll('script').length).to.equal(0);
       expect(second.querySelectorAll('script').length).to.equal(0);
-      const firstInputId = first.querySelector('input')!.id;
-      const secondInputId = second.querySelector('input')!.id;
-      expect(firstInputId).to.not.equal('template-field');
-      expect(secondInputId).to.not.equal(firstInputId);
-      expect(first.querySelector('label')!.htmlFor).to.equal(firstInputId);
-      expect(second.querySelector('label')!.htmlFor).to.equal(secondInputId);
-      expect(document.querySelectorAll(`#${CSS.escape(firstInputId)}`).length).to.equal(1);
-      expect(document.querySelectorAll(`#${CSS.escape(secondInputId)}`).length).to.equal(1);
+      const firstHeadingId = first.querySelector('h2')!.id;
+      const secondHeadingId = second.querySelector('h2')!.id;
+      expect(firstHeadingId).to.not.equal('template-heading');
+      expect(secondHeadingId).to.not.equal(firstHeadingId);
+      expect(first.querySelector('p')!.getAttribute('aria-labelledby')).to.equal(firstHeadingId);
+      expect(second.querySelector('p')!.getAttribute('aria-labelledby')).to.equal(secondHeadingId);
+      expect(document.querySelectorAll(`#${CSS.escape(firstHeadingId)}`).length).to.equal(1);
+      expect(document.querySelectorAll(`#${CSS.escape(secondHeadingId)}`).length).to.equal(1);
     } finally {
       window.fetch = original;
     }
@@ -885,7 +893,7 @@ describe('lr-include', () => {
     expect(el.textContent).to.equal('Fallback');
   });
 
-  it('leaves a dangling internal hash href unchanged after rebasing ids', async () => {
+  it('rejects a dangling internal hash href after rebasing ids', async () => {
     const fixtureRoot = await fixture<HTMLDivElement>(html`
       <div>
         <div id="href-dangling-source"><a href="#not-in-fragment">Link</a></div>
@@ -896,7 +904,7 @@ describe('lr-include', () => {
     const loaded = oneEvent(el, 'lr-load');
     el.src = '#href-dangling-source';
     await loaded;
-    expect(el.querySelector('a')!.getAttribute('href')).to.equal('#not-in-fragment');
+    expect(el.querySelector('a')!.hasAttribute('href')).to.equal(false);
   });
 
   it('rewrites an internal hash href that resolves to a rebased id', async () => {
@@ -918,12 +926,12 @@ describe('lr-include', () => {
     expect(el.querySelector('a')!.getAttribute('href')).to.equal(`#${target.id}`);
   });
 
-  it('rewrites a url(#id) reference attribute to the rebased id', async () => {
+  it('rewrites quoted, whitespace-variant and mixed-case local URL references', async () => {
     const fixtureRoot = await fixture<HTMLDivElement>(html`
       <div>
         <div id="url-rewrite-source">
           <div id="grad-target"></div>
-          <div data-fill="url(#grad-target)"></div>
+          <div data-fill="URL( '#grad-target' )"></div>
         </div>
         <lr-include></lr-include>
       </div>
@@ -937,10 +945,15 @@ describe('lr-include', () => {
     expect(el.querySelector('[data-fill]')!.getAttribute('data-fill')).to.equal(`url(#${gradDiv.id})`);
   });
 
-  it('leaves a dangling url(#id) reference attribute unchanged', async () => {
+  it('rejects dangling, external, escaped and compound URL references', async () => {
     const fixtureRoot = await fixture<HTMLDivElement>(html`
       <div>
-        <div id="url-dangling-source"><div data-fill="url(#not-a-real-id)"></div></div>
+        <div id="url-dangling-source">
+          <div class="dangling-url" data-fill="url(#not-a-real-id)"></div>
+          <div class="external-url" data-external="url(https://example.test/a.svg#x)"></div>
+          <div class="compound-url" data-compound="url(#not-a-real-id) url(#also-missing)"></div>
+          <svg><rect data-escaped-marker fill="u\\72l(#not-a-real-id)"></rect></svg>
+        </div>
         <lr-include></lr-include>
       </div>
     `);
@@ -948,7 +961,10 @@ describe('lr-include', () => {
     const loaded = oneEvent(el, 'lr-load');
     el.src = '#url-dangling-source';
     await loaded;
-    expect(el.querySelector('[data-fill]')!.getAttribute('data-fill')).to.equal('url(#not-a-real-id)');
+    expect(el.querySelector('.dangling-url')!.hasAttribute('data-fill')).to.equal(false);
+    expect(el.querySelector('.external-url')!.hasAttribute('data-external')).to.equal(false);
+    expect(el.querySelector('.compound-url')!.hasAttribute('data-compound')).to.equal(false);
+    expect(el.querySelector('[data-escaped-marker]')!.hasAttribute('fill')).to.equal(false);
   });
 
   // No .strings override test: this component renders no built-in visible

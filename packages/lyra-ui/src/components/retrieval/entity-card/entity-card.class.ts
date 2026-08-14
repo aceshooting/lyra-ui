@@ -1,23 +1,23 @@
-import { html, nothing, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
-import { styleMap } from 'lit/directives/style-map.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { sanitizeCssColor } from '../../../internal/safe-css.js';
-import type { LyraFrame } from '../../../internal/variants.js';
-import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { styles } from './entity-card.styles.js';
-import '../../agent-tools/result-card/result-field.class.js';
-import '../../overlays/badge/badge.class.js';
-import '../../overlays/chip/chip.class.js';
-import '../../forms/button/button.class.js';
-import '../../overlays/empty/empty.class.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { html, nothing, type TemplateResult } from "lit";
+import { property } from "lit/decorators.js";
+import { styleMap } from "lit/directives/style-map.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { sanitizeCssColor } from "../../../internal/safe-css.js";
+import type { LyraFrame } from "../../../internal/variants.js";
+import { finiteCount, finiteNumber } from "../../../internal/numbers.js";
+import { getNumberFormat } from "../../../internal/intl-cache.js";
+import { styles } from "./entity-card.styles.js";
+import "../../agent-tools/result-card/result-field.class.js";
+import "../../overlays/badge/badge.class.js";
+import "../../overlays/chip/chip.class.js";
+import "../../forms/button/button.class.js";
+import "../../overlays/empty/empty.class.js";
+import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
+import type { LyraNodeTypeStyle } from "../../../internal/node-type-style.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_entityCommunity, LYRA_DEFAULT_entityDegree, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_focusInGraph, LYRA_DEFAULT_noData, LYRA_DEFAULT_untitledEntity } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** One knowledge-graph entity, as consumed by every knowledge-graph explorer component. Field
  *  names deliberately mirror `lr-graph`'s node shape (`type`, `communityId`), so
@@ -36,16 +36,12 @@ export interface LyraEntity {
   communityId?: string;
 }
 
-/** The exact `lr-graph.nodeTypes` entry shape -- see `lr-graph-legend`'s identical local
- *  alias for why this isn't imported from `lr-graph` itself. */
-type NodeTypeStyle = { id: string; label: string; color?: string; shape?: 'circle' | 'square' | 'diamond' };
-
 /** Container treatment for `<lr-entity-card>`'s root. The library-wide {@linkcode LyraFrame}
  *  vocabulary under this component's own export name. */
 export type EntityCardAppearance = LyraFrame;
 
 export interface LyraEntityCardEventMap {
-  'lr-entity-activate': CustomEvent<{ id: string }>;
+  "lr-entity-activate": CustomEvent<{ id: string }>;
 }
 
 /** Derives themeable `--lr-badge-*` overrides from a data-driven type color -- the same "type
@@ -55,14 +51,13 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
   const safe = color != null ? sanitizeCssColor(color) : undefined;
   if (!safe) return {};
   return {
-    '--lr-badge-color': safe,
-    // 8% (not the 16% other quiet-tint recipes in this codebase use) -- WCAG AA 4.5:1 text
-    // contrast must hold for *any* data-driven type color against --lr-color-surface. 16%
-    // measurably fails it for saturated hues (e.g. #7c3aed lands at 4.46:1, confirmed via axe),
-    // and even 10% isn't safe margin for every hue in this palette -- e.g.
-    // --lr-theme-color-chart-1 (#8250df) lands at 4.42:1. 8% clears 4.5:1 for both with margin.
-    '--lr-badge-background': `color-mix(in srgb, ${safe} 8%, var(--lr-color-surface))`,
-    '--lr-badge-border': safe,
+    // Consumer colors remain an accent rather than becoming the text authority. Extreme valid
+    // inputs such as white, black, or a translucent color therefore cannot erase the category
+    // label in the opposite theme; the semantic foreground stays token-owned and the border is
+    // the persistent non-text color cue (also retained by forced-colors adjustment).
+    "--lr-badge-color": "var(--lr-color-text)",
+    "--lr-badge-background": `color-mix(in srgb, ${safe} 12%, var(--lr-color-surface))`,
+    "--lr-badge-border": safe,
   };
 }
 
@@ -115,11 +110,15 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
   @property({ attribute: false }) entity: LyraEntity | null = null;
   /** `lr-graph` `nodeTypes` pass-through used to resolve the type badge's label and swatch
    *  color; an unresolvable `entity.type` renders as its raw id in a neutral badge. */
-  @property({ attribute: false }) types: NodeTypeStyle[] = [];
+  @property({ attribute: false }) types: LyraNodeTypeStyle[] = [];
   /** Display label for `entity.communityId`'s chip; falls back to the raw id. */
-  @property({ attribute: 'community-label' }) communityLabel = '';
+  @property({ attribute: "community-label" }) communityLabel = "";
   /** Hides the built-in focus action on pages with no graph. */
-  @property({ type: Boolean, attribute: 'show-focus-button', converter: trueDefaultBooleanConverter })
+  @property({
+    type: Boolean,
+    attribute: "show-focus-button",
+    converter: trueDefaultBooleanConverter,
+  })
   showFocusButton = true;
   /** Tighter root padding and row gap for dense contexts (a dossier rendered in a sidebar or a
    *  result list) -- same convention as `lr-empty`'s `compact`, and as this component's sibling
@@ -130,26 +129,28 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
    *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
    *  radius, so a card nested inside a container that already draws a border doesn't double it.
    *  `plain` wins over `compact` when both are set (nothing left to tighten). */
-  @property({ reflect: true }) frame: LyraFrame = 'card';
+  @property({ reflect: true }) frame: LyraFrame = "card";
 
-  private resolvedType(type: string): NodeTypeStyle | undefined {
+  private resolvedType(type: string): LyraNodeTypeStyle | undefined {
     return this.types.find((t) => t.id === type);
   }
 
   private onFocusClick = (): void => {
-    if (this.entity) this.emit('lr-entity-activate', { id: this.entity.id });
+    if (this.entity) this.emit("lr-entity-activate", { id: this.entity.id });
   };
 
   override render(): TemplateResult {
     if (!this.entity) {
-      return html`<div part="base"><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;
+      return html`<div part="base">
+        <lr-empty part="empty" heading=${this.localize("noData")}></lr-empty>
+      </div>`;
     }
     const entity = this.entity;
-    const titleText = entity.label || this.localize('untitledEntity');
+    const titleText = entity.label || this.localize("untitledEntity");
     const resolved = entity.type ? this.resolvedType(entity.type) : undefined;
     const badgeLabel = resolved?.label ?? entity.type;
     const properties = Object.entries(entity.properties ?? {});
-    const ariaLevel = this.getAttribute('aria-level') || '3';
+    const ariaLevel = this.getAttribute("aria-level") || "3";
 
     // The degree/community rows route their localized labels through `lr-result-field`'s
     // `label` prop, exactly like the plain `property` rows above: the label/value separator is
@@ -160,41 +161,58 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
       <div part="base">
         <div part="header">
           ${badgeLabel
-            ? html`<lr-badge part="type-badge" style=${styleMap(typeBadgeStyle(resolved?.color))}
+            ? html`<lr-badge
+                part="type-badge"
+                style=${styleMap(typeBadgeStyle(resolved?.color))}
                 >${badgeLabel}</lr-badge
               >`
             : nothing}
-          <span part="title" role="heading" aria-level=${ariaLevel}>${titleText}</span>
+          <span part="title" role="heading" aria-level=${ariaLevel}
+            >${titleText}</span
+          >
           <div part="actions">
             <slot name="actions"></slot>
             ${this.showFocusButton
-              ? html`<lr-button part="focus-button" size="s" @click=${this.onFocusClick}
-                  >${this.localize('focusInGraph')}</lr-button
+              ? html`<lr-button
+                  part="focus-button"
+                  size="s"
+                  @click=${this.onFocusClick}
+                  >${this.localize("focusInGraph")}</lr-button
                 >`
               : nothing}
           </div>
         </div>
-        ${entity.description ? html`<p part="description">${entity.description}</p>` : nothing}
+        ${entity.description
+          ? html`<p part="description">${entity.description}</p>`
+          : nothing}
         <div part="properties">
           ${properties.map(
             ([key, value]) => html`<lr-result-field
               part="property"
               label=${key}
-              value=${typeof value === 'number'
-                ? getNumberFormat(this.effectiveLocale).format(finiteNumber(value, 0))
+              value=${typeof value === "number"
+                ? getNumberFormat(this.effectiveLocale).format(
+                    finiteNumber(value, 0)
+                  )
                 : String(value)}
-            ></lr-result-field>`,
+            ></lr-result-field>`
           )}
           ${entity.degree != null
             ? html`<lr-result-field
                 part="degree"
-                label=${this.localize('entityDegree')}
-                value=${getNumberFormat(this.effectiveLocale).format(finiteCount(entity.degree))}
+                label=${this.localize("entityDegree")}
+                value=${getNumberFormat(this.effectiveLocale).format(
+                  finiteCount(entity.degree)
+                )}
               ></lr-result-field>`
             : nothing}
           ${entity.communityId
-            ? html`<lr-result-field part="community" label=${this.localize('entityCommunity')}
-                ><lr-chip>${this.communityLabel || entity.communityId}</lr-chip></lr-result-field
+            ? html`<lr-result-field
+                part="community"
+                label=${this.localize("entityCommunity")}
+                ><lr-chip
+                  >${this.communityLabel || entity.communityId}</lr-chip
+                ></lr-result-field
               >`
             : nothing}
         </div>
@@ -206,6 +224,6 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-entity-card': LyraEntityCard;
+    "lr-entity-card": LyraEntityCard;
   }
 }

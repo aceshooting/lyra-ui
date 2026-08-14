@@ -6,9 +6,11 @@ import { styles } from './date-picker.styles.js';
 import { weekdayLabels, monthTitle, resolveFirstDayOfWeek } from './calendar-core.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
-it('gates the previous/next hover background behind :where() (regression)', () => {
+it('gates enabled previous/next hover backgrounds behind :where() (regression)', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/:where\(\[part='previous'\]\):hover,\s*:where\(\[part='next'\]\):hover/);
+  expect(css).to.match(
+    /:where\(\[part='previous'\]\):hover:not\(:disabled\),\s*:where\(\[part='next'\]\):hover:not\(:disabled\)/,
+  );
   // The old over-specific, unwrapped shape must be gone, not merely joined by the new one.
   expect(css).to.not.include("[part='previous']:hover,");
 });
@@ -775,6 +777,32 @@ it('formats each day cell aria-label with the full localized weekday/month/day/y
     day: 'numeric',
   }).format(new Date(2026, 6, 15));
   expect(cell.getAttribute('aria-label')).to.equal(expected);
+});
+
+it('keeps the ISO model Gregorian while localizing visible Persian digits', async () => {
+  const el = (await fixture(
+    html`<lr-date-picker value="2026-07-01" locale="fa-IR" with-week-numbers></lr-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+  const cell = el.shadowRoot!.querySelector('[data-date="2026-07-01"]') as HTMLButtonElement;
+  const expectedDay = new Intl.NumberFormat('fa-IR').format(1);
+  const expectedLabel = new Intl.DateTimeFormat('fa-IR', {
+    calendar: 'gregory',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date(2026, 6, 1));
+  expect(cell.textContent?.trim()).to.equal(expectedDay);
+  expect(cell.getAttribute('aria-label')).to.equal(expectedLabel);
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal(
+    new Intl.DateTimeFormat('fa-IR', {
+      calendar: 'gregory',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date(2026, 6, 1)),
+  );
+  expect(el.shadowRoot!.querySelector('[part="weeknumber"]')!.textContent).to.match(/[۰-۹]+/);
 });
 
 it('derives month/weekday labels and first-day-of-week from an inherited lang ancestor when no locale attribute is set', async () => {

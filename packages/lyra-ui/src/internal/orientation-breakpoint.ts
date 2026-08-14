@@ -5,8 +5,8 @@ import { resolveCssLength } from './css-length.js';
  * Which box a responsive breakpoint is compared against — the component's own measured allocation
  * (`'container'`, a `ResizeObserver`) or the viewport (`'viewport'`, a `matchMedia` query).
  *
- * This types the public `orientationBreakpointBasis` property on `<lr-split>` and `<lr-stepper>`
- * and `<lr-split>`'s `collapseBreakpointBasis`, so it must stay in the shipped `.d.ts` — unlike the
+ * This types the public `orientationBreakpointBasis` property on `<lr-multi-split>` and `<lr-stepper>`
+ * and `<lr-multi-split>`'s `collapseBreakpointBasis`, so it must stay in the shipped `.d.ts` — unlike the
  * controllers below, it carries no internal-visibility tag. `tsconfig.json` sets `stripInternal`,
  * which erases any declaration whose JSDoc carries that tag; doing so here would leave public
  * properties referencing a member the published types don't export, which
@@ -15,27 +15,34 @@ import { resolveCssLength } from './css-length.js';
  */
 export type BreakpointBasis = 'container' | 'viewport';
 
-/** The original name of {@link BreakpointBasis}, from before a second breakpoint (`<lr-split>`'s
- *  `collapseBreakpointBasis`) shared the same union. Kept exported — and identical — so the shipped
- *  `.d.ts` keeps naming it for `orientationBreakpointBasis`, and so anything already importing it
- *  keeps compiling. Same publish-surface reasoning as the doc above. */
-export type OrientationBreakpointBasis = BreakpointBasis;
-
-/** A bare CSS `<number>` with no unit — mirrors css-length.ts's `BREAKPOINT_LENGTH_RE` numeric
+/** A bare CSS `<number>` with no unit — mirrors css-length.ts's `CSS_LENGTH_RE` numeric
  *  part. `matchMedia()`, unlike `resolveCssLength`, has no unitless default, so this is what the
  *  raw value must match before `arm()` appends `px` to it. */
 const BARE_NUMBER_RE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/;
 
 /** The grammar a raw value must satisfy to be a usable `'viewport'`-basis breakpoint: the same
  *  signed CSS `<number>` as `BARE_NUMBER_RE`, plus an optional `px`/`rem`/`em` unit — mirrors
- *  css-length.ts's `BREAKPOINT_LENGTH_RE`. This only decides whether `arm()` is worth calling
+ *  css-length.ts's `CSS_LENGTH_RE` subset accepted by this controller. This only decides whether `arm()` is worth calling
  *  `matchMedia()` at all; it is not consulted for the actual crossing comparison, which the
  *  browser owns under viewport basis. */
 const VIEWPORT_LENGTH_RE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em)?$/i;
 
+/** Resolves only the breakpoint vocabulary these controllers have always published. The shared
+ * CSS-length resolver additionally supports percentages and viewport units for callers with an
+ * explicit reference box, but accepting those here would silently mix viewport and measured-host
+ * reference frames. */
+function resolveBreakpointLength(
+  raw: number | string | undefined,
+  host: Element,
+): number | undefined {
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : undefined;
+  if (typeof raw !== 'string' || !VIEWPORT_LENGTH_RE.test(raw.trim())) return undefined;
+  return resolveCssLength(raw, { host });
+}
+
 /**
  * Owns the "is this component currently below its orientation breakpoint?"
- * question for `<lr-split>` and `<lr-stepper>`, which expose an identically
+ * question for `<lr-multi-split>` and `<lr-stepper>`, which expose an identically
  * named `orientationBreakpoint`/`orientationBreakpointBasis` contract.
  *
  * Under `'container'` basis the host measures itself (via its own
@@ -80,7 +87,7 @@ export class OrientationBreakpointController implements ReactiveController {
    *  breakpoint tracks the live root font size — caching would freeze the
    *  crossing width and defeat the point of accepting `rem`. */
   get resolved(): number | undefined {
-    return resolveCssLength(this.raw, this.host);
+    return resolveBreakpointLength(this.raw, this.host);
   }
 
   /** Whether the orientation-breakpoint feature is on at all, i.e. the authored value resolves to
@@ -192,19 +199,19 @@ export class OrientationBreakpointController implements ReactiveController {
   }
 }
 
-/** The collapsing pane's responsive band, widest first. Structurally identical to `<lr-split>`'s
- *  own `SplitCollapseState`, which stays declared next to the property it types — this controller
+/** The collapsing pane's responsive band, widest first. Structurally identical to `<lr-multi-split>`'s
+ *  own `LyraMultiSplitCollapseState`, which stays declared next to the property it types — this controller
  *  deliberately doesn't import from a component. */
 export type CollapseBand = 'wide' | 'rail' | 'floating';
 
-/** `<lr-split>`'s documented `railBreakpoint` default, reapplied here because `resolveCssLength`
+/** `<lr-multi-split>`'s documented `railBreakpoint` default, reapplied here because `resolveCssLength`
  *  reports an unparseable value as `undefined` rather than substituting anything. */
 const DEFAULT_RAIL_PX = 640;
-/** `<lr-split>`'s documented `floatBreakpoint` default; same reasoning as above. */
+/** `<lr-multi-split>`'s documented `floatBreakpoint` default; same reasoning as above. */
 const DEFAULT_FLOAT_PX = 400;
 
 /**
- * Owns `<lr-split>`'s two collapse thresholds — `railBreakpoint` and `floatBreakpoint` — and
+ * Owns `<lr-multi-split>`'s two collapse thresholds — `railBreakpoint` and `floatBreakpoint` — and
  * classifies the current width into one of three bands.
  *
  * This is deliberately **not** a second instance of `OrientationBreakpointController`. That one
@@ -218,7 +225,7 @@ const DEFAULT_FLOAT_PX = 400;
  * having documented defaults rather than an off switch:
  *
  * - An unparseable length falls back to `640`/`400` instead of disabling the feature.
- * - The host's `ResizeObserver` is not droppable under `'viewport'` basis: `<lr-split>` still reads
+ * - The host's `ResizeObserver` is not droppable under `'viewport'` basis: `<lr-multi-split>` still reads
  *   its measured width for the container-basis orientation feature and for the `'auto'` release
  *   path, so this controller reports no `containerObservationEnabled` equivalent.
  *
@@ -267,7 +274,7 @@ export class CollapseBreakpointController implements ReactiveController {
    *  documented default. Re-resolved on every read so a `rem` length tracks the live root font
    *  size. */
   get floatPx(): number {
-    return Math.max(0, resolveCssLength(this.rawFloat, this.host) ?? DEFAULT_FLOAT_PX);
+    return Math.max(0, resolveBreakpointLength(this.rawFloat, this.host) ?? DEFAULT_FLOAT_PX);
   }
 
   /** `railBreakpoint` resolved the same way, then held at or above `floatPx` — the class doc
@@ -317,7 +324,7 @@ export class CollapseBreakpointController implements ReactiveController {
   /** `railBreakpoint` resolved and floored at 0, before the float-breakpoint invariant is applied
    *  — the raw side of the pixel-space comparison the class doc describes. */
   private get railUnclampedPx(): number {
-    return Math.max(0, resolveCssLength(this.rawRail, this.host) ?? DEFAULT_RAIL_PX);
+    return Math.max(0, resolveBreakpointLength(this.rawRail, this.host) ?? DEFAULT_RAIL_PX);
   }
 
   /** Whether the live classification comes from `matchMedia` rather than a measured width. False
@@ -377,7 +384,7 @@ export class CollapseBreakpointController implements ReactiveController {
    *  default, and a negative one to `0px` (a valid query that simply never matches, matching the
    *  container-basis clamp). */
   private queryLength(raw: number | string | undefined, fallbackPx: number): string {
-    const resolved = resolveCssLength(raw, this.host);
+    const resolved = resolveBreakpointLength(raw, this.host);
     if (resolved === undefined) return `${fallbackPx}px`;
     if (resolved <= 0) return '0px';
     const trimmed = typeof raw === 'number' ? `${raw}` : String(raw).trim();

@@ -14,18 +14,38 @@ it('preserves the former zoomable-frame slotted pan/zoom contract under lr-pan-z
   expect(el.shadowRoot!.querySelectorAll('[part="zoom-in"]').length).to.equal(1);
 });
 
-it('preserves image source safety and an absent src attribute for rejected URLs', async () => {
+it('uses only pan-zoom geometry tokens after the v9 component split', async () => {
+  const el = await fixture<LyraPanZoom>(html`
+    <lr-pan-zoom
+      style="--lr-zoomable-frame-min-block-size:333px;--lr-zoomable-frame-zoom:3"
+    ></lr-pan-zoom>
+  `);
+  const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+  expect(getComputedStyle(viewport).minBlockSize).to.not.equal('333px');
+  expect(content.style.getPropertyValue('--lr-zoomable-frame-zoom')).to.equal('');
+  expect(Number(getComputedStyle(content).zoom)).to.equal(1);
+
+  el.style.setProperty('--lr-pan-zoom-min-block-size', '123px');
+  el.zoom = 1.5;
+  await el.updateComplete;
+  expect(getComputedStyle(viewport).minBlockSize).to.equal('123px');
+  expect(content.style.getPropertyValue('--lr-pan-zoom-zoom').trim()).to.equal('1.5');
+  expect(Number(getComputedStyle(content).zoom)).to.equal(1.5);
+});
+
+it('renders an image only for an accepted source and falls back to slotted content for rejected URLs', async () => {
   const safe = await fixture<LyraPanZoom>(
     html`<lr-pan-zoom src="https://example.test/a.png" alt="A map"></lr-pan-zoom>`,
   );
   expect(safe.shadowRoot!.querySelector('img')!.getAttribute('src')).to.equal('https://example.test/a.png');
 
   const unsafe = await fixture<LyraPanZoom>(
-    html`<lr-pan-zoom src="javascript:alert(1)" alt="A map"></lr-pan-zoom>`,
+    html`<lr-pan-zoom src="javascript:alert(1)" alt="A map"><span>Safe fallback</span></lr-pan-zoom>`,
   );
-  const image = unsafe.shadowRoot!.querySelector('img') as HTMLImageElement;
-  expect(image.hasAttribute('src')).to.be.false;
-  expect(image.src).to.equal('');
+  expect(unsafe.shadowRoot!.querySelector('img') === null).to.be.true;
+  expect(unsafe.shadowRoot!.querySelector('slot') !== null).to.be.true;
+  expect(unsafe.textContent).to.contain('Safe fallback');
 });
 
 it('keeps zoom methods, reset semantics, and lr-zoom-change', async () => {
@@ -104,14 +124,18 @@ it('normalizes malformed zoom configuration to finite usable values', async () =
   expect(el.zoom).to.be.greaterThan(before);
 });
 
-it('forwards aria-label to the focusable viewport and localizes visible zoom output', async () => {
+it('keeps the host name on the host and gives the focusable viewport a purpose name', async () => {
   const el = await fixture<LyraPanZoom>(html`
     <lr-pan-zoom aria-label="Map preview" .strings=${{ pdfViewerCurrentZoom: '{percent} pourcent' }}></lr-pan-zoom>
   `);
   const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
   expect(viewport.getAttribute('role')).to.equal('group');
-  expect(viewport.getAttribute('aria-label')).to.equal('Map preview');
-  expect(el.shadowRoot!.querySelector('[part="reset"]')!.textContent?.trim()).to.equal('100 pourcent');
+  expect(el.getAttribute('aria-label')).to.equal('Map preview');
+  expect(viewport.getAttribute('aria-label')).to.equal('Zoomable content');
+  const reset = el.shadowRoot!.querySelector('[part="reset"]') as HTMLButtonElement;
+  expect(reset.textContent).to.contain('Reset zoom');
+  expect(reset.textContent).to.contain('100 pourcent');
+  expect(reset.hasAttribute('aria-label')).to.be.false;
 });
 
 it('recomputes the reset button percentage from live zoom, not a hardcoded 100', async () => {
@@ -119,21 +143,46 @@ it('recomputes the reset button percentage from live zoom, not a hardcoded 100',
     <lr-pan-zoom .strings=${{ pdfViewerCurrentZoom: '{percent} pourcent' }}></lr-pan-zoom>
   `);
   const reset = el.shadowRoot!.querySelector('[part="reset"]') as HTMLButtonElement;
-  expect(reset.textContent?.trim()).to.equal('100 pourcent');
+  const visibleValue = (): string => reset.querySelector('span:not(.sr-only)')?.textContent?.trim() ?? '';
+  expect(visibleValue()).to.equal('100 pourcent');
 
   el.zoomIn();
   await el.updateComplete;
   expect(el.zoom).to.equal(1.25);
-  expect(reset.textContent?.trim()).to.equal('125 pourcent');
+  expect(visibleValue()).to.equal('125 pourcent');
 
   el.zoomOut();
   el.zoomOut();
   await el.updateComplete;
-  expect(reset.textContent?.trim()).to.equal('75 pourcent');
+  expect(visibleValue()).to.equal('75 pourcent');
 
   reset.click();
   await el.updateComplete;
-  expect(reset.textContent?.trim()).to.equal('100 pourcent');
+  expect(visibleValue()).to.equal('100 pourcent');
+});
+
+it('expands scroll geometry with the scaled paint footprint at narrow LTR and RTL allocations', async () => {
+  for (const direction of ['ltr', 'rtl']) {
+    for (const width of [319, 320]) {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction} style=${`inline-size: ${width}px`}>
+          <lr-pan-zoom zoom="2">
+            <div style="inline-size: 400px; block-size: 80px">Wide content</div>
+          </lr-pan-zoom>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-pan-zoom') as LyraPanZoom;
+      const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+      const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+      const paintedWidth = content.getBoundingClientRect().width;
+
+      expect(paintedWidth, `${direction} ${width}px scaled paint`).to.be.greaterThan(790);
+      expect(viewport.scrollWidth, `${direction} ${width}px reachable footprint`).to.be.at.least(
+        Math.floor(paintedWidth) - 1,
+      );
+      wrapper.remove();
+    }
+  }
 });
 
 it('forwards host focus()/blur()/click() to the keyboard-zoomable viewport', async () => {
@@ -179,29 +228,30 @@ it('forwards host focus()/blur()/click() to the keyboard-zoomable viewport', asy
   expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
 });
 
-it('preserves present host aria-labels on the region and viewport, then restores the fallback on removal', async () => {
+it('preserves host aria-label presence without duplicating it on the nested semantic owner', async () => {
   const el = await fixture<LyraPanZoom>(html`
     <lr-pan-zoom aria-label="" .strings=${{ zoomableFrameLabel: 'Localized zoom surface' }}></lr-pan-zoom>
   `);
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
   const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
-  const labels = (): Array<string | null> => [base.getAttribute('aria-label'), viewport.getAttribute('aria-label')];
+  const labels = (): Array<string | null> => [el.getAttribute('aria-label'), viewport.getAttribute('aria-label')];
 
-  expect(base.getAttribute('role')).to.equal('region');
+  expect(base.hasAttribute('role')).to.equal(false);
+  expect(base.hasAttribute('aria-label')).to.equal(false);
   expect(viewport.getAttribute('role')).to.equal('group');
-  expect(labels()).to.deep.equal(['', '']);
+  expect(labels()).to.deep.equal(['', 'Localized zoom surface']);
 
   el.setAttribute('aria-label', 'Updated zoom surface');
   await el.updateComplete;
-  expect(labels()).to.deep.equal(['Updated zoom surface', 'Updated zoom surface']);
+  expect(labels()).to.deep.equal(['Updated zoom surface', 'Localized zoom surface']);
 
   el.setAttribute('aria-label', '');
   await el.updateComplete;
-  expect(labels()).to.deep.equal(['', '']);
+  expect(labels()).to.deep.equal(['', 'Localized zoom surface']);
 
   el.removeAttribute('aria-label');
   await el.updateComplete;
-  expect(labels()).to.deep.equal(['Localized zoom surface', 'Localized zoom surface']);
+  expect(labels()).to.deep.equal([null, 'Localized zoom surface']);
 });
 
 it('contains unbroken localized reset labels inside 320px LTR and RTL allocations', async () => {

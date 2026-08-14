@@ -1,8 +1,32 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './rating.js';
-import type { LyraRating } from './rating.js';
+import { LyraRating } from './rating.js';
 import { styles } from './rating.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+
+it('exposes fresh callable static validators that project live rating validity', async () => {
+  const first = LyraRating.validators;
+  const second = LyraRating.validators;
+  expect(first === second).to.be.false;
+  expect(first).to.have.lengthOf(1);
+  expect(first[0]!.observedAttributes).to.deep.equal([
+    'required',
+    'disabled',
+    'readonly',
+    'value',
+    'max',
+  ]);
+
+  const el = await fixture<LyraRating>(html`<lr-rating required></lr-rating>`);
+  const missing = first[0]!.checkValidity(el);
+  expect(missing.isValid).to.be.false;
+  expect(missing.invalidKeys).to.deep.equal(['valueMissing']);
+  expect(missing.message).to.equal(el.validationMessage);
+
+  el.value = 3;
+  const valid = first[0]!.checkValidity(el);
+  expect(valid).to.deep.equal({ isValid: true, message: '', invalidKeys: [] });
+});
 
 it('emits one cancelable lr-invalid alias whose cancellation cancels the native invalid event', async () => {
   const el = await fixture<LyraRating>(html`<lr-rating required aria-label="Score"></lr-rating>`);
@@ -32,6 +56,20 @@ it('emits one cancelable lr-invalid alias whose cancellation cancels the native 
     nativePrevented,
     'preventDefault() on lr-invalid suppresses the native validation bubble',
   ).to.deep.equal([false, true]);
+});
+
+it('exposes the live rating surface across updates and reconnects', async () => {
+  const el = (await fixture(html`<lr-rating value="2"></lr-rating>`)) as LyraRating;
+  const surface = el.rating;
+  expect(surface === el.shadowRoot!.querySelector('[part~="rating"]')).to.equal(true);
+  el.value = 3;
+  await el.updateComplete;
+  expect(el.rating === surface).to.equal(true);
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  expect(el.rating === surface).to.equal(true);
 });
 
 it('gives the star row hover feedback matching the keyboard focus-visible cue', () => {

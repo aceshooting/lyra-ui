@@ -5,6 +5,37 @@ export const Json: Story = { render: () => html`<lr-code-editor label="Configura
 // their Tab key, except where `tab-size` is set explicitly -- the property still wins.
 export const TabWidth: Story = { render: () => html`<div style="display: grid; gap: 1rem; --lr-code-editor-tab-size: 8;"><lr-code-editor label="Token-driven (8)" language="go" .value=${'func main() {\n\tprintln("hi")\n}'}></lr-code-editor><lr-code-editor label="Property wins (2)" language="go" tab-size="2" .value=${'func main() {\n\tprintln("hi")\n}'}></lr-code-editor></div>` };
 
+export const NativeTextSurface: Story = {
+  name: 'Native text-control surface',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The original editor forwards native rows/columns, length, editing-assistance and hard-wrap submission semantics while retaining its unwrapped live value.',
+      },
+    },
+  },
+  render: () => html`
+    <form @submit=${(event: Event) => event.preventDefault()}>
+      <lr-code-editor
+        name="source"
+        label="Source"
+        language="typescript"
+        rows="6"
+        cols="32"
+        maxlength="240"
+        wrap="hard"
+        autocomplete="off"
+        inputmode="text"
+        enterkeyhint="done"
+        autocorrect="off"
+        .value=${'const message = "Edit this source";'}
+      ></lr-code-editor>
+      <button type="submit">Inspect with FormData</button>
+    </form>
+  `,
+};
+
 export const ScopedStateTheme: Story = {
   name: 'Scoped hover / invalid border',
   parameters: { docs: { description: { story: 'Hover the editor, then submit it empty, to exercise its independent frame-state hooks.' } } },

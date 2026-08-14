@@ -9,7 +9,7 @@ it('mirrors the low-to-high legend ramp in RTL', async () => {
 
   const wrapper = await fixture(html`
     <div dir="rtl">
-      <lr-heatmap .values=${[[1, 2]]}></lr-heatmap>
+      <lr-heatmap  .data=${{ kind: 'matrix', rowLabels: [], colLabels: [], values: [[1, 2]] }}></lr-heatmap>
     </div>
   `);
   const el = wrapper.querySelector('lr-heatmap') as LyraHeatmap;
@@ -22,9 +22,9 @@ it('mirrors a consumer-provided multi-stop palette without rewriting its color o
   const wrapper = await fixture(html`
     <div dir="rtl">
       <lr-heatmap
-        .values=${[[1, 2]]}
+
         .colorSteps=${['#010203', '#040506', '#070809']}
-      ></lr-heatmap>
+       .data=${{ kind: 'matrix', rowLabels: [], colLabels: [], values: [[1, 2]] }}></lr-heatmap>
     </div>
   `);
   const el = wrapper.querySelector('lr-heatmap') as LyraHeatmap;

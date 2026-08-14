@@ -1,6 +1,6 @@
 import {
   getAnimation,
-  type ElementAnimation,
+  type LyraElementAnimation,
 } from '../utilities/animation-registry.js';
 import { prefersReducedMotion } from './motion.js';
 
@@ -36,7 +36,7 @@ function supportsEasing(value: string): boolean {
     : CSS.supports('animation-timing-function', value);
 }
 
-function fallbackAnimation(target: HTMLElement, spec: RegisteredAnimationSpec): ElementAnimation {
+function fallbackAnimation(target: HTMLElement, spec: RegisteredAnimationSpec): LyraElementAnimation {
   const style = target.ownerDocument.defaultView?.getComputedStyle(target);
   let parsed: ParsedDuration | undefined;
   for (const property of spec.durationProperties) {
@@ -103,18 +103,22 @@ export function animateRegistered(
     fallback,
   });
   if (resolved.keyframes.length === 0) return undefined;
+  const resolvedKeyframes = resolved.keyframes.map((keyframe) => ({ ...keyframe }));
   const options = clampReducedMotion(target, {
     ...resolved.options,
     id: resolved.options.id ?? animationName,
   });
   try {
-    return target.animate(resolved.keyframes, options);
+    return target.animate(resolvedKeyframes, options);
   } catch {
     const keyframes = direction === 'rtl' && fallback.rtlKeyframes
       ? fallback.rtlKeyframes
       : fallback.keyframes;
     try {
-      return target.animate(keyframes, clampReducedMotion(target, fallback.options ?? {}));
+      return target.animate(
+        keyframes.map((keyframe) => ({ ...keyframe })),
+        clampReducedMotion(target, fallback.options ?? {}),
+      );
     } catch {
       return undefined;
     }

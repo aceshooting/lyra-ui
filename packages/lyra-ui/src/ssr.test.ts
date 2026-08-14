@@ -34,7 +34,7 @@ describe('diagnoseLyraHydration', () => {
 
       expect(diagnostics.length).to.equal(1);
       expect(diagnostics[0]?.tag).to.equal('lr-button');
-      expect(diagnostics[0]?.status).to.equal('hydrated');
+      expect(diagnostics[0]?.status).to.equal('ready');
       expect(diagnostics[0]?.element === root).to.equal(true);
     } finally {
       iframe.remove();
@@ -74,7 +74,7 @@ describe('diagnoseLyraHydration', () => {
   // constructor rather than redefining the tag.
 
   // Render-and-hydrate tag (not in LYRA_SSR_CLIENT_RENDER_REASONS), shadow root attached, resolved
-  // updateComplete -> exercises the 'hydrated' status.
+  // updateComplete -> exercises the neutral 'ready' status.
   customElements.define(
     'lr-badge',
     class extends HTMLElement {
@@ -88,7 +88,7 @@ describe('diagnoseLyraHydration', () => {
   );
 
   // Client-render tag (present in LYRA_SSR_CLIENT_RENDER_REASONS), shadow root attached, resolved
-  // updateComplete -> exercises the 'client-rendered' status.
+  // updateComplete -> exercises the same neutral 'ready' status; `mode` distinguishes the tier.
   customElements.define(
     'lr-radio',
     class extends HTMLElement {
@@ -162,7 +162,7 @@ describe('diagnoseLyraHydration', () => {
     }
   });
 
-  it('reports hydrated for a registered render-and-hydrate tag with a shadow root and a resolved updateComplete', async () => {
+  it('reports ready, not observed hydration, for a fresh render-and-hydrate client instance', async () => {
     const { container, cleanup } = withContainer();
     try {
       container.append(document.createElement('lr-badge'));
@@ -170,13 +170,13 @@ describe('diagnoseLyraHydration', () => {
       expect(diagnostics.length).to.equal(1);
       expect(diagnostics[0]?.tag).to.equal('lr-badge');
       expect(diagnostics[0]?.mode).to.equal('render-and-hydrate');
-      expect(diagnostics[0]?.status).to.equal('hydrated');
+      expect(diagnostics[0]?.status).to.equal('ready');
     } finally {
       cleanup();
     }
   });
 
-  it('reports client-rendered for a registered client-render tag with a shadow root and a resolved updateComplete', async () => {
+  it('reports ready for a registered client-render tag and keeps its mode separate', async () => {
     expect(LYRA_SSR_CLIENT_RENDER_TAGS).to.include('lr-radio');
     const { container, cleanup } = withContainer();
     try {
@@ -185,7 +185,7 @@ describe('diagnoseLyraHydration', () => {
       expect(diagnostics.length).to.equal(1);
       expect(diagnostics[0]?.tag).to.equal('lr-radio');
       expect(diagnostics[0]?.mode).to.equal('client-render');
-      expect(diagnostics[0]?.status).to.equal('client-rendered');
+      expect(diagnostics[0]?.status).to.equal('ready');
     } finally {
       cleanup();
     }
@@ -249,6 +249,26 @@ describe('diagnoseLyraHydration', () => {
     }
   });
 
+  it('discovers Lyra hosts recursively through nested open shadow roots without duplicates', async () => {
+    const { container, cleanup } = withContainer();
+    try {
+      const shell = document.createElement('div');
+      const shellRoot = shell.attachShadow({ mode: 'open' });
+      const badge = document.createElement('lr-badge');
+      const radio = document.createElement('lr-radio');
+      badge.shadowRoot!.append(radio);
+      shellRoot.append(badge);
+      container.append(shell);
+
+      const diagnostics = await diagnoseLyraHydration(container);
+
+      expect(diagnostics.map(({ tag }) => tag)).to.deep.equal(['lr-badge', 'lr-radio']);
+      expect(new Set(diagnostics.map(({ element }) => element)).size).to.equal(diagnostics.length);
+    } finally {
+      cleanup();
+    }
+  });
+
   it('accepts a detached DocumentFragment root, which has no localName of its own', async () => {
     const fragment = document.createDocumentFragment();
     fragment.append(document.createElement('lr-badge'));
@@ -257,7 +277,7 @@ describe('diagnoseLyraHydration', () => {
 
     expect(diagnostics.length).to.equal(1);
     expect(diagnostics[0]?.tag).to.equal('lr-badge');
-    expect(diagnostics[0]?.status).to.equal('hydrated');
+    expect(diagnostics[0]?.status).to.equal('ready');
   });
 
   it('defaults to the ambient document when no root argument is given', async () => {
@@ -268,7 +288,7 @@ describe('diagnoseLyraHydration', () => {
       const own = diagnostics.find((d) => d.element === element);
       expect(own).to.not.equal(undefined);
       expect(own?.tag).to.equal('lr-badge');
-      expect(own?.status).to.equal('hydrated');
+      expect(own?.status).to.equal('ready');
     } finally {
       element.remove();
     }

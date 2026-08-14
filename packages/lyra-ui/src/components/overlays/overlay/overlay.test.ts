@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LyraPopover } from './popover.class.js';
 import type { LyraTooltip } from './tooltip.class.js';
 import type { LyraDropdown } from './dropdown.class.js';
+import type { LyraMenu } from '../../layout/menu/menu.class.js';
 import { setAnimation } from '../../../utilities/animation-registry.js';
 import './popover.js';
 import './tooltip.js';
@@ -864,7 +865,11 @@ it('uses menu semantics for dropdowns', async () => {
   expect(trigger.getAttribute('aria-haspopup')).to.equal('menu');
   trigger.click();
   await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
-  expect(el.shadowRoot!.querySelector('[part~="popup"]')?.getAttribute('role')).to.equal('menu');
+  const popup = el.shadowRoot!.querySelector('[part~="popup"]')!;
+  const menu = el.shadowRoot!.querySelector('lr-menu')!;
+  await menu.updateComplete;
+  expect(popup.getAttribute('role')).to.equal(null);
+  expect(menu.shadowRoot!.querySelector('[role="menu"]')?.getAttribute('role')).to.equal('menu');
 });
 
 it('targets the public popover host from a native trigger aria-controls relationship', async () => {
@@ -947,11 +952,10 @@ it('owns ARIA and restores focus on the real control inside a consumer popover t
   expect(wrapper.shadowRoot!.activeElement === focusedControl).to.equal(true);
 });
 
-// lr-dropdown is its own registered custom element (extending LyraPopover with popupRole='menu'
-// set in its constructor) -- it needs its own axe assertion run against an <lr-dropdown> instance
-// specifically. Every other `to.be.accessible()` call in this file targets <lr-popover> or
-// <lr-tooltip>; none of those would catch a menu-semantics regression (e.g. a bad
-// aria-haspopup/role combination) introduced by lr-dropdown's constructor override.
+// lr-dropdown is its own registered custom element. Its positioning shell is neutral while the
+// contained menu owns role/name, so it needs an axe assertion against that exact composition.
+// Every other `to.be.accessible()` call here targets <lr-popover> or <lr-tooltip> and cannot catch
+// an aria-haspopup/semantic-owner regression introduced by the dropdown subclass.
 it('is accessible, both closed and with its menu open', async () => {
   const el = await fixture(html`<lr-dropdown><button slot="trigger">Actions</button><button role="menuitem">Item</button></lr-dropdown>`);
   await expect(el).to.be.accessible();
@@ -1108,10 +1112,13 @@ it('positions a tooltip that is open on first render against its slotted trigger
   expect(popupRect.bottom).to.be.at.most(triggerRect.top);
 });
 
-it('names a dropdown popup "Menu", not "Popover", since it inherits LyraPopover with popupRole=menu', async () => {
+it('names the dropdown menu engine "Menu" while leaving the positioning popup neutral', async () => {
   const el = await fixture(html`<lr-dropdown><button slot="trigger">Actions</button><button role="menuitem">Item</button></lr-dropdown>`);
   const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
-  expect(popup.getAttribute('aria-label')).to.equal('Menu');
+  const menu = el.shadowRoot!.querySelector('lr-menu')!;
+  expect(popup.getAttribute('role')).to.equal(null);
+  expect(popup.getAttribute('aria-label')).to.equal(null);
+  expect(menu.shadowRoot!.querySelector('[role="menu"]')?.getAttribute('aria-label')).to.equal('Menu');
 });
 
 it('keeps a plain popover (popupRole=dialog) named "Popover"', async () => {
@@ -1154,29 +1161,32 @@ it('preserves an explicitly empty host aria-label on the semantic popup before l
   expect(popup.getAttribute('aria-label')).to.equal('Localized fallback');
 });
 
-it('preserves an explicitly empty host aria-label on a menu-role popup', async () => {
+it('preserves an explicitly empty host aria-label on the contained menu owner', async () => {
   const el = (await fixture(html`
     <lr-dropdown aria-label=""><button slot="trigger">Actions</button><button role="menuitem">Item</button></lr-dropdown>
   `)) as LyraDropdown;
-  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+  const menu = el.shadowRoot!.querySelector('lr-menu') as LyraMenu;
+  await menu.updateComplete;
+  const menuRole = menu.shadowRoot!.querySelector('[role="menu"]')!;
 
-  expect(popup.getAttribute('role')).to.equal('menu');
-  expect(popup.getAttribute('aria-label')).to.equal('');
+  expect(menuRole.getAttribute('aria-label')).to.equal('');
 
   el.removeAttribute('aria-label');
   await el.updateComplete;
-  expect(popup.getAttribute('aria-label')).to.equal('Menu');
+  await menu.updateComplete;
+  expect(menuRole.getAttribute('aria-label')).to.equal('Menu');
 });
 
-it('honors a .strings override for the menuLabel key, provably reaching the rendered popup', async () => {
+it('honors a .strings override for the menuLabel key, provably reaching the contained owner', async () => {
   const el = (await fixture(
     html`<lr-dropdown .strings=${{ menuLabel: 'Actions' }}
       ><button slot="trigger">Open</button>
       <button role="menuitem">Item</button></lr-dropdown
     >`,
   )) as LyraDropdown;
-  const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
-  expect(popup.getAttribute('aria-label')).to.equal('Actions');
+  const menu = el.shadowRoot!.querySelector('lr-menu') as LyraMenu;
+  await menu.updateComplete;
+  expect(menu.shadowRoot!.querySelector('[role="menu"]')?.getAttribute('aria-label')).to.equal('Actions');
 });
 
 it('dismisses an open tooltip on Escape while the trigger keeps focus', async () => {

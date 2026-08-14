@@ -33,6 +33,56 @@ it('renders messages, resolves variables in preview, and exposes versions', asyn
   expect(el.shadowRoot!.querySelector('[data-version-id="v1"]')).to.exist;
 });
 
+it('uses the first duplicate message and version ids before rendering or emitting state', async () => {
+  const duplicateMessages: PromptStudioMessage[] = [
+    { id: 'same', role: 'user', content: 'First message' },
+    { id: 'same', role: 'assistant', content: 'Second message' },
+  ];
+  const duplicateVersions: PromptStudioVersion[] = [
+    { id: 'same-version', label: 'First version', messages: [] },
+    { id: 'same-version', label: 'Second version', messages: [] },
+  ];
+  const el = await fixture<LyraPromptStudio>(html`
+    <lr-prompt-studio .messages=${duplicateMessages} .versions=${duplicateVersions}></lr-prompt-studio>
+  `);
+
+  expect(el.shadowRoot!.querySelectorAll('[part="message"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="message-content"]')!.value).to.equal('First message');
+  expect(el.shadowRoot!.querySelectorAll('[part="version"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelector('[part="version"]')!.textContent!.trim()).to.equal('First version');
+
+  const pending = oneEvent(el, 'lr-change');
+  const textarea = el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="message-content"]')!;
+  textarea.value = 'Edited first';
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  const detail = (await pending).detail;
+  expect(detail.messages).to.deep.equal([{ id: 'same', role: 'user', content: 'Edited first' }]);
+});
+
+it('keeps duplicate variable names occurrence-addressable while resolving the first definition', async () => {
+  const el = await fixture<LyraPromptStudio>(html`
+    <lr-prompt-studio
+      .messages=${[{ id: 'one', role: 'user', content: '{{audience}}' }]}
+      .variables=${[
+        { name: 'audience', value: 'first' },
+        { name: 'audience', value: 'second' },
+      ]}
+    ></lr-prompt-studio>
+  `);
+  expect(el.shadowRoot!.querySelector('[part="preview"]')!.textContent).to.contain('first');
+  expect(el.shadowRoot!.querySelector('[part="preview"]')!.textContent).not.to.contain('second');
+
+  const inputs = [...el.shadowRoot!.querySelectorAll<HTMLInputElement>('[part="variable"] input')];
+  const pending = oneEvent(el, 'lr-change');
+  inputs[3]!.value = 'edited second';
+  inputs[3]!.dispatchEvent(new Event('input', { bubbles: true }));
+  const detail = (await pending).detail;
+  expect(detail.variables).to.deep.equal([
+    { name: 'audience', value: 'first' },
+    { name: 'audience', value: 'edited second' },
+  ]);
+});
+
 it('emits immutable edits, run requests, and complete version records', async () => {
   const el = (await fixture(
     html`<lr-prompt-studio .messages=${messages} .versions=${versions}></lr-prompt-studio>`,

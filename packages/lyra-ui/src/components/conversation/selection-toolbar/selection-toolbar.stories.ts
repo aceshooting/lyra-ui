@@ -15,6 +15,14 @@ type Story = StoryObj;
 const refreshActions: SelectionAction[] = ['ask', 'quote', 'cite', 'copy'];
 
 export const Default: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Assign `rect` to move the toolbar. It is the sole coordinate input; collision-safe inline/block coordinates are private implementation outputs.',
+      },
+    },
+  },
   render: () => html`
     <div style="min-height: 12rem; max-width: 40rem;">
       <p>

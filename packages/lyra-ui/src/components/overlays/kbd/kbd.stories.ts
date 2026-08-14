@@ -10,20 +10,31 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A small platform-aware chip for a keyboard shortcut. `keys` is a `+`-separated token sequence (`"mod+k"`, `"mod+shift+p"`); `mod` resolves to ⌘ on macOS and "Ctrl" everywhere else, computed once from `navigator.userAgentData`/`navigator.platform`/`navigator.userAgent` at module load. The rendered `aria-label` always spells the shortcut out in words (e.g. "Command+K") since the glyphs alone are not reliably announced by every screen reader.',
+          'A small platform-aware chip for a keyboard shortcut. `keys` is a `+`-separated token sequence (`"mod+k"`, `"mod+shift+p"`); `mod` resolves to ⌘ on macOS and "Ctrl" everywhere else. `platform="auto"` detects the browser platform, while `mac`, `windows`, and `linux` make rendering deterministic. The rendered `aria-label` always spells the shortcut out in words.',
       },
     },
   },
   argTypes: {
     keys: { control: 'text' },
+    platform: { control: 'select', options: ['auto', 'mac', 'windows', 'linux'] },
   },
 };
 export default meta;
 type Story = StoryObj;
 
 export const Basic: Story = {
-  args: { keys: 'mod+k' },
-  render: (args) => html`<lr-kbd keys=${args.keys}></lr-kbd>`,
+  args: { keys: 'mod+k', platform: 'auto' },
+  render: (args) => html`<lr-kbd keys=${args.keys} platform=${args.platform}></lr-kbd>`,
+};
+
+export const DeterministicPlatforms: Story = {
+  render: () => html`
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+      <lr-kbd keys="mod+alt+k" platform="mac"></lr-kbd>
+      <lr-kbd keys="mod+alt+k" platform="windows"></lr-kbd>
+      <lr-kbd keys="mod+alt+k" platform="linux"></lr-kbd>
+    </div>
+  `,
 };
 
 export const ModifierCombinations: Story = {

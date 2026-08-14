@@ -10,7 +10,9 @@ import { loadHtmlSanitizer } from './dompurify-loader.js';
 import { styles } from './html-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+import { sanitizePassiveMarkup } from '../passive-markup.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_htmlViewerLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
@@ -47,10 +49,10 @@ class LyraHtmlViewerBase extends LyraElement<LyraHtmlViewerEventMap> {}
  * @event {CustomEvent<TextSelectDetail>} lr-text-select - Fired after a selection ends inside the
  *   rendered document. `detail: { text: string; anchor: LyraAnchor | null; rects: DOMRect[] }`.
  *   Bubbling, composed, and non-cancelable.
- * @csspart base - The root container.
+ * @csspart base - The root container with explicit `aria-busy` loading state.
  * @csspart body - The wrapper around the fetched-state content.
  * @csspart html - The sanitized HTML document, once loaded.
- * @csspart spinner - The loading region.
+ * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
  * @csspart error - The error region.
  * @cssprop [--lr-html-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
@@ -76,7 +78,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
 
   /** URL to fetch and render as sanitized inline HTML. */
   @property() src = '';
@@ -119,7 +121,8 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.announcements.adopted();
   }
 
@@ -144,9 +147,10 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
       if (!sanitizer) throw new LyraUserFacingError(this.localize('documentViewerMissingSanitizer'));
       const raw = await readResponseText(response);
       if (!this.isConnected || generation !== this.generation) return;
-      const markup = sanitizer.sanitize(raw);
+      const markup = sanitizePassiveMarkup(sanitizer, raw, this.ownerDocument, 'passive-document');
+      if (!this.isConnected || generation !== this.generation) return;
       if (this.isConnected && generation === this.generation) {
-        this.fetchState = { kind: 'loaded', markup: markup as string };
+        this.fetchState = { kind: 'loaded', markup };
       }
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
@@ -158,7 +162,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
       case 'loaded': return html`<div part="html" role="document" aria-label=${hostAriaLabel(this) ?? (this.name || this.localize('htmlViewerLabel'))}>${unsafeHTML(this.fetchState.markup)}</div>`;
-      case 'loading': return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+      case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle':
       default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
@@ -167,7 +171,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
 
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    return html`<div part="base" style=${maxHeight ? styleMap({ '--lr-html-viewer-max-height': maxHeight }) : nothing}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div part="base" aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'} style=${maxHeight ? styleMap({ '--lr-html-viewer-max-height': maxHeight }) : nothing}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

@@ -6,14 +6,12 @@ import { getRelativeTimeFormat } from '../../../internal/intl-cache.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import {
   relativeTimeFormatOptions,
+  dateSourceConverter,
   type FormatDisplay,
   type RelativeTimeNumeric,
 } from './format-options.js';
 
-export type {
-  FormatDisplay as RelativeTimeFormat,
-  RelativeTimeNumeric,
-} from './format-options.js';
+export type { FormatDisplay as RelativeTimeFormat, RelativeTimeNumeric } from './format-options.js';
 
 export type RelativeTimeUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
 
@@ -30,7 +28,9 @@ const DIVISORS: Record<RelativeTimeUnit, number> = {
 const UNITS = Object.keys(DIVISORS) as RelativeTimeUnit[];
 
 /**
- * `<lr-relative-time>` — locale-aware relative time that can refresh automatically.
+ * `<lr-relative-time>` — locale-aware relative time that can refresh automatically. Numeric
+ * `date` attributes are epoch milliseconds, matching numeric property assignment; nonnumeric
+ * attributes remain date strings.
  *
  * @customElement lr-relative-time
  * @status stable
@@ -38,7 +38,7 @@ const UNITS = Object.keys(DIVISORS) as RelativeTimeUnit[];
  */
 export class LyraRelativeTime extends LyraElement {
   static override styles = [LyraElement.styles, styles];
-  @property() date: string | number | Date = new Date();
+  @property({ converter: dateSourceConverter }) date: string | number | Date = new Date();
   @property() unit: RelativeTimeUnit | 'auto' = 'auto';
   @property() format: FormatDisplay = 'long';
   @property() numeric: RelativeTimeNumeric = 'auto';
@@ -47,12 +47,18 @@ export class LyraRelativeTime extends LyraElement {
   private timerOwner?: Window;
   private timerDocument?: Document;
   private timerGeneration = 0;
-  override connectedCallback(): void { super.connectedCallback(); this.schedule(); }
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.schedule();
+  }
   override disconnectedCallback(): void {
     this.clearTimer();
     super.disconnectedCallback();
   }
-  adoptedCallback(): void { this.clearTimer(); }
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.clearTimer();
+  }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (
@@ -62,7 +68,8 @@ export class LyraRelativeTime extends LyraElement {
       changed.has('unit') ||
       changed.has('format') ||
       changed.has('numeric')
-    ) this.schedule();
+    )
+      this.schedule();
   }
 
   private schedule(): void {
@@ -122,13 +129,15 @@ export class LyraRelativeTime extends LyraElement {
     this.timerDocument = undefined;
   }
 
-  private relativeState(): {
-    target: number;
-    seconds: number;
-    requestedUnit: RelativeTimeUnit | 'auto';
-    selected: RelativeTimeUnit;
-    value: number;
-  } | undefined {
+  private relativeState():
+    | {
+        target: number;
+        seconds: number;
+        requestedUnit: RelativeTimeUnit | 'auto';
+        selected: RelativeTimeUnit;
+        value: number;
+      }
+    | undefined {
     const source = this.date ?? new Date();
     const target = source instanceof Date ? source.getTime() : new Date(source).getTime();
     if (!Number.isFinite(target)) return undefined;
@@ -138,7 +147,13 @@ export class LyraRelativeTime extends LyraElement {
       requestedUnit === 'auto'
         ? UNITS.find((candidate) => Math.abs(seconds) >= DIVISORS[candidate]) ?? 'second'
         : requestedUnit;
-    return { target, seconds, requestedUnit, selected, value: Math.round(seconds / DIVISORS[selected]) };
+    return {
+      target,
+      seconds,
+      requestedUnit,
+      selected,
+      value: Math.round(seconds / DIVISORS[selected]),
+    };
   }
 
   private relative(): { text: string; target: number } | undefined {
@@ -152,7 +167,10 @@ export class LyraRelativeTime extends LyraElement {
       };
     } catch {
       return {
-        text: getRelativeTimeFormat(undefined, { numeric: 'auto', style: 'long' }).format(state.value, state.selected),
+        text: getRelativeTimeFormat(undefined, {
+          numeric: 'auto',
+          style: 'long',
+        }).format(state.value, state.selected),
         target: state.target,
       };
     }
@@ -160,9 +178,11 @@ export class LyraRelativeTime extends LyraElement {
 
   override render(): TemplateResult {
     const relative = this.relative();
-    return relative
-      ? html`<time datetime=${new Date(relative.target).toISOString()}>${relative.text}</time>`
-      : html``;
+    return relative ? html`<time datetime=${new Date(relative.target).toISOString()}>${relative.text}</time>` : html``;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lr-relative-time': LyraRelativeTime; } }
+declare global {
+  interface HTMLElementTagNameMap {
+    'lr-relative-time': LyraRelativeTime;
+  }
+}

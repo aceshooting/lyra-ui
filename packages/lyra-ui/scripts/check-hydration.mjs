@@ -7,17 +7,25 @@ import { render } from '@lit-labs/ssr';
 import { collectResult } from '@lit-labs/ssr/lib/render-result.js';
 import { html } from 'lit';
 import { chromium } from 'playwright';
-import { packageDir, registrationDistPath, renderSsrMatrix } from './ssr-fixture.mjs';
+import {
+  packageDir,
+  registrationDistPath,
+  renderSsrMatrix,
+} from './ssr-fixture.mjs';
 
 // Exercise the published metadata through a production bundler, not only the direct browser
 // module graph below. A side-effect-only hydration entry missing from package.json#sideEffects is
 // silently discarded when ssr-loader imports it; direct ESM tests cannot reveal that failure.
 const requireFromPackage = createRequire(join(packageDir, 'package.json'));
-const requireFromLoaderHost = createRequire(requireFromPackage.resolve('@web/dev-server-esbuild'));
+const requireFromLoaderHost = createRequire(
+  requireFromPackage.resolve('@web/dev-server-esbuild')
+);
 const esbuild = requireFromLoaderHost('esbuild');
-const packageJson = JSON.parse(await readFile(join(packageDir, 'package.json'), 'utf8'));
+const packageJson = JSON.parse(
+  await readFile(join(packageDir, 'package.json'), 'utf8')
+);
 const optionalPeers = Object.keys(packageJson.peerDependencies ?? {}).filter(
-  (name) => packageJson.peerDependenciesMeta?.[name]?.optional === true,
+  (name) => packageJson.peerDependenciesMeta?.[name]?.optional === true
 );
 const bundledLoader = await esbuild.build({
   entryPoints: [join(packageDir, 'dist', 'ssr-loader.js')],
@@ -29,14 +37,18 @@ const bundledLoader = await esbuild.build({
   write: false,
   logLevel: 'silent',
 });
-const bundledLoaderSource = new TextDecoder().decode(bundledLoader.outputFiles[0].contents);
+const bundledLoaderSource = new TextDecoder().decode(
+  bundledLoader.outputFiles[0].contents
+);
 assert.match(
   bundledLoaderSource,
   /defer-hydration/,
-  'production bundling ssr-loader must retain the transitive Lit hydration hook',
+  'production bundling ssr-loader must retain the transitive Lit hydration hook'
 );
 
-const hydrationTagArg = process.argv.find((argument) => argument.startsWith('--tag='));
+const hydrationTagArg = process.argv.find((argument) =>
+  argument.startsWith('--tag=')
+);
 const hydrationTag = hydrationTagArg?.slice('--tag='.length);
 const hydrationMatrix = await renderSsrMatrix();
 const { inventory, loader, elementRenderers } = hydrationMatrix;
@@ -44,65 +56,73 @@ const entries = hydrationTag
   ? hydrationMatrix.entries.filter(({ tag }) => tag === hydrationTag)
   : hydrationMatrix.entries;
 if (hydrationTag) {
-  assert.ok(entries.some(({ tag }) => tag === hydrationTag), `unknown hydration probe tag: ${hydrationTag}`);
+  assert.ok(
+    entries.some(({ tag }) => tag === hydrationTag),
+    `unknown hydration probe tag: ${hydrationTag}`
+  );
 }
 const statefulProbeMarkup = new Map([
   [
     'lr-badge',
     await collectResult(
       render(
-        html`<lr-badge data-ssr-probe="lr-badge"><span slot="start"
-          data-ssr-light="lr-badge"
-        >●</span>Deployment complete<span slot="end">✓</span></lr-badge>`,
-        { elementRenderers },
-      ),
+        html`<lr-badge data-ssr-probe="lr-badge"
+          ><span slot="start" data-ssr-light="lr-badge">●</span>Deployment
+          complete<span slot="end">✓</span></lr-badge
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
     'lr-alert',
     await collectResult(
       render(
-        html`<lr-alert data-ssr-probe="lr-alert" open><span slot="icon"
-          data-ssr-light="lr-alert"
-        >!</span>Message</lr-alert>`,
-        { elementRenderers },
-      ),
+        html`<lr-alert data-ssr-probe="lr-alert" open
+          ><span slot="icon" data-ssr-light="lr-alert">!</span>Message</lr-alert
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
     'lr-callout',
     await collectResult(
       render(
-        html`<lr-callout data-ssr-probe="lr-callout"><span slot="icon"
-          data-ssr-light="lr-callout"
-        >!</span><strong slot="heading">Attention</strong>Message</lr-callout>`,
-        { elementRenderers },
-      ),
+        html`<lr-callout data-ssr-probe="lr-callout"
+          ><span slot="icon" data-ssr-light="lr-callout">!</span
+          ><strong slot="heading">Attention</strong>Message</lr-callout
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
     'lr-empty',
     await collectResult(
       render(
-        html`<lr-empty data-ssr-probe="lr-empty"><span
-          data-ssr-light="lr-empty"
-        >Illustration</span><strong slot="heading">No results</strong
-        ><span slot="description">Try another query</span
-        ><button slot="actions">Reset</button></lr-empty>`,
-        { elementRenderers },
-      ),
+        html`<lr-empty data-ssr-probe="lr-empty"
+          ><span data-ssr-light="lr-empty">Illustration</span
+          ><strong slot="heading">No results</strong
+          ><span slot="description">Try another query</span
+          ><button slot="actions">Reset</button></lr-empty
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
     'lr-chip',
     await collectResult(
       render(
-        html`<lr-chip data-ssr-probe="lr-chip" removable><span
-          slot="icon"
-          data-ssr-light="lr-chip"
-        >●</span>Research<span slot="end">✓</span></lr-chip>`,
-        { elementRenderers },
-      ),
+        html`<lr-chip data-ssr-probe="lr-chip" removable
+          ><span slot="icon" data-ssr-light="lr-chip">●</span>Research<span
+            slot="end"
+            >✓</span
+          ></lr-chip
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -113,9 +133,12 @@ const statefulProbeMarkup = new Map([
           data-ssr-probe="lr-flow-node"
           aria-label="SSR probe lr-flow-node"
           status="running"
-        ><span slot="header" data-ssr-light="lr-flow-node">Stateful header</span></lr-flow-node>`,
-        { elementRenderers },
-      ),
+          ><span slot="header" data-ssr-light="lr-flow-node"
+            >Stateful header</span
+          ></lr-flow-node
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -127,9 +150,12 @@ const statefulProbeMarkup = new Map([
           aria-label="SSR probe lr-menu-item"
           disabled
           loading
-        ><span data-ssr-light="lr-menu-item">Stateful menu item</span></lr-menu-item>`,
-        { elementRenderers },
-      ),
+          ><span data-ssr-light="lr-menu-item"
+            >Stateful menu item</span
+          ></lr-menu-item
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -144,21 +170,24 @@ const statefulProbeMarkup = new Map([
           required
           readonly
           disabled
-        ><span data-ssr-light="lr-rating">Stateful rating</span></lr-rating>`,
-        { elementRenderers },
-      ),
+          ><span data-ssr-light="lr-rating">Stateful rating</span></lr-rating
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
     'lr-tag',
     await collectResult(
       render(
-        html`<lr-tag
-          data-ssr-probe="lr-tag"
-          with-remove
-        ><span slot="start" data-ssr-light="lr-tag">●</span>Alpha<span slot="end">✓</span></lr-tag>`,
-        { elementRenderers },
-      ),
+        html`<lr-tag data-ssr-probe="lr-tag" with-remove
+          ><span slot="start" data-ssr-light="lr-tag">●</span>Alpha<span
+            slot="end"
+            >✓</span
+          ></lr-tag
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -166,10 +195,11 @@ const statefulProbeMarkup = new Map([
     await collectResult(
       render(
         html`<lr-chip-group data-ssr-probe="lr-chip-group" max-visible="2"
-          ><lr-chip data-ssr-light="lr-chip-group">One</lr-chip><lr-chip>Two</lr-chip
-          ><lr-chip>Three</lr-chip></lr-chip-group>`,
-        { elementRenderers },
-      ),
+          ><lr-chip data-ssr-light="lr-chip-group">One</lr-chip
+          ><lr-chip>Two</lr-chip><lr-chip>Three</lr-chip></lr-chip-group
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -178,9 +208,11 @@ const statefulProbeMarkup = new Map([
       render(
         html`<lr-avatar-group data-ssr-probe="lr-avatar-group" max="2"
           ><lr-avatar data-ssr-light="lr-avatar-group" label="One"></lr-avatar
-          ><lr-avatar label="Two"></lr-avatar><lr-avatar label="Three"></lr-avatar></lr-avatar-group>`,
-        { elementRenderers },
-      ),
+          ><lr-avatar label="Two"></lr-avatar
+          ><lr-avatar label="Three"></lr-avatar
+        ></lr-avatar-group>`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -188,9 +220,12 @@ const statefulProbeMarkup = new Map([
     await collectResult(
       render(
         html`<lr-lightbox data-ssr-probe="lr-lightbox" open
-          ><button slot="actions" data-ssr-light="lr-lightbox">Download</button></lr-lightbox>`,
-        { elementRenderers },
-      ),
+          ><button slot="actions" data-ssr-light="lr-lightbox">
+            Download
+          </button></lr-lightbox
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -199,10 +234,11 @@ const statefulProbeMarkup = new Map([
       render(
         html`<lr-model-select data-ssr-probe="lr-model-select"
           ><span slot="label" data-ssr-light="lr-model-select">Model</span
-          ><span slot="error">Choose a model</span><span slot="hint">Available models</span
-        ></lr-model-select>`,
-        { elementRenderers },
-      ),
+          ><span slot="error">Choose a model</span
+          ><span slot="hint">Available models</span></lr-model-select
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -211,10 +247,11 @@ const statefulProbeMarkup = new Map([
       render(
         html`<lr-voice-picker data-ssr-probe="lr-voice-picker"
           ><span slot="label" data-ssr-light="lr-voice-picker">Voice</span
-          ><span slot="error">Choose a voice</span><span slot="hint">Preview a voice</span
-        ></lr-voice-picker>`,
-        { elementRenderers },
-      ),
+          ><span slot="error">Choose a voice</span
+          ><span slot="hint">Preview a voice</span></lr-voice-picker
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -224,10 +261,11 @@ const statefulProbeMarkup = new Map([
         html`<lr-combobox data-ssr-probe="lr-combobox">
           <span slot="label" data-ssr-light="lr-combobox">Country</span
           ><span slot="start">&#x1f30d;</span><span slot="end">&#x2713;</span
-          ><span slot="error">Choose a country</span><span slot="hint">Start typing</span>
+          ><span slot="error">Choose a country</span
+          ><span slot="hint">Start typing</span>
         </lr-combobox>`,
-        { elementRenderers },
-      ),
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -235,11 +273,11 @@ const statefulProbeMarkup = new Map([
     await collectResult(
       render(
         html`<lr-option data-ssr-probe="lr-option" value="alpha"
-          ><span slot="start" data-ssr-light="lr-option">&#x25cf;</span>Alpha<span
-            slot="end"
-          >Primary</span></lr-option>`,
-        { elementRenderers },
-      ),
+          ><span slot="start" data-ssr-light="lr-option">&#x25cf;</span
+          >Alpha<span slot="end">Primary</span></lr-option
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -247,12 +285,13 @@ const statefulProbeMarkup = new Map([
     await collectResult(
       render(
         html`<lr-input data-ssr-probe="lr-input">
-          <span slot="label" data-ssr-light="lr-input">Name</span><span slot="start">@</span
-          ><span slot="end">&#x2713;</span><span slot="error">Enter a name</span
+          <span slot="label" data-ssr-light="lr-input">Name</span
+          ><span slot="start">@</span><span slot="end">&#x2713;</span
+          ><span slot="error">Enter a name</span
           ><span slot="hint">Public name</span>
         </lr-input>`,
-        { elementRenderers },
-      ),
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -262,10 +301,11 @@ const statefulProbeMarkup = new Map([
         html`<lr-select data-ssr-probe="lr-select">
           <span slot="label" data-ssr-light="lr-select">Status</span
           ><span slot="start">&#x25cf;</span><span slot="end">&#x2713;</span
-          ><span slot="error">Choose a status</span><span slot="hint">One status</span>
+          ><span slot="error">Choose a status</span
+          ><span slot="hint">One status</span>
         </lr-select>`,
-        { elementRenderers },
-      ),
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -274,10 +314,11 @@ const statefulProbeMarkup = new Map([
       render(
         html`<lr-textarea data-ssr-probe="lr-textarea">
           <span slot="label" data-ssr-light="lr-textarea">Notes</span
-          ><span slot="error">Enter notes</span><span slot="hint">Markdown supported</span>
+          ><span slot="error">Enter notes</span
+          ><span slot="hint">Markdown supported</span>
         </lr-textarea>`,
-        { elementRenderers },
-      ),
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -285,11 +326,11 @@ const statefulProbeMarkup = new Map([
     await collectResult(
       render(
         html`<lr-breadcrumb-item data-ssr-probe="lr-breadcrumb-item"
-          ><span slot="start" data-ssr-light="lr-breadcrumb-item">&#x2302;</span>Home<span
-            slot="end"
-          >1</span></lr-breadcrumb-item>`,
-        { elementRenderers },
-      ),
+          ><span slot="start" data-ssr-light="lr-breadcrumb-item">&#x2302;</span
+          >Home<span slot="end">1</span></lr-breadcrumb-item
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -298,10 +339,11 @@ const statefulProbeMarkup = new Map([
       render(
         html`<lr-file-input data-ssr-probe="lr-file-input">
           <span slot="label" data-ssr-light="lr-file-input">Attachments</span
-          ><span slot="error">Choose a smaller file</span><span slot="hint">PDF only</span>
+          ><span slot="error">Choose a smaller file</span
+          ><span slot="hint">PDF only</span>
         </lr-file-input>`,
-        { elementRenderers },
-      ),
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -312,12 +354,17 @@ const statefulProbeMarkup = new Map([
           data-ssr-probe="lr-flow-canvas"
           .nodes=${[
             { id: 'fetch', data: { label: 'Fetch' }, position: { x: 0, y: 0 } },
-            { id: 'answer', data: { label: 'Answer' }, position: { x: 240, y: 0 } },
+            {
+              id: 'answer',
+              data: { label: 'Answer' },
+              position: { x: 240, y: 0 },
+            },
           ]}
           .edges=${[{ id: 'fetch-answer', source: 'fetch', target: 'answer' }]}
-        ><span hidden data-ssr-light="lr-flow-canvas"></span></lr-flow-canvas>`,
-        { elementRenderers },
-      ),
+          ><span hidden data-ssr-light="lr-flow-canvas"></span
+        ></lr-flow-canvas>`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -326,10 +373,13 @@ const statefulProbeMarkup = new Map([
       render(
         html`<lr-dashboard-grid
           data-ssr-probe="lr-dashboard-grid"
-          .layout=${[{ id: 'summary', x: 0, y: 0, w: 3, h: 1, label: 'Summary' }]}
-        ><span hidden data-ssr-light="lr-dashboard-grid"></span></lr-dashboard-grid>`,
-        { elementRenderers },
-      ),
+          .layout=${[
+            { id: 'summary', x: 0, y: 0, w: 3, h: 1, label: 'Summary' },
+          ]}
+          ><span hidden data-ssr-light="lr-dashboard-grid"></span
+        ></lr-dashboard-grid>`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -341,9 +391,10 @@ const statefulProbeMarkup = new Map([
           aria-label="Documents"
           .columns=${[{ key: 'name', label: 'Name', cell: (row) => row.name }]}
           .rows=${[{ name: 'Alpha.pdf' }]}
-        ><span hidden data-ssr-light="lr-table"></span></lr-table>`,
-        { elementRenderers },
-      ),
+          ><span hidden data-ssr-light="lr-table"></span
+        ></lr-table>`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -352,10 +403,13 @@ const statefulProbeMarkup = new Map([
       render(
         html`<lr-document-library
           data-ssr-probe="lr-document-library"
-          .documents=${[{ id: 'alpha', name: 'Alpha.pdf', mimeType: 'application/pdf' }]}
-        ><span hidden data-ssr-light="lr-document-library"></span></lr-document-library>`,
-        { elementRenderers },
-      ),
+          .documents=${[
+            { id: 'alpha', name: 'Alpha.pdf', mimeType: 'application/pdf' },
+          ]}
+          ><span hidden data-ssr-light="lr-document-library"></span
+        ></lr-document-library>`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -364,16 +418,19 @@ const statefulProbeMarkup = new Map([
       render(
         html`<lr-emoji-picker
           data-ssr-probe="lr-emoji-picker"
-          .groups=${[{
-            label: 'Faces',
-            emojis: Array.from(
-              { length: 200 },
-              (_value, index) => ({ emoji: '😀', name: `face-${index}` }),
-            ),
-          }]}
-        ><span hidden data-ssr-light="lr-emoji-picker"></span></lr-emoji-picker>`,
-        { elementRenderers },
-      ),
+          .groups=${[
+            {
+              label: 'Faces',
+              emojis: Array.from({ length: 200 }, (_value, index) => ({
+                emoji: '😀',
+                name: `face-${index}`,
+              })),
+            },
+          ]}
+          ><span hidden data-ssr-light="lr-emoji-picker"></span
+        ></lr-emoji-picker>`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -386,21 +443,21 @@ const statefulProbeMarkup = new Map([
           row-height="48"
           .items=${['Alpha', 'Beta']}
           .renderItem=${(item) => item}
-        ><span hidden data-ssr-light="lr-virtual-list"></span></lr-virtual-list>`,
-        { elementRenderers },
-      ),
+          ><span hidden data-ssr-light="lr-virtual-list"></span
+        ></lr-virtual-list>`,
+        { elementRenderers }
+      )
     ),
   ],
   [
     'lr-qr-code',
     await collectResult(
       render(
-        html`<lr-qr-code
-          data-ssr-probe="lr-qr-code"
-          value="hello"
-        ><span hidden data-ssr-light="lr-qr-code"></span></lr-qr-code>`,
-        { elementRenderers },
-      ),
+        html`<lr-qr-code data-ssr-probe="lr-qr-code" value="hello"
+          ><span hidden data-ssr-light="lr-qr-code"></span
+        ></lr-qr-code>`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -422,8 +479,8 @@ const statefulProbeMarkup = new Map([
           ></lr-video
           ><lr-video title="Unavailable lesson" inert></lr-video
         ></lr-video-playlist>`,
-        { elementRenderers },
-      ),
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -434,9 +491,10 @@ const statefulProbeMarkup = new Map([
           data-ssr-probe="lr-result-field"
           label="Status"
           value="fallback"
-        ><span data-ssr-light="lr-result-field">Live</span></lr-result-field>`,
-        { elementRenderers },
-      ),
+          ><span data-ssr-light="lr-result-field">Live</span></lr-result-field
+        >`,
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -444,10 +502,11 @@ const statefulProbeMarkup = new Map([
     await collectResult(
       render(
         html`<lr-result-card data-ssr-probe="lr-result-card" with-actions
-          ><button slot="actions" data-ssr-light="lr-result-card">Copy</button>Body</lr-result-card
+          ><button slot="actions" data-ssr-light="lr-result-card">Copy</button
+          >Body</lr-result-card
         >`,
-        { elementRenderers },
-      ),
+        { elementRenderers }
+      )
     ),
   ],
   [
@@ -455,22 +514,25 @@ const statefulProbeMarkup = new Map([
     await collectResult(
       render(
         html`<lr-tab-group data-ssr-probe="lr-tab-group">
-          <section slot="one" label="One" data-ssr-light="lr-tab-group">Panel one</section>
+          <section slot="one" label="One" data-ssr-light="lr-tab-group">
+            Panel one
+          </section>
           <section slot="two" label="Two">Panel two</section>
         </lr-tab-group>`,
-        { elementRenderers },
-      ),
+        { elementRenderers }
+      )
     ),
   ],
   [
-    'lr-split',
+    'lr-multi-split',
     await collectResult(
       render(
-        html`<lr-split data-ssr-probe="lr-split" .sizes=${[50, 50]}
-          ><section data-ssr-light="lr-split">One</section><section>Two</section></lr-split
+        html`<lr-multi-split data-ssr-probe="lr-multi-split" .sizes=${[50, 50]}
+          ><section data-ssr-light="lr-multi-split">One</section>
+          <section>Two</section></lr-multi-split
         >`,
-        { elementRenderers },
-      ),
+        { elementRenderers }
+      )
     ),
   ],
 ]);
@@ -507,7 +569,7 @@ const populatedHydrationTags = new Set([
   'lr-result-field',
   'lr-result-card',
   'lr-tab-group',
-  'lr-split',
+  'lr-multi-split',
 ]);
 for (const [tag, markup] of statefulProbeMarkup) {
   const entry = entries.find((candidate) => candidate.tag === tag);
@@ -518,22 +580,33 @@ for (const [tag, markup] of statefulProbeMarkup) {
 }
 const litRoot = await realpath(join(packageDir, 'node_modules', 'lit'));
 const litDependencyRoot = resolve(litRoot, '..');
-const floatingDomRoot = await realpath(join(packageDir, 'node_modules', '@floating-ui', 'dom'));
+const floatingDomRoot = await realpath(
+  join(packageDir, 'node_modules', '@floating-ui', 'dom')
+);
 const floatingScopeRoot = resolve(floatingDomRoot, '..');
 
 const mounts = new Map([
   ['/dist/', join(packageDir, 'dist')],
-  ['/modules/ssr-client/', await realpath(join(packageDir, 'node_modules', '@lit-labs', 'ssr-client'))],
+  [
+    '/modules/ssr-client/',
+    await realpath(join(packageDir, 'node_modules', '@lit-labs', 'ssr-client')),
+  ],
   ['/modules/lit/', litRoot],
   ['/modules/lit-html/', await realpath(join(litDependencyRoot, 'lit-html'))],
-  ['/modules/lit-element/', await realpath(join(litDependencyRoot, 'lit-element'))],
+  [
+    '/modules/lit-element/',
+    await realpath(join(litDependencyRoot, 'lit-element')),
+  ],
   [
     '/modules/reactive-element/',
     await realpath(join(litDependencyRoot, '@lit', 'reactive-element')),
   ],
   ['/modules/floating-dom/', floatingDomRoot],
   ['/modules/floating-core/', await realpath(join(floatingScopeRoot, 'core'))],
-  ['/modules/floating-utils/', await realpath(join(floatingScopeRoot, 'utils'))],
+  [
+    '/modules/floating-utils/',
+    await realpath(join(floatingScopeRoot, 'utils')),
+  ],
 ]);
 
 const importMap = {
@@ -541,7 +614,7 @@ const importMap = {
     '@lit-labs/ssr-client/': '/modules/ssr-client/',
     '@lit/reactive-element': '/modules/reactive-element/reactive-element.js',
     '@lit/reactive-element/': '/modules/reactive-element/',
-    'lit': '/modules/lit/index.js',
+    lit: '/modules/lit/index.js',
     'lit/': '/modules/lit/',
     'lit-html': '/modules/lit-html/lit-html.js',
     'lit-html/': '/modules/lit-html/',
@@ -549,18 +622,24 @@ const importMap = {
     '@floating-ui/dom': '/modules/floating-dom/dist/floating-ui.dom.mjs',
     '@floating-ui/core': '/modules/floating-core/dist/floating-ui.core.mjs',
     '@floating-ui/utils': '/modules/floating-utils/dist/floating-ui.utils.mjs',
-    '@floating-ui/utils/dom': '/modules/floating-utils/dist/floating-ui.utils.dom.mjs',
+    '@floating-ui/utils/dom':
+      '/modules/floating-utils/dist/floating-ui.utils.dom.mjs',
   },
 };
 
 const optionalRegistrationUrls = inventory.components
   .filter(({ rootIncluded }) => !rootIncluded)
-  .map((component) =>
-    `/${registrationDistPath(component).slice(packageDir.length + 1).replaceAll('\\', '/')}`,
+  .map(
+    (component) =>
+      `/${registrationDistPath(component)
+        .slice(packageDir.length + 1)
+        .replaceAll('\\', '/')}`
   );
 
 const fixtureMarkup = entries
-  .map(({ tag, html }) => `<section data-fixture-tag="${tag}">${html}</section>`)
+  .map(
+    ({ tag, html }) => `<section data-fixture-tag="${tag}">${html}</section>`
+  )
   .join('\n');
 
 const documentHtml = `<!doctype html>
@@ -617,7 +696,7 @@ const documentHtml = `<!doctype html>
               { title: 'Unavailable lesson', unavailable: true },
             ];
             break;
-          case 'lr-split':
+          case 'lr-multi-split':
             host.sizes = [50, 50];
             break;
         }
@@ -671,7 +750,7 @@ const documentHtml = `<!doctype html>
             return host.shadowRoot?.querySelector('[part="actions"]');
           case 'lr-tab-group':
             return host.shadowRoot?.querySelector('slot:not([name])');
-          case 'lr-split':
+          case 'lr-multi-split':
             return host.shadowRoot?.querySelector('[role="separator"]');
           case 'lr-badge':
           case 'lr-tag':
@@ -847,7 +926,9 @@ const documentHtml = `<!doctype html>
         globalThis.__lyraHydrationStage = 'importing-loader';
         const loader = await import('/dist/ssr-loader.js');
         globalThis.__lyraHydrationStage = 'importing-optional-registrations';
-        await Promise.all(${JSON.stringify(optionalRegistrationUrls)}.map((url) => import(url)));
+        await Promise.all(${JSON.stringify(
+          optionalRegistrationUrls
+        )}.map((url) => import(url)));
         globalThis.__lyraHydrationStage = 'awaiting-first-updates';
         await Promise.all(firstHydrationPromises);
         globalThis.__lyraHydrationStage = 'awaiting-settled-updates';
@@ -997,7 +1078,8 @@ async function serveFile(response, root, relativePath) {
     const fileStat = await stat(filePath);
     if (!fileStat.isFile()) throw new Error('not a file');
     response.writeHead(200, {
-      'content-type': mimeTypes[extname(filePath)] ?? 'application/octet-stream',
+      'content-type':
+        mimeTypes[extname(filePath)] ?? 'application/octet-stream',
       'cache-control': 'no-store',
     });
     response.end(await readFile(filePath));
@@ -1007,7 +1089,9 @@ async function serveFile(response, root, relativePath) {
 }
 
 const server = createServer(async (request, response) => {
-  const pathname = decodeURIComponent(new URL(request.url ?? '/', 'http://localhost').pathname);
+  const pathname = decodeURIComponent(
+    new URL(request.url ?? '/', 'http://localhost').pathname
+  );
   if (pathname === '/') {
     response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     response.end(documentHtml);
@@ -1027,21 +1111,31 @@ await new Promise((resolveListen, reject) => {
   server.listen(0, '127.0.0.1', resolveListen);
 });
 const address = server.address();
-assert.ok(address && typeof address !== 'string', 'hydration server did not expose a port');
+assert.ok(
+  address && typeof address !== 'string',
+  'hydration server did not expose a port'
+);
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage();
 await page.emulateMedia({ reducedMotion: 'no-preference' });
 const browserFindings = [];
-page.on('pageerror', (error) => browserFindings.push(`pageerror: ${error.stack ?? error.message}`));
+page.on('pageerror', (error) =>
+  browserFindings.push(`pageerror: ${error.stack ?? error.message}`)
+);
 page.on('console', (message) => {
   if (message.type() === 'error' || message.type() === 'warning') {
-    if (/needs the optional peer dependenc(?:y|ies)/.test(message.text())) return;
+    if (/needs the optional peer dependenc(?:y|ies)/.test(message.text()))
+      return;
     browserFindings.push(`console.${message.type()}: ${message.text()}`);
   }
 });
 page.on('requestfailed', (request) => {
-  browserFindings.push(`request failed: ${request.url()} (${request.failure()?.errorText ?? 'unknown'})`);
+  browserFindings.push(
+    `request failed: ${request.url()} (${
+      request.failure()?.errorText ?? 'unknown'
+    })`
+  );
 });
 
 try {
@@ -1050,27 +1144,41 @@ try {
     timeout: 60_000,
   });
   try {
-    await page.waitForFunction(() => globalThis.__lyraHydrationDone === true, undefined, {
-      timeout: 60_000,
-    });
+    await page.waitForFunction(
+      () => globalThis.__lyraHydrationDone === true,
+      undefined,
+      {
+        timeout: 60_000,
+      }
+    );
   } catch (error) {
     const stage = await page.evaluate(() => globalThis.__lyraHydrationStage);
-    throw new Error(`hydration fixture timed out during ${stage ?? 'startup'}`, { cause: error });
+    throw new Error(
+      `hydration fixture timed out during ${stage ?? 'startup'}`,
+      { cause: error }
+    );
   }
   const outcome = await page.evaluate(() => ({
     error: globalThis.__lyraHydrationError,
     result: globalThis.__lyraHydrationResult,
   }));
-  assert.equal(outcome.error, undefined, `hydration fixture failed: ${outcome.error}`);
+  assert.equal(
+    outcome.error,
+    undefined,
+    `hydration fixture failed: ${outcome.error}`
+  );
   assert.equal(
     outcome.result.components.length,
     entries.length,
-    'hydration result count drifted from inventory',
+    'hydration result count drifted from inventory'
   );
 
-  const shouldAssertHydrationTag = (tag) => hydrationTag === undefined || hydrationTag === tag;
+  const shouldAssertHydrationTag = (tag) =>
+    hydrationTag === undefined || hydrationTag === tag;
   const hydrationResult = (tag) => {
-    const component = outcome.result.components.find((candidate) => candidate.tag === tag);
+    const component = outcome.result.components.find(
+      (candidate) => candidate.tag === tag
+    );
     assert.ok(component, `${tag} must be present in the hydration crawl`);
     return component;
   };
@@ -1103,7 +1211,7 @@ try {
       assert.deepEqual(
         semantics,
         expectedBadgeSemantics,
-        `lr-badge ${phase} must retain exactly one host status owner and no shadow duplicate`,
+        `lr-badge ${phase} must retain exactly one host status owner and no shadow duplicate`
       );
     }
   }
@@ -1131,7 +1239,7 @@ try {
       assert.deepEqual(
         semantics,
         expectedRatingSemantics,
-        `lr-rating ${phase} must retain one host-owned value/name/state slider surface`,
+        `lr-rating ${phase} must retain one host-owned value/name/state slider surface`
       );
     }
   }
@@ -1141,17 +1249,17 @@ try {
     assert.equal(
       checkboxHydration.mode,
       'render-and-hydrate',
-      'lr-checkbox must retain node-preserving server hydration',
+      'lr-checkbox must retain node-preserving server hydration'
     );
     assert.equal(
       checkboxHydration.rootReused,
       true,
-      'lr-checkbox must reuse its declarative shadow root on the first hydration update',
+      'lr-checkbox must reuse its declarative shadow root on the first hydration update'
     );
     assert.equal(
       checkboxHydration.shadowNodesReused,
       true,
-      'lr-checkbox must preserve its server shadow nodes on the first hydration update',
+      'lr-checkbox must preserve its server shadow nodes on the first hydration update'
     );
   }
 
@@ -1160,22 +1268,22 @@ try {
     assert.equal(
       chipHydration.mode,
       'render-and-hydrate',
-      'lr-chip must retain node-preserving server hydration',
+      'lr-chip must retain node-preserving server hydration'
     );
     assert.equal(
       chipHydration.rootReused && chipHydration.shadowNodesReused,
       true,
-      'lr-chip must preserve its declarative root and direct nodes on the first hydration update',
+      'lr-chip must preserve its declarative root and direct nodes on the first hydration update'
     );
     assert.equal(
       chipHydration.chipServerIconHidden,
       false,
-      'server chip must progressively expose authored icon content without JavaScript',
+      'server chip must progressively expose authored icon content without JavaScript'
     );
     assert.equal(
       chipHydration.chipServerRemoveLabel,
       'Remove',
-      'server chip must use the context-free remove label while light DOM is unavailable',
+      'server chip must use the context-free remove label while light DOM is unavailable'
     );
     assert.deepEqual(
       {
@@ -1190,18 +1298,22 @@ try {
         iconHiddenPreserved: true,
         removeLabelPreserved: true,
       },
-      'lr-chip first hydration render must preserve its nested actions and server-only state',
+      'lr-chip first hydration render must preserve its nested actions and server-only state'
     );
     assert.equal(
       chipHydration.chipIconReused && chipHydration.chipRemoveButtonReused,
       true,
-      'lr-chip corrective update must preserve the server icon and remove-button nodes',
+      'lr-chip corrective update must preserve the server icon and remove-button nodes'
     );
-    assert.equal(chipHydration.chipIconHidden, false, 'hydrated chip must reveal its assigned icon');
+    assert.equal(
+      chipHydration.chipIconHidden,
+      false,
+      'hydrated chip must reveal its assigned icon'
+    );
     assert.equal(
       chipHydration.chipRemoveLabel,
       'Remove Research',
-      'hydrated chip must add its light-DOM context to the remove label',
+      'hydrated chip must add its light-DOM context to the remove label'
     );
   }
 
@@ -1211,17 +1323,17 @@ try {
     assert.equal(
       component.progressiveServerPartsVisible,
       true,
-      `${tag} populated SSR must leave authored slot wrappers visible without JavaScript`,
+      `${tag} populated SSR must leave authored slot wrappers visible without JavaScript`
     );
     assert.equal(
       component.progressiveFirstPartsPreserved,
       true,
-      `${tag} first hydration update must reuse and preserve every progressive slot wrapper`,
+      `${tag} first hydration update must reuse and preserve every progressive slot wrapper`
     );
     assert.equal(
       component.progressiveSettledPartsPreserved,
       true,
-      `${tag} settled hydration must keep every authored slot wrapper visible and reused`,
+      `${tag} settled hydration must keep every authored slot wrapper visible and reused`
     );
   }
 
@@ -1230,29 +1342,38 @@ try {
     assert.equal(
       flowNodeHydration.mode,
       'render-and-hydrate',
-      'lr-flow-node must retain node-preserving server hydration',
+      'lr-flow-node must retain node-preserving server hydration'
     );
     assert.equal(
       flowNodeHydration.rootReused && flowNodeHydration.shadowNodesReused,
       true,
-      'lr-flow-node must preserve its declarative root and nodes on the first hydration update',
+      'lr-flow-node must preserve its declarative root and nodes on the first hydration update'
     );
-    assert.equal(flowNodeHydration.flowServerPulse, false, 'server flow node must start without motion');
+    assert.equal(
+      flowNodeHydration.flowServerPulse,
+      false,
+      'server flow node must start without motion'
+    );
     assert.equal(
       flowNodeHydration.flowServerHasBuiltInHeader,
       true,
-      'server flow node must retain its fallback header before slot assignment is observable',
+      'server flow node must retain its fallback header before slot assignment is observable'
     );
     assert.equal(
-      flowNodeHydration.flowPulsePreserved && flowNodeHydration.flowHeaderPreserved,
+      flowNodeHydration.flowPulsePreserved &&
+        flowNodeHydration.flowHeaderPreserved,
       true,
-      'lr-flow-node first hydration render must reproduce both server-only state decisions',
+      'lr-flow-node first hydration render must reproduce both server-only state decisions'
     );
-    assert.equal(flowNodeHydration.flowPulse, true, 'hydrated running flow node must enable motion');
+    assert.equal(
+      flowNodeHydration.flowPulse,
+      true,
+      'hydrated running flow node must enable motion'
+    );
     assert.equal(
       flowNodeHydration.flowHasBuiltInHeader,
       false,
-      'hydrated flow node must replace its fallback with the assigned header',
+      'hydrated flow node must replace its fallback with the assigned header'
     );
   }
 
@@ -1261,27 +1382,27 @@ try {
     assert.equal(
       menuItemHydration.mode,
       'render-and-hydrate',
-      'lr-menu-item must retain node-preserving server hydration',
+      'lr-menu-item must retain node-preserving server hydration'
     );
     assert.equal(
       menuItemHydration.rootReused,
       true,
-      'lr-menu-item must reuse its declarative shadow root on the first hydration update',
+      'lr-menu-item must reuse its declarative shadow root on the first hydration update'
     );
     assert.equal(
       menuItemHydration.shadowNodesReused,
       true,
-      'lr-menu-item must preserve its server shadow nodes on the first hydration update',
+      'lr-menu-item must preserve its server shadow nodes on the first hydration update'
     );
     assert.equal(
       menuItemHydration.menuAriaDisabled,
       'true',
-      'hydrated disabled/loading menu item must retain its disabled semantics',
+      'hydrated disabled/loading menu item must retain its disabled semantics'
     );
     assert.equal(
       menuItemHydration.menuHasSpinner,
       true,
-      'hydrated loading menu item must retain its spinner state',
+      'hydrated loading menu item must retain its spinner state'
     );
   }
 
@@ -1291,72 +1412,91 @@ try {
       assert.equal(
         semantics.statusOwnerCount,
         0,
-        `lr-tag ${phase} must not acquire badge status semantics`,
+        `lr-tag ${phase} must not acquire badge status semantics`
       );
       assert.equal(
         semantics.shadowStatusOwnerCount,
         0,
-        `lr-tag ${phase} must not expose a shadow status owner`,
+        `lr-tag ${phase} must not expose a shadow status owner`
       );
     }
     assert.equal(
       tagHydration.mode,
       'render-and-hydrate',
-      'lr-tag must retain node-preserving server hydration',
+      'lr-tag must retain node-preserving server hydration'
     );
     assert.equal(
       tagHydration.rootReused && tagHydration.shadowNodesReused,
       true,
-      'lr-tag must preserve its declarative root and nodes on the first hydration update',
+      'lr-tag must preserve its declarative root and nodes on the first hydration update'
     );
     assert.equal(
       tagHydration.tagServerRemoveLabel,
       'Remove',
-      'server tag must use the context-free remove label while light DOM is unavailable',
+      'server tag must use the context-free remove label while light DOM is unavailable'
     );
     assert.equal(
-      tagHydration.tagFirstRemoveButtonReused && tagHydration.tagFirstRemoveLabelPreserved,
+      tagHydration.tagFirstRemoveButtonReused &&
+        tagHydration.tagFirstRemoveLabelPreserved,
       true,
-      'lr-tag first hydration render must preserve the server remove action and its bare label',
+      'lr-tag first hydration render must preserve the server remove action and its bare label'
     );
     assert.equal(
       tagHydration.tagRemoveButtonReused,
       true,
-      'lr-tag contextual-label update must keep the server remove button node',
+      'lr-tag contextual-label update must keep the server remove button node'
     );
     assert.equal(
       tagHydration.tagRemoveLabel,
       'Remove Alpha',
-      'hydrated tag must add its light-DOM context to the remove label',
+      'hydrated tag must add its light-DOM context to the remove label'
     );
   }
 
   const failures = [...outcome.result.updateErrors, ...browserFindings];
   for (const result of outcome.result.components) {
-    if (result.probeAttribute !== result.tag) failures.push(`${result.tag}: host attribute changed`);
-    if (!result.lightNodeReused) failures.push(`${result.tag}: light DOM node identity changed`);
+    if (result.probeAttribute !== result.tag)
+      failures.push(`${result.tag}: host attribute changed`);
+    if (!result.lightNodeReused)
+      failures.push(`${result.tag}: light DOM node identity changed`);
     if (result.mode === 'render-and-hydrate') {
-      if (result.status !== 'hydrated') failures.push(`${result.tag}: diagnostic=${result.status}`);
-      if (!result.rootReused) failures.push(`${result.tag}: declarative shadow root was replaced`);
+      if (result.status !== 'hydrated')
+        failures.push(`${result.tag}: diagnostic=${result.status}`);
+      if (!result.rootReused)
+        failures.push(`${result.tag}: declarative shadow root was replaced`);
       if (!result.shadowNodesReused) {
         failures.push(
           `${result.tag}: server shadow nodes were replaced ` +
-          JSON.stringify({
-            before: result.directShadowNodeSignatureBefore,
-            after: result.directShadowNodeSignatureAfter,
-          }),
+            JSON.stringify({
+              before: result.directShadowNodeSignatureBefore,
+              after: result.directShadowNodeSignatureAfter,
+            })
         );
       }
-      if (populatedHydrationTags.has(result.tag) && !result.populatedFirstNodeReused) {
-        failures.push(`${result.tag}: populated server node was replaced on first hydration`);
+      if (
+        populatedHydrationTags.has(result.tag) &&
+        !result.populatedFirstNodeReused
+      ) {
+        failures.push(
+          `${result.tag}: populated server node was replaced on first hydration`
+        );
       }
     } else {
-      if (result.status !== 'client-rendered') failures.push(`${result.tag}: diagnostic=${result.status}`);
-      if (!result.startedWithoutShadow) failures.push(`${result.tag}: fallback emitted server shadow DOM`);
-      if (!result.hasClientShadow) failures.push(`${result.tag}: client upgrade did not render shadow DOM`);
+      if (result.status !== 'client-rendered')
+        failures.push(`${result.tag}: diagnostic=${result.status}`);
+      if (!result.startedWithoutShadow)
+        failures.push(`${result.tag}: fallback emitted server shadow DOM`);
+      if (!result.hasClientShadow)
+        failures.push(
+          `${result.tag}: client upgrade did not render shadow DOM`
+        );
     }
   }
-  assert.deepEqual(failures, [], `hydration contract failures:\n${failures.join('\n')}`);
+  assert.deepEqual(
+    failures,
+    [],
+    `hydration contract failures:\n${failures.join('\n')}`
+  );
 } finally {
   await browser.close();
   await new Promise((resolveClose) => server.close(resolveClose));
@@ -1364,5 +1504,5 @@ try {
 
 console.log(
   `Hydration crawl passed: ${loader.LYRA_SSR_RENDER_AND_HYDRATE_TAGS.length} shadow roots reused, ` +
-    `${loader.LYRA_SSR_CLIENT_RENDER_TAGS.length} explicit client fallbacks upgraded.`,
+    `${loader.LYRA_SSR_CLIENT_RENDER_TAGS.length} explicit client fallbacks upgraded.`
 );

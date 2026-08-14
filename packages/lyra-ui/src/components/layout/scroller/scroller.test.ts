@@ -16,7 +16,7 @@ describe("<lr-scroller>", () => {
     expect(el.orientation).to.equal("horizontal");
     expect(el.withoutScrollbar).to.be.false;
     expect(el.withoutShadow).to.be.false;
-    expect(el.hideScrollbar).to.be.false;
+    expect("hideScrollbar" in el).to.be.false;
   });
 
   it("renders logical start/end shadow parts only where more content exists", async () => {
@@ -58,15 +58,64 @@ describe("<lr-scroller>", () => {
     );
   });
 
-  it("accepts without-scrollbar alongside the legacy hide-scrollbar alias", async () => {
-    for (const attribute of ["without-scrollbar", "hide-scrollbar"]) {
-      const el = await fixture<LyraScroller>(
-        attribute === "without-scrollbar"
-          ? html`<lr-scroller label="Items" without-scrollbar><span>Content</span></lr-scroller>`
-          : html`<lr-scroller label="Items" hide-scrollbar><span>Content</span></lr-scroller>`
-      );
+  it("uses the canonical without-scrollbar opt-out", async () => {
+    const el = await fixture<LyraScroller>(
+      html`<lr-scroller label="Items" without-scrollbar><span>Content</span></lr-scroller>`
+    );
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    expect(getComputedStyle(viewport).scrollbarWidth).to.equal("none");
+  });
+
+  it("keeps controls and edge cues inert until the first trustworthy measurement", async () => {
+    const el = document.createElement("lr-scroller") as LyraScroller;
+    el.controls = true;
+    Object.assign(el as unknown as Record<string, unknown>, {
+      armResizeObserver: () => undefined,
+      scheduleEdgeUpdate: () => undefined,
+    });
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      const previous = el.shadowRoot!.querySelector('[part~="previous"]') as HTMLButtonElement;
+      const next = el.shadowRoot!.querySelector('[part~="next"]') as HTMLButtonElement;
+      const start = el.shadowRoot!.querySelector('[part="start-shadow"]') as HTMLElement;
+      const end = el.shadowRoot!.querySelector('[part="end-shadow"]') as HTMLElement;
+      expect(previous.disabled).to.be.true;
+      expect(next.disabled).to.be.true;
+      expect(start.hidden).to.be.true;
+      expect(end.hidden).to.be.true;
+    } finally {
+      el.remove();
+    }
+  });
+
+  it("observes the slotted content wrapper so intrinsic-size-only changes refresh edges", async () => {
+    const OriginalResizeObserver = window.ResizeObserver;
+    let callback: ResizeObserverCallback | undefined;
+    const observed = new Set<Element>();
+    class TestResizeObserver implements ResizeObserver {
+      constructor(next: ResizeObserverCallback) { callback = next; }
+      observe(target: Element): void { observed.add(target); }
+      unobserve(target: Element): void { observed.delete(target); }
+      disconnect(): void { observed.clear(); }
+    }
+    window.ResizeObserver = TestResizeObserver;
+    try {
+      const el = await fixture<LyraScroller>(html`
+        <lr-scroller controls><span>Content</span></lr-scroller>
+      `);
+      const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
       const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
-      expect(getComputedStyle(viewport).scrollbarWidth).to.equal("none");
+      const next = el.shadowRoot!.querySelector('[part~="next"]') as HTMLButtonElement;
+      expect(observed.has(content), "content wrapper is a resize target").to.be.true;
+
+      Object.defineProperty(viewport, "clientWidth", { configurable: true, value: 100 });
+      Object.defineProperty(viewport, "scrollWidth", { configurable: true, value: 300 });
+      callback?.([], {} as ResizeObserver);
+      await el.updateComplete;
+      expect(next.disabled).to.be.false;
+    } finally {
+      window.ResizeObserver = OriginalResizeObserver;
     }
   });
 
@@ -402,7 +451,7 @@ describe("<lr-scroller>", () => {
 
   it("gives control a hover state", () => {
     const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-    expect(css).to.match(/\[part='control'\]:hover/);
+    expect(css).to.match(/\[part~='control'\]:hover:not\(:disabled\)/);
   });
 
   it("gives the keyboard-focusable viewport a hover affordance", () => {

@@ -9,7 +9,7 @@ import '../model-select/model-select.class.js';
 import '../../forms/slider/slider.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_selectModel, LYRA_DEFAULT_temperature } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_model, LYRA_DEFAULT_selectModel, LYRA_DEFAULT_temperature } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -18,7 +18,7 @@ export type ModelSettingsPanelLayout = 'vertical' | 'compact';
 /** The full current settings shape, re-emitted on every `lr-change`
  *  regardless of which child control actually triggered it. */
 export interface ModelSettingsChangeDetail {
-  modelValue: string;
+  model: string;
   inCatalog: boolean;
   temperature: number;
 }
@@ -53,13 +53,16 @@ const DEFAULT_TEMPERATURE = 1;
  * `lr-change` — and is re-clamped into `[temperatureMin, temperatureMax]`
  * (snapped to `temperatureStep`) whenever those three properties change, so
  * it can never drift from what the nested `lr-slider` itself shows.
- * The visible temperature readout uses the effective locale with up to 20 fractional digits,
- * matching `<lr-slider>` rather than exposing JavaScript's raw number serialization.
+ * The visible temperature readout uses the effective locale and switches to bounded scientific
+ * notation when a full decimal expansion would disturb the layout. The slider retains the exact
+ * finite value through `aria-valuenow`.
  *
  * @customElement lr-model-settings-panel
- * @event lr-change - Either child control changed. `detail: { modelValue: string; inCatalog: boolean; temperature: number }` — always the full current settings, not just whatever changed.
+ * @event lr-change - Either child control changed. `detail: { model: string; inCatalog: boolean; temperature: number }` — always the full current settings, not just whatever changed.
  * @csspart base - The outermost wrapping container.
  * @csspart model-row - The row wrapping the internal `lr-model-select`.
+ * @csspart model-select - The internal model selector.
+ * @csspart model-label - The model selector's visible label.
  * @csspart temperature-row - The row wrapping the temperature label/slider/value.
  * @csspart temperature-label - The visible "Temperature" caption.
  * @csspart temperature-value - The visible current temperature readout.
@@ -72,6 +75,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
+    model: LYRA_DEFAULT_model,
     selectModel: LYRA_DEFAULT_selectModel,
     temperature: LYRA_DEFAULT_temperature,
   };
@@ -84,7 +88,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   /** The model list, passed straight through to the internal `lr-model-select`. */
   @property({ attribute: false }) catalog?: LyraModelCatalog;
   /** The current model id. */
-  @property({ attribute: 'model-value' }) modelValue = '';
+  @property() model = '';
   /** Let the model control accept a value outside `catalog`; passed straight through. */
   @property({ type: Boolean, attribute: 'allow-custom' }) allowCustom = false;
   /** The current sampling temperature. */
@@ -102,15 +106,27 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
    *  `disabled` IDL property/attribute is never mutated by fieldset cascading. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
-  /** Whether `modelValue` is present in `catalog` — recomputed fresh from
+  /** Whether `model` is present in `catalog` — recomputed fresh from
    *  scratch (like `lr-model-select`'s own `effectiveEntries`) rather than
    *  cached from the last child event, so it's still correct when
-   *  `modelValue` was assigned directly instead of via the child's own
+   *  `model` was assigned directly instead of via the child's own
    *  `lr-change`. */
   private get inCatalog(): boolean {
     const catalog = this.catalog;
     if (!catalog || catalog.length === 0) return false;
-    return catalog.some((entry) => (typeof entry === 'string' ? entry === this.modelValue : entry.id === this.modelValue));
+    return catalog.some((entry) => (typeof entry === 'string' ? entry === this.model : entry.id === this.model));
+  }
+
+  private get temperatureDomain(): { min: number; max: number; lo: number; hi: number; step: number } {
+    const min = finiteNumber(this.temperatureMin, DEFAULT_TEMPERATURE_MIN);
+    const max = finiteNumber(this.temperatureMax, DEFAULT_TEMPERATURE_MAX);
+    return {
+      min,
+      max,
+      lo: Math.min(min, max),
+      hi: Math.max(min, max),
+      step: finiteRange(this.temperatureStep, 0, 0),
+    };
   }
 
   /** Clamps `raw` into `[temperatureMin, temperatureMax]`, snapped to
@@ -119,13 +135,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
    *  mirrored `temperature` readout can never disagree with what the nested
    *  slider itself would clamp the same raw number to. */
   private clampTemperature(raw: number): number {
-    const rawMin = this.temperatureMin;
-    const rawMax = this.temperatureMax;
-    const min = finiteNumber(rawMin, DEFAULT_TEMPERATURE_MIN);
-    const max = finiteNumber(rawMax, DEFAULT_TEMPERATURE_MAX);
-    const lo = Math.min(min, max);
-    const hi = Math.max(min, max);
-    const step = finiteRange(this.temperatureStep, 0, 0);
+    const { lo, hi, step } = this.temperatureDomain;
     const hasStep = step > 0;
     let stepped = Math.min(hi, Math.max(lo, finiteNumber(raw, lo)));
     if (hasStep) {
@@ -142,12 +152,17 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   }
 
   private formatTemperature(value: number): string {
-    return getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 20 }).format(value);
+    const expanded = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 20 }).format(value);
+    if (expanded.length <= 24) return expanded;
+    return getNumberFormat(this.effectiveLocale, {
+      notation: 'scientific',
+      maximumSignificantDigits: 6,
+    }).format(value);
   }
 
   private emitChange(): void {
     this.emit('lr-change', {
-      modelValue: this.modelValue,
+      model: this.model,
       inCatalog: this.inCatalog,
       temperature: this.temperature,
     });
@@ -155,13 +170,15 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
 
   private onModelChange = (e: CustomEvent<{ value: string; inCatalog: boolean }>): void => {
     e.stopPropagation();
-    this.modelValue = e.detail.value;
+    if (this.disabled) return;
+    this.model = e.detail.value;
     this.emitChange();
   };
 
   private onTemperatureChange = (e: CustomEvent<{ value: number }>): void => {
     e.stopPropagation();
-    this.temperature = e.detail.value;
+    if (this.disabled) return;
+    this.temperature = this.clampTemperature(e.detail.value);
     this.emitChange();
   };
 
@@ -172,7 +189,12 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
    *  once the interaction commits. */
   private onTemperatureInput = (e: CustomEvent<{ value: number }>): void => {
     e.stopPropagation();
-    this.temperature = e.detail.value;
+    if (this.disabled) return;
+    this.temperature = this.clampTemperature(e.detail.value);
+  };
+
+  private containNativeEvent = (event: Event): void => {
+    event.stopPropagation();
   };
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -189,14 +211,19 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   }
 
   override render(): TemplateResult {
+    const domain = this.temperatureDomain;
+    const modelLabel = this.localize('model');
     const temperatureLabel = this.localize('temperature');
     return html`
-      <div part="base">
+      <div part="base" @input=${this.containNativeEvent} @change=${this.containNativeEvent}>
         <div part="model-row">
           <lr-model-select
+            part="model-select"
+            exportparts="form-control-label:model-label"
             .provider=${this.provider}
             .catalog=${this.catalog}
-            .value=${this.modelValue}
+            .value=${this.model}
+            .label=${modelLabel}
             .allowCustom=${this.allowCustom}
             .disabled=${this.disabled}
             placeholder=${this.localize('selectModel')}
@@ -207,9 +234,9 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
           <span part="temperature-label">${temperatureLabel}</span>
           <lr-slider
             aria-label=${temperatureLabel}
-            .min=${this.temperatureMin}
-            .max=${this.temperatureMax}
-            .step=${this.temperatureStep}
+            .min=${domain.min}
+            .max=${domain.max}
+            .step=${domain.step}
             .valueAsNumber=${this.temperature}
             .showValue=${false}
             .disabled=${this.disabled}

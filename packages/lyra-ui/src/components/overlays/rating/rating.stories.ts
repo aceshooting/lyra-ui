@@ -1,7 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import './rating.js';
-const meta: Meta = { title: 'Form/Rating', component: 'lr-rating', tags: ['autodocs'] };
+import { LyraRating } from './rating.js';
+const meta: Meta = {
+  title: 'Form/Rating',
+  component: 'lr-rating',
+  tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'A form-associated slider-style rating. The public `rating` getter returns the live presentational symbol row.',
+      },
+    },
+  },
+};
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-rating value="3" label="Satisfaction"></lr-rating>` };
 export const NativeChangeEvent: StoryObj = {
@@ -128,6 +140,33 @@ export const InAForm: StoryObj = {
       <output></output>
     </form>
   `,
+};
+export const StaticValidators: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The mirrored constructor exposes a fresh callable `validators` catalog for tooling that projects the rating\'s live intrinsic and custom validity.',
+      },
+    },
+  },
+  render: () => {
+    const validate = (event: Event) => {
+      const wrapper = (event.currentTarget as HTMLElement).parentElement!;
+      const control = wrapper.querySelector<LyraRating>('lr-rating')!;
+      const result = LyraRating.validators[0]!.checkValidity(control);
+      wrapper.querySelector('output')!.textContent = result.isValid
+        ? 'Valid rating'
+        : `${result.invalidKeys.join(', ')}: ${result.message}`;
+    };
+    return html`
+      <div style="display: flex; gap: var(--lr-space-s); align-items: center; flex-wrap: wrap;">
+        <lr-rating required label="Satisfaction"></lr-rating>
+        <button type="button" @click=${validate}>Run static validator</button>
+        <output aria-live="polite"></output>
+      </div>
+    `;
+  },
 };
 export const CustomTheming: StoryObj = {
   render: () => html`<lr-rating

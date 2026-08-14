@@ -82,5 +82,4 @@ export const styles = css`
   [part='quoted'] { margin-block-start: var(--lr-space-xs); color: var(--lr-color-text-quiet); }
   .empty-note { margin: 0; padding: var(--lr-space-m); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); }
   [part='error'] { margin: 0; padding: var(--lr-space-l); color: var(--lr-color-danger); font-size: var(--lr-font-size-md-sm); text-align: center; }
-  [part='spinner'] { display: flex; justify-content: center; padding: var(--lr-space-l); }
 `;

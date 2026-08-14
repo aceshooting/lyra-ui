@@ -1,11 +1,13 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
 import type {
   LyraAnchor,
   LyraAnchorKind,
+  LyraHighlight,
   HighlightActivateDetail,
   AnchorResultDetail,
 } from '../../viewers/document-viewer/anchors.js';
@@ -17,7 +19,7 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './image-viewer.styles.js';
-import { sanitizePercentRect } from '../../../internal/safe-css.js';
+import { sanitizePercentRect, type SafePercentRect } from '../../../internal/safe-css.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -25,22 +27,61 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type ImageFit = 'contain' | 'width' | 'actual';
-export type ImageRotation = 0 | 90 | 180 | 270;
+export type LyraImageFit = 'contain' | 'width' | 'actual';
+export type LyraImageRotation = 0 | 90 | 180 | 270;
 /** Finite percentage coordinates. Negative widths/heights are rejected when rendered. */
-export interface ImageRegionRect {
+export interface LyraImageRegionRect {
   x: number;
   y: number;
   width: number;
   height: number;
 }
 
-type AnnotationDraft = ImageRegionRect;
+type AnnotationDraft = LyraImageRegionRect;
 
 type ImageLoadState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded' } | { kind: 'error' };
 
 const MIN_REGION_PERCENT = 2;
 const ARROW_STEP_PERCENT = 2;
+/** Maximum region buttons projected at once. An active region beyond the leading window replaces
+ * the final entry so anchor identity remains reachable without making an unbounded tab/DOM list. */
+export const IMAGE_VIEWER_HIGHLIGHT_LIMIT = 200;
+const IMAGE_FITS = new Set<LyraImageFit>(['contain', 'width', 'actual']);
+
+function normalizeImageFit(value: unknown): LyraImageFit {
+  return IMAGE_FITS.has(value as LyraImageFit) ? value as LyraImageFit : 'contain';
+}
+
+function normalizeImageRotation(value: unknown): LyraImageRotation {
+  const degrees = typeof value === 'number' ? finiteNumber(value, 0) : 0;
+  const steps = Math.round(degrees / 90);
+  return ((((steps % 4) + 4) % 4) * 90) as LyraImageRotation;
+}
+
+function normalizeImageRegionRect(value: unknown): SafePercentRect | undefined {
+  const rect = sanitizePercentRect(value);
+  if (
+    !rect ||
+    rect.x < 0 ||
+    rect.y < 0 ||
+    rect.width <= 0 ||
+    rect.height <= 0 ||
+    rect.x + rect.width > 100 ||
+    rect.y + rect.height > 100
+  ) return undefined;
+  return rect;
+}
+
+function normalizeHighlightTone(value: unknown): 'accent' | 'success' | 'warning' | 'danger' | 'neutral' {
+  return value === 'success' || value === 'warning' || value === 'danger' || value === 'neutral'
+    ? value
+    : 'accent';
+}
+
+interface NormalizedRegionHighlight {
+  highlight: LyraHighlight;
+  rect: SafePercentRect;
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -50,7 +91,7 @@ function clamp(value: number, min: number, max: number): number {
  *  coordinate space. Exact (not an approximation) because `rotation` is constrained to right
  *  angles: a 90/270 rotation of a rectangle is exactly an axis swap with a sign flip, and 180 is
  *  exactly a double sign flip. */
-function screenPercentToImagePercent(px: number, py: number, rotation: ImageRotation): { x: number; y: number } {
+function screenPercentToImagePercent(px: number, py: number, rotation: LyraImageRotation): { x: number; y: number } {
   switch (rotation) {
     case 90:
       return { x: py, y: 100 - px };
@@ -66,8 +107,8 @@ function screenPercentToImagePercent(px: number, py: number, rotation: ImageRota
 export interface LyraImageViewerEventMap {
   'lr-load': CustomEvent<{ naturalWidth: number; naturalHeight: number }>;
   'lr-zoom-change': CustomEvent<{ zoom: number }>;
-  'lr-rotation-change': CustomEvent<{ rotation: ImageRotation }>;
-  'lr-fit-change': CustomEvent<{ fit: ImageFit }>;
+  'lr-rotation-change': CustomEvent<{ rotation: LyraImageRotation }>;
+  'lr-fit-change': CustomEvent<{ fit: LyraImageFit }>;
   'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
   'lr-annotation-create': CustomEvent<{ anchor: LyraAnchor }>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
@@ -86,13 +127,22 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * Adopts `DocumentAnchorTarget` with `anchorKinds: ['region']` only — no text selection is bound
  * (a raster image has no selectable text), so `lr-text-select` is never emitted by this viewer.
  *
+ * Region rectangles are canonical finite, positive percentages wholly inside the 0–100 image
+ * space; IDs use first-wins uniqueness. At most `IMAGE_VIEWER_HIGHLIGHT_LIMIT` buttons are
+ * projected at once with one roving tab stop. An active tail item remains reachable by replacing
+ * the final item in the leading window. Anchor success means the canonical rendered target was
+ * scrolled into and visibly intersects the embedded viewport.
+ *
+ * Fit, rotation, and annotation controls become operable only after the current image loads. At
+ * 90°/270° the `rotation-frame` owns an axis-swapped layout footprint so transformed media stays
+ * reachable in every fit mode rather than painting outside the pan/zoom scroll geometry.
+ *
  * **RTL behavior:** the raster and annotation geometry use physical image coordinates. In
  * annotation mode, ArrowLeft/ArrowRight decrease/increase a draft's x coordinate and their Shift
  * variants decrease/increase its width in both text directions; the surrounding toolbar remains
  * logical.
  *
  * @customElement lr-image-viewer
- * @slot - None.
  * @event lr-load - Image finished loading. `detail: { naturalWidth, naturalHeight }`.
  * @event lr-zoom-change - `detail: { zoom }`, bubbles from the embedded pan-zoom surface.
  * @event lr-rotation-change - `detail: { rotation }`.
@@ -109,6 +159,10 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * @csspart rotate-button - The rotate-90-clockwise button.
  * @csspart annotate-toggle - The annotation-mode toggle button.
  * @csspart frame - The embedded `lr-pan-zoom`.
+ * @csspart frame-viewport - The embedded pan-zoom's scrollable viewport.
+ * @csspart frame-content - The embedded pan-zoom's transformed content wrapper.
+ * @csspart frame-controls - The embedded pan-zoom's zoom controls.
+ * @csspart rotation-frame - Layout footprint that axis-swaps at 90/270 degrees.
  * @csspart image-wrapper - The rotated wrapper around the image and its overlays.
  * @csspart image - The `<img>` element.
  * @csspart highlight-layer - The overlay hosting highlight boxes.
@@ -186,7 +240,16 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   @property() alt?: string;
   /** Base scale at `zoom = 1`: `contain` fits the whole image in the frame, `width` fills the
    *  frame's inline size, `actual` shows the image at its natural pixel dimensions. */
-  @property({ reflect: true }) fit: ImageFit = 'contain';
+  private _fit: LyraImageFit = 'contain';
+  @property({ reflect: true })
+  get fit(): LyraImageFit {
+    return this._fit;
+  }
+  set fit(value: LyraImageFit) {
+    const old = this._fit;
+    this._fit = normalizeImageFit(value);
+    this.requestUpdate('fit', old);
+  }
   /** Multiplier over the fit-derived base scale, delegated to the embedded pan-zoom surface. */
   // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeZoom
   @property({ type: Number, reflect: true }) zoom = 1;
@@ -207,7 +270,17 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeZoomStep
   @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
   /** Clockwise rotation in 90-degree steps. */
-  @property({ type: Number, reflect: true }) rotation: ImageRotation = 0;
+  private _rotation: LyraImageRotation = 0;
+  // numeric-guard-exempt: the setter immediately normalizes every write with finiteNumber and a bounded four-step wrap
+  @property({ type: Number, reflect: true })
+  get rotation(): LyraImageRotation {
+    return this._rotation;
+  }
+  set rotation(value: LyraImageRotation) {
+    const old = this._rotation;
+    this._rotation = normalizeImageRotation(value);
+    this.requestUpdate('rotation', old);
+  }
   /** Enables region drawing via pointer or keyboard. */
   @property({ type: Boolean, reflect: true }) annotatable = false;
 
@@ -216,7 +289,14 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   @state() private loadState: ImageLoadState = { kind: 'idle' };
   @state() private draft: AnnotationDraft | null = null;
+  @state() private revealTarget: SafePercentRect | null = null;
+  @state() private highlightFocusId: string | null = null;
+  @state() private mediaLayoutSize: { width: number; height: number } | null = null;
   private errorAnnouncementSink?: AnnouncementSink;
+  private geometryObserver?: ResizeObserver;
+  private observedWrapper?: HTMLElement;
+  private geometryFrame?: number;
+  private geometryFrameOwner?: Window;
 
   @query('lr-pan-zoom') private frameEl?: LyraPanZoom;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
@@ -229,30 +309,42 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
    *  otherwise reach the CSS `rotate(${rotation}deg)` transform and
    *  `screenPercentToImagePercent()`'s right-angle-only coordinate math unnormalized. Rounds to
    *  the nearest right angle, then wraps into `[0, 360)`. */
-  private get safeRotation(): ImageRotation {
-    const degrees = finiteNumber(this.rotation, 0);
-    const steps = Math.round(degrees / 90);
-    return ((((steps % 4) + 4) % 4) * 90) as ImageRotation;
+  private get safeRotation(): LyraImageRotation {
+    return this.rotation;
+  }
+
+  private get hasOperableContent(): boolean {
+    return this.loadState.kind === 'loaded';
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('src')) {
       this.cancelPointerDraft();
+      this.revealTarget = null;
+      this.mediaLayoutSize = null;
       const safeSrc = this.src ? safeMediaSrc(this.src) : null;
       this.loadState = safeSrc ? { kind: 'loading' } : this.src ? { kind: 'error' } : { kind: 'idle' };
       if (this.hasUpdated && this.src && !safeSrc) this.announceLoadError();
     }
-    if (changed.has('annotatable') && !this.annotatable) this.cancelPointerDraft();
+    if (changed.has('annotatable') && (!this.annotatable || !this.hasOperableContent)) {
+      this.cancelPointerDraft();
+    }
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('rotation') && changed.get('rotation') !== undefined) this.emit('lr-rotation-change', { rotation: this.safeRotation });
     if (changed.has('fit') && changed.get('fit') !== undefined) this.emit('lr-fit-change', { fit: this.fit });
-    if (changed.has('annotatable') && this.annotatable && changed.get('annotatable') !== undefined) {
+    if (
+      (changed.has('annotatable') || changed.has('loadState')) &&
+      this.annotatable &&
+      this.hasOperableContent &&
+      (changed.has('loadState') || changed.get('annotatable') !== undefined)
+    ) {
       this.liveRegion?.announce(this.localize('imageViewerAnnotationHint'), { force: true });
     }
+    this.syncGeometryObserver();
   }
 
   /** Increases the embedded pan/zoom scale by one configured step. */
@@ -263,24 +355,43 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   resetZoom: () => void = (): void => this.frameEl?.resetZoom();
 
   rotate(): void {
-    this.rotation = ((this.safeRotation + 90) % 360) as ImageRotation;
+    this.rotation = ((this.safeRotation + 90) % 360) as LyraImageRotation;
   }
 
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
-    // Percent-rect geometry needs no scroll math -- the whole image is already laid out inside
-    // the embedded pan-zoom viewport. `scrollToAnchor()` (in the mixin) sets
-    // `activeHighlightId` for an id-form anchor once this resolves `true`, and `renderHighlights()`
-    // reflects that through the `[data-active]` highlight styling.
-    return anchor.kind === 'region' && this.loadState.kind === 'loaded';
+    if (anchor.kind !== 'region' || !this.hasOperableContent) return false;
+    const rect = normalizeImageRegionRect(anchor.rect);
+    if (!rect) return false;
+    this.revealTarget = rect;
+    await this.updateComplete;
+    const target = this.shadowRoot?.querySelector<HTMLElement>('[data-reveal-target]');
+    const viewport = this.frameEl?.shadowRoot?.querySelector<HTMLElement>('[part="viewport"]');
+    if (!target || !viewport || target.getClientRects().length === 0) return false;
+    target.scrollIntoView({ block: 'center', inline: 'center' });
+    await new Promise<void>((resolve) => {
+      const view = this.ownerDocument.defaultView;
+      if (view) view.requestAnimationFrame(() => resolve());
+      else resolve();
+    });
+    const targetRect = target.getBoundingClientRect();
+    const viewportRect = viewport.getBoundingClientRect();
+    return targetRect.right > viewportRect.left &&
+      targetRect.left < viewportRect.right &&
+      targetRect.bottom > viewportRect.top &&
+      targetRect.top < viewportRect.bottom;
   }
 
   private onImgLoad = (event: Event): void => {
     const img = event.target as HTMLImageElement;
+    if (img !== this.shadowRoot?.querySelector('[part="image"]')) return;
     this.loadState = { kind: 'loaded' };
     this.emit('lr-load', { naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight });
   };
 
-  private onImgError = (): void => {
+  private onImgError = (event: Event): void => {
+    if (event.target !== this.shadowRoot?.querySelector('[part="image"]')) return;
+    this.cancelPointerDraft();
+    this.revealTarget = null;
     this.loadState = { kind: 'error' };
     this.announceLoadError();
     this.emit('lr-render-error', { error: new Error('The image failed to load.') });
@@ -291,9 +402,58 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     this.syncErrorAnnouncementSink();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.disconnectGeometryObserver();
     this.releaseErrorAnnouncementSink();
     this.syncErrorAnnouncementSink();
+    this.scheduleAfterUpdate(() => this.syncGeometryObserver());
+  }
+
+  private disconnectGeometryObserver(): void {
+    this.geometryObserver?.disconnect();
+    this.geometryObserver = undefined;
+    this.observedWrapper = undefined;
+    if (this.geometryFrame !== undefined) this.geometryFrameOwner?.cancelAnimationFrame(this.geometryFrame);
+    this.geometryFrame = undefined;
+    this.geometryFrameOwner = undefined;
+  }
+
+  private updateMediaLayoutSize(width: number, height: number): void {
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return;
+    if (this.mediaLayoutSize?.width === width && this.mediaLayoutSize.height === height) return;
+    this.mediaLayoutSize = { width, height };
+  }
+
+  private scheduleMediaLayoutSize(width: number, height: number): void {
+    const view = this.ownerDocument.defaultView;
+    if (!view) {
+      this.updateMediaLayoutSize(width, height);
+      return;
+    }
+    if (this.geometryFrame !== undefined) this.geometryFrameOwner?.cancelAnimationFrame(this.geometryFrame);
+    this.geometryFrameOwner = view;
+    this.geometryFrame = view.requestAnimationFrame(() => {
+      this.geometryFrame = undefined;
+      this.geometryFrameOwner = undefined;
+      this.updateMediaLayoutSize(Math.round(width * 100) / 100, Math.round(height * 100) / 100);
+    });
+  }
+
+  private syncGeometryObserver(): void {
+    const wrapper = this.wrapperEl;
+    if (wrapper === this.observedWrapper) return;
+    this.disconnectGeometryObserver();
+    if (!wrapper) return;
+    this.observedWrapper = wrapper;
+    this.scheduleMediaLayoutSize(wrapper.offsetWidth, wrapper.offsetHeight);
+    const ResizeObserverConstructor = this.ownerDocument.defaultView?.ResizeObserver;
+    if (!ResizeObserverConstructor) return;
+    this.geometryObserver = new ResizeObserverConstructor((entries) => {
+      const entry = entries.find((candidate) => candidate.target === this.observedWrapper);
+      if (entry) this.scheduleMediaLayoutSize(entry.contentRect.width, entry.contentRect.height);
+    });
+    this.geometryObserver.observe(wrapper);
   }
 
   private syncErrorAnnouncementSink(): void {
@@ -325,11 +485,12 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   }
 
   private toggleAnnotatable = (): void => {
+    if (!this.hasOperableContent) return;
     this.annotatable = !this.annotatable;
   };
 
   private onFitChange = (event: Event): void => {
-    this.fit = (event.target as HTMLSelectElement).value as ImageFit;
+    this.fit = (event.target as HTMLSelectElement).value as LyraImageFit;
   };
 
   private announceDraftPosition(): void {
@@ -349,7 +510,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   }
 
   private onWrapperKeyDown = (event: KeyboardEvent): void => {
-    if (!this.annotatable) return;
+    if (!this.annotatable || !this.hasOperableContent) return;
     if (!this.draft) {
       if (event.key === 'Enter') {
         event.preventDefault();
@@ -400,7 +561,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   private commitDraft(): void {
     if (!this.draft) return;
-    const rect: ImageRegionRect = { x: this.draft.x, y: this.draft.y, width: this.draft.width, height: this.draft.height };
+    const rect: LyraImageRegionRect = { x: this.draft.x, y: this.draft.y, width: this.draft.width, height: this.draft.height };
     this.draft = null;
     this.emit('lr-annotation-create', { anchor: { kind: 'region', rect } });
     this.liveRegion?.announce(this.localize('imageViewerAnnotationAdded'), { force: true });
@@ -429,18 +590,23 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   }
 
   private onWrapperPointerDown = (event: PointerEvent): void => {
-    if (!this.annotatable || !this.wrapperEl) return;
+    if (!this.annotatable || !this.hasOperableContent || !this.wrapperEl) return;
     // Only the primary button starts a drag. A secondary/middle press has to stay free for the
     // context menu and must not capture the pointer or leave a draft box behind, which it would
     // otherwise do with no matching pointerup path to clear it.
-    if (event.button !== 0) return;
+    if (!event.isPrimary || event.button !== 0 || this.pointerDraftId !== null) return;
     const rect = this.wrapperEl.getBoundingClientRect();
     const px = clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100);
     const py = clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100);
     const origin = screenPercentToImagePercent(px, py, this.safeRotation);
     this.pointerOrigin = origin;
     this.pointerDraftId = event.pointerId;
-    this.wrapperEl.setPointerCapture(event.pointerId);
+    try {
+      this.wrapperEl.setPointerCapture(event.pointerId);
+    } catch {
+      // Synthetic events have no active browser pointer to capture; their explicit terminal event
+      // still clears the same identity-keyed gesture state.
+    }
     this.draft = { x: origin.x, y: origin.y, width: 0, height: 0 };
     event.preventDefault();
   };
@@ -468,12 +634,61 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     }
   };
 
+  private canonicalRegionHighlights(): NormalizedRegionHighlight[] {
+    const ids = new Set<string>();
+    const result: NormalizedRegionHighlight[] = [];
+    for (const highlight of this.highlights) {
+      if (typeof highlight.id !== 'string' || highlight.id === '' || ids.has(highlight.id)) continue;
+      if (highlight.anchor.kind !== 'region') continue;
+      const rect = normalizeImageRegionRect(highlight.anchor.rect);
+      if (!rect) continue;
+      ids.add(highlight.id);
+      result.push({ highlight, rect });
+    }
+    return result;
+  }
+
+  private boundedRegionHighlights(): {
+    all: NormalizedRegionHighlight[];
+    visible: NormalizedRegionHighlight[];
+  } {
+    const all = this.canonicalRegionHighlights();
+    if (all.length <= IMAGE_VIEWER_HIGHLIGHT_LIMIT) return { all, visible: all };
+    const visible = all.slice(0, IMAGE_VIEWER_HIGHLIGHT_LIMIT);
+    const active = this.activeHighlightId
+      ? all.find((entry) => entry.highlight.id === this.activeHighlightId)
+      : undefined;
+    if (active && !visible.includes(active)) visible[visible.length - 1] = active;
+    return { all, visible };
+  }
+
+  private onHighlightFocus(id: string): void {
+    this.highlightFocusId = id;
+  }
+
+  private onHighlightKeyDown(event: KeyboardEvent, id: string): void {
+    const buttons = [...this.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="highlight"]')];
+    if (buttons.length < 2) return;
+    const current = buttons.findIndex((button) => button.dataset['highlightId'] === id);
+    const rtl = this.effectiveDirection === 'rtl';
+    let next = current;
+    if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = buttons.length - 1;
+    else if (event.key === 'ArrowDown' || event.key === (rtl ? 'ArrowLeft' : 'ArrowRight')) {
+      next = (current + 1) % buttons.length;
+    } else if (event.key === 'ArrowUp' || event.key === (rtl ? 'ArrowRight' : 'ArrowLeft')) {
+      next = (current - 1 + buttons.length) % buttons.length;
+    } else return;
+    event.preventDefault();
+    const target = buttons[next]!;
+    this.highlightFocusId = target.dataset['highlightId'] ?? null;
+    target.focus();
+    this.requestUpdate();
+  }
+
   private renderHighlights(): TemplateResult | typeof nothing {
-    const regionHighlights = this.highlights.flatMap((highlight) => {
-      if (highlight.anchor.kind !== 'region') return [];
-      const rect = sanitizePercentRect(highlight.anchor.rect);
-      return rect ? [{ highlight, rect }] : [];
-    });
+    if (!this.hasOperableContent) return nothing;
+    const { all: regionHighlights, visible } = this.boundedRegionHighlights();
     if (!regionHighlights.length) return nothing;
     const formatter = getNumberFormat(this.effectiveLocale, {
       maximumFractionDigits: 0,
@@ -483,14 +698,27 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     // mirrors, so position with physical left/top -- logical inset-inline-start would flip the
     // overlay under RTL while the image stays put. This also keeps the boxes consistent with the
     // pointer math (clientX - rect.left) and the physical-arrow keyboard model above.
-    return html`<div part="highlight-layer" role="group" aria-label=${this.localize('imageViewerHighlightsLabel')}>
-      ${regionHighlights.map(
+    const preferredFocusId = visible.some(({ highlight }) => highlight.id === this.highlightFocusId)
+      ? this.highlightFocusId
+      : visible.some(({ highlight }) => highlight.id === this.activeHighlightId)
+        ? this.activeHighlightId
+        : visible[0]?.highlight.id ?? null;
+    return html`<div
+      part="highlight-layer"
+      role="group"
+      aria-label=${this.localize('imageViewerHighlightsLabel')}
+      ?data-truncated=${regionHighlights.length > visible.length}
+      data-total=${String(regionHighlights.length)}
+    >
+      ${visible.map(
         ({ highlight: h, rect }, index) => html`
         <button
           part="highlight"
           type="button"
-          data-tone=${h.tone ?? 'accent'}
+          data-highlight-id=${h.id}
+          data-tone=${normalizeHighlightTone(h.tone)}
           ?data-active=${this.activeHighlightId === h.id}
+          tabindex=${preferredFocusId === h.id ? '0' : '-1'}
           style=${styleMap({
             left: `${rect.x}%`,
             top: `${rect.y}%`,
@@ -501,6 +729,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
             index: formatter.format(index + 1),
           })}
           @click=${() => this.onHighlightActivate(h.id)}
+          @focus=${() => this.onHighlightFocus(h.id)}
+          @keydown=${(event: KeyboardEvent) => this.onHighlightKeyDown(event, h.id)}
         >${h.label ? html`<span part="highlight-label">${h.label}</span>` : nothing}</button>
       `,
       )}
@@ -514,6 +744,22 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     return html`<div part="annotation-box" style="left:${this.draft.x}%;top:${this.draft.y}%;width:${this.draft.width}%;height:${this.draft.height}%"></div>`;
   }
 
+  private renderRevealTarget(): TemplateResult | typeof nothing {
+    const rect = this.revealTarget;
+    if (!rect) return nothing;
+    return html`<span
+      class="reveal-target"
+      data-reveal-target
+      aria-hidden="true"
+      style=${styleMap({
+        left: `${rect.x}%`,
+        top: `${rect.y}%`,
+        width: `${rect.width}%`,
+        height: `${rect.height}%`,
+      })}
+    ></span>`;
+  }
+
   private renderBody(): TemplateResult {
     if (this.loadState.kind === 'error') {
       return html`<div part="error">${this.localize('imageViewerFailedToLoad')}</div>`;
@@ -522,52 +768,78 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeImage') })}</p>`;
     }
     const safeSrc = safeMediaSrc(this.src);
+    const swapped = this.safeRotation === 90 || this.safeRotation === 270;
+    const layout = this.mediaLayoutSize;
+    const rotationFrameStyle = layout
+      ? styleMap({
+        width: `${swapped ? layout.height : layout.width}px`,
+        height: `${swapped ? layout.width : layout.height}px`,
+      })
+      : nothing;
+    const effectiveAnnotatable = this.annotatable && this.hasOperableContent;
     return html`<lr-pan-zoom
       part="frame"
-      exportparts="viewport,content,controls"
+      exportparts="viewport:frame-viewport,content:frame-content,controls:frame-controls"
       .zoom=${this.zoom}
       .minZoom=${this.minZoom}
       .maxZoom=${this.maxZoom}
       .zoomStep=${this.zoomStep}
       @lr-zoom-change=${this.onFrameZoomChange}
+      @focus=${(event: Event) => event.stopPropagation()}
+      @blur=${(event: Event) => event.stopPropagation()}
+      @lr-focus=${(event: Event) => event.stopPropagation()}
+      @lr-blur=${(event: Event) => event.stopPropagation()}
     >
       <div
-        part="image-wrapper"
-        tabindex=${this.annotatable ? '0' : '-1'}
-        role=${this.annotatable ? 'group' : nothing}
-        aria-label=${this.annotatable ? this.localize('imageViewerAnnotate') : nothing}
-        aria-description=${this.annotatable ? this.localize('imageViewerAnnotationHint') : nothing}
-        style="transform:rotate(${this.safeRotation}deg)"
-        @keydown=${this.onWrapperKeyDown}
-        @pointerdown=${this.onWrapperPointerDown}
-        @pointermove=${this.onWrapperPointerMove}
-        @pointerup=${this.onWrapperPointerUp}
-        @pointercancel=${(event: PointerEvent) => this.cancelPointerDraft(event.pointerId)}
-        @lostpointercapture=${(event: PointerEvent) => this.cancelPointerDraft(event.pointerId, false)}
+        part="rotation-frame"
+        data-rotation=${String(this.safeRotation)}
+        ?data-measured=${layout !== null}
+        style=${rotationFrameStyle}
       >
-        ${safeSrc
-          ? html`<img part="image" data-fit=${this.fit} src=${safeSrc} alt=${this.alt ?? this.name} @load=${this.onImgLoad} @error=${this.onImgError} />`
-          : nothing}
-        ${this.renderHighlights()}
-        ${this.renderDraft()}
+        <div
+          part="image-wrapper"
+          tabindex=${effectiveAnnotatable ? '0' : '-1'}
+          role=${effectiveAnnotatable ? 'group' : nothing}
+          aria-label=${effectiveAnnotatable ? this.localize('imageViewerAnnotate') : nothing}
+          aria-description=${effectiveAnnotatable ? this.localize('imageViewerAnnotationHint') : nothing}
+          style=${styleMap({
+            transform: layout
+              ? `translate(-50%, -50%) rotate(${this.safeRotation}deg)`
+              : `rotate(${this.safeRotation}deg)`,
+          })}
+          @keydown=${this.onWrapperKeyDown}
+          @pointerdown=${this.onWrapperPointerDown}
+          @pointermove=${this.onWrapperPointerMove}
+          @pointerup=${this.onWrapperPointerUp}
+          @pointercancel=${(event: PointerEvent) => this.cancelPointerDraft(event.pointerId)}
+          @lostpointercapture=${(event: PointerEvent) => this.cancelPointerDraft(event.pointerId, false)}
+        >
+          ${safeSrc
+            ? keyed(safeSrc, html`<img part="image" data-fit=${this.fit} src=${safeSrc} alt=${this.alt ?? this.name} @load=${this.onImgLoad} @error=${this.onImgError} />`)
+            : nothing}
+          ${this.renderHighlights()}
+          ${this.renderDraft()}
+          ${this.renderRevealTarget()}
+        </div>
       </div>
     </lr-pan-zoom>`;
   }
 
   override render(): TemplateResult {
     const label = hostAriaLabel(this) ?? (this.name || this.localize('imageViewerLabel'));
+    const operable = this.hasOperableContent;
     return html`<div part="base" role="region" aria-label=${label}>
       <div part="toolbar">
         <span class="fit-control-wrapper">
-          <select part="fit-control" aria-label=${this.localize('imageViewerFitLabel')} @change=${this.onFitChange}>
+          <select part="fit-control" aria-label=${this.localize('imageViewerFitLabel')} ?disabled=${!operable} @change=${this.onFitChange}>
             <option value="contain" ?selected=${this.fit === 'contain'}>${this.localize('imageViewerFitContain')}</option>
             <option value="width" ?selected=${this.fit === 'width'}>${this.localize('imageViewerFitWidth')}</option>
             <option value="actual" ?selected=${this.fit === 'actual'}>${this.localize('imageViewerFitActual')}</option>
           </select>
           <span class="fit-control-chevron" aria-hidden="true">${chevronIcon()}</span>
         </span>
-        <button part="rotate-button" type="button" aria-label=${this.localize('imageViewerRotate')} @click=${() => this.rotate()}>&#8635;</button>
-        <button part="annotate-toggle" type="button" aria-pressed=${this.annotatable ? 'true' : 'false'} aria-label=${this.localize('imageViewerAnnotate')} @click=${this.toggleAnnotatable}>&#9633;</button>
+        <button part="rotate-button" type="button" ?disabled=${!operable} aria-label=${this.localize('imageViewerRotate')} @click=${() => this.rotate()}>&#8635;</button>
+        <button part="annotate-toggle" type="button" ?disabled=${!operable} aria-pressed=${this.annotatable && operable ? 'true' : 'false'} aria-label=${this.localize('imageViewerAnnotate')} @click=${this.toggleAnnotatable}>&#9633;</button>
       </div>
       ${this.renderBody()}
       <lr-live-region></lr-live-region>
@@ -577,6 +849,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   override disconnectedCallback(): void {
     this.cancelPointerDraft();
+    this.disconnectGeometryObserver();
     this.releaseErrorAnnouncementSink();
     super.disconnectedCallback();
   }

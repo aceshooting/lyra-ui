@@ -10,4 +10,9 @@
  * same bucketing to agree with the component's, and reimplementing "this week" is how two lists on
  * one page start disagreeing about what day it is.
  */
-export * from '../internal/group-by-recency.js';
+export { groupByRecency } from '../internal/group-by-recency.js';
+export type {
+  GroupByRecencyOptions,
+  RecencyBucket,
+  RecencyLabels,
+} from '../internal/group-by-recency.js';

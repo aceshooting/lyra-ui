@@ -18,6 +18,14 @@ export const styles = css`
     overflow: visible;
   }
 
+  .semantic-owner {
+    display: inline-flex;
+    inline-size: 100%;
+    block-size: 100%;
+    align-items: center;
+    justify-content: center;
+  }
+
   /* The custom-content slot is an assignment target only: syncCustomNodes() clones its trusted SVG
      nodes into the component-owned svg above, where they have a real SVG parent and actually
      paint. Rendering the slot itself would place the originals a second time, outside that svg. */
@@ -43,8 +51,7 @@ export const styles = css`
   /* Rotate and flip are deliberately physical, not direction-relative. Directional glyphs are
      mirrored by the wrapping part of the component that owns their reading-order semantics. */
   :host(:where([rotate], [flip])) {
-    transform: rotate(var(--lr-icon-rotate, 0deg))
-      scale(var(--lr-icon-flip-x, 1), var(--lr-icon-flip-y, 1));
+    transform: rotate(var(--lr-icon-rotate, 0deg)) scale(var(--lr-icon-flip-x, 1), var(--lr-icon-flip-y, 1));
   }
 
   :host(:where([flip='x'], [flip='horizontal'])) {
@@ -183,7 +190,7 @@ export const styles = css`
 
   @keyframes lr-icon-beat {
     50% {
-      transform: scale(calc(var(--beat-scale, 1.25) * 1.25));
+      transform: scale(var(--beat-scale, 1.25));
     }
   }
 
@@ -204,26 +211,15 @@ export const styles = css`
     0%,
     100% {
       transform: translateY(var(--bounce-anticipation, 0))
-        scale(
-          var(--bounce-start-scale-x, 1),
-          var(--bounce-start-scale-y, 1)
-        );
+        scale(var(--bounce-start-scale-x, 1), var(--bounce-start-scale-y, 1));
     }
     45% {
-      transform: translateY(
-          var(--bounce-height, calc(var(--lr-size-0-5em) * -1))
-        )
-        scale(
-          var(--bounce-jump-scale-x, 0.95),
-          var(--bounce-jump-scale-y, 1.05)
-        );
+      transform: translateY(var(--bounce-height, calc(var(--lr-size-0-5em) * -1)))
+        scale(var(--bounce-jump-scale-x, 0.95), var(--bounce-jump-scale-y, 1.05));
     }
     70% {
       transform: translateY(var(--bounce-rebound, calc(var(--lr-size-1em) * -0.1)))
-        scale(
-          var(--bounce-land-scale-x, 1.08),
-          var(--bounce-land-scale-y, 0.92)
-        );
+        scale(var(--bounce-land-scale-x, 1.08), var(--bounce-land-scale-y, 0.92));
     }
   }
 
@@ -282,16 +278,10 @@ export const styles = css`
 
   @keyframes lr-icon-buzz {
     25% {
-      transform: translateX(
-          calc(var(--buzz-distance, calc(var(--lr-size-1em) * 0.12)) * -1)
-        )
-        rotate(-4deg);
+      transform: translateX(calc(var(--buzz-distance, calc(var(--lr-size-1em) * 0.12)) * -1)) rotate(-4deg);
     }
     75% {
-      transform: translateX(
-          var(--buzz-distance, calc(var(--lr-size-1em) * 0.12))
-        )
-        rotate(4deg);
+      transform: translateX(var(--buzz-distance, calc(var(--lr-size-1em) * 0.12))) rotate(4deg);
     }
   }
 
@@ -321,22 +311,13 @@ export const styles = css`
 
   @keyframes lr-icon-jello {
     30% {
-      transform: scale(
-        var(--jello-scale-x, 1.18),
-        var(--jello-scale-y, 0.82)
-      );
+      transform: scale(var(--jello-scale-x, 1.18), var(--jello-scale-y, 0.82));
     }
     55% {
-      transform: scale(
-        calc(2 - var(--jello-scale-x, 1.18)),
-        calc(2 - var(--jello-scale-y, 0.82))
-      );
+      transform: scale(calc(2 - var(--jello-scale-x, 1.18)), calc(2 - var(--jello-scale-y, 0.82)));
     }
     75% {
-      transform: scale(
-        calc((var(--jello-scale-x, 1.18) + 2) / 3),
-        calc((var(--jello-scale-y, 0.82) + 2) / 3)
-      );
+      transform: scale(calc((var(--jello-scale-x, 1.18) + 2) / 3), calc((var(--jello-scale-y, 0.82) + 2) / 3));
     }
   }
 
@@ -344,19 +325,11 @@ export const styles = css`
     0%,
     100% {
       transform: translateX(0) translateY(0) rotate(0deg)
-        scale(
-          var(--float-squash-x, 1.04),
-          var(--float-squash-y, 0.96)
-        );
+        scale(var(--float-squash-x, 1.04), var(--float-squash-y, 0.96));
     }
     50% {
-      transform: translateX(var(--float-drift, 0))
-        translateY(var(--float-height, calc(var(--lr-size-0-5em) * -1)))
-        rotate(var(--float-tilt, 4deg))
-        scale(
-          var(--float-stretch-x, 0.96),
-          var(--float-stretch-y, 1.04)
-        );
+      transform: translateX(var(--float-drift, 0)) translateY(var(--float-height, calc(var(--lr-size-0-5em) * -1)))
+        rotate(var(--float-tilt, 4deg)) scale(var(--float-stretch-x, 0.96), var(--float-stretch-y, 1.04));
     }
   }
 

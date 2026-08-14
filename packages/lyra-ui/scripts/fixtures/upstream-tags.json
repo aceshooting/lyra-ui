@@ -32,11 +32,47 @@
     "runtimeEventCancelability -- black-box observations used only when an exact pinned package's",
     "                    published manifest omits cancelability. Every record covers the named",
     "                    public transition paths and becomes stale on an artifact or manifest",
-    "                    change; it is comparison evidence, never an executable rewrite."
+    "                    change; it is comparison evidence, never an executable rewrite.",
+    "",
+    "runtimeMethodEdgeSemantics -- artifact-bound black-box observations for public method edge",
+    "                    cases whose return behavior is absent from the published manifest. Each",
+    "                    case records only public inputs/outcomes and becomes stale when the exact",
+    "                    package, method signature, or reviewed case changes."
   ],
   "webawesome": {
     "version": "3.11.0",
     "commit": "1d05f1a4468336de35d2c61282a953ef07da3bdf",
+    "runtimeMethodEdgeSemantics": {
+      "source": {
+        "package": "@awesome.me/webawesome",
+        "version": "3.11.0",
+        "tarballIntegrity": "sha512-WM8kyP+AdAT3/zwNpc/YzN3Nu5pRD6ksREFZAct/DIn6KMnQs8lPVfiPbJrOpKMk8OaSnQX19iiwFGjoswXVXw=="
+      },
+      "methods": [
+        {
+          "tag": "wa-page",
+          "method": "visiblePixelsInViewport",
+          "cases": [
+            {
+              "case": "null-argument",
+              "arguments": ["null"],
+              "outcome": {
+                "kind": "sentinel",
+                "value": null
+              }
+            },
+            {
+              "case": "detached-document-element",
+              "arguments": ["detached-document-element"],
+              "outcome": {
+                "kind": "measurement",
+                "basis": "ambient-page-viewport"
+              }
+            }
+          ]
+        }
+      ]
+    },
     "free": [
       "wa-accordion",
       "wa-accordion-item",

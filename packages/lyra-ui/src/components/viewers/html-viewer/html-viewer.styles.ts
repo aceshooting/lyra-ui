@@ -27,5 +27,4 @@ export const styles = css`
   [part='html'] img, [part='html'] video { max-inline-size: 100%; block-size: auto; }
   .empty-note, [part='error'] { margin: 0; color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); text-align: center; }
   [part='error'] { color: var(--lr-color-danger); }
-  [part='spinner'] { display: flex; justify-content: center; }
 `;

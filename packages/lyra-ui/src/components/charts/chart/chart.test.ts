@@ -53,6 +53,129 @@ it('shows a loading skeleton and aria-busy while chart.js loads, then swaps to t
   expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
 });
 
+describe('bounded chart surface regressions', () => {
+  it('normalizes invalid closed-set and nested numeric writes before building peer config', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    (el as unknown as { grid: string }).grid = 'diagonal';
+    (el as unknown as { legendPosition: string }).legendPosition = 'sideways';
+    el.datasets = [{
+      label: 'points',
+      points: [{ x: Number.NaN, y: 2 }, { x: 1, y: 2, r: Number.POSITIVE_INFINITY }],
+      width: Number.POSITIVE_INFINITY,
+      pointRadius: [Number.NaN, -1, 3],
+    }];
+
+    const config = (el as unknown as { buildConfig(): any }).buildConfig();
+    expect(config.options.scales.x.grid.display).to.be.true;
+    expect(config.options.scales.y.grid.display).to.be.true;
+    expect(config.options.plugins.legend.position).to.equal('top');
+    expect(config.data.datasets[0].data).to.deep.equal([null, { x: 1, y: 2 }]);
+    expect(config.data.datasets[0].pointRadius.every((value: number) => Number.isFinite(value) && value >= 0)).to.be.true;
+    expect(Number.isFinite(config.data.datasets[0].borderWidth)).to.be.true;
+  });
+
+  it('bounds the simplified visual plan while preserving explicit config.data as full fidelity', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.labels = Array.from({ length: 2_000 }, (_, index) => `L${index}`);
+    el.datasets = [{ label: 'series', data: el.labels.map((_, index) => index) }];
+    expect((el as unknown as { buildConfig(): any }).buildConfig().data.labels).to.have.length(1_000);
+
+    const rawLabels = Array.from({ length: 1_500 }, (_, index) => `R${index}`);
+    el.config = { data: { labels: rawLabels, datasets: [{ label: 'raw', data: rawLabels }] } };
+    expect((el as unknown as { buildConfig(): any }).buildConfig().data.labels).to.have.length(1_500);
+  });
+
+  it('exposes renderChart and emits the normalized datum event before the compatibility event', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    let renders = 0;
+    (el as unknown as { drawIfVisible(): void }).drawIfVisible = () => { renders += 1; };
+    const order: string[] = [];
+    let detail: unknown;
+    el.addEventListener('lr-datum-activate', (event) => {
+      order.push('datum');
+      detail = (event as CustomEvent).detail;
+    });
+    el.addEventListener('lr-point-click', () => order.push('legacy'));
+
+    el.renderChart();
+    (el as unknown as { activateDatum(value: unknown): void }).activateDatum({
+      datasetIndex: 0,
+      index: 1,
+      label: 'B',
+      value: 2,
+    });
+
+    expect(renders).to.equal(1);
+    expect(order).to.deep.equal(['datum', 'legacy']);
+    expect(detail).to.deep.equal({ datasetIndex: 0, index: 1, label: 'B', value: 2, kind: 'bar' });
+  });
+
+  it('responds to live reduced-motion changes and releases the query listener', () => {
+    const originalMatchMedia = window.matchMedia;
+    let listener: ((event: MediaQueryListEvent) => void) | undefined;
+    let removals = 0;
+    window.matchMedia = ((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener() {},
+      removeListener() {},
+      addEventListener(_type: string, callback: EventListenerOrEventListenerObject) {
+        if (query === '(prefers-reduced-motion: reduce)') {
+          listener = callback as (event: MediaQueryListEvent) => void;
+        }
+      },
+      removeEventListener() {
+        if (query === '(prefers-reduced-motion: reduce)') removals += 1;
+      },
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+    try {
+      const el = document.createElement('lr-chart') as LyraChart;
+      let draws = 0;
+      (el as unknown as { drawIfVisible(): void }).drawIfVisible = () => { draws += 1; };
+      document.body.append(el);
+      const before = draws;
+      listener?.({ matches: true, media: '(prefers-reduced-motion: reduce)' } as MediaQueryListEvent);
+      expect(draws).to.equal(before + 1);
+      el.remove();
+      expect(removals).to.be.greaterThan(0);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('ignores a stale visibility callback after reconnecting with a new observer', () => {
+    const OriginalObserver = window.IntersectionObserver;
+    const callbacks: IntersectionObserverCallback[] = [];
+    class TestObserver {
+      readonly root = null;
+      readonly rootMargin = '0px';
+      readonly thresholds = [0];
+      constructor(callback: IntersectionObserverCallback) { callbacks.push(callback); }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+      takeRecords(): IntersectionObserverEntry[] { return []; }
+    }
+    window.IntersectionObserver = TestObserver as unknown as typeof IntersectionObserver;
+    const el = document.createElement('lr-chart') as LyraChart;
+    try {
+      document.body.append(el);
+      el.remove();
+      document.body.append(el);
+      (el as unknown as { visible: boolean }).visible = true;
+      callbacks[0]?.([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
+      expect((el as unknown as { visible: boolean }).visible).to.be.true;
+      callbacks[1]?.([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
+      expect((el as unknown as { visible: boolean }).visible).to.be.false;
+    } finally {
+      el.remove();
+      window.IntersectionObserver = OriginalObserver;
+    }
+  });
+});
+
 it('announces keyboard datum changes through one light-DOM sink and keeps the shadow copy inert', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.labels = ['North', 'South'];
@@ -295,13 +418,13 @@ it('appends streamed category data, caps numeric series, and preserves point ser
 
   expect(el.labels).to.deep.equal(['B', 'C']);
   expect(el.datasets[0].data).to.deep.equal([2, 3]);
-  expect(el.datasets[1].data).to.deep.equal([null]);
+  expect(el.datasets[1].data).to.deep.equal([null, null]);
   expect(el.datasets[2].points).to.equal(points);
 
   el.appendData('D', [4, 5], Number.POSITIVE_INFINITY);
   expect(el.labels).to.deep.equal(['B', 'C', 'D']);
   expect(el.datasets[0].data).to.deep.equal([2, 3, 4]);
-  expect(el.datasets[1].data).to.deep.equal([null, 5]);
+  expect(el.datasets[1].data).to.deep.equal([null, null, 5]);
 });
 
 it('exports mixed data and point series as spreadsheet-safe CSV', () => {
@@ -1660,7 +1783,7 @@ it('applies one valueFormatter to numeric ticks, tooltips, and legend values', a
 
   const config = (el as any).buildConfig();
   expect(config.options.scales.y.ticks.callback(10)).to.equal('tick:10');
-  expect(config.options.plugins.tooltip.label({ parsed: { y: 20 }, dataset: { label: 'Revenue' } })).to.equal(
+  expect(config.options.plugins.tooltip.callbacks.label({ parsed: { y: 20 }, dataset: { label: 'Revenue' } })).to.equal(
     'Revenue: tooltip:20',
   );
   const labels = config.options.plugins.legend.labels.generateLabels({
@@ -3241,7 +3364,13 @@ describe('effective chart contract', () => {
       'South cluster,30,40,9,South cluster',
     ].join('\r\n'));
 
-    const tableText = el.shadowRoot!.querySelector('[part="data-table"] table')!.textContent!;
+    const table = el.shadowRoot!.querySelector('[part="data-table"] table')!;
+    const tableText = table.textContent!;
+    expect([...table.querySelectorAll('tbody button')].map((button) => button.textContent?.trim()))
+      .to.deep.equal([
+        'North cluster: x 10, y 20, radius 7',
+        'South cluster: x 30, y 40, radius 9',
+      ]);
     expect(tableText).to.contain('North cluster');
     expect(tableText).to.contain('10');
     expect(tableText).to.contain('20');
@@ -3293,6 +3422,47 @@ describe('effective chart contract', () => {
       chart.getElementsAtEventForMode = original;
     }
   });
+
+  for (const localizedPointCase of [
+    {
+      name: 'scatter',
+      type: 'scatter' as const,
+      point: { x: 10, y: 20, label: 'Caller x=/y= label' },
+      expected: 'CALLER[Caller x=/y= label] => Y=20 before X=10',
+    },
+    {
+      name: 'bubble',
+      type: 'bubble' as const,
+      point: { x: 30, y: 40, r: 9, label: 'Caller (r=9) label' },
+      expected: 'CALLER[Caller (r=9) label] => R=9; Y=40; X=30',
+    },
+  ]) {
+    it(`localizes the whole ${localizedPointCase.name} point message across description, visible table, keyboard mirror, and announcement`, async () => {
+      const el = (await fixture(html`
+        <lr-chart type=${localizedPointCase.type} show-data-table></lr-chart>
+      `)) as LyraChart;
+      el.datasets = [{ label: 'Points', points: [localizedPointCase.point] }];
+      (el as unknown as { strings: Record<string, string> }).strings = {
+        chartPointCoordinates: 'Y={y} before X={x}',
+        chartBubblePointCoordinates: 'R={radius}; Y={y}; X={x}',
+        chartLabeledPoint: 'CALLER[{label}] => {coordinates}',
+      };
+      await el.updateComplete;
+      await waitUntil(() => (el as any).chart != null);
+
+      const description = el.shadowRoot!.querySelector('[part="description"]')!;
+      const tableButton = el.shadowRoot!.querySelector('[part="data-table"] tbody button')!;
+      expect(description.textContent).to.contain(localizedPointCase.expected);
+      expect(tableButton.textContent?.trim()).to.equal(localizedPointCase.expected);
+
+      const canvas = el.shadowRoot!.querySelector('canvas')!;
+      canvas.focus();
+      await el.updateComplete;
+      const keyboardMirror = el.shadowRoot!.querySelector('.sr-only[aria-hidden="true"]')!;
+      expect(keyboardMirror.textContent).to.contain(localizedPointCase.expected);
+      expect(announcementTexts().at(-1)).to.contain(localizedPointCase.expected);
+    });
+  }
 
   it('uses interactive application semantics for its keyboard-navigable canvas', async () => {
     const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
@@ -4160,7 +4330,7 @@ describe('coverage: chartDatums/datumDisplayValue/keyboard-navigation fallbacks'
     expect(datums).to.have.length(1_000);
     expect(datums[0].index).to.equal(0);
     expect(datums.at(-1).index).to.equal(1_000);
-    expect((description.match(/x=/g) ?? [])).to.have.length(1_000);
+    expect((description.match(/x /g) ?? [])).to.have.length(1_000);
     expect(description).to.contain((el as any).datumDisplayValue(points[0]));
     expect(description).to.contain((el as any).datumDisplayValue(points.at(-1)));
   });
@@ -4170,6 +4340,13 @@ describe('coverage: chartDatums/datumDisplayValue/keyboard-navigation fallbacks'
     expect((el as any).datumDisplayValue({ r: 5 })).to.equal('5');
     expect((el as any).datumDisplayValue({ x: 7 })).to.equal('7');
     expect((el as any).datumDisplayValue('n/a')).to.equal('n/a');
+  });
+
+  it('uses the built-in whole-message coordinate and labeled-point fallbacks', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    expect((el as any).datumDisplayValue({ x: 10, y: 20 })).to.equal('x 10, y 20');
+    expect((el as any).datumDisplayValue({ x: 10, y: 20, r: 7, label: 'North' }))
+      .to.equal('North: x 10, y 20, radius 7');
   });
 
   it('navigates keyboard datums with Home/End/ArrowUp/ArrowDown and ignores an unrecognized key', async () => {

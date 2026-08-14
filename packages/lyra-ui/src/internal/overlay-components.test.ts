@@ -8,7 +8,7 @@ import '../components/agent-tools/tool-approval-dialog/tool-approval-dialog.js';
 import '../components/agent-tools/tool-result-dialog/tool-result-dialog.js';
 import '../components/layout/app-rail/app-rail.js';
 import '../components/layout/command-palette/command-palette.js';
-import '../components/layout/split/split.js';
+import '../components/layout/multi-split/multi-split.js';
 import '../components/layout/widget/widget.js';
 import '../components/forms/date-picker/date-input.js';
 import '../components/media/lightbox/lightbox.js';
@@ -94,7 +94,7 @@ const adapters: OverlayAdapter[] = [
     deactivate: (element) => (element.open = false),
   },
   {
-    tag: 'lr-split',
+    tag: 'lr-multi-split',
     setup: (element) => {
       element.collapse = 'start';
       element.collapseState = 'floating';

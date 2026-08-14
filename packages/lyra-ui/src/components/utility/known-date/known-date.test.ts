@@ -3,7 +3,7 @@ import type { PropertyValues } from 'lit';
 import './known-date.js';
 import '../../forms/input/input.js';
 import '../../forms/button/button.js';
-import type { LyraKnownDate, DateParts } from './known-date.js';
+import { LyraKnownDate, type LyraKnownDateParts } from './known-date.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -38,6 +38,31 @@ function typeInto(input: HTMLInputElement, text: string): void {
   input.value = text;
   input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 }
+
+it('exposes fresh callable static validators that project live composite validity', async () => {
+  const first = LyraKnownDate.validators;
+  const second = LyraKnownDate.validators;
+  expect(first === second).to.be.false;
+  expect(first).to.have.lengthOf(1);
+  expect(first[0]!.observedAttributes).to.deep.equal([
+    'required',
+    'disabled',
+    'readonly',
+    'value',
+    'min',
+    'max',
+  ]);
+
+  const el = await fixture<LyraKnownDate>(html`<lr-known-date required></lr-known-date>`);
+  const missing = first[0]!.checkValidity(el);
+  expect(missing.isValid).to.be.false;
+  expect(missing.invalidKeys).to.deep.equal(['valueMissing']);
+  expect(missing.message).to.equal(el.validationMessage);
+
+  el.value = '2007-03-27';
+  const valid = first[0]!.checkValidity(el);
+  expect(valid).to.deep.equal({ isValid: true, message: '', invalidKeys: [] });
+});
 
 it('renders three fields in en-GB locale order (day, month, year) by default when lang is inherited', async () => {
   const wrapper = await fixture(html` <div lang="en-GB"><lr-known-date></lr-known-date></div> `);
@@ -199,7 +224,7 @@ describe('mirrored Web Awesome public surface', () => {
     await el.updateComplete;
     expect(el.value).to.equal('2026-03-05');
     expect(fieldFor(el, 'day').value).to.equal('5');
-    expect((el.valueInput?.constructor.name) === ('HTMLInputElement')).to.equal(true);
+    expect(el.valueInput?.constructor.name === 'HTMLInputElement').to.equal(true);
     expect(el.valueInput.type).to.equal('date');
     expect(el.valueInput.value).to.equal('2026-03-05');
     expect(el.valueInput.min).to.equal('2000-01-01');
@@ -239,7 +264,7 @@ describe('mirrored Web Awesome public surface', () => {
     el.parts = { day: '5', month: '', year: '' };
     await el.updateComplete;
     el.focus();
-    expect((el.shadowRoot!.activeElement) === (fieldFor(el, 'month'))).to.equal(true);
+    expect(el.shadowRoot!.activeElement === fieldFor(el, 'month')).to.equal(true);
 
     el.setCustomValidity('Server rejected this date');
     expect(el.validity.customError).to.be.true;
@@ -292,9 +317,7 @@ it('announces a newly shown validation error once through a pre-mounted assertiv
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   await el.updateComplete;
 
-  let sink = document.querySelector<HTMLElement>(
-    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
-  )!;
+  let sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
   expect(sink !== null, 'the sink exists before validation changes').to.be.true;
   expect(sink.childElementCount).to.equal(0);
   const errorPart = el.shadowRoot!.querySelector<HTMLElement>('[part="error"]')!;
@@ -306,9 +329,7 @@ it('announces a newly shown validation error once through a pre-mounted assertiv
   typeInto(fieldFor(el, 'year'), '2026');
   fieldFor(el, 'year').dispatchEvent(new FocusEvent('blur', { relatedTarget: null }));
   await el.updateComplete;
-  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
-    'Enter a valid date.',
-  ]);
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal(['Enter a valid date.']);
 
   el.requestUpdate();
   await el.updateComplete;
@@ -329,9 +350,7 @@ it('announces a newly shown validation error once through a pre-mounted assertiv
   await el.updateComplete;
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   await el.updateComplete;
-  sink = document.querySelector<HTMLElement>(
-    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
-  )!;
+  sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
   expect(sink.childElementCount, 'reconnect does not replay the existing error').to.equal(0);
 });
 
@@ -353,9 +372,7 @@ it('announces only newly visible accessible text from the slotted error', async 
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   await el.updateComplete;
 
-  const sink = document.querySelector<HTMLElement>(
-    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
-  )!;
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
   expect(sink !== null, 'the assertive sink is pre-mounted').to.be.true;
   expect(sink.childElementCount).to.equal(0);
 
@@ -404,17 +421,13 @@ it('announces visibility-overridden descendants without hidden parent text', asy
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   await el.updateComplete;
 
-  const sink = document.querySelector<HTMLElement>(
-    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
-  )!;
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
   const wrapper = error.querySelector<HTMLElement>('[data-wrapper]')!;
   const visible = error.querySelector<HTMLElement>('[data-visible]')!;
 
   visible.textContent = 'Exposed hidden error';
   await Promise.resolve();
-  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
-    'Exposed hidden error',
-  ]);
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal(['Exposed hidden error']);
 
   wrapper.style.visibility = 'collapse';
   visible.textContent = 'Exposed collapsed error';
@@ -436,15 +449,11 @@ it('tracks accessible error text through a forwarding slot and its assigned-node
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   await el.updateComplete;
 
-  const sink = document.querySelector<HTMLElement>(
-    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
-  )!;
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
   const initial = wrapper.querySelector<HTMLElement>('[slot="error"]')!;
   initial.textContent = 'Changed forwarded error';
   await Promise.resolve();
-  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
-    'Changed forwarded error',
-  ]);
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal(['Changed forwarded error']);
 
   initial.style.visibility = 'hidden';
   initial.textContent = 'Changed while forwarded error is hidden';
@@ -491,9 +500,7 @@ it('recreates its error observer in the adopted owner realm', async () => {
     configurable: true,
     value: TrackingMutationObserver,
   });
-  const el = (await fixture(html`
-    <lr-known-date error-text="Initial frame error"></lr-known-date>
-  `)) as LyraKnownDate;
+  const el = (await fixture(html` <lr-known-date error-text="Initial frame error"></lr-known-date> `)) as LyraKnownDate;
   el.remove();
   try {
     frameDocument.body.append(frameDocument.adoptNode(el));
@@ -514,9 +521,7 @@ it('keeps property errors silent while the host or a composed ancestor is hidden
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   await el.updateComplete;
 
-  const sink = document.querySelector<HTMLElement>(
-    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
-  )!;
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
   expect(sink !== null).to.be.true;
 
   el.hidden = true;
@@ -527,9 +532,7 @@ it('keeps property errors silent while the host or a composed ancestor is hidden
   el.hidden = false;
   await Promise.resolve();
   await el.updateComplete;
-  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
-    'Hidden host error',
-  ]);
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal(['Hidden host error']);
 
   container.style.visibility = 'hidden';
   el.errorText = 'Hidden ancestor error';
@@ -585,14 +588,10 @@ it('announces from a boxless host that explicitly overrides an ancestor hidden v
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   await el.updateComplete;
 
-  const sink = document.querySelector<HTMLElement>(
-    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
-  )!;
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
   el.errorText = 'Visible override error';
   await el.updateComplete;
-  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal([
-    'Visible override error',
-  ]);
+  expect(Array.from(sink.children, (node) => node.textContent)).to.deep.equal(['Visible override error']);
 });
 
 describe('auto-advance and backspace navigation', () => {
@@ -602,17 +601,17 @@ describe('auto-advance and backspace navigation', () => {
 
     typeInto(fieldFor(el, 'day'), '27');
     await el.updateComplete;
-    expect((el.shadowRoot!.activeElement) === (fieldFor(el, 'month'))).to.equal(true);
+    expect(el.shadowRoot!.activeElement === fieldFor(el, 'month')).to.equal(true);
 
     typeInto(fieldFor(el, 'month'), '03');
     await el.updateComplete;
-    expect((el.shadowRoot!.activeElement) === (fieldFor(el, 'year'))).to.equal(true);
+    expect(el.shadowRoot!.activeElement === fieldFor(el, 'year')).to.equal(true);
 
     fieldFor(el, 'year').focus();
     typeInto(fieldFor(el, 'year'), '2007');
     await el.updateComplete;
     // Nothing after year -- focus stays put instead of moving off the control.
-    expect((el.shadowRoot!.activeElement) === (fieldFor(el, 'year'))).to.equal(true);
+    expect(el.shadowRoot!.activeElement === fieldFor(el, 'year')).to.equal(true);
   });
 
   it('moves focus to the previous field on Backspace in an already-empty field, without altering its content', async () => {
@@ -638,7 +637,7 @@ describe('auto-advance and backspace navigation', () => {
     );
     await el.updateComplete;
 
-    expect((el.shadowRoot!.activeElement) === (fieldFor(el, 'day'))).to.equal(true);
+    expect(el.shadowRoot!.activeElement === fieldFor(el, 'day')).to.equal(true);
     expect(fieldFor(el, 'day').value).to.equal('27'); // untouched by the previous field's Backspace
   });
 
@@ -657,7 +656,7 @@ describe('auto-advance and backspace navigation', () => {
       }),
     );
     await el.updateComplete;
-    expect((el.shadowRoot!.activeElement) === (day)).to.equal(true);
+    expect(el.shadowRoot!.activeElement === day).to.equal(true);
   });
 });
 
@@ -680,7 +679,7 @@ describe('arrow-key field-to-field navigation and RTL', () => {
       }),
     );
     await el.updateComplete;
-    expect((el.shadowRoot!.activeElement) === (fieldFor(el, 'month'))).to.equal(true);
+    expect(el.shadowRoot!.activeElement === fieldFor(el, 'month')).to.equal(true);
 
     const month = fieldFor(el, 'month');
     month.setSelectionRange(0, 0); // caret at the start
@@ -693,7 +692,7 @@ describe('arrow-key field-to-field navigation and RTL', () => {
       }),
     );
     await el.updateComplete;
-    expect((el.shadowRoot!.activeElement) === (day)).to.equal(true);
+    expect(el.shadowRoot!.activeElement === day).to.equal(true);
   });
 
   it('flips which physical arrow key means "next field" under an inherited RTL ancestor, without changing the field order itself', async () => {
@@ -723,7 +722,7 @@ describe('arrow-key field-to-field navigation and RTL', () => {
       }),
     );
     await el.updateComplete;
-    expect((el.shadowRoot!.activeElement) === (day)).to.equal(true);
+    expect(el.shadowRoot!.activeElement === day).to.equal(true);
 
     // ArrowLeft-at-start now means "toward the next field" under RTL.
     day.setSelectionRange(0, 0);
@@ -736,7 +735,7 @@ describe('arrow-key field-to-field navigation and RTL', () => {
       }),
     );
     await el.updateComplete;
-    expect((el.shadowRoot!.activeElement) === (fieldFor(el, 'month'))).to.equal(true);
+    expect(el.shadowRoot!.activeElement === fieldFor(el, 'month')).to.equal(true);
   });
 });
 
@@ -1018,6 +1017,21 @@ describe('per-field labels', () => {
     );
     expect(labels).to.deep.equal(['Day', 'Month', 'Year']);
   });
+
+  it('keeps explicit empty and old-English per-field labels caller-owned', async () => {
+    const el = (await fixture(html`
+      <lr-known-date
+        day-label="Day"
+        month-label=""
+        .strings=${{ knownDateDay: 'Jour', knownDateMonth: 'Mois', knownDateYear: 'Année' }}
+      ></lr-known-date>
+    `)) as LyraKnownDate;
+    await el.updateComplete;
+    const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="field-label"]')) as HTMLLabelElement[];
+    expect(labels.find((label) => label.htmlFor === fieldFor(el, 'day').id)?.textContent).to.equal('Day');
+    expect(labels.find((label) => label.htmlFor === fieldFor(el, 'month').id)?.textContent).to.equal('');
+    expect(labels.find((label) => label.htmlFor === fieldFor(el, 'year').id)?.textContent).to.equal('Année');
+  });
 });
 
 describe('slot vs. attribute precedence and empty-state hiding', () => {
@@ -1058,8 +1072,8 @@ describe('required-field asterisk', () => {
   it('appears only when both required and a real label are set', async () => {
     const el = (await fixture(html`<lr-known-date label="Birth date" required></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
-    const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
-    const after = getComputedStyle(legend, '::after');
+    const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
+    const after = getComputedStyle(label, '::after');
     expect(after.content).to.contain('*');
   });
 
@@ -1411,10 +1425,10 @@ it('focus() activates the first field in locale order and blur() releases it', a
   await el.updateComplete;
   el.focus();
   const focused = el.shadowRoot!.activeElement as HTMLInputElement | null;
-  expect((focused) != null, 'focus() reaches an internal field').to.equal(true);
+  expect(focused != null, 'focus() reaches an internal field').to.equal(true);
   expect(focused!.tagName).to.equal('INPUT');
   el.blur();
-  expect((el.shadowRoot!.activeElement) === null).to.equal(true);
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
 });
 
 describe('lr-known-date implicit form submission', () => {
@@ -1563,9 +1577,7 @@ it('uses caller-supplied field labels ahead of the localized defaults', async ()
     <lr-known-date day-label="Jour" month-label="Mois" year-label="Annee"></lr-known-date>
   `)) as LyraKnownDate;
   await el.updateComplete;
-  const labels = [...el.shadowRoot!.querySelectorAll('[part="field-label"]')].map(
-    (label) => label.textContent!.trim(),
-  );
+  const labels = [...el.shadowRoot!.querySelectorAll('[part="field-label"]')].map((label) => label.textContent!.trim());
   expect(labels).to.include.members(['Jour', 'Mois', 'Annee']);
 });
 
@@ -1589,9 +1601,7 @@ it('rejects a non-padded or calendar-impossible declarative value', async () => 
   await loose.updateComplete;
   expect(loose.value).to.equal('');
 
-  const impossible = (await fixture(
-    html`<lr-known-date value="2007-02-30"></lr-known-date>`,
-  )) as LyraKnownDate;
+  const impossible = (await fixture(html`<lr-known-date value="2007-02-30"></lr-known-date>`)) as LyraKnownDate;
   await impossible.updateComplete;
   expect(impossible.value).to.equal('');
 
@@ -1610,9 +1620,7 @@ it('rejects a non-padded or calendar-impossible declarative value', async () => 
 // a disabled required field kept `valueMissing` raised and `:state(invalid)` published.
 describe('lr-known-date barred from constraint validation', () => {
   it('reports no violation while disabled, and restores it on re-enable', async () => {
-    const el = (await fixture(
-      html`<lr-known-date required disabled></lr-known-date>`,
-    )) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date required disabled></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     expect(el.validity.valueMissing, 'valueMissing while disabled').to.be.false;
     expect(el.validationMessage, 'no message while disabled').to.equal('');
@@ -1633,7 +1641,9 @@ describe('lr-known-date barred from constraint validation', () => {
 
   it('reports no violation inside a disabled fieldset', async () => {
     const form = (await fixture(html`
-      <form><fieldset disabled><lr-known-date required></lr-known-date></fieldset></form>
+      <form>
+        <fieldset disabled><lr-known-date required></lr-known-date></fieldset>
+      </form>
     `)) as HTMLFormElement;
     const el = form.querySelector('lr-known-date') as LyraKnownDate;
     await el.updateComplete;
@@ -1642,9 +1652,7 @@ describe('lr-known-date barred from constraint validation', () => {
   });
 
   it('still reports no violation while readonly', async () => {
-    const el = (await fixture(
-      html`<lr-known-date required readonly></lr-known-date>`,
-    )) as LyraKnownDate;
+    const el = (await fixture(html`<lr-known-date required readonly></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
     expect(el.validity.valueMissing, 'valueMissing while readonly').to.be.false;
   });
@@ -1685,12 +1693,12 @@ it('tolerates a null or partial parts assignment, defaulting missing fields to e
   const el = (await fixture(html`<lr-known-date value="2007-03-27"></lr-known-date>`)) as LyraKnownDate;
   await el.updateComplete;
 
-  el.parts = null as unknown as DateParts;
+  el.parts = null as unknown as LyraKnownDateParts;
   await el.updateComplete;
   expect(el.parts).to.deep.equal({ day: '', month: '', year: '' });
   expect(el.value).to.equal('');
 
-  el.parts = { day: '27' } as unknown as DateParts;
+  el.parts = { day: '27' } as unknown as LyraKnownDateParts;
   await el.updateComplete;
   expect(el.parts, 'month/year missing from the assignment default to empty').to.deep.equal({
     day: '27',
@@ -1825,9 +1833,7 @@ it("prefers a nested element's own non-empty aria-label over its visible text wh
 });
 
 it('focus() falls back to the first field in locale order once every field is already filled', async () => {
-  const el = (await fixture(
-    html`<lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date>`,
-  )) as LyraKnownDate;
+  const el = (await fixture(html`<lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date>`)) as LyraKnownDate;
   await el.updateComplete;
   el.focus();
   const focused = el.shadowRoot!.activeElement as HTMLInputElement | null;
@@ -1862,10 +1868,7 @@ it('falls back to ambient globals in a window missing MutationObserver, requestA
 
     typeInto(fieldFor(el, 'day'), '5');
     fieldFor(el, 'day').dispatchEvent(new FocusEvent('blur', { relatedTarget: null }));
-    expect(
-      el.value,
-      'still commits through the module-level Event/InputEvent fallback',
-    ).to.equal('2007-03-05');
+    expect(el.value, 'still commits through the module-level Event/InputEvent fallback').to.equal('2007-03-05');
   } finally {
     el.remove();
     for (const name of removable) {

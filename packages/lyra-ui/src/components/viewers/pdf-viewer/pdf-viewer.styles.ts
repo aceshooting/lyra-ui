@@ -34,6 +34,23 @@ export const styles = css`
      file, never a function of the surrounding UI direction. Scoped to the canvas alone so the
      text-layer's own RTL centering (below) is untouched. */
   lr-virtual-list::part(page-canvas) { box-shadow: 0 0 0 var(--lr-border-width-thin) var(--lr-color-border); direction: ltr; }
+  lr-virtual-list::part(page-error) {
+    position: absolute;
+    inset-block-start: var(--lr-space-m);
+    inset-inline-start: 50%;
+    translate: -50% 0;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-size-12rem);
+    min-block-size: var(--lr-size-12rem);
+    padding: var(--lr-space-l);
+    border: var(--lr-border-width-thin) solid var(--lr-color-danger);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-danger);
+    text-align: center;
+  }
+  lr-virtual-list::part(page-error-visible) { display: flex; }
   lr-virtual-list::part(text-layer) {
     position: absolute;
     inset-block-start: var(--lr-space-m);

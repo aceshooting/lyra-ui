@@ -77,7 +77,8 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.disconnect();
   }
 

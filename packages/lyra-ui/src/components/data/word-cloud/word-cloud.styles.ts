@@ -27,13 +27,16 @@ export const styles = css`
     display: block;
     inline-size: 100%;
     block-size: 100%;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    cursor: pointer;
   }
   svg:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='word'] {
-    cursor: pointer;
+    pointer-events: none;
     font-family: var(--lr-font);
     font-weight: var(--lr-font-weight-semibold);
     text-anchor: middle;
@@ -41,21 +44,18 @@ export const styles = css`
     transition: text-decoration-color var(--lr-transition-fast);
     text-decoration: underline transparent;
   }
-  [part='word']:hover {
+  [part='word'][data-hovered] {
     text-decoration-color: currentColor;
-  }
-  /* A word's colour is data -- word-cloud.class.ts writes it as the SVG fill attribute, and it is
-     the thing the legend keys off -- so the pressed state thickens the underline the hover reveals
-     rather than tinting the glyph, which would read as the word changing category. */
-  [part='word']:active {
-    text-decoration-color: currentColor;
-    text-decoration-thickness: var(--lr-border-width-medium);
   }
   [part='focus-ring'] {
     fill: none;
     stroke: var(--lr-focus-ring-color);
     stroke-width: var(--lr-focus-ring-width);
     pointer-events: none;
+  }
+  [part='focus-ring'][data-pressed] {
+    stroke-width: var(--lr-border-width-thick);
+    stroke-dasharray: var(--lr-size-4px) var(--lr-size-2px);
   }
   [part='empty'] {
     color: var(--lr-color-text-quiet);
@@ -88,6 +88,13 @@ export const styles = css`
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
+  [part='limit'],
+  [part='legend-limit'] {
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+  }
   @media (prefers-reduced-motion: reduce) {
     [part='word'] {
       transition: none !important;
@@ -99,6 +106,10 @@ export const styles = css`
     }
     [part='focus-ring'] {
       stroke: Highlight;
+    }
+    [part='focus-ring'][data-pressed] {
+      fill: Highlight;
+      fill-opacity: 0.2;
     }
   }
 `;

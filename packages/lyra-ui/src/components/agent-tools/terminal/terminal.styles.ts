@@ -98,8 +98,7 @@ export const styles = css`
      trailing attribute selector (see the renderItem note above), so this is a plain pointer-hover
      preview across all lines rather than an attribute-gated one. Reuses the same
      --lr-color-brand-quiet token as the toolbar buttons' own hover fill above: a toned highlight's
-     background is set inline via styleMap (see lineStateStyle()'s comment in terminal.class.ts) and
-     always wins specificity over this rule, so the two never visibly compete. */
+     semantic state-specific aliases below reassert their own tone for hover/press. */
   lr-virtual-list::part(line):hover {
     background: var(--lr-color-brand-quiet);
   }
@@ -109,6 +108,38 @@ export const styles = css`
      wires @click/@keydown), not a passive hover-only preview. */
   lr-virtual-list::part(line):active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  /* State-specific parts keep semantic highlights intact through hover/press. They are also the
+     honest external styling surface: a consumer can deliberately override a semantic part. */
+  lr-virtual-list::part(line-highlight-accent):hover {
+    background: var(--lr-terminal-highlight-accent-bg, var(--lr-color-brand-quiet));
+  }
+  lr-virtual-list::part(line-highlight-accent):active {
+    background: var(--lr-terminal-highlight-accent-bg, var(--lr-color-brand-quiet));
+  }
+  lr-virtual-list::part(line-highlight-success):hover {
+    background: var(--lr-terminal-highlight-success-bg, var(--lr-color-success-quiet));
+  }
+  lr-virtual-list::part(line-highlight-success):active {
+    background: var(--lr-terminal-highlight-success-bg, var(--lr-color-success-quiet));
+  }
+  lr-virtual-list::part(line-highlight-warning):hover {
+    background: var(--lr-terminal-highlight-warning-bg, var(--lr-color-warning-quiet));
+  }
+  lr-virtual-list::part(line-highlight-warning):active {
+    background: var(--lr-terminal-highlight-warning-bg, var(--lr-color-warning-quiet));
+  }
+  lr-virtual-list::part(line-highlight-danger):hover {
+    background: var(--lr-terminal-highlight-danger-bg, var(--lr-color-danger-quiet));
+  }
+  lr-virtual-list::part(line-highlight-danger):active {
+    background: var(--lr-terminal-highlight-danger-bg, var(--lr-color-danger-quiet));
+  }
+  lr-virtual-list::part(line-highlight-neutral):hover {
+    background: var(--lr-terminal-highlight-neutral-bg, var(--lr-color-surface));
+  }
+  lr-virtual-list::part(line-highlight-neutral):active {
+    background: var(--lr-terminal-highlight-neutral-bg, var(--lr-color-surface));
   }
   lr-virtual-list::part(line):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -123,6 +154,9 @@ export const styles = css`
   :host(:not([wrap])) lr-virtual-list::part(line) {
     white-space: pre;
     overflow-wrap: normal;
+    inline-size: max-content;
+    min-inline-size: 100%;
+    box-sizing: border-box;
   }
   :host(:not([wrap])) lr-virtual-list::part(base) {
     overflow-x: auto;

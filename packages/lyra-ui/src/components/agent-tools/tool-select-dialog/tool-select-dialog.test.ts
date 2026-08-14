@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './tool-select-dialog.js';
 import type {
   LyraToolSelectDialog,
@@ -7,14 +7,24 @@ import type {
 } from './tool-select-dialog.js';
 import type { LyraCheckbox } from '../../forms/checkbox/checkbox.js';
 import type { LyraSwitch } from '../../forms/switch/switch.js';
-import { styles } from './tool-select-dialog.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
-it('provides hover feedback for the native search input', () => {
-  // Pseudo-class presence is the behavior under test; synthetic pointer events do not
-  // activate browser :hover state under Web Test Runner.
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/:where\(\[part='search-input'\]\):hover/);
+it('provides rendered hover feedback for the native search input', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog open style="--lr-color-brand: rgb(1, 2, 3)"></lr-tool-select-dialog>
+  `);
+  const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+  const rect = input.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(() => getComputedStyle(input).borderTopColor === 'rgb(1, 2, 3)');
+    expect(getComputedStyle(input).borderTopColor).to.equal('rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
+  }
 });
 
 // A stand-in for a slotted component whose real focusable target lives
@@ -127,14 +137,20 @@ it('reflects open as an attribute and sets dialog semantics once open', async ()
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="title"]')!.id);
 });
 
-it('forwards a host aria-label to the panel and lets it win over the generated title', async () => {
+it('keeps a host aria-label on the host while the dialog panel remains title-labelled', async () => {
   const el = (await fixture(
     html`<lr-tool-select-dialog open aria-label="Custom tool picker name"></lr-tool-select-dialog>`,
   )) as LyraToolSelectDialog;
   const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
 
-  expect(panel.getAttribute('aria-label')).to.equal('Custom tool picker name');
-  expect(panel.hasAttribute('aria-labelledby')).to.equal(false);
+  expect(el.getAttribute('aria-label')).to.equal('Custom tool picker name');
+  expect(panel.hasAttribute('aria-label')).to.equal(false);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="title"]')!.id);
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(panel.hasAttribute('aria-label')).to.equal(false);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="title"]')!.id);
 });
 
 it('renders the default label and a live "N of M tools enabled" subtitle', async () => {
@@ -577,6 +593,19 @@ describe('useDefaults', () => {
 });
 
 describe('dismissal', () => {
+  it('offers consistent show() and hide() lifecycle methods', async () => {
+    const el = await fixture<LyraToolSelectDialog>(html`
+      <lr-tool-select-dialog></lr-tool-select-dialog>
+    `);
+    el.show();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    const closed = oneEvent(el, 'lr-close');
+    el.hide();
+    expect((await closed).detail).to.equal('api');
+    expect(el.open).to.be.false;
+  });
+
   it('closes on backdrop click and emits lr-close with reason "backdrop"', async () => {
     const el = (await fixture(
       html`<lr-tool-select-dialog open></lr-tool-select-dialog>`,
@@ -797,6 +826,29 @@ describe('footer slot', () => {
     const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
     expect(footer.hasAttribute('hidden')).to.be.false;
   });
+
+  it('keeps an unbroken slotted footer action reachable inside a 320px allocation', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="inline-size:320px;block-size:480px">
+        <lr-tool-select-dialog
+          open
+          style="position:relative;inset:auto;display:flex;inline-size:320px;block-size:480px;box-sizing:border-box"
+          .tools=${TOOLS}
+        >
+          <button slot="footer">${'FinishSelectionWithoutNaturalBreaks'.repeat(10)}</button>
+        </lr-tool-select-dialog>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-tool-select-dialog') as LyraToolSelectDialog;
+    const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+    const footer = el.shadowRoot!.querySelector<HTMLElement>('[part="footer"]')!;
+    const action = el.querySelector<HTMLButtonElement>('[slot="footer"]')!;
+
+    expect(Math.ceil(el.getBoundingClientRect().width)).to.be.at.most(320);
+    expect(footer.scrollWidth).to.be.at.most(footer.clientWidth + 1);
+    expect(action.getBoundingClientRect().left).to.be.at.least(panel.getBoundingClientRect().left - 1);
+    expect(action.getBoundingClientRect().right).to.be.at.most(panel.getBoundingClientRect().right + 1);
+  });
 });
 
 it('is accessible while closed', async () => {
@@ -893,13 +945,88 @@ it('counts only unique known selected ids in the summary', async () => {
   expect(el.shadowRoot!.querySelector('[part="subtitle"]')!.textContent!.trim()).to.equal('1 of 2 tools enabled');
 });
 
-it('bounds the initially rendered large catalog', async () => {
-  const tools: ToolSelectDialogTool[] = Array.from({ length: 1_000 }, (_, index) => ({
+it('uses the first tool for a duplicate id across grouping, rendering, counting, and selection events', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog
+      open
+      .tools=${[
+        { id: 'same', name: 'First definition', category: 'First category' },
+        { id: 'same', name: 'Second definition', category: 'Second category' },
+      ]}
+      .selected=${['same', 'same']}
+    ></lr-tool-select-dialog>
+  `);
+
+  expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelector('[part="tool-name"]')!.textContent!.trim()).to.equal('First definition');
+  expect(el.shadowRoot!.querySelectorAll('[part="category"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelector('[part="subtitle"]')!.textContent!.trim()).to.equal('1 of 1 tools enabled');
+
+  const pending = oneEvent(el, 'lr-change');
+  const defaults = el.shadowRoot!.querySelector('lr-switch')!;
+  defaults.dispatchEvent(new CustomEvent('lr-change', {
+    detail: { checked: true },
+    bubbles: true,
+    composed: true,
+  }));
+  expect((await pending).detail.selected).to.deep.equal(['same']);
+});
+
+it('bounds a large catalog while reserving selected identities and a keyboard-reachable continuation', async () => {
+  const tools: ToolSelectDialogTool[] = Array.from({ length: 201 }, (_, index) => ({
     id: `tool-${index}`,
     name: `Tool ${index}`,
   }));
   const el = (await fixture(
-    html`<lr-tool-select-dialog open .tools=${tools}></lr-tool-select-dialog>`,
+    html`<lr-tool-select-dialog
+      open
+      .tools=${tools}
+      .selected=${['tool-200']}
+      .strings=${{
+        toolSelectLimit: 'Only {count} tools are currently mounted.',
+        loadMore: 'Show the next tools',
+      }}
+    ></lr-tool-select-dialog>`,
   )) as LyraToolSelectDialog;
   expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]').length).to.equal(200);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.include(
+    'Only 200 tools are currently mounted.',
+  );
+  expect(el.shadowRoot!.querySelectorAll('lr-checkbox[value="tool-200"]')).to.have.length(1);
+  expect(checkboxFor(el, 'tool-200').checked).to.be.true;
+  expect(el.shadowRoot!.querySelectorAll('lr-checkbox[value="tool-199"]')).to.have.length(0);
+  const loadMore = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="load-more"]')!;
+  expect(loadMore.textContent!.trim()).to.equal('Show the next tools');
+
+  loadMore.focus();
+  loadMore.click();
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]').length).to.equal(201);
+  expect(el.shadowRoot!.querySelectorAll('[part="load-more"]').length).to.equal(0);
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('body');
+  expect(checkboxFor(el, 'tool-200').checked).to.be.true;
+});
+
+it('lets search reach a matching tool beyond the initial projection without mounting the full catalog', async () => {
+  const tools: ToolSelectDialogTool[] = Array.from({ length: 1_000 }, (_, index) => ({
+    id: `tool-${index}`,
+    name: `Tool ${index}`,
+  }));
+  const el = (await fixture(html`
+    <lr-tool-select-dialog
+      open
+      .tools=${tools}
+      .strings=${{ toolSelectLimit: 'Only {count} tools are currently mounted.', loadMore: 'Load more' }}
+    ></lr-tool-select-dialog>
+  `)) as LyraToolSelectDialog;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+
+  input.value = 'Tool 999';
+  input.dispatchEvent(new Event('input'));
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]').length).to.equal(1);
+  expect(checkboxFor(el, 'tool-999').value).to.equal('tool-999');
+  expect(el.shadowRoot!.querySelectorAll('[part="limit"]').length).to.equal(0);
 });

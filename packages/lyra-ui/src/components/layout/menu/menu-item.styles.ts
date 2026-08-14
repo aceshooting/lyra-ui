@@ -76,19 +76,19 @@ export const styles = css`
   :host([loading]) [part='base']:active {
     background: none;
   }
-  :host([destructive]) [part='base'],
   :host([variant='danger']) [part='base'] {
     color: var(--lr-menu-item-danger-color, var(--lr-color-danger));
   }
-  :host([destructive]) [part='base']:hover,
-  :host([variant='danger']) [part='base']:hover {
-    background: var(--lr-menu-item-danger-hover-bg, var(--lr-color-danger-quiet));
+  :host([variant='danger']:not([disabled]):not([loading])) [part='base']:hover {
+    background: var(
+      --lr-menu-item-danger-hover-bg,
+      var(--lr-color-danger-quiet)
+    );
   }
   /* Same step past hover as the ordinary row above, taken on the danger fill this variant hovers
-     with. Ordered exactly like the :hover rules it mirrors, so the disabled/destructive precedence
-     stays whatever it already was rather than diverging between the two states. */
-  :host([destructive]) [part='base']:active,
-  :host([variant='danger']) [part='base']:active {
+     with. Disabled/loading rows never regain enabled paint through this later danger rule. */
+  :host([variant='danger']:not([disabled]):not([loading]))
+    [part='base']:active {
     background: var(
       --lr-menu-item-danger-active-bg,
       color-mix(
@@ -137,7 +137,9 @@ export const styles = css`
     animation: lr-menu-item-spin var(--lr-transition-ambient) linear infinite;
   }
   @keyframes lr-menu-item-spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
   /* Only ever present in the DOM at all for a checked type="checkbox" item
      (see menu-item.ts's render()) -- no [hidden]-toggling needed, unlike
@@ -176,6 +178,8 @@ export const styles = css`
     display: contents;
   }
   @media (prefers-reduced-motion: reduce) {
-    [part~='spinner'] { animation: none; }
+    [part~='spinner'] {
+      animation: none;
+    }
   }
 `;

@@ -36,6 +36,44 @@ const eightSeries = () =>
   }));
 
 describe('lite-chart forced-colors encodings', () => {
+  it('re-renders when the live forced-colors query changes and removes its listener on disconnect', async () => {
+    const originalMatchMedia = window.matchMedia;
+    let active = false;
+    let listener: ((event: MediaQueryListEvent) => void) | undefined;
+    let removals = 0;
+    window.matchMedia = ((query: string) => {
+      if (query !== '(forced-colors: active)') return originalMatchMedia(query);
+      return {
+        get matches() { return active; },
+        media: query,
+        onchange: null,
+        addListener() {},
+        removeListener() {},
+        addEventListener(_type: string, callback: EventListenerOrEventListenerObject) {
+          listener = callback as (event: MediaQueryListEvent) => void;
+        },
+        removeEventListener() { removals += 1; },
+        dispatchEvent: () => false,
+      } as MediaQueryList;
+    }) as typeof window.matchMedia;
+    try {
+      const el = await mount(html`<lr-lite-chart
+        type="bar"
+        .labels=${['A']}
+        .datasets=${[{ label: 'S', data: [1] }]}
+      ></lr-lite-chart>`);
+      expect(el.shadowRoot!.querySelectorAll('pattern')).to.have.length(0);
+      active = true;
+      listener?.({ matches: true, media: '(forced-colors: active)' } as MediaQueryListEvent);
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('pattern')).to.have.length(1);
+      el.remove();
+      expect(removals).to.be.greaterThan(0);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
   it('textures eight repeated-color bar series and their legend swatches distinctly', async () => {
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = forcedColorsMatchMedia(originalMatchMedia);

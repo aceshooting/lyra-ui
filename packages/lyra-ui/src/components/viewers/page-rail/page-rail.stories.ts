@@ -2,7 +2,8 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './page-rail.js';
 import '../pdf-viewer/pdf-viewer.js';
-import '../../layout/split/split.js';
+import '../pptx-viewer/pptx-viewer.js';
+import '../../layout/multi-split/multi-split.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
@@ -18,6 +19,7 @@ export default meta;
 type Story = StoryObj;
 
 const SAMPLE_PDF_URL = '/fixtures/sample.pdf';
+const SAMPLE_PPTX_URL = new URL('../pptx-viewer/fixtures/table-stale-frame.pptx', import.meta.url).href;
 const HIGHLIGHTS: LyraHighlight[] = [{ id: 'cite-1', anchor: { kind: 'page', page: 1 }, tone: 'accent' }];
 
 export const Mediated: Story = {
@@ -26,10 +28,19 @@ export const Mediated: Story = {
 
 export const WiredToPdfViewer: Story = {
   render: () => html`
-    <lr-split style="height:320px;">
+    <lr-multi-split style="height:320px;">
       <lr-page-rail for="rail-doc" .highlights=${HIGHLIGHTS} style="width:96px;"></lr-page-rail>
       <lr-pdf-viewer id="rail-doc" src=${SAMPLE_PDF_URL} name="sample.pdf" .highlights=${HIGHLIGHTS}></lr-pdf-viewer>
-    </lr-split>
+    </lr-multi-split>
+  `,
+};
+
+export const WiredToPptxViewer: Story = {
+  render: () => html`
+    <lr-multi-split style="height:320px;">
+      <lr-page-rail for="rail-deck" style="width:96px;"></lr-page-rail>
+      <lr-pptx-viewer id="rail-deck" src=${SAMPLE_PPTX_URL} name="Table fixture"></lr-pptx-viewer>
+    </lr-multi-split>
   `,
 };
 

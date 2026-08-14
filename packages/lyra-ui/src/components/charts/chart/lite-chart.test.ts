@@ -13,6 +13,63 @@ it('provides hover feedback for keyboard-focusable bars and points', () => {
   expect(css).to.match(/:where\(\[part='point'\]\):hover/);
 });
 
+describe('lite chart family-contract regressions', () => {
+  it('falls back to bar rendering for an invalid direct type write', async () => {
+    const el = await mount(html`<lr-lite-chart
+      .labels=${['A']}
+      .datasets=${[{ label: 'S', data: [1] }]}
+    ></lr-lite-chart>`);
+    (el as unknown as { type: string }).type = 'pie';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="bar"]')).to.have.length(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="line"]')).to.have.length(0);
+  });
+
+  it('does not connect a sampled line across a null hidden between retained endpoints', async () => {
+    const values = Array.from({ length: 2_000 }, (_, index) => index as number | null);
+    values[1] = null;
+    const el = await mount(html`<lr-lite-chart
+      type="line"
+      .labels=${values.map((_, index) => `L${index}`)}
+      .datasets=${[{ label: 'S', data: values }]}
+    ></lr-lite-chart>`);
+    const path = el.shadowRoot!.querySelector('[part="line"]')!.getAttribute('d') ?? '';
+    expect(path.match(/M/g)?.length ?? 0).to.be.at.least(2);
+    expect(el.shadowRoot!.querySelectorAll('[part="point"]')).to.have.length(1_000);
+  });
+
+  it('aligns sparse streamed series before appending the next category', async () => {
+    const el = await mount(html`<lr-lite-chart></lr-lite-chart>`);
+    el.labels = ['A', 'B'];
+    el.datasets = [{ label: 'full', data: [1, 2] }, { label: 'sparse', data: [] }];
+    el.appendData('C', [3, 4]);
+    expect(el.datasets[1]!.data).to.deep.equal([null, null, 4]);
+  });
+
+  it('routes values through the unified formatter and emits both activation contracts', async () => {
+    const surfaces = new Set<string>();
+    const el = await mount(html`<lr-lite-chart
+      legend
+      .labels=${['A']}
+      .datasets=${[{ label: 'S', data: [2] }]}
+    ></lr-lite-chart>`);
+    el.formatter = ({ value, surface }) => {
+      surfaces.add(surface);
+      return `${surface}:${value}`;
+    };
+    await el.updateComplete;
+    el.exportData('csv');
+    const events: string[] = [];
+    el.addEventListener('lr-datum-activate', () => events.push('datum'));
+    el.addEventListener('lr-point-click', () => events.push('legacy'));
+    el.shadowRoot!.querySelector('[part="bar"]')!.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, composed: true }),
+    );
+    expect([...surfaces]).to.include.members(['visual', 'spoken', 'legend', 'export']);
+    expect(events).to.deep.equal(['datum', 'legacy']);
+  });
+});
+
 async function mount(tpl: ReturnType<typeof html>): Promise<LyraLiteChart> {
   const el = (await fixture(tpl)) as LyraLiteChart;
   // Let the ResizeObserver callback (async, fires after connect) settle so
@@ -393,7 +450,7 @@ it('carries every mark colour in a computed `color` so the hover/active mix has 
     .labels=${['only']}
     .datasets=${[
       { label: 'Custom', data: [1], color: 'rgb(255, 0, 0)' },
-      { label: 'Themed', data: [1], color: 'var(--lr-chart-color-3)' },
+      { label: 'Themed', data: [1] },
     ]}
   ></lr-lite-chart>`);
   const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
@@ -426,8 +483,10 @@ it('allows the categorical palette to be rethemed through semantic chart color v
     ]}
   ></lr-lite-chart>`);
   const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
-  expect(styles.cssText).to.match(/--lr-chart-color-1:\s*var\(--lr-color-chart-1\)/);
-  expect(rects[1].getAttribute('fill')).to.equal('var(--lr-chart-color-2)');
+  expect(styles.cssText).to.not.match(/--lr-chart-color-1\s*:/);
+  expect(rects[1].getAttribute('fill')).to.equal(
+    'var(--lr-chart-color-2, var(--lr-color-chart-2))',
+  );
   expect(getComputedStyle(rects[1]).fill).to.equal('rgb(1, 2, 3)');
 });
 
@@ -1868,7 +1927,7 @@ describe('multi-series screen-reader data table', () => {
       { label: 'Cost', data: [5, 8] },
     ];
     await el.updateComplete;
-    const table = el.shadowRoot!.querySelector('table[part="data-table"]');
+    const table = el.shadowRoot!.querySelector('table[part="table"]');
     expect((table) != null).to.equal(true);
     expect((el.shadowRoot!.querySelector('ul[part="data-list"]')) == null).to.be.true;
     const headerCells = table!.querySelectorAll('thead th');
@@ -1888,7 +1947,7 @@ describe('multi-series screen-reader data table', () => {
       { label: 'Cost', data: [5, 8] },
     ];
     await el.updateComplete;
-    const rows = [...el.shadowRoot!.querySelectorAll('table[part="data-table"] tbody tr')];
+    const rows = [...el.shadowRoot!.querySelectorAll('table[part="table"] tbody tr')];
     const cells = rows.map((row) => [...row.querySelectorAll('td')].map((c) => c.textContent?.trim()));
     expect(cells).to.deep.equal([
       ['10', '5'],
@@ -1907,7 +1966,7 @@ describe('multi-series screen-reader data table', () => {
       { label: 'Cost', data: [5, 8] },
     ];
     await el.updateComplete;
-    const caption = el.shadowRoot!.querySelector('table[part="data-table"] caption');
+    const caption = el.shadowRoot!.querySelector('table[part="table"] caption');
     expect(caption?.textContent?.trim()).to.equal('Diagrammdaten');
   });
 
@@ -1917,7 +1976,7 @@ describe('multi-series screen-reader data table', () => {
     el.datasets = [{ label: 'Revenue', data: [10, 20] }];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('ul[part="data-list"]')).to.exist;
-    expect((el.shadowRoot!.querySelector('table[part="data-table"]')) == null).to.be.true;
+    expect((el.shadowRoot!.querySelector('table[part="table"]')) == null).to.be.true;
   });
 
   it('caps generated marks and the single-series alternative at 1,000 endpoint-preserving records', async () => {
@@ -3150,6 +3209,36 @@ describe('exportData', () => {
       .datasets=${[{ label: 'A', data: [1] }]}
     ></lr-lite-chart>`);
     expect(el.exportData('csv').split('\r\n').at(-1)).to.equal('Tue,');
+  });
+
+  it('exports data beyond the final label with an empty aligned label cell', async () => {
+    const el = await mount(html`<lr-lite-chart
+      .labels=${['Only label']}
+      .datasets=${[{ label: 'A', data: [1, 2] }]}
+    ></lr-lite-chart>`);
+    expect(el.exportData('csv').split('\r\n')).to.deep.equal([
+      'label,A',
+      'Only label,1',
+      ',2',
+    ]);
+  });
+
+  it('keeps ragged and malformed series cells on their canonical record rows', async () => {
+    const el = await mount(html`<lr-lite-chart
+      .labels=${['Only label']}
+      .datasets=${[
+        { label: 'A', data: [1, Number.NaN, 3] },
+        { label: 'B', data: [null, 2] },
+        { label: 'C', data: [Number.POSITIVE_INFINITY, null, 30, 40] },
+      ]}
+    ></lr-lite-chart>`);
+    expect(el.exportData('csv').split('\r\n')).to.deep.equal([
+      'label,A,B,C',
+      'Only label,1,,',
+      ',,2,',
+      ',3,,30',
+      ',,,40',
+    ]);
   });
 
   it('serializes the rendered SVG for the svg format', async () => {

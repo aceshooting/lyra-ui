@@ -5,12 +5,17 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { finiteDuration } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import {
+  writeClipboardText,
+  type LyraClipboardWriteFailure,
+  type LyraClipboardWriteSuccess,
+} from '../../../internal/clipboard.js';
+import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
 import { styles } from './copy-button.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** How long the confirmation/failure state lasts before reverting -- matches
  *  `lr-code-block`'s own `COPY_CONFIRM_MS`. */
@@ -75,10 +80,12 @@ function errorIcon(): SVGTemplateResult {
   `;
 }
 
-/** Why a clipboard write failed. `unsupported` — no Clipboard API in this context (an insecure
- *  origin, or an older browser); `denied` — the browser refused the write (permission denied, or
- *  the document did not have focus); `failed` — anything else the platform reported. */
-export type LyraCopyErrorReason = 'unsupported' | 'denied' | 'failed';
+export type {
+  LyraClipboardWriteFailure,
+  LyraClipboardWriteOutcome,
+  LyraClipboardWriteSuccess,
+  LyraCopyErrorReason,
+} from '../../../internal/clipboard.js';
 
 /** When the copy button's tooltip is available. */
 export type LyraCopyButtonTooltip = 'full' | 'copy' | 'none';
@@ -97,19 +104,12 @@ function isElementValue(value: unknown): value is Element {
 function isHtmlElementValue(value: unknown): value is HTMLElement {
   if (!isElementValue(value)) return false;
   const candidate = value as Partial<HTMLElement>;
-  return candidate.namespaceURI === 'http://www.w3.org/1999/xhtml'
-    && typeof candidate.focus === 'function'
-    && typeof candidate.blur === 'function'
-    && typeof candidate.click === 'function';
-}
-
-/** Distinguishes "there is no Clipboard API here at all" from a real rejection, so `lr-copy-error`
- *  can report `unsupported` instead of guessing from a `DOMException` name. */
-class ClipboardUnsupportedError extends Error {
-  constructor() {
-    super('The Clipboard API is unavailable in this context.');
-    this.name = 'ClipboardUnsupportedError';
-  }
+  return (
+    candidate.namespaceURI === 'http://www.w3.org/1999/xhtml' &&
+    typeof candidate.focus === 'function' &&
+    typeof candidate.blur === 'function' &&
+    typeof candidate.click === 'function'
+  );
 }
 
 /** A missing/empty source is an activation failure, but not a platform clipboard failure. */
@@ -121,9 +121,10 @@ class CopySourceError extends Error {
 }
 
 export interface LyraCopyButtonEventMap {
-  'lr-copy': CustomEvent<{ text: string }>;
+  'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-error': CustomEvent<undefined>;
-  'lr-copy-error': CustomEvent<{ text: string; reason: LyraCopyErrorReason; error: unknown }>;
+  'lr-toolbar-actions-change': Event;
+  'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
 }
 /**
  * `<lr-copy-button>` — a standalone icon-only copy-to-clipboard affordance for a plain
@@ -148,16 +149,17 @@ export interface LyraCopyButtonEventMap {
  * @slot copy-icon - Resting copy icon for the built-in button.
  * @slot success-icon - Confirmation icon for the built-in button.
  * @slot error-icon - Failure icon for the built-in button.
- * @event lr-copy - Fired on activation. `detail: { text }` is the resolved copy text, and fires
- *   for every activation — including one whose resolution or clipboard write then fails — matching
- *   `lr-code-block`'s/`lr-json-viewer`'s own copy buttons. Pair it with `lr-copy-error` to tell
- *   the two outcomes apart.
+ * @event lr-copy - Clipboard writing fulfilled. The frozen shared outcome detail is
+ *   `{ ok: true, text }`. Failed writes emit `lr-copy-error` instead.
  * @event lr-error - The source could not be resolved or clipboard writing failed. A bubbling,
  *   composed, non-cancelable `CustomEvent` with no detail, matching the mapped notification.
- * @event lr-copy-error - Clipboard writing failed. `detail: { text, reason, error }`, where
+ * @event lr-copy-error - Source resolution or clipboard writing failed. The frozen detail is
+ *   `{ ok: false, text, reason, error }`, where
  *   `reason` is `'unsupported' | 'denied' | 'failed'` and `error` is the platform error (a
  *   `DOMException` for a real rejection) or a component-created source error. Retained as a
  *   richer Lyra compatibility alias for `lr-error`.
+ * @event lr-toolbar-actions-change - The logical action exposed to a parent toolbar changed its
+ *   disabled state or backing trigger. Bubbling, composed, and non-cancelable.
  * @csspart base - The button itself.
  * @csspart button - Mapped alias for `base` on the same built-in button.
  * @csspart base-success - The button while the copied confirmation is showing.
@@ -248,6 +250,8 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   private readonly internals = attachInternalsSafely(this);
 
+  private readonly toolbarAction = this.createToolbarAction();
+
   constructor() {
     super();
     // `aria-label` is the retained public spelling for naming the internal button. A default
@@ -267,6 +271,13 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (this.hasUpdated && (changed.has('value') || changed.has('from'))) this.resetFeedback();
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (changed.has('disabled') || changed.has('hasCustomTrigger')) {
+      this.emit('lr-toolbar-actions-change');
+    }
   }
 
   override connectedCallback(): void {
@@ -290,7 +301,8 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     this.sink = undefined;
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     // Adoption may occur while already disconnected, so defensively retire old-realm resources
     // even when no additional disconnected callback will run.
     this.resetFeedback();
@@ -317,13 +329,38 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   }
 
   private customTrigger(): HTMLElement | undefined {
-    return this.defaultSlot?.assignedElements({ flatten: true }).find(
-      isHtmlElementValue,
-    );
+    return this.defaultSlot?.assignedElements({ flatten: true }).find(isHtmlElementValue);
   }
 
   private activeTrigger(): HTMLElement | undefined {
     return this.hasCustomTrigger ? this.customTrigger() : this.buttonEl;
+  }
+
+  private createToolbarAction(): LyraToolbarAction {
+    const host = this;
+    return {
+      id: 'copy',
+      get disabled() {
+        const trigger = host.activeTrigger();
+        return !trigger || host.disabled || (trigger as Partial<HTMLButtonElement>).disabled === true;
+      },
+      focus(options) {
+        host.activeTrigger()?.focus(options);
+      },
+      setTabIndex(tabIndex) {
+        const trigger = host.activeTrigger();
+        if (trigger) trigger.tabIndex = tabIndex;
+      },
+      matchesEventPath(path) {
+        const trigger = host.activeTrigger();
+        return trigger !== undefined && path.includes(trigger);
+      },
+    };
+  }
+
+  /** The stable logical copy action exposed to an enclosing composite toolbar. */
+  getToolbarActions(): readonly LyraToolbarAction[] {
+    return [this.toolbarAction];
   }
 
   override focus(options?: FocusOptions): void {
@@ -339,25 +376,20 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     this.activeTrigger()?.click();
   }
 
-  private async writeClipboard(text: string, ownerWindow: Window): Promise<void> {
-    const clipboard = ownerWindow.navigator.clipboard;
-    // Absent in insecure contexts and older browsers. Some engines also throw synchronously from
-    // writeText() rather than rejecting -- inside this async function both arrive at the same
-    // catch below.
-    if (typeof clipboard?.writeText !== 'function') throw new ClipboardUnsupportedError();
-    await clipboard.writeText(text);
-  }
-
   private sourceById(id: string): Element | null {
     const root = this.getRootNode();
     if (
-      (root.nodeType === 9 || root.nodeType === 11)
-      && typeof (root as Partial<Document | ShadowRoot>).getElementById === 'function'
+      (root.nodeType === 9 || root.nodeType === 11) &&
+      typeof (root as Partial<Document | ShadowRoot>).getElementById === 'function'
     ) {
       const source = (root as Document | ShadowRoot).getElementById(id);
-      return isElementValue(source) ? source : null;
+      if (isElementValue(source)) return source;
     }
-    return null;
+    // A shadow-root-local id wins so duplicate ids cannot unexpectedly cross a component
+    // boundary. The mapped `from` contract is nevertheless document-scoped when no local
+    // candidate exists, matching ordinary author markup and remaining correct after adoption.
+    const documentSource = this.ownerDocument.getElementById(id);
+    return isElementValue(documentSource) ? documentSource : null;
   }
 
   private resolveCopyText(): string {
@@ -389,17 +421,6 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     return text;
   }
 
-  private failureReason(error: unknown): LyraCopyErrorReason {
-    if (error instanceof ClipboardUnsupportedError) return 'unsupported';
-    const name = error !== null && typeof error === 'object'
-      ? (error as { name?: unknown }).name
-      : undefined;
-    if (name === 'NotAllowedError' || name === 'SecurityError') {
-      return 'denied';
-    }
-    return 'failed';
-  }
-
   private showStatus(status: CopyStatus): void {
     const owner = this.ownerDocument.defaultView;
     if (!this.isConnected || !owner) return;
@@ -417,23 +438,24 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     handle = owner.setTimeout(() => {
       const timer = this.copyTimer;
       if (
-        timer?.owner !== owner
-        || timer.handle !== handle
-        || timer.generation !== generation
-        || generation !== this.copyGeneration
-        || !this.isConnected
-        || this.ownerDocument.defaultView !== owner
-      ) return;
+        timer?.owner !== owner ||
+        timer.handle !== handle ||
+        timer.generation !== generation ||
+        generation !== this.copyGeneration ||
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== owner
+      )
+        return;
       this.copyTimer = undefined;
       this.setStatus('rest');
     }, duration);
     this.copyTimer = { owner, handle, generation };
   }
 
-  private reportFailure(text: string, error: unknown): void {
+  private reportFailure(outcome: LyraClipboardWriteFailure): void {
     this.showStatus('error');
     this.emit('lr-error');
-    this.emit('lr-copy-error', { text, reason: this.failureReason(error), error });
+    this.emit('lr-copy-error', outcome);
   }
 
   private async copy(): Promise<void> {
@@ -444,27 +466,28 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     try {
       text = this.resolveCopyText();
     } catch (error) {
-      this.emit('lr-copy', { text });
-      if (this.isCurrentCopy(generation)) this.reportFailure(text, error);
+      if (this.isCurrentCopy(generation)) {
+        this.reportFailure(Object.freeze({ ok: false, text, reason: 'failed', error }));
+      }
       return;
     }
-    this.emit('lr-copy', { text });
     if (!owner) return;
-    try {
-      await this.writeClipboard(text, owner);
-    } catch (error) {
-      if (!this.isCurrentCopy(generation, owner)) return;
-      this.reportFailure(text, error);
+    const outcome = await writeClipboardText(owner, text);
+    if (!this.isCurrentCopy(generation, owner)) return;
+    if (!outcome.ok) {
+      this.reportFailure(outcome);
       return;
     }
-    if (!this.isCurrentCopy(generation, owner)) return;
     this.showStatus('success');
+    this.emit('lr-copy', outcome);
   }
 
   private isCurrentCopy(generation: number, owner?: Window): boolean {
-    return this.isConnected
-      && generation === this.copyGeneration
-      && (owner === undefined || this.ownerDocument.defaultView === owner);
+    return (
+      this.isConnected &&
+      generation === this.copyGeneration &&
+      (owner === undefined || this.ownerDocument.defaultView === owner)
+    );
   }
 
   private onClick = (): void => {
@@ -473,10 +496,14 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   private onDefaultSlotChange = (event: Event): void => {
     const slot = event.currentTarget as HTMLSlotElement;
-    const hasCustomTrigger = slot
-      .assignedElements({ flatten: true })
-      .some(isHtmlElementValue);
-    if (hasCustomTrigger !== this.hasCustomTrigger) this.hasCustomTrigger = hasCustomTrigger;
+    const hasCustomTrigger = slot.assignedElements({ flatten: true }).some(isHtmlElementValue);
+    if (hasCustomTrigger !== this.hasCustomTrigger) {
+      this.hasCustomTrigger = hasCustomTrigger;
+      return;
+    }
+    // Replacing one custom trigger with another leaves the boolean state unchanged but still
+    // requires the parent toolbar to transfer its roving tab stop to the new backing node.
+    this.emit('lr-toolbar-actions-change');
   };
 
   private onCustomTriggerClick = (): void => {
@@ -491,18 +518,12 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   private renderIcon(): TemplateResult {
     if (this.status === 'error') {
-      return html`<span part="error-icon" aria-hidden="true"
-        ><slot name="error-icon">${errorIcon()}</slot></span
-      >`;
+      return html`<span part="error-icon" aria-hidden="true"><slot name="error-icon">${errorIcon()}</slot></span>`;
     }
     if (this.status === 'success') {
-      return html`<span part="success-icon" aria-hidden="true"
-        ><slot name="success-icon">${checkIcon()}</slot></span
-      >`;
+      return html`<span part="success-icon" aria-hidden="true"><slot name="success-icon">${checkIcon()}</slot></span>`;
     }
-    return html`<span part="copy-icon" aria-hidden="true"
-      ><slot name="copy-icon">${copyIcon()}</slot></span
-    >`;
+    return html`<span part="copy-icon" aria-hidden="true"><slot name="copy-icon">${copyIcon()}</slot></span>`;
   }
 
   override render(): TemplateResult {
@@ -516,8 +537,8 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
       this.status === 'success'
         ? 'base button base-success'
         : this.status === 'error'
-          ? 'base button base-error'
-          : 'base button';
+        ? 'base button base-error'
+        : 'base button';
     const tooltipDisabled = this.tooltip === 'none';
     const tooltipOpen = !tooltipDisabled && this.status !== 'rest';
     return html`

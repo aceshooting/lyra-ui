@@ -1020,6 +1020,25 @@ it('contains RTL unbroken body and footer content in a 320px overlay allocation'
   expect(body.scrollTop, 'the body scrolling surface must accept a keyboard/mouse scroll position').to.be.greaterThan(0);
 });
 
+it('keeps a long header-actions projection and the close target inside a 319px panel', async () => {
+  const el = (await fixture(html`
+    <lr-dialog open closable heading="Settings" style="inline-size:319px;block-size:16rem;inset-inline-end:auto;inset-block-end:auto">
+      <button slot="header-actions">${'LocalizedAction'.repeat(120)}</button>
+      Body
+    </lr-dialog>
+  `)) as LyraDialog;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector('[part="header-actions"]') as HTMLElement;
+  const close = el.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement;
+  const panelRect = panel.getBoundingClientRect();
+  for (const target of [actions, close]) {
+    const rect = target.getBoundingClientRect();
+    expect(rect.left).to.be.at.least(panelRect.left - 1);
+    expect(rect.right).to.be.at.most(panelRect.right + 1);
+  }
+});
+
 describe('unified show/hide lifecycle', () => {
   it('emits lr-show before the dialog opens, then lr-after-show once the enter animation finishes', async () => {
     const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
@@ -1763,4 +1782,47 @@ it('elevates its panel at the modal tier, not the default anchored-overlay one',
   expect(modalTier, 'the modal tier is a distinct step from the default').to.not.equal(defaultTier);
   expect(getComputedStyle(panel).boxShadow).to.equal(modalTier);
   el.close('api');
+});
+
+it('coalesces same-target show requests made during lr-show preflight', async () => {
+  const el = (await fixture(html`<lr-dialog label="Title"></lr-dialog>`)) as LyraDialog;
+  let shows = 0;
+  el.addEventListener('lr-show', () => {
+    shows++;
+    void el.show();
+    el.open = true;
+  });
+  await el.show();
+  expect(shows).to.equal(1);
+  expect(el.open).to.equal(true);
+  await el.hide();
+});
+
+it('lets an opposite close request supersede an in-flight show preflight', async () => {
+  const el = (await fixture(html`<lr-dialog label="Title"></lr-dialog>`)) as LyraDialog;
+  let afterShows = 0;
+  el.addEventListener('lr-after-show', () => afterShows++);
+  el.addEventListener('lr-show', () => {
+    void el.hide();
+    el.open = false;
+  }, { once: true });
+  await el.show();
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+  expect(afterShows).to.equal(0);
+});
+
+it('coalesces close calls and lets an opposite show request supersede lr-hide preflight', async () => {
+  const el = (await fixture(html`<lr-dialog open label="Title"></lr-dialog>`)) as LyraDialog;
+  await el.updateComplete;
+  let hides = 0;
+  el.addEventListener('lr-hide', () => {
+    hides++;
+    void el.close('nested');
+    void el.show();
+  }, { once: true });
+  await el.close('outer');
+  expect(hides).to.equal(1);
+  expect(el.open).to.equal(true);
+  await el.hide();
 });

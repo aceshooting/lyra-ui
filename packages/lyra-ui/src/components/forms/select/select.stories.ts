@@ -325,6 +325,7 @@ export const RequiredWithValidation: Story = {
  * The trigger exposes one complete joined selected-value string while built-in painted chip labels
  * are hidden from assistive technology, so capped chips neither truncate nor duplicate the value.
  * Picking a selected row or pressing Backspace on the trigger remain equivalent alternatives.
+ * Closed type-ahead skips selected occurrences and continues to a later unselected label match.
  */
 export const Multiple: Story = {
   render: () => html`

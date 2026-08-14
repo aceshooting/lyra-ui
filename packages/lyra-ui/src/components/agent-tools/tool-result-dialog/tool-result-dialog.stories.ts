@@ -3,6 +3,8 @@ import { html } from 'lit';
 import './tool-result-dialog.js';
 import type { LyraToolResultDialog } from './tool-result-dialog.js';
 import '../../layout/tab-group/tab-group.js';
+import '../../layout/tab-group/tab-panel.js';
+import '../../layout/tab-group/tab.js';
 import '../../utility/json-viewer/json-viewer.js';
 
 const meta: Meta = {
@@ -20,7 +22,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. The component knows nothing about what is inside that slot -- it only supplies the modal chrome (focus trap, Escape/backdrop dismiss, scroll lock, a maximize toggle) around it.',
+          'A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. The component knows nothing about what is inside that slot -- it only supplies the modal chrome (focus trap, Escape/backdrop dismiss, scroll lock, a maximize toggle) around it. Long localized header content wraps within narrow allocations so the header actions remain reachable.',
       },
     },
   },
@@ -31,7 +33,7 @@ type Story = StoryObj;
 function openDialog(e: Event): void {
   const trigger = e.currentTarget as HTMLElement;
   const dialog = trigger.parentElement!.querySelector('lr-tool-result-dialog') as LyraToolResultDialog;
-  dialog.open = true;
+  dialog.show();
 }
 
 const runPythonOutput = { stdout: 'sum = 5050\n', stderr: '', exit_code: 0 };
@@ -39,18 +41,22 @@ const runPythonOutput = { stdout: 'sum = 5050\n', stderr: '', exit_code: 0 };
 function toolCallPanels() {
   return html`
     <lr-tab-group slot="body">
-      <pre slot="input" label="Input" style="margin:0;padding:0.75rem 0;white-space:pre-wrap;">
+      <lr-tab panel="input">Input</lr-tab>
+      <lr-tab panel="preview">Preview</lr-tab>
+      <lr-tab panel="json">JSON</lr-tab>
+      <lr-tab panel="raw">Raw</lr-tab>
+      <lr-tab-panel name="input"><pre style="margin:0;padding:0.75rem 0;white-space:pre-wrap;">
 print(sum(range(1, 101)))</pre
-      >
-      <div slot="preview" label="Preview" style="padding:0.75rem 0;">
+      ></lr-tab-panel>
+      <lr-tab-panel name="preview"><div style="padding:0.75rem 0;">
         <code>sum = 5050</code>
-      </div>
-      <div slot="json" label="JSON" style="padding:0.75rem 0;">
+      </div></lr-tab-panel>
+      <lr-tab-panel name="json"><div style="padding:0.75rem 0;">
         <lr-json-viewer .data=${runPythonOutput} style="display:block;"></lr-json-viewer>
-      </div>
-      <pre slot="raw" label="Raw" style="margin:0;padding:0.75rem 0;white-space:pre-wrap;">
+      </div></lr-tab-panel>
+      <lr-tab-panel name="raw"><pre style="margin:0;padding:0.75rem 0;white-space:pre-wrap;">
 ${JSON.stringify(runPythonOutput, null, 2)}</pre
-      >
+      ></lr-tab-panel>
     </lr-tab-group>
   `;
 }
@@ -211,7 +217,15 @@ export const NamedAndRetimed: Story = {
 
 export const Narrow320: Story = {
   name: 'Narrow viewport with long localized status',
-  parameters: { viewport: { defaultViewport: 'mobile1' } },
+  parameters: {
+    viewport: { defaultViewport: 'mobile1' },
+    docs: {
+      description: {
+        story:
+          'A long localized status and unbroken tool identifier stay contained at 320px; the status wraps and both header actions remain reachable.',
+      },
+    },
+  },
   render: (_args, context) => html`
     <lr-tool-result-dialog
       .open=${context.viewMode !== 'docs'}

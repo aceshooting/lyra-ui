@@ -484,7 +484,7 @@ export const NarrowLongContent: Story = {
   },
   render: () => html`
     <div dir="rtl" style="inline-size:320px;max-inline-size:100%;overflow:hidden">
-      <lr-button style="display:block;max-inline-size:100%">
+      <lr-button>
         ${'LocalizedUnbrokenButtonLabel'.repeat(16)}
         <span slot="end">${'UnbrokenMetadata'.repeat(16)}</span>
       </lr-button>

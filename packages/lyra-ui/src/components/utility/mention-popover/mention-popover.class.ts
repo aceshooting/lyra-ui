@@ -10,29 +10,54 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_mentionSuggestions, LYRA_DEFAULT_noMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 /** One candidate row — an `@`-mentionable person/entity, or a `/`-command. */
-export interface MentionItem {
-  id: string;
-  label: string;
-  description?: string;
+export interface LyraMentionItem {
+  /** Stable business id. Duplicate ids remain distinguishable through the selection index. */
+  readonly suggestionId: string;
+  readonly label: string;
+  readonly description?: string;
   /** Literal icon hint (e.g. an emoji), rendered next to `label` -- same
    *  "opaque string, not a registry lookup" convention as
    *  `<lr-tool-call-chip>`'s/`<lr-tool-select-dialog>`'s own `icon`. */
-  icon?: string;
+  readonly icon?: string;
 }
 
 /** Predicate deciding whether `item` matches a (already-trimmed, locale-lowercased) `query`.
  *  Mirrors `<lr-combobox>`'s `OptionFilter` convention -- override `filter` to replace the
  *  built-in case-insensitive label/description substring match entirely. */
-export type MentionFilter = (item: MentionItem, query: string) => boolean;
+export type LyraMentionFilter = (item: LyraMentionItem, query: string) => boolean;
 
-export interface MentionSelectDetail {
-  id: string;
-  label: string;
+export interface LyraMentionSelectDetail {
+  readonly suggestionId: string;
+  /** Occurrence in the assigned `items` collection, before query filtering. */
+  readonly index: number;
+  readonly label: string;
+}
+
+/** Guards an asynchronous same-tree focus transfer against stale caller ownership. */
+export interface LyraMentionFocusOptions {
+  /** Re-evaluated immediately before focus moves and during later fallback-owned navigation. */
+  readonly ownsFocus?: () => boolean;
 }
 
 type TextControl = HTMLTextAreaElement | HTMLInputElement;
+
+type ReflectedAriaControl = HTMLElement & {
+  ariaActiveDescendantElement?: Element | null;
+  ariaControlsElements?: readonly Element[] | null;
+};
+
+interface AttributeSnapshot {
+  present: boolean;
+  value: string | null;
+}
+
+interface AnchorRelationship {
+  control: TextControl;
+  attributes: Map<string, AttributeSnapshot>;
+  activeElement: Element | null | undefined;
+  controlsElements: readonly Element[] | null | undefined;
+}
 
 function isTextControl(el: Element): el is TextControl {
   const view = el.ownerDocument.defaultView;
@@ -133,7 +158,7 @@ function caretClientRect(el: TextControl): DOMRect | null {
 }
 
 export interface LyraMentionPopoverEventMap {
-  'lr-mention-select': CustomEvent<MentionSelectDetail>;
+  'lr-mention-select': CustomEvent<LyraMentionSelectDetail>;
   'lr-mention-close': CustomEvent<undefined>;
 }
 /**
@@ -166,15 +191,15 @@ export interface LyraMentionPopoverEventMap {
  *    leaving both the input and this popover) — `lr-mention-close` fires
  *    automatically from that (see below), there is no separate "tell it to
  *    close" call needed.
- * 5. Call `syncActiveDescendant()` after opening and after every consumed
- *    navigation key. It uses cross-root ARIA element reflection where the
- *    platform supports it and never installs a broken string IDREF. When it
- *    returns `false`, call `focusActiveOption()` after the first consumed
- *    navigation key. That fallback moves real focus into the shadow listbox,
- *    where each option and its focus owner share one tree scope; a host blur
- *    handler must therefore keep the popover open when `relatedTarget` is this
- *    component. Subsequent navigation is handled by the popover and focus
- *    returns to `anchor` when it closes.
+ * 5. The component automatically projects the open combobox relationship and active option onto
+ *    a text-control `anchor`, using cross-root ARIA element reflection for controls/active
+ *    descendant. When `syncActiveDescendant()` returns `false`, call `focusActiveOption()` after
+ *    the first consumed navigation key. Pass an `ownsFocus` predicate if the host tracks a
+ *    suggestion generation or disabled/focus-exit state; it must remain true while either the
+ *    anchor or this popover owns that live session. That fallback moves real focus into the shadow
+ *    listbox, where each option and its focus owner share one tree scope; a host blur handler must
+ *    therefore keep the popover open when `relatedTarget` is this component. Author-provided ARIA
+ *    is restored atomically on close, anchor replacement, disconnect, or adoption.
  *
  * Positioning: when `anchor` is a plain `<textarea>` or single-line text
  * `<input>`, this component measures exactly where the caret currently
@@ -245,7 +270,8 @@ export interface LyraMentionPopoverEventMap {
  * ```
  *
  * @customElement lr-mention-popover
- * @event lr-mention-select - An item was committed (Enter/Tab/click). `detail: { id, label }`.
+ * @event lr-mention-select - An item was committed (Enter/Tab/click).
+ *   `detail: { suggestionId, index, label }`; `index` disambiguates repeated business ids.
  * @event lr-mention-close - The popover was dismissed with no selection — Escape, or `open`
  * transitioning to `false` by any other means (a direct host assignment included). Never fires
  * for a close that followed a `lr-mention-select` commit.
@@ -272,14 +298,29 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
 
   static override styles = [LyraElement.styles, styles];
 
+  static override properties = {
+    items: { attribute: false, noAccessor: true },
+  };
+
   /** The element to position the popup relative to. When this is a plain
    *  `<textarea>`/single-line text `<input>`, positioning is caret-precise
    *  (see the class doc); any other element anchors the whole popup under
    *  that element's own box, the same as `<lr-combobox>`'s trigger. */
   @property({ attribute: false }) anchor?: HTMLElement;
 
-  /** The full candidate set, pre-`query`-filtering. */
-  @property({ attribute: false }) items: MentionItem[] = [];
+  private _items: readonly Readonly<LyraMentionItem>[] = Object.freeze([]);
+
+  /** The full candidate set, pre-`query`-filtering. Assignment takes a shallow frozen snapshot. */
+  get items(): readonly Readonly<LyraMentionItem>[] {
+    return this._items;
+  }
+
+  set items(next: readonly LyraMentionItem[]) {
+    const previous = this._items;
+    const source = Array.isArray(next) ? next : [];
+    this._items = Object.freeze(source.map((item) => Object.freeze({ ...item })));
+    this.requestUpdate('items', previous);
+  }
 
   /** The text typed since the trigger character (`@`/`/`/…) — drives the
    *  built-in internal filtering (see `filter` to override it). */
@@ -289,15 +330,18 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   @property({ type: Boolean, reflect: true }) open = false;
 
   /** Overrides the built-in case-insensitive label/description substring match. */
-  @property({ attribute: false }) filter: MentionFilter | null = null;
+  @property({ attribute: false }) filter: LyraMentionFilter | null = null;
 
-  /** Message shown when `items` (post-`query`-filtering) is empty. */
-  @property({ attribute: 'empty-text' }) emptyText = 'No matches';
+  /** Message shown when `items` (post-`query`-filtering) is empty. `undefined` uses the localized
+   * default; every supplied string, including `''` and `'No matches'`, is caller-owned. */
+  @property({ attribute: 'empty-text' }) emptyText?: string;
 
-  /** Accessible name for the `role="listbox"` popup. Also settable as a plain `aria-label`
-   *  attribute on `<lr-mention-popover>` itself, which takes precedence over this property when
-   *  present -- matches `<lr-combobox>`'s/`<lr-table>`'s identical host `aria-label` fallback. */
-  @property() label = 'Suggestions';
+  /** Accessible name for the `role="listbox"` popup. `undefined` uses the localized default;
+   *  every supplied string, including `''` and `'Suggestions'`, is caller-owned. Also settable as
+   *  a plain `aria-label` attribute on `<lr-mention-popover>` itself, which takes precedence over
+   *  this property when present -- matches `<lr-combobox>`'s/`<lr-table>`'s identical host
+   *  `aria-label` fallback. */
+  @property() label?: string;
 
   // Highlighted row, opens pre-highlighted on the top match (index 0) so a
   // bare Enter right after opening commits immediately -- the same "first
@@ -326,17 +370,26 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   // focus moves onto the active option so ownership and option share this
   // shadow tree instead of publishing an unresolvable string IDREF.
   @state() private _ownsFocus = false;
+  private _focusOwnerPredicate?: () => boolean;
+  private _focusTransferGeneration = 0;
+  private anchorRelationship?: AnchorRelationship;
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
+    // Focus may have moved outside the input/popover composite since the previous update. Never
+    // let a later candidate render reclaim it merely because this component used to own fallback
+    // focus.
+    if (this._ownsFocus && !this.fallbackFocusIsStillOwned()) {
+      this._ownsFocus = false;
+      this._focusOwnerPredicate = undefined;
+    }
     // A fresh query or candidate set re-highlights the top match, mirroring
     // how a filtering text field's own suggestion list re-anchors to the
     // first result on every keystroke rather than preserving a highlight
     // that may no longer even be in the filtered set.
     if (changed.has('query') || changed.has('items') || changed.has('filter')) this.activeIndex = 0;
-    const candidatesChanged =
-      changed.has('query') || changed.has('items') || changed.has('filter');
+    const candidatesChanged = changed.has('query') || changed.has('items') || changed.has('filter');
     if (this._ownsFocus && changed.has('open') && !this.open) {
       this._ownsFocus = false;
       if (this.anchor?.isConnected) this.anchor.focus({ preventScroll: true });
@@ -380,12 +433,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     // mention-popover.styles.ts) -- without this, arrowing past its visible
     // rows would silently move the highlight off-screen. `block: 'nearest'`
     // makes this a no-op whenever the active row is already fully visible.
-    if (
-      changed.has('activeIndex') ||
-      changed.has('query') ||
-      changed.has('items') ||
-      changed.has('filter')
-    ) {
+    if (changed.has('activeIndex') || changed.has('query') || changed.has('items') || changed.has('filter')) {
       const active = this.renderRoot.querySelector<HTMLElement>('[part="option"][data-active]');
       active?.scrollIntoView({ block: 'nearest' });
       if (this._ownsFocus) {
@@ -404,17 +452,21 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         }
       }
     }
+    this.syncAnchorRelationship();
   }
 
   override disconnectedCallback(): void {
+    this._focusTransferGeneration += 1;
+    this.detachAnchorRelationship();
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
     this.virtualAnchor?.remove();
-    if (this._ownsFocus && this.anchor?.isConnected) {
+    if (this._ownsFocus && this.callFocusOwner(this._focusOwnerPredicate) && this.anchor?.isConnected) {
       this.anchor.focus({ preventScroll: true });
     }
     this._ownsFocus = false;
+    this._focusOwnerPredicate = undefined;
     // Reset so a reconnect (e.g. a drag-drop reparent of the composer, or a
     // virtualized/reordering message list moving this element) re-triggers
     // updated()'s open-driven branch -- without this, `open` stays `true`
@@ -426,9 +478,108 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     this.open = false;
   }
 
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this._focusTransferGeneration += 1;
+    this.detachAnchorRelationship();
+    this._ownsFocus = false;
+    this._focusOwnerPredicate = undefined;
+    this.open = false;
+  }
+
+  private snapshotAttribute(control: HTMLElement, name: string): AttributeSnapshot {
+    return {
+      present: control.hasAttribute(name),
+      value: control.getAttribute(name),
+    };
+  }
+
+  private restoreAttribute(control: HTMLElement, name: string, snapshot: AttributeSnapshot): void {
+    if (snapshot.present) control.setAttribute(name, snapshot.value ?? '');
+    else control.removeAttribute(name);
+  }
+
+  private attachAnchorRelationship(control: TextControl): AnchorRelationship {
+    const reflected = control as ReflectedAriaControl;
+    const relationship: AnchorRelationship = {
+      control,
+      attributes: new Map(
+        ['role', 'aria-expanded', 'aria-haspopup', 'aria-controls', 'aria-activedescendant'].map((name) => [
+          name,
+          this.snapshotAttribute(control, name),
+        ]),
+      ),
+      activeElement:
+        'ariaActiveDescendantElement' in control ? reflected.ariaActiveDescendantElement ?? null : undefined,
+      controlsElements: 'ariaControlsElements' in control ? reflected.ariaControlsElements ?? null : undefined,
+    };
+    this.anchorRelationship = relationship;
+    return relationship;
+  }
+
+  private detachAnchorRelationship(): void {
+    const relationship = this.anchorRelationship;
+    if (!relationship) return;
+    this.anchorRelationship = undefined;
+    const reflected = relationship.control as ReflectedAriaControl;
+    try {
+      if (relationship.activeElement !== undefined) {
+        reflected.ariaActiveDescendantElement = relationship.activeElement;
+      }
+      if (relationship.controlsElements !== undefined) {
+        reflected.ariaControlsElements = relationship.controlsElements;
+      }
+    } catch {
+      // Attribute restoration below remains authoritative on partial AOM implementations.
+    }
+    for (const [name, snapshot] of relationship.attributes) {
+      this.restoreAttribute(relationship.control, name, snapshot);
+    }
+  }
+
+  private syncAnchorRelationship(): void {
+    const next = this.open && this.anchor && isTextControl(this.anchor) ? this.anchor : undefined;
+    if (this.anchorRelationship?.control !== next) this.detachAnchorRelationship();
+    if (!next) return;
+    const relationship = this.anchorRelationship ?? this.attachAnchorRelationship(next);
+    const control = relationship.control;
+    if (!relationship.attributes.get('role')?.present) control.setAttribute('role', 'combobox');
+    control.setAttribute('aria-expanded', 'true');
+    control.setAttribute('aria-haspopup', 'listbox');
+
+    const listbox = this.renderRoot.querySelector<HTMLElement>('[part="listbox"]');
+    const reflected = control as ReflectedAriaControl;
+    if (listbox && 'ariaControlsElements' in control) {
+      try {
+        // An authored string IDREF can keep the reflection getter pinned to that unresolved
+        // token in current engines. The snapshot above owns restoration; clear it before
+        // installing the cross-root element reference.
+        control.removeAttribute('aria-controls');
+        reflected.ariaControlsElements = [listbox];
+        if (reflected.ariaControlsElements?.[0] !== listbox) {
+          // Some current engines expose the reflection setter but reject a sibling shadow
+          // descendant. The component host is a truthful controlled container and is usually in
+          // the anchor's own root, so retain a resolvable relationship without publishing a
+          // broken string IDREF.
+          reflected.ariaControlsElements = [this];
+          if (reflected.ariaControlsElements?.[0] !== this) {
+            control.removeAttribute('aria-controls');
+          }
+        }
+      } catch {
+        control.removeAttribute('aria-controls');
+      }
+    } else {
+      // A string idref cannot cross from the owner tree into this shadow root.
+      control.removeAttribute('aria-controls');
+    }
+    control.removeAttribute('aria-activedescendant');
+    this.syncActiveDescendant(control);
+  }
+
   /** The current candidate set: `items` filtered by `query` via `filter`
    *  (or the built-in default). Empty `query` returns `items` unfiltered. */
-  get filteredItems(): MentionItem[] {
+  get filteredItems(): readonly Readonly<LyraMentionItem>[] {
     const locale = this.effectiveLocale;
     const q = this.query.trim().toLocaleLowerCase(locale);
     if (!q) return this.items;
@@ -454,9 +605,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   get activeDescendantElement(): HTMLElement | null {
     const id = this.activeDescendantId;
     const escape = this.ownerDocument.defaultView?.CSS.escape;
-    return id && escape
-      ? this.renderRoot.querySelector<HTMLElement>(`#${escape(id)}`)
-      : null;
+    return id && escape ? this.renderRoot.querySelector<HTMLElement>(`#${escape(id)}`) : null;
   }
 
   /**
@@ -470,7 +619,9 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     if (!('ariaActiveDescendantElement' in control)) return false;
     const active = this.activeDescendantElement;
     try {
-      const reflected = control as HTMLElement & { ariaActiveDescendantElement: Element | null };
+      const reflected = control as HTMLElement & {
+        ariaActiveDescendantElement: Element | null;
+      };
       reflected.ariaActiveDescendantElement = active;
       const accepted = reflected.ariaActiveDescendantElement === active;
       if (!accepted) {
@@ -485,19 +636,64 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   }
 
   /**
-   * Same-tree fallback for platforms that reject cross-shadow ARIA element
-   * reflection. Moves real focus to the active option and returns whether it
-   * succeeded. Once active, the popover handles its own navigation keys and
-   * restores focus to `anchor` when it closes.
+   * Same-tree fallback for platforms that reject cross-shadow ARIA element reflection. Moves real
+   * focus to the active option and returns whether it succeeded. `options.ownsFocus`, when given,
+   * is checked before and immediately after the awaited render, then retained while the fallback
+   * owns navigation. A close, candidate/query/filter/anchor change, disconnect/adoption, newer
+   * transfer, or failed ownership check makes the pending transfer resolve `false` without moving
+   * focus. Once active, the popover handles its own navigation keys and restores focus to `anchor`
+   * when it closes.
    */
-  async focusActiveOption(): Promise<boolean> {
-    if (!this.open || !this.activeDescendantElement) return false;
+  async focusActiveOption(options: LyraMentionFocusOptions = {}): Promise<boolean> {
+    const ownsFocus = options.ownsFocus ?? (this._ownsFocus ? this._focusOwnerPredicate : undefined);
+    if (!this.open || !this.isConnected || !this.activeDescendantElement || !this.callFocusOwner(ownsFocus)) {
+      return false;
+    }
+    const generation = ++this._focusTransferGeneration;
+    const snapshot = {
+      ownerDocument: this.ownerDocument,
+      anchor: this.anchor,
+      items: this.items,
+      query: this.query,
+      filter: this.filter,
+      activeIndex: this.activeIndex,
+    };
+    await this.updateComplete;
+
+    if (
+      generation !== this._focusTransferGeneration ||
+      !this.isConnected ||
+      !this.open ||
+      this.ownerDocument !== snapshot.ownerDocument ||
+      this.anchor !== snapshot.anchor ||
+      this.items !== snapshot.items ||
+      this.query !== snapshot.query ||
+      this.filter !== snapshot.filter ||
+      this.activeIndex !== snapshot.activeIndex ||
+      !this.callFocusOwner(ownsFocus)
+    ) {
+      return false;
+    }
+    const active = this.activeDescendantElement;
+    if (!active?.isConnected || !this.callFocusOwner(ownsFocus)) return false;
+    active.focus({ preventScroll: true });
+    if (activeElementIn(this.shadowRoot) !== active) return false;
+    this._focusOwnerPredicate = ownsFocus;
     this._ownsFocus = true;
     this.requestUpdate();
-    await this.updateComplete;
-    const active = this.activeDescendantElement;
-    active?.focus({ preventScroll: true });
-    return activeElementIn(this.shadowRoot) === active;
+    return true;
+  }
+
+  private callFocusOwner(predicate: (() => boolean) | undefined): boolean {
+    try {
+      return predicate?.() ?? true;
+    } catch {
+      return false;
+    }
+  }
+
+  private fallbackFocusIsStillOwned(): boolean {
+    return this.callFocusOwner(this._focusOwnerPredicate) && activeElementIn(this.shadowRoot) !== null;
   }
 
   /** The internal `id` of the `role="listbox"` popup. Like
@@ -552,7 +748,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     }
   }
 
-  private clampedIndex(rows: MentionItem[]): number {
+  private clampedIndex(rows: readonly Readonly<LyraMentionItem>[]): number {
     if (!rows.length) return -1;
     return Math.min(Math.max(this.activeIndex, 0), rows.length - 1);
   }
@@ -561,8 +757,13 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     return `${this._listboxId}-opt-${index}`;
   }
 
-  private commit(item: MentionItem): void {
-    this.emit('lr-mention-select', { id: item.id, label: item.label });
+  private commit(item: Readonly<LyraMentionItem>): void {
+    const index = this.items.indexOf(item);
+    if (index < 0) return;
+    this.emit(
+      'lr-mention-select',
+      Object.freeze({ suggestionId: item.suggestionId, index, label: item.label }),
+    );
     this._suppressCloseEvent = true;
     this.open = false;
   }
@@ -615,9 +816,9 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
 
   private onListboxClick = (e: MouseEvent): void => {
     const optionEl = (e.target as HTMLElement).closest('[part="option"]') as HTMLElement | null;
-    const id = optionEl?.dataset['id'];
-    if (id === undefined) return;
-    const item = this.filteredItems.find((i) => i.id === id);
+    const index = Number(optionEl?.dataset['index']);
+    if (!Number.isInteger(index) || index < 0) return;
+    const item = this.filteredItems[index];
     if (item) this.commit(item);
   };
 
@@ -630,7 +831,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    *  built-in default it instead routes through `this.localize()` so a locale/`.strings`
    *  override applies without requiring `emptyText` itself to be set. */
   private get effectiveEmptyText(): string {
-    return this.localize('noMatches', this.emptyText === 'No matches' ? undefined : this.emptyText);
+    return this.emptyText === undefined ? this.localize('noMatches') : this.emptyText;
   }
 
   /** Resolves `label`'s effective text: a host-level plain `aria-label` attribute on
@@ -641,12 +842,11 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    *  `label` itself to be set. */
   private get effectiveLabel(): string {
     return (
-      hostAriaLabel(this) ??
-      this.localize('mentionSuggestions', this.label === 'Suggestions' ? undefined : this.label)
+      hostAriaLabel(this) ?? (this.label === undefined ? this.localize('mentionSuggestions') : this.label)
     );
   }
 
-  private renderRow(item: MentionItem, index: number, activeId: string): TemplateResult {
+  private renderRow(item: Readonly<LyraMentionItem>, index: number, activeId: string): TemplateResult {
     const id = this.rowId(index);
     const active = id === activeId;
     return html`
@@ -654,7 +854,8 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         part="option"
         id=${id}
         role="option"
-        data-id=${item.id}
+        data-id=${item.suggestionId}
+        data-index=${index}
         aria-selected=${active ? 'true' : 'false'}
         tabindex=${this._ownsFocus && active ? '0' : '-1'}
         ?data-active=${active}
@@ -691,7 +892,6 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

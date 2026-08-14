@@ -69,7 +69,8 @@ export const ExportFormatMenu: Story = {
       label="8K context window"
       total="8000"
       .segments=${SEGMENTS}
-      .formats=${['json', 'csv']}
+      .exportFormats=${['json', 'csv']}
+      export-filename="assembled-context"
     ></lr-context-inspector>
   `,
 };

@@ -1,4 +1,5 @@
 import { html, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './menu-label.styles.js';
 
@@ -23,14 +24,17 @@ import { styles } from './menu-label.styles.js';
 export class LyraMenuLabel extends LyraElement {
   static override styles = [LyraElement.styles, styles];
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    if (!this.hasAttribute('role')) this.setAttribute('role', 'presentation');
-  }
+  /** Light-DOM semantic role. Reflected so the default is available to server renderers before
+   * browser connection; authored values remain authoritative. */
+  @property({ reflect: true }) override role: string | null = 'presentation';
 
   override render(): TemplateResult {
     return html`<div part="base"><slot></slot></div>`;
   }
 }
 
-declare global { interface HTMLElementTagNameMap { 'lr-menu-label': LyraMenuLabel; } }
+declare global {
+  interface HTMLElementTagNameMap {
+    'lr-menu-label': LyraMenuLabel;
+  }
+}

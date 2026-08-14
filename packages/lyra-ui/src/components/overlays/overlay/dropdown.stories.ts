@@ -4,7 +4,19 @@ import './dropdown.js';
 import '../../layout/menu/dropdown-item.js';
 import '../../layout/menu/menu.js';
 
-const meta: Meta = { title: 'Overlay/Dropdown', component: 'lr-dropdown', tags: ['autodocs'] };
+const meta: Meta = {
+  title: 'Overlay/Dropdown',
+  component: 'lr-dropdown',
+  tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'A trigger-owned action menu. The contained menu owns role/name while the positioned shell stays neutral; `focusOnTrigger()` focuses the assigned trigger and `getMenu()` returns the live generated or consumer-supplied menu engine.',
+      },
+    },
+  },
+};
 export default meta;
 // Forced open in the story canvas (but not in autodocs, viewMode === 'docs') so the visual-
 // regression harness and anyone opening the story lands on the actual dropdown surface rather than
@@ -51,16 +63,17 @@ export const DirectItemSubmenus: StoryObj = {
 };
 
 /** A consumer-supplied menu becomes the dropdown's owned content instead of creating a second
- * popup. Selection still travels through the dropdown's single cancelable `lr-select` path; the
- * menu's standalone `lr-menu-select` compatibility alias stays inside the wrapper. */
+ * popup. Selection travels through the dropdown's single cancelable `lr-select` path. */
 export const ConsumerMenu: StoryObj = {
   render: () => html`
     <lr-dropdown aria-label="Account actions" stay-open-on-select>
       <button slot="trigger">Account ▾</button>
       <lr-menu label="Account actions">
+        <input slot="header" aria-label="Filter account actions" placeholder="Filter actions" />
         <lr-dropdown-item type="checkbox" value="online">Appear online</lr-dropdown-item>
         <lr-dropdown-item value="settings">Settings</lr-dropdown-item>
         <lr-dropdown-item value="sign-out" variant="danger">Sign out</lr-dropdown-item>
+        <button slot="footer" type="button">Manage account</button>
       </lr-menu>
     </lr-dropdown>
   `,

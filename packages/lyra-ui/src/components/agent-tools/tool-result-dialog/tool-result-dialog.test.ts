@@ -50,7 +50,7 @@ it('reflects open as an attribute and sets dialog semantics once open', async ()
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="tool-name"]')!.id);
 });
 
-it('forwards a host aria-label to the internal dialog and lets it win over the generated title', async () => {
+it('keeps a host aria-label on the host while the dialog panel remains title-labelled', async () => {
   const el = (await fixture(
     html`<lr-tool-result-dialog
       open
@@ -60,8 +60,14 @@ it('forwards a host aria-label to the internal dialog and lets it win over the g
   )) as LyraToolResultDialog;
   const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
 
-  expect(panel.getAttribute('aria-label')).to.equal('Python execution details');
-  expect(panel.hasAttribute('aria-labelledby')).to.equal(false);
+  expect(el.getAttribute('aria-label')).to.equal('Python execution details');
+  expect(panel.hasAttribute('aria-label')).to.equal(false);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="tool-name"]')!.id);
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(panel.hasAttribute('aria-label')).to.equal(false);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="tool-name"]')!.id);
 });
 
 it('defaults to pending status and reflects status changes onto the host attribute', async () => {
@@ -262,6 +268,19 @@ it('close() is a no-op when already closed (no duplicate event, no error)', asyn
   await el.updateComplete;
 
   expect(count).to.equal(0);
+});
+
+it('offers consistent show() and hide() lifecycle methods', async () => {
+  const el = await fixture<LyraToolResultDialog>(html`
+    <lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>
+  `);
+  el.show();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+  const closed = oneEvent(el, 'lr-close');
+  el.hide();
+  expect((await closed).detail).to.equal('api');
+  expect(el.open).to.be.false;
 });
 
 it('close() sets open false, emits with the given reason, and is idempotent once closed', async () => {
@@ -543,6 +562,45 @@ it('localizes the tool-name fallback, status label, and maximize/restore button 
   maximizeButton.click();
   await el.updateComplete;
   expect(maximizeButton.getAttribute('aria-label')).to.equal('Restaurer');
+});
+
+it('contains a long localized status and keeps both header actions reachable at 320px', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="inline-size:320px">
+      <lr-tool-result-dialog
+        open
+        tool-name="query_customer_database_readonly_with_a_long_identifier"
+        status="running"
+        style="position:relative; inset:auto; inline-size:320px; block-size:480px; padding:0"
+        .strings=${{
+          statusRunning:
+            'ExecutionActuellementEnCoursDansLEnvironnementSecuriseExecutionActuellementEnCoursDansLEnvironnementSecurise',
+        }}
+      ></lr-tool-result-dialog>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-tool-result-dialog') as LyraToolResultDialog;
+  await el.updateComplete;
+
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+  const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
+  const statusText = status.querySelector('span') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector('[part="header-actions"]') as HTMLElement;
+  const panelRect = panel.getBoundingClientRect();
+  const actionsRect = actions.getBoundingClientRect();
+  const statusRect = status.getBoundingClientRect();
+
+  expect(panelRect.width).to.be.at.most(320);
+  expect(header.scrollWidth).to.be.at.most(header.clientWidth + 1);
+  expect(status.scrollWidth).to.be.at.most(status.clientWidth + 1);
+  expect(statusRect.left).to.be.at.least(panelRect.left - 1);
+  expect(statusRect.right).to.be.at.most(panelRect.right + 1);
+  expect(actionsRect.left).to.be.at.least(panelRect.left - 1);
+  expect(actionsRect.right).to.be.at.most(panelRect.right + 1);
+  expect(statusText.getBoundingClientRect().height).to.be.greaterThan(
+    Number.parseFloat(getComputedStyle(statusText).fontSize) * 1.5,
+  );
 });
 
 it('defaults to English "Tool call"/"Running"/"Maximize" when no strings override is set', async () => {

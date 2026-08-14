@@ -265,6 +265,10 @@ export const styles = css`
   :host([expanded]) [part='children'] {
     animation-name: lr-tree-show;
   }
+  [part='children'][data-collapsing] {
+    animation-name: lr-tree-hide;
+    animation-duration: var(--hide-duration, var(--lr-duration-base));
+  }
 
   @keyframes lr-tree-show {
     from {
@@ -272,6 +276,15 @@ export const styles = css`
     }
     to {
       opacity: 1;
+    }
+  }
+
+  @keyframes lr-tree-hide {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
     }
   }
 

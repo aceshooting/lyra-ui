@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Stacks a set of slotted `<lr-avatar>` children into a single overlapping row and, past a configurable `max` count, collapses the excess into a "+N" overflow badge. `size`/`shape`/`variant` drive the ring/overlap/badge only -- set a matching `size`/`shape` on each `<lr-avatar>` child too for a visually coherent stack.',
+          'Stacks direct or forwarded `<lr-avatar>` children into an overlapping row and collapses eligible excess avatars behind a "+N" action. Group `size`, `shape`, and `variant` values default only children that omit their own value.',
       },
     },
   },
@@ -54,23 +54,23 @@ export const Overflow: Story = {
 export const Sizes: Story = {
   render: () => html`
     <div style="display:flex; align-items:center; gap:1.5rem;">
-      <lr-avatar-group size="sm" max="3">
-        <lr-avatar initials="AB" size="sm"></lr-avatar>
-        <lr-avatar initials="CD" size="sm"></lr-avatar>
-        <lr-avatar initials="EF" size="sm"></lr-avatar>
-        <lr-avatar initials="GH" size="sm"></lr-avatar>
+      <lr-avatar-group size="small" max="3">
+        <lr-avatar initials="AB"></lr-avatar>
+        <lr-avatar initials="CD"></lr-avatar>
+        <lr-avatar initials="EF"></lr-avatar>
+        <lr-avatar initials="GH"></lr-avatar>
       </lr-avatar-group>
-      <lr-avatar-group size="md" max="3">
-        <lr-avatar initials="AB" size="md"></lr-avatar>
-        <lr-avatar initials="CD" size="md"></lr-avatar>
-        <lr-avatar initials="EF" size="md"></lr-avatar>
-        <lr-avatar initials="GH" size="md"></lr-avatar>
+      <lr-avatar-group size="medium" max="3">
+        <lr-avatar initials="AB"></lr-avatar>
+        <lr-avatar initials="CD"></lr-avatar>
+        <lr-avatar initials="EF"></lr-avatar>
+        <lr-avatar initials="GH"></lr-avatar>
       </lr-avatar-group>
-      <lr-avatar-group size="lg" max="3">
-        <lr-avatar initials="AB" size="lg"></lr-avatar>
-        <lr-avatar initials="CD" size="lg"></lr-avatar>
-        <lr-avatar initials="EF" size="lg"></lr-avatar>
-        <lr-avatar initials="GH" size="lg"></lr-avatar>
+      <lr-avatar-group size="large" max="3">
+        <lr-avatar initials="AB"></lr-avatar>
+        <lr-avatar initials="CD"></lr-avatar>
+        <lr-avatar initials="EF"></lr-avatar>
+        <lr-avatar initials="GH"></lr-avatar>
       </lr-avatar-group>
     </div>
   `,
@@ -86,14 +86,14 @@ export const Variants: Story = {
         <lr-avatar initials="EF"></lr-avatar>
       </lr-avatar-group>
       <lr-avatar-group max="2" variant="brand">
-        <lr-avatar initials="AB" variant="brand"></lr-avatar>
-        <lr-avatar initials="CD" variant="brand"></lr-avatar>
-        <lr-avatar initials="EF" variant="brand"></lr-avatar>
+        <lr-avatar initials="AB"></lr-avatar>
+        <lr-avatar initials="CD"></lr-avatar>
+        <lr-avatar initials="EF" variant="danger"></lr-avatar>
       </lr-avatar-group>
       <lr-avatar-group max="2" variant="success">
-        <lr-avatar initials="AB" variant="success"></lr-avatar>
-        <lr-avatar initials="CD" variant="success"></lr-avatar>
-        <lr-avatar initials="EF" variant="success"></lr-avatar>
+        <lr-avatar initials="AB"></lr-avatar>
+        <lr-avatar initials="CD"></lr-avatar>
+        <lr-avatar initials="EF"></lr-avatar>
       </lr-avatar-group>
     </div>
   `,
@@ -136,21 +136,21 @@ export const BadgeFontSize: Story = {
   },
   render: () => html`
     <div style="display:flex; align-items:center; gap:1.5rem;">
-      <lr-avatar-group size="sm" max="1">
-        <lr-avatar initials="AB" size="sm"></lr-avatar>
-        <lr-avatar initials="CD" size="sm"></lr-avatar>
+      <lr-avatar-group size="small" max="1">
+        <lr-avatar initials="AB" size="small"></lr-avatar>
+        <lr-avatar initials="CD" size="small"></lr-avatar>
       </lr-avatar-group>
-      <lr-avatar-group size="md" max="1">
+      <lr-avatar-group size="medium" max="1">
         <lr-avatar initials="AB"></lr-avatar>
         <lr-avatar initials="CD"></lr-avatar>
       </lr-avatar-group>
-      <lr-avatar-group size="lg" max="1">
-        <lr-avatar initials="AB" size="lg"></lr-avatar>
-        <lr-avatar initials="CD" size="lg"></lr-avatar>
+      <lr-avatar-group size="large" max="1">
+        <lr-avatar initials="AB" size="large"></lr-avatar>
+        <lr-avatar initials="CD" size="large"></lr-avatar>
       </lr-avatar-group>
-      <lr-avatar-group size="lg" max="1" style="--lr-avatar-group-badge-font-size: 0.6875rem;">
-        <lr-avatar initials="AB" size="lg"></lr-avatar>
-        ${Array.from({ length: 128 }, () => html`<lr-avatar initials="CD" size="lg"></lr-avatar>`)}
+      <lr-avatar-group size="large" max="1" style="--lr-avatar-group-badge-font-size: 0.6875rem;">
+        <lr-avatar initials="AB" size="large"></lr-avatar>
+        ${Array.from({ length: 128 }, () => html`<lr-avatar initials="CD" size="large"></lr-avatar>`)}
       </lr-avatar-group>
     </div>
   `,

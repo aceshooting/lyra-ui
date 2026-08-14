@@ -1,9 +1,9 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './attachment-chip.js';
 import type { LyraAttachmentChip } from './attachment-chip.js';
 import { formatFileSize } from './attachment-chip.js';
-import { styles } from './attachment-chip.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
@@ -52,7 +52,7 @@ it('defaults to status="pending", removable=true, and empty independent props', 
   expect(el.getAttribute('status')).to.equal('pending');
   expect(el.removable).to.be.true;
   expect(el.name).to.equal('');
-  expect(el.bytes).to.equal(0);
+  expect(el.bytes).to.be.undefined;
   expect(el.mimeType).to.equal('');
   expect(el.thumbnailSrc).to.equal('');
   expect(el.previewSrc).to.equal('');
@@ -61,33 +61,27 @@ it('defaults to status="pending", removable=true, and empty independent props', 
   expect(el.file).to.be.undefined;
 });
 
-it('registers lr-document-preview transitively via lr-document-viewer, with no direct import of its own', async () => {
-  // attachment-chip.ts only side-effect-imports document-viewer.js; document-viewer.js in turn
-  // imports document-preview.js as its own built-in fallback renderer, so the tag must still be
-  // defined even though attachment-chip.ts no longer imports document-preview.js directly.
+it('keeps the granular chip registration free of viewer registrations', async () => {
   await fixture(html`<lr-attachment-chip></lr-attachment-chip>`);
-  expect(customElements.get('lr-document-preview')).to.exist;
+  expect(customElements.get('lr-document-viewer')).to.equal(undefined);
 });
 
-describe('document preview integration', () => {
-  it('opens the document viewer with the File MIME type and blob source', async () => {
+describe('event-owned preview requests', () => {
+  it('emits a cancelable request with the File MIME type and blob source without rendering a viewer', async () => {
     const file = makeFile('notes.txt', 'text/plain', 12);
-    const el = (await fixture(html`<lr-attachment-chip .file=${file}></lr-attachment-chip>`)) as LyraAttachmentChip;
+    const el = (await fixture(html`<lr-attachment-chip attachment-id="attachment-1" .file=${file}></lr-attachment-chip>`)) as LyraAttachmentChip;
     const preview = el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement;
     expect((preview) != null).to.equal(true);
 
-    const eventPromise = oneEvent(el, 'lr-preview');
+    const eventPromise = oneEvent(el, 'lr-preview-request');
     preview.click();
     const event = await eventPromise;
+    expect(event.cancelable).to.be.true;
+    expect(event.detail.attachmentId).to.equal('attachment-1');
     expect(event.detail.name).to.equal('notes.txt');
     expect(event.detail.mimeType).to.equal('text/plain');
     expect(event.detail.src).to.match(/^blob:/);
-
-    const viewer = el.shadowRoot!.querySelector('lr-document-viewer') as HTMLElement & { open: boolean };
-    await el.updateComplete;
-    expect(viewer.open).to.be.true;
-    expect((viewer as HTMLElement & { mimeType: string }).mimeType).to.equal('text/plain');
-    expect((viewer as HTMLElement & { name: string }).name).to.equal('notes.txt');
+    expect(el.shadowRoot!.querySelectorAll('lr-document-viewer').length).to.equal(0);
   });
 
   it('uses preview-src with the existing mime-type for persisted attachments', async () => {
@@ -98,7 +92,7 @@ describe('document preview integration', () => {
         preview-src="https://example.test/report.pdf"
       ></lr-attachment-chip>
     `)) as LyraAttachmentChip;
-    const eventPromise = oneEvent(el, 'lr-preview');
+    const eventPromise = oneEvent(el, 'lr-preview-request');
     (el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement).click();
     const event = await eventPromise;
     expect(event.detail.mimeType).to.equal('application/pdf');
@@ -116,38 +110,16 @@ describe('document preview integration', () => {
       'Aperçu de notes.txt',
     );
   });
-});
 
-describe('document viewer close', () => {
-  it('stops the document-viewer-owned lr-close event from leaking past the attachment chip as a raw event', async () => {
-    // <lr-document-viewer>'s own `lr-close` is a plain `this.emit()` (bubbles + composed), so it
-    // reaches the chip's shadow-internal `@lr-close` listener and then keeps bubbling right past
-    // the chip host unless that listener stops it -- the chip only consumes it to flip
-    // `previewOpen` back to closed and documents no `lr-close` event of its own, so a leaked
-    // instance would reach an ancestor under an event name this component never advertises.
-    const file = makeFile('notes.txt', 'text/plain', 12);
-    const wrapper = await fixture(html`<div><lr-attachment-chip .file=${file}></lr-attachment-chip></div>`);
-    const el = wrapper.querySelector('lr-attachment-chip') as LyraAttachmentChip;
+  it('lets a consumer veto a preview request without any chip-owned side effect', async () => {
+    const el = (await fixture(html`
+      <lr-attachment-chip preview-src="https://example.test/report.pdf"></lr-attachment-chip>
+    `)) as LyraAttachmentChip;
+    el.addEventListener('lr-preview-request', (event) => event.preventDefault());
+    const requested = oneEvent(el, 'lr-preview-request');
     (el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement).click();
-    await el.updateComplete;
-    const viewer = el.shadowRoot!.querySelector('lr-document-viewer') as HTMLElement & { open: boolean };
-    expect(viewer.open).to.be.true;
-
-    let leaked = 0;
-    wrapper.addEventListener('lr-close', () => leaked++);
-
-    // Drive the nested dialog through its real public close() (the same path a genuine
-    // Escape/backdrop/close-button dismissal takes) rather than faking a bare `lr-dialog-close`
-    // event -- close() synchronously settles the dialog's own `open` state before document-viewer
-    // re-renders, so the viewer emits exactly one real `lr-close`, matching an actual dismissal.
-    const dialog = viewer.shadowRoot!.querySelector('lr-dialog') as HTMLElement & {
-      close: (reason?: string) => Promise<void>;
-    };
-    void dialog.close('escape');
-    await el.updateComplete;
-
-    expect(leaked, "the document viewer's own lr-close must not leak past the attachment chip").to.equal(0);
-    expect(viewer.open).to.be.false;
+    expect((await requested).defaultPrevented).to.be.true;
+    expect(el.shadowRoot!.querySelectorAll('lr-document-viewer').length).to.equal(0);
   });
 });
 
@@ -185,6 +157,14 @@ it('reflects status changes onto the host attribute', async () => {
   expect(el.getAttribute('status')).to.equal('error');
 });
 
+it('normalizes hostile status values to the canonical pending state', async () => {
+  const el = (await fixture(html`<lr-attachment-chip></lr-attachment-chip>`)) as LyraAttachmentChip;
+  el.status = 'finished' as typeof el.status;
+  await el.updateComplete;
+  expect(el.status).to.equal('pending');
+  expect(el.getAttribute('status')).to.equal('pending');
+});
+
 describe('independent name/bytes/mime-type props', () => {
   it('renders the given name, falling back to "Untitled file" when unset', async () => {
     const withName = (await fixture(
@@ -204,7 +184,7 @@ describe('independent name/bytes/mime-type props', () => {
     expect(name.getAttribute('title')).to.equal('a-very-long-quarterly-financial-summary-2026.pdf');
   });
 
-  it('formats bytes via formatFileSize and hides the part entirely for a 0/unset byte count', async () => {
+  it('formats bytes, renders a known zero-byte value, and hides only an absent byte count', async () => {
     const noSize = (await fixture(html`<lr-attachment-chip name="a.txt"></lr-attachment-chip>`)) as LyraAttachmentChip;
     const sizePart = noSize.shadowRoot!.querySelector('[part="size"]') as HTMLElement;
     expect(sizePart.hidden).to.be.true;
@@ -215,9 +195,16 @@ describe('independent name/bytes/mime-type props', () => {
     const sizePart2 = withSize.shadowRoot!.querySelector('[part="size"]') as HTMLElement;
     expect(sizePart2.hidden).to.be.false;
     expect(sizePart2.textContent).to.equal('2.3 MB');
+
+    const empty = (await fixture(
+      html`<lr-attachment-chip name="empty.txt" bytes="0"></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const emptySize = empty.shadowRoot!.querySelector('[part="size"]') as HTMLElement;
+    expect(emptySize.hidden).to.be.false;
+    expect(emptySize.textContent).to.equal('0 B');
   });
 
-  it('treats a negative or NaN bytes value the same as 0/unset -- hides the size part instead of rendering "NaN B"/a negative size', async () => {
+  it('treats a negative, NaN, or infinite bytes value as unknown', async () => {
     const negative = (await fixture(
       html`<lr-attachment-chip name="a.txt" .bytes=${-5}></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
@@ -227,6 +214,12 @@ describe('independent name/bytes/mime-type props', () => {
       html`<lr-attachment-chip name="a.txt" .bytes=${NaN}></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     expect((nan.shadowRoot!.querySelector('[part="size"]') as HTMLElement).hidden).to.be.true;
+
+    const infinite = (await fixture(
+      html`<lr-attachment-chip name="a.txt" .bytes=${Infinity}></lr-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    expect(infinite.bytes).to.equal(undefined);
+    expect((infinite.shadowRoot!.querySelector('[part="size"]') as HTMLElement).hidden).to.be.true;
   });
 
   it('renders thumbnail-src as the thumbnail image when file is unset', async () => {
@@ -370,28 +363,6 @@ describe('the file property', () => {
     expect(secondSrc).to.not.equal(firstSrc);
   });
 
-  it('closes transient preview state when the attachment identity changes or reconnects', async () => {
-    const file = makeFile('a.png', 'image/png');
-    const el = (await fixture(html`<lr-attachment-chip .file=${file}></lr-attachment-chip>`)) as LyraAttachmentChip;
-    (el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement).click();
-    await el.updateComplete;
-    let viewer = el.shadowRoot!.querySelector('lr-document-viewer') as HTMLElement & { open: boolean };
-    expect(viewer.open).to.be.true;
-
-    el.file = makeFile('b.png', 'image/png');
-    await el.updateComplete;
-    viewer = el.shadowRoot!.querySelector('lr-document-viewer') as HTMLElement & { open: boolean };
-    expect(viewer.open).to.be.false;
-
-    (el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement).click();
-    await el.updateComplete;
-    const parent = el.parentElement!;
-    el.remove();
-    parent.append(el);
-    await el.updateComplete;
-    viewer = el.shadowRoot!.querySelector('lr-document-viewer') as HTMLElement & { open: boolean };
-    expect(viewer.open).to.be.false;
-  });
 });
 
 describe('status accents and progress', () => {
@@ -413,17 +384,24 @@ describe('status accents and progress', () => {
   });
 
   it('exposes a themeable spinner duration and stops the ambient loop for reduced motion', async () => {
-    const el = (await fixture(html`
-      <lr-attachment-chip
-        status="uploading"
-        style="--lr-attachment-chip-spinner-duration: 240ms"
-      ></lr-attachment-chip>
-    `)) as LyraAttachmentChip;
-    const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
-    expect(getComputedStyle(spinner).animationDuration).to.equal('0.24s');
-    expect(styles.cssText).to.match(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)[^]*\[part='spinner'\][^{]*\{[^}]*animation:\s*none\s*!important/,
-    );
+    await setReducedMotion('no-preference');
+    try {
+      const el = (await fixture(html`
+        <lr-attachment-chip
+          status="uploading"
+          style="--lr-attachment-chip-spinner-duration: 240ms"
+        ></lr-attachment-chip>
+      `)) as LyraAttachmentChip;
+      const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
+      expect(getComputedStyle(spinner).animationDuration).to.equal('0.24s');
+      expect(getComputedStyle(spinner).animationName).to.equal('lr-attachment-chip-spin');
+
+      await setReducedMotion('reduce');
+      await aTimeout(0);
+      expect(getComputedStyle(spinner).animationName).to.equal('none');
+    } finally {
+      await setReducedMotion('no-preference');
+    }
   });
 
   it('renders a real progressbar with aria-valuenow/min/max once progress is a meaningful number', async () => {
@@ -485,7 +463,7 @@ describe('status accents and progress', () => {
     expect(text.textContent).to.equal(`Uploading ${bar.getAttribute('aria-valuenow')}%`);
   });
 
-  it('shows visible status-text (not just color) for uploading and error, none for pending/done', async () => {
+  it('shows visible status-text for uploading and error, none for pending/success', async () => {
     const uploading = (await fixture(
       html`<lr-attachment-chip status="uploading" progress="30"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
@@ -499,8 +477,8 @@ describe('status accents and progress', () => {
     const pending = (await fixture(html`<lr-attachment-chip status="pending"></lr-attachment-chip>`)) as LyraAttachmentChip;
     expect((pending.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement).hidden).to.be.true;
 
-    const done = (await fixture(html`<lr-attachment-chip status="done"></lr-attachment-chip>`)) as LyraAttachmentChip;
-    expect((done.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement).hidden).to.be.true;
+    const success = (await fixture(html`<lr-attachment-chip status="success"></lr-attachment-chip>`)) as LyraAttachmentChip;
+    expect((success.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement).hidden).to.be.true;
   });
 
   it('leaves status-text as plain visible text -- no shadow live role for either state', async () => {
@@ -616,14 +594,14 @@ describe('retry affordance', () => {
     expect(btn.getAttribute('aria-label')).to.equal('Retry invoice.pdf');
   });
 
-  it('emits lr-retry with { id } on click, using the id attribute when set', async () => {
+  it('emits lr-retry with { attachmentId } on click', async () => {
     const el = (await fixture(
-      html`<lr-attachment-chip id="att-1" name="invoice.pdf" status="error"></lr-attachment-chip>`,
+      html`<lr-attachment-chip attachment-id="att-1" name="invoice.pdf" status="error"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     const btn = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLButtonElement;
     setTimeout(() => btn.click());
     const ev = await oneEvent(el, 'lr-retry');
-    expect(ev.detail).to.deep.equal({ id: 'att-1' });
+    expect(ev.detail).to.deep.equal({ attachmentId: 'att-1' });
     expect(ev.bubbles).to.be.true;
     expect(ev.composed).to.be.true;
   });
@@ -685,14 +663,14 @@ describe('remove affordance', () => {
     expect(btn.getAttribute('aria-label')).to.equal('Remove invoice.pdf');
   });
 
-  it('emits lr-remove with { id } on click', async () => {
+  it('emits lr-remove with { attachmentId } on click', async () => {
     const el = (await fixture(
-      html`<lr-attachment-chip id="att-2" name="invoice.pdf"></lr-attachment-chip>`,
+      html`<lr-attachment-chip attachment-id="att-2" name="invoice.pdf"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement;
     setTimeout(() => btn.click());
     const ev = await oneEvent(el, 'lr-remove');
-    expect(ev.detail).to.deep.equal({ id: 'att-2' });
+    expect(ev.detail).to.deep.equal({ attachmentId: 'att-2' });
     expect(ev.bubbles).to.be.true;
     expect(ev.composed).to.be.true;
   });
@@ -734,38 +712,67 @@ describe('hit area', () => {
   });
 });
 
-describe('id resolution', () => {
-  it('derives a stable id from file name+size+lastModified when no id attribute is set', async () => {
+describe('attachment identity resolution', () => {
+  it('derives a stable attachmentId from file name+size+lastModified when no attachment-id is set', async () => {
     const file = makeFile('a.png', 'image/png', 10);
     const el = (await fixture(html`<lr-attachment-chip .file=${file}></lr-attachment-chip>`)) as LyraAttachmentChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement;
     setTimeout(() => btn.click());
     const ev = await oneEvent(el, 'lr-remove');
-    expect(ev.detail.id).to.equal(`a.png:10:${file.lastModified}`);
+    expect(ev.detail.attachmentId).to.equal(`a.png:10:${file.lastModified}`);
   });
 
-  it('falls back to a generated internal id when neither id nor file is set', async () => {
+  it('falls back to a generated attachmentId when neither attachment-id nor file is set', async () => {
     const el = (await fixture(html`<lr-attachment-chip name="a.txt"></lr-attachment-chip>`)) as LyraAttachmentChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement;
     setTimeout(() => btn.click());
     const ev = await oneEvent(el, 'lr-remove');
-    expect(ev.detail.id).to.be.a('string');
-    expect(ev.detail.id.length).to.be.greaterThan(0);
+    expect(ev.detail.attachmentId).to.be.a('string');
+    expect(ev.detail.attachmentId.length).to.be.greaterThan(0);
   });
 
-  it('prefers the explicit id attribute even when file is also set', async () => {
+  it('prefers attachment-id and leaves platform id independent', async () => {
     const file = makeFile('a.png', 'image/png', 10);
     const el = (await fixture(
-      html`<lr-attachment-chip id="explicit-id" .file=${file}></lr-attachment-chip>`,
+      html`<lr-attachment-chip id="dom-id" attachment-id="attachment-42" .file=${file}></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement;
     setTimeout(() => btn.click());
     const ev = await oneEvent(el, 'lr-remove');
-    expect(ev.detail.id).to.equal('explicit-id');
+    expect(ev.detail.attachmentId).to.equal('attachment-42');
+    expect(el.id).to.equal('dom-id');
   });
 });
 
 describe('label overrides (i18n)', () => {
+  it('never mistakes explicit old-English or empty labels for localization sentinels', async () => {
+    const el = (await fixture(html`
+      <lr-attachment-chip
+        name="invoice.pdf"
+        status="error"
+        remove-label="Remove"
+        retry-label="Retry"
+        upload-failed-label="Upload failed"
+        untitled-label="Untitled file"
+        .strings=${{
+          removeWithContext: 'Localized remove {label}',
+          attachmentRetryWithContext: 'Localized retry {label}',
+          attachmentUploadFailed: 'Localized failure',
+          attachmentUntitledFile: 'Localized untitled',
+        }}
+      ></lr-attachment-chip>
+    `)) as LyraAttachmentChip;
+    expect(el.shadowRoot!.querySelector('[part="remove-button"]')!.getAttribute('aria-label')).to.equal('Remove');
+    expect(el.shadowRoot!.querySelector('[part="retry-button"]')!.getAttribute('aria-label')).to.equal('Retry');
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Upload failed');
+
+    el.removeLabel = '';
+    el.retryLabel = '';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="remove-button"]')!.getAttribute('aria-label')).to.equal('');
+    expect(el.shadowRoot!.querySelector('[part="retry-button"]')!.getAttribute('aria-label')).to.equal('');
+  });
+
   it('uses contextual message templates so translations control word order and punctuation', async () => {
     const uploading = (await fixture(html`
       <lr-attachment-chip
@@ -808,57 +815,57 @@ describe('label overrides (i18n)', () => {
     );
   });
 
-  it('overrides the remove button aria-label while keeping displayName interpolation', async () => {
+  it('lets an explicit remove label win verbatim', async () => {
     const el = (await fixture(
       html`<lr-attachment-chip name="invoice.pdf" remove-label="Supprimer"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
-    expect(btn.getAttribute('aria-label')).to.equal('Supprimer invoice.pdf');
+    expect(btn.getAttribute('aria-label')).to.equal('Supprimer');
   });
 
   it('defaults removeLabel to "Remove", matching today\'s hardcoded text exactly', async () => {
     const el = (await fixture(html`<lr-attachment-chip name="invoice.pdf"></lr-attachment-chip>`)) as LyraAttachmentChip;
-    expect(el.removeLabel).to.equal('Remove');
+    expect(el.removeLabel).to.be.undefined;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
     expect(btn.getAttribute('aria-label')).to.equal('Remove invoice.pdf');
   });
 
-  it('overrides the retry button aria-label while keeping displayName interpolation', async () => {
+  it('lets an explicit retry label win verbatim', async () => {
     const el = (await fixture(
       html`<lr-attachment-chip name="invoice.pdf" status="error" retry-label="Réessayer"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     const btn = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLElement;
-    expect(btn.getAttribute('aria-label')).to.equal('Réessayer invoice.pdf');
+    expect(btn.getAttribute('aria-label')).to.equal('Réessayer');
   });
 
   it('defaults retryLabel to "Retry", matching today\'s hardcoded text exactly', async () => {
     const el = (await fixture(
       html`<lr-attachment-chip name="invoice.pdf" status="error"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
-    expect(el.retryLabel).to.equal('Retry');
+    expect(el.retryLabel).to.be.undefined;
     const btn = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLElement;
     expect(btn.getAttribute('aria-label')).to.equal('Retry invoice.pdf');
   });
 
-  it('overrides the uploading status text verb while keeping the live percentage', async () => {
+  it('lets an explicit uploading label win verbatim', async () => {
     const el = (await fixture(
       html`<lr-attachment-chip status="uploading" progress="30" uploading-label="Téléversement"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
-    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Téléversement 30%');
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Téléversement');
   });
 
   it('overrides the indeterminate uploading status text verb (no numeric progress)', async () => {
     const el = (await fixture(
       html`<lr-attachment-chip name="a.zip" status="uploading" uploading-label="Téléversement"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
-    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Téléversement…');
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Téléversement');
   });
 
   it('defaults uploadingLabel to "Uploading", matching today\'s hardcoded text exactly', async () => {
     const el = (await fixture(
       html`<lr-attachment-chip status="uploading" progress="30"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
-    expect(el.uploadingLabel).to.equal('Uploading');
+    expect(el.uploadingLabel).to.be.undefined;
     expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Uploading 30%');
   });
 
@@ -871,7 +878,7 @@ describe('label overrides (i18n)', () => {
 
   it('defaults uploadFailedLabel to "Upload failed", matching today\'s hardcoded text exactly', async () => {
     const el = (await fixture(html`<lr-attachment-chip status="error"></lr-attachment-chip>`)) as LyraAttachmentChip;
-    expect(el.uploadFailedLabel).to.equal('Upload failed');
+    expect(el.uploadFailedLabel).to.be.undefined;
     expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Upload failed');
   });
 });
@@ -887,7 +894,7 @@ describe('uploadingLabel wiring', () => {
       ></lr-attachment-chip>
     `)) as LyraAttachmentChip;
     const progress = el.shadowRoot!.querySelector('[part="progress"]')!;
-    expect(progress.getAttribute('aria-label')).to.equal('Envoi de report.pdf');
+    expect(progress.getAttribute('aria-label')).to.equal('Envoi de');
   });
 
   it('wires uploadingLabel into visible status text while the indeterminate spinner stays decorative', async () => {
@@ -896,7 +903,7 @@ describe('uploadingLabel wiring', () => {
     `)) as LyraAttachmentChip;
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]')!;
     expect(spinner.getAttribute('aria-hidden')).to.equal('true');
-    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Envoi de…');
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Envoi de');
   });
 });
 
@@ -910,7 +917,7 @@ describe('untitledLabel', () => {
 
   it('defaults to "Untitled file" (unchanged from before this property existed)', async () => {
     const el = (await fixture(html`<lr-attachment-chip></lr-attachment-chip>`)) as LyraAttachmentChip;
-    expect(el.untitledLabel).to.equal('Untitled file');
+    expect(el.untitledLabel).to.be.undefined;
     const name = el.shadowRoot!.querySelector('[part="name"]')!;
     expect(name.textContent).to.equal('Untitled file');
   });
@@ -1011,6 +1018,72 @@ describe('file-size unit localization', () => {
     expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.contain('٤٢');
   });
 });
+
+it('honors inherited and direct public theme hooks', async () => {
+  const wrapper = await fixture(html`
+    <div style="--lr-transition-fast: 0ms linear; --lr-attachment-chip-bg: rgb(1, 2, 3); --lr-attachment-chip-accent: rgb(4, 5, 6)">
+      <lr-attachment-chip status="uploading" name="report.pdf"></lr-attachment-chip>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-attachment-chip') as LyraAttachmentChip;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const status = el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement;
+  expect(getComputedStyle(base).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(status).color).to.equal('rgb(4, 5, 6)');
+
+  el.style.setProperty('--lr-attachment-chip-bg', 'rgb(7, 8, 9)');
+  await waitUntil(() => getComputedStyle(base).backgroundColor === 'rgb(7, 8, 9)');
+});
+
+it('keeps every status distinguishable without color in forced-colors mode', async () => {
+  await setForcedColors('active');
+  try {
+    const wrapper = await fixture(html`
+      <div>
+        <lr-attachment-chip status="pending"></lr-attachment-chip>
+        <lr-attachment-chip status="uploading"></lr-attachment-chip>
+        <lr-attachment-chip status="error"></lr-attachment-chip>
+        <lr-attachment-chip status="success"></lr-attachment-chip>
+      </div>
+    `);
+    const stylesByStatus = new Map(
+      Array.from(wrapper.querySelectorAll('lr-attachment-chip')).map((chip) => [
+        chip.getAttribute('status'),
+        getComputedStyle(chip.shadowRoot!.querySelector('[part="base"]') as HTMLElement),
+      ]),
+    );
+    expect(stylesByStatus.get('pending')!.borderStyle).to.equal('solid');
+    expect(stylesByStatus.get('uploading')!.borderStyle).to.equal('dashed');
+    expect(stylesByStatus.get('error')!.borderStyle).to.equal('double');
+    expect(stylesByStatus.get('success')!.outlineStyle).to.equal('double');
+  } finally {
+    await setForcedColors('none');
+  }
+});
+
+for (const dir of ['ltr', 'rtl'] as const) {
+  it(`contains long attachment content and all actions in a 320px ${dir} allocation`, async () => {
+    const wrapper = await fixture(html`
+      <div dir=${dir} style="inline-size: 320px; max-inline-size: 320px; overflow: auto">
+        <lr-attachment-chip
+          style="max-inline-size: 100%"
+          status="error"
+          name=${'a'.repeat(500)}
+          preview-src="https://example.test/report.pdf"
+        ></lr-attachment-chip>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-attachment-chip') as LyraAttachmentChip;
+    const hostRect = el.getBoundingClientRect();
+    const wrapperRect = wrapper.getBoundingClientRect();
+    expect(hostRect.width).to.be.at.most(wrapperRect.width + 0.5);
+    for (const action of el.shadowRoot!.querySelectorAll<HTMLElement>('button')) {
+      const rect = action.getBoundingClientRect();
+      expect(rect.left).to.be.at.least(wrapperRect.left - 0.5);
+      expect(rect.right).to.be.at.most(wrapperRect.right + 0.5);
+    }
+  });
+}
 
 it('is accessible in the default (empty) state', async () => {
   const el = (await fixture(html`<lr-attachment-chip></lr-attachment-chip>`)) as LyraAttachmentChip;

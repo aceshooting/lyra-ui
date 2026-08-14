@@ -33,24 +33,23 @@ export const Horizontal: Story = {
 };
 
 export const MarkerIconSlots: Story = {
-  name: 'Canonical and legacy marker icons',
+  name: 'Marker icons',
   parameters: {
     docs: {
       description: {
-        story:
-          'Use marker-icon for the purpose-named marker override. The shipped icon slot remains a permanent fallback, and marker-icon takes precedence if both are filled.',
+        story: 'Use marker-icon for the purpose-named marker override. An empty slot falls back to the tone-colored dot.',
       },
     },
   },
   render: () => html`
-    <lr-timeline aria-label="Marker icon compatibility">
+    <lr-timeline aria-label="Marker icon examples">
       <lr-timeline-item variant="success">
         <span slot="marker-icon" aria-hidden="true">✓</span>
         Canonical marker icon
       </lr-timeline-item>
       <lr-timeline-item variant="brand">
-        <span slot="icon" aria-hidden="true">◆</span>
-        Legacy icon fallback
+        <span slot="marker-icon" aria-hidden="true">◆</span>
+        Custom marker icon
       </lr-timeline-item>
     </lr-timeline>
   `,

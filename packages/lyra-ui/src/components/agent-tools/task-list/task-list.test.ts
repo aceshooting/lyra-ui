@@ -1,6 +1,7 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './task-list.js';
 import type { LyraTaskList, TaskItem } from './task-list.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const items: TaskItem[] = [
   { id: 'step-1', label: 'Read repository', status: 'success' },
@@ -222,6 +223,19 @@ it('shows a shape-distinct status icon plus visually-hidden status text per item
   expect(rows[1]!.querySelector('.sr-only')!.textContent!.trim()).to.equal('Running');
 });
 
+it('normalizes foreign runtime task statuses to pending instead of throwing', async () => {
+  const el = await fixture<LyraTaskList>(html`
+    <lr-task-list .items=${[
+      { id: 'foreign', label: 'Foreign', status: 42 },
+      { id: 'null', label: 'Null', status: null },
+    ] as unknown as TaskItem[]}></lr-task-list>
+  `);
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')];
+  expect(rows.map((row) => row.dataset.status)).to.deep.equal(['pending', 'pending']);
+  expect(rows.map((row) => row.querySelector('[part="status-label"]')!.textContent!.trim()))
+    .to.deep.equal(['Pending', 'Pending']);
+});
+
 describe('status-change announcements', () => {
   async function getLiveRegionText(el: LyraTaskList): Promise<string> {
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -383,17 +397,29 @@ describe('compact / frame escape hatches', () => {
   });
 });
 
-describe('header hover specificity', () => {
-  it('wraps the internal button[part="header"]:hover rule in :where() so a consumer ::part(header):hover override can win', async () => {
-    // Mirrors lr-attachment-trigger/lr-copy-button's own test for the identical fix -- jsdom/wtr
-    // don't synthesize a real :hover pseudo-class from a dispatched event, so this asserts the
-    // internal rule's own specificity-lowering wrapper directly via the adopted stylesheet text.
-    const el = (await fixture(html`<lr-task-list></lr-task-list>`)) as LyraTaskList;
-    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
-      .flatMap((sheet) => Array.from(sheet.cssRules))
-      .map((rule) => rule.cssText)
-      .find((text) => text.includes(':hover') && text.toLowerCase().includes('part="header"'));
-    expect(internalRule).to.contain(':where(');
+describe('header hover cascade', () => {
+  it('applies a consumer ::part(header):hover override under a real pointer', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <style>
+          lr-task-list.consumer-hover::part(header):hover { background: rgb(1, 2, 3); }
+        </style>
+        <lr-task-list class="consumer-hover"></lr-task-list>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-task-list') as LyraTaskList;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement;
+    const rect = header.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => getComputedStyle(header).backgroundColor === 'rgb(1, 2, 3)');
+      expect(getComputedStyle(header).backgroundColor).to.equal('rgb(1, 2, 3)');
+    } finally {
+      await resetMouse();
+    }
   });
 });
 

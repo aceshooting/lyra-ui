@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LyraInput } from './input.js';
+import { LyraInput } from './input.js';
 import './input.js';
 import '../button/button.js';
 
@@ -44,6 +44,25 @@ export const NativeTypes: Story = {
   `,
 };
 
+/** Chromium/WebKit expose the browser-native time-picker indicator as a stylable pseudo-element;
+ * its hover and focus-visible affordances use component-local theme hooks and disappear while the
+ * native input is disabled. */
+export const NativeTimePickerIndicator: Story = {
+  name: 'Native time-picker indicator states',
+  render: () => html`
+    <lr-input
+      type="time"
+      label="Start time"
+      style="
+        --lr-input-time-picker-hover-bg: var(--lr-color-success-quiet);
+        --lr-input-time-picker-active-bg: var(--lr-color-success);
+        --lr-input-time-picker-focus-bg: var(--lr-color-warning-quiet);
+        --lr-input-time-picker-focus-ring: var(--lr-color-warning);
+      "
+    ></lr-input>
+  `,
+};
+
 /**
  * `autocorrect` always reads as boolean while accepting Web Awesome's boolean writes and
  * Shoelace's `'off'`/`'on'` writes.
@@ -82,6 +101,30 @@ export const NumericType: Story = {
 
 export const ValidationMessage: Story = {
   render: () => html`<lr-input type="email" label="Email" hint="We'll never share it." required></lr-input>`,
+};
+
+/** Mirrored constructors expose callable validators for tooling that inspects intrinsic validity. */
+export const StaticValidators: Story = {
+  render: () => {
+    const inspect = async (event: Event) => {
+      const root = (event.currentTarget as HTMLElement).closest('[data-static-validator-story]')!;
+      const input = root.querySelector('lr-input') as LyraInput;
+      const output = root.querySelector('output')!;
+      await input.updateComplete;
+      const result = LyraInput.validators[0]!.checkValidity(input);
+      output.textContent = result.isValid
+        ? 'The static validator reports valid.'
+        : `The static validator reports: ${result.invalidKeys.join(', ')}.`;
+    };
+
+    return html`
+      <div data-static-validator-story style="display:grid; gap:var(--lr-space-s); max-inline-size:24rem">
+        <lr-input required label="Project name"></lr-input>
+        <button type="button" @click=${inspect}>Inspect static validator</button>
+        <output aria-live="polite">Choose Inspect static validator.</output>
+      </div>
+    `;
+  },
 };
 
 export const CompactGridRow: Story = {

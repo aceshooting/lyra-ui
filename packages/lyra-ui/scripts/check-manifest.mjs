@@ -4,6 +4,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { cli as analyzeManifest } from '@custom-elements-manifest/analyzer/cli.js';
 import { compactManifest } from './manifest-compact.mjs';
+import { renderSurfaceFor } from './manifest-render-reachability.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceDir = path.join(packageDir, 'src', 'components');
@@ -50,6 +51,70 @@ function addLiteralPartNames(source, names) {
     for (const name of staticText.trim().split(/\s+/)) {
       if (name) names.add(name);
     }
+  }
+  // Preserve the static prefix of a template whose interpolation itself contains a nested
+  // template literal. The complete-template expression above necessarily stops at that inner
+  // backtick, but the prefix is still a deterministic public token (for example `node-type-*`).
+  for (const templatePrefix of source.matchAll(/`([^`$]*)\$\{/g)) {
+    for (const name of templatePrefix[1].trim().split(/\s+/)) {
+      if (name) names.add(name);
+    }
+  }
+}
+
+/** Extracts balanced Lit attribute expressions such as `part=${condition ? `a ${b}` : 'a'}`.
+ * A flat `[^}]*` expression stops at the first nested template interpolation and silently loses
+ * the exact static token that precedes it. */
+function litPartBindings(source) {
+  const expressions = [];
+  const pattern = /\bpart\s*=\s*\$\{/g;
+  for (const match of source.matchAll(pattern)) {
+    const start = match.index + match[0].length;
+    let depth = 1;
+    let quote = '';
+    let escaped = false;
+    let index = start;
+    for (; index < source.length && depth > 0; index += 1) {
+      const character = source[index];
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (character === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (quote === "'" || quote === '"') {
+        if (character === quote) quote = '';
+        continue;
+      }
+      if (character === "'" || character === '"') {
+        quote = character;
+        continue;
+      }
+      // Template-literal `${...}` braces remain structural here; counting every brace while a
+      // backtick is open correctly carries the outer binding past nested interpolations.
+      if (character === '{') depth += 1;
+      else if (character === '}') depth -= 1;
+    }
+    if (depth === 0) expressions.push(source.slice(start, index - 1));
+  }
+  return expressions;
+}
+
+function addPartBindingHelperLiterals(source, expression, names) {
+  for (const identifier of new Set(expression.match(/[A-Za-z_$][\w$]*/g) ?? [])) {
+    const escapedIdentifier = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const declaration = source.match(
+      new RegExp(`\\b(?:const|let)\\s+${escapedIdentifier}\\s*(?::\\s*[^=;]+)?=([^;]+);`),
+    );
+    const calledHelper = declaration?.[1].match(/^\s*(?:this\.)?([A-Za-z_$][\w$]*)\s*\(/)?.[1];
+    if (!calledHelper) continue;
+    const escapedHelper = calledHelper.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const helper = source.match(
+      new RegExp(`\\b(?:function\\s+)?${escapedHelper}\\s*\\([^)]*\\)[^{]*\\{([\\s\\S]{0,1600})`),
+    );
+    if (helper) addLiteralPartNames(helper[1], names);
   }
 }
 
@@ -145,8 +210,9 @@ function namesFromTemplates(source) {
   // every helper to call its variable exactly `part` -- <lr-evaluation-run> and
   // <lr-graph-query-builder> both use descriptive names for two related parts in one helper.
   // Literals directly inside the binding cover the common inline conditional form first.
-  for (const match of source.matchAll(/\bpart\s*=\s*\$\{([^}]*)\}/g)) {
-    addLiteralPartNames(match[1], names);
+  for (const expression of litPartBindings(source)) {
+    addLiteralPartNames(expression, names);
+    addPartBindingHelperLiterals(source, expression, names);
   }
   for (const match of source.matchAll(/\bpart\s*=\s*\$\{(\w+)\}/g)) {
     const [, identifier] = match;
@@ -156,6 +222,14 @@ function namesFromTemplates(source) {
     );
     if (declaration) {
       addLiteralPartNames(declaration[1], names);
+      const calledHelper = declaration[1].match(/^\s*(?:this\.)?([A-Za-z_$][\w$]*)\s*\(/)?.[1];
+      if (calledHelper) {
+        const escapedHelper = calledHelper.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const helper = source.match(
+          new RegExp(`\\b(?:function\\s+)?${escapedHelper}\\s*\\([^)]*\\)[^{]*\\{([\\s\\S]{0,1600})`),
+        );
+        if (helper) addLiteralPartNames(helper[1], names);
+      }
     }
     const typeDeclaration = source.match(
       new RegExp(`\\b${escapedIdentifier}\\s*:\\s*((?:'[^']+'|"[^"]+")(?:\\s*\\|\\s*(?:'[^']+'|"[^"]+"))*)`),
@@ -184,6 +258,31 @@ function namesFromTemplates(source) {
   for (const match of source.matchAll(/\.setAttribute\(\s*["']part["']\s*,\s*["']([^"']+)["']\s*\)/g)) {
     names.add(match[1]);
   }
+  for (const match of source.matchAll(/\.setAttribute\(\s*["']part["']\s*,([\s\S]{0,300}?)\)/g)) {
+    addLiteralPartNames(match[1], names);
+  }
+  // Imperative peer DOM receives public parts through this explicit sink. Follow literal values
+  // directly, plus the finite selector/part tuple table used by the MapLibre adapter; selectors
+  // themselves never count as evidence.
+  for (const match of source.matchAll(/\baddPartToken\([^,]+,\s*["']([^"']+)["']\s*\)/g)) {
+    names.add(match[1]);
+  }
+  if (/\baddPartToken\([^,]+,\s*part\s*\)/.test(source)) {
+    for (const match of source.matchAll(/\[\s*["'][^"']+["']\s*,\s*["']([^"']+)["']\s*\]/g)) {
+      names.add(match[1]);
+    }
+  }
+  // A render method can deliberately accept a finite part token from its callers. Only literal
+  // arguments to a method whose first parameter is actually bound to `part=${...}` are evidence.
+  for (const signature of source.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(\s*([A-Za-z_$][\w$]*)\s*:\s*string\b/g)) {
+    const [, methodName, parameter] = signature;
+    const methodSlice = source.slice(signature.index, signature.index + 1800);
+    if (!new RegExp(`\\bpart\\s*=\\s*\\$\\{\\s*${parameter}\\s*\\}`).test(methodSlice)) continue;
+    const escapedMethod = methodName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    for (const call of source.matchAll(new RegExp(`\\bthis\\.${escapedMethod}\\(\\s*["']([^"']+)["']`, 'g'))) {
+      names.add(call[1]);
+    }
+  }
   // Fetched SVGs retain sanitizer-approved third-party part names while adding Lyra's public
   // token through a Set. Only accept `.add('token')` when that exact Set is spread into a
   // `setAttribute('part', ...)` sink, so unrelated Set values cannot mask a missing rendered part.
@@ -210,34 +309,6 @@ for (const file of walk(sourceDir).filter((file) => file.endsWith('.ts') && !fil
   sourceByModule.set(modulePath, fs.readFileSync(file, 'utf8'));
 }
 
-// A component that renders part of its own template from a sibling module -- the `x-shared.ts`
-// module a lean/full split pair (`x.class.ts` / `x-core.class.ts`) shares its duplicated render
-// helpers through -- still owns and documents those parts on the class itself. Scanning only the
-// class file's own text would report every such part as "not rendered statically", which would
-// make the documented de-duplication pattern unusable. Follow the module's own same-directory
-// relative imports (transitively, guarded against cycles) so the check sees the real render
-// surface rather than just the one file. Deliberately limited to same-directory siblings: a part
-// name is owned by its component, so reaching further afield would start masking real drift.
-function renderSurfaceFor(modulePath) {
-  const seen = new Set();
-  const sources = [];
-  const visit = (currentPath) => {
-    if (seen.has(currentPath)) return;
-    seen.add(currentPath);
-    const source = sourceByModule.get(currentPath);
-    if (source === undefined) return;
-    sources.push(source);
-    const dir = path.posix.dirname(currentPath);
-    for (const match of source.matchAll(/\bfrom\s+['"](\.\/[^'"]+)['"]/g)) {
-      // Import specifiers are runtime-resolvable ('./x.js'); the sources on disk are '.ts'.
-      const siblingPath = path.posix.join(dir, match[1].replace(/\.js$/, '.ts'));
-      if (path.posix.dirname(siblingPath) === dir) visit(siblingPath);
-    }
-  };
-  visit(modulePath);
-  return sources.join('\n');
-}
-
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const errors = [];
 const tags = new Set();
@@ -245,7 +316,7 @@ for (const module of manifest.modules ?? []) {
   const source = sourceByModule.get(module.path);
   if (!source) continue;
   const documented = namesFromJSDoc(source);
-  const rendered = namesFromTemplates(renderSurfaceFor(module.path));
+  const rendered = namesFromTemplates(renderSurfaceFor(module.path, sourceByModule));
   for (const name of documented) {
     if (!rendered.has(name)) errors.push(`${module.path}: documented CSS part "${name}" is not rendered statically`);
   }

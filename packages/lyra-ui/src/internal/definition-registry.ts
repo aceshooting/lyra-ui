@@ -14,15 +14,21 @@ function explicitRegistry(value: unknown): CustomElementRegistry | undefined {
 
 /** Resolves a scoped registry first, then the root's owning-window registry. */
 export function registryForRoot(root: LyraDefinitionRoot): CustomElementRegistry | undefined {
-  if ('getRootNode' in root && typeof root.getRootNode === 'function') {
-    const containingRoot = root.getRootNode();
-    const scoped = explicitRegistry(containingRoot);
-    if (scoped) return scoped;
+  try {
+    if ('getRootNode' in root && typeof root.getRootNode === 'function') {
+      const containingRoot = root.getRootNode();
+      const scoped = explicitRegistry(containingRoot);
+      if (scoped) return scoped;
+    }
+
+    const direct = explicitRegistry(root);
+    if (direct) return direct;
+
+    const ownerDocument = root.nodeType === 9 ? (root as Document) : root.ownerDocument;
+    return ownerDocument?.defaultView?.customElements;
+  } catch {
+    // Consumer-owned roots can shadow DOM methods/accessors. One malformed node must not make a
+    // public rendered-tree readiness operation reject or fall back to an unrelated registry.
+    return undefined;
   }
-
-  const direct = explicitRegistry(root);
-  if (direct) return direct;
-
-  const ownerDocument = root.nodeType === 9 ? (root as Document) : root.ownerDocument;
-  return ownerDocument?.defaultView?.customElements;
 }

@@ -27,7 +27,7 @@ export const NarrowLongContent: Story = {
     <div style="inline-size: 320px; max-inline-size: 100%;">
       <lr-histogram
         aria-label="Distribution of end-to-end request completion times"
-        label="Requests grouped by end-to-end completion time"
+        series-label="Requests grouped by end-to-end completion time"
         bins="6"
         height="16rem"
         legend

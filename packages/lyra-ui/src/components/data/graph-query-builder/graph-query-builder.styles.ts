@@ -76,6 +76,8 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-m);
     cursor: pointer;
     border: var(--lr-border-width-thin) solid;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
   }
   [part='run-button'] {
     background: var(--lr-graph-query-builder-run-bg, var(--lr-color-brand));
@@ -183,6 +185,7 @@ export const styles = css`
     padding: var(--lr-space-2xs);
     cursor: pointer;
     border-radius: var(--lr-radius-xs);
+    min-block-size: var(--lr-icon-button-size);
   }
   [part='saved-load-button']:hover {
     text-decoration: underline;

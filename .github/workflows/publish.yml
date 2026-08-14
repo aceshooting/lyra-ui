@@ -19,157 +19,18 @@ permissions:
   contents: read
 
 jobs:
-  # All checkout, dependency, repository-script, and package lifecycle execution stays in this
-  # read-only job. The protected publish job consumes only the byte-verified artifact and digest.
+  # Credential-free source/test/rebuild verification is shared with recovery signing.
   verify:
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/release-verification.yml
     permissions:
       actions: read
       checks: read
       contents: read
-    outputs:
-      tag: ${{ steps.tag.outputs.tag }}
-      tag_sha: ${{ steps.source.outputs.sha }}
-      tarball_sha256: ${{ steps.asset_digest.outputs.sha256 }}
-    steps:
-      - name: Resolve release tag
-        id: tag
-        env:
-          DISPATCH_TAG: ${{ inputs.tag }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            TAG="$DISPATCH_TAG"
-          else
-            TAG="$RELEASE_TAG"
-          fi
-          if [[ ! "$TAG" =~ ^lyra-(ui|flags)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "::error::Unsupported release tag '$TAG'. Expected a stable lyra-ui@<semver> or lyra-flags@<semver> tag."
-            exit 1
-          fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Checkout tag without credentials
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ steps.tag.outputs.tag }}
-          persist-credentials: false
-
-      - name: Validate source binding and required test runs
-        id: source
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.tag.outputs.tag }}
-          WORKFLOW_REF: ${{ github.ref }}
-          WORKFLOW_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          SHA="$(git rev-parse HEAD^{commit})"
-          TAG_OBJECT_TYPE="$(git cat-file -t "refs/tags/$TAG")"
-          TAG_SHA="$(git rev-parse --verify "refs/tags/$TAG^{commit}")"
-          node scripts/release-integrity.mjs validate-git-tag \
-            --tag "$TAG" \
-            --object-type "$TAG_OBJECT_TYPE" \
-            --checkout-sha "$SHA" \
-            --tag-commit-sha "$TAG_SHA"
-          node scripts/release-integrity.mjs validate-workflow-source \
-            --tag "$TAG" \
-            --event-name "$EVENT_NAME" \
-            --github-ref "$WORKFLOW_REF" \
-            --github-sha "$WORKFLOW_SHA" \
-            --tag-commit-sha "$TAG_SHA"
-          node scripts/release-integrity.mjs wait-ci \
-            --repository "$GITHUB_REPOSITORY" \
-            --sha "$SHA" \
-            --workflow ci.yml \
-            --timeout-seconds 3600 \
-            --poll-seconds 20
-          node scripts/release-integrity.mjs wait-full-engine \
-            --repository "$GITHUB_REPOSITORY" \
-            --sha "$SHA" \
-            --workflow full-engine.yml \
-            --timeout-seconds 7200 \
-            --poll-seconds 20
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-
-      - name: Resolve source package identity from tag
-        id: pkg
-        env:
-          TAG: ${{ steps.tag.outputs.tag }}
-        run: |
-          node scripts/release-integrity.mjs resolve-tag \
-            --tag "$TAG" \
-            --github-output "$GITHUB_OUTPUT"
-
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install exact tagged dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Download and validate release tarball
-        id: release_asset
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.tag.outputs.tag }}
-        run: |
-          set -euo pipefail
-          dir="$RUNNER_TEMP/release-assets"
-          mkdir -p "$dir"
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.tgz' --dir "$dir"
-          files=()
-          while IFS= read -r -d '' file; do
-            files+=(--file "$file")
-          done < <(find "$dir" -maxdepth 1 -type f -name '*.tgz' -print0)
-          node scripts/release-integrity.mjs validate-tarball \
-            --tag "$TAG" \
-            --github-output "$GITHUB_OUTPUT" \
-            "${files[@]}"
-
-      # Default actions/attest provenance identifies this workflow as the builder. Rebuild the
-      # exact tag and require byte identity so the later provenance statement remains truthful.
-      - name: Rebuild exact tagged source and compare release bytes
-        env:
-          PACKAGE_NAME: ${{ steps.pkg.outputs.name }}
-          RELEASE_TARBALL: ${{ steps.release_asset.outputs.path }}
-          TAG: ${{ steps.tag.outputs.tag }}
-        run: |
-          set -euo pipefail
-          rebuild_dir="$RUNNER_TEMP/tagged-source-rebuild"
-          mkdir -p "$rebuild_dir"
-          pnpm --filter "$PACKAGE_NAME" --fail-if-no-match pack --pack-destination "$rebuild_dir"
-          rebuilt=()
-          while IFS= read -r -d '' file; do
-            rebuilt+=("$file")
-          done < <(find "$rebuild_dir" -maxdepth 1 -type f -name '*.tgz' -print0)
-          if [[ "${#rebuilt[@]}" -ne 1 ]]; then
-            echo "::error::Expected exactly one tagged-source rebuild, found ${#rebuilt[@]}."
-            exit 1
-          fi
-          node scripts/release-integrity.mjs validate-tarball --tag "$TAG" --file "${rebuilt[0]}"
-          node scripts/release-integrity.mjs compare-rebuild \
-            --release-file "$RELEASE_TARBALL" \
-            --rebuilt-file "${rebuilt[0]}"
-
-      - name: Record verified tarball digest
-        id: asset_digest
-        env:
-          TARBALL: ${{ steps.release_asset.outputs.path }}
-        run: |
-          echo "sha256=$(sha256sum "$TARBALL" | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
-
-      - name: Upload byte-verified tarball
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: verified-release-tarball
-          path: ${{ steps.release_asset.outputs.path }}
-          if-no-files-found: error
-          retention-days: 14
+    with:
+      tag: ${{ inputs.tag || github.event.release.tag_name }}
+      trigger_event: ${{ github.event_name }}
+      workflow_ref: ${{ github.ref }}
+      workflow_sha: ${{ github.sha }}
 
   publish:
     needs: verify

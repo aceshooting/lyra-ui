@@ -7,6 +7,14 @@ const meta: Meta = {
   title: 'Env List',
   component: 'lr-env-list',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Copy settlement is explicit: `lr-copy` fires only after clipboard fulfillment; failures emit `lr-copy-error` plus `lr-error` and announce localized failure text.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;
@@ -57,6 +65,41 @@ export const AllSecretsMasked: Story = {
         { name: 'JWT_SECRET', value: 'x' },
       ]}
     ></lr-env-list>`,
+};
+
+export const ClipboardSettlement: Story = {
+  name: 'Clipboard settlement events',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Use the copy action to see fulfillment versus failure reported only after the owning browser clipboard settles. The output deliberately never repeats the secret value or raw platform error.',
+      },
+    },
+  },
+  render: () => {
+    const report = (event: Event): void => {
+      const wrapper = event.currentTarget as HTMLElement;
+      const output = wrapper.querySelector('output');
+      if (!output) return;
+      if (event.type === 'lr-copy') {
+        output.textContent = 'Clipboard write fulfilled.';
+        return;
+      }
+      const reason = (event as CustomEvent<{ readonly reason: string }>).detail.reason;
+      output.textContent = `Clipboard write failed (${reason}).`;
+    };
+    return html`
+      <div
+        style="display:grid;gap:var(--lr-space-s);max-width:32rem"
+        @lr-copy=${report}
+        @lr-copy-error=${report}
+      >
+        <lr-env-list .entries=${entries}></lr-env-list>
+        <output aria-live="polite">No clipboard attempt yet.</output>
+      </div>
+    `;
+  },
 };
 
 export const Empty: Story = {

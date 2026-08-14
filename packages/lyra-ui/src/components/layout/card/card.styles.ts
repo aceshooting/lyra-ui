@@ -78,12 +78,12 @@ export const styles = css`
     border-color: transparent;
     background: transparent;
   }
-  :host([interactive]) [part="base"] {
+  [part="base"][data-actionable="true"] {
     cursor: pointer;
     transition: border-color var(--lr-transition-fast);
   }
-  :host([interactive]) [part="base"]:hover,
-  :host([interactive]) .linked-shell:hover > [part="base"] {
+  [part="base"][data-actionable="true"]:hover,
+  .linked-shell:hover > [part="base"][data-actionable="true"] {
     border-color: var(--lr-card-interactive-hover-border-color, var(--lr-color-brand));
   }
   /* Pressed keeps the hover border and adds a tint of the whole tile, so it reads as a step past
@@ -91,8 +91,8 @@ export const styles = css`
      not a background colour: the appearance variants own background-color (filled and
      filled-outlined set brand-quiet), and a colour here would replace theirs instead of deepening
      it, so a filled card would flash back to plain surface on mousedown. */
-  :host([interactive]) [part="base"]:active,
-  :host([interactive]) .linked-shell:active > [part="base"] {
+  [part="base"][data-actionable="true"]:active,
+  .linked-shell:active > [part="base"][data-actionable="true"] {
     border-color: var(--lr-card-interactive-active-border-color, var(--lr-color-brand));
     background-image: linear-gradient(
       var(

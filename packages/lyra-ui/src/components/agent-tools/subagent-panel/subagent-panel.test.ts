@@ -45,7 +45,7 @@ function sinkTexts(): string[] {
 }
 
 const runs: SubagentRun[] = [
-  { id: 'research', label: 'Researcher', status: 'running', task: 'Find sources', progress: 0.5 },
+  { id: 'research', label: 'Researcher', status: 'running', task: 'Find sources', progressRatio: 0.5 },
   { id: 'writer', parentId: 'research', label: 'Writer', status: 'waiting-input', task: 'Draft answer' },
   { id: 'review', label: 'Reviewer', status: 'error', task: 'Verify claims' },
 ];
@@ -67,15 +67,15 @@ it('renders nested runs, localized statuses, tasks, and guarded progress', async
 
 it('emits full selections plus status-appropriate cancel and retry intents', async () => {
   const el = (await fixture(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`)) as LyraSubagentPanel;
-  const selectPending = oneEvent(el, 'lr-run-select');
+  const selectPending = oneEvent(el, 'lr-run-activate');
   (el.shadowRoot!.querySelector('[data-run-id="research"] [part="run-trigger"]') as HTMLButtonElement).click();
-  expect((await selectPending).detail).to.deep.equal({ run: runs[0] });
+  expect((await selectPending).detail).to.deep.equal({ runId: 'research', run: runs[0] });
 
   const cancelPending = oneEvent(el, 'lr-cancel');
   (el.shadowRoot!.querySelector('[data-run-id="research"] [part="cancel"]') as HTMLButtonElement).click();
   expect((await cancelPending).detail).to.deep.equal({ runId: 'research' });
 
-  const retryPending = oneEvent(el, 'lr-retry');
+  const retryPending = oneEvent(el, 'lr-run-retry');
   (el.shadowRoot!.querySelector('[data-run-id="review"] [part="retry"]') as HTMLButtonElement).click();
   expect((await retryPending).detail).to.deep.equal({ runId: 'review' });
 });
@@ -86,14 +86,14 @@ it('activates the focused treeitem with Enter/Space and contextualizes row actio
   const research = el.shadowRoot!.querySelector<HTMLElement>('[data-run-id="research"]')!;
   const review = el.shadowRoot!.querySelector<HTMLElement>('[data-run-id="review"]')!;
   research.focus();
-  const enterPending = oneEvent(el, 'lr-run-select');
+  const enterPending = oneEvent(el, 'lr-run-activate');
   research.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
-  expect((await enterPending).detail).to.deep.equal({ run: runs[0] });
+  expect((await enterPending).detail).to.deep.equal({ runId: 'research', run: runs[0] });
 
   review.focus();
-  const spacePending = oneEvent(el, 'lr-run-select');
+  const spacePending = oneEvent(el, 'lr-run-activate');
   review.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, composed: true }));
-  expect((await spacePending).detail).to.deep.equal({ run: runs[2] });
+  expect((await spacePending).detail).to.deep.equal({ runId: 'review', run: runs[2] });
   expect(
     el.shadowRoot!.querySelector('[data-run-id="research"] [part="cancel"]')!.getAttribute('aria-label'),
   ).to.equal('Cancel Researcher');
@@ -111,9 +111,10 @@ it('renders an empty state and has an accessible populated state', async () => {
 
 it('applies per-instance localized strings', async () => {
   const el = (await fixture(html`<lr-subagent-panel
+    .runs=${runs}
     .strings=${{ subagentPanelLabel: 'Localized agent hierarchy' }}
   ></lr-subagent-panel>`)) as LyraSubagentPanel;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized agent hierarchy');
+  expect(el.shadowRoot!.querySelector('[part="list"]')!.getAttribute('aria-label')).to.equal('Localized agent hierarchy');
 });
 
 it('iteratively bounds a deeply nested hierarchy without overflowing the stack', async () => {
@@ -355,8 +356,7 @@ it('tracks roving focus when focus lands directly on a nested action button, byp
   const grandchild = el.shadowRoot!.querySelector('[data-run-id="grandchild"]') as HTMLElement;
   const leafCancel = el.shadowRoot!.querySelector('[data-run-id="leaf"] [part="cancel"]') as HTMLButtonElement;
 
-  // Skip the row entirely -- focus the nested cancel button directly. (tabindex="-1" only blocks
-  // Tab from reaching it; script-triggered .focus() still works, matching a Tab-then-click flow.)
+  // Skip the row entirely -- focus the nested cancel button directly, as native Tab can too.
   leafCancel.focus();
   await el.updateComplete;
 
@@ -370,7 +370,7 @@ it('tracks roving focus when focus lands directly on a nested action button, byp
   expect(root.getAttribute('tabindex')).to.equal('-1');
 });
 
-it('excludes nested run-trigger/cancel/retry buttons from the native Tab order (roving tabindex contract)', async () => {
+it('keeps nested run-trigger/cancel/retry buttons in the native Tab order', async () => {
   const withActionable: SubagentRun[] = [
     { id: 'active', label: 'Active', status: 'running' },
     { id: 'broken', label: 'Broken', status: 'error' },
@@ -380,18 +380,12 @@ it('excludes nested run-trigger/cancel/retry buttons from the native Tab order (
   )) as LyraSubagentPanel;
   await el.updateComplete;
 
-  expect(
-    el.shadowRoot!.querySelector('[data-run-id="active"] [part="run-trigger"]')!.getAttribute('tabindex'),
-  ).to.equal('-1');
-  expect(
-    el.shadowRoot!.querySelector('[data-run-id="active"] [part="cancel"]')!.getAttribute('tabindex'),
-  ).to.equal('-1');
-  expect(
-    el.shadowRoot!.querySelector('[data-run-id="broken"] [part="run-trigger"]')!.getAttribute('tabindex'),
-  ).to.equal('-1');
-  expect(
-    el.shadowRoot!.querySelector('[data-run-id="broken"] [part="retry"]')!.getAttribute('tabindex'),
-  ).to.equal('-1');
+  const actions = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>(
+    '[part="run-trigger"], [part="cancel"], [part="retry"]',
+  )];
+  expect(actions).to.have.length(4);
+  expect(actions.every((button) => button.getAttribute('tabindex') === null)).to.be.true;
+  expect(actions.every((button) => button.tabIndex === 0)).to.be.true;
 });
 
 it('caches tree ordering and only recomputes it when `runs` changes (regression)', async () => {

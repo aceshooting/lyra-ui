@@ -2,19 +2,38 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { FormAssociated } from '../../../internal/form-associated.js';
-import { finiteInteger } from '../../../internal/numbers.js';
+import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
+import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
+import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { styles } from './code-editor.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { sanitizeCssResize } from '../../../internal/safe-css.js';
 import type { LyraSize } from '../../../internal/variants.js';
+import { autocorrectConverter, normalizeAutocorrect } from '../../../internal/converters.js';
+import { lengthViolations } from '../../../internal/length-constraints.js';
+import {
+  dispatchNativeInputEvent,
+  relayNativeEvent,
+} from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_codeEditorLabel, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_codeEditorLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export interface LyraCodeEditorEventMap { input: CustomEvent<{ value: string }>; change: CustomEvent<{ value: string }>; blur: CustomEvent<undefined>; focus: CustomEvent<undefined>; 'lr-invalid': CustomEvent<undefined>; }
+export interface LyraCodeEditorEventMap {
+  input: InputEvent;
+  change: Event;
+  blur: FocusEvent;
+  focus: FocusEvent;
+  'lr-input': CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string }>;
+  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<undefined>;
+}
+export type LyraCodeEditorResize = 'none' | 'both' | 'horizontal' | 'vertical' | 'auto';
+export type LyraCodeEditorWrap = 'off' | 'soft' | 'hard';
 class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
 
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
@@ -44,10 +63,14 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @slot label - Visible label content.
  * @slot hint - Supporting text.
  * @slot error - Validation message.
- * @event input - User edited the code.
- * @event change - Native change timing.
- * @event focus - The internal textarea received focus; re-dispatched as a bubbling, composed event.
- * @event blur - The internal textarea lost focus; re-dispatched as a bubbling, composed event.
+ * @event input - Realm-correct native `InputEvent` relayed once when the user edits the code.
+ * @event change - Realm-correct native commit `Event`, relayed once.
+ * @event lr-input - Lyra value alias; detail is `{ value }`.
+ * @event lr-change - Lyra commit alias; detail is `{ value }`.
+ * @event focus - Realm-correct native `FocusEvent` relayed from the textarea with `relatedTarget`.
+ * @event blur - Realm-correct native `FocusEvent` relayed from the textarea with `relatedTarget`.
+ * @event lr-focus - Lyra compatibility alias for `focus`.
+ * @event lr-blur - Lyra compatibility alias for `blur`.
  * @event lr-invalid - The editor failed a validity check. Cancelable: `preventDefault()` forwards to
  * the native `invalid` event, suppressing the browser's own validation bubble and the focus/scroll
  * `reportValidity()` would otherwise perform.
@@ -85,11 +108,13 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     ...super.defaultStrings,
     codeEditorLabel: LYRA_DEFAULT_codeEditorLabel,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
+    valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  @property() language = '';
+  /** Language identifier exposed as a reflected host styling hook. */
+  @property({ reflect: true, useDefault: true }) language = '';
   @property({ converter: trueDefaultBooleanConverter, reflect: true, attribute: 'line-numbers' }) lineNumbers = true;
 
   private _tabSize = 2;
@@ -131,39 +156,148 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @property({ attribute: 'error-text' }) errorText = '';
   @property() placeholder = '';
   @property({ type: Boolean, reflect: true }) readonly = false;
+  /** Visible native row count. */
+  private _rows = 4;
+  @property({ type: Number, useDefault: true })
+  get rows(): number { return this._rows; }
+  set rows(next: number) {
+    const previous = this._rows;
+    this._rows = finiteInteger(next, 4, 1);
+    this.requestUpdate('rows', previous);
+  }
+  /** Visible native column count. It also supplies the platform's hard-wrap submission width. */
+  @property({ type: Number, useDefault: true }) cols = 20;
+  /** Native minimum and maximum code-unit length constraints. */
+  private _minlength?: number;
+  @property({ type: Number })
+  get minlength(): number | undefined { return this._minlength; }
+  set minlength(next: number | undefined) {
+    const previous = this._minlength;
+    this._minlength = next !== undefined && Number.isFinite(next) && next >= 0
+      ? finiteInteger(next, 0, 0)
+      : undefined;
+    this.requestUpdate('minlength', previous);
+  }
+  private _maxlength?: number;
+  @property({ type: Number })
+  get maxlength(): number | undefined { return this._maxlength; }
+  set maxlength(next: number | undefined) {
+    const previous = this._maxlength;
+    this._maxlength = next !== undefined && Number.isFinite(next) && next >= 0
+      ? finiteInteger(next, 0, 0)
+      : undefined;
+    this.requestUpdate('maxlength', previous);
+  }
   /** Native CSS `resize` behavior. An invalid runtime value falls back to `'both'`. */
-  @property() resize: 'none' | 'both' | 'horizontal' | 'vertical' = 'both';
+  @property({ reflect: true, useDefault: true }) resize: LyraCodeEditorResize = 'both';
   /** Visual size on the library's one control ladder, shared with `<lr-textarea>`/`<lr-input>`/
    *  `<lr-select>`. Accepts both the canonical `'2xs'`–`'xl'` steps and Web Awesome's/Shoelace's
    *  `'small'`/`'medium'`/`'large'` spellings of `s`/`m`/`l`; the two render identically. Governs
    *  the gutter's and textarea's padding and font size, plus the editor frame's minimum block
    *  size. */
   @property({ reflect: true }) size: LyraSize = 'm';
-  @property({ attribute: 'wrap' }) wrap: 'off' | 'soft' | 'hard' = 'off';
-  @property({ converter: { fromAttribute: (value: string | null) => value !== 'false', toAttribute: (value: boolean) => value ? 'true' : 'false' } }) override spellcheck = false;
+  private wrapValue: LyraCodeEditorWrap = 'off';
+  @property({ attribute: 'wrap', useDefault: true })
+  get wrap(): LyraCodeEditorWrap { return this.wrapValue; }
+  set wrap(next: LyraCodeEditorWrap | string | null) {
+    const old = this.wrapValue;
+    this.wrapValue = next === 'soft' || next === 'hard' ? next : 'off';
+    this.syncSubmissionValue();
+    this.requestUpdate('wrap', old);
+  }
+  @property({
+    converter: {
+      fromAttribute: (value: string | null) => value === '' || value === 'true',
+      toAttribute: (value: boolean) => value ? 'true' : 'false',
+    },
+    useDefault: true,
+  })
+  override spellcheck = false;
+  @property({ type: Boolean }) override autofocus = false;
+  @property() override title = '';
   @property() override autocapitalize = 'off';
-  @property({ attribute: 'autocorrect' }) autoCorrect = 'off';
+  @property() autocomplete = '';
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
+  private autocorrectValue = false;
+  @property({ converter: autocorrectConverter, useDefault: true })
+  override get autocorrect(): boolean { return this.autocorrectValue; }
+  override set autocorrect(next: boolean | string) {
+    this.autocorrectValue = normalizeAutocorrect(next);
+    this.requestUpdate();
+  }
+  get inputmode(): string { return this.inputMode; }
+  set inputmode(next: string) { this.inputMode = next ?? ''; }
+  get enterkeyhint(): string { return this.enterKeyHint; }
+  set enterkeyhint(next: string) { this.enterKeyHint = next ?? ''; }
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private touched = false;
   @state() private hasLabelSlot = false;
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
   @query('textarea') private textarea?: HTMLTextAreaElement;
+  @query('[part="editor"]') private editor?: HTMLElement;
+  @state() private gutterWindowStart = 0;
+  /** The normalized live value. Native textarea line endings are always LF; the host, form state,
+   * gutter and selection APIs use that same representation. */
+  override get value(): string { return super.value; }
+  override set value(next: string | null) {
+    super.value = this.normalizeLineEndings(next);
+    this.syncSubmissionValue();
+  }
+  override get defaultValue(): string { return super.defaultValue; }
+  override set defaultValue(next: string | null) {
+    super.defaultValue = this.normalizeLineEndings(next);
+    this.syncSubmissionValue();
+  }
+  private normalizeLineEndings(value: string | null | undefined): string {
+    return String(value ?? '').replace(/\r\n?/g, '\n');
+  }
+  /** Uses the owner realm's native textarea serializer for `wrap="hard"`; the live value and
+   * restoration state remain unwrapped, exactly like a native textarea's IDL value. */
+  private submissionValue(): string {
+    if (this.wrap !== 'hard') return this.value;
+    const view = this.ownerDocument.defaultView;
+    if (!view?.FormData) return this.value;
+    const form = this.ownerDocument.createElement('form');
+    const textarea = this.ownerDocument.createElement('textarea');
+    textarea.name = 'value';
+    textarea.wrap = 'hard';
+    textarea.cols = finiteInteger(this.cols, 20, 1, 1_000_000);
+    textarea.value = this.value;
+    form.append(textarea);
+    const mount = this.isConnected ? this.ownerDocument.body : null;
+    mount?.append(form);
+    try {
+      const serialized = new view.FormData(form).get('value');
+      return typeof serialized === 'string' ? serialized : this.value;
+    } catch {
+      return this.value;
+    } finally {
+      form.remove();
+    }
+  }
+  private syncSubmissionValue(): void {
+    if (!this.internals) return;
+    this.internals.setFormValue(this.submissionValue(), this.value);
+  }
+  /** Direct access to the owned native textarea. */
+  get input(): HTMLTextAreaElement | null { return this.textarea ?? null; }
   /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
   private get liveDisabled(): boolean { return this.effectiveDisabled || this.matches(':disabled'); }
   override click(): void { if (!this.liveDisabled) this.textarea?.click(); }
   override focus(options?: FocusOptions): void { if (!this.liveDisabled) this.textarea?.focus(options); }
   override blur(): void { this.textarea?.blur(); }
   select(): void { this.textarea?.select(); }
-  get selectionStart(): number { return this.textarea?.selectionStart ?? 0; }
-  set selectionStart(value: number) { if (this.textarea) this.textarea.selectionStart = value; }
-  get selectionEnd(): number { return this.textarea?.selectionEnd ?? 0; }
-  set selectionEnd(value: number) { if (this.textarea) this.textarea.selectionEnd = value; }
-  get selectionDirection(): 'forward' | 'backward' | 'none' {
-    return this.textarea?.selectionDirection ?? 'none';
+  get selectionStart(): number | null { return this.textarea?.selectionStart ?? null; }
+  set selectionStart(value: number | null) { if (this.textarea) this.textarea.selectionStart = value ?? 0; }
+  get selectionEnd(): number | null { return this.textarea?.selectionEnd ?? null; }
+  set selectionEnd(value: number | null) { if (this.textarea) this.textarea.selectionEnd = value ?? 0; }
+  get selectionDirection(): 'forward' | 'backward' | 'none' | null {
+    return this.textarea?.selectionDirection ?? null;
   }
-  set selectionDirection(value: 'forward' | 'backward' | 'none') {
-    if (this.textarea) this.textarea.selectionDirection = value;
+  set selectionDirection(value: 'forward' | 'backward' | 'none' | null) {
+    if (this.textarea) this.textarea.selectionDirection = value ?? 'none';
   }
   setSelectionRange(start: number, end: number, direction?: 'forward' | 'backward' | 'none'): void { this.textarea?.setSelectionRange(start, end, direction); }
   setRangeText(replacement: string, start?: number, end?: number, selectionMode?: SelectionMode): void {
@@ -171,19 +305,47 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     if (!textarea) return;
     textarea.setRangeText(replacement, start ?? textarea.selectionStart, end ?? textarea.selectionEnd, selectionMode);
     this.value = textarea.value;
+    this.fitToContent();
   }
-  private onInput = (event: Event): void => {
-    if (this.liveDisabled) return;
+  scrollPosition(position?: { top?: number; left?: number }): { top: number; left: number } | undefined {
+    if (!this.textarea) return undefined;
+    if (position === undefined) return { top: this.textarea.scrollTop, left: this.textarea.scrollLeft };
+    if (position.top !== undefined) {
+      this.textarea.scrollTop = finiteNumber(position.top, this.textarea.scrollTop);
+    }
+    if (position.left !== undefined) {
+      this.textarea.scrollLeft = finiteNumber(position.left, this.textarea.scrollLeft);
+    }
+    return undefined;
+  }
+  private onInput = (event: InputEvent): void => {
+    if (this.liveDisabled) { event.stopPropagation(); return; }
     this.value = (event.target as HTMLTextAreaElement).value;
-    this.emit('input', { value: this.value });
+    this.fitToContent();
+    relayNativeEvent(this, event);
+    this.emit('lr-input', { value: this.value });
   };
-  private onChange = (): void => { if (!this.liveDisabled) this.emit('change', { value: this.value }); };
-  private onFocus = (): void => { if (!this.liveDisabled) this.emit('focus'); };
+  private onChange = (event: Event): void => {
+    if (this.liveDisabled) { event.stopPropagation(); return; }
+    this.value = (event.target as HTMLTextAreaElement).value;
+    relayNativeEvent(this, event);
+    this.emit('lr-change', { value: this.value });
+  };
+  private onFocus = (event: FocusEvent): void => {
+    if (this.liveDisabled) { event.stopPropagation(); return; }
+    relayNativeEvent(this, event);
+    this.emit('lr-focus');
+  };
   // Disabling a focused native control forces the browser to blur it --
   // plain native HTML behavior, not a real user interaction -- so that forced blur must not mark
   // the field touched. `tabBypassArmed`/`emit('blur')` still run unconditionally: they're tab-key
   // bookkeeping and the public blur event contract, not validation state.
-  private onBlur = (): void => { if (!this.liveDisabled) this.touched = true; this.tabBypassArmed = false; this.emit('blur'); };
+  private onBlur = (event: FocusEvent): void => {
+    if (!this.liveDisabled) this.touched = true;
+    this.tabBypassArmed = false;
+    relayNativeEvent(this, event);
+    this.emit('lr-blur');
+  };
   private tabBypassArmed = false;
   private onKeyDown = (event: KeyboardEvent): void => {
     if (this.liveDisabled) return;
@@ -197,7 +359,8 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       const start = target.selectionStart;
       target.setRangeText(' '.repeat(this.indentWidth), start, target.selectionEnd, 'end');
       this.value = target.value;
-      this.emit('input', { value: this.value });
+      dispatchNativeInputEvent(this, { data: ' '.repeat(this.indentWidth), inputType: 'insertText' });
+      this.emit('lr-input', { value: this.value });
       return;
     }
     this.tabBypassArmed = false;
@@ -208,25 +371,96 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
-      this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
-      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
-      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
+      this.hasLabelSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'label');
+      this.hasHintSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'hint');
+      this.hasErrorSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'error');
     }
   }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (this.textarea && this.textarea.value !== this.value) this.textarea.value = this.value;
-    if (changed.has('touched') || changed.has('required') || changed.has('value')) {
+    if (
+      changed.has('touched') || changed.has('required') || changed.has('value') ||
+      changed.has('minlength') || changed.has('maxlength') || changed.has('readonly')
+    ) {
+      this.updateValidity();
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     }
+    if (changed.has('wrap') || changed.has('cols')) this.syncSubmissionValue();
+    if (changed.has('resize') || changed.has('value') || changed.has('rows') || changed.has('cols')) {
+      this.fitToContent();
+    }
+  }
+  protected updateValidity(): void {
+    if (isBarredFromValidation(this, this.internals)) {
+      this[SET_ANCHORED_VALIDITY]({});
+      return;
+    }
+    if (this.required && this.value === '') {
+      this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, this.localize('fieldRequired'));
+      return;
+    }
+    const native = this.textarea;
+    if (native && native.value !== this.value) native.value = this.value;
+    const own = lengthViolations(
+      this.value,
+      this.minlength,
+      this.maxlength,
+    );
+    const tooShort = Boolean(native?.validity.tooShort) || own.tooShort;
+    const tooLong = Boolean(native?.validity.tooLong) || own.tooLong;
+    this[SET_ANCHORED_VALIDITY](
+      tooShort || tooLong ? { tooShort, tooLong } : {},
+      tooShort || tooLong ? native?.validationMessage || this.localize('valueInvalid') : '',
+    );
+  }
+  private countLines(): number {
+    if (!this.lineNumbers) return 0;
+    let count = 1;
+    for (let index = 0; index < this.value.length; index++) {
+      if (this.value.charCodeAt(index) === 10) count++;
+    }
+    return count;
+  }
+  private onEditorScroll = (): void => {
+    if (!this.lineNumbers || !this.editor || !this.textarea) return;
+    const computed = this.ownerDocument.defaultView?.getComputedStyle(this.textarea);
+    const lineHeight = computed ? Number.parseFloat(computed.lineHeight) : Number.NaN;
+    if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
+    const next = Math.max(0, Math.floor(this.editor.scrollTop / lineHeight) - 20);
+    if (next !== this.gutterWindowStart) this.gutterWindowStart = next;
+  };
+  private gutterRows(lineCount: number): TemplateResult {
+    const start = Math.min(this.gutterWindowStart, Math.max(0, lineCount - 1));
+    const end = Math.min(lineCount, start + 200);
+    const rows = Array.from({ length: end - start }, (_value, offset) => {
+      const index = start + offset;
+      return html`<span class="gutter-line" style=${styleMap({
+        insetBlockStart: `calc(var(--lr-code-editor-line-height) * ${index}em)`,
+      })}>${index + 1}</span>`;
+    });
+    return html`<span class="gutter-measure">${lineCount}</span><span class="gutter-window" style=${styleMap({
+      blockSize: `calc(var(--lr-code-editor-line-height) * ${lineCount}em)`,
+    })}>${rows}</span>`;
+  }
+  private fitToContent(): void {
+    const textarea = this.textarea;
+    if (!textarea || this.resize !== 'auto') return;
+    textarea.style.blockSize = 'auto';
+    const computed = this.ownerDocument.defaultView?.getComputedStyle(textarea);
+    if (!computed) return;
+    const border = Number.parseFloat(computed.borderBlockStartWidth) + Number.parseFloat(computed.borderBlockEndWidth);
+    const blockSize = textarea.scrollHeight + (Number.isFinite(border) ? border : 0);
+    textarea.style.blockSize = `${blockSize}px`;
+    textarea.style.overflowY = 'hidden';
   }
   override render(): TemplateResult {
-    const lineCount = Math.max(1, this.value.split('\n').length);
+    const lineCount = this.countLines();
     // Write the token, not `tab-size` itself: the stylesheet's `tab-size: var(--lr-code-editor-tab-size)`
     // resolves it, so an untouched `tabSize` leaves a host-level override of that token in charge
     // instead of being overwritten by an inline declaration on every update.
     const textareaStyle = {
-      resize: sanitizeCssResize(this.resize, 'both'),
+      resize: this.resize === 'auto' ? 'none' : sanitizeCssResize(this.resize, 'both'),
       ...(this.tabSizeAssigned
         ? { '--lr-code-editor-tab-size': String(this._tabSize) }
         : {}),
@@ -235,17 +469,17 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const describedBy = [hasError ? 'textarea-error' : '', hasHint ? 'textarea-hint' : ''].filter(Boolean).join(' ');
-    const label = this.accessibleLabel || (hasLabel ? nothing : this.localize('codeEditorLabel'));
+    const label = this.hasAttribute('aria-label')
+      ? this.getAttribute('aria-label')!
+      : this.accessibleLabel || (hasLabel ? nothing : this.localize('codeEditorLabel'));
     const invalid = hasError || (this.touched && !this.internals.validity.valid);
     return html`<div part="form-control">
       <label part="label form-control-label" for="textarea" ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot></label>
-      <div part="editor" data-language=${this.language}>
+      <div part="editor" data-language=${this.language} @scroll=${this.onEditorScroll}>
         ${this.lineNumbers
-          ? html`<div part="gutter" aria-hidden="true">${lineCount <= 1_000
-              ? Array.from({ length: lineCount }, (_v, i) => html`<div>${i + 1}</div>`)
-              : html`<span>${Array.from({ length: lineCount }, (_v, i) => i + 1).join('\n')}</span>`}</div>`
+          ? html`<div part="gutter" aria-hidden="true">${this.gutterRows(lineCount)}</div>`
           : nothing}
-        <textarea id="textarea" part="textarea" .value=${this.value} aria-label=${label} aria-describedby=${describedBy || nothing} aria-invalid=${invalid ? 'true' : 'false'} placeholder=${this.placeholder} ?required=${this.required} ?readonly=${this.readonly} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize} autocorrect=${this.autoCorrect} wrap=${this.wrap} style=${styleMap(textareaStyle)} @input=${this.onInput} @change=${this.onChange} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}></textarea>
+        <textarea id="textarea" part="textarea" .value=${this.value} aria-label=${label} aria-describedby=${describedBy || nothing} aria-invalid=${invalid ? 'true' : 'false'} placeholder=${this.placeholder} ?required=${this.required} ?readonly=${this.readonly} ?disabled=${this.effectiveDisabled} ?autofocus=${this.autofocus} title=${this.title || nothing} rows=${this.rows} cols=${this.cols} minlength=${this.minlength ?? nothing} maxlength=${this.maxlength ?? nothing} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize} autocorrect=${this.autocorrect ? 'on' : 'off'} autocomplete=${this.autocomplete || nothing} inputmode=${this.inputMode || nothing} enterkeyhint=${this.enterKeyHint || nothing} wrap=${this.wrap} style=${styleMap(textareaStyle)} @input=${this.onInput} @change=${this.onChange} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}></textarea>
       </div>
       <div id="textarea-hint" part="hint" ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot></div>
       <div id="textarea-error" part="error" ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot></div>

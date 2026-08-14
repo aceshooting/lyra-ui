@@ -15,7 +15,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './select.styles.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
-import { LyraOption } from '../combobox/option.class.js';
+import type { LyraOption } from '../combobox/option.class.js';
 import '../combobox/option.class.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import {
@@ -40,6 +40,9 @@ import {
   RESET_OPTION_SELECTED_FROM_OWNER,
   SET_OPTION_SELECTED_FROM_OWNER,
 } from '../../../internal/option-selection.js';
+import { isHtmlElement } from '../../../internal/dom-guards.js';
+import { tag } from '../../../internal/prefix.js';
+import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_select, LYRA_DEFAULT_selectSelectedOverflow, LYRA_DEFAULT_selectValueMissing } from '../../../internal/default-strings.generated.js';
@@ -49,6 +52,10 @@ import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_removeWith
 /** Alias of the canonical six-step size ladder. The `size` property itself accepts
  *  {@linkcode LyraSize}, i.e. these steps *and* the `small`/`medium`/`large` spellings. */
 export type LyraSelectSize = LyraSizeStep;
+
+function isLyraOptionElement(value: unknown): value is LyraOption {
+  return isHtmlElement(value) && value.localName === tag('option');
+}
 
 /** Visual treatment of the trigger surface. `outlined` (the default) is a bordered surface;
  *  `filled` swaps the border for a raised fill; `filled-outlined` keeps both; `accent` paints the
@@ -83,7 +90,8 @@ export interface LyraSelectEventMap {
  * input) -- click/Enter/Space/ArrowDown opens it, there's no typing-to-filter.
  * A printable keypress instead jumps (or, while closed, directly selects) the
  * next option whose label starts with what's been typed, like a native
- * `<select>`'s type-ahead.
+ * `<select>`'s type-ahead. Closed multiple mode skips selected option occurrences and keeps
+ * searching for a later unselected match, including another occurrence of the same value.
  *
  * Options are `<lr-option value>` children, the same element `<lr-combobox>`
  * uses. Unlike `lr-combobox` there is no filter/source/empty-text/max-render
@@ -294,6 +302,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  /** Public WA-compatible intrinsic validator catalog. */
+  static get validators(): LyraFormValidator<LyraSelect>[] {
+    return [currentValidityValidator('required', 'disabled', 'value', 'multiple')];
+  }
   static formAssociated = true;
   // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own
   // sheet so every `--lr-select-*` geometry knob points at the active tier's value -- and so both
@@ -733,7 +745,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     const values = (Array.isArray(next) ? next : next ? [next] : []).filter(
       (value): value is string => typeof value === 'string',
     );
-    this._defaultSelected = this.multiple ? [...new Set(values)] : values.slice(0, 1);
+    this._defaultSelected = this.multiple ? [...values] : values.slice(0, 1);
     this._defaultSelectedOptions = this.resolveOccurrences(this._defaultSelected);
     if (!this._valueDirty && !this._restoredStateActive) {
       this.setSelection([...this._defaultSelected], [...this._defaultSelectedOptions]);
@@ -755,7 +767,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     const candidates = Array.isArray(next) ? next : [];
     const live = candidates.filter(
       (option, index): option is LyraOption =>
-        option instanceof LyraOption &&
+        isLyraOptionElement(option) &&
         this.contains(option) &&
         this.options.includes(option) &&
         candidates.indexOf(option) === index,
@@ -774,7 +786,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    * value against the current option list.
    */
   private setSelection(next: string[], preferred: Array<LyraOption | undefined> = []): void {
-    const values = this.multiple ? [...new Set(next)] : next.slice(0, 1);
+    // Multiple-selection identity is occurrence-based. Preserve duplicate strings so two distinct
+    // same-valued options survive through value, tags, restoration and FormData.
+    const values = this.multiple ? [...next] : next.slice(0, 1);
     const previousValues = this._selected;
     const previousOptions = this._selectedOptions;
     const old = this.multiple ? [...previousValues] : (previousValues[0] ?? '');
@@ -989,7 +1003,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.open = false;
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
     this.positionedDirection = undefined;
@@ -1009,7 +1024,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       : this.activeIndex;
     this.options = slot
       .assignedElements({ flatten: true })
-      .filter((el): el is LyraOption => el instanceof LyraOption);
+      .filter(isLyraOptionElement);
     this.reconcileActiveOption(previousActive, previousActiveRawIndex);
     if (!this._defaultCaptured) {
       this._defaultCaptured = true;
@@ -1111,8 +1126,11 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   /** The label to show for one committed value: the selected occurrence's own label, else any
    *  option sharing that value, else the raw value (a programmatic write with no matching row). */
-  private labelFor(value: string): string {
+  private labelFor(value: string, occurrenceIndex = 0): string {
     return (
+      (this._selectedOptions[occurrenceIndex]?.value === value
+        ? this._selectedOptions[occurrenceIndex]?.label
+        : undefined) ??
       this._selectedOptions.find((option) => option.value === value)?.label ??
       this.options.find((option) => option.value === value)?.label ??
       value
@@ -1431,12 +1449,13 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     if (this.multiple) {
       // Picking a selected row again toggles it back off, the standard multi-select listbox
       // contract -- and the listbox stays open, since one pick is rarely the whole intent.
-      const selected = this._selected.includes(option.value);
+      const selectedIndex = this._selectedOptions.indexOf(option);
+      const selected = selectedIndex >= 0;
       const occurrences = selected
-        ? this._selectedOptions.filter((candidate) => candidate.value !== option.value)
+        ? this._selectedOptions.filter((_, index) => index !== selectedIndex)
         : [...this._selectedOptions, option];
       const values = selected
-        ? this._selected.filter((value) => value !== option.value)
+        ? this._selected.filter((_, index) => index !== selectedIndex)
         : [...this._selected, option.value];
       this.setSelection(values, occurrences);
       this.emitValueEvents();
@@ -1454,14 +1473,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     if (changed) this.emitValueEvents();
   }
 
-  /** Drops one committed value, for the trigger's Backspace/Delete shortcut. */
-  private removeValue(value: string): void {
-    if (this.effectiveDisabled || !this._selected.includes(value)) return;
+  /** Removes one occurrence, rather than collapsing every row sharing its public string value. */
+  private removeValueAt(index: number): void {
+    if (this.effectiveDisabled || index < 0 || index >= this._selected.length) return;
     this._restoredStateActive = false;
     this._valueDirty = true;
     this.setSelection(
-      this._selected.filter((candidate) => candidate !== value),
-      this._selectedOptions.filter((option) => option.value !== value),
+      this._selected.filter((_, candidateIndex) => candidateIndex !== index),
+      this._selectedOptions.filter((_, candidateIndex) => candidateIndex !== index),
     );
     this.emitValueEvents();
   }
@@ -1479,7 +1498,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   private removeTag(value: string, index: number, event: Event): void {
     event.stopPropagation();
-    this.removeValue(value);
+    if (this._selected[index] !== value) return;
+    this.removeValueAt(index);
     void this.updateComplete.then(() => {
       const buttons = [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part~="tag__remove-button"]')];
       (buttons[Math.min(index, buttons.length - 1)] ?? this.triggerElement)?.focus();
@@ -1565,11 +1585,15 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       if (candidate.label.toLocaleLowerCase(this.effectiveLocale).startsWith(this.typeAheadBuffer)) {
         if (this.open) {
           this.setActiveIndex(idx, navigable);
-        } else if (!(this.multiple && this._selected.includes(candidate.value))) {
-          // A closed multi-select commits the match the same way, except when it is already
-          // selected: typing a label to *find* an option must never silently deselect it.
-          this.selectOption(candidate);
+          return;
         }
+        if (this.multiple && this._selectedOptions.includes(candidate)) {
+          // A closed multi-select must not toggle an already-selected occurrence off. Keep the
+          // bounded circular search moving so a later unselected match -- including another row
+          // with the same public value -- remains reachable.
+          continue;
+        }
+        this.selectOption(candidate);
         return;
       }
     }
@@ -1645,7 +1669,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
         // sibling tag row now also provides independently-focusable remove buttons.
         if (this.multiple && this._selected.length > 0) {
           e.preventDefault();
-          this.removeValue(this._selected[this._selected.length - 1]!);
+          this.removeValueAt(this._selected.length - 1);
         }
         break;
       default:
@@ -1660,7 +1684,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   // pair allocated per option per render -- resolves the target row via
   // closest('[part="option"]') + a data-value lookup, mirroring lr-combobox.
   private onListboxMouseDown = (e: MouseEvent): void => {
-    if ((e.target as HTMLElement).closest('[part="option"]')) e.preventDefault();
+    // Keep focus on the trigger for every listbox surface, including group headings, padding and
+    // scrollbar space. The delegated click path still commits only a real option.
+    e.preventDefault();
   };
 
   private onListboxClick = (e: MouseEvent): void => {
@@ -1730,10 +1756,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
    * never as markup. Built-in remove buttons are siblings of the trigger, never nested inside it. */
   private renderTag(value: string, index: number): unknown {
     const option =
-      this._selectedOptions.find((candidate) => candidate.value === value) ??
+      (this._selectedOptions[index]?.value === value ? this._selectedOptions[index] : undefined) ??
       this.options.find((candidate) => candidate.value === value);
     if (this.getTag && option) return this.getTag(option, index);
-    const label = this.labelFor(value);
+    const label = this.labelFor(value, index);
     return html`<span part="tag tag__base">
       <span part="tag-label"><span part="tag__content" aria-hidden="true">${label}</span></span>
       <button
@@ -1752,7 +1778,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     const active = this.activeIndex >= 0 ? navigable[this.activeIndex] : undefined;
     const activeId = active ? `${this.listId}-opt-${options.indexOf(active)}` : '';
     const selectedLabel = this._selected.length > 0 ? this.labelFor(this._selected[0]!) : '';
-    const selectedLabels = this._selected.map((value) => this.labelFor(value)).join(', ');
+    const selectedLabels = this._selected.map((value, index) => this.labelFor(value, index)).join(', ');
     const hasValue = this._selected.length > 0;
     // `0` removes the cap entirely, matching the upstream contract this mirrors.
     const shownValues =
@@ -1845,7 +1871,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
             </span>
             ${isSingleOption
               ? nothing
-              : html`<span part="expand-icon" aria-hidden="true"
+              : html`<span part="expand-icon" aria-hidden="true" inert
                   ><slot name="expand-icon">${chevronIcon()}</slot></span
                 >`}
           </button>
@@ -1875,7 +1901,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
                   this.clear();
                 }}
               >
-                <slot name="clear-icon">${closeIcon()}</slot>
+                <span aria-hidden="true" inert><slot name="clear-icon">${closeIcon()}</slot></span>
               </button>`
             : ''}
         </div>

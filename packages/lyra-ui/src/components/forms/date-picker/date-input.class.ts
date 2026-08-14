@@ -16,10 +16,13 @@ import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-m
 import { setCustomState } from '../../../internal/custom-states.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
 import { isDateObject } from '../../../internal/dom-guards.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   dateTimeFormat,
   parseISO,
   formatISO,
+  localDate,
+  utcDate,
   normalizeCalendarMonths,
   normalizeWeekdayFormat,
   type WeekdayFormat,
@@ -36,7 +39,6 @@ import {
   type LyraDatePickerPageBy,
 } from './date-picker.class.js';
 import './date-picker.class.js';
-import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
 import { isImplicitSubmission, submitOnEnter } from '../../../internal/submit-on-enter.js';
 import {
@@ -56,7 +58,7 @@ import { LYRA_DEFAULT_chooseDate, LYRA_DEFAULT_clear, LYRA_DEFAULT_date, LYRA_DE
  *  (commonly mm/dd/yyyy-biased) heuristics for an ambiguous separated date. */
 function localeDateOrder(locale: string): ('day' | 'month' | 'year')[] {
   try {
-    const parts = getDateTimeFormat(locale || undefined, {
+    const parts = dateTimeFormat(locale, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -71,6 +73,23 @@ function localeDateOrder(locale: string): ('day' | 'month' | 'year')[] {
   } catch {
     return ['month', 'day', 'year']; // Date.parse()'s own bias, as a last-resort fallback
   }
+}
+
+const BIDI_FORMATTING_MARKS = /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
+
+/** Normalizes the locale digits and bidi marks the component itself can render before parsing. */
+function normalizeLocalizedDateText(raw: string, locale: string): string {
+  let normalized = raw.replace(BIDI_FORMATTING_MARKS, '');
+  try {
+    const formatter = getNumberFormat(locale || undefined, { useGrouping: false });
+    for (let digit = 0; digit <= 9; digit++) {
+      const localized = formatter.format(digit).replace(BIDI_FORMATTING_MARKS, '');
+      if (localized && localized !== String(digit)) normalized = normalized.split(localized).join(String(digit));
+    }
+  } catch {
+    // Malformed runtime locale: ASCII input remains available.
+  }
+  return normalized.trim();
 }
 
 const monthsConverter: ComplexAttributeConverter<1 | 2> = {
@@ -187,6 +206,9 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * `<lr-date-input>` — a date field with an attached calendar popover.
  * Mirrors the core `<wa-date-input>` API under `lr-`. Value is ISO 8601
  * (`YYYY-MM-DD`, or `YYYY-MM-DD/YYYY-MM-DD` in range mode). Form-associated.
+ * The ISO model is explicitly proleptic Gregorian for every locale. Display uses locale digits
+ * and `Intl.DateTimeFormat.formatRange()`; parsing normalizes those digits and bidi marks so the
+ * component's own Arabic/Persian presentation always round-trips to the same ISO value.
  *
  * This component uses a single text field; typing accepts ISO or a
  * locale-parseable date. Enter commits the typed text and then performs the implicit form
@@ -314,7 +336,21 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   };
 
   @property({ converter: appearanceConverter, reflect: true }) appearance: LyraDateInputAppearance = 'outlined';
-  @property({ type: Boolean, reflect: true }) open = false;
+  /** Whether the calendar popup is open. Disabled or readonly controls reject direct reopen
+   * attempts, including the synchronous fieldset cascade before its callback runs. */
+  @property({ type: Boolean, reflect: true })
+  get open(): boolean { return this._open; }
+  set open(next: boolean) {
+    const old = this._open;
+    const liveDisabled = this.effectiveDisabled ||
+      (typeof this.matches === 'function' && this.matches(':disabled'));
+    this._open = Boolean(next) && !this.readonly && !liveDisabled;
+    if (this._open === old) {
+      if (next && !this._open && this.hasAttribute('open')) this.removeAttribute('open');
+      return;
+    }
+    this.requestUpdate('open', old);
+  }
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
@@ -445,6 +481,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   private _mode: 'single' | 'range' = 'single';
   private _min = '';
   private _max = '';
+  private _open = false;
   private _readonly = false;
   private _disablePast = false;
   private _disableFuture = false;
@@ -686,8 +723,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   private rangeLength(from: Date, to: Date): number {
-    const fromUtc = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
-    const toUtc = Date.UTC(to.getFullYear(), to.getMonth(), to.getDate());
+    const fromUtc = utcDate(from.getFullYear(), from.getMonth(), from.getDate()).getTime();
+    const toUtc = utcDate(to.getFullYear(), to.getMonth(), to.getDate()).getTime();
     return Math.round(Math.abs(toUtc - fromUtc) / 86_400_000) + 1;
   }
 
@@ -752,7 +789,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
         const max = this.parseStrictISO(this.max);
         const configuredToday = this.parseStrictISO(this.today);
         const now = configuredToday ?? this.now();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const today = localDate(now.getFullYear(), now.getMonth(), now.getDate());
         if (min !== null && dates.some((date) => date < min)) {
           flags.rangeUnderflow = true;
           underflowMessage = this.localize('dateInputMinMessage', undefined, { min: this.min });
@@ -862,19 +899,28 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     const from = parseISO(parts[0]!);
     const to = parseISO(parts[1] ?? '');
     if (!from) return '';
-    const formatter = dateTimeFormat(this.effectiveLocale, {});
+    const formatter = dateTimeFormat(this.effectiveLocale, {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    });
     const fmt = (d: Date) => formatter.format(d);
-    return this.mode === 'range' && to ? `${fmt(from)} – ${fmt(to)}` : fmt(from);
+    if (this.mode !== 'range' || !to) return fmt(from);
+    try {
+      return formatter.formatRange(from, to);
+    } catch {
+      return `${fmt(from)} – ${fmt(to)}`;
+    }
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
-      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
-      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
-      this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
-      this.hasStartSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'start');
-      this.hasEndSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'end');
+      this.hasHintSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'hint');
+      this.hasErrorSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'error');
+      this.hasLabelSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'label');
+      this.hasStartSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'start');
+      this.hasEndSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'end');
     }
     if (changed.has('open')) {
       if (this.open && this.isConnected) {
@@ -1127,7 +1173,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.cleanupFn?.();
     this.cleanupFn = undefined;
     this.overlayHandle?.deactivate({ restoreFocus: false });
@@ -1292,6 +1339,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    *  ambiguous-date regex below existed at all).
    *  Anything else (e.g. "July 15, 2026") still falls through to Date.parse(). */
   private parseOneDate(raw: string): Date | null {
+    raw = normalizeLocalizedDateText(raw, this.effectiveLocale);
     const looksLikeISO = /^\d{4}-\d{2}-\d{2}$/.test(raw);
     if (looksLikeISO) return parseISO(raw);
 
@@ -1325,6 +1373,27 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     return parsed ? formatISO(parsed) : null;
   }
 
+  /** Literal joining the start/end ranges for this locale's Gregorian numeric formatter. */
+  private localizedRangeSeparator(): string {
+    const formatter = dateTimeFormat(this.effectiveLocale, {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    });
+    try {
+      const parts = formatter.formatRangeToParts(localDate(2026, 0, 2), localDate(2026, 0, 3));
+      const firstEnd = parts.findIndex((part) => part.source === 'endRange');
+      let lastStart = -1;
+      for (let index = 0; index < firstEnd; index++) {
+        if (parts[index]?.source === 'startRange') lastStart = index;
+      }
+      const separator = parts.slice(lastStart + 1, firstEnd).map((part) => part.value).join('');
+      return normalizeLocalizedDateText(separator, this.effectiveLocale) || '–';
+    } catch {
+      return '–';
+    }
+  }
+
   /** Only round-trips the exact `displayText` shape this component itself
    *  renders (`"<locale from> – <locale to>"`) — a raw ISO range typed
    *  directly (`"2026-05-01/2026-05-15"`) is also accepted as a convenience.
@@ -1332,6 +1401,13 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    *  from-before-to order, matching what the date-picker's own UI-driven
    *  `commit()` already does for a UI-picked range. */
   private parseRangeText(raw: string): string | null {
+    raw = normalizeLocalizedDateText(raw, this.effectiveLocale);
+    if (
+      raw === normalizeLocalizedDateText(this.displayText, this.effectiveLocale) &&
+      this.value.includes('/')
+    ) {
+      return this.normalizeCommittedValue(this.value);
+    }
     if (/^\d{4}-\d{2}-\d{2}\/\d{4}-\d{2}-\d{2}$/.test(raw)) {
       // safe: the regex above guarantees exactly one '/', so split yields two defined parts
       const [a, b] = raw.split('/');
@@ -1340,7 +1416,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       if (!from || !to) return null;
       return from <= to ? raw : `${b}/${a}`;
     }
-    const separator = ' – '; // matches displayText's ` – ` join exactly
+    const separator = this.localizedRangeSeparator();
     const idx = raw.indexOf(separator);
     if (idx === -1) return null;
     const from = this.parseOneDate(raw.slice(0, idx).trim());
@@ -1518,7 +1594,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       .filter(Boolean)
       .join(' ');
     const dynamicDaySlots = [...new Set(
-      Array.from(this.children)
+      Array.from(this.children ?? [])
         .map((child) => child.getAttribute('slot') ?? '')
         .filter((name) => /^day-\d{4}-\d{2}-\d{2}$/.test(name)),
     )];
@@ -1576,7 +1652,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                     aria-label=${this.localize('clear', this.clearLabel || undefined)}
                     @click=${() => this.clear()}
                   >
-                    <slot name="clear-icon">${closeIcon()}</slot>
+                    <span aria-hidden="true" inert><slot name="clear-icon">${closeIcon()}</slot></span>
                   </button>`
                 : nothing}
               <span part="end" ?hidden=${!this.hasEndSlot}>
@@ -1592,7 +1668,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                 ?disabled=${this.effectiveDisabled || this.readonly}
                 @click=${() => { void (this.open ? this.hide() : this.show()); }}
               >
-                <span part="expand-icon" aria-hidden="true"><slot name="expand-icon">${calendarIcon()}</slot></span>
+                <span part="expand-icon" aria-hidden="true" inert><slot name="expand-icon">${calendarIcon()}</slot></span>
               </button>
             </div>
             <div

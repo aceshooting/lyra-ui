@@ -14,6 +14,7 @@ import {
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { invalidateLyraLocaleCache } from '../../../internal/localization-runtime.js';
+import { getSegmenter, resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { Slugger } from '../../../internal/slugger.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import { scopeFromElement, resolveTextQuote, buildQuoteAnchor } from '../../../internal/text-quote.js';
@@ -26,7 +27,16 @@ import type {
 import { loadDocxDeps, type DocxDeps } from './docx-loader.js';
 import { assertDocxArchiveWithinLimits } from './docx-resource-guard.js';
 import { styles } from './docx-viewer.styles.js';
+import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
+export type {
+  LyraViewerDiagnostic,
+  LyraViewerDiagnosticCode,
+  LyraViewerDiagnosticEventDetail,
+  LyraViewerDiagnosticSeverity,
+} from '../viewer-diagnostics.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
+import { sanitizePassiveMarkup } from '../passive-markup.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_docxViewerLabel, LYRA_DEFAULT_docxViewerMissingConverter, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
@@ -72,6 +82,89 @@ interface DocxTextIndexEntry {
  *  clear whatever it painted last pass. */
 const HIGHLIGHT_TONES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
 const MAX_DOCX_SEARCH_MATCHES = 1_000;
+
+interface FoldedDocxSearchText {
+  text: string;
+  /** Inclusive raw UTF-16 start for each folded UTF-16 unit. */
+  rawStarts: number[];
+  /** Exclusive raw UTF-16 end for each folded UTF-16 unit. */
+  rawEnds: number[];
+}
+
+interface DocxCaseSegment { text: string; start: number; end: number }
+
+function foldDocxSearchCase(value: string, locale: string): string {
+  return value.toLocaleLowerCase(resolveIntlLocale(locale)).replaceAll('ς', 'σ');
+}
+
+function docxCaseSegments(value: string, locale: string): DocxCaseSegment[] {
+  if (typeof Intl.Segmenter === 'function') {
+    let segments: Intl.Segments;
+    try {
+      segments = getSegmenter(locale, { granularity: 'grapheme' }).segment(value);
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error;
+      segments = getSegmenter(undefined, { granularity: 'grapheme' }).segment(value);
+    }
+    return [...segments].map(({ segment, index }) => ({
+      text: segment,
+      start: index,
+      end: index + segment.length,
+    }));
+  }
+  const segments: DocxCaseSegment[] = [];
+  let start = 0;
+  for (const text of value) {
+    segments.push({ text, start, end: start + text.length });
+    start += text.length;
+  }
+  return segments;
+}
+
+/** Locale-folds a search corpus while retaining raw DOM offsets. Every unit produced by a
+ *  length-changing grapheme maps to that complete raw grapheme, so a match can never paint a
+ *  combining mark or expanded case-fold unit onto an adjacent character. */
+function foldDocxSearchText(raw: string, locale: string): FoldedDocxSearchText {
+  const text = foldDocxSearchCase(raw, locale);
+  if (text.length === raw.length) {
+    return {
+      text,
+      rawStarts: Array.from({ length: raw.length }, (_, index) => index),
+      rawEnds: Array.from({ length: raw.length }, (_, index) => index + 1),
+    };
+  }
+
+  const segments = docxCaseSegments(raw, locale);
+  const isolatedLength = segments.reduce(
+    (length, segment) => length + foldDocxSearchCase(segment.text, locale).length,
+    0,
+  );
+  const rawStarts: number[] = [];
+  const rawEnds: number[] = [];
+  let foldedStart = 0;
+  for (const segment of segments) {
+    const foldedEnd = segment.end === raw.length
+      ? text.length
+      : isolatedLength === text.length
+        ? foldedStart + foldDocxSearchCase(segment.text, locale).length
+        : foldDocxSearchCase(raw.slice(0, segment.end), locale).length;
+    const foldedLength = foldedEnd - foldedStart;
+    const rawLength = segment.end - segment.start;
+    if (foldedLength === rawLength) {
+      for (let offset = 0; offset < foldedLength; offset++) {
+        rawStarts.push(segment.start + offset);
+        rawEnds.push(segment.start + offset + 1);
+      }
+    } else {
+      for (let offset = 0; offset < foldedLength; offset++) {
+        rawStarts.push(segment.start);
+        rawEnds.push(segment.end);
+      }
+    }
+    foldedStart = foldedEnd;
+  }
+  return { text, rawStarts, rawEnds };
+}
 
 /** Walks `root`'s text nodes in document order and returns their concatenated raw text alongside
  *  an offset table (`entries`) mapping each contiguous span back to the `Text` node that produced
@@ -176,6 +269,7 @@ function unwrapSearchMark(mark: HTMLElement): void {
 
 export interface LyraDocxViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-viewer-diagnostic': CustomEvent<LyraViewerDiagnosticEventDetail>;
   'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
 }
 
@@ -206,7 +300,9 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * many simultaneously-visible matches rather than one set of themed spans.
  *
  * @customElement lr-docx-viewer
- * @event lr-render-error - Fired when loading, conversion, sanitization, or a non-fatal Mammoth message occurs.
+ * @event lr-render-error - Fired only when loading, conversion, or sanitization fails terminally.
+ * @event lr-viewer-diagnostic - Structured non-fatal converter diagnostics. `detail.diagnostic`
+ *   has code `docx-conversion-message`, severity, source, and the original peer value as `cause`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
@@ -217,11 +313,11 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  *   `null` if the selection couldn't be anchored.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
- * @csspart base - The root container.
+ * @csspart base - The root container with explicit `aria-busy` loading state.
  * @csspart body - The scrollable document body.
  * @csspart content - The semantic document content.
  * @csspart error - The error message region.
- * @csspart spinner - The loading status region.
+ * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
  * @csspart highlight - A painted `text-quote` highlight (`<mark>`, `<mark>`-wrap fallback path only).
  * @csspart highlight-actions - Keyboard-accessible actions for the resolved text highlights.
  * @csspart highlight-action - One native highlight activation button.
@@ -262,7 +358,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
 
   /** URL to fetch and convert as a DOCX document. */
   @property() src = '';
@@ -328,7 +424,8 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     this.highlightHandle = undefined;
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.announcements.adopted();
   }
 
@@ -415,11 +512,30 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
       const converted = (await mammoth.convertToHtml({ arrayBuffer })) as { value: string; messages: unknown[] };
       if (!this.isConnected || generation !== this.generation) return;
+      const markup = sanitizePassiveMarkup(
+        DOMPurify,
+        converted.value,
+        this.ownerDocument,
+        'passive-document',
+      );
+      if (!this.isConnected || generation !== this.generation) return;
       this.fetchState = {
         kind: 'loaded',
-        markup: this.stampHeadings(DOMPurify.sanitize(converted.value) as string),
+        markup: this.stampHeadings(markup),
       };
-      if (converted.messages.length > 0) this.emit('lr-render-error', { error: converted.messages });
+      if (converted.messages.length > 0) {
+        for (const cause of converted.messages) {
+          this.emit('lr-viewer-diagnostic', {
+            diagnostic: Object.freeze({
+              code: 'docx-conversion-message',
+              severity: 'warning',
+              fatal: false,
+              source: 'mammoth',
+              cause,
+            } as const),
+          });
+        }
+      }
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.fetchState = {
@@ -699,13 +815,15 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       return 0;
     }
     const { text } = this.getTextIndex(root);
-    const haystack = text.toLocaleLowerCase(this.effectiveLocale);
-    const needle = trimmed.toLocaleLowerCase(this.effectiveLocale);
+    const { text: haystack, rawStarts, rawEnds } = foldDocxSearchText(text, this.effectiveLocale);
+    const needle = foldDocxSearchCase(trimmed, this.effectiveLocale);
     const matches: DocxSearchMatch[] = [];
     let from = 0;
     let idx: number;
     while ((idx = haystack.indexOf(needle, from)) !== -1) {
-      matches.push({ start: idx, end: idx + needle.length });
+      const start = rawStarts[idx];
+      const end = rawEnds[idx + needle.length - 1];
+      if (start !== undefined && end !== undefined) matches.push({ start, end });
       if (matches.length >= MAX_DOCX_SEARCH_MATCHES) break;
       from = idx + Math.max(1, needle.length);
     }
@@ -809,7 +927,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
           </div>
         `;
       case 'loading':
-        return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+        return renderViewerLoading(this.localize('loadingDocument'));
       case 'error':
         return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle':
@@ -822,6 +940,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     return html`
       <div
         part="base"
+        aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'}
         style=${sanitizeCssLength(this.maxHeight)
           ? styleMap({ '--lr-docx-viewer-max-height': sanitizeCssLength(this.maxHeight)! })
           : nothing}

@@ -5,6 +5,7 @@ import type { Feature, FeatureCollection } from 'geojson';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sanitizeCssColor, sanitizeSwatchColor } from '../../../internal/safe-css.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -21,30 +22,154 @@ import { styles } from './map.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_mapMissingLibrary } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_items, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapWebglUnavailable, LYRA_DEFAULT_paginationSummary } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 /** Probes for a real WebGL2 context without ever touching maplibre-gl's own (unreliable) failure
  *  path -- see the call site in `tryConstructMap()`. */
-function supportsWebGL2(): boolean {
+function supportsWebGL2(host: Element): boolean {
   try {
-    return document.createElement('canvas').getContext('webgl2') !== null;
+    return host.ownerDocument.createElement('canvas').getContext('webgl2') !== null;
   } catch {
     return false;
   }
 }
 
-export interface LegendEntry {
-  color: string;
-  label: string;
+type MapFailureReason =
+  | 'missing-peer'
+  | 'style-required'
+  | 'webgl-unavailable'
+  | 'initialization-failed';
+
+function hasMapStyle(style: LyraMapStyleSpecification | string | undefined): boolean {
+  return typeof style === 'string' ? style.trim().length > 0 : style !== undefined;
+}
+
+/** Non-color encoding retained when a legend entry's authored color is unavailable. */
+export type LyraMapLegendPattern = 'solid' | 'diagonal' | 'dots' | 'crosshatch';
+
+/** One immutable, bounded map-legend row. Pattern is required so color is never the sole cue. */
+export interface LyraMapLegendEntry {
+  readonly color: string;
+  readonly label: string;
+  readonly pattern: LyraMapLegendPattern;
+}
+
+/** Observable result of normalizing the latest `legend` assignment. */
+export interface LyraMapLegendProjection {
+  readonly inputCount: number;
+  readonly renderedCount: number;
+  readonly omittedCount: number;
+  readonly truncatedLabelCount: number;
+  readonly truncated: boolean;
+}
+
+interface NormalizedMapLegend {
+  readonly entries: readonly LyraMapLegendEntry[];
+  readonly projection: LyraMapLegendProjection;
+}
+
+const MAP_LEGEND_ITEM_LIMIT = 100;
+const MAP_LEGEND_SCAN_LIMIT = 1_000;
+const MAP_LEGEND_LABEL_LIMIT = 256;
+const MAP_LEGEND_TOTAL_LABEL_LIMIT = 8_192;
+const MAP_LEGEND_COLOR_LIMIT = 256;
+const MAP_LEGEND_PATTERNS = new Set<LyraMapLegendPattern>([
+  'solid',
+  'diagonal',
+  'dots',
+  'crosshatch',
+]);
+const EMPTY_MAP_LEGEND = Object.freeze([]) as readonly LyraMapLegendEntry[];
+const EMPTY_MAP_LEGEND_PROJECTION: LyraMapLegendProjection = Object.freeze({
+  inputCount: 0,
+  renderedCount: 0,
+  omittedCount: 0,
+  truncatedLabelCount: 0,
+  truncated: false,
+});
+
+function boundedLegendText(value: string, limit: number): string {
+  return value.length <= limit ? value : `${value.slice(0, Math.max(0, limit - 1))}…`;
+}
+
+function normalizeMapLegend(value: unknown): NormalizedMapLegend {
+  let input: readonly unknown[];
+  try {
+    input = Array.isArray(value) ? value : [];
+  } catch {
+    input = [];
+  }
+  let inputCount = 0;
+  try {
+    inputCount = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, input.length));
+  } catch {
+    inputCount = 0;
+  }
+
+  const entries: LyraMapLegendEntry[] = [];
+  let labelCharacters = 0;
+  let truncatedLabelCount = 0;
+  const scanCount = Math.min(inputCount, MAP_LEGEND_SCAN_LIMIT);
+  for (let index = 0; index < scanCount && entries.length < MAP_LEGEND_ITEM_LIMIT; index++) {
+    try {
+      const candidate = input[index] as {
+        color?: unknown;
+        label?: unknown;
+        pattern?: unknown;
+      } | null;
+      if (!candidate || typeof candidate !== 'object') continue;
+      const rawColor = candidate.color;
+      const rawLabel = candidate.label;
+      const rawPattern = candidate.pattern;
+      if (
+        typeof rawColor !== 'string' ||
+        typeof rawLabel !== 'string' ||
+        typeof rawPattern !== 'string' ||
+        !MAP_LEGEND_PATTERNS.has(rawPattern as LyraMapLegendPattern)
+      ) continue;
+
+      const remaining = MAP_LEGEND_TOTAL_LABEL_LIMIT - labelCharacters;
+      if (remaining <= 0) break;
+      const labelLimit = Math.min(MAP_LEGEND_LABEL_LIMIT, remaining);
+      const label = boundedLegendText(rawLabel, labelLimit);
+      if (!label.trim()) continue;
+      if (rawLabel.length > labelLimit) truncatedLabelCount++;
+      labelCharacters += label.length;
+      entries.push(Object.freeze({
+        color: rawColor.slice(0, MAP_LEGEND_COLOR_LIMIT),
+        label,
+        pattern: rawPattern as LyraMapLegendPattern,
+      }));
+    } catch {
+      // A hostile record is omitted without preventing later valid entries from rendering.
+    }
+  }
+
+  const frozenEntries = entries.length ? Object.freeze(entries) : EMPTY_MAP_LEGEND;
+  const omittedCount = Math.max(0, inputCount - frozenEntries.length);
+  const projection: LyraMapLegendProjection = Object.freeze({
+    inputCount,
+    renderedCount: frozenEntries.length,
+    omittedCount,
+    truncatedLabelCount,
+    truncated: omittedCount > 0 || truncatedLabelCount > 0,
+  });
+  return { entries: frozenEntries, projection };
+}
+
+function addPartToken(element: Element, token: string): void {
+  const tokens = new Set((element.getAttribute('part') ?? '').split(/\s+/).filter(Boolean));
+  tokens.add(token);
+  element.setAttribute('part', [...tokens].join(' '));
 }
 
 /**
  * Declarative GeoJSON fill layer, colored by interpolating `field`'s value
  * across `stops`.
  */
-export interface ChoroplethLayer {
+export interface LyraMapChoroplethLayer {
   sourceId: string;
   geojson: FeatureCollection;
   field: string;
@@ -60,13 +185,13 @@ export interface ChoroplethLayer {
 /** One GeoJSON source rendered as three layers (`${sourceId}-fill` for polygons, `${sourceId}-line`
  *  for lines/outlines, `${sourceId}-circle` for points). Colors resolve from `--lr-*` tokens at
  *  apply time, defaulting to `accent`. */
-export interface GeoJsonDataLayer {
+export interface LyraMapGeoJsonDataLayer {
   sourceId: string;
   geojson: Feature | FeatureCollection;
   tone?: 'accent' | 'success' | 'warning' | 'danger' | 'neutral';
 }
 
-export interface MapMarker {
+export interface LyraMapMarker {
   id?: string;
   lngLat: [number, number];
   /** A CSS color. Invalid values and `url()` paint servers use maplibre-gl's default marker color. */
@@ -82,6 +207,17 @@ export interface MapMarker {
    * `Popup.setText()`) whenever the content is plain text.
    */
   unsafeHtml?: string;
+}
+
+/** Extracts a marker name from trusted popup markup without attaching or executing it. Elements
+ * whose text is not exposed as visible content are excluded before whitespace is normalized. */
+function popupText(host: Element, markup: string): string {
+  const template = host.ownerDocument.createElement('template');
+  template.innerHTML = markup;
+  for (const hidden of template.content.querySelectorAll(
+    'script, style, template, [hidden], [aria-hidden="true"]',
+  )) hidden.remove();
+  return (template.content.textContent ?? '').replace(/\s+/gu, ' ').trim();
 }
 
 /** Peer-neutral subset of a MapLibre style accepted by `mapStyle`. */
@@ -106,31 +242,6 @@ export interface LyraMapInstance {
   setZoom(zoom: number): unknown;
   resize(): unknown;
 }
-
-/**
- * Fallback `mapStyle` used only when a consumer never sets one. Points at
- * OpenStreetMap's shared **demo** tile server (`tile.openstreetmap.org`),
- * which is explicitly NOT for production/bulk use: it has no capacity
- * guarantees, requires an identifying `User-Agent`/`Referer`, and will
- * rate-limit or IP-block non-compliant or high-volume clients per the OSM
- * Foundation's tile usage policy
- * (https://operations.osmfoundation.org/policies/tiles/). Convenient for
- * local development and quick prototypes only — production apps MUST supply
- * their own `mapStyle` (a hosted vector/raster style from a tile provider
- * you have a plan with, or your own tile server).
- */
-const DEFAULT_STYLE: LyraMapStyleSpecification = {
-  version: 8,
-  sources: {
-    'lr-osm': {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      attribution: '© OpenStreetMap contributors',
-    },
-  },
-  layers: [{ id: 'lr-osm', type: 'raster', source: 'lr-osm' }],
-};
 
 // Defensive JS-side fallback for choroplethFillOpacity() below. The custom
 // property deliberately remains undeclared on :host so a value from any
@@ -157,7 +268,7 @@ function choroplethFillOpacity(host: Element): number {
   return Number.isFinite(parsed) ? parsed : FALLBACK_FILL_OPACITY;
 }
 
-const TONE_TOKEN: Record<NonNullable<GeoJsonDataLayer['tone']>, string> = {
+const TONE_TOKEN: Record<NonNullable<LyraMapGeoJsonDataLayer['tone']>, string> = {
   accent: '--lr-color-brand',
   success: '--lr-color-success',
   warning: '--lr-color-warning',
@@ -166,12 +277,12 @@ const TONE_TOKEN: Record<NonNullable<GeoJsonDataLayer['tone']>, string> = {
 };
 
 /**
- * Resolves a `GeoJsonDataLayer.tone` to a real color via the matching
+ * Resolves a `LyraMapGeoJsonDataLayer.tone` to a real color via the matching
  * `--lr-color-*` token, read at apply time (not property-set time) so a
  * later retheme is picked up the next time `dataLayers` is (re)applied --
  * same rationale as `choroplethFillOpacity()` above.
  */
-function dataLayerColor(host: Element, tone: GeoJsonDataLayer['tone']): string {
+function dataLayerColor(host: Element, tone: LyraMapGeoJsonDataLayer['tone']): string {
   const token = TONE_TOKEN[tone ?? 'accent'];
   const raw = ownerWindow(host)?.getComputedStyle(host).getPropertyValue(token).trim() ?? '';
   return raw || '#0969da';
@@ -218,10 +329,16 @@ export interface LyraMapEventMap {
  *   region and receives the host-first accessible name and effective locale.
  * @csspart legend - The map legend.
  * @csspart legend-swatch - A legend color swatch.
+ * @csspart legend-limit - Visible localized summary when legend input is bounded or shortened.
+ * @csspart marker - A MapLibre-generated marker.
+ * @csspart popup - A MapLibre-generated marker popup.
+ * @csspart popup-content - The content container inside a MapLibre-generated marker popup.
  * @csspart popup-close-button - The MapLibre-generated button that closes an open marker popup.
- * @csspart error - Visible message shown instead of `container` if the optional `maplibre-gl`
- *   peer dependency fails to load (e.g. not installed); the transition is announced through the
- *   shared light-DOM assertive region.
+ * @csspart attribution - MapLibre-generated map attribution.
+ * @csspart attribution-toggle - MapLibre's compact-attribution disclosure control.
+ * @csspart error - Visible localized message shown instead of `container` when `mapStyle` is
+ *   missing, the optional peer is unavailable, WebGL2 cannot be created, or map initialization
+ *   fails; the transition is announced through the shared light-DOM assertive region.
  * @cssprop [--lr-map-choropleth-fill-opacity=0.75] - Fill opacity for choropleth and polygon
  *   `dataLayers` fills. Read from the resolved cascade whenever those layers are applied or painted
  *   after a theme change.
@@ -233,10 +350,8 @@ export interface LyraMapEventMap {
  * @cssprop [--lr-map-popup-close-button-active-color=var(--lr-color-brand)] - Pressed foreground
  *   of `popup-close-button`.
  *
- * ⚠️ The default `mapStyle` (when unset) uses OpenStreetMap's demo tile
- * server, which is not suitable for production traffic — see the
- * `DEFAULT_STYLE` doc comment above. Always pass an explicit
- * `mapStyle` in production.
+ * No style or tile provider is selected implicitly. Set `mapStyle` explicitly before connection;
+ * this prevents a bare component from making an undeclared third-party request.
  * @status stable
  * @since 4.0.0
  */
@@ -246,9 +361,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     close: LYRA_DEFAULT_close,
+    items: LYRA_DEFAULT_items,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
+    mapInitializationFailed: LYRA_DEFAULT_mapInitializationFailed,
+    mapLegend: LYRA_DEFAULT_mapLegend,
     mapMissingLibrary: LYRA_DEFAULT_mapMissingLibrary,
+    mapStyleRequired: LYRA_DEFAULT_mapStyleRequired,
+    mapWebglUnavailable: LYRA_DEFAULT_mapWebglUnavailable,
+    paginationSummary: LYRA_DEFAULT_paginationSummary,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -270,32 +391,50 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ type: Array }) center: [number, number] = [0, 0];
   /** Initial and controlled map zoom level. */
   @property({ type: Number }) zoom = 2;
-  /** MapLibre style URL or peer-neutral style specification. Production callers should override
-   * the OpenStreetMap demonstration style used by default. */
-  @property({ attribute: false }) mapStyle: LyraMapStyleSpecification | string = DEFAULT_STYLE;
-  /** Entries rendered in the optional map legend. */
-  @property({ attribute: false }) legend: LegendEntry[] = [];
+  /** Required MapLibre style URL or peer-neutral style specification. No provider is contacted
+   * unless a consumer assigns this property. */
+  @property({ attribute: false }) mapStyle?: LyraMapStyleSpecification | string;
+  private _legend = EMPTY_MAP_LEGEND;
+  private _legendProjection = EMPTY_MAP_LEGEND_PROJECTION;
+  /** Immutable, bounded entries rendered in the optional map legend. A required pattern keeps
+   * category identity available when authored colors collapse or are unavailable. */
+  @property({ attribute: false })
+  get legend(): readonly LyraMapLegendEntry[] {
+    return this._legend;
+  }
+  set legend(value: readonly LyraMapLegendEntry[]) {
+    const previous = this._legend;
+    const normalized = normalizeMapLegend(value);
+    this._legend = normalized.entries;
+    this._legendProjection = normalized.projection;
+    this.requestUpdate('legend', previous);
+  }
+
+  /** Counts from the latest bounded legend normalization. `truncated` covers omitted rows or
+   * shortened labels; the returned record is frozen and never aliases caller input. */
+  get legendProjection(): LyraMapLegendProjection {
+    return this._legendProjection;
+  }
   /** Optional GeoJSON choropleth layer and value-to-color configuration. */
-  @property({ attribute: false }) choropleth?: ChoroplethLayer;
+  @property({ attribute: false }) choropleth?: LyraMapChoroplethLayer;
   /** Point markers rendered over the map. */
-  @property({ attribute: false }) markers: MapMarker[] = [];
+  @property({ attribute: false }) markers: LyraMapMarker[] = [];
   /** Additive GeoJSON layers rendered alongside the choropleth/markers -- each entry becomes a
    *  source plus fill/line/circle layers. Defaults empty (zero behavior change). */
-  @property({ attribute: false }) dataLayers: GeoJsonDataLayer[] = [];
+  @property({ attribute: false }) dataLayers: LyraMapGeoJsonDataLayer[] = [];
 
-  /** Accessible-name fallback for MapLibre's focusable canvas. A host `aria-label` takes
-   *  precedence when both are set; when neither is present, the canvas uses the localized `map`
-   *  message. */
+  /** Accessible name for MapLibre's focusable canvas. A nonempty host `aria-label` remains the
+   *  overall component name and is not cloned onto the nested focus owner; the canvas uses this
+   *  purpose-specific label or the localized `map` message. An explicit empty host name is
+   *  preserved on the canvas for deliberately decorative embeddings. */
   @property() label = '';
 
   /** True until the lazy-loaded `maplibre-gl` peer dependency has settled (success or failure). */
   @state() private loading = true;
 
-  /** True once the lazy-loaded `maplibre-gl` peer dependency has settled with a `null` result
-   *  (not installed) -- render() fails closed into visible `part="error"` chrome instead of
-   *  silently leaving `part="container"` empty, mirroring docx-viewer/pdf-viewer's identical
-   *  "optional peer missing" treatment for the same failure shape. */
-  @state() private loadFailed = false;
+  /** Classified failure rendered as localized ordinary text and announced through the owner
+   * document's assertive sink. */
+  @state() private failure?: MapFailureReason;
   private errorAnnouncementSink?: AnnouncementSink;
 
   // Overridable instance field (not a direct `loadMaplibre()` call site) purely so tests can
@@ -339,11 +478,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   // on `this._map` being truthy can rely on this being set too, without
   // re-awaiting the (already-settled) loadMaplibre() promise.
   private _maplibreModule?: MaplibreModule;
+  /** True only after WebGL2 has been proved in the current owner-document realm. */
+  private _webglReady = false;
   private _markerInstances = new Map<string, MapLibreMarkerCapability>();
   private _markerLabels = new Map<string, string | undefined>();
   private _markerPopupIds = new Map<string, string>();
   private _configuredPopups = new WeakSet<object>();
   private _nextPopupId = 0;
+  private peerChromeObserver?: MutationObserver;
+  private observedPeerContainer?: HTMLElement;
   // The installed maplibre-gl's `Marker` class has no `setColor()` (verified
   // against its shipped `.d.ts` -- `color` is only ever consumed by the
   // constructor), so an id-matched marker whose `color` changes can't be
@@ -397,11 +540,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // whatever `visible` was left at from before the previous disconnect.
     const IntersectionObserverCtor = ownerWindow(this)?.IntersectionObserver;
     this.visible = IntersectionObserverCtor === undefined;
-    // A reconnect after a previous failed load deserves its own fresh attempt rather than being
-    // stuck showing the error state forever -- loadLibrary()'s own cached promise (once it
-    // resolves null) would otherwise keep re-resolving null, but this at least clears the stale
-    // UI state for a genuinely new connection.
-    this.loadFailed = false;
+    // A reconnect is a new, owner-realm initialization transaction.
+    this.failure = undefined;
+    this.loading = true;
+    this._webglReady = false;
     if (IntersectionObserverCtor) {
       const observer = new IntersectionObserverCtor((entries) => {
         if (entries[0]?.isIntersecting) this.visible = true;
@@ -409,7 +551,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.intersectionObserver = observer;
       observer.observe(this);
     }
-    void this.loadLibrary().then(async (mod) => {
+    void (async () => {
+      let mod: Awaited<ReturnType<typeof loadMaplibre>>;
+      try {
+        mod = await this.loadLibrary();
+      } catch {
+        if (generation === this._connectGeneration && this.isConnected) {
+          this.failInitialization('missing-peer');
+        }
+        return;
+      }
       // A newer connectedCallback (disconnect + reconnect) already
       // superseded this attempt while loadLibrary()'s cached promise was
       // in flight — bail before touching any state, let the newer attempt's
@@ -425,12 +576,22 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // elsewhere that construct <lr-map> in a WebGL2-less environment). Failing this closed as
       // early as possible avoids that entirely, and is also just more correct: there's no reason
       // to wait for visibility to report an environment limitation that visibility can't fix.
-      if (!mod || !supportsWebGL2()) {
-        this.loadFailed = true;
-        this.errorAnnouncementSink?.announce(this.localize('mapMissingLibrary'));
+      if (!mod) {
+        this.failInitialization('missing-peer');
         return;
       }
+      // Retain the successfully-loaded peer even when configuration is not ready yet, so assigning
+      // `mapStyle` later can retry without a second import or reconnect.
       this._maplibreModule = mod;
+      if (!hasMapStyle(this.mapStyle)) {
+        this.failInitialization('style-required');
+        return;
+      }
+      if (!supportsWebGL2(this)) {
+        this.failInitialization('webgl-unavailable');
+        return;
+      }
+      this._webglReady = true;
       // `[part="container"]` only exists once `loading` flips to `false` and
       // Lit re-renders — wait for that render to land before querying it.
       await this.updateComplete;
@@ -442,18 +603,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // cycle that happened during the `await` above.
       if (generation !== this._connectGeneration || !this.containerEl || !this.isConnected) return;
       this.tryConstructMap();
-    });
+    })();
   }
 
   override disconnectedCallback(): void {
     this.releaseErrorAnnouncementSink();
     super.disconnectedCallback();
-    this._map?.remove();
-    this._map = undefined;
-    this._styleLoaded = false;
-    this._appliedChoroplethSourceId = undefined;
-    this._appliedFillLayerId = undefined;
-    this._appliedDataLayerIds.clear();
+    this.disposeMap();
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
     for (const marker of this._markerInstances.values()) marker.remove();
@@ -463,7 +619,44 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._markerPopupIds.clear();
   }
 
-  adoptedCallback(): void {
+  private failureMessage(reason: MapFailureReason = this.failure ?? 'initialization-failed'): string {
+    switch (reason) {
+      case 'missing-peer': return this.localize('mapMissingLibrary');
+      case 'style-required': return this.localize('mapStyleRequired');
+      case 'webgl-unavailable': return this.localize('mapWebglUnavailable');
+      case 'initialization-failed': return this.localize('mapInitializationFailed');
+    }
+  }
+
+  private failInitialization(reason: MapFailureReason, partialMap?: MapLibreMapCapability): void {
+    try {
+      partialMap?.remove();
+    } catch {
+      // A partially-created peer instance may not have completed enough setup to remove cleanly.
+    }
+    this.disposeMap();
+    this.loading = false;
+    this.failure = reason;
+    this.errorAnnouncementSink?.announce(this.failureMessage(reason));
+  }
+
+  private disposeMap(): void {
+    this.stopObservingPeerChrome();
+    try {
+      this._map?.remove();
+    } catch {
+      // Teardown is best-effort for a peer instance that failed partway through initialization.
+    }
+    this._map = undefined;
+    this._styleLoaded = false;
+    this._appliedChoroplethSourceId = undefined;
+    this._appliedFillLayerId = undefined;
+    this._appliedDataLayerIds.clear();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.stopObservingPeerChrome();
     this.releaseErrorAnnouncementSink();
     this.syncErrorAnnouncementSink();
   }
@@ -492,7 +685,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * below without risking a double construction.
    */
   private tryConstructMap(): void {
-    if (this._map || !this._maplibreModule || !this.containerEl || !this.visible || !this.isConnected) return;
+    if (
+      this._map ||
+      !this._maplibreModule ||
+      !this._webglReady ||
+      !this.containerEl ||
+      !this.visible ||
+      !this.isConnected
+    ) return;
+    if (!hasMapStyle(this.mapStyle)) {
+      this.failInitialization('style-required');
+      return;
+    }
     // supportsWebGL2() is already checked before `this._maplibreModule` is ever set (see the
     // connectedCallback() load path above) -- reaching here with a set _maplibreModule means it
     // already passed. maplibre-gl doesn't fail construction cleanly when WebGL2 is unavailable
@@ -500,47 +704,60 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // `painter`, which would crash disconnectedCallback()'s `this._map.remove()`), so this must
     // stay a precondition rather than a try/catch around the constructor below.
     const mod = this._maplibreModule;
-    this._map = new mod.Map({
-      container: this.containerEl,
-      style: this.mapStyle as never,
-      center: this.safeCenter,
-      zoom: this.safeZoom,
-      locale: {
-        'Map.Title': this.effectiveMapLabel,
-        'Marker.Title': this.localize('map'),
-        'Popup.Close': this.localize('close'),
-      },
-    });
-    const canvas = this._map.getCanvas?.() as HTMLCanvasElement | undefined;
-    if (canvas) notifyMapCanvasReady(this, canvas);
-    // maplibre-gl's Evented base rethrows an 'error' emission that has no
-    // listener attached (mirroring Node's EventEmitter convention) -- with
-    // no handler here, a failed tile/style fetch (e.g. DEFAULT_STYLE's
-    // tile.openstreetmap.org demo server being unreachable or rate-limited)
-    // would surface as an unhandled promise rejection instead of a normal,
-    // catchable error. Log it instead so callers can see it without the
-    // whole page treating it as an uncaught exception.
-    this._map.on('error', (event) => {
-      console.error('lr-map:', event.error ?? event);
-    });
-    this._map.on('load', () => {
-      this._styleLoaded = true;
-      this.applyChoropleth();
-      this.applyMarkers();
-      this.applyDataLayers();
-      this.emit('lr-map-load');
-    });
-    this._map.on('click', (event) => {
-      const fillLayerId = this._appliedFillLayerId;
-      const features =
-        fillLayerId && this._map!.getLayer(fillLayerId)
-          ? this._map!.queryRenderedFeatures(event.point, { layers: [fillLayerId] })
-          : [];
-      this.emit('lr-map-click', {
-        lngLat: [event.lngLat.lng, event.lngLat.lat],
-        feature: features[0] as Feature | undefined,
+    let candidate: MapLibreMapCapability | undefined;
+    try {
+      candidate = new mod.Map({
+        container: this.containerEl,
+        style: this.mapStyle as never,
+        center: this.safeCenter,
+        zoom: this.safeZoom,
+        locale: {
+          'Map.Title': this.effectiveMapLabel,
+          'Marker.Title': this.localize('map'),
+          'Popup.Close': this.localize('close'),
+        },
       });
-    });
+      // Install every component-owned handler before publishing the instance. A constructor or
+      // setup failure therefore leaves no half-live map reachable through the public getter.
+      candidate.on('error', (event) => {
+        if (this._map === candidate && !this._styleLoaded) {
+          this.failInitialization('initialization-failed');
+          return;
+        }
+        console.error('lr-map:', event.error ?? event);
+      });
+      candidate.on('load', () => {
+        if (this._map !== candidate) return;
+        try {
+          this._styleLoaded = true;
+          this.applyChoropleth();
+          this.applyMarkers();
+          this.applyDataLayers();
+          this.emit('lr-map-load');
+        } catch {
+          this.failInitialization('initialization-failed');
+        }
+      });
+      candidate.on('click', (event) => {
+        if (this._map !== candidate) return;
+        const fillLayerId = this._appliedFillLayerId;
+        const features =
+          fillLayerId && candidate!.getLayer(fillLayerId)
+            ? candidate!.queryRenderedFeatures(event.point, { layers: [fillLayerId] })
+            : [];
+        this.emit('lr-map-click', {
+          lngLat: [event.lngLat.lng, event.lngLat.lat],
+          feature: features[0] as Feature | undefined,
+        });
+      });
+      const canvas = candidate.getCanvas?.() as HTMLCanvasElement | undefined;
+      if (canvas) notifyMapCanvasReady(this, canvas);
+      this._map = candidate;
+      this.observePeerChrome();
+      this.failure = undefined;
+    } catch {
+      this.failInitialization('initialization-failed', candidate);
+    }
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -553,7 +770,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // `loadMaplibre().then()` chain in connectedCallback() above).
     if (changed.has('visible') && this.visible) this.tryConstructMap();
 
-    if (changed.has('mapStyle') && this._map) {
+    if (changed.has('mapStyle') && !hasMapStyle(this.mapStyle) && this._maplibreModule) {
+      this.failInitialization('style-required');
+    } else if (changed.has('mapStyle') && !this._map && this._maplibreModule && hasMapStyle(this.mapStyle)) {
+      this.tryConstructMap();
+    } else if (changed.has('mapStyle') && this._map) {
       // A style change wipes every layer/source maplibre-gl knows about, so
       // the previously-applied choropleth bookkeeping is stale the instant
       // setStyle() is called — clear it and re-apply once the new style's
@@ -566,13 +787,29 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // fire 'style.load' synchronously from inside setStyle() itself —
       // registering the listener afterwards would miss that emission and
       // leave the choropleth (and `_styleLoaded`) never re-applied.
-      this._map.once('style.load', () => {
-        this._styleLoaded = true;
-        this._appliedDataLayerIds.clear(); // a style change wipes every layer/source maplibre-gl knows about
-        this.applyChoropleth();
-        this.applyDataLayers();
-      });
-      this._map.setStyle(this.mapStyle as never);
+      const map = this._map;
+      try {
+        map.once('style.load', () => {
+          if (this._map !== map) return;
+          try {
+            this._styleLoaded = true;
+            this._appliedDataLayerIds.clear(); // a style change wipes every layer/source maplibre-gl knows about
+            this.applyChoropleth();
+            this.applyDataLayers();
+          } catch {
+            this.scheduleAfterUpdate(
+              () => this.failInitialization('initialization-failed'),
+              'map-style-failure',
+            );
+          }
+        });
+        map.setStyle(this.mapStyle as never);
+      } catch {
+        this.scheduleAfterUpdate(
+          () => this.failInitialization('initialization-failed'),
+          'map-style-failure',
+        );
+      }
     } else if (this._styleLoaded && (changed.has('dataLayers') || changed.has('choropleth'))) {
       const nextChoroplethSourceId = this.choropleth
         ? this.resolveChoroplethSourceId(this.choropleth.sourceId)
@@ -593,6 +830,23 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (changed.has('zoom') && this._map) this._map.setZoom(this.safeZoom);
     if (changed.has('markers') && this._map) this.applyMarkers();
     this.syncMapSemantics();
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (
+      changed.has('mapStyle') &&
+      !this._map &&
+      this._maplibreModule &&
+      hasMapStyle(this.mapStyle)
+    ) {
+      if (!this._webglReady) this._webglReady = supportsWebGL2(this);
+      this.failure = this._webglReady ? undefined : 'webgl-unavailable';
+      if (!this._webglReady) {
+        this.loading = false;
+        this.errorAnnouncementSink?.announce(this.failureMessage('webgl-unavailable'));
+      }
+    }
   }
 
   /** Repaints token-derived MapLibre values without touching sources, layers, or map geometry. */
@@ -642,7 +896,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // `feature.id` on `lr-map-click` for the common case. Nothing in this
       // component actually needs feature-state promotion today; if that's
       // added later it should be driven by an explicit, documented
-      // `ChoroplethLayer` option (e.g. `idField`), not a silent default.
+      // `LyraMapChoroplethLayer` option (e.g. `idField`), not a silent default.
       this._map.addSource(sourceId, { type: 'geojson', data: geojson });
     }
     this._appliedChoroplethSourceId = sourceId;
@@ -815,7 +1069,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     for (const candidate of Array.isArray(this.markers) ? this.markers : []) {
       const lngLat = this.validMarkerLngLat(candidate);
       if (!lngLat) continue;
-      const m = candidate as MapMarker;
+      const m = candidate as LyraMapMarker;
       let key: string;
       if (m.id != null) {
         key = `id:${m.id}`;
@@ -873,17 +1127,20 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           existing.setPopup(undefined);
         }
       }
-      this._markerLabels.set(key, m.label);
+      const markerLabel = m.label?.trim() || (m.unsafeHtml ? popupText(this, m.unsafeHtml) : '');
+      this._markerLabels.set(key, markerLabel || undefined);
       const markerElement = (this._markerInstances.get(key) as { getElement?: () => HTMLElement } | undefined)
         ?.getElement?.();
       if (markerElement) {
-        markerElement.setAttribute('aria-label', m.label || this.localize('map'));
+        addPartToken(markerElement, 'marker');
+        markerElement.setAttribute('aria-label', markerLabel || this.localize('map'));
         markerElement.setAttribute('lang', this.effectiveLocale);
         const currentMarker = this._markerInstances.get(key);
         const popup = currentMarker?.getPopup();
         if (popup && currentMarker) {
           this.configurePopupSemantics(key, currentMarker, popup);
           this.syncPopupSemantics(key, currentMarker, popup);
+          this.configureMarkerKeyboard(markerElement, currentMarker);
         } else {
           markerElement.removeAttribute('aria-controls');
           markerElement.removeAttribute('aria-expanded');
@@ -901,8 +1158,24 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
   }
 
+  private readonly configuredMarkerElements = new WeakSet<HTMLElement>();
+
+  private configureMarkerKeyboard(
+    markerElement: HTMLElement,
+    marker: MapLibreMarkerCapability,
+  ): void {
+    if (this.configuredMarkerElements.has(markerElement)) return;
+    this.configuredMarkerElements.add(markerElement);
+    markerElement.addEventListener('keydown', (event) => {
+      if (event.key !== ' ' || !marker.getPopup?.() || event.defaultPrevented) return;
+      // MapLibre owns the actual popup toggle. Preventing the Space default in capture/boundary
+      // handling keeps that one activation while suppressing the page-scroll side effect.
+      event.preventDefault();
+    }, { capture: true });
+  }
+
   private get effectiveMapLabel(): string {
-    return this.getAttribute('aria-label') ?? (this.label || this.localize('map'));
+    return this.getAttribute('aria-label') === '' ? '' : (this.label || this.localize('map'));
   }
 
   private validMarkerLngLat(candidate: unknown): [number, number] | null {
@@ -945,6 +1218,49 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     });
   }
 
+  private stopObservingPeerChrome(): void {
+    this.peerChromeObserver?.disconnect();
+    this.peerChromeObserver = undefined;
+    this.observedPeerContainer = undefined;
+  }
+
+  /** Projects stable Lyra parts onto peer-owned nodes without erasing existing part tokens. */
+  private syncPeerChromeParts(root: ParentNode = this.containerEl ?? this.renderRoot): void {
+    const selectors: ReadonlyArray<readonly [string, string]> = [
+      ['.maplibregl-marker', 'marker'],
+      ['.maplibregl-popup', 'popup'],
+      ['.maplibregl-popup-content', 'popup-content'],
+      ['.maplibregl-popup-close-button', 'popup-close-button'],
+      ['.maplibregl-ctrl-attrib', 'attribution'],
+      ['.maplibregl-ctrl-attrib-button', 'attribution-toggle'],
+    ];
+    for (const [selector, part] of selectors) {
+      const candidate = root as ParentNode & { matches?: (value: string) => boolean };
+      if (candidate.matches?.(selector)) addPartToken(candidate as unknown as Element, part);
+      for (const element of root.querySelectorAll(selector)) addPartToken(element, part);
+    }
+  }
+
+  private observePeerChrome(): void {
+    const container = this.containerEl;
+    if (!container) return;
+    this.syncPeerChromeParts(container);
+    if (this.observedPeerContainer === container && this.peerChromeObserver) return;
+    this.stopObservingPeerChrome();
+    const MutationObserverCtor = container.ownerDocument.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    this.observedPeerContainer = container;
+    this.peerChromeObserver = new MutationObserverCtor((records) => {
+      if (!this.isConnected || this.containerEl !== container) return;
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node.nodeType === Node.ELEMENT_NODE) this.syncPeerChromeParts(node as Element);
+        }
+      }
+    });
+    this.peerChromeObserver.observe(container, { childList: true, subtree: true });
+  }
+
   private syncPopupSemantics(
     key: string,
     marker: MapLibreMarkerCapability,
@@ -957,6 +1273,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     markerElement.setAttribute('aria-expanded', popup?.isOpen?.() ? 'true' : 'false');
     const popupElement = popup?.getElement?.() as HTMLElement | undefined;
     if (!popupElement) return;
+    addPartToken(markerElement, 'marker');
+    addPartToken(popupElement, 'popup');
     popupElement.id = id;
     popupElement.setAttribute('role', 'dialog');
     popupElement.setAttribute('lang', this.effectiveLocale);
@@ -964,8 +1282,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       'aria-label',
       this._markerLabels.get(key) || this.effectiveMapLabel,
     );
+    const popupContent = popupElement.querySelector('.maplibregl-popup-content');
+    if (popupContent) addPartToken(popupContent, 'popup-content');
     const closeButton = popupElement.querySelector('.maplibregl-popup-close-button');
-    closeButton?.setAttribute('part', 'popup-close-button');
+    if (closeButton) addPartToken(closeButton, 'popup-close-button');
     closeButton?.setAttribute('aria-label', this.localize('close'));
   }
 
@@ -974,10 +1294,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (canvas) {
       canvas.setAttribute('aria-label', this.effectiveMapLabel);
       canvas.setAttribute('lang', this.effectiveLocale);
+      if (this.legend.length || this.legendProjection.truncated) {
+        canvas.setAttribute('aria-describedby', 'map-legend');
+      }
+      else canvas.removeAttribute('aria-describedby');
     }
     for (const [key, marker] of this._markerInstances) {
       const markerElement = marker.getElement?.() as HTMLElement | undefined;
       if (!markerElement) continue;
+      addPartToken(markerElement, 'marker');
       markerElement.setAttribute(
         'aria-label',
         this._markerLabels.get(key) || this.localize('map'),
@@ -986,36 +1311,74 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const popup = marker.getPopup?.();
       if (popup) this.syncPopupSemantics(key, marker, popup);
     }
+    this.syncPeerChromeParts();
+  }
+
+  private formatCount(value: number): string {
+    return getNumberFormat(this.effectiveLocale).format(value);
+  }
+
+  private legendLimitText(): string {
+    return this.localize('paginationSummary', undefined, {
+      start: this.formatCount(this.legend.length === 0 ? 0 : 1),
+      end: this.formatCount(this.legend.length),
+      total: this.formatCount(this.legendProjection.inputCount),
+      itemLabel: this.localize('items'),
+    });
   }
 
   override render(): TemplateResult {
     // Lit's own whitespace/comment marker nodes around the `${...}` binding mean
     // `[part="legend"]` is never truly `:empty` in CSS even with zero entries, so
-    // the panel is omitted from the template entirely when `legend` is empty
-    // (same `nothing` pattern `stat.ts` uses to omit its optional trend section)
+    // the panel is omitted only when both the bounded legend and its projection result are empty
     // rather than relying on a CSS `:empty` selector that can never match.
     return html`
       <div
         part="base"
         aria-busy=${String(this.loading)}
       >
-        ${this.loadFailed
-          ? html`<div part="error">${this.localize('mapMissingLibrary')}</div>`
+        ${this.failure
+          ? html`<div part="error">${this.failureMessage()}</div>`
           : this.loading
             ? html`
                 <span class="sr-only">${this.localize('loading')}</span>
-                <lr-skeleton variant="rect" .announce=${false}></lr-skeleton>
+          <lr-skeleton shape="rect" .announce=${false}></lr-skeleton>
               `
-            : html`<div part="container" lang=${this.effectiveLocale}></div>`}
-        ${this.legend.length
-          ? html`<div part="legend">
-              ${this.legend.map((entry) => {
-                const bg = sanitizeSwatchColor(entry.color);
-                return html`<div class="legend-row">
-                  <span part="legend-swatch" style=${styleMap(bg ? { background: bg } : {})}></span>
-                  <span>${entry.label}</span>
-                </div>`;
-              })}
+            : html`<div part="container" id="map-container" lang=${this.effectiveLocale}></div>`}
+        ${this.legend.length || this.legendProjection.truncated
+          ? html`<div
+              part="legend"
+              id="map-legend"
+              role="group"
+              aria-label=${this.localize('mapLegend')}
+              aria-controls="map-container"
+              data-truncated=${String(this.legendProjection.truncated)}
+            >
+              <div class="legend-list" role="list">
+                ${this.legend.map((entry, index) => {
+                  const bg = sanitizeSwatchColor(entry.color);
+                  return html`<div
+                    class="legend-row"
+                    role="listitem"
+                    aria-posinset=${String(index + 1)}
+                    aria-setsize=${String(this.legendProjection.inputCount)}
+                  >
+                    <span
+                      part="legend-swatch"
+                      data-pattern=${entry.pattern}
+                      aria-hidden="true"
+                      inert
+                      style=${styleMap(bg ? { backgroundColor: bg } : {})}
+                    ></span>
+                    <span>${entry.label}</span>
+                  </div>`;
+                })}
+              </div>
+              ${this.legendProjection.truncated
+                ? html`<div id="map-legend-limit" part="legend-limit">
+                    ${this.legendLimitText()}
+                  </div>`
+                : nothing}
             </div>`
           : nothing}
       </div>

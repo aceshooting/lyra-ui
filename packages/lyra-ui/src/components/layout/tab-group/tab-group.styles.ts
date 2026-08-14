@@ -3,11 +3,19 @@ import { css } from "lit";
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    min-block-size: 0;
   }
   [part~="base"] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-s);
+    min-inline-size: 0;
+    min-block-size: 0;
+    max-block-size: 100%;
+    block-size: 100%;
+    box-sizing: border-box;
   }
   /* The tablist plus its two overflow controls. A row of its own so the controls can flank the
      scroll container without ever becoming children of role="tablist" (whose only legal children
@@ -17,6 +25,7 @@ export const styles = css`
     display: flex;
     align-items: stretch;
     min-inline-size: 0;
+    min-block-size: 0;
   }
   [part~="tablist"] {
     display: flex;
@@ -29,7 +38,7 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
   }
-  :where([part~='scroll-button']) {
+  :where([part~="scroll-button"]) {
     /* Never shrinks: at the narrow allocations that produce overflow in the first place, a
        shrinkable control would be squeezed straight through the WCAG 2.5.8 floor. */
     flex: 0 0 auto;
@@ -62,15 +71,15 @@ export const styles = css`
     [part~="scroll-button"] {
     display: none;
   }
+  :where([part~="scroll-button"][hidden]) {
+    display: none;
+  }
   /* Same treatment as [part="tab"], so the controls read as part of the strip rather than as two
      foreign buttons bolted to its ends. */
-  :where([part~='scroll-button']):where(:hover) {
-    color: var(
-      --lr-tab-group-scroll-button-hover-color,
-      var(--lr-color-text)
-    );
+  :where([part~="scroll-button"]):where(:hover) {
+    color: var(--lr-tab-group-scroll-button-hover-color, var(--lr-color-text));
   }
-  :where([part~='scroll-button']):where(:active) {
+  :where([part~="scroll-button"]):where(:active) {
     background: var(
       --lr-tab-group-scroll-button-active-bg,
       color-mix(
@@ -79,15 +88,12 @@ export const styles = css`
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       )
     );
-    color: var(
-      --lr-tab-group-scroll-button-active-color,
-      var(--lr-color-text)
-    );
+    color: var(--lr-tab-group-scroll-button-active-color, var(--lr-color-text));
   }
   /* Firefox suppresses native :active when the control's mousedown keeps focus on the tab. The
      short-lived attribute mirrors that state there. The base and each state selector are wrapped
      in :where(), so source order applies the state without blocking a consumer part override. */
-  :where([part~='scroll-button']):where([data-pressed]) {
+  :where([part~="scroll-button"]):where([data-pressed]) {
     background: var(
       --lr-tab-group-scroll-button-active-bg,
       color-mix(
@@ -96,10 +102,7 @@ export const styles = css`
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       )
     );
-    color: var(
-      --lr-tab-group-scroll-button-active-color,
-      var(--lr-color-text)
-    );
+    color: var(--lr-tab-group-scroll-button-active-color, var(--lr-color-text));
   }
   /* Reachable only by script (the controls are tabindex="-1"), but a consumer that focuses one must
      still see where focus went. */
@@ -130,7 +133,7 @@ export const styles = css`
      data-scroll-overflow from a real scrollWidth/clientWidth measurement; scrolling itself stays
      native, with no scroll listener. Painted unconditionally (as it used to be) it fades the first
      and last tab of a row that fits, for no reason. */
-  [part~="tablist"][data-scroll-overflow] {
+  [part~="tablist"][data-scroll-overflow][data-scroll-start][data-scroll-end] {
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
@@ -142,6 +145,72 @@ export const styles = css`
       to right,
       transparent,
       var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+  }
+  [part~="tablist"][data-scroll-overflow][data-scroll-end]:not(
+      [data-scroll-start]
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+  }
+  [part~="tablist"][data-scroll-overflow][data-scroll-start]:not(
+      [data-scroll-end]
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+  }
+  :host(:dir(rtl))
+    [part~="tablist"][data-scroll-overflow][data-scroll-end]:not(
+      [data-scroll-start]
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+  }
+  :host(:dir(rtl))
+    [part~="tablist"][data-scroll-overflow][data-scroll-start]:not(
+      [data-scroll-end]
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
       var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
       transparent
     );
@@ -216,7 +285,10 @@ export const styles = css`
     inset-inline: 0;
     inset-block-end: calc(-1 * var(--lr-border-width-medium));
     block-size: var(--lr-border-width-medium);
-    background: var(--indicator-color, var(--lr-tab-group-indicator-color, var(--lr-color-brand)));
+    background: var(
+      --indicator-color,
+      var(--lr-tab-group-indicator-color, var(--lr-color-brand))
+    );
     pointer-events: none;
   }
   [part="tab"][aria-disabled="true"] {
@@ -239,6 +311,8 @@ export const styles = css`
   [part="body"] {
     flex: 1 1 auto;
     min-inline-size: 0;
+    min-block-size: 0;
+    overflow: auto;
   }
   /* no-pressed-state: the panel is a container for whatever the consumer slotted into the tab, not
      a target -- pressing it activates nothing, and :active matches the ancestors of whatever was
@@ -264,44 +338,45 @@ export const styles = css`
   /* Placement. The base flex direction moves the strip relative to the panels; start/end are
      logical, so row/row-reverse mirror under RTL with no :dir() rule. A vertical strip trades
      its block-end rule for an inline-end one, in the matching logical direction. */
-  :host([placement='bottom']) [part~='base'] {
+  :host([placement="bottom"]) [part~="base"] {
     flex-direction: column-reverse;
   }
-  :host([placement='bottom']) [part~='tablist'],
-  :host([placement='bottom']) [part~='scroll-button'] {
+  :host([placement="bottom"]) [part~="tablist"],
+  :host([placement="bottom"]) [part~="scroll-button"] {
     border-block-end: none;
     border-block-start: var(--track-width, var(--lr-border-width-thin)) solid
       var(--track-color, var(--lr-color-border));
   }
-  :host([placement='bottom']) [part='tab'][aria-selected='true'] {
+  :host([placement="bottom"]) [part="tab"][aria-selected="true"] {
     border-block-end-color: transparent;
   }
-  :host([placement='bottom']) [part='active-tab-indicator'] {
+  :host([placement="bottom"]) [part="active-tab-indicator"] {
     inset-block-start: calc(-1 * var(--lr-border-width-medium));
     inset-block-end: auto;
   }
   /* A vertical strip renders no scroll controls at all. Its nav keeps its natural width for short
      labels, but is allowed to shrink and capped so one unbroken label cannot consume the panel's
      entire allocation. Keep the fallback inline: consumers can set it on the group or an ancestor. */
-  :host([placement='start']) [part='nav'],
-  :host([placement='end']) [part='nav'] {
+  :host([placement="start"]) [part="nav"],
+  :host([placement="end"]) [part="nav"] {
     flex: 0 1 auto;
     min-inline-size: 0;
     max-inline-size: var(
       --lr-tab-group-vertical-nav-max-inline-size,
       var(--lr-size-12rem)
     );
+    max-block-size: 100%;
   }
-  :host([placement='start']) [part~='base'],
-  :host([placement='end']) [part~='base'] {
+  :host([placement="start"]) [part~="base"],
+  :host([placement="end"]) [part~="base"] {
     flex-direction: row;
-    align-items: start;
+    align-items: stretch;
   }
-  :host([placement='end']) [part~='base'] {
+  :host([placement="end"]) [part~="base"] {
     flex-direction: row-reverse;
   }
-  :host([placement='start']) [part~='tablist'],
-  :host([placement='end']) [part~='tablist'] {
+  :host([placement="start"]) [part~="tablist"],
+  :host([placement="end"]) [part~="tablist"] {
     flex-direction: column;
     align-items: stretch;
     flex: 1 1 auto;
@@ -310,61 +385,76 @@ export const styles = css`
     gap: var(--lr-space-2xs);
     overflow-x: hidden;
     overflow-y: auto;
+    min-block-size: 0;
+    max-block-size: 100%;
     border-block-end: none;
   }
   /* The vertical nav is deliberately single-line: clipping the visual label preserves a compact
      side rail while the full label remains the tab's accessible name. */
-  :host([placement='start']) [part='tab'],
-  :host([placement='end']) [part='tab'] {
+  :host([placement="start"]) [part="tab"],
+  :host([placement="end"]) [part="tab"] {
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  :host([placement='start']) [part~='tablist'] {
+  :host([placement="start"]) [part~="tablist"] {
     border-inline-end: var(--track-width, var(--lr-border-width-thin)) solid
       var(--track-color, var(--lr-color-border));
   }
-  :host([placement='end']) [part~='tablist'] {
+  :host([placement="end"]) [part~="tablist"] {
     border-inline-start: var(--track-width, var(--lr-border-width-thin)) solid
       var(--track-color, var(--lr-color-border));
   }
   /* The horizontal edge fade measures inline overflow; a vertical strip scrolls in the block
      direction instead, so the mask would dim the wrong ends. */
-  :host([placement='start']) [part~='tablist'][data-scroll-overflow],
-  :host([placement='end']) [part~='tablist'][data-scroll-overflow] {
+  :host([placement="start"]) [part~="tablist"][data-scroll-overflow],
+  :host([placement="end"]) [part~="tablist"][data-scroll-overflow] {
     -webkit-mask-image: none;
     mask-image: none;
   }
   /* The selected-tab indicator runs along whichever edge the panels are on. */
-  :host([placement='start']) [part='tab'][aria-selected='true'],
-  :host([placement='end']) [part='tab'][aria-selected='true'] {
+  :host([placement="start"]) [part="tab"][aria-selected="true"],
+  :host([placement="end"]) [part="tab"][aria-selected="true"] {
     box-shadow: none;
     border-block-end-color: transparent;
   }
-  :host([placement='start']) [part='tab'][aria-selected='true'] {
+  :host([placement="start"]) [part="tab"][aria-selected="true"] {
     border-inline-end: var(--lr-border-width-thick) solid
-      var(--indicator-color, var(--lr-tab-group-indicator-color, var(--lr-color-brand)));
+      var(
+        --indicator-color,
+        var(--lr-tab-group-indicator-color, var(--lr-color-brand))
+      );
   }
-  :host([placement='end']) [part='tab'][aria-selected='true'] {
+  :host([placement="end"]) [part="tab"][aria-selected="true"] {
     border-inline-start: var(--lr-border-width-thick) solid
-      var(--indicator-color, var(--lr-tab-group-indicator-color, var(--lr-color-brand)));
+      var(
+        --indicator-color,
+        var(--lr-tab-group-indicator-color, var(--lr-color-brand))
+      );
   }
-  :host([placement='start']) [part='active-tab-indicator'] {
+  :host([placement="start"]) [part="active-tab-indicator"] {
     inset-block: 0;
     inset-inline: auto calc(-1 * var(--lr-border-width-thick));
     inline-size: var(--lr-border-width-thick);
     block-size: auto;
   }
-  :host([placement='end']) [part='active-tab-indicator'] {
+  :host([placement="end"]) [part="active-tab-indicator"] {
     inset-block: 0;
     inset-inline: calc(-1 * var(--lr-border-width-thick)) auto;
     inline-size: var(--lr-border-width-thick);
     block-size: auto;
   }
-  :host([placement='start']) [part='panel'],
-  :host([placement='end']) [part='panel'] {
+  :host([placement="start"]) [part="panel"],
+  :host([placement="end"]) [part="panel"] {
     flex: 1 1 auto;
     min-inline-size: 0;
+  }
+  @media (forced-colors: active) {
+    [part~="tablist"][data-scroll-overflow],
+    :host(:dir(rtl)) [part~="tablist"][data-scroll-overflow] {
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
   }
 `;

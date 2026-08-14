@@ -3,19 +3,19 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './skeleton.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_loading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type SkeletonVariant = 'text' | 'circle' | 'rect';
+export type LyraSkeletonShape = 'text' | 'circle' | 'rect';
 export type SkeletonEffect = 'pulse' | 'sheen' | 'none';
 
 /**
- * `<lr-skeleton>` — a loading placeholder. First-party invention, standing
- * in for the bespoke `animate-pulse` div most dashboards hand-roll.
+ * `<lr-skeleton>` — a loading placeholder mirroring the public Web Awesome/Shoelace skeleton
+ * surface under the `lr-` prefix. It is decorative by default like both upstreams; `announce`
+ * opts one placeholder into a localized status. Geometry is exposed as `shape`.
  *
  * @customElement lr-skeleton
  * @csspart base - Compatibility name for the placeholder shape.
@@ -44,18 +44,19 @@ export class LyraSkeleton extends LyraElement {
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
-  @property({ reflect: true }) variant: SkeletonVariant = 'text';
+  /** Placeholder geometry. This is named `shape` so it cannot be confused with semantic tone. */
+  @property({ reflect: true, useDefault: true }) shape: LyraSkeletonShape = 'text';
   @property() effect: SkeletonEffect = 'none';
   @property() width?: string;
   @property() height?: string;
 
-  /** Whether this placeholder exposes a localized status announcement. Disable for decorative
-   *  members of a group whose loading state is announced once by a parent or sibling. */
-  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) announce = true;
+  /** Opts this placeholder into a localized status announcement. Leave unset for decorative
+   *  skeletons, including repeated members of a group whose loading state is announced once. */
+  @property({ type: Boolean, reflect: true }) announce = false;
 
-  /** Accessible name announced via `role="status"`. Override with a
-   *  description of what is actually loading (e.g. "Loading chart"). */
-  @property() label = 'Loading…';
+  /** Accessible name announced via `role="status"`. Absence uses the localized loading string;
+   *  every supplied value, including the English fallback or an empty string, remains literal. */
+  @property() label?: string;
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -83,7 +84,7 @@ export class LyraSkeleton extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const label = this.localize('loading', this.label === 'Loading…' ? undefined : this.label);
+    const label = this.label === undefined ? this.localize('loading') : this.label;
     return html`<span part="base indicator" data-effect=${this.effect}
       >${this.announce ? html`<span class="sr-only">${label}</span>` : ''}</span
     >`;

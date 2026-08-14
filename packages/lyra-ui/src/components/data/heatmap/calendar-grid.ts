@@ -22,6 +22,9 @@ export interface CalendarCell {
 }
 
 const MS_PER_DAY = 86_400_000;
+/** Resource envelope for caller-owned calendar collections and their sparse date span. */
+export const MAX_CALENDAR_INPUT_DAYS = 10_000;
+export const MAX_CALENDAR_WEEKS = 530;
 
 /** Parses a `yyyy-mm-dd` string as UTC midnight, avoiding local-timezone day-boundary drift. */
 export function parseIsoDate(iso: string): Date {
@@ -62,7 +65,7 @@ function isCalendarValid(iso: string, parsed: Date): boolean {
  * `isCalendarValid()`.
  *
  * `monthLabelText`, when it returns a string for a given `(jsMonth, year)`, overrides that
- * month's locale-derived label — mirrors `LyraHeatmap.weekdayLabelText`'s own override-with-
+ * month's locale-derived label — mirrors calendar `data.weekdayLabelText`'s override-with-
  * fallback shape, letting month labels track the same locale signal (e.g. an app's own i18n
  * store) as every other localizable string on the component. Absent that override, `locale`
  * (typically the host's `effectiveLocale`) drives the default label the same way it drives
@@ -70,7 +73,7 @@ function isCalendarValid(iso: string, parsed: Date): boolean {
  * so a calendar's month and weekday labels never disagree on language.
  */
 export function buildCalendarGrid(
-  days: CalendarDay[],
+  days: readonly CalendarDay[],
   firstDayOfWeek = 0,
   monthLabelText?: (jsMonth: number, year: number) => string | undefined,
   locale?: string,
@@ -79,13 +82,28 @@ export function buildCalendarGrid(
   weekCount: number;
   firstWeekStart: Date;
   monthLabels: { week: number; label: string }[];
+  /** True when input cardinality or a sparse span exceeded the bounded projection. */
+  truncated: boolean;
 } {
-  const parsed = days
+  const inputWasTruncated = days.length > MAX_CALENDAR_INPUT_DAYS;
+  const parsedByDate = new Map<string, CalendarDay & { dateObj: Date }>();
+  days
+    .slice(0, MAX_CALENDAR_INPUT_DAYS)
     .map((d) => ({ ...d, dateObj: parseIsoDate(d.date) }))
-    .filter((d) => !Number.isNaN(d.dateObj.getTime()) && isCalendarValid(d.date, d.dateObj));
+    .filter((d) => !Number.isNaN(d.dateObj.getTime()) && isCalendarValid(d.date, d.dateObj))
+    .forEach((day) => parsedByDate.set(day.date, day));
+  // Calendar identity is the ISO date. A deterministic last-wins policy is applied before every
+  // scale, count, paint, focus, event and annotation path consumes the grid.
+  const parsed = [...parsedByDate.values()];
 
   if (parsed.length === 0) {
-    return { cells: [], weekCount: 0, firstWeekStart: new Date(0), monthLabels: [] };
+    return {
+      cells: [],
+      weekCount: 0,
+      firstWeekStart: new Date(0),
+      monthLabels: [],
+      truncated: inputWasTruncated,
+    };
   }
 
   const timeBounds = minMax(parsed.map((d) => d.dateObj.getTime()))!;
@@ -98,7 +116,7 @@ export function buildCalendarGrid(
     Date.UTC(min.getUTCFullYear(), min.getUTCMonth(), min.getUTCDate() - daysBackToAnchor),
   );
 
-  const cells: CalendarCell[] = parsed.map((d) => {
+  const projectedCells: CalendarCell[] = parsed.map((d) => {
     // Relative to the anchor weekday (see `CalendarCell.weekday`'s doc
     // comment) — with the default firstDayOfWeek of 0 this is just
     // `d.dateObj.getUTCDay()`, unchanged from before.
@@ -107,8 +125,10 @@ export function buildCalendarGrid(
     const week = Math.floor(daysSinceStart / 7);
     return { date: d.date, value: d.value, week, weekday };
   });
-
-  const weekCount = minMax(cells.map((c) => c.week))![1] + 1;
+  const naturalWeekCount = minMax(projectedCells.map((c) => c.week))![1] + 1;
+  const spanWasTruncated = naturalWeekCount > MAX_CALENDAR_WEEKS;
+  const weekCount = Math.min(naturalWeekCount, MAX_CALENDAR_WEEKS);
+  const cells = projectedCells.filter((cell) => cell.week < weekCount);
 
   // Label every distinct (year, month) present in the data, not just months
   // that happen to contain a Sunday-anchored cell — a sparse calendar (few
@@ -129,7 +149,13 @@ export function buildCalendarGrid(
     });
   }
 
-  return { cells, weekCount, firstWeekStart, monthLabels };
+  return {
+    cells,
+    weekCount,
+    firstWeekStart,
+    monthLabels,
+    truncated: inputWasTruncated || spanWasTruncated,
+  };
 }
 
 /** Splits `value`'s rank within `sorted` (ascending, pre-sorted by the caller) into `bucketCount` quartile-style buckets. */

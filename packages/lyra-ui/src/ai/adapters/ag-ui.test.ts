@@ -64,12 +64,16 @@ it('maps run failures to both error and terminal status events', () => {
   })).to.deep.equal([
     {
       type: 'error',
+      generation: 0,
+      sequence: 1,
       eventId: 'failure-1:error',
       message: 'Rate limited',
       code: 'rate_limit',
     },
     {
       type: 'run-status',
+      generation: 0,
+      sequence: 2,
       eventId: 'failure-1:status',
       runId: 'run-1',
       status: { kind: 'error', message: 'Rate limited' },
@@ -80,8 +84,8 @@ it('maps run failures to both error and terminal status events', () => {
   expect(fallback[0]).to.deep.include({
     type: 'error',
     message: 'Agent run failed',
-    eventId: undefined,
   });
+  expect(fallback[0]).not.to.have.property('eventId');
 });
 
 it('maps snapshot messages with role and identifier fallbacks while filtering malformed entries', () => {
@@ -194,4 +198,77 @@ it('ignores events whose required payload is absent or malformed', () => {
   ];
 
   for (const event of ignored) expect(adapter.push(event)).to.deep.equal([]);
+});
+
+it('validates malformed events and patch operations without throwing', () => {
+  const adapter = new AgUiStreamAdapter();
+  for (const event of [
+    null,
+    [],
+    'event',
+    { type: 42 },
+    { type: 'STATE_DELTA', delta: [null] },
+    { type: 'STATE_DELTA', delta: [{}] },
+    { type: 'STATE_DELTA', delta: [{ op: 'move', path: '/count' }] },
+    { type: 'STATE_DELTA', delta: [{ op: 'replace' }] },
+  ]) {
+    expect(() => adapter.push(event as never)).not.to.throw();
+    expect(adapter.push(event as never)).to.deep.equal([]);
+  }
+});
+
+it('emits explicit generations and monotonic sequences and resets buffers atomically on run start', () => {
+  const adapter = new AgUiStreamAdapter();
+  const firstStart = adapter.push({ type: 'RUN_STARTED', runId: 'run-1' });
+  adapter.push({ type: 'TOOL_CALL_START', toolCallId: 'old', toolCallName: 'old-tool' });
+  adapter.push({ type: 'TOOL_CALL_ARGS', toolCallId: 'old', delta: '{"old":true}' });
+  const secondStart = adapter.push({ type: 'RUN_STARTED', runId: 'run-2' });
+  const lateResult = adapter.push({ type: 'TOOL_CALL_RESULT', toolCallId: 'old', result: 'late' });
+
+  expect(firstStart[0]).to.deep.include({ generation: 1, sequence: 1 });
+  expect(secondStart[0]).to.deep.include({ generation: 2, sequence: 1 });
+  expect(lateResult[0]).to.deep.nested.include({
+    generation: 2,
+    sequence: 2,
+    'invocation.name': 'tool',
+    'invocation.args': {},
+  });
+});
+
+it('bounds fragmented tool buffers, emits a limit error, and releases terminal buffers', () => {
+  const adapter = new AgUiStreamAdapter({ maxBufferedTools: 1, maxToolArgumentBytes: 8 });
+  adapter.push({ type: 'TOOL_CALL_START', toolCallId: 'first', toolCallName: 'search' });
+  const tooMany = adapter.push({ type: 'TOOL_CALL_START', toolCallId: 'second', toolCallName: 'other' });
+  expect(tooMany[0]).to.deep.include({ type: 'error', code: 'stream_limit_exceeded' });
+  expect(adapter.bufferedToolCount).to.equal(1);
+
+  const oversized = adapter.push({ type: 'TOOL_CALL_ARGS', toolCallId: 'first', delta: '{"query":"large"}' });
+  expect(oversized[0]).to.deep.include({ type: 'error', code: 'stream_limit_exceeded' });
+  expect(adapter.bufferedToolCount).to.equal(0);
+
+  adapter.push({ type: 'TOOL_CALL_START', toolCallId: 'terminal', toolCallName: 'search' });
+  adapter.push({ type: 'TOOL_CALL_RESULT', toolCallId: 'terminal', result: { hits: 1 } });
+  expect(adapter.bufferedToolCount).to.equal(0);
+
+  adapter.push({ type: 'TOOL_CALL_START', toolCallId: 'run-terminal', toolCallName: 'search' });
+  adapter.push({ type: 'RUN_FINISHED', runId: 'run-1' });
+  expect(adapter.bufferedToolCount).to.equal(0);
+});
+
+it('recursively snapshots provider payloads before returning adapted events', () => {
+  const adapter = new AgUiStreamAdapter();
+  const snapshot = { nested: { value: 'original' } };
+  const result = { nested: { value: 'original' } };
+  const snapshotEvents = adapter.push({ type: 'STATE_SNAPSHOT', snapshot });
+  adapter.push({ type: 'TOOL_CALL_START', toolCallId: 'call', toolCallName: 'search' });
+  const resultEvents = adapter.push({ type: 'TOOL_CALL_RESULT', toolCallId: 'call', result });
+  snapshot.nested.value = 'mutated';
+  result.nested.value = 'mutated';
+
+  expect(snapshotEvents[0]).to.deep.nested.include({ 'snapshot.nested.value': 'original' });
+  expect(resultEvents[0]).to.deep.nested.include({ 'invocation.result.nested.value': 'original' });
+  expect(adapter.push({ type: 'STATE_SNAPSHOT', snapshot: { callback: () => undefined } })[0]).to.deep.include({
+    type: 'error',
+    code: 'invalid_provider_event',
+  });
 });

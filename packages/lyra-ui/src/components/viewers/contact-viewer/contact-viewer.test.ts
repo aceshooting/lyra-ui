@@ -14,7 +14,7 @@ describe('lr-contact-viewer', () => {
   });
   it('renders contact fields and multiple cards', async () => {
     const original = window.fetch;
-    window.fetch = (() => Promise.resolve(response(`${CARD}\r\nBEGIN:VCARD\r\nFN:Second\r\nEND:VCARD`))) as typeof window.fetch;
+    window.fetch = (() => Promise.resolve(response(`${CARD}\r\nBEGIN:VCARD\r\nVERSION:4.0\r\nFN:Second\r\nEND:VCARD`))) as typeof window.fetch;
     try {
       const el = (await fixture(html`<lr-contact-viewer src="https://example.test/a.vcf"></lr-contact-viewer>`)) as LyraContactViewer;
       await aTimeout(20);
@@ -97,7 +97,7 @@ describe('lr-contact-viewer', () => {
     // VCARD records used to throw the same LyraUserFacingError funneled through the generic catch
     // block into `case 'error'` -- assertive announcement and error-styled chrome for a state that isn't
     // actually a failure (matching <lr-calendar-viewer>'s identical zero-events handling).
-    const original = window.fetch; window.fetch = (() => Promise.resolve(response('not vcard'))) as typeof window.fetch;
+    const original = window.fetch; window.fetch = (() => Promise.resolve(response(' \r\n\t'))) as typeof window.fetch;
     try {
       const el = (await fixture(html`<lr-contact-viewer></lr-contact-viewer>`)) as LyraContactViewer;
       let renderErrors = 0;
@@ -117,7 +117,7 @@ describe('lr-contact-viewer', () => {
     // the actually-rendered contact cards (name/org/tel/email/adr lists and their aria-labels)
     // would be invisible to it.
     const original = window.fetch;
-    window.fetch = (() => Promise.resolve(response(`${CARD}\r\nBEGIN:VCARD\r\nFN:Second\r\nEND:VCARD`))) as typeof window.fetch;
+    window.fetch = (() => Promise.resolve(response(`${CARD}\r\nBEGIN:VCARD\r\nVERSION:4.0\r\nFN:Second\r\nEND:VCARD`))) as typeof window.fetch;
     try {
       const el = (await fixture(html`<lr-contact-viewer src="https://example.test/a.vcf"></lr-contact-viewer>`)) as LyraContactViewer;
       await aTimeout(20);
@@ -126,11 +126,12 @@ describe('lr-contact-viewer', () => {
       await expect(el).to.be.accessible();
     } finally { window.fetch = original; }
   });
-  it('uses name as the accessible name, falling back to a host aria-label and then a localized default', async () => {
+  it('uses name or a localized fallback in shadow while leaving a non-empty host name on the host', async () => {
     const named = (await fixture(html`<lr-contact-viewer name="contacts.vcf"></lr-contact-viewer>`)) as LyraContactViewer;
     expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('contacts.vcf');
     const labeled = (await fixture(html`<lr-contact-viewer aria-label="Team contacts"></lr-contact-viewer>`)) as LyraContactViewer;
-    expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Team contacts');
+    expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.be.null;
+    expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.be.null;
     const unnamed = (await fixture(html`<lr-contact-viewer></lr-contact-viewer>`)) as LyraContactViewer;
     expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Contact viewer');
   });

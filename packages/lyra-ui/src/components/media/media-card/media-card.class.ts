@@ -2,11 +2,13 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import type { LyraFrame } from '../../../internal/variants.js';
+export type { LyraFrame } from '../../../internal/variants.js';
 import { expandIcon, fileIcon } from '../../../internal/icons.js';
 import {
-  safeDownloadHref as validateLinkHref,
-  safeMediaSrc as validateMediaSrc,
+  safeDownloadHref as safeMediaCardLinkHref,
+  safeMediaSrc as safeMediaCardSrc,
 } from '../../../internal/safe-url.js';
 import { styles } from './media-card.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -16,40 +18,19 @@ import { LYRA_DEFAULT_mediaCardImageAttachment, LYRA_DEFAULT_mediaCardOpenFileAt
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type MediaCardKind = 'image' | 'video' | 'file';
+export type LyraMediaCardKind = 'image' | 'video' | 'file';
 
-/** Whether the root draws itself as a bounded card — an alias of the shared {@linkcode LyraFrame},
- *  so there is one definition. Named `frame`, not `appearance`: `appearance` is the library's
- *  vocabulary for how a *control fills itself*, and using it for container chrome as well made one
- *  property name mean two unrelated things. */
-export type MediaCardFrame = LyraFrame;
-
-export interface MediaCardOpenDetail {
+export interface LyraMediaCardOpenDetail {
   src: string;
   filename: string;
 }
 
 export interface LyraMediaCardEventMap {
-  'lr-open': CustomEvent<MediaCardOpenDetail>;
+  'lr-media-open': CustomEvent<LyraMediaCardOpenDetail>;
+  'lr-before-media-download': CustomEvent<LyraMediaCardOpenDetail>;
 }
 
-/** Validates `url` for an `<img>`/`<video>` source. Kept as a public wrapper
- * so existing imports and generated API metadata remain stable. */
-export function safeMediaSrc(url: string): string | null {
-  return validateMediaSrc(url);
-}
-
-/** Validates `url` for the library's download/open link sinks — `http:`,
- * `https:`, `blob:`, or relative. Deliberately narrower than the general-purpose
- * navigation validator of the same name in `internal/safe-url.js`, which also
- * admits `mailto:`; a mail handoff names no retrievable bytes, so it is not a
- * valid target for this component's `download` affordance. Kept as a public
- * wrapper so existing imports and generated API metadata remain stable. */
-export function safeLinkHref(url: string): string | null {
-  return validateLinkHref(url);
-}
-
-function detectKind(mimeType: string): MediaCardKind {
+function detectKind(mimeType: string): LyraMediaCardKind {
   const mt = mimeType.trim().toLowerCase();
   if (mt.startsWith('image/')) return 'image';
   if (mt.startsWith('video/')) return 'video';
@@ -78,9 +59,8 @@ function detectKind(mimeType: string): MediaCardKind {
  * `<img>`/`<video>` `src` or an `<a href>` — only `http:`/`https:`/`blob:`
  * (plus `data:` for a *media* `src` only) or a scheme-relative/relative URL
  * with no scheme at all pass; anything else (`javascript:`, `vbscript:`,
- * and similarly suspicious schemes) is rejected. `safeMediaSrc()` and
- * `safeLinkHref()` share a platform-URL-based validator; their sink-specific
- * allowlists explain why `data:` gets two different answers depending on
+ * and similarly suspicious schemes) is rejected. Internal sink-specific
+ * validators explain why `data:` gets two different answers depending on
  * where it is used. An `image`/`video` `kind` whose `src` fails the
  * media-src check falls back to the generic file-chip rendering — this is
  * the "plain preview unavailable state" a dangerous URL degrades to, rather
@@ -99,18 +79,18 @@ function detectKind(mimeType: string): MediaCardKind {
  * itself interactive content (its own play/seek/volume controls), and HTML
  * forbids nesting interactive content inside a `<button>`/`<a>` — doing so
  * anyway would also make every click on the video's own controls bubble up
- * and spuriously fire `lr-open`. So for `kind="video"`, `base` is a plain,
+ * and spuriously fire `lr-media-open`. So for `kind="video"`, `base` is a plain,
  * non-interactive wrapper around `[part="media"]`, and a small separate
  * `[part="open-button"]` (not one of this component's originally-scoped
  * parts, added as the "explicit view/open affordance" the class is free to
- * provide) is the thing that actually fires `lr-open`.
+ * provide) is the thing that actually fires `lr-media-open`.
  *
  * **Navigation.** This component never navigates on its own for `image`/
- * `video` — activating the card only fires `lr-open`; a host decides what
+ * `video` — activating the card only fires noncancelable `lr-media-open`; a host decides what
  * "open" means (a lightbox, a new tab, whatever). The `file`-chip case is
  * the one exception: when `src` passes the (stricter) href safety check, the
  * chip is a real `<a href download>` so a bare drop-in still does something
- * useful — but `lr-open` fires first and is `cancelable`; a host that
+ * useful — but `lr-before-media-download` fires first and is `cancelable`; a host that
  * calls `preventDefault()` on it suppresses that default download/open so it
  * can substitute its own handling instead.
  *
@@ -120,18 +100,20 @@ function detectKind(mimeType: string): MediaCardKind {
  * host, so a conversation or attachment-list ancestor can theme every card
  * without muting its own values.
  *
- * **Accessible action name.** The host `aria-label` maps to
- * `accessibleLabel` and overrides the filename/alt/per-kind action name on
- * whichever internal element is actionable for the resolved kind. The name
- * is therefore applied directly to the button or link across the shadow
- * boundary; it does not replace the image alt text or the video control's
- * own label.
+ * **Accessible action name.** A declarative host `aria-label` remains on the
+ * host as the component's overall name; it is not cloned onto a second
+ * semantic owner. The actionable button or link keeps a localized,
+ * purpose-specific name derived from filename/alt/kind. A property-only
+ * `accessibleLabel` assignment can name that internal action when no host
+ * label is present. Neither path replaces image alt text or the video
+ * control's own purpose label, and an explicitly empty host name does not
+ * leave the still-interactive nested action unnamed.
  *
  * @customElement lr-media-card
- * @event lr-open - The card (or, for `kind="video"`, its `open-button`)
- * was activated. `detail: { src, filename }`. Cancelable — see the class
- * doc's "Navigation" section for what calling `preventDefault()` on it does
- * in the `file`-chip case.
+ * @event lr-media-open - An image card or video `open-button` requested consumer-owned viewing.
+ *   `detail: { src, filename }`; noncancelable notification.
+ * @event lr-before-media-download - A safe file anchor is about to perform its native default.
+ *   `detail: { src, filename }`; cancelable, and prevention suppresses the native download/open.
  * @csspart base - The root interactive/container element. A `<button>` for
  * `kind="image"`, a plain wrapper `<div>` for `kind="video"`, and either an
  * `<a>` (when `src` passes the href safety check) or a plain `<span>`
@@ -176,7 +158,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   @property() src = '';
 
   /** Explicit format dispatch. Leave unset to auto-detect from `mime-type`. */
-  @property({ reflect: true }) kind?: MediaCardKind;
+  @property({ reflect: true }) kind?: LyraMediaCardKind;
 
   /** Drives auto-detection when `kind` is unset. */
   @property({ attribute: 'mime-type' }) mimeType = '';
@@ -189,9 +171,9 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
    *  Falls back to `filename`, then a generic per-kind description. */
   @property() alt = '';
 
-  /** Accessible-name override for the card's actionable element. Maps to
-   *  the host's `aria-label` attribute and wins over names derived from
-   *  `filename`, `alt`, or the resolved media kind. */
+  /** Accessible-name input. A declarative `aria-label` names the host; a property-only assignment
+   *  names the internal action when no host label is present. Nested actions otherwise keep a
+   *  localized purpose name derived from `filename`, `alt`, or the resolved media kind. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
 
   /** A CSS length (e.g. `"16rem"`); once set, overrides the
@@ -204,11 +186,11 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
    *  bordered, filled box. `'plain'` removes the border, background, padding and corner radius, so
    *  a card inside a dense chat transcript (or any container already drawing its own separation
    *  between attachments) doesn't double the frame. */
-  @property({ reflect: true }) frame: MediaCardFrame = 'card';
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   /** Effective kind used for rendering — `kind` if explicitly set,
    *  otherwise detected from `mime-type`. */
-  private get resolvedKind(): MediaCardKind {
+  private get resolvedKind(): LyraMediaCardKind {
     return this.kind ?? detectKind(this.mimeType);
   }
 
@@ -219,9 +201,13 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   /** Accessible name for the card's own actionable element (`base` or, for
    *  video, `open-button`) — always phrased as the action it performs. */
   private get actionLabel(): string {
-    const hostLabel = this.getAttribute('aria-label');
-    if (hostLabel !== null && hostLabel === this.accessibleLabel) return hostLabel;
-    if (this.accessibleLabel) return this.accessibleLabel;
+    const hostLabel = hostAriaLabel(this);
+    // A present host label already controls the component itself. Keep the nested action's
+    // purpose-specific generated name instead of cloning one label onto two semantic owners; an
+    // explicitly unnamed host does not make its still-interactive nested button/link unnamed.
+    if (this.accessibleLabel && (hostLabel === null || this.accessibleLabel !== hostLabel)) {
+      return this.accessibleLabel;
+    }
     const name = this.filename || this.alt;
     if (name) return this.localize('mediaCardOpenName', undefined, { name });
     if (this.resolvedKind === 'image') return this.localize('mediaCardOpenImageAttachment');
@@ -247,25 +233,27 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
       : nothing;
   }
 
-  private emitOpen(): CustomEvent<MediaCardOpenDetail> {
+  private eventDetail(): LyraMediaCardOpenDetail {
     // Matches whichever safe-URL sink actually rendered (see the class doc):
     // falls back to a trimmed raw src so a whitespace-padded, otherwise-unsafe
     // src still reports the same value the DOM would show if it were safe.
-    const src = safeMediaSrc(this.src) ?? safeLinkHref(this.src) ?? this.src.trim();
-    return this.emit('lr-open', { src, filename: this.filename }, { cancelable: true });
+    const src = safeMediaCardSrc(this.src) ?? safeMediaCardLinkHref(this.src) ?? this.src.trim();
+    return { src, filename: this.filename };
   }
 
   private onActivate = (): void => {
-    this.emitOpen();
+    this.emit('lr-media-open', this.eventDetail());
   };
 
   // The file-chip's `<a>` provides a real default action (download/open the
-  // resource) so a bare drop-in works with no host wiring, but `lr-open`
+  // resource) so a bare drop-in works with no host wiring, but `lr-before-media-download`
   // fires first and is cancelable -- a host that preventDefault()s it is
   // suppressing exactly that default, so the native click also needs
   // stopping or the download/navigation would proceed anyway.
   private onLinkClick = (e: MouseEvent): void => {
-    if (this.emitOpen().defaultPrevented) e.preventDefault();
+    if (this.emit('lr-before-media-download', this.eventDetail(), { cancelable: true }).defaultPrevented) {
+      e.preventDefault();
+    }
   };
 
   private get primaryAction(): HTMLElement | null {
@@ -318,10 +306,10 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   }
 
   private renderFileFallback(): TemplateResult {
-    const href = safeLinkHref(this.src);
+    const href = safeMediaCardLinkHref(this.src);
     const name = this.displayFilename;
     const content = html`
-      <span part="file-icon" aria-hidden="true">${fileIcon()}</span>
+      <span part="file-icon" aria-hidden="true" inert>${fileIcon()}</span>
       <span part="filename" title=${name}>${name}</span>
     `;
     if (href) {
@@ -348,12 +336,12 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   override render(): TemplateResult {
     const kind = this.resolvedKind;
     if (kind === 'image') {
-      const src = safeMediaSrc(this.src);
+      const src = safeMediaCardSrc(this.src);
       if (src) return this.renderImage(src);
       return this.renderFileFallback();
     }
     if (kind === 'video') {
-      const src = safeMediaSrc(this.src);
+      const src = safeMediaCardSrc(this.src);
       if (src) return this.renderVideo(src);
       return this.renderFileFallback();
     }

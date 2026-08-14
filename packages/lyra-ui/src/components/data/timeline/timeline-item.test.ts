@@ -2,7 +2,7 @@ import { fixture, fixtureSync, expect, html, oneEvent } from '@open-wc/testing';
 import './timeline-item.js';
 import type { LyraTimelineItem } from './timeline-item.js';
 import type { LyraRelativeTime } from '../../utility/format/relative-time.js';
-import { styles } from './timeline-item.styles.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 
 /**
  * Resolve a design token in the same shadow scope the component's own `var()` chain resolves in.
@@ -48,7 +48,7 @@ it('renders default-slot content as the title; an item with no default-slot cont
 it('renders the default color-coded dot marker when the icon slot is empty', async () => {
   const el = (await fixture(html`<lr-timeline-item variant="success">Done</lr-timeline-item>`)) as LyraTimelineItem;
   const marker = el.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
-  const iconSlot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
+  const iconSlot = el.shadowRoot!.querySelector('slot[name="marker-icon"]') as HTMLSlotElement;
   expect(iconSlot.assignedElements({ flatten: true })).to.have.length(0);
   const success = resolve(marker, '--lr-color-success');
   expect(success).to.not.equal('');
@@ -57,19 +57,19 @@ it('renders the default color-coded dot marker when the icon slot is empty', asy
   expect(getComputedStyle(marker).backgroundColor).to.equal(toRgb(success));
 });
 
-it('shows only the slotted icon content once the icon slot is populated, at parse time and via a later slotchange', async () => {
+it('shows only the slotted marker icon once populated, at parse time and via a later slotchange', async () => {
   const el = (await fixture(
-    html`<lr-timeline-item><span slot="icon">🚀</span>Launched</lr-timeline-item>`
+    html`<lr-timeline-item><span slot="marker-icon">🚀</span>Launched</lr-timeline-item>`
   )) as LyraTimelineItem;
-  const iconSlot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
+  const iconSlot = el.shadowRoot!.querySelector('slot[name="marker-icon"]') as HTMLSlotElement;
   expect(iconSlot.assignedElements({ flatten: true })).to.have.length(1);
 
   const bare = (await fixture(html`<lr-timeline-item>No icon yet</lr-timeline-item>`)) as LyraTimelineItem;
-  const bareSlot = bare.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
+  const bareSlot = bare.shadowRoot!.querySelector('slot[name="marker-icon"]') as HTMLSlotElement;
   expect(bareSlot.assignedElements({ flatten: true })).to.have.length(0);
 
   const icon = document.createElement('span');
-  icon.setAttribute('slot', 'icon');
+  icon.setAttribute('slot', 'marker-icon');
   icon.textContent = '🔔';
   const changed = oneEvent(bareSlot, 'slotchange');
   bare.appendChild(icon);
@@ -78,7 +78,7 @@ it('shows only the slotted icon content once the icon slot is populated, at pars
   expect(bareSlot.assignedElements({ flatten: true })).to.have.length(1);
 });
 
-it('renders marker-icon ahead of the legacy icon slot and falls back live', async () => {
+it('does not expose or render the removed legacy icon slot', async () => {
   const el = (await fixture(html`
     <lr-timeline-item>
       <span id="legacy-marker" slot="icon">legacy</span>
@@ -93,9 +93,8 @@ it('renders marker-icon ahead of the legacy icon slot and falls back live', asyn
   const legacyMarker = el.querySelector('#legacy-marker') as HTMLElement;
 
   expect(canonicalSlot?.localName).to.equal('slot');
-  expect(legacySlot?.localName).to.equal('slot');
+  expect(legacySlot === null).to.be.true;
   expect(canonicalSlot?.assignedElements().map((assigned) => assigned.id)).to.deep.equal(['canonical-marker']);
-  expect(legacySlot?.assignedElements().map((assigned) => assigned.id)).to.deep.equal(['legacy-marker']);
   expect(marker.hasAttribute('data-has-icon')).to.be.true;
   expect(canonicalMarker.getClientRects().length > 0).to.be.true;
   expect(legacyMarker.getClientRects().length).to.equal(0);
@@ -104,8 +103,8 @@ it('renders marker-icon ahead of the legacy icon slot and falls back live', asyn
   canonicalMarker.remove();
   await changed;
   await el.updateComplete;
-  expect(marker.hasAttribute('data-has-icon')).to.be.true;
-  expect(legacyMarker.getClientRects().length > 0).to.be.true;
+  expect(marker.hasAttribute('data-has-icon')).to.be.false;
+  expect(legacyMarker.getClientRects().length).to.equal(0);
 });
 
 it('renders the internal <lr-relative-time> fallback, wrapped in a <time> with the correct datetime/title, when timestamp is set and the slot is empty', async () => {
@@ -213,6 +212,16 @@ it('variant reflects the attribute, defaults to "neutral", and drives --lr-timel
   // Colour-coded: the three tones are three genuinely different colours, not one token reused --
   // this is what a per-variant marker buys, and it survives any palette regeneration.
   expect(new Set([neutralColor, successColor, dangerColor]).size).to.equal(3);
+
+  danger.setAttribute('variant', 'hostile');
+  await danger.updateComplete;
+  expect(danger.variant).to.equal('neutral');
+  expect(danger.hasAttribute('variant')).to.be.false;
+
+  danger.variant = 'hostile' as never;
+  await danger.updateComplete;
+  expect(danger.variant).to.equal('neutral');
+  expect(danger.hasAttribute('variant')).to.be.false;
 });
 
 it('inherits marker and rail theme hooks from an ancestor while direct item overrides win', async () => {
@@ -250,25 +259,34 @@ it('active reflects and drives an explicit aria-current true/false state', async
   expect(activeEl.getAttribute('aria-current')).to.equal('false');
 });
 
-it('pulses the marker while active, and disables the animation under prefers-reduced-motion (assert via stylesheet text)', async () => {
-  const el = (await fixture(html`<lr-timeline-item active>Running</lr-timeline-item>`)) as LyraTimelineItem;
-  const marker = el.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
-  expect(getComputedStyle(marker).animationName).to.not.equal('none');
+it('retains a rendered static active cue when reduced motion disables the pulse', async () => {
+  try {
+    await setReducedMotion('no-preference');
+    const el = (await fixture(html`<lr-timeline-item active>Running</lr-timeline-item>`)) as LyraTimelineItem;
+    const marker = el.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
+    expect(getComputedStyle(marker).animationName).to.equal('lr-timeline-item-pulse');
+    expect(getComputedStyle(marker).outlineStyle).to.equal('solid');
 
-  const inactive = (await fixture(html`<lr-timeline-item>Done</lr-timeline-item>`)) as LyraTimelineItem;
-  const inactiveMarker = inactive.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
-  expect(getComputedStyle(inactiveMarker).animationName).to.equal('none');
+    await setReducedMotion('reduce');
+    const reduced = (await fixture(html`<lr-timeline-item active>Running</lr-timeline-item>`)) as LyraTimelineItem;
+    const reducedMarker = reduced.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
+    const inactive = (await fixture(html`<lr-timeline-item>Done</lr-timeline-item>`)) as LyraTimelineItem;
+    const inactiveMarker = inactive.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
 
-  expect(styles.cssText).to.match(
-    /@media \(prefers-reduced-motion: reduce\) \{[^}]*\[part='marker'\][^}]*animation: none !important/
-  );
+    expect(getComputedStyle(reducedMarker).animationName).to.equal('none');
+    expect(getComputedStyle(reducedMarker).outlineStyle).to.equal('solid');
+    expect(getComputedStyle(reducedMarker).outlineWidth).to.not.equal('0px');
+    expect(getComputedStyle(inactiveMarker).outlineStyle).to.equal('none');
+  } finally {
+    await setReducedMotion('no-preference');
+  }
 });
 
 it('is accessible standalone with an icon, timestamp, title, and a description containing a nested focusable link', async () => {
   const el = await fixture(html`
     <ul style="list-style:none;margin:0;padding:0;">
       <lr-timeline-item variant="brand" .timestamp=${new Date()}>
-        <span slot="icon">🔔</span>
+        <span slot="marker-icon">🔔</span>
         Deployment started
         <span slot="description">See <a href="#log">the live log</a> for progress.</span>
       </lr-timeline-item>

@@ -1,5 +1,5 @@
 import { GEMSTONES } from './gemstones-data.js';
-import { setLyraTheme, type LyraTheme } from './theme.js';
+import { getLyraTheme, setLyraTheme, type LyraTheme } from './theme.js';
 
 /** A named, reusable application theme choice. */
 export interface LyraThemePreset {
@@ -13,8 +13,8 @@ export interface LyraThemePreset {
 export interface LyraThemePresetChangeDetail {
   /** Applied preset id. */
   readonly id: string;
-  /** Semantic fields requested by the preset. */
-  readonly theme: Readonly<Partial<LyraTheme>>;
+  /** Complete semantic snapshot the production runtime applied. */
+  readonly theme: Readonly<LyraTheme>;
 }
 
 declare global {
@@ -80,7 +80,12 @@ export const LYRA_THEME_PRESETS = Object.freeze({
 
 export type LyraThemePresetName = keyof typeof LYRA_THEME_PRESETS;
 
-/** Applies a built-in key or an application preset and announces the completed change. */
+/**
+ * Applies a built-in key or an application preset. The preset marker and
+ * `lr-theme-preset-change` event are published only when runtime normalization accepts every
+ * explicitly requested field; otherwise `lr-theme-change` remains the truthful notification for
+ * the normalized state and no exact named-preset identity is claimed.
+ */
 export function applyLyraThemePreset(
   presetOrName: LyraThemePresetName | Readonly<LyraThemePreset>,
 ): void {
@@ -93,11 +98,16 @@ export function applyLyraThemePreset(
   // Revalidate external objects even when callers bypass defineLyraThemePreset().
   const normalized = defineLyraThemePreset(preset);
   setLyraTheme(normalized.theme);
+  const applied = Object.freeze({ ...getLyraTheme() });
+  const matchesApplied = (normalized.theme.mode === undefined || normalized.theme.mode === applied.mode)
+    && (normalized.theme.accent === undefined || normalized.theme.accent === applied.accent);
+  if (!matchesApplied) return;
+
   document.documentElement.dataset['lrThemePreset'] = normalized.id;
-  const detail: LyraThemePresetChangeDetail = {
+  const detail: LyraThemePresetChangeDetail = Object.freeze({
     id: normalized.id,
-    theme: normalized.theme,
-  };
+    theme: applied,
+  });
   window.dispatchEvent(new CustomEvent<LyraThemePresetChangeDetail>('lr-theme-preset-change', {
     detail,
   }));

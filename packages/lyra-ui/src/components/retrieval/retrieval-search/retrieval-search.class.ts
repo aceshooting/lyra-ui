@@ -1,27 +1,32 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteNumber } from '../../../internal/numbers.js';
-import type { SegmentedItem } from '../../layout/segmented/segmented.class.js';
-import '../../forms/input/input.class.js';
-import '../../layout/segmented/segmented.class.js';
-import '../../overlays/chip/chip.class.js';
-import '../../overlays/chip/chip-group.class.js';
-import '../../overlays/spinner/spinner.class.js';
-import '../../overlays/empty/empty.class.js';
-import type { RetrievalQuery, CancelEventDetail } from '../../../ai/types.js';
-import { styles } from './retrieval-search.styles.js';
-import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
+import { property } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import type { LyraSegmentedItem } from "../../layout/segmented/segmented.class.js";
+import "../../forms/input/input.class.js";
+import "../../layout/segmented/segmented.class.js";
+import "../../overlays/chip/chip.class.js";
+import "../../overlays/chip/chip-group.class.js";
+import "../../overlays/spinner/spinner.class.js";
+import "../../overlays/empty/empty.class.js";
+import type { RetrievalQuery, CancelEventDetail } from "../../../ai/types.js";
+import { styles } from "./retrieval-search.styles.js";
+import {
+  retrievalSemanticLabel,
+  retrievalSemanticRole,
+} from "../retrieval-semantic-owner.js";
+import { formatBoundedRetrievalValue } from "../retrieval-value-format.js";
+import {
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from "../../../internal/announcer.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_retrievalFilterChipLabel, LYRA_DEFAULT_retrievalFiltersLabel, LYRA_DEFAULT_retrievalModeHybrid, LYRA_DEFAULT_retrievalModeKeyword, LYRA_DEFAULT_retrievalModeLabel, LYRA_DEFAULT_retrievalModeVector, LYRA_DEFAULT_retrievalSearchEmptyDescription, LYRA_DEFAULT_retrievalSearchLabel, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_retrievalFilterChipLabel, LYRA_DEFAULT_retrievalFiltersLabel, LYRA_DEFAULT_retrievalModeHybrid, LYRA_DEFAULT_retrievalModeKeyword, LYRA_DEFAULT_retrievalModeLabel, LYRA_DEFAULT_retrievalModeVector, LYRA_DEFAULT_retrievalSearchEmptyDescription, LYRA_DEFAULT_retrievalSearchLabel, LYRA_DEFAULT_search, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** The three retrieval modes `RetrievalQuery.mode` supports, reused verbatim rather than
  *  redefining the union -- see `src/ai/types.ts`'s own header for why. */
-export type LyraRetrievalMode = RetrievalQuery['mode'];
+export type LyraRetrievalMode = RetrievalQuery["mode"];
 
 /** `detail` for `lr-filters-change` -- the complete, already-updated `filters`/`scope` state
  *  after a chip removal, mirroring `<lr-source-picker>`'s `lr-sources-change` "full next state"
@@ -32,9 +37,9 @@ export interface RetrievalFiltersChangeDetail {
 }
 
 export interface LyraRetrievalSearchEventMap {
-  'lr-search': CustomEvent<RetrievalQuery>;
-  'lr-cancel': CustomEvent<CancelEventDetail>;
-  'lr-filters-change': CustomEvent<RetrievalFiltersChangeDetail>;
+  "lr-search": CustomEvent<RetrievalQuery>;
+  "lr-cancel": CustomEvent<CancelEventDetail>;
+  "lr-filters-change": CustomEvent<RetrievalFiltersChangeDetail>;
 }
 
 /**
@@ -71,7 +76,8 @@ export interface LyraRetrievalSearchEventMap {
  *   it resolved (`detail: { reason: 'superseded' }`, fired immediately before the new `lr-search`).
  * @event lr-filters-change - A `filters`/`scope` chip's remove button was activated. `detail`: the
  *   complete updated `{ filters, scope }` state.
- * @csspart base - The `role="search"` root landmark.
+ * @csspart base - The root search shell. It owns `role="search"` and the fallback name unless a
+ *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart row - The row holding the query field, mode selector, and submit/cancel button.
  * @csspart query - The query `<lr-input type="search">`.
  * @csspart mode - The vector/keyword/hybrid `<lr-segmented>`.
@@ -105,6 +111,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     retrievalSearchEmptyDescription: LYRA_DEFAULT_retrievalSearchEmptyDescription,
     retrievalSearchLabel: LYRA_DEFAULT_retrievalSearchLabel,
     search: LYRA_DEFAULT_search,
+    valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -113,11 +120,11 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   /** The current query text. Controlled -- the internal `lr-input` updates this optimistically as
    *  the user types (mirroring every other Lyra input's controlled-value convention), and a host
    *  reassignment always wins. */
-  @property() query = '';
+  @property() query = "";
 
   /** Retrieval mode. Defaults to `'hybrid'`, the common default for a search bar combining both
    *  vector and keyword retrieval. */
-  @property() mode: LyraRetrievalMode = 'hybrid';
+  @property() mode: LyraRetrievalMode = "hybrid";
 
   /** Arbitrary metadata filters, rendered as removable `"{key}: {value}"` chips. Controlled --
    *  reassign to change what's shown; see the class doc's "update, then emit" round-trip. */
@@ -136,7 +143,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
    *  not localized) in a neutral visible region. New non-empty values are announced through a
    *  shared assertive light-DOM region; initial and reconnect content is not replayed. Empty
    *  string (the default) shows nothing. */
-  @property({ attribute: 'error-text' }) errorText = '';
+  @property({ attribute: "error-text" }) errorText = "";
 
   /** Host-driven flag: the last completed search returned zero results. Renders a compact
    *  `<lr-empty>` beneath the search row. Never inferred by this component itself -- see the
@@ -146,15 +153,15 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   /** Placeholder for the query field. Empty string (the default) falls back to the localized
    *  generic "Search" placeholder, which also becomes that field's accessible name (mirroring
    *  `<lr-input>`'s own placeholder-as-label fallback). */
-  @property() placeholder = '';
+  @property() placeholder = "";
 
-  /** Accessible name for the `role="search"` landmark. Falls back to the localized default; a
-   *  host `aria-label` (via `accessibleLabel`) wins over both. */
-  @property() label = '';
+  /** Accessible name for the inner search landmark when the host has no `aria-label`; falls back
+   *  to the localized default. */
+  @property() label = "";
 
-  /** Overrides the computed accessible name for the `role="search"` landmark. Wins over `label`
-   *  and the localized default. Attribute-reflects from a host-level `aria-label`. */
-  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  /** JS-only accessible-name override for the inner search landmark. A non-empty markup
+   *  `aria-label` names the host as the sole overall owner instead. */
+  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
 
   private isMounting = true;
   private errorAnnouncementSink?: AnnouncementSink;
@@ -162,7 +169,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
+    this.errorAnnouncementSink ??= acquireAnnouncementSink("assertive", {
       document: this.ownerDocument,
       source: this,
     });
@@ -179,64 +186,69 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
-    if (!wasMounting && changed.has('errorText') && this.errorText !== '' && this.isConnected) {
+    if (
+      !wasMounting &&
+      changed.has("errorText") &&
+      this.errorText !== "" &&
+      this.isConnected
+    ) {
       this.errorAnnouncementSink?.announce(this.errorText);
     }
   }
 
-  private modeItems(): SegmentedItem[] {
+  private modeItems(): LyraSegmentedItem[] {
     return [
-      { value: 'vector', label: this.localize('retrievalModeVector') },
-      { value: 'keyword', label: this.localize('retrievalModeKeyword') },
-      { value: 'hybrid', label: this.localize('retrievalModeHybrid') },
+      { value: "vector", label: this.localize("retrievalModeVector") },
+      { value: "keyword", label: this.localize("retrievalModeKeyword") },
+      { value: "hybrid", label: this.localize("retrievalModeHybrid") },
     ];
   }
 
   private formatFilterValue(value: unknown): string {
-    if (typeof value === 'string') return value;
-    if (typeof value === 'number') {
-      return getNumberFormat(this.effectiveLocale).format(finiteNumber(value, 0));
-    }
-    if (typeof value === 'boolean') return String(value);
-    if (Array.isArray(value)) {
-      return getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(
-        value.map((item) => this.formatFilterValue(item)),
-      );
-    }
-    if (value == null) return '';
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return String(value);
-    }
+    const sentinel = this.localize("valueInvalid");
+    return formatBoundedRetrievalValue(value, {
+      locale: this.effectiveLocale,
+      invalid: sentinel,
+      truncated: sentinel,
+    });
   }
 
   private buildQuery(): RetrievalQuery {
-    return { text: this.query, mode: this.mode, filters: { ...this.filters }, scope: [...this.scope] };
+    return {
+      text: this.query,
+      mode: this.mode,
+      filters: { ...this.filters },
+      scope: [...this.scope],
+    };
   }
 
   private submit(): void {
-    if (this.loading) this.emit('lr-cancel', { reason: 'superseded' });
-    this.emit('lr-search', this.buildQuery());
+    if (this.loading) this.emit("lr-cancel", { reason: "superseded" });
+    this.emit("lr-search", this.buildQuery());
   }
 
   private cancel(): void {
-    this.emit('lr-cancel', {});
+    this.emit("lr-cancel", {});
   }
 
   private emitFiltersChange(): void {
-    this.emit('lr-filters-change', {
+    this.emit("lr-filters-change", {
       filters: { ...this.filters },
       scope: [...this.scope],
     });
   }
 
-  private repairFocusAfterChipRemoval(index: number, shouldRepair: boolean): void {
+  private repairFocusAfterChipRemoval(
+    index: number,
+    shouldRepair: boolean
+  ): void {
     const generation = ++this.chipFocusGeneration;
     if (!shouldRepair) return;
     void this.updateComplete.then(() => {
       if (!this.isConnected || generation !== this.chipFocusGeneration) return;
-      const chips = this.renderRoot.querySelectorAll<HTMLElement>('[part="filters"] lr-chip');
+      const chips = this.renderRoot.querySelectorAll<HTMLElement>(
+        '[part="filters"] lr-chip'
+      );
       const target = chips[Math.min(index, chips.length - 1)];
       if (target) {
         target.focus();
@@ -268,7 +280,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   };
 
   private onQueryKeyDown = (e: KeyboardEvent): void => {
-    if (e.key !== 'Enter') return;
+    if (e.key !== "Enter") return;
     // An IME composition step (e.g. confirming a Japanese/Chinese/Korean candidate) must never be
     // treated as "the user pressed Enter to search" -- keyCode 229 is a defense-in-depth fallback
     // for browsers that report isComposing inconsistently on the compositionend-adjacent keydown.
@@ -292,17 +304,26 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   };
 
   override render(): TemplateResult {
-    const label =
-      this.accessibleLabel || this.label || this.localize('retrievalSearchLabel');
-    const hasFilters = Object.keys(this.filters).length > 0 || this.scope.length > 0;
+    const label = retrievalSemanticLabel(
+      this,
+      this.accessibleLabel ??
+        (this.label || this.localize("retrievalSearchLabel"))
+    );
+    const searchRole = retrievalSemanticRole(this, "search");
+    const hasFilters =
+      Object.keys(this.filters).length > 0 || this.scope.length > 0;
 
     return html`
-      <div part="base" role="search" aria-label=${label}>
+      <div
+        part="base"
+        role=${searchRole ?? nothing}
+        aria-label=${label ?? nothing}
+      >
         <div part="row">
           <lr-input
             part="query"
             type="search"
-            placeholder=${this.placeholder || this.localize('search')}
+            placeholder=${this.placeholder || this.localize("search")}
             .value=${this.query}
             @lr-input=${this.onQueryInput}
             @keydown=${this.onQueryKeyDown}
@@ -314,55 +335,70 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
             part="mode"
             .items=${this.modeItems()}
             .value=${this.mode}
-            label=${this.localize('retrievalModeLabel')}
+            label=${this.localize("retrievalModeLabel")}
             @lr-change=${this.onModeChange}
           ></lr-segmented>
           <button part="submit" type="button" @click=${this.onSubmitClick}>
-            ${this.loading ? this.localize('cancel') : this.localize('search')}
+            ${this.loading ? this.localize("cancel") : this.localize("search")}
           </button>
         </div>
         ${hasFilters
           ? html`<lr-chip-group
               part="filters"
               role="group"
-              aria-label=${this.localize('retrievalFiltersLabel')}
+              aria-label=${this.localize("retrievalFiltersLabel")}
             >
               ${this.scope.map(
-                (s) => html`<lr-chip variant="brand" removable value=${s} @lr-remove=${(event: Event) => {
-                  event.stopPropagation();
-                  const chip = event.currentTarget as HTMLElement;
-                  this.removeScope(s, chip.shadowRoot?.activeElement !== null);
-                }}
+                (s) => html`<lr-chip
+                  variant="brand"
+                  removable
+                  value=${s}
+                  @lr-remove=${(event: Event) => {
+                    event.stopPropagation();
+                    const chip = event.currentTarget as HTMLElement;
+                    this.removeScope(
+                      s,
+                      chip.shadowRoot?.activeElement !== null
+                    );
+                  }}
                   >${s}</lr-chip
-                >`,
+                >`
               )}
               ${Object.entries(this.filters).map(
-                ([k, v]) => html`<lr-chip removable value=${k} @lr-remove=${(event: Event) => {
-                  event.stopPropagation();
-                  const chip = event.currentTarget as HTMLElement;
-                  this.removeFilter(k, chip.shadowRoot?.activeElement !== null);
-                }}
-                  >${this.localize('retrievalFilterChipLabel', undefined, {
+                ([k, v]) => html`<lr-chip
+                  removable
+                  value=${k}
+                  @lr-remove=${(event: Event) => {
+                    event.stopPropagation();
+                    const chip = event.currentTarget as HTMLElement;
+                    this.removeFilter(
+                      k,
+                      chip.shadowRoot?.activeElement !== null
+                    );
+                  }}
+                  >${this.localize("retrievalFilterChipLabel", undefined, {
                     key: k,
                     value: this.formatFilterValue(v),
                   })}</lr-chip
-                >`,
+                >`
               )}
             </lr-chip-group>`
           : nothing}
         ${this.loading
-          ? html`<lr-spinner part="spinner" aria-label=${label}></lr-spinner>`
+          ? html`<lr-spinner part="spinner"></lr-spinner>`
           : this.errorText
-            ? html`<div part="error">${this.errorText}</div>`
-            : this.empty
-              ? html`<lr-empty
-                  part="empty"
-                  compact
-                  heading=${this.localize('noMatches')}
-                  description=${this.localize('retrievalSearchEmptyDescription', undefined,
-                  )}
-                ></lr-empty>`
-              : nothing}
+          ? html`<div part="error">${this.errorText}</div>`
+          : this.empty
+          ? html`<lr-empty
+              part="empty"
+              compact
+              heading=${this.localize("noMatches")}
+              description=${this.localize(
+                "retrievalSearchEmptyDescription",
+                undefined
+              )}
+            ></lr-empty>`
+          : nothing}
       </div>
     `;
   }
@@ -370,6 +406,6 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-retrieval-search': LyraRetrievalSearch;
+    "lr-retrieval-search": LyraRetrievalSearch;
   }
 }

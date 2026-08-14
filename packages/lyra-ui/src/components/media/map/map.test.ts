@@ -6,6 +6,7 @@ import { loadMaplibre } from './map-loader.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 
 // maplibre-gl requires a real WebGL2 context; headless Firefox/WebKit in CI don't reliably
 // provide one (unlike Chromium's software rasterizer), so any test that needs a map to actually
@@ -77,6 +78,7 @@ it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps t
       resolveLibrary = resolve;
     });
   el.strings = { loading: 'Chargement de la carte…' };
+  el.mapStyle = RASTER_STYLE;
   document.body.append(el);
   try {
     await el.updateComplete;
@@ -299,6 +301,96 @@ it('uses the adopted owner realm for intersection observation, token reads, and 
   }
 });
 
+it('probes WebGL2 in the concrete owner realm before and after adoption', async () => {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument!;
+  const frameWindow = iframe.contentWindow!;
+  const ambientGetContext = HTMLCanvasElement.prototype.getContext;
+  const frameGetContext = frameWindow.HTMLCanvasElement.prototype.getContext;
+  const ambientIntersectionObserver = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+  const frameIntersectionObserver = Object.getOwnPropertyDescriptor(frameWindow, 'IntersectionObserver');
+  let ambientProbes = 0;
+  let frameProbes = 0;
+  let removals = 0;
+  let loadCalls = 0;
+
+  (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+    function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
+      if (contextId === 'webgl2') {
+        ambientProbes += 1;
+        return null;
+      }
+      return ambientGetContext.call(this, contextId as never, ...(rest as []));
+    };
+  (frameWindow.HTMLCanvasElement.prototype as unknown as {
+    getContext: (...args: unknown[]) => unknown;
+  }).getContext = function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
+    if (contextId === 'webgl2') {
+      frameProbes += 1;
+      return {};
+    }
+    return frameGetContext.call(this, contextId as never, ...(rest as []));
+  };
+  Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
+  Object.defineProperty(frameWindow, 'IntersectionObserver', { configurable: true, value: undefined });
+
+  class OwnerRealmMap {
+    private readonly canvas = frameDocument.createElement('canvas');
+    on(): this { return this; }
+    getCanvas(): HTMLCanvasElement { return this.canvas; }
+    remove(): void { removals += 1; }
+  }
+  const module = { Map: OwnerRealmMap };
+  const el = document.createElement('lr-map') as LyraMap;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => {
+    loadCalls += 1;
+    return loadCalls === 1 ? new Promise(() => {}) : Promise.resolve(module);
+  };
+  el.mapStyle = RASTER_STYLE;
+  el.strings = { mapWebglUnavailable: 'Current document lacks WebGL2' };
+
+  try {
+    // First render in the ambient document gives nested custom elements a stable original realm;
+    // its intentionally pending peer load ensures no ambient capability probe runs.
+    document.body.append(el);
+    await el.updateComplete;
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await waitUntil(() => el.map != null, 'frame-owned map never initialized', { timeout: 2000 });
+    expect(frameProbes).to.be.greaterThan(0);
+    expect(ambientProbes).to.equal(0);
+
+    el.remove();
+    document.body.append(document.adoptNode(el));
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="error"]')?.textContent?.trim() ===
+        'Current document lacks WebGL2',
+      'ambient owner did not replace the frame result',
+      { timeout: 2000 },
+    );
+    expect(ambientProbes).to.be.greaterThan(0);
+    expect(el.map).to.equal(undefined);
+    expect(removals).to.equal(1);
+  } finally {
+    el.remove();
+    HTMLCanvasElement.prototype.getContext = ambientGetContext;
+    frameWindow.HTMLCanvasElement.prototype.getContext = frameGetContext;
+    if (ambientIntersectionObserver) {
+      Object.defineProperty(window, 'IntersectionObserver', ambientIntersectionObserver);
+    } else {
+      delete (window as unknown as { IntersectionObserver?: typeof IntersectionObserver })
+        .IntersectionObserver;
+    }
+    if (frameIntersectionObserver) {
+      Object.defineProperty(frameWindow, 'IntersectionObserver', frameIntersectionObserver);
+    } else {
+      delete (frameWindow as unknown as { IntersectionObserver?: typeof IntersectionObserver })
+        .IntersectionObserver;
+    }
+    iframe.remove();
+  }
+});
+
 // Regression coverage for the lifecycle-optional-peer-missing-fails-silently defect class --
 // when the optional peer `maplibre-gl` fails to load, <lr-map> must fail closed into a visible,
 // accessible error state instead of silently rendering an empty container with no on-page
@@ -312,6 +404,7 @@ it('renders a visible, accessible error state instead of a blank container when 
   // then connect" need.
   const el = document.createElement('lr-map') as unknown as LyraMap;
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve(null);
+  el.strings = { mapMissingLibrary: 'Map peer is unavailable' };
   document.body.appendChild(el);
   try {
     await waitUntil(
@@ -321,7 +414,7 @@ it('renders a visible, accessible error state instead of a blank container when 
     );
     const errorEl = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(errorEl.getAttribute('role')).to.equal(null);
-    expect(errorEl.textContent!.trim().length).to.be.greaterThan(0);
+    expect(errorEl.textContent!.trim()).to.equal('Map peer is unavailable');
     expect(assertiveAnnouncements()).to.deep.equal([errorEl.textContent!.trim()]);
     expect(el.getAttribute('aria-busy')).to.equal('false');
     expect(el.map == null).to.be.true;
@@ -329,6 +422,228 @@ it('renders a visible, accessible error state instead of a blank container when 
     expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
   } finally {
     el.remove();
+  }
+});
+
+it('requires explicit mapStyle without constructing a peer map or making an implicit provider choice', async () => {
+  let constructorCalls = 0;
+  class NeverConstructedMap {
+    constructor() {
+      constructorCalls += 1;
+    }
+  }
+  const el = document.createElement('lr-map') as LyraMap;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+    Map: NeverConstructedMap,
+  });
+  el.strings = { mapStyleRequired: 'Choose a map provider explicitly' };
+  document.body.append(el);
+  try {
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="error"]') != null,
+      'explicit-style error state never rendered',
+      { timeout: 2000 },
+    );
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim()).to.equal(
+      'Choose a map provider explicitly',
+    );
+    expect(assertiveAnnouncements()).to.deep.equal(['Choose a map provider explicitly']);
+    expect(constructorCalls).to.equal(0);
+    expect(el.map).to.equal(undefined);
+  } finally {
+    el.remove();
+  }
+});
+
+for (const failureStage of ['constructor', 'setup'] as const) {
+  it(`rolls back a ${failureStage} failure, reports it locally, retries, reconnects, and disposes`, async () => {
+    const OriginalIntersectionObserver = window.IntersectionObserver;
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
+    (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+      function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
+        if (contextId === 'webgl2') return {};
+        return originalGetContext.call(this, contextId as never, ...(rest as []));
+      };
+
+    let attempts = 0;
+    let removals = 0;
+    const unhandled: PromiseRejectionEvent[] = [];
+    const onUnhandled = (event: PromiseRejectionEvent): void => unhandled.push(event);
+    window.addEventListener('unhandledrejection', onUnhandled);
+    class TransactionMap {
+      private readonly callbacks = new Map<string, Array<(event: unknown) => void>>();
+      private readonly canvas = document.createElement('canvas');
+
+      constructor() {
+        attempts += 1;
+        if (attempts === 1 && failureStage === 'constructor') {
+          throw new Error('private constructor failure');
+        }
+      }
+
+      on(name: string, callback: (event: unknown) => void): this {
+        if (attempts === 1 && failureStage === 'setup') {
+          throw new Error('private setup failure');
+        }
+        const callbacks = this.callbacks.get(name) ?? [];
+        callbacks.push(callback);
+        this.callbacks.set(name, callbacks);
+        return this;
+      }
+
+      getCanvas(): HTMLCanvasElement {
+        return this.canvas;
+      }
+
+      remove(): void {
+        removals += 1;
+      }
+    }
+
+    const el = document.createElement('lr-map') as LyraMap;
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      Map: TransactionMap,
+    });
+    el.mapStyle = RASTER_STYLE;
+    el.strings = { mapInitializationFailed: 'Map setup could not finish' };
+    document.body.append(el);
+    try {
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="error"]') != null,
+        `${failureStage} failure never reached error state`,
+        { timeout: 2000 },
+      );
+      expect(el.map).to.equal(undefined);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim()).to.equal(
+        'Map setup could not finish',
+      );
+      expect(removals).to.equal(failureStage === 'setup' ? 1 : 0);
+      expect(unhandled).to.deep.equal([]);
+
+      el.mapStyle = { ...RASTER_STYLE, name: `retry-${failureStage}` };
+      await waitUntil(() => el.map != null, `${failureStage} retry never initialized`, {
+        timeout: 2000,
+      });
+      expect(attempts).to.equal(2);
+
+      el.remove();
+      expect(removals).to.equal(failureStage === 'setup' ? 2 : 1);
+      document.body.append(el);
+      await waitUntil(() => el.map != null, `${failureStage} reconnect never initialized`, {
+        timeout: 2000,
+      });
+      expect(attempts).to.equal(3);
+    } finally {
+      el.remove();
+      window.removeEventListener('unhandledrejection', onUnhandled);
+      HTMLCanvasElement.prototype.getContext = originalGetContext;
+      Object.defineProperty(window, 'IntersectionObserver', {
+        configurable: true,
+        value: OriginalIntersectionObserver,
+      });
+    }
+  });
+}
+
+it('classifies an initial peer style error and disposes the published candidate transaction', async () => {
+  const OriginalIntersectionObserver = window.IntersectionObserver;
+  const originalGetContext = HTMLCanvasElement.prototype.getContext;
+  Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
+  (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+    function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
+      if (contextId === 'webgl2') return {};
+      return originalGetContext.call(this, contextId as never, ...(rest as []));
+    };
+  let errorCallback: ((event: unknown) => void) | undefined;
+  let removals = 0;
+  class StyleErrorMap {
+    private readonly canvas = document.createElement('canvas');
+    on(name: string, callback: (event: unknown) => void): this {
+      if (name === 'error') errorCallback = callback;
+      return this;
+    }
+    getCanvas(): HTMLCanvasElement { return this.canvas; }
+    remove(): void { removals += 1; }
+  }
+  const el = document.createElement('lr-map') as LyraMap;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+    Map: StyleErrorMap,
+  });
+  el.mapStyle = RASTER_STYLE;
+  el.strings = { mapInitializationFailed: 'Initial style failed' };
+  document.body.append(el);
+  try {
+    await waitUntil(() => el.map != null && errorCallback !== undefined, 'fake map never initialized');
+    errorCallback?.({ error: new Error('private style parser detail') });
+    await el.updateComplete;
+    expect(el.map).to.equal(undefined);
+    expect(removals).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim()).to.equal(
+      'Initial style failed',
+    );
+  } finally {
+    el.remove();
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      value: OriginalIntersectionObserver,
+    });
+  }
+});
+
+it('rolls back a synchronous dynamic style failure and retries with a fresh map', async () => {
+  const originalIntersectionObserver = window.IntersectionObserver;
+  const originalGetContext = HTMLCanvasElement.prototype.getContext;
+  Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
+  (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+    function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
+      if (contextId === 'webgl2') return {};
+      return originalGetContext.call(this, contextId as never, ...(rest as []));
+    };
+  let constructions = 0;
+  let removals = 0;
+  class DynamicStyleMap {
+    private readonly canvas = document.createElement('canvas');
+    private readonly generation = ++constructions;
+    on(): this { return this; }
+    once(): this { return this; }
+    getCanvas(): HTMLCanvasElement { return this.canvas; }
+    setStyle(): void {
+      if (this.generation === 1) throw new Error('private dynamic style parser detail');
+    }
+    remove(): void { removals += 1; }
+  }
+  const el = document.createElement('lr-map') as LyraMap;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+    Map: DynamicStyleMap,
+  });
+  el.mapStyle = RASTER_STYLE;
+  el.strings = { mapInitializationFailed: 'Map style could not be applied' };
+  document.body.append(el);
+  try {
+    await waitUntil(() => el.map != null, 'initial fake map never initialized');
+    el.mapStyle = { ...RASTER_STYLE, name: 'throws' };
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="error"]') != null,
+      'dynamic style failure never reached the localized error state',
+    );
+    expect(el.map).to.equal(undefined);
+    expect(removals).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim()).to.equal(
+      'Map style could not be applied',
+    );
+
+    el.mapStyle = { ...RASTER_STYLE, name: 'retry' };
+    await waitUntil(() => el.map != null, 'dynamic style retry never initialized');
+    expect(constructions).to.equal(2);
+  } finally {
+    el.remove();
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      value: originalIntersectionObserver,
+    });
   }
 });
 
@@ -340,23 +655,27 @@ it('renders a visible, accessible error state instead of a blank container when 
 // report unsupported, independent of this engine's real capability, so the assertion is
 // deterministic everywhere rather than depending on whether the test runner's own WebGL2 support
 // happens to be available.
-it('renders the same accessible error state instead of crashing when WebGL2 is unavailable', async () => {
+it('renders a distinct accessible error state instead of crashing when WebGL2 is unavailable', async () => {
   const originalGetContext = HTMLCanvasElement.prototype.getContext;
   (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
     function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
       if (contextId === 'webgl2') return null;
       return originalGetContext.call(this, contextId as never, ...(rest as []));
     };
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = document.createElement('lr-map') as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  el.strings = { mapWebglUnavailable: 'Owner realm has no WebGL2' };
+  document.body.append(el);
   try {
-    el.mapStyle = RASTER_STYLE;
-    await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="error"]') != null,
       'error state never rendered',
       { timeout: 2000 },
     );
     expect(el.map == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim()).to.equal(
+      'Owner realm has no WebGL2',
+    );
     expect(el.shadowRoot!.querySelectorAll('[part="container"]').length).to.equal(0);
     // The regression: disconnecting must not throw even though a WebGL2-unavailable environment
     // was detected and construction was skipped entirely.
@@ -379,6 +698,7 @@ it('fails closed when the WebGL2 capability probe itself throws', async () => {
     };
   const el = document.createElement('lr-map') as LyraMap;
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({});
+  el.mapStyle = RASTER_STYLE;
   document.body.append(el);
   try {
     await waitUntil(
@@ -411,7 +731,7 @@ it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired
     original.call(this, changed);
   };
   try {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map .mapStyle=${RASTER_STYLE}></lr-map>`)) as LyraMap;
     await el.updateComplete;
     expect(calledOnSelf).to.be.true;
   } finally {
@@ -547,16 +867,157 @@ it('fires lr-map-load once the underlying map loads', async function () {
 it('renders a legend swatch per entry', async () => {
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
   el.legend = [
-    { color: '#f00', label: 'High' },
-    { color: '#0f0', label: 'Low' },
+    { color: '#f00', label: 'High', pattern: 'diagonal' },
+    { color: '#0f0', label: 'Low', pattern: 'dots' },
   ];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="legend-swatch"]').length).to.equal(2);
+  const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
+  expect(legend.getAttribute('role')).to.equal('group');
+  expect(legend.getAttribute('aria-label')).to.equal('Map legend');
+  expect(legend.getAttribute('aria-controls')).to.equal('map-container');
+  expect(legend.querySelector('[role="list"]') != null).to.be.true;
+  expect(legend.querySelectorAll('[role="listitem"]')).to.have.length(2);
+  expect([...legend.querySelectorAll('[part="legend-swatch"]')].every(
+    (swatch) => swatch.getAttribute('aria-hidden') === 'true',
+  )).to.be.true;
+  expect([...legend.querySelectorAll<HTMLElement>('[part="legend-swatch"]')].every(
+    (swatch) => swatch.inert,
+  )).to.be.true;
+  expect([...legend.querySelectorAll<HTMLElement>('[part="legend-swatch"]')].map(
+    (swatch) => swatch.dataset.pattern,
+  )).to.deep.equal(['diagonal', 'dots']);
 });
 
-it('does not let a LegendEntry.color value inject extra CSS declarations via the swatch style attribute', async () => {
+it('owns a bounded frozen legend snapshot and exposes an exact truncation result', async () => {
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.legend = [{ color: 'red; position: fixed; top: 0px', label: 'Bad' }];
+  const input = Array.from({ length: 150 }, (_, index) => ({
+    color: index % 2 ? '#f00' : '#00f',
+    label: `Category ${index}`,
+    pattern: 'solid' as const,
+  }));
+  el.strings = {
+    paginationSummary: 'Showing {start} through {end} of {total} {itemLabel}',
+    items: 'categories',
+  };
+  el.legend = input;
+  input[0]!.label = 'Caller mutation';
+  await el.updateComplete;
+
+  expect(el.legend.length).to.equal(100);
+  expect(el.legend[0]!.label).to.equal('Category 0');
+  expect(Object.isFrozen(el.legend)).to.be.true;
+  expect(Object.isFrozen(el.legend[0])).to.be.true;
+  expect(Object.isFrozen(el.legendProjection)).to.be.true;
+  expect(el.legendProjection.inputCount).to.equal(150);
+  expect(el.legendProjection.renderedCount).to.equal(100);
+  expect(el.legendProjection.omittedCount).to.equal(50);
+  expect(el.legendProjection.truncatedLabelCount).to.equal(0);
+  expect(el.legendProjection.truncated).to.be.true;
+  const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
+  expect(legend.getAttribute('data-truncated')).to.equal('true');
+  expect(legend.querySelectorAll('[role="listitem"]').length).to.equal(100);
+  expect(legend.querySelector('[role="listitem"]')?.getAttribute('aria-setsize')).to.equal('150');
+  expect(legend.querySelector('[part="legend-limit"]')?.textContent?.trim()).to.equal(
+    'Showing 1 through 100 of 150 categories',
+  );
+});
+
+it('bounds labels and contains malformed or hostile legend records', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const hostile = new Proxy({}, {
+    get(): never {
+      throw new Error('hostile legend getter');
+    },
+  });
+  el.legend = [
+    { color: '#f00', label: 'x'.repeat(400), pattern: 'diagonal' },
+    { color: '#0f0', label: 'Missing pattern' },
+    hostile,
+    { color: '#00f', label: 'Valid', pattern: 'dots' },
+  ] as never;
+  await el.updateComplete;
+
+  expect(el.legend.length).to.equal(2);
+  expect(el.legend[0]!.label.length).to.equal(256);
+  expect(el.legend[0]!.label.endsWith('…')).to.be.true;
+  expect(el.legendProjection.inputCount).to.equal(4);
+  expect(el.legendProjection.omittedCount).to.equal(2);
+  expect(el.legendProjection.truncatedLabelCount).to.equal(1);
+  expect(el.legendProjection.truncated).to.be.true;
+});
+
+it('keeps every legend category pattern distinct in forced colors', async () => {
+  await setForcedColors('active');
+  try {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    el.legend = [
+      { color: '#f00', label: 'Solid', pattern: 'solid' },
+      { color: '#0f0', label: 'Diagonal', pattern: 'diagonal' },
+      { color: '#00f', label: 'Dots', pattern: 'dots' },
+      { color: '#ff0', label: 'Crosshatch', pattern: 'crosshatch' },
+    ];
+    await el.updateComplete;
+    const styles = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="legend-swatch"]')]
+      .map((swatch) => getComputedStyle(swatch).borderStyle);
+    expect(styles).to.deep.equal(['solid', 'dashed', 'dotted', 'double']);
+  } finally {
+    await setForcedColors('none');
+  }
+});
+
+it('projects stable parts onto every supported peer-chrome class without erasing tokens', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const root = document.createElement('div');
+  const cases = [
+    ['maplibregl-marker', 'marker'],
+    ['maplibregl-popup', 'popup'],
+    ['maplibregl-popup-content', 'popup-content'],
+    ['maplibregl-popup-close-button', 'popup-close-button'],
+    ['maplibregl-ctrl-attrib', 'attribution'],
+    ['maplibregl-ctrl-attrib-button', 'attribution-toggle'],
+  ] as const;
+  for (const [className] of cases) {
+    const node = document.createElement(className.includes('button') ? 'button' : 'div');
+    node.className = className;
+    node.setAttribute('part', 'peer-token');
+    root.append(node);
+  }
+  (el as unknown as { syncPeerChromeParts(root: ParentNode): void }).syncPeerChromeParts(root);
+  for (const [className, part] of cases) {
+    const tokens = root.querySelector(`.${className}`)!.getAttribute('part')!.split(/\s+/);
+    expect(tokens.includes('peer-token')).to.be.true;
+    expect(tokens.includes(part)).to.be.true;
+  }
+});
+
+it('projects parts onto peer chrome added after map construction', async () => {
+  const { el } = await connectedMapWithoutMaplibre();
+  const internals = el as unknown as {
+    loading: boolean;
+    observePeerChrome(): void;
+  };
+  internals.loading = false;
+  el.requestUpdate();
+  await el.updateComplete;
+  internals.observePeerChrome();
+  const container = el.shadowRoot!.querySelector('[part="container"]')!;
+  const attribution = document.createElement('div');
+  attribution.className = 'maplibregl-ctrl-attrib';
+  const toggle = document.createElement('button');
+  toggle.className = 'maplibregl-ctrl-attrib-button';
+  attribution.append(toggle);
+  container.append(attribution);
+  await waitUntil(
+    () => attribution.getAttribute('part') === 'attribution' &&
+      toggle.getAttribute('part') === 'attribution-toggle',
+    'late peer chrome never received stable parts',
+  );
+});
+
+it('does not let a LyraMapLegendEntry.color value inject extra CSS declarations via the swatch style attribute', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.legend = [{ color: 'red; position: fixed; top: 0px', label: 'Bad', pattern: 'solid' }];
   await el.updateComplete;
   const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
   // Read the parsed inline style declaration directly — this is what actually
@@ -568,7 +1029,7 @@ it('does not let a LegendEntry.color value inject extra CSS declarations via the
 
 it('does not accept a non-color CSS value (e.g. url()) as a legend swatch background', async () => {
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.legend = [{ color: 'url(https://attacker.example/beacon.gif)', label: 'Bad' }];
+  el.legend = [{ color: 'url(https://attacker.example/beacon.gif)', label: 'Bad', pattern: 'solid' }];
   await el.updateComplete;
   const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
   expect(swatch.style.background).to.equal('');
@@ -585,7 +1046,7 @@ it('does not render the legend panel when legend is empty (the default)', async 
 
 it('renders the legend panel once entries are set, and removes it again once cleared', async () => {
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.legend = [{ color: '#f00', label: 'High' }];
+  el.legend = [{ color: '#f00', label: 'High', pattern: 'solid' }];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="legend"]') != null).to.be.true;
 
@@ -597,7 +1058,7 @@ it('renders the legend panel once entries are set, and removes it again once cle
 describe('aria-label forwarding', () => {
   it('falls back to the localized default when neither label nor a host aria-label is set', async function () {
     if (!hasWebGL2) this.skip();
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map .mapStyle=${RASTER_STYLE}></lr-map>`)) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('role')).to.equal(null);
@@ -607,8 +1068,9 @@ describe('aria-label forwarding', () => {
 
   it('uses a .strings override for the localized default when neither label nor a host aria-label is set', async function () {
     if (!hasWebGL2) this.skip();
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-    el.strings = { map: 'Carte' };
+    const el = (await fixture(html`
+      <lr-map .mapStyle=${RASTER_STYLE} .strings=${{ map: 'Carte' }}></lr-map>
+    `)) as LyraMap;
     await el.updateComplete;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
     expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Carte');
@@ -616,31 +1078,45 @@ describe('aria-label forwarding', () => {
 
   it('uses the label prop when set', async function () {
     if (!hasWebGL2) this.skip();
-    const el = (await fixture(html`<lr-map label="Delivery regions"></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`
+      <lr-map label="Delivery regions" .mapStyle=${RASTER_STYLE}></lr-map>
+    `)) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
     expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Delivery regions');
   });
 
-  it('forwards a host aria-label attribute onto the MapLibre canvas when label is unset', async function () {
+  it('keeps a nonempty host aria-label on the host and gives the canvas a purpose name', async function () {
     if (!hasWebGL2) this.skip();
-    const el = (await fixture(html`<lr-map aria-label="Forwarded label"></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`
+      <lr-map aria-label="Forwarded label" .mapStyle=${RASTER_STYLE}></lr-map>
+    `)) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
-    expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Forwarded label');
+    expect(el.getAttribute('aria-label')).to.equal('Forwarded label');
+    expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Map');
   });
 
-  it('prefers the forwarded host aria-label over the label prop when both are set', async function () {
+  it('uses the purpose-specific label prop without cloning the overall host name', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(
-      html`<lr-map label="Delivery regions" aria-label="Forwarded label"></lr-map>`,
+      html`<lr-map
+        label="Delivery regions"
+        aria-label="Forwarded label"
+        .mapStyle=${RASTER_STYLE}
+      ></lr-map>`,
     )) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
-    expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Forwarded label');
+    expect(el.getAttribute('aria-label')).to.equal('Forwarded label');
+    expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Delivery regions');
   });
 
   it('preserves an explicit empty host aria-label on the MapLibre canvas, updates it live, and restores the label fallback after removal', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(
-      html`<lr-map label="Delivery regions" aria-label=""></lr-map>`,
+      html`<lr-map
+        label="Delivery regions"
+        aria-label=""
+        .mapStyle=${RASTER_STYLE}
+      ></lr-map>`,
     )) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
     const canvas = () => el.map?.getCanvas();
@@ -649,7 +1125,8 @@ describe('aria-label forwarding', () => {
 
     el.setAttribute('aria-label', 'Live delivery map');
     await el.updateComplete;
-    expect(canvas()?.getAttribute('aria-label')).to.equal('Live delivery map');
+    expect(el.getAttribute('aria-label')).to.equal('Live delivery map');
+    expect(canvas()?.getAttribute('aria-label')).to.equal('Delivery regions');
 
     el.removeAttribute('aria-label');
     await el.updateComplete;
@@ -662,8 +1139,8 @@ it('is accessible', async function () {
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;
   el.legend = [
-    { color: '#f00', label: 'High' },
-    { color: '#0f0', label: 'Low' },
+    { color: '#f00', label: 'High', pattern: 'diagonal' },
+    { color: '#0f0', label: 'Low', pattern: 'dots' },
   ];
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -1196,7 +1673,7 @@ describe('dataLayers', () => {
         },
       ],
     },
-  } as unknown as import('./map.js').GeoJsonDataLayer;
+  } as unknown as import('./map.js').LyraMapGeoJsonDataLayer;
 
   it('defaults to an empty array with zero behavior change', async () => {
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
@@ -1387,6 +1864,10 @@ it('provides shadow-local layout for MapLibre canvas, markers, and popups withou
   const popup = el.shadowRoot!.querySelector('.maplibregl-popup') as HTMLElement;
   const popupContent = el.shadowRoot!.querySelector('.maplibregl-popup-content') as HTMLElement;
   const popupClose = el.shadowRoot!.querySelector('.maplibregl-popup-close-button') as HTMLElement;
+  expect(marker.getAttribute('part')?.split(/\s+/).includes('marker')).to.be.true;
+  expect(popup.getAttribute('part')?.split(/\s+/).includes('popup')).to.be.true;
+  expect(popupContent.getAttribute('part')?.split(/\s+/).includes('popup-content')).to.be.true;
+  expect(popupClose.getAttribute('part')?.split(/\s+/).includes('popup-close-button')).to.be.true;
   expect(getComputedStyle(popup).position).to.equal('absolute');
   expect(getComputedStyle(popup).display).to.equal('flex');
   expect(getComputedStyle(popup).pointerEvents).to.equal('none');
@@ -1765,12 +2246,73 @@ it('attaches an openable popup when label or html is provided', async function (
   await el.updateComplete;
 
   const markerEl = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
+  const space = new KeyboardEvent('keydown', {
+    key: ' ',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  });
+  markerEl.dispatchEvent(space);
+  expect(space.defaultPrevented, 'Space activation must not also scroll the page').to.be.true;
   markerEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   await waitUntil(
     () => el.shadowRoot!.querySelector('.maplibregl-popup-content') != null,
     'popup never opened',
   );
   expect(el.shadowRoot!.querySelector('.maplibregl-popup-content')!.textContent).to.contain('Station A');
+});
+
+it('keeps one keyboard popup toggle while preventing only valid Space scroll defaults', async () => {
+  const { el } = await connectedMapWithoutMaplibre();
+  const markerElement = document.createElement('button');
+  let hasPopup = true;
+  let toggles = 0;
+  markerElement.setAttribute('aria-expanded', 'false');
+  const marker = {
+    getPopup: (): object | undefined => hasPopup ? {} : undefined,
+  };
+  // Stand in for MapLibre's own target-phase keyboard activation. The component boundary handler
+  // must suppress the browser Space scroll default without stopping this one peer-owned toggle.
+  markerElement.addEventListener('keydown', (event) => {
+    if ((event.key === ' ' || event.key === 'Enter') && marker.getPopup()) {
+      toggles += 1;
+      markerElement.setAttribute(
+        'aria-expanded',
+        markerElement.getAttribute('aria-expanded') === 'true' ? 'false' : 'true',
+      );
+    }
+  });
+  (el as unknown as {
+    configureMarkerKeyboard: (element: HTMLElement, marker: unknown) => void;
+  }).configureMarkerKeyboard(markerElement, marker);
+
+  const space = new KeyboardEvent('keydown', {
+    key: ' ',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  });
+  markerElement.dispatchEvent(space);
+  expect(space.defaultPrevented).to.be.true;
+  expect(toggles).to.equal(1);
+  expect(markerElement.getAttribute('aria-expanded')).to.equal('true');
+
+  const enter = new KeyboardEvent('keydown', {
+    key: 'Enter',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  });
+  markerElement.dispatchEvent(enter);
+  expect(enter.defaultPrevented).to.be.false;
+  expect(toggles).to.equal(2);
+  expect(markerElement.getAttribute('aria-expanded')).to.equal('false');
+
+  hasPopup = false;
+  const plainSpace = new KeyboardEvent('keydown', { key: ' ', cancelable: true });
+  markerElement.dispatchEvent(plainSpace);
+  expect(plainSpace.defaultPrevented).to.be.false;
+  expect(toggles).to.equal(2);
 });
 
 it('removes all marker DOM on disconnect', async function () {
@@ -1790,7 +2332,7 @@ it('removes all marker DOM on disconnect', async function () {
   expect(shadowRoot.querySelectorAll('.maplibregl-marker').length).to.equal(0);
 });
 
-it('renders a colored marker and an html popup', async function () {
+it('renders a colored marker and derives its accessible name from visible popup HTML', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;
@@ -1798,11 +2340,17 @@ it('renders a colored marker and an html popup', async function () {
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
 
-  el.markers = [{ id: 'a', lngLat: [10, 20], color: '#ff0000', unsafeHtml: '<strong>Station A</strong>' }];
+  el.markers = [{
+    id: 'a',
+    lngLat: [10, 20],
+    color: '#ff0000',
+    unsafeHtml: '<strong>Station A</strong><script>hidden script name</script><span hidden>Hidden</span>',
+  }];
   await el.updateComplete;
 
   const markerEl = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
   expect((markerEl) != null).to.equal(true);
+  expect(markerEl.getAttribute('aria-label')).to.equal('Station A');
   markerEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   await waitUntil(
     () => el.shadowRoot!.querySelector('.maplibregl-popup-content') != null,
@@ -1813,7 +2361,7 @@ it('renders a colored marker and an html popup', async function () {
   expect(popupContent.textContent).to.contain('Station A');
 });
 
-it('puts the host-first localized map name and effective locale on the real MapLibre focus owner', async function () {
+it('keeps the host name on the host and a localized purpose name on the real MapLibre focus owner', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`
     <lr-map
@@ -1829,14 +2377,16 @@ it('puts the host-first localized map name and effective locale on the real MapL
   const canvas = el.map!.getCanvas() as HTMLCanvasElement;
   const container = el.shadowRoot!.querySelector('[part="container"]') as HTMLElement;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(canvas.getAttribute('aria-label')).to.equal('Delivery map');
+  expect(el.getAttribute('aria-label')).to.equal('Delivery map');
+  expect(canvas.getAttribute('aria-label')).to.equal('Carte');
   expect(container.getAttribute('lang')).to.equal('fr-FR');
   expect(base.getAttribute('role')).to.equal(null);
   expect(base.getAttribute('aria-label')).to.equal(null);
 
   el.setAttribute('aria-label', 'Carte des livraisons');
   await el.updateComplete;
-  expect(canvas.getAttribute('aria-label')).to.equal('Carte des livraisons');
+  expect(el.getAttribute('aria-label')).to.equal('Carte des livraisons');
+  expect(canvas.getAttribute('aria-label')).to.equal('Carte');
 });
 
 it('synchronizes popup-capable marker disclosure semantics and localized popup ownership', async function () {
@@ -1941,13 +2491,13 @@ it('contains long legend labels in paired 320px LTR and RTL allocations', async 
       <div dir="ltr" style="inline-size: 320px; max-inline-size: 100%">
         <lr-map
           style="block-size: var(--lr-size-12rem)"
-          .legend=${[{ color: '#f00', label: 'LongestUnbrokenLegendLabel'.repeat(80) }]}
+          .legend=${[{ color: '#f00', label: 'LongestUnbrokenLegendLabel'.repeat(80), pattern: 'solid' }]}
         ></lr-map>
       </div>
       <div dir="rtl" lang="ar" style="inline-size: 320px; max-inline-size: 100%">
         <lr-map
           style="block-size: var(--lr-size-12rem)"
-          .legend=${[{ color: '#00f', label: 'أطولتسميةوسيلةإيضاحمتصلة'.repeat(80) }]}
+          .legend=${[{ color: '#00f', label: 'أطولتسميةوسيلةإيضاحمتصلة'.repeat(80), pattern: 'dots' }]}
         ></lr-map>
       </div>
     </div>
@@ -2068,5 +2618,5 @@ function choropleth(sourceId: string, stops: [number, string][]) {
         },
       ],
     },
-  } as unknown as import('./map.js').ChoroplethLayer;
+  } as unknown as import('./map.js').LyraMapChoroplethLayer;
 }

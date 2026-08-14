@@ -81,6 +81,7 @@
        backs full-bleed media chrome. Set them separately. */
     --lr-theme-color-overlay: rgb(0 0 0 / 0.5);
     --lr-theme-color-overlay-strong: rgb(0 0 0 / 0.92);
+    --lr-theme-color-on-strong-overlay: #ffffff;
     /* The surface a modal panel paints itself with. In light mode it is the page surface: a white
        dialog on a white page is separated by the scrim drawn around it. In dark mode it must not
        be, or the panel and the page are the same near-black and there is no panel. */
@@ -400,6 +401,7 @@
        exists to draw disappears. Both scrims go heavier here. */
     --lr-theme-color-overlay: rgb(0 0 0 / 0.72);
     --lr-theme-color-overlay-strong: rgb(0 0 0 / 0.95);
+    --lr-theme-color-on-strong-overlay: #ffffff;
     /* Elevation is a luminance difference, and a 12%-alpha black shadow on a near-black surface is
        not one. The alphas roughly triple so each step stays a visible step; the geometry of the two
        largest steps grows too, since a wider, softer shadow is what still reads as depth when the

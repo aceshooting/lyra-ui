@@ -7,7 +7,7 @@ const data = [
   {
     id: '1',
     label: 'Root',
-    badge: 2,
+    badges: [{ text: '2' }],
     children: [
       { id: '1.1', label: 'Child A' },
       { id: '1.2', label: 'Child B' },
@@ -18,7 +18,7 @@ const data = [
 
 it('renders a badge value of 0 instead of treating it as absent', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
-  el.data = [{ id: '1', label: 'Root', badge: 0 }];
+  el.data = [{ id: '1', label: 'Root', badges: [{ text: '0' }], }];
   await el.updateComplete;
   const root = el.querySelector('lr-tree-item') as HTMLElement;
   const badge = root.shadowRoot!.querySelector('[part="badge"]');

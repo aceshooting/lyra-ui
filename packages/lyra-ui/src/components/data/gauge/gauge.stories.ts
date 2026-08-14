@@ -14,15 +14,15 @@ export const Radial: Story = {
 };
 
 export const Linear: Story = {
-  render: () => html`<lr-gauge type="linear" value="40" max="100" label="Disk"></lr-gauge>`,
+  render: () => html`<lr-gauge shape="linear" value="40" max="100" label="Disk"></lr-gauge>`,
 };
 
 export const Ring: Story = {
   render: () => html`
     <div style="display: flex; gap: 2rem; align-items: center; flex-wrap: wrap">
-      <lr-gauge type="ring" value="72" max="100" label="Score"></lr-gauge>
+      <lr-gauge shape="ring" value="72" max="100" label="Score"></lr-gauge>
       <lr-gauge
-        type="ring"
+        shape="ring"
         value="84"
         max="100"
         label="Coverage"
@@ -32,8 +32,8 @@ export const Ring: Story = {
   `,
 };
 
-export const WithValueLabel: Story = {
-  render: () => html`<lr-gauge value="72" max="100" label="Temp" .valueLabel=${'72°F'}></lr-gauge>`,
+export const WithValueText: Story = {
+  render: () => html`<lr-gauge value="72" max="100" label="Temp" .valueText=${'72°F'}></lr-gauge>`,
 };
 
 export const NonzeroMin: Story = {

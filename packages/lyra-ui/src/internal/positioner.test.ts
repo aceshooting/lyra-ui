@@ -1,4 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
+import { platform as floatingPlatform } from '@floating-ui/dom';
 import {
   createPlacementSyncOwnershipController,
   createPlacementStyleTransaction,
@@ -78,7 +79,7 @@ it('tracks visual viewport rect changes until its cleanup runs', async () => {
   const stop = trackRect(target, (rect) => updates.push(rect));
   const visualViewport = window.visualViewport;
 
-  expect(updates.length, 'trackRect reports the initial rect immediately').to.be.greaterThan(0);
+  expect(updates.length, 'trackRect reports the initial rect exactly once').to.equal(1);
   const initial = updates[0]!;
   const expectedInitial = target.getBoundingClientRect();
   expect([initial.left, initial.top, initial.width, initial.height]).to.deep.equal([
@@ -695,7 +696,7 @@ it('synchronously restores open middleware writes when placement is disposed', a
     {
       getBoundingClientRect() {
         geometryReads += 1;
-        if (geometryReads > 1) {
+        if (geometryReads > 3) {
           beforeStop = snapshot();
           stop();
           afterStop = snapshot();
@@ -706,7 +707,7 @@ it('synchronously restores open middleware writes when placement is disposed', a
     popup,
     { flip: false, hoverBridge: bridge, shift: false, sync: 'both' },
   );
-  await waitFor(() => geometryReads, (reads) => reads > 1);
+  await waitFor(() => geometryReads, (reads) => reads > 3);
 
   expect(beforeStop?.width).to.deep.equal(['50px', '']);
   expect(beforeStop?.height).to.deep.equal(['20px', '']);
@@ -908,6 +909,147 @@ describe('virtualAnchorFromRect', () => {
   it('leaves contextElement undefined when not supplied', () => {
     const anchor = virtualAnchorFromRect({ x: 0, y: 0 });
     expect(anchor.contextElement).to.equal(undefined);
+  });
+
+  it('rejects non-finite coordinates and negative or non-finite dimensions', () => {
+    for (const rect of [
+      { x: Number.NaN, y: 0 },
+      { x: 0, y: Number.POSITIVE_INFINITY },
+      { x: 0, y: 0, width: -1 },
+      { x: 0, y: 0, width: Number.NaN },
+      { x: 0, y: 0, height: -1 },
+      { x: 0, y: 0, height: Number.NEGATIVE_INFINITY },
+    ]) {
+      expect(() => virtualAnchorFromRect(rect)).to.throw(RangeError);
+    }
+  });
+});
+
+describe('numeric input validation', () => {
+  it('rejects every non-finite numeric option before mutating or observing the popup', () => {
+    const anchor = document.createElement('button');
+    const popup = document.createElement('div');
+    popup.style.position = 'sticky';
+    popup.style.margin = '3px';
+    let placed = 0;
+
+    for (const name of [
+      'offset',
+      'skidding',
+      'flipPadding',
+      'shiftPadding',
+      'padding',
+      'autoSizePadding',
+      'arrowPadding',
+    ] as const) {
+      let cleanup: (() => void) | undefined;
+      let error: unknown;
+      try {
+        cleanup = place(anchor, popup, {
+          [name]: Number.NaN,
+          onPlaced: () => placed++,
+        });
+      } catch (caught) {
+        error = caught;
+      } finally {
+        cleanup?.();
+      }
+      expect(error instanceof RangeError, `${name} must reject synchronously`).to.equal(true);
+      expect(popup.style.position, `${name} must not partially restyle position`).to.equal('sticky');
+      expect(popup.style.margin, `${name} must not partially restyle margin`).to.equal('3px');
+    }
+    expect(placed).to.equal(0);
+  });
+
+  it('allows signed finite offsets but rejects negative padding before setup', () => {
+    const anchor = document.createElement('button');
+    const popup = document.createElement('div');
+    const signedCleanup = place(anchor, popup, { offset: -4, skidding: -2 });
+    signedCleanup();
+
+    for (const name of [
+      'flipPadding',
+      'shiftPadding',
+      'padding',
+      'autoSizePadding',
+      'arrowPadding',
+    ] as const) {
+      let cleanup: (() => void) | undefined;
+      let error: unknown;
+      try {
+        cleanup = place(anchor, popup, { [name]: -1 });
+      } catch (caught) {
+        error = caught;
+      } finally {
+        cleanup?.();
+      }
+      expect(error instanceof RangeError, `${name} must reject negative values`).to.equal(true);
+    }
+  });
+
+  it('rejects invalid custom virtual-anchor geometry before popup writes or callbacks', () => {
+    const popup = document.createElement('div');
+    popup.style.position = 'sticky';
+    popup.style.margin = '5px';
+    let placed = 0;
+    const anchor: VirtualAnchor = {
+      getBoundingClientRect: () => ({
+        x: Number.NaN,
+        y: 0,
+        width: 0,
+        height: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        toJSON: () => ({}),
+      }) as DOMRect,
+    };
+
+    expect(() => place(anchor, popup, { onPlaced: () => placed++ })).to.throw(RangeError);
+    expect(popup.style.position).to.equal('sticky');
+    expect(popup.style.margin).to.equal('5px');
+    expect(placed).to.equal(0);
+  });
+
+  it('fails closed when platform geometry makes derived available space non-finite', async () => {
+    const popup = await fixture<HTMLElement>(html`<div style="width: 20px; height: 20px;"></div>`);
+    const mutablePlatform = floatingPlatform as unknown as {
+      getClippingRect: (...args: unknown[]) => Promise<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }>;
+    };
+    const originalGetClippingRect = mutablePlatform.getClippingRect;
+    mutablePlatform.getClippingRect = async () => ({
+      x: 0,
+      y: 0,
+      width: Number.NaN,
+      height: 100,
+    });
+    let placed = 0;
+    let stop: (() => void) | undefined;
+
+    try {
+      stop = place(virtualAnchorFromRect({ x: 10, y: 10 }), popup, {
+        flip: false,
+        shift: false,
+        onPlaced: () => placed++,
+      });
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    } finally {
+      stop?.();
+      mutablePlatform.getClippingRect = originalGetClippingRect;
+    }
+
+    expect(placed).to.equal(0);
+    expect(popup.style.left).to.equal('');
+    expect(popup.style.top).to.equal('');
+    expect(popup.style.getPropertyValue('--lr-positioner-available-inline-size')).to.equal('');
+    expect(popup.style.getPropertyValue('--lr-positioner-available-block-size')).to.equal('');
   });
 });
 

@@ -3,7 +3,10 @@ import {
   type DataGridCopyOptions,
   type DataGridCsvOptions,
   type DataGridExportOptions,
+  type DataGridGroupDetail,
+  type DataGridRequest,
   type DataGridScrollOptions,
+  type LyraDataGridEventMap,
 } from '../src/lyra.js';
 
 interface Row {
@@ -38,6 +41,12 @@ type UpstreamScrollToIndexOptions = {
 };
 
 type Assert<T extends true> = T;
+type IsEqual<Left, Right> =
+  (<Value>() => Value extends Left ? 1 : 2) extends <Value>() => Value extends Right ? 1 : 2
+    ? (<Value>() => Value extends Right ? 1 : 2) extends <Value>() => Value extends Left ? 1 : 2
+      ? true
+      : false
+    : false;
 type AllUpstreamOptionFieldsAreAccepted<Upstream extends object, Target extends object> = Exclude<{
   [Key in keyof Upstream]-?: Key extends keyof Target
     ? Upstream[Key] extends Target[Key]
@@ -60,12 +69,28 @@ type DataGridCsvOptionsAcceptAllUpstreamFields = Assert<
 type DataGridScrollOptionsAcceptAllUpstreamFields = Assert<
   AllUpstreamOptionFieldsAreAccepted<UpstreamScrollToIndexOptions, DataGridScrollOptions>
 >;
+type DataGridRequestEventUsesMirroredName = Assert<
+  IsEqual<LyraDataGridEventMap<Row>['request']['detail'], DataGridRequest>
+>;
+type DataGridGroupExpandEventUsesCanonicalDetail = Assert<
+  IsEqual<LyraDataGridEventMap<Row>['lr-group-expand']['detail'], DataGridGroupDetail<Row>>
+>;
+type DataGridGroupCollapseEventUsesCanonicalDetail = Assert<
+  IsEqual<LyraDataGridEventMap<Row>['lr-group-collapse']['detail'], DataGridGroupDetail<Row>>
+>;
+
+// The v9 event contract retains the mirrored `request` event as the sole request surface.
+// @ts-expect-error `lr-data-request` was intentionally removed.
+export type RemovedDataGridRequestEvent = LyraDataGridEventMap<Row>['lr-data-request'];
 
 export type DataGridUpstreamOptionContractAssertions =
   | DataGridCopyOptionsAcceptAllUpstreamFields
   | DataGridExportOptionsAcceptAllUpstreamFields
   | DataGridCsvOptionsAcceptAllUpstreamFields
-  | DataGridScrollOptionsAcceptAllUpstreamFields;
+  | DataGridScrollOptionsAcceptAllUpstreamFields
+  | DataGridRequestEventUsesMirroredName
+  | DataGridGroupExpandEventUsesCanonicalDetail
+  | DataGridGroupCollapseEventUsesCanonicalDetail;
 
 const upstreamCopyOptions: UpstreamCopySelectedRowsOptions = {
   columnIds: ['name', 'score'],

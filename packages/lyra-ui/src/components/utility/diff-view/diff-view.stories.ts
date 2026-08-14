@@ -38,7 +38,7 @@ export const Copyable: Story = {
     docs: {
       description: {
         story:
-          'The button remains in its resting state until the Clipboard API resolves. Rejections show and announce the localized failure state and emit `lr-error` plus `lr-copy-error`.',
+          'The button remains in its resting state until the Clipboard API settles. A fulfilled write emits the frozen success-only `lr-copy` outcome. Rejections show and announce the localized failure state and emit `lr-error` plus the frozen detailed `lr-copy-error` outcome.',
       },
     },
   },
@@ -60,4 +60,16 @@ export const SplitNarrow: Story = {
         .newText=${'function add(a, b, c) {\n  return a + b + c;\n}'}
       ></lr-diff-view>
     </div>`,
+};
+
+export const EmptyDocument: Story = {
+  name: 'Empty document against one added line',
+  parameters: {
+    docs: {
+      description: {
+        story: 'An empty document has zero logical lines, so this renders exactly one addition with no phantom blank row.',
+      },
+    },
+  },
+  render: () => html`<lr-diff-view .oldText=${''} .newText=${'created'} copyable></lr-diff-view>`,
 };

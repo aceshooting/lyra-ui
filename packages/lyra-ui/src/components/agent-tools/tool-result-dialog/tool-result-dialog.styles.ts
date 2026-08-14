@@ -51,7 +51,9 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     inline-size: min(var(--lr-size-48rem), 100%);
+    min-inline-size: 0;
     max-block-size: 100%;
+    box-sizing: border-box;
     /* Modal-panel surface, not the page surface -- in dark mode the two resolve to the same
        near-black and the dialog reads as a scrim with floating text instead of a panel. */
     background: var(--lr-color-surface-overlay);
@@ -76,6 +78,9 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: center;
     gap: var(--lr-space-s);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    box-sizing: border-box;
     padding: var(--lr-space-m) var(--lr-space-l);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
@@ -86,8 +91,12 @@ export const styles = css`
     gap: var(--lr-space-s);
     flex: 1 1 auto;
     min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='tool-name'] {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     font-weight: var(--lr-font-weight-semibold);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -97,16 +106,27 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lr-size-0-25rem);
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    box-sizing: border-box;
     padding: var(--lr-size-0-125rem) var(--lr-space-xs);
     border-radius: var(--lr-radius);
     font-size: var(--lr-font-size-xs);
     font-weight: var(--lr-font-weight-semibold);
+    white-space: normal;
+    overflow-wrap: anywhere;
     color: var(--lr-tool-result-dialog-pending-color);
     background: var(--lr-tool-result-dialog-pending-bg);
   }
   [part='status'] svg {
+    flex: 0 0 auto;
     inline-size: var(--lr-size-1em);
     block-size: var(--lr-size-1em);
+  }
+  [part='status'] span {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
   /* Pending is the resting state before a tool call has done anything worth
      calling out; its foreground and background remain independently themeable. */
@@ -133,6 +153,7 @@ export const styles = css`
     animation: lr-tool-result-dialog-spin var(--lr-tool-result-dialog-spin) infinite;
   }
   [part='duration'] {
+    max-inline-size: 100%;
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
     white-space: nowrap;
@@ -142,6 +163,8 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     flex: 0 0 auto;
+    max-inline-size: 100%;
+    margin-inline-start: auto;
   }
   [part='maximize-button'],
   [part='close-button'] {

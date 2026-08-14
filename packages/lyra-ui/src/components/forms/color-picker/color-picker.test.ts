@@ -193,9 +193,9 @@ it('reportValidity marks an invalid picker for assistive technology', async () =
   expect(part(el, 'input').getAttribute('aria-invalid')).to.equal('true');
 });
 
-it('accepts default-value as the Shoelace reset-default spelling', async () => {
+it('uses only the canonical value attribute as its reset default', async () => {
   const form = (await fixture(html`
-    <form><lr-color-picker name="accent" default-value="#ff0000"></lr-color-picker></form>
+    <form><lr-color-picker name="accent" value="#ff0000"></lr-color-picker></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-color-picker') as LyraColorPicker;
   await el.updateComplete;
@@ -210,12 +210,11 @@ it('accepts default-value as the Shoelace reset-default spelling', async () => {
   expect(new FormData(form).get('accent')).to.equal('#ff0000');
 });
 
-it('falls back to an empty default value when default-value is cleared programmatically', async () => {
+it('does not treat fictional default-value as a reset-default alias', async () => {
   const el = (await fixture(html`<lr-color-picker default-value="#00ff00"></lr-color-picker>`)) as LyraColorPicker;
   await el.updateComplete;
-  expect(el.defaultValue).to.equal('#00ff00');
-  el.defaultValueAlias = null;
   expect(el.defaultValue).to.equal('');
+  expect(el.value).to.equal('');
 });
 
 it('treats a null value assignment as clearing the field rather than throwing', async () => {

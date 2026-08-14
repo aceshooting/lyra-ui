@@ -1,7 +1,9 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { FlowHandle, FlowRunStatus } from '../flow-canvas/flow-canvas.class.js';
+import type { LyraOrientation, LyraToolStatus } from '../../../internal/shared-unions.js';
+import type { FlowHandle } from '../flow-canvas/flow-types.js';
+import { normalizeFlowStatus, snapshotFlowHandles } from '../flow-canvas/flow-model.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -12,8 +14,8 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_flowInputHandle, LYRA_DEFAULT_flowOutputHandle, LYRA_DEFAULT_flowStatusWithDetail, LYRA_DEFAULT_flowStatusWithDuration, LYRA_DEFAULT_progress, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-const DEFAULT_INPUTS: FlowHandle[] = [{ id: 'in' }];
-const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
+const DEFAULT_INPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id: 'in' })]);
+const DEFAULT_OUTPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id: 'out' })]);
 
 /**
  * `<lr-flow-node>` — the card a workflow node renders as: header/body/toolbar chrome,
@@ -45,21 +47,20 @@ const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
  *   `compact`.
  * @cssprop [--lr-flow-node-compact-gap=var(--lr-space-2xs)] - Gap between `[part="card"]`'s rows
  *   while `compact`.
- * @cssprop [--lr-flow-node-selected-border=var(--lr-color-brand)] - Border color of the card while
- *   `selected`. Overriding the selection color otherwise requires hijacking the library-wide
- *   `--lr-color-brand` token.
+ * @cssprop [--lr-flow-node-selected-outline-color=var(--lr-color-brand)] - Outline color of the
+ *   card while `selected`. The outline stays independent from execution-state border and glow.
  * @cssprop [--lr-flow-node-running-border=var(--lr-color-brand)] - Border color of the card while
- *   `status="running"`. Independent from `--lr-flow-node-selected-border` so a consumer can retint
- *   just one of the two states without the other following along.
+ *   `status="running"`. Independent from `--lr-flow-node-selected-outline-color` so a consumer can
+ *   retint just one of the two states without the other following along.
  * @cssprop [--lr-flow-node-running-glow=var(--lr-color-brand-quiet)] - Box-shadow color of the
  *   running-state ring around the card, and the pulse keyframes' peak color.
- * @cssprop [--lr-flow-node-status-color=var(--lr-color-border-strong)] - Status-dot color when no
+ * @cssprop [--lr-flow-status-color=var(--lr-color-border-strong)] - Status-dot color when no
  *   execution status is set.
- * @cssprop [--lr-flow-node-status-pending-color=var(--lr-color-border-strong)] - Pending status-dot color.
- * @cssprop [--lr-flow-node-status-running-color=var(--lr-color-brand)] - Running status-dot color.
- * @cssprop [--lr-flow-node-status-success-color=var(--lr-color-success)] - Success status-dot color.
- * @cssprop [--lr-flow-node-status-error-color=var(--lr-color-danger)] - Error status-dot color.
- * @cssprop [--lr-flow-node-status-denied-color=var(--lr-color-warning)] - Denied status-dot color.
+ * @cssprop [--lr-flow-status-pending-color=var(--lr-color-border-strong)] - Pending status-dot color.
+ * @cssprop [--lr-flow-status-running-color=var(--lr-color-brand)] - Running status-dot color.
+ * @cssprop [--lr-flow-status-success-color=var(--lr-color-success)] - Success status-dot color.
+ * @cssprop [--lr-flow-status-error-color=var(--lr-color-danger)] - Error status-dot color.
+ * @cssprop [--lr-flow-status-denied-color=var(--lr-color-warning)] - Denied status-dot color.
  * @cssprop [--lr-flow-node-progress-track-color=var(--lr-color-border)] - Determinate progress
  *   track color.
  * @cssprop [--lr-flow-node-progress-fill-color=var(--lr-color-brand)] - Determinate progress fill
@@ -96,8 +97,22 @@ export class LyraFlowNode extends LyraElement {
    *  serializing as `node-id=""`, which the canvas would have to skip anyway. */
   @property({ attribute: 'node-id', reflect: true, converter: omittedEmptyStringConverter })
   nodeId = '';
+  /** Consumer taxonomy forwarded by `lr-flow-canvas` as the reachable `data-node-type` attribute. */
+  @property({ attribute: 'data-node-type', reflect: true, converter: omittedEmptyStringConverter })
+  flowType = '';
   @property() heading = '';
-  @property({ reflect: true }) status: FlowRunStatus | null = null;
+  private _status: LyraToolStatus | null = null;
+  /** Canonical tool lifecycle status. Invalid runtime/attribute values normalize to null. */
+  @property({ reflect: true })
+  get status(): LyraToolStatus | null {
+    return this._status;
+  }
+  set status(value: LyraToolStatus | null) {
+    const previous = this._status;
+    const next = normalizeFlowStatus(value);
+    this._status = next;
+    if (next !== previous || value !== next) this.requestUpdate('status', previous);
+  }
   @property({ type: Number }) progress: number | null = null;
   @property({ attribute: 'status-detail' }) statusDetail = '';
   @property({ type: Number, attribute: 'duration-ms' }) durationMs: number | null = null;
@@ -107,25 +122,79 @@ export class LyraFlowNode extends LyraElement {
    *  i.e. the full card padding. Purely a density knob: the border, background and shadow stay, as
    *  do the `selected` and `status="running"` treatments. */
   @property({ type: Boolean, reflect: true }) compact = false;
-  @property({ attribute: false }) inputs: FlowHandle[] = DEFAULT_INPUTS;
-  @property({ attribute: false }) outputs: FlowHandle[] = DEFAULT_OUTPUTS;
+  private _inputs: readonly FlowHandle[] = DEFAULT_INPUTS;
+  @property({ attribute: false })
+  get inputs(): readonly FlowHandle[] {
+    return this._inputs;
+  }
+  set inputs(value: readonly FlowHandle[]) {
+    const previous = this._inputs;
+    this._inputs = snapshotFlowHandles(value) ?? Object.freeze([]);
+    this.requestUpdate('inputs', previous);
+  }
+
+  private _outputs: readonly FlowHandle[] = DEFAULT_OUTPUTS;
+  @property({ attribute: false })
+  get outputs(): readonly FlowHandle[] {
+    return this._outputs;
+  }
+  set outputs(value: readonly FlowHandle[]) {
+    const previous = this._outputs;
+    this._outputs = snapshotFlowHandles(value) ?? Object.freeze([]);
+    this.requestUpdate('outputs', previous);
+  }
   /** Additive: which physical edge handles render on, mirroring the canvas's own `orientation` when
    *  this card is canvas-adopted; a standalone card defaults to `"horizontal"`. */
-  @property({ reflect: true }) orientation: 'horizontal' | 'vertical' = 'horizontal';
+  private _orientation: LyraOrientation = 'horizontal';
+  @property({ reflect: true })
+  get orientation(): LyraOrientation {
+    return this._orientation;
+  }
+  set orientation(value: LyraOrientation) {
+    const previous = this._orientation;
+    const next: LyraOrientation = value === 'vertical' ? 'vertical' : 'horizontal';
+    this._orientation = next;
+    if (next !== previous || value !== next) this.requestUpdate('orientation', previous);
+  }
 
   @state() private hasHeaderSlot = false;
+  @state() private hasIconSlot = false;
+  @state() private hasBodySlot = false;
+  @state() private hasToolbarSlot = false;
   @state() private pulsesRing = false;
   private browserStateSeeded = false;
 
-  private sampleHeaderSlotPresence(): void {
+  private sampleSlotPresence(): void {
     const renderRoot = this.renderRoot as ParentNode | undefined;
-    const renderedSlot = renderRoot?.querySelector<HTMLSlotElement>('slot[name="header"]');
-    if (renderedSlot) {
-      this.hasHeaderSlot = renderedSlot.assignedElements({ flatten: true }).length > 0;
+    const renderedSlots = renderRoot?.querySelectorAll<HTMLSlotElement>('slot');
+    if (renderedSlots?.length) {
+      const assigned = (name: string): boolean =>
+        [...renderedSlots].some(
+          (slot) => slot.name === name && slot.assignedElements({ flatten: true }).length > 0,
+        );
+      this.hasHeaderSlot = assigned('header');
+      this.hasIconSlot = assigned('icon');
+      this.hasBodySlot = [...renderedSlots].some(
+        (slot) =>
+          slot.name === '' &&
+          slot.assignedNodes({ flatten: true }).some(
+            (node) => node.nodeType === 1 || Boolean(node.textContent?.trim()),
+          ),
+      );
+      this.hasToolbarSlot = assigned('toolbar');
       return;
     }
     const children = (this as unknown as { children?: HTMLCollection }).children;
-    this.hasHeaderSlot = Array.from(children ?? []).some((element) => element.getAttribute('slot') === 'header');
+    const lightChildren = Array.from(children ?? []);
+    const childNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
+    this.hasHeaderSlot = lightChildren.some((element) => element.getAttribute('slot') === 'header');
+    this.hasIconSlot = lightChildren.some((element) => element.getAttribute('slot') === 'icon');
+    this.hasBodySlot = Array.from(childNodes ?? []).some(
+      (node) =>
+        (node.nodeType === 1 && !(node as Element).hasAttribute('slot')) ||
+        (node.nodeType === 3 && Boolean(node.textContent?.trim())),
+    );
+    this.hasToolbarSlot = lightChildren.some((element) => element.getAttribute('slot') === 'toolbar');
   }
 
   private shouldPulseRing(): boolean {
@@ -134,7 +203,7 @@ export class LyraFlowNode extends LyraElement {
   }
 
   private sampleBrowserState(): void {
-    this.sampleHeaderSlotPresence();
+    this.sampleSlotPresence();
     this.pulsesRing = this.shouldPulseRing();
     this.browserStateSeeded = true;
   }
@@ -160,8 +229,8 @@ export class LyraFlowNode extends LyraElement {
     if (this.hasUpdated || this.browserStateSeeded) this.sampleBrowserState();
   }
 
-  private onHeaderSlotChange = (e: Event): void => {
-    this.hasHeaderSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  private onSlotChange = (): void => {
+    this.sampleSlotPresence();
   };
 
   /** `progress` normalized to a finite `[0, 100]` percentage, or `null` -- `null`/`undefined` and a
@@ -218,13 +287,11 @@ export class LyraFlowNode extends LyraElement {
     return html`<div part="base">
       <div class="handles handles-input">${this.inputs.map((h) => this.handleTemplate('input', h))}</div>
       <div part="card" class="card" ?data-pulse=${this.pulsesRing}>
-        <slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>
-        ${this.hasHeaderSlot
-          ? nothing
-          : html`<div part="header">
-              <slot name="icon" part="icon"></slot>
-              <span part="heading">${this.heading}</span>
-            </div>`}
+        <slot name="header" @slotchange=${this.onSlotChange}></slot>
+        <div part="header" ?hidden=${this.hasHeaderSlot || (!this.heading && !this.hasIconSlot)}>
+          <slot name="icon" part="icon" @slotchange=${this.onSlotChange}></slot>
+          <span part="heading">${this.heading}</span>
+        </div>
         ${this.status
           ? html`<div part="status" data-status=${this.status}>
               <span class="status-dot"></span>${this.statusText()}
@@ -242,8 +309,12 @@ export class LyraFlowNode extends LyraElement {
               <div class="progress-fill" style="inline-size:${clampedProgress}%"></div>
             </div>`
           : nothing}
-        <div part="body"><slot></slot></div>
-        <div part="toolbar"><slot name="toolbar"></slot></div>
+        <div part="body" ?hidden=${!this.hasBodySlot}>
+          <slot @slotchange=${this.onSlotChange}></slot>
+        </div>
+        <div part="toolbar" ?hidden=${!this.hasToolbarSlot}>
+          <slot name="toolbar" @slotchange=${this.onSlotChange}></slot>
+        </div>
       </div>
       <div class="handles handles-output">${this.outputs.map((h) => this.handleTemplate('output', h))}</div>
     </div>`;

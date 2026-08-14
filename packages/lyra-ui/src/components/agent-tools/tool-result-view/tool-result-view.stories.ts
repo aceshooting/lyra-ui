@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './tool-result-view.js';
 import { registerToolRenderer } from './registry.js';
+import type { ToolRendererRegistry } from './registry.js';
 
 // Registered once, at module load -- every story below dispatches against
 // this same module-level default registry, exactly like a real app would
@@ -87,6 +88,50 @@ export const NoRendererRegistered: Story = {
       style="display:block;max-width:24rem;"
     ></lr-tool-result-view>
   `,
+};
+
+export const TextFallback: Story = {
+  name: 'Typed text fallback',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`fallback="text"` is the second member of the exported `ToolResultFallback` union. A foreign runtime spelling normalizes back to the reflected `json` default.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-tool-result-view
+      tool-name="unregistered_text_tool"
+      fallback="text"
+      copyable
+      .result=${'Plain text returned by the tool.'}
+      style="display:block;max-width:24rem;"
+    ></lr-tool-result-view>
+  `,
+};
+
+export const InvalidCustomRegistryDefinitionFailsClosed: Story = {
+  name: 'Invalid custom registry definition fails closed',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Runtime validation rejects an untyped `{}` renderer definition and routes the result through the normal JSON fallback/error event instead of caching it as a successful load.',
+      },
+    },
+  },
+  render: () => {
+    const registry = new Map([['invalid_provider', {}]]) as unknown as ToolRendererRegistry;
+    return html`
+      <lr-tool-result-view
+        tool-name="invalid_provider"
+        .registry=${registry}
+        .result=${{ preserved: 'fallback data' }}
+        style="display:block;max-width:24rem;"
+      ></lr-tool-result-view>
+    `;
+  },
 };
 
 export const ExactNameMatch: Story = {

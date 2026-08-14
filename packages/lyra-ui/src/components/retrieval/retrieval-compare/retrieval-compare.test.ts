@@ -58,6 +58,26 @@ it('applies per-instance strings to the comparison region label', async () => {
   );
 });
 
+it('keeps exactly one comparison owner across explicit-empty and dynamic host naming', async () => {
+  const el = (await fixture(html`
+    <lr-retrieval-compare aria-label="Author comparison" label="Result comparison" .sets=${sets}></lr-retrieval-compare>
+  `)) as LyraRetrievalCompare;
+  const region = () => el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(el.getAttribute('aria-label')).to.equal('Author comparison');
+  expect(region().getAttribute('aria-label')).to.equal(null);
+  expect(region().getAttribute('role')).to.equal(null);
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('');
+  expect(region().getAttribute('aria-label')).to.equal('');
+  expect(region().getAttribute('role')).to.equal('region');
+  el.setAttribute('aria-label', 'Revised comparison');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Revised comparison');
+  expect(region().getAttribute('aria-label')).to.equal(null);
+  expect(region().getAttribute('role')).to.equal(null);
+});
+
 it('uses instance-safe heading ids instead of caller set ids', async () => {
   const hostileSets: RetrievalComparisonSet[] = [
     { id: 'same id', label: 'First', chunks: [chunk('a', 0.8)] },

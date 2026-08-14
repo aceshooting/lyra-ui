@@ -5,20 +5,20 @@ export const styles = css`
     display: inline-flex;
     max-inline-size: 100%;
   }
-  :host([reveal-on-hover]) {
+  :host([reveal-on-interaction]) {
     opacity: 0;
     transition: opacity var(--lr-transition-fast);
   }
-  :host([reveal-on-hover][data-revealed]) {
+  :host([reveal-on-interaction][data-revealed]) {
     opacity: 1;
   }
   @media (hover: none) {
-    :host([reveal-on-hover]) {
+    :host([reveal-on-interaction]) {
       opacity: 1;
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    :host([reveal-on-hover]) {
+    :host([reveal-on-interaction]) {
       transition: none;
     }
   }

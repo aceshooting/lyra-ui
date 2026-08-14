@@ -1,5 +1,5 @@
 export * from './agent-run.class.js';
-import '../../conversation/generation-status/generation-status.js';
+import '../../conversation/generation-metrics/generation-metrics.js';
 import '../../conversation/usage-badge/usage-badge.js';
 import '../task-list/task-list.js';
 import '../../overlays/badge/badge.js';

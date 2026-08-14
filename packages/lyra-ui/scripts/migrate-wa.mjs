@@ -2,9 +2,9 @@
 
 // Contract-aware Web Awesome / Shoelace migration. Automatic edits come only from the checked-in
 // component inventory: exact mappings receive prefix/import edits, rewritten mappings additionally
-// receive their declared member/default rules, and every other mapping remains unchanged with a
-// location-aware warning. The README parser remains exported for the independent documentation
-// coverage gate; it is not an input to migration decisions.
+// receive their declared member/default rules and any scoped behavior-review diagnostics, and every
+// other mapping remains unchanged with a location-aware warning. The README parser remains exported
+// for the independent documentation coverage gate; it is not an input to migration decisions.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,6 +15,7 @@ import {
   validateAccessibilityContract,
   validateLocalMigrations,
   validateMappingNormalizations,
+  validateMethodEdgeParity,
 } from './component-inventory.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -65,6 +66,7 @@ const PACKAGE_TIERS = new Set(['free', 'pro']);
 const STATIC_API_STATUSES = new Set(['reviewed', 'tag-only', 'unreviewed']);
 const LIGHT_DOM_STATUSES = new Set(['not-applicable', 'surface-only', 'warning-required', 'unreviewed']);
 const REGISTRATION_STATUSES = new Set(['all', 'granular', 'unavailable']);
+const CONDITIONAL_BEHAVIOR_REVIEW_TAGS = new Set(['wa-random-content']);
 
 function invariant(condition, message) {
   if (!condition) throw new Error(`Invalid component inventory migration contract: ${message}`);
@@ -332,7 +334,7 @@ export function buildMigrationContract(inventory) {
       const parity = mapping.parity;
       invariant(parity && typeof parity === 'object' && !Array.isArray(parity), `${mapping.upstreamTag}: parity missing`);
       const parityKeys = Object.keys(parity).filter(
-        (key) => !['staticApi', 'lightDom', 'runtime', 'behaviorReviewFlags', 'accessibility'].includes(key),
+        (key) => !['staticApi', 'lightDom', 'runtime', 'behaviorReviewFlags', 'accessibility', 'methodEdges'].includes(key),
       );
       invariant(parityKeys.length === 0, `${mapping.upstreamTag}: parity has unknown key(s) ${parityKeys.join(', ')}`);
       invariant(STATIC_API_STATUSES.has(parity.staticApi), `${mapping.upstreamTag}: invalid parity.staticApi`);
@@ -366,15 +368,31 @@ export function buildMigrationContract(inventory) {
         JSON.stringify([...parity.runtime.optionalPeers].sort()) === JSON.stringify(expectedPeers),
         `${mapping.upstreamTag}: parity runtime optional peers are stale`,
       );
+      const methodEdgeFindings = validateMethodEdgeParity(
+        mapping,
+        runtimeInventory
+          ? {}
+          : {
+              upstream: upstreamEntry.component.surface,
+              target: target?.surface,
+            },
+      );
+      invariant(methodEdgeFindings.length === 0, methodEdgeFindings.join('; '));
       if (AUTO_CLASSIFICATIONS.has(mapping.classification)) {
-        invariant(
-          parity.lightDom !== 'warning-required' && parity.lightDom !== 'unreviewed',
-          `${mapping.upstreamTag}: automatic mapping cannot require light-DOM review`,
-        );
-        invariant(
-          parity.behaviorReviewFlags.length === 0,
-          `${mapping.upstreamTag}: automatic mapping cannot carry behavior review flags`,
-        );
+        const hasConditionalReview = parity.behaviorReviewFlags.length > 0;
+        if (hasConditionalReview) {
+          invariant(
+            mapping.classification === 'rewritten' &&
+              CONDITIONAL_BEHAVIOR_REVIEW_TAGS.has(mapping.upstreamTag) &&
+              parity.lightDom === 'warning-required',
+            `${mapping.upstreamTag}: automatic behavior review lacks a registered conditional scanner`,
+          );
+        } else {
+          invariant(
+            parity.lightDom !== 'warning-required' && parity.lightDom !== 'unreviewed',
+            `${mapping.upstreamTag}: automatic mapping cannot require unscoped light-DOM review`,
+          );
+        }
       }
     }
     if (!runtimeInventory && target && upstreamEntry.component.review?.status === 'complete') {
@@ -585,9 +603,21 @@ function locationAt(starts, offset) {
   return { line: low + 1, column: offset - starts[low] + 1 };
 }
 
-function reportEntry({ textStarts, file, offset, origin, upstreamTag, upstreamMember = null, action, target = null, warningCode: code = null, message }) {
+function reportEntry({
+  textStarts,
+  file,
+  offset,
+  origin,
+  upstreamTag,
+  upstreamMember = null,
+  action,
+  target = null,
+  warningCode: code = null,
+  behaviorReviewFlags = null,
+  message,
+}) {
   const location = locationAt(textStarts, offset);
-  return {
+  const entry = {
     file,
     line: location.line,
     column: location.column,
@@ -599,6 +629,10 @@ function reportEntry({ textStarts, file, offset, origin, upstreamTag, upstreamMe
     warningCode: code,
     message,
   };
+  if (behaviorReviewFlags?.length) {
+    entry.behaviorReviewFlags = Object.freeze([...behaviorReviewFlags]);
+  }
+  return entry;
 }
 
 function commentRanges(text) {
@@ -2071,6 +2105,152 @@ function scanDynamicDefaultReviews(text, markupTokens, contract) {
   return reviews;
 }
 
+const VOID_HTML_TAGS = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
+]);
+
+const RANDOM_CONTENT_BEHAVIOR_MESSAGES = Object.freeze({
+  'host-layout':
+    'Web Awesome uses display: contents while Lyra uses a block host with a shadow base; review inline placement and host-authored layout CSS.',
+  'multi-item-layout':
+    'Lyra owns the simultaneous-item flex/wrap/gap context inside its shadow base instead of leaving it on the host.',
+  'unique-retry-bound':
+    'Web Awesome promises non-repeating unique selection while Lyra uses a bounded retry and can eventually repeat.',
+  'forwarded-slot-candidates':
+    'Lyra flattens a direct forwarding slot into projected candidates while Web Awesome treats only its direct element child as the candidate.',
+  'autoplay-semantics':
+    'Lyra stops autoplay for reduced motion, keeps timer ticks silent, does not pause on hover, and exposes a localized paused control/state/event absent upstream.',
+});
+
+function pairedMarkupTokens(tokens) {
+  const stack = [];
+  const pairs = new Map();
+  for (const token of tokens) {
+    if (!token.closing && !token.selfClosing) {
+      stack.push(token);
+      continue;
+    }
+    if (!token.closing) continue;
+    for (let index = stack.length - 1; index >= 0; index -= 1) {
+      if (stack[index].tag !== token.tag) continue;
+      const [opening] = stack.splice(index, 1);
+      pairs.set(opening.start, token);
+      break;
+    }
+  }
+  return pairs;
+}
+
+function scanDirectElementChildren(text, start, end, ignoredRanges) {
+  const directTags = [];
+  const stack = [];
+  let cursor = start;
+  let dynamicDirectContent = false;
+  const tagPattern = /<(?<closing>\/)?(?<tag>[a-z][a-z0-9.:-]*)(?=[\s/>])/gi;
+  tagPattern.lastIndex = start;
+
+  const noteGap = (gapStart, gapEnd) => {
+    if (stack.length === 0 && /\$\{|\{\{|<%/.test(text.slice(gapStart, gapEnd))) {
+      dynamicDirectContent = true;
+    }
+  };
+
+  for (let match = tagPattern.exec(text); match && match.index < end; match = tagPattern.exec(text)) {
+    if (insideRanges(match.index, ignoredRanges)) continue;
+    noteGap(cursor, match.index);
+    const tokenEnd = findTagEnd(text, match.index + match[0].length);
+    if (tokenEnd < 0 || tokenEnd >= end) break;
+    const tagName = match.groups.tag.toLowerCase();
+    if (match.groups.closing) {
+      for (let index = stack.length - 1; index >= 0; index -= 1) {
+        if (stack[index] !== tagName) continue;
+        stack.splice(index, 1);
+        break;
+      }
+    } else {
+      if (stack.length === 0) directTags.push(tagName);
+      const selfClosing = /\/\s*>$/.test(text.slice(match.index, tokenEnd + 1));
+      if (!selfClosing && !VOID_HTML_TAGS.has(tagName)) stack.push(tagName);
+    }
+    cursor = tokenEnd + 1;
+    tagPattern.lastIndex = cursor;
+  }
+  noteGap(cursor, end);
+  return { directTags, dynamicDirectContent };
+}
+
+function normalizedAttributeName(attribute) {
+  return attribute.rawName.replace(/^(?:v-bind:|bind:|[.?:])/, '').toLowerCase();
+}
+
+function scanConditionalBehaviorReviews(text, markupTokens, ignoredRanges, contract) {
+  const reviews = new Map();
+  const pairs = pairedMarkupTokens(markupTokens);
+  for (const opening of markupTokens) {
+    if (opening.closing || opening.tag !== 'wa-random-content') continue;
+    const mapping = contract.mappings.get(opening.tag);
+    if (!AUTO_CLASSIFICATIONS.has(mapping?.classification) || !mapping.parity.behaviorReviewFlags.length) continue;
+
+    const attributes = parseTagAttributes(text, opening);
+    const attribute = (name) => attributes.find((candidate) => normalizedAttributeName(candidate) === name);
+    const closing = pairs.get(opening.start);
+    const children = closing
+      ? scanDirectElementChildren(text, opening.end + 1, closing.start, ignoredRanges)
+      : { directTags: [], dynamicDirectContent: !opening.selfClosing };
+    const flags = [];
+    const hasCandidates = children.directTags.length > 0 || children.dynamicDirectContent;
+    if (hasCandidates) flags.push('host-layout');
+
+    const items = attribute('items');
+    const dynamicItems = items ? isDynamicAttribute(items) : false;
+    const itemCount = !items || items.value === null ? 1 : Number(items.value);
+    if (dynamicItems || (Number.isFinite(itemCount) && itemCount > 1)) {
+      flags.push('multi-item-layout');
+    }
+
+    const mode = attribute('mode');
+    const dynamicMode = mode ? isDynamicAttribute(mode) : false;
+    const effectiveItems = Number.isFinite(itemCount) ? Math.max(1, Math.trunc(itemCount)) : 1;
+    const uniqueMode = !mode || dynamicMode || mode.value === 'unique';
+    if (
+      uniqueMode &&
+      (dynamicMode || children.dynamicDirectContent || children.directTags.length > effectiveItems)
+    ) {
+      flags.push('unique-retry-bound');
+    }
+    if (children.directTags.includes('slot') || children.dynamicDirectContent) {
+      flags.push('forwarded-slot-candidates');
+    }
+    if (attribute('autoplay')) flags.push('autoplay-semantics');
+
+    const uniqueFlags = flags.filter(
+      (flag, index) =>
+        mapping.parity.behaviorReviewFlags.includes(flag) && flags.indexOf(flag) === index,
+    );
+    if (!uniqueFlags.length) continue;
+    reviews.set(opening.start, {
+      flags: uniqueFlags,
+      message:
+        `Review ${mapping.upstreamTag} before relying on the migrated behavior: ` +
+        uniqueFlags.map((flag) => `${flag}: ${RANDOM_CONTENT_BEHAVIOR_MESSAGES[flag]}`).join(' '),
+    });
+  }
+  return reviews;
+}
+
 function memberAction(section) {
   const singular = {
     attributes: 'attribute',
@@ -2548,6 +2728,12 @@ export function migrateText(original, contract, options = {}) {
   const apiReferences = scanApiTagReferences(original, ignoredRanges, options.domFactoryBindings);
   const aliasReviews = scanAliasedRewriteReviews(original, contract, ignoredRanges);
   const dynamicDefaultReviews = scanDynamicDefaultReviews(original, markupTokens, contract);
+  const conditionalBehaviorReviews = scanConditionalBehaviorReviews(
+    original,
+    markupTokens,
+    ignoredRanges,
+    contract,
+  );
   const imports = scanImports(original, ignoredRanges, contract);
   const bareImportPackages = new Set(
     imports.filter((imported) => imported.sideEffect && !imported.subpath).map((imported) => imported.packageName),
@@ -2607,7 +2793,16 @@ export function migrateText(original, contract, options = {}) {
       message,
     }));
   };
-  const warn = (offset, upstreamTag, upstreamMember, code, target, message, origin = null) => {
+  const warn = (
+    offset,
+    upstreamTag,
+    upstreamMember,
+    code,
+    target,
+    message,
+    origin = null,
+    behaviorReviewFlags = null,
+  ) => {
     warnings.push(
       reportEntry({
         textStarts: starts,
@@ -2619,6 +2814,7 @@ export function migrateText(original, contract, options = {}) {
         action: 'manual-review',
         target,
         warningCode: code,
+        behaviorReviewFlags,
         message,
       }),
     );
@@ -2733,6 +2929,8 @@ export function migrateText(original, contract, options = {}) {
         isBlockedAutomatic(mapping) ? blockedWarningCode(mapping) : warningCode(mapping),
         mapping?.targetTag ?? null,
         isBlockedAutomatic(mapping) ? blockedMessage(mapping) : mappingMessage(mapping),
+        null,
+        mapping?.parity?.behaviorReviewFlags,
       );
       continue;
     }
@@ -2745,6 +2943,19 @@ export function migrateText(original, contract, options = {}) {
       target: mapping.targetTag,
       message: `Rename ${token.tag} to ${mapping.targetTag}.`,
     });
+    const behaviorReview = conditionalBehaviorReviews.get(token.start);
+    if (behaviorReview) {
+      warn(
+        token.nameStart,
+        mapping.upstreamTag,
+        null,
+        'BEHAVIOR_REVIEW_REQUIRED',
+        mapping.targetTag,
+        behaviorReview.message,
+        null,
+        behaviorReview.flags,
+      );
+    }
     if (!token.closing) openingTokens.push({ token, mapping, attributes: parseTagAttributes(original, token) });
   }
 
@@ -2761,6 +2972,8 @@ export function migrateText(original, contract, options = {}) {
         isBlockedAutomatic(mapping) ? blockedWarningCode(mapping) : warningCode(mapping),
         mapping?.targetTag ?? null,
         isBlockedAutomatic(mapping) ? blockedMessage(mapping) : mappingMessage(mapping),
+        null,
+        mapping?.parity?.behaviorReviewFlags,
       );
       continue;
     }
@@ -2910,6 +3123,8 @@ export function migrateText(original, contract, options = {}) {
             isBlockedAutomatic(mapping) ? blockedWarningCode(mapping) : warningCode(mapping),
             mapping.targetTag,
             isBlockedAutomatic(mapping) ? blockedMessage(mapping) : mappingMessage(mapping),
+            null,
+            mapping?.parity?.behaviorReviewFlags,
           );
         }
         continue;
@@ -2917,6 +3132,19 @@ export function migrateText(original, contract, options = {}) {
       for (const tagMatch of selectorMatches) {
         const offset = selectorStart + tagMatch.index;
         noteAutomatic(mapping, offset);
+        if (mapping.upstreamTag === 'wa-random-content') {
+          const flags = ['host-layout', 'multi-item-layout'];
+          warn(
+            offset,
+            mapping.upstreamTag,
+            'selector',
+            'BEHAVIOR_REVIEW_REQUIRED',
+            mapping.targetTag,
+            'Review this selector after migration: Web Awesome lays candidates out through the host, while Lyra uses a block host and owns simultaneous-item flex layout inside its shadow base.',
+            null,
+            flags,
+          );
+        }
         addEdit(offset, offset + mapping.upstreamTag.length, mapping.targetTag, {
           upstreamTag: mapping.upstreamTag,
           upstreamMember: null,
@@ -3097,6 +3325,7 @@ export function migrateText(original, contract, options = {}) {
             ? mappingMessage(mapping)
             : `No component registration entry can be derived from ${imported.specifier}.`,
         ecosystem,
+        mapping?.parity?.behaviorReviewFlags,
       );
       continue;
     }

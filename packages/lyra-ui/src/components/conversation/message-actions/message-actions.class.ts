@@ -1,34 +1,58 @@
-import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { composedParentElement } from '../../../internal/active-element.js';
-import '../../utility/copy-button/copy-button.class.js';
-import '../message-feedback/message-feedback.class.js';
+import {
+  html,
+  nothing,
+  svg,
+  type PropertyValues,
+  type SVGTemplateResult,
+  type TemplateResult,
+} from "lit";
+import { property, state } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import "../../utility/copy-button/copy-button.class.js";
+import "../message-feedback/message-feedback.class.js";
 
-import { styles } from './message-actions.styles.js';
+import { styles } from "./message-actions.styles.js";
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
-  collectComposedFocusTargets,
-  isActionableElement,
+  isComposedFocusAvailable,
   isSemanticActionElement,
   type ComposedFocusRepairSnapshot,
-} from '../../../internal/focus-navigation.js';
-import { composedContains } from '../../../internal/overlay-manager.js';
+} from "../../../internal/focus-navigation.js";
+import { composedContains } from "../../../internal/overlay-manager.js";
+import type {
+  LyraClipboardWriteFailure,
+  LyraClipboardWriteSuccess,
+} from "../../../internal/clipboard.js";
+import {
+  isLyraToolbarActionProvider,
+  type LyraToolbarAction,
+  type LyraToolbarActionProvider,
+} from "./toolbar-actions.js";
+import type {
+  MessageFeedbackSubmitDetail,
+  MessageFeedbackValue,
+} from "../message-feedback/message-feedback.class.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_editMessage, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_messageActionsLabel, LYRA_DEFAULT_regenerateResponse } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export type MessageActionControl = "copy" | "regenerate" | "edit" | "feedback";
 
-export type MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback';
+interface ManagedToolbarAction {
+  owner: Element;
+  action: LyraToolbarAction;
+}
 
 export interface LyraMessageActionsEventMap {
-  'lr-regenerate': CustomEvent<undefined>;
-  'lr-edit': CustomEvent<undefined>;
-  'lr-copy': CustomEvent<{ text: string }>;
-  'lr-change': CustomEvent<{ value: 'up' | 'down' | null }>;
-  'lr-submit': CustomEvent<{ value: 'up' | 'down'; reasonIds: string[]; comment: string }>;
+  "lr-regenerate": CustomEvent<null>;
+  "lr-edit": CustomEvent<null>;
+  "lr-copy": CustomEvent<LyraClipboardWriteSuccess>;
+  "lr-error": CustomEvent<null>;
+  "lr-copy-error": CustomEvent<LyraClipboardWriteFailure>;
+  "lr-feedback-change": CustomEvent<{ rating: MessageFeedbackValue }>;
+  "lr-feedback-submit": CustomEvent<MessageFeedbackSubmitDetail>;
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions (internal/icons.ts's
@@ -63,16 +87,14 @@ function editIcon(): SVGTemplateResult {
  *
  * `[part="base"]` is `role="toolbar"` with the WAI-ARIA APG roving-tabindex pattern applied to the
  * plain `<button>` elements this component renders itself (`regenerate`/`edit`); ArrowLeft/ArrowRight
- * (swapped under `effectiveDirection === 'rtl'`) plus Home/End move focus across *every actual
- * action* -- built-ins and slotted controls alike. Open shadow roots and slots are traversed in
- * composed order, so both feedback thumbs and both enabled branch-picker buttons are independent
- * stops rather than one custom-element placeholder. Composite children are reconciled after their
- * own Lit updates so the toolbar retains exactly one sequential Tab stop. Disabled, hidden,
- * `aria-hidden`, and inert controls (including a control beneath an unavailable composed ancestor)
- * are excluded before choosing that stop, because inert targets silently refuse `.focus()` and
- * would otherwise strand arrow navigation. Availability, actionability, and `tabindex` mutations
- * are reconciled live. A former stop is cleared, and if it held focus, focus moves to the nearest
- * survivor or the stable toolbar without overriding a newer external focus move.
+ * (swapped under `effectiveDirection === 'rtl'`) plus Home/End move focus across every logical
+ * action. Plain light-DOM actions are flattened directly. Composite controls opt into the exported
+ * `LyraToolbarActionProvider` protocol, which keeps implementation nodes private while exposing
+ * ordered focus/tab-stop operations and stable action IDs. Both feedback thumbs and both branch
+ * controls therefore remain independent arrow-key stops without parent shadow-root inspection.
+ * Providers notify availability/order changes with `lr-toolbar-actions-change`; plain authored
+ * actions are observed in light DOM. A former stop is cleared, and if it held focus, focus moves to
+ * the nearest survivor or the stable toolbar without overriding a newer external focus move.
  *
  * @customElement lr-message-actions
  * @slot - Additional controls (e.g. `lr-copy-button`, `lr-icon-button`, `lr-branch-picker`)
@@ -80,12 +102,18 @@ function editIcon(): SVGTemplateResult {
  * @event lr-regenerate - The regenerate built-in was activated. No detail.
  * @event lr-edit - The edit built-in was activated: a *request* to edit; the host swaps the message
  *   body for its own editor.
- * @event lr-copy - `detail: { text }`, surfaced by the embedded `lr-copy-button` (bubbles +
- *   composed already; not re-emitted, so exactly one event reaches a host listener).
- * @event lr-change - Bubbles unchanged from the embedded, thumbs-only `lr-message-feedback`.
- *   `detail: { value }`.
- * @event lr-submit - Only arises from a slotted, fully-configured `lr-message-feedback` (the
- *   built-in is thumbs-only and never opens a panel) -- also bubbles unchanged.
+ * @event lr-copy - Clipboard writing fulfilled. Frozen `detail: { ok: true, text }`, surfaced by
+ *   the embedded `lr-copy-button` (bubbles + composed already; not re-emitted, so exactly one event
+ *   reaches a host listener).
+ * @event lr-error - Clipboard writing failed; generic `detail: null` signal from the embedded
+ *   copy button.
+ * @event lr-copy-error - Clipboard writing failed. Frozen
+ *   `detail: { ok: false, text, reason, error }` from the embedded copy button.
+ * @event lr-feedback-change - Bubbles unchanged from the embedded, thumbs-only
+ *   `lr-message-feedback`. `detail: { rating }`. A colliding event from a slotted custom child is
+ *   contained at the slot boundary and remains observable directly on that child.
+ * @event lr-feedback-submit - The built-in feedback control's terminal cancelable persistence
+ *   request, including thumbs-only choices. Slotted collisions are contained at the slot boundary.
  * @csspart base - The toolbar (`role="toolbar"`).
  * @csspart copy-button - The embedded `lr-copy-button`.
  * @csspart regenerate-button - The built-in regenerate icon button.
@@ -113,28 +141,32 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   /** What the `copy` built-in copies. Required for it to render at all -- this component never
    *  interprets the slotted message body itself. */
-  @property({ attribute: 'copy-text' }) copyText = '';
+  @property({ attribute: "copy-text" }) copyText = "";
 
-  /** Forwarded to the embedded `lr-message-feedback` when the `feedback` built-in is enabled. The
-   *  built-in stays thumbs-only: `reasons`/`commentable`/`detailFor` are never forwarded, so its
-   *  detail panel never opens. */
-  @property({ attribute: 'feedback-value' }) feedbackValue: 'up' | 'down' | null = null;
+  /** Forwarded to the embedded thumbs-only `lr-message-feedback` when enabled. */
+  @property({ attribute: "feedback-rating" })
+  feedbackRating: MessageFeedbackValue = null;
 
   /** Visually hides the bar until the enclosing message is hovered or any control inside has focus. */
-  @property({ type: Boolean, reflect: true, attribute: 'reveal-on-hover' }) revealOnHover = false;
+  @property({
+    type: Boolean,
+    reflect: true,
+    attribute: "reveal-on-interaction",
+  })
+  revealOnInteraction = false;
 
   /** Accessible name for the toolbar. Defaults to the localized `messageActionsLabel`. */
-  @property() label = '';
+  @property() label = "";
 
   /** Overrides the toolbar's computed accessible name. Wins over `label` and the localized
    *  default. Attribute-reflects from a host-level `aria-label` so a plain-markup consumer gets
    *  ARIA-name forwarding without setting a JS property. */
-  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
 
-  @state() private activeStopIndex = 0;
+  private activeStopIndex = 0;
   /** Drives the `data-revealed` host attribute (toggled imperatively in `updated()`, not via a Lit
    *  template binding -- `lr-graph`'s `data-hovered` attribute is the precedent for this exact
-   *  technique) while `revealOnHover` is active. CSS alone cannot key `:host`'s own opacity off the
+   *  technique) while `revealOnInteraction` is active. CSS alone cannot key `:host`'s own opacity off the
    *  ancestor `lr-chat-message`'s hover state from inside this component's own shadow DOM, so the
    *  reveal state is tracked in JS instead (see `bindHoverTarget()`). */
   @state() private revealed = false;
@@ -142,19 +174,22 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   private hoverTarget: HTMLElement | null = null;
   private stopSyncGeneration = 0;
   private stopObserver?: MutationObserver;
-  private managedStops = new Set<HTMLElement>();
-  private authoredTabIndex = new WeakMap<HTMLElement, string | null>();
+  private managedStops: ManagedToolbarAction[] = [];
+  private authoredTabIndex = new WeakMap<Element, string | null>();
+  private directActions = new WeakMap<Element, LyraToolbarAction>();
+  private nextDirectActionId = 0;
   private focusedStop?: {
     index: number;
+    owner: Element;
+    id: string;
     repair: ComposedFocusRepairSnapshot;
-    stop: HTMLElement;
   };
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.addEventListener('focusin', this.onFocusIn);
-    this.addEventListener('focusout', this.onFocusOut);
-    if (this.revealOnHover) this.bindHoverTarget();
+    this.addEventListener("focusin", this.onFocusIn);
+    this.addEventListener("focusout", this.onFocusOut);
+    if (this.revealOnInteraction) this.bindHoverTarget();
     if (this.hasUpdated) void this.reconcileStopsAfterChildren();
   }
 
@@ -164,12 +199,13 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     this.stopObserver = undefined;
     this.focusedStop = undefined;
     this.unbindHoverTarget();
-    this.removeEventListener('focusin', this.onFocusIn);
-    this.removeEventListener('focusout', this.onFocusOut);
+    this.removeEventListener("focusin", this.onFocusIn);
+    this.removeEventListener("focusout", this.onFocusOut);
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.stopSyncGeneration++;
     this.stopObserver?.disconnect();
     this.stopObserver = undefined;
@@ -177,45 +213,56 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('revealOnHover')) {
-      if (this.revealOnHover) this.bindHoverTarget();
+    if (changed.has("revealOnInteraction")) {
+      if (this.revealOnInteraction) this.bindHoverTarget();
       else this.unbindHoverTarget();
     }
   }
 
   protected override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
-    this.setActiveStop(this.focusableStops(), 0);
+    this.setActiveStop(this.logicalActions(), 0);
     void this.reconcileStopsAfterChildren();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('controls')) {
-      const stops = this.focusableStops();
-      this.setActiveStop(stops, Math.min(this.activeStopIndex, Math.max(0, stops.length - 1)));
+    if (changed.has("controls")) {
+      const stops = this.logicalActions();
+      this.setActiveStop(
+        stops,
+        Math.min(this.activeStopIndex, Math.max(0, stops.length - 1))
+      );
       void this.reconcileStopsAfterChildren();
     }
-    if (changed.has('revealed')) {
+    if (changed.has("revealed")) {
       // Toggled on the host itself (not a shadow-internal part) so the stylesheet's `:host(...)`
       // rules can key off it directly -- same imperative-attribute-toggle technique lr-graph's
       // `data-hovered` attribute already establishes for hover-driven presentation state.
-      this.toggleAttribute('data-revealed', this.revealed);
+      this.toggleAttribute("data-revealed", this.revealed);
     }
   }
 
   private bindHoverTarget(): void {
     this.unbindHoverTarget();
-    const target = (this.closest('lr-chat-message') as HTMLElement | null) ?? this.parentElement;
+    const target =
+      (this.closest("lr-chat-message") as HTMLElement | null) ??
+      this.parentElement;
     if (!target) return;
     this.hoverTarget = target;
-    target.addEventListener('pointerenter', this.onHoverTargetEnter);
-    target.addEventListener('pointerleave', this.onHoverTargetLeave);
+    target.addEventListener("pointerenter", this.onHoverTargetEnter);
+    target.addEventListener("pointerleave", this.onHoverTargetLeave);
   }
 
   private unbindHoverTarget(): void {
-    this.hoverTarget?.removeEventListener('pointerenter', this.onHoverTargetEnter);
-    this.hoverTarget?.removeEventListener('pointerleave', this.onHoverTargetLeave);
+    this.hoverTarget?.removeEventListener(
+      "pointerenter",
+      this.onHoverTargetEnter
+    );
+    this.hoverTarget?.removeEventListener(
+      "pointerleave",
+      this.onHoverTargetLeave
+    );
     this.hoverTarget = null;
     this.revealed = false;
   }
@@ -225,90 +272,169 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   };
 
   private onHoverTargetLeave = (): void => {
-    if (!this.matches(':focus-within')) this.revealed = false;
+    if (!this.matches(":focus-within")) this.revealed = false;
   };
 
   private onFocusIn = (event: Event): void => {
     this.revealed = true;
-    const stops = this.focusableStops();
+    const stops = this.logicalActions();
     const path = event.composedPath();
-    const index = stops.findIndex((stop) => path.includes(stop));
+    const index = stops.findIndex(({ action }) =>
+      action.matchesEventPath(path)
+    );
     if (index >= 0) {
-      const origin = path[0] as Partial<HTMLElement> | undefined;
-      const focused = origin?.nodeType === 1 && typeof origin.focus === 'function'
-        ? origin as HTMLElement
-        : undefined;
-      this.setActiveStop(stops, index, focused);
+      this.setActiveStop(stops, index, stops[index]);
       const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
-      const stop = focused && stops.includes(focused) ? focused : stops[index];
-      const repair = stop && base ? captureComposedFocusRepair(stop, base) : null;
-      this.focusedStop = stop && repair ? { index, repair, stop } : undefined;
+      const repair = base ? captureComposedFocusRepair(this, base) : null;
+      const stop = stops[index];
+      this.focusedStop =
+        stop && repair
+          ? { index, owner: stop.owner, id: stop.action.id, repair }
+          : undefined;
     } else {
       this.focusedStop = undefined;
     }
   };
 
   private onFocusOut = (event: Event): void => {
-    if (!this.hoverTarget?.matches(':hover')) this.revealed = false;
+    if (!this.hoverTarget?.matches(":hover")) this.revealed = false;
     const destination = (event as FocusEvent).relatedTarget;
     if (
-      destination
-      && (destination as Node).nodeType === 1
-      && !composedContains(this, destination as Element)
+      destination &&
+      (destination as Node).nodeType === 1 &&
+      !composedContains(this, destination as Element)
     ) {
       this.focusedStop = undefined;
     }
   };
 
-  private focusableStops(): HTMLElement[] {
-    const base = this.renderRoot.querySelector('[part="base"]');
-    if (!base) return [];
-    return collectComposedFocusTargets(base, {
-      mode: 'programmatic',
-      includeRoot: false,
-    }).elements.filter((stop) =>
-      Boolean(isSemanticActionElement(stop))
-      || (this.authoredTabIndex.has(stop)
-        ? this.authoredTabIndex.get(stop) !== null
-        : stop.hasAttribute('tabindex')));
-  }
-
-  /** Immediate rendered children plus flattened slotted roots whose Lit updates can create the
-   * actual nested actions returned by `focusableStops()`. */
+  /** Immediate rendered children plus flattened slotted roots that own logical actions. */
   private actionRoots(): Element[] {
     const base = this.renderRoot.querySelector('[part="base"]');
     if (!base) return [];
-    const direct = [...base.children].filter((element) => element.localName !== 'slot');
-    const slot = base.querySelector<HTMLSlotElement>('slot');
+    const direct = [...base.children].filter(
+      (element) => element.localName !== "slot"
+    );
+    const slot = base.querySelector<HTMLSlotElement>("slot");
     return [...direct, ...(slot?.assignedElements({ flatten: true }) ?? [])];
   }
 
-  private setActiveStop(stops: HTMLElement[], index: number, preferred?: HTMLElement): void {
-    this.stopObserver?.disconnect();
-    for (const stop of stops) {
-      if (!this.authoredTabIndex.has(stop)) {
-        this.authoredTabIndex.set(stop, stop.getAttribute('tabindex'));
-      }
-    }
-    for (const previous of this.managedStops) {
-      if (!stops.includes(previous) && (previous.hasAttribute('tabindex') || Boolean(isActionableElement(previous)))) {
-        previous.tabIndex = -1;
-      }
-    }
-    const preferredIndex = preferred ? stops.indexOf(preferred) : -1;
-    this.activeStopIndex = stops.length === 0
-      ? 0
-      : preferredIndex >= 0
-        ? preferredIndex
-        : Math.min(Math.max(0, index), stops.length - 1);
-    stops.forEach((stop, stopIndex) => {
-      stop.tabIndex = stopIndex === this.activeStopIndex ? 0 : -1;
-    });
-    this.managedStops = new Set(stops);
-    this.observeStopChanges(stops);
+  private sameAction(
+    left: ManagedToolbarAction,
+    right: ManagedToolbarAction
+  ): boolean {
+    return left.owner === right.owner && left.action.id === right.action.id;
   }
 
-  private observeStopChanges(stops: HTMLElement[]): void {
+  private isAvailable(action: LyraToolbarAction): boolean {
+    try {
+      return action.disabled !== true;
+    } catch {
+      return false;
+    }
+  }
+
+  private directActionFor(element: Element): LyraToolbarAction {
+    let action = this.directActions.get(element);
+    if (action) return action;
+    if (!this.authoredTabIndex.has(element)) {
+      this.authoredTabIndex.set(element, element.getAttribute("tabindex"));
+    }
+    const target = element as HTMLElement;
+    const id = `direct-${++this.nextDirectActionId}`;
+    action = {
+      id,
+      get disabled() {
+        return !isComposedFocusAvailable(element);
+      },
+      focus(options) {
+        target.focus(options);
+      },
+      setTabIndex(tabIndex) {
+        target.tabIndex = tabIndex;
+      },
+      matchesEventPath(path) {
+        return path.includes(element);
+      },
+    };
+    this.directActions.set(element, action);
+    return action;
+  }
+
+  private logicalActions(): ManagedToolbarAction[] {
+    const actions: ManagedToolbarAction[] = [];
+    const addProvider = (
+      owner: Element,
+      provider: LyraToolbarActionProvider
+    ): void => {
+      let provided: readonly LyraToolbarAction[];
+      try {
+        provided = provider.getToolbarActions();
+      } catch {
+        return;
+      }
+      const seen = new Set<string>();
+      for (const action of Array.from(provided).slice(0, 100)) {
+        if (
+          !action ||
+          typeof action.id !== "string" ||
+          action.id.length === 0 ||
+          seen.has(action.id) ||
+          typeof action.focus !== "function" ||
+          typeof action.setTabIndex !== "function" ||
+          typeof action.matchesEventPath !== "function"
+        )
+          continue;
+        seen.add(action.id);
+        if (this.isAvailable(action)) actions.push({ owner, action });
+      }
+    };
+    const visit = (element: Element): void => {
+      if (isLyraToolbarActionProvider(element)) {
+        addProvider(element, element);
+        return;
+      }
+      const authoredTabIndex = this.authoredTabIndex.has(element)
+        ? this.authoredTabIndex.get(element)
+        : element.getAttribute("tabindex");
+      if (isSemanticActionElement(element) || authoredTabIndex !== null) {
+        const action = this.directActionFor(element);
+        if (this.isAvailable(action)) actions.push({ owner: element, action });
+        return;
+      }
+      for (const child of element.children) visit(child);
+    };
+    for (const root of this.actionRoots()) visit(root);
+    return actions;
+  }
+
+  private setActiveStop(
+    stops: ManagedToolbarAction[],
+    index: number,
+    preferred?: ManagedToolbarAction
+  ): void {
+    this.stopObserver?.disconnect();
+    for (const previous of this.managedStops) {
+      if (!stops.some((stop) => this.sameAction(stop, previous)))
+        previous.action.setTabIndex(-1);
+    }
+    const preferredIndex = preferred
+      ? stops.findIndex((stop) => this.sameAction(stop, preferred))
+      : -1;
+    this.activeStopIndex =
+      stops.length === 0
+        ? 0
+        : preferredIndex >= 0
+        ? preferredIndex
+        : Math.min(Math.max(0, index), stops.length - 1);
+    stops.forEach(({ action }, stopIndex) => {
+      action.setTabIndex(stopIndex === this.activeStopIndex ? 0 : -1);
+    });
+    this.managedStops = stops;
+    this.observeStopChanges();
+  }
+
+  private observeStopChanges(): void {
     this.stopObserver?.disconnect();
     const Observer = this.ownerDocument.defaultView?.MutationObserver;
     const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
@@ -318,30 +444,22 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     }
     const observer = new Observer(this.onStopMutations);
     const roots = new Set<Node>([base, ...this.actionRoots()]);
-    for (const stop of stops) {
-      let current: Element | null = stop;
-      while (current && current !== this) {
-        const root = current.getRootNode();
-        if (root.nodeType === 11 && 'host' in root) roots.add(root);
-        current = composedParentElement(current);
-      }
-    }
     const options: MutationObserverInit = {
       attributes: true,
       attributeOldValue: true,
       attributeFilter: [
-        'aria-disabled',
-        'aria-hidden',
-        'contenteditable',
-        'controls',
-        'disabled',
-        'hidden',
-        'href',
-        'inert',
-        'open',
-        'role',
-        'tabindex',
-        'type',
+        "aria-disabled",
+        "aria-hidden",
+        "contenteditable",
+        "controls",
+        "disabled",
+        "hidden",
+        "href",
+        "inert",
+        "open",
+        "role",
+        "tabindex",
+        "type",
       ],
       childList: true,
       subtree: true,
@@ -352,11 +470,10 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   private onStopMutations = (records: MutationRecord[]): void => {
     for (const record of records) {
-      if (record.type !== 'attributes' || record.attributeName !== 'tabindex') continue;
-      const target = record.target as HTMLElement;
-      if (this.authoredTabIndex.has(target)) {
-        this.authoredTabIndex.set(target, target.getAttribute('tabindex'));
-      }
+      if (record.type !== "attributes" || record.attributeName !== "tabindex")
+        continue;
+      const target = record.target as Element;
+      this.authoredTabIndex.set(target, target.getAttribute("tabindex"));
     }
     void this.reconcileStopsAfterChildren();
   };
@@ -364,99 +481,150 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   private async reconcileStopsAfterChildren(): Promise<void> {
     const generation = ++this.stopSyncGeneration;
     const pending = this.actionRoots()
-      .map((root) => (root as Element & { updateComplete?: Promise<unknown> }).updateComplete)
+      .map(
+        (root) =>
+          (root as Element & { updateComplete?: Promise<unknown> })
+            .updateComplete
+      )
       .filter(
         (value): value is Promise<unknown> =>
-          value !== undefined && typeof (value as PromiseLike<unknown>).then === 'function',
+          value !== undefined &&
+          typeof (value as PromiseLike<unknown>).then === "function"
       );
     await Promise.all(pending);
     await Promise.resolve();
     if (generation !== this.stopSyncGeneration || !this.isConnected) return;
-    const stops = this.focusableStops();
+    const stops = this.logicalActions();
     const focused = this.focusedStop;
-    const retainedIndex = focused ? stops.indexOf(focused.stop) : -1;
-    const targetIndex = retainedIndex >= 0
-      ? retainedIndex
-      : focused
+    const retainedIndex = focused
+      ? stops.findIndex(
+          (stop) =>
+            stop.owner === focused.owner && stop.action.id === focused.id
+        )
+      : -1;
+    const targetIndex =
+      retainedIndex >= 0
+        ? retainedIndex
+        : focused
         ? Math.min(Math.max(0, focused.index), Math.max(0, stops.length - 1))
         : Math.min(this.activeStopIndex, Math.max(0, stops.length - 1));
     this.setActiveStop(stops, targetIndex);
     if (focused && retainedIndex < 0) {
       const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
-      applyComposedFocusRepair(focused.repair, stops[targetIndex] ?? base ?? null);
+      if (base && applyComposedFocusRepair(focused.repair, base)) {
+        stops[targetIndex]?.action.focus();
+      }
       if (this.focusedStop === focused) this.focusedStop = undefined;
     }
   }
 
   private onSlotChange = (): void => {
-    const stops = this.focusableStops();
-    this.setActiveStop(stops, Math.min(this.activeStopIndex, Math.max(0, stops.length - 1)));
+    const stops = this.logicalActions();
+    this.setActiveStop(
+      stops,
+      Math.min(this.activeStopIndex, Math.max(0, stops.length - 1))
+    );
     void this.reconcileStopsAfterChildren();
   };
 
+  private onToolbarActionsChange = (event: Event): void => {
+    event.stopPropagation();
+    void this.reconcileStopsAfterChildren();
+  };
+
+  private containSlottedFeedbackEvent = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   private onToolbarKeyDown = (e: KeyboardEvent): void => {
-    const stops = this.focusableStops();
+    const stops = this.logicalActions();
     if (stops.length === 0) return;
-    const originIndex = stops.findIndex((stop) => e.composedPath().includes(stop));
+    const path = e.composedPath();
+    const originIndex = stops.findIndex(({ action }) =>
+      action.matchesEventPath(path)
+    );
     const currentIndex = originIndex >= 0 ? originIndex : this.activeStopIndex;
-    const forwardKey = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+    const forwardKey =
+      this.effectiveDirection === "rtl" ? "ArrowLeft" : "ArrowRight";
+    const backwardKey =
+      this.effectiveDirection === "rtl" ? "ArrowRight" : "ArrowLeft";
     let target: number;
     if (e.key === forwardKey) target = (currentIndex + 1) % stops.length;
-    else if (e.key === backwardKey) target = (currentIndex - 1 + stops.length) % stops.length;
-    else if (e.key === 'Home') target = 0;
-    else if (e.key === 'End') target = stops.length - 1;
+    else if (e.key === backwardKey)
+      target = (currentIndex - 1 + stops.length) % stops.length;
+    else if (e.key === "Home") target = 0;
+    else if (e.key === "End") target = stops.length - 1;
     else return;
     e.preventDefault();
     this.setActiveStop(stops, target);
-    stops[target]?.focus();
+    stops[target]?.action.focus();
   };
 
   private onRegenerateClick = (): void => {
-    this.emit('lr-regenerate');
+    this.emit("lr-regenerate", null);
   };
 
   private onEditClick = (): void => {
-    this.emit('lr-edit');
+    this.emit("lr-edit", null);
   };
 
   private renderControl(type: MessageActionControl) {
     switch (type) {
-      case 'copy':
+      case "copy":
         return this.copyText
-          ? html`<lr-copy-button part="copy-button" .value=${this.copyText}></lr-copy-button>`
+          ? html`<lr-copy-button
+              part="copy-button"
+              .value=${this.copyText}
+            ></lr-copy-button>`
           : nothing;
-      case 'regenerate':
+      case "regenerate":
         return html`<button
           part="regenerate-button"
           type="button"
-          aria-label=${this.localize('regenerateResponse')}
+          aria-label=${this.localize("regenerateResponse")}
           @click=${this.onRegenerateClick}
         >
           ${regenerateIcon()}
         </button>`;
-      case 'edit':
+      case "edit":
         return html`<button
           part="edit-button"
           type="button"
-          aria-label=${this.localize('editMessage')}
+          aria-label=${this.localize("editMessage")}
           @click=${this.onEditClick}
         >
           ${editIcon()}
         </button>`;
-      case 'feedback':
-        return html`<lr-message-feedback part="feedback" .value=${this.feedbackValue}></lr-message-feedback>`;
+      case "feedback":
+        return html`<lr-message-feedback
+          part="feedback"
+          .rating=${this.feedbackRating}
+          @lr-toolbar-actions-change=${this.onToolbarActionsChange}
+        ></lr-message-feedback>`;
       default:
         return nothing;
     }
   }
 
   override render(): TemplateResult {
-    const label = this.accessibleLabel || this.label || this.localize('messageActionsLabel');
+    const label =
+      this.accessibleLabel ??
+      (this.label || this.localize("messageActionsLabel"));
     return html`
-      <div part="base" role="toolbar" aria-label=${label} tabindex="-1" @keydown=${this.onToolbarKeyDown}>
+      <div
+        part="base"
+        role="toolbar"
+        aria-label=${label}
+        tabindex="-1"
+        @keydown=${this.onToolbarKeyDown}
+      >
         ${this.controls.map((type) => this.renderControl(type))}
-        <slot @slotchange=${this.onSlotChange}></slot>
+        <slot
+          @slotchange=${this.onSlotChange}
+          @lr-toolbar-actions-change=${this.onToolbarActionsChange}
+          @lr-feedback-change=${this.containSlottedFeedbackEvent}
+          @lr-feedback-submit=${this.containSlottedFeedbackEvent}
+        ></slot>
       </div>
     `;
   }
@@ -464,6 +632,6 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-message-actions': LyraMessageActions;
+    "lr-message-actions": LyraMessageActions;
   }
 }

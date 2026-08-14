@@ -7,21 +7,11 @@ import {
 } from '../../../internal/aria-controls.js';
 import { styles } from './icon-button.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
-import {
-  attachInternalsSafely,
-  getFormOwner,
-  setFormOwner,
-  type FormOwnerValue,
-} from '../../../internal/form-associated.js';
 import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
 import { isUnsafeSvgCloneAttribute } from '../../../internal/safe-svg.js';
-import {
-  EXTERNAL_LABEL_ACTIVATION,
-  type ExternalLabelActivation,
-} from '../../../internal/form-control-labels.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_iconButtonLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_iconButtonLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -89,11 +79,9 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * the serialized `aria-controls` value; read `ariaControlsElements` in a supporting browser.
  * Browsers without that API retain the forwarded string attribute as a best-effort fallback.
  *
- * Form-associated (mirroring `<lr-button>`'s identical shape): discoverable through
- * `form.elements`, and `type="submit"`/`type="reset"` are handled by this component itself via
- * the host's associated form — a shadow-internal native `<button type="submit">` does not
- * participate in an ancestor light-DOM form's submission on its own, since form-submitter
- * semantics don't cross the shadow boundary.
+ * This icon-only primitive is intentionally an action/link, not a form submitter. Use
+ * `<lr-button circle type="submit|reset">` with an icon-only default slot when a form action is
+ * required; that component owns the complete native submitter contract.
  *
  * A safe `href` switches the interactive root to a native anchor. `target` derives
  * `rel="noopener noreferrer"`; `download` narrows URL validation to downloadable schemes. A
@@ -151,24 +139,17 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     iconButtonLabel: LYRA_DEFAULT_iconButtonLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  // A button is form-associated so it is discoverable through form.elements, mirroring
-  // <lr-button>'s identical rationale -- see the class doc above.
-  static formAssociated = true;
-
   static override properties = {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
   };
 
   private _disabled = false;
-  private _fieldsetDisabled = false;
   private hasSyncedDescribedByElements = false;
-  private internals: ElementInternals;
 
   get disabled(): boolean {
     return this._disabled;
@@ -185,9 +166,9 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
     this.requestUpdate('disabled', old);
   }
 
-  /** Whether the control is disabled directly or by an ancestor fieldset. */
+  /** Whether the action is disabled. */
   get effectiveDisabled(): boolean {
-    return this._disabled || this._fieldsetDisabled;
+    return this._disabled;
   }
 
   /** Canonical Lyra glyph name. Shoelace's `name` alias delegates to the same state. */
@@ -213,9 +194,6 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   @property() target?: string;
   /** Native anchor download filename; also selects the stricter download URL allowlist. */
   @property() download?: string;
-  /** Forwarded to this component's own submit/reset handling (`onClick` below) — see the class
-   *  doc comment for why this component (not the shadow-internal `<button>`) owns that behavior. */
-  @property() type: 'button' | 'submit' | 'reset' = 'button';
   @query('[part~="button"]') private baseEl?: HTMLButtonElement | HTMLAnchorElement;
   @query('slot') private slotEl?: HTMLSlotElement;
   @query('[part="fallback"]') private fallbackSvgEl?: SVGSVGElement;
@@ -224,17 +202,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
    *  `[part="fallback"]` SVG, which `updated()` then populates via `syncFallbackGeometry()`. */
   @state() private hasBareGeometry = false;
 
-  constructor() {
-    super();
-    this.internals = attachInternalsSafely(this);
-  }
-
-  get form(): HTMLFormElement | null { return getFormOwner(this.internals); }
-  set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
-  getForm(): HTMLFormElement | null { return getFormOwner(this.internals); }
-  get labels(): NodeList { return this.internals.labels; }
-
-  /** Activates the internal native button, including submit/reset behavior. */
+  /** Activates the internal native action or link. */
   override click(): void {
     if (this.effectiveDisabled) return;
     this.baseEl?.click();
@@ -245,23 +213,6 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   }
   override blur(): void { this.baseEl?.blur(); }
 
-  /** A native `<button>`'s label activates it rather than merely focusing it, so an external
-   *  `<label for>` runs this button's submit/reset behavior once. See `<lr-button>` for why the
-   *  internal element's role cannot be used to infer this.
-   *  @internal */
-  [EXTERNAL_LABEL_ACTIVATION](): ExternalLabelActivation {
-    return 'activate';
-  }
-
-  private onClick = (): void => {
-    if (this.effectiveDisabled) return;
-    if (this.type === 'submit') {
-      this.getForm()?.requestSubmit();
-    } else if (this.type === 'reset') {
-      this.getForm()?.reset();
-    }
-  };
-
   private onFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
     this.emit('lr-focus');
@@ -271,11 +222,6 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
     relayNativeEvent(this, event);
     this.emit('lr-blur');
   };
-
-  formDisabledCallback(disabled: boolean): void {
-    this._fieldsetDisabled = disabled;
-    this.requestUpdate();
-  }
 
   private onSlotChange = (): void => {
     const assigned = this.slotEl?.assignedElements({ flatten: true }) ?? [];
@@ -324,7 +270,10 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
       : nothing}${this.hasBareGeometry
       ? html`<svg part="fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"></svg>`
       : nothing}<slot @slotchange=${this.onSlotChange}></slot>`;
-    const href = this.download ? safeDownloadHref(this.href) : safeLinkHref(this.href);
+    // Empty is still present for native anchors: `download=""` asks the browser to derive a
+    // filename and must select the same strict resource-URL policy as a named download.
+    const hasDownload = this.download !== undefined;
+    const href = hasDownload ? safeDownloadHref(this.href) : safeLinkHref(this.href);
 
     if (href) {
       const disabled = this.effectiveDisabled;
@@ -333,7 +282,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
         href=${disabled ? nothing : href}
         target=${this.target || nothing}
         rel=${this.target ? 'noopener noreferrer' : nothing}
-        download=${this.download || nothing}
+        download=${hasDownload ? this.download ?? '' : nothing}
         aria-label=${label}
         aria-haspopup=${this.triggerHasPopup ?? nothing}
         aria-expanded=${this.triggerExpanded ?? nothing}
@@ -355,7 +304,6 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
       aria-expanded=${this.triggerExpanded ?? nothing}
       aria-controls=${this.triggerControls || nothing}
       aria-describedby=${this.triggerDescribedBy || nothing}
-      @click=${this.onClick}
       @focus=${this.onFocus}
       @blur=${this.onBlur}
     >${content}</button>`;

@@ -224,6 +224,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   }
   set open(next: boolean) {
     const normalized = Boolean(next);
+    if (this.coalesceOpenRequest(normalized)) return;
     if (normalized === this._open) return;
     // Before the first render this is the initial markup/property state, not a transition:
     // `<lr-dialog open>` and confirm.ts's `dialog.open = true` before mounting both land here.
@@ -298,6 +299,10 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    *  the opposite transition (or by a disconnect) never announces a completion that never
    *  happened. */
   private transitionToken = 0;
+  /** Target currently in its cancelable lifecycle preflight. Writes from a listener are captured
+   * here so same-target requests coalesce and an opposite request supersedes the outer commit. */
+  private openRequestTarget?: boolean;
+  private openRequestDuringPreflight?: boolean;
   private transitionAnimations: Animation[] = [];
   private initialFocusDecision?: boolean;
   private readonly headingId = nextId('dialog-heading');
@@ -413,7 +418,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     }
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.resetHeadingObserver();
   }
 
@@ -486,8 +492,13 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    * animation has finished.
    */
   show(): Promise<void> {
+    if (this.coalesceOpenRequest(true)) return Promise.resolve();
     if (this._open) return Promise.resolve();
-    if (this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented) {
+    this.beginOpenRequest(true);
+    const prevented = this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented;
+    const superseded = this.openRequestWasSuperseded(true);
+    this.finishOpenRequest();
+    if (prevented || superseded) {
       this.syncOpenAttribute();
       return Promise.resolve();
     }
@@ -520,19 +531,51 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   }
 
   private closeFrom(reason: DialogCloseReason, source: Element): Promise<void> {
+    if (this.coalesceOpenRequest(false)) return Promise.resolve();
     if (!this._open) return Promise.resolve();
-    if (this.emit('lr-hide', { source }, { cancelable: true }).defaultPrevented) {
+    this.beginOpenRequest(false);
+    if (
+      this.emit('lr-hide', { source }, { cancelable: true }).defaultPrevented ||
+      this.openRequestWasSuperseded(false)
+    ) {
+      this.finishOpenRequest();
       this.syncOpenAttribute();
       return Promise.resolve();
     }
-    if (this.emit('lr-dialog-close', reason, { cancelable: true }).defaultPrevented) {
+    if (
+      this.emit('lr-dialog-close', reason, { cancelable: true }).defaultPrevented ||
+      this.openRequestWasSuperseded(false)
+    ) {
+      this.finishOpenRequest();
       this.syncOpenAttribute();
       return Promise.resolve();
     }
+    this.finishOpenRequest();
     this.cancelTransitionAnimations();
     if (this.isConnected) this.setAttribute('data-closing', '');
     this.applyOpenState(false);
     return this.settleTransition('lr-after-hide');
+  }
+
+  private coalesceOpenRequest(next: boolean): boolean {
+    if (this.openRequestTarget === undefined) return false;
+    this.openRequestDuringPreflight = next;
+    return true;
+  }
+
+  private beginOpenRequest(next: boolean): void {
+    this.openRequestTarget = next;
+    this.openRequestDuringPreflight = undefined;
+  }
+
+  private openRequestWasSuperseded(next: boolean): boolean {
+    return this.openRequestDuringPreflight !== undefined &&
+      this.openRequestDuringPreflight !== next;
+  }
+
+  private finishOpenRequest(): void {
+    this.openRequestTarget = undefined;
+    this.openRequestDuringPreflight = undefined;
   }
 
   private applyOpenState(next: boolean): void {

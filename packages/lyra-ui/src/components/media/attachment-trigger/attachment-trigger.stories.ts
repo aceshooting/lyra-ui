@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './attachment-trigger.js';
-import type { AttachmentPickDetail } from './attachment-trigger.js';
+import type { LyraAttachmentFilesDetail } from './attachment-trigger.js';
 import '../../conversation/chat-composer/chat-composer.js';
 import '../attachment-chip/attachment-chip.js';
 
@@ -13,7 +13,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A compact attach affordance for a chat composer\'s leading slot. Renders a single plain icon button when only one `capabilities` entry is configured, or a small anchored menu when more than one. `files`/`image` open a hidden native file input and re-emit the selection as `lr-pick`; `camera` only fires `lr-camera-request` — this component never implements capture UI itself, that\'s entirely a host concern. The active trigger relays one native `FocusEvent` for `focus`/`blur`, followed by `lr-focus`/`lr-blur`.',
+          'A compact attach affordance for a chat composer\'s leading slot. Renders a single plain icon button when only one `capabilities` entry is configured, or a small anchored menu when more than one. `files`/`image` open a hidden native file input and emit a readonly array snapshot as `lr-files`; `camera` only fires `lr-camera-request` — this component never implements capture UI itself, that\'s entirely a host concern. The active trigger relays one native `FocusEvent` for `focus`/`blur`, followed by `lr-focus`/`lr-blur`.',
       },
     },
   },
@@ -22,13 +22,13 @@ export default meta;
 type Story = StoryObj;
 
 function logPick(logId: string) {
-  return (e: CustomEvent<AttachmentPickDetail>) => {
+  return (e: CustomEvent<LyraAttachmentFilesDetail>) => {
     const out = document.getElementById(logId);
     if (!out) return;
     const names = Array.from(e.detail.files)
       .map((f) => f.name)
       .join(', ');
-    out.textContent = `lr-pick: capability="${e.detail.capability}", files=[${names}]`;
+    out.textContent = `lr-files: capability="${e.detail.capability}", files=[${names}]`;
   };
 }
 
@@ -44,9 +44,9 @@ function logCameraRequest(logId: string) {
 export const SingleCapability: Story = {
   render: () => html`
     <div>
-      <lr-attachment-trigger @lr-pick=${logPick('single-log')}></lr-attachment-trigger>
+      <lr-attachment-trigger @lr-files=${logPick('single-log')}></lr-attachment-trigger>
       <p id="single-log" style="margin-top:0.5rem; font: 0.8125rem monospace;">
-        lr-pick: (none yet)
+        lr-files: (none yet)
       </p>
     </div>
   `,
@@ -58,20 +58,20 @@ export const SingleImageCapability: Story = {
   render: () => html`
     <lr-attachment-trigger
       .capabilities=${['image']}
-      @lr-pick=${logPick('image-log')}
+      @lr-files=${logPick('image-log')}
     ></lr-attachment-trigger>
-    <p id="image-log" style="margin-top:0.5rem; font: 0.8125rem monospace;">lr-pick: (none yet)</p>
+    <p id="image-log" style="margin-top:0.5rem; font: 0.8125rem monospace;">lr-files: (none yet)</p>
   `,
 };
 
-/** More than one capability renders `<lr-menu>`/`<lr-menu-item>` instead
+/** More than one capability renders `<lr-dropdown>`/`<lr-menu>`/`<lr-menu-item>` instead
  *  of a plain button — click the paperclip to see the menu. */
 export const MultiCapabilityMenu: Story = {
   render: () => html`
     <div>
       <lr-attachment-trigger
         .capabilities=${['files', 'image', 'camera']}
-        @lr-pick=${logPick('multi-log')}
+        @lr-files=${logPick('multi-log')}
         @lr-camera-request=${logCameraRequest('multi-log')}
       ></lr-attachment-trigger>
       <p id="multi-log" style="margin-top:0.5rem; font: 0.8125rem monospace;">(no event yet)</p>
@@ -120,7 +120,7 @@ export const Disabled: Story = {
  *  `<lr-attachment-chip>` rows in the composer's `chips` slot. */
 export const InChatComposer: Story = {
   render: () => {
-    const onPick = (e: CustomEvent<AttachmentPickDetail>) => {
+    const onPick = (e: CustomEvent<LyraAttachmentFilesDetail>) => {
       const composer = document.getElementById('composer-demo');
       if (!composer) return;
       for (const file of Array.from(e.detail.files)) {
@@ -140,7 +140,7 @@ export const InChatComposer: Story = {
         <lr-attachment-trigger
           slot="leading"
           .capabilities=${['files', 'image', 'camera']}
-          @lr-pick=${onPick}
+          @lr-files=${onPick}
           @lr-camera-request=${logCameraRequest('composer-log')}
         ></lr-attachment-trigger>
       </lr-chat-composer>

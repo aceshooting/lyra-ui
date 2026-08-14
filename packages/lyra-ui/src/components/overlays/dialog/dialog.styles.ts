@@ -82,6 +82,7 @@ export const styles = css`
   }
   [part='header'] {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -99,11 +100,21 @@ export const styles = css`
     white-space: nowrap;
   }
   [part='header-actions'] {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-end;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     gap: var(--lr-space-xs);
     margin-inline-start: auto;
+  }
+  [part='header-actions'] ::slotted(*) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   [part~='close-button'] {
     flex: 0 0 auto;

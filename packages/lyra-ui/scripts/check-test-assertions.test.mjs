@@ -7,6 +7,7 @@ import test from 'node:test';
 import { API } from 'typescript/unstable/sync';
 
 import {
+  allRelatedTypes,
   collectUnsafeAssertions,
   isDomTypeDescription,
   policyAccountingFailures,
@@ -24,6 +25,21 @@ test('accepts primitive projections and ordinary data payloads', () => {
   assert.equal(isDomTypeDescription('boolean'), false);
   assert.equal(isDomTypeDescription('{ id: string; label: string }'), false);
   assert.equal(isDomTypeDescription('string | null', ['String']), false);
+});
+
+test('retains a usable top-level type when unstable relationship accessors throw', () => {
+  const topLevelType = {
+    isUnionType: () => true,
+    isIntersectionType: () => false,
+    getTypes: () => {
+      throw new Error('synthetic tuple relationship failure');
+    },
+    getBaseTypes: () => {
+      throw new Error('synthetic base relationship failure');
+    },
+  };
+
+  assert.deepEqual(allRelatedTypes(topLevelType), [topLevelType]);
 });
 
 function withProject(source, callback) {

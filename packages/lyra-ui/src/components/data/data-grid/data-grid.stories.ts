@@ -74,7 +74,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "Data grid with client and server processing. `selectedRows` is writable and maps current source-row objects onto `selectedKeys` for controlled selection.",
+          "Data grid with client and server processing. Collection inputs and event/state collections are readonly snapshots; `selectedRows` remains writable and maps current source-row objects onto `selectedKeys`.",
       },
     },
   },
@@ -113,6 +113,67 @@ export const FullClientFeatures: Story = {
   `,
 };
 
+export const HonestColumnControls: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Open a column's options button. It discloses a native-control group with distinct pin-to-start, pin-to-end, unpin, and visibility names; Escape closes it and returns focus. Resize separators are separate keyboard stops with complete adjustable values.",
+      },
+    },
+  },
+  render: () => html`
+    <lr-data-grid
+      label="Column controls"
+      with-column-menu
+      pinnable
+      resizable
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `,
+};
+
+export const BoundedTreeProjection: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Nested input is cycle-safe and bounded to 64 descendant levels and 10,000 total rows. This 70-level example renders the supported prefix plus the localized `tree-limit` notice.",
+      },
+    },
+  },
+  render: () => {
+    let root: DemoRow = {
+      id: 69,
+      name: "Level 69",
+      team: "Tree",
+      score: 69,
+      joined: "2024-01-01",
+    };
+    for (let id = 68; id >= 0; id -= 1) {
+      root = {
+        id,
+        name: `Level ${id}`,
+        team: "Tree",
+        score: id,
+        joined: "2024-01-01",
+        children: [root],
+      };
+    }
+    return html`
+      <lr-data-grid
+        label="Bounded nested rows"
+        row-key="id"
+        child-rows="children"
+        .expandedKeys=${Array.from({ length: 70 }, (_value, id) => id)}
+        .columns=${columns.slice(0, 1)}
+        .data=${[root]}
+      ></lr-data-grid>
+    `;
+  },
+};
+
 /** An explicit delimiter overrides the comma normally selected by `format: "csv"`. */
 export const ExplicitCopyDelimiter: Story = {
   parameters: {
@@ -133,18 +194,32 @@ export const ExplicitCopyDelimiter: Story = {
       const output = wrapper?.querySelector<HTMLOutputElement>("output");
       if (!grid || !output) return;
 
-      const copied = grid.copySelectedRows({
-        columnIds: ["name", "score"],
-        includeHeaders: false,
-        format: "csv",
-        delimiter: ";",
-      });
       const preview = grid.getDataAsCsv({
         columnIds: ["name", "score"],
         includeHeaders: false,
         delimiter: ";",
       });
-      output.textContent = `Copied ${copied} selected rows with semicolons:\n${preview}`;
+      const cleanup = (): void => {
+        grid.removeEventListener("lr-copy", onCopy);
+        grid.removeEventListener("lr-copy-error", onCopyError);
+      };
+      const onCopy = (): void => {
+        cleanup();
+        output.textContent = `Clipboard write fulfilled:\n${preview}`;
+      };
+      const onCopyError = (): void => {
+        cleanup();
+        output.textContent = "Clipboard write failed; no success was reported.";
+      };
+      grid.addEventListener("lr-copy", onCopy);
+      grid.addEventListener("lr-copy-error", onCopyError);
+      const requested = grid.copySelectedRows({
+        columnIds: ["name", "score"],
+        includeHeaders: false,
+        format: "csv",
+        delimiter: ";",
+      });
+      output.textContent = `Requested a clipboard write for ${requested} selected rows…`;
     };
     return html`
       <div data-copy-delimiter style="display:grid;gap:var(--lr-space-s)">

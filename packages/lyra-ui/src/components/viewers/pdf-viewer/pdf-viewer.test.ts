@@ -150,6 +150,40 @@ describe('lr-pdf-viewer', () => {
     } finally { restore(); }
   });
 
+  it('publishes a readonly correlated snapshot for loading, ready, page changes, and same-count reloads', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    const snapshots: LyraPdfViewer['pageViewerSnapshot'][] = [];
+    el.addEventListener('lr-page-viewer-state-change', (event) => snapshots.push(event.detail.snapshot));
+    try {
+      el.src = 'https://example.test/first.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      expect(snapshots.map((snapshot) => snapshot.status)).to.include.members(['loading', 'ready']);
+      const firstReady = snapshots.find((snapshot) => snapshot.status === 'ready')!;
+      expect(firstReady).to.deep.include({ page: 1, pageCount: 3 });
+      expect(Object.isFrozen(firstReady)).to.be.true;
+      expect(el.pageViewerSnapshot).to.equal(firstReady);
+
+      el.page = 2;
+      await el.updateComplete;
+      expect(el.pageViewerSnapshot).to.deep.include({
+        identity: firstReady.identity,
+        status: 'ready',
+        page: 2,
+        pageCount: 3,
+      });
+
+      el.src = 'https://example.test/second.pdf';
+      await waitUntil(() => el.pageViewerSnapshot.status === 'ready'
+        && el.pageViewerSnapshot.identity !== firstReady.identity);
+      expect(el.pageViewerSnapshot.pageCount).to.equal(3);
+      expect(el.pageViewerSnapshot.page).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
   it('exposes the toolbar nav/zoom buttons as individually themeable parts (regression)', async () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(3));
@@ -297,9 +331,20 @@ describe('lr-pdf-viewer', () => {
     try {
       el.src = 'https://example.test/report.pdf';
       await waitFor(el, 'lr-virtual-list');
-      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[]; keyFunction?: (item: unknown, index: number) => unknown };
-      expect(list.items).to.deep.equal([1, 2, 3, 4, 5]);
-      expect(list.keyFunction!(3, 2)).to.equal(3);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+        items: unknown[];
+        source: {
+          count: number;
+          itemAt(index: number): number;
+          keyAt?(index: number): string | number;
+          indexOfKey?(key: string | number): number;
+        };
+      };
+      expect(list.items).to.deep.equal([]);
+      expect(list.source.count).to.equal(5);
+      expect(list.source.itemAt(2)).to.equal(3);
+      expect(list.source.keyAt!(2)).to.equal(3);
+      expect(list.source.indexOfKey!(3)).to.equal(2);
       await aTimeout(80);
       await waitUntil(() => list.shadowRoot!.querySelector('[part="page"] canvas') !== null);
       const canvas = list.shadowRoot!.querySelector('[part="page"] canvas') as HTMLCanvasElement;
@@ -328,14 +373,26 @@ describe('lr-pdf-viewer', () => {
     } finally { restore(); }
   });
 
-  it('lets an explicit host aria-label win over the name-derived fallback', async () => {
+  it('uses name in shadow but leaves a non-empty host aria-label on the host', async () => {
     const named = (await fixture(html`<lr-pdf-viewer name="Report.pdf"></lr-pdf-viewer>`)) as LyraPdfViewer;
     expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Report.pdf');
 
     const overridden = (await fixture(
       html`<lr-pdf-viewer name="Report.pdf" aria-label="Quarterly report"></lr-pdf-viewer>`,
     )) as LyraPdfViewer;
-    expect(overridden.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Quarterly report');
+    const overriddenBase = overridden.shadowRoot!.querySelector('[part="base"]')!;
+    expect(overriddenBase.getAttribute('aria-label')).to.be.null;
+    expect(overriddenBase.getAttribute('role')).to.be.null;
+  });
+
+  it('preserves an explicitly empty host aria-label on the region owner', async () => {
+    const el = await fixture<LyraPdfViewer>(
+      html`<lr-pdf-viewer name="Report.pdf" aria-label=""></lr-pdf-viewer>`,
+    );
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('region');
+    expect(base.hasAttribute('aria-label')).to.be.true;
+    expect(base.getAttribute('aria-label')).to.equal('');
   });
 
   it('falls back to the localized label when neither name nor aria-label is set', async () => {
@@ -371,7 +428,33 @@ describe('lr-pdf-viewer', () => {
       const eventPromise = oneEvent(el, 'lr-render-error');
       el.src = 'https://example.test/report.pdf';
       expect((await eventPromise).detail.error).to.equal(boom);
+      await waitUntil(() => listShadowRoot(el).querySelector<HTMLElement>('[part~="page-error"]:not([hidden])') !== null);
+      expect(listShadowRoot(el).querySelector('[part~="page-error"]')!.textContent)
+        .to.equal('Failed to load document.');
     } finally { restore(); }
+  });
+
+  it('contains getPage failures to a visible page fallback while the document stays usable', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const boom = new Error('page decode boom');
+    installFakeLoader(el, {
+      numPages: 2,
+      getPage: (pageNumber: number) => pageNumber === 1
+        ? Promise.reject(boom)
+        : Promise.resolve(fakePage(pageNumber)),
+    } as never);
+    const restore = stubFetch();
+    try {
+      const errorEvent = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/partial.pdf';
+      expect((await errorEvent).detail.error).to.equal(boom);
+      await waitUntil(() => listShadowRoot(el).querySelector<HTMLElement>('[part~="page-error"]:not([hidden])') !== null);
+      expect(el.shadowRoot!.querySelector('[part="toolbar"]')).to.exist;
+      expect(el.pageViewerSnapshot).to.deep.include({ status: 'ready', pageCount: 2 });
+      expect(await el.getPageText(2)).to.contain('unrelated content');
+    } finally {
+      restore();
+    }
   });
 
   it('emits lr-render-error when the text layer render itself rejects', async () => {

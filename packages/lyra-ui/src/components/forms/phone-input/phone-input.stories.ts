@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import '../../media/flag/flag-peer.js';
-import type { LyraPhoneInput, PhoneNumberAdapter, LyraPhoneInputSize } from './phone-input.class.js';
+import type { LyraPhoneInput, LyraPhoneNumberAdapter, LyraPhoneInputSize } from './phone-input.class.js';
 
-const demoAdapter: PhoneNumberAdapter = {
+const demoAdapter: LyraPhoneNumberAdapter = {
   countries: [
     { code: 'LU', callingCode: '352' },
     { code: 'FR', callingCode: '33' },
@@ -145,6 +145,38 @@ export const Required: Story = {
       default-country="FR"
       .adapter=${demoAdapter}
       style="max-width: 24rem"
+    ></lr-phone-input>
+  `,
+};
+
+/** Readonly keeps the telephone value focusable, selectable, and submittable while locking both
+ * the text surface and the country selector; autofocus is forwarded to that real native input. */
+export const ReadonlyAutofocus: Story = {
+  name: 'Readonly with native autofocus',
+  render: () => html`
+    <form>
+      <lr-phone-input
+        name="mobile"
+        label="Readonly contact number"
+        value="+352621123456"
+        default-country="LU"
+        readonly
+        autofocus
+        .adapter=${demoAdapter}
+      ></lr-phone-input>
+    </form>
+  `,
+};
+
+/** Any supplied catalog is authoritative. An explicit empty array deliberately removes country
+ * selection even when the adapter carries automatic metadata. */
+export const AuthoritativeEmptyCountries: Story = {
+  name: 'Authoritative empty country catalog',
+  render: () => html`
+    <lr-phone-input
+      label="International number without country selector"
+      .countries=${[]}
+      .adapter=${demoAdapter}
     ></lr-phone-input>
   `,
 };

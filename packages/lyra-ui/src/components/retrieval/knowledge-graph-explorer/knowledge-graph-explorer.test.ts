@@ -1,10 +1,23 @@
-import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from '@open-wc/testing';
+import {
+  fixture,
+  expect,
+  html,
+  oneEvent,
+  waitUntil,
+  aTimeout,
+} from '@open-wc/testing';
 import './knowledge-graph-explorer.js';
 import type {
   LyraKnowledgeGraphExplorer,
   LyraKnowledgeGraphExplorerEventMap,
 } from './knowledge-graph-explorer.js';
-import type { LyraGraph, GraphNode, GraphLink, GraphNodeType, GraphCommunity } from '../graph/graph.class.js';
+import type {
+  GraphCommunity,
+  LyraGraph,
+  LyraGraphLink,
+  LyraGraphNode,
+} from '../graph/graph.class.js';
+import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import type { LyraGraphLegend } from '../graph-legend/graph-legend.class.js';
 import type { LyraPopover } from '../../overlays/overlay/popover.class.js';
 import type { LyraEntityCard } from '../entity-card/entity-card.class.js';
@@ -13,11 +26,15 @@ import type { LyraInput } from '../../forms/input/input.class.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 function sinkElement(): HTMLElement | null {
-  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+  return document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  );
 }
 
 function sinkTexts(): string[] {
-  return Array.from(sinkElement()?.children ?? []).map((child) => child.textContent ?? '');
+  return Array.from(sinkElement()?.children ?? []).map(
+    (child) => child.textContent ?? ''
+  );
 }
 
 // d3-force's own timer runs on requestAnimationFrame -- Chromium throttles this heavily on a
@@ -26,13 +43,13 @@ function sinkTexts(): string[] {
 // headroom, matching graph.test.ts's own NODE_COUNT_TIMEOUT precedent.
 const NODE_COUNT_TIMEOUT = 5000;
 
-const nodeTypes: GraphNodeType[] = [{ id: 'person', label: 'Person' }];
-const nodes: GraphNode[] = [
+const nodeTypes: LyraNodeTypeStyle[] = [{ id: 'person', label: 'Person' }];
+const nodes: LyraGraphNode[] = [
   { id: 'marie', label: 'Marie Curie', type: 'person' },
   { id: 'pierre', label: 'Pierre Curie', type: 'person' },
   { id: 'polonium', label: 'Polonium' },
 ];
-const links: GraphLink[] = [
+const links: LyraGraphLink[] = [
   { source: 'marie', target: 'pierre', label: 'married_to' },
   { source: 'marie', target: 'polonium', label: 'discovered' },
 ];
@@ -49,7 +66,11 @@ function graphNodeEls(el: LyraKnowledgeGraphExplorer): SVGElement[] {
 
 async function settledFixture(): Promise<LyraKnowledgeGraphExplorer> {
   const el = (await fixture(html`
-    <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+    <lr-knowledge-graph-explorer
+      .nodes=${nodes}
+      .links=${links}
+      .nodeTypes=${nodeTypes}
+    ></lr-knowledge-graph-explorer>
   `)) as LyraKnowledgeGraphExplorer;
   await el.updateComplete;
   await waitUntil(() => graphNodeEls(el).length === nodes.length, undefined, {
@@ -60,7 +81,9 @@ async function settledFixture(): Promise<LyraKnowledgeGraphExplorer> {
 
 describe('lr-knowledge-graph-explorer', () => {
   it('defaults to empty data, no selection/pins/path, renderer="svg"', async () => {
-    const el = (await fixture(html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`)) as LyraKnowledgeGraphExplorer;
+    const el = (await fixture(
+      html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`
+    )) as LyraKnowledgeGraphExplorer;
     expect(el.nodes).to.deep.equal([]);
     expect(el.links).to.deep.equal([]);
     expect(el.pinnedNodeIds).to.deep.equal([]);
@@ -69,32 +92,62 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(el.renderer).to.equal('svg');
   });
 
-  it('preserves an explicitly empty host aria-label on the root group and restores label after removal', async () => {
+  it('keeps exactly one root owner across explicit-empty and dynamic host naming', async () => {
     const el = (await fixture(
-      html`<lr-knowledge-graph-explorer label="Research graph" aria-label=""></lr-knowledge-graph-explorer>`,
+      html`<lr-knowledge-graph-explorer
+        label="Research graph"
+        aria-label=""
+      ></lr-knowledge-graph-explorer>`
     )) as LyraKnowledgeGraphExplorer;
-    const group = () => el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const group = () =>
+      el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
 
-    expect(group().hasAttribute('aria-label')).to.equal(true);
+    expect(el.hasAttribute('aria-label')).to.equal(true);
+    expect(el.getAttribute('aria-label')).to.equal('');
     expect(group().getAttribute('aria-label')).to.equal('');
+    expect(group().getAttribute('role')).to.equal('group');
+
+    el.setAttribute('aria-label', 'Author graph explorer');
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.equal('Author graph explorer');
+    expect(group().getAttribute('aria-label')).to.equal(null);
+    expect(group().getAttribute('role')).to.equal(null);
 
     el.removeAttribute('aria-label');
     await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.equal(null);
     expect(group().getAttribute('aria-label')).to.equal('Research graph');
+    expect(group().getAttribute('role')).to.equal('group');
   });
 
   it('registers every composed custom element', async () => {
     // Importing a *.class.js module alone never calls defineElement() -- only the barrel (*.js)
     // does; this proves the registration entry point actually pulls every composed child in.
-    await fixture(html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`);
-    for (const tag of ['lr-graph', 'lr-graph-legend', 'lr-entity-card', 'lr-neighbor-list', 'lr-path-strip', 'lr-popover', 'lr-input', 'lr-chip', 'lr-button']) {
+    await fixture(
+      html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`
+    );
+    for (const tag of [
+      'lr-graph',
+      'lr-graph-legend',
+      'lr-entity-card',
+      'lr-neighbor-list',
+      'lr-path-strip',
+      'lr-popover',
+      'lr-input',
+      'lr-chip',
+      'lr-button',
+    ]) {
       expect(customElements.get(tag), `${tag} should be registered`).to.exist;
     }
   });
 
   it('passes graph data straight through to the composed lr-graph', async () => {
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
     const graph = el.shadowRoot!.querySelector('[part="graph"]') as LyraGraph;
@@ -105,11 +158,19 @@ describe('lr-knowledge-graph-explorer', () => {
 
   it('wires the composed lr-graph-legend into hiddenTypes on both this component and lr-graph', async () => {
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
-    const legend = el.shadowRoot!.querySelector('lr-graph-legend') as LyraGraphLegend;
-    const item = legend.shadowRoot!.querySelectorAll('[part~="item"]')[0] as HTMLButtonElement;
+    const legend = el.shadowRoot!.querySelector(
+      'lr-graph-legend'
+    ) as LyraGraphLegend;
+    const item = legend.shadowRoot!.querySelectorAll(
+      '[part~="item"]'
+    )[0] as HTMLButtonElement;
     item.click();
     await el.updateComplete;
     expect(el.hiddenTypes).to.deep.equal(['person']);
@@ -129,30 +190,50 @@ describe('lr-knowledge-graph-explorer', () => {
     await el.updateComplete;
 
     expect(el.searchQuery).to.equal('curie');
-    expect(el.shadowRoot!.querySelectorAll('[part="search-result"]').length).to.equal(2);
-    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
-    expect(searchInput.value, 'the preset query is reflected into the visible search box').to.equal('curie');
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="search-result"]').length
+    ).to.equal(2);
+    const searchInput = el.shadowRoot!.querySelector(
+      '[part="search"]'
+    ) as LyraInput;
+    expect(
+      searchInput.value,
+      'the preset query is reflected into the visible search box'
+    ).to.equal('curie');
   });
 
   it('emits lr-search-change with the new query when the user types, and stays silent for a host assignment', async () => {
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
 
     const details: unknown[] = [];
     el.addEventListener('lr-search-change', (event) => {
-      details.push((event as LyraKnowledgeGraphExplorerEventMap['lr-search-change']).detail);
+      details.push(
+        (event as LyraKnowledgeGraphExplorerEventMap['lr-search-change']).detail
+      );
     });
 
-    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
-    const native = searchInput.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const searchInput = el.shadowRoot!.querySelector(
+      '[part="search"]'
+    ) as LyraInput;
+    const native = searchInput.shadowRoot!.querySelector(
+      'input'
+    ) as HTMLInputElement;
     native.value = 'curie';
     native.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
 
     expect(details).to.deep.equal([{ searchQuery: 'curie' }]);
-    expect(el.searchQuery, 'the component applies the query itself before announcing it').to.equal('curie');
+    expect(
+      el.searchQuery,
+      'the component applies the query itself before announcing it'
+    ).to.equal('curie');
 
     el.searchQuery = 'polonium';
     await el.updateComplete;
@@ -171,37 +252,58 @@ describe('lr-knowledge-graph-explorer', () => {
     await el.updateComplete;
 
     const hostBox = el.getBoundingClientRect();
-    const baseBox = el.shadowRoot!.querySelector('[part="base"]')!.getBoundingClientRect();
+    const baseBox = el
+      .shadowRoot!.querySelector('[part="base"]')!
+      .getBoundingClientRect();
     const graphBox = graphEl(el).getBoundingClientRect();
 
     expect(hostBox.height, 'the fixture height applied').to.be.closeTo(320, 1);
-    expect(baseBox.height, 'the column fills its host rather than its content').to.be.closeTo(hostBox.height, 1);
+    expect(
+      baseBox.height,
+      'the column fills its host rather than its content'
+    ).to.be.closeTo(hostBox.height, 1);
     expect(
       graphBox.bottom - hostBox.bottom,
-      'the graph does not bleed past the host box it was given',
+      'the graph does not bleed past the host box it was given'
     ).to.be.at.most(1);
-    expect(graphBox.height, 'and it takes the space the toolbar leaves over').to.be.greaterThan(100);
+    expect(
+      graphBox.height,
+      'and it takes the space the toolbar leaves over'
+    ).to.be.greaterThan(100);
   });
 
   it('still sizes itself from the graph when the host is left unsized', async () => {
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
 
-    expect(el.getBoundingClientRect().height, 'no height collapse without an explicit host height').to.be.greaterThan(
-      100,
-    );
+    expect(
+      el.getBoundingClientRect().height,
+      'no height collapse without an explicit host height'
+    ).to.be.greaterThan(100);
     expect(graphEl(el).getBoundingClientRect().height).to.be.greaterThan(100);
   });
 
   it('filters search matches, shows a no-matches state, and dims non-matching nodes/links on lr-graph', async () => {
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
-    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
-    const native = searchInput.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const searchInput = el.shadowRoot!.querySelector(
+      '[part="search"]'
+    ) as LyraInput;
+    const native = searchInput.shadowRoot!.querySelector(
+      'input'
+    ) as HTMLInputElement;
     native.value = 'curie';
     native.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
@@ -213,7 +315,9 @@ describe('lr-knowledge-graph-explorer', () => {
     // polonium is dimmed, so both links touching it (married_to doesn't, discovered does) --
     // only "discovered" (marie->polonium) should dim; "married_to" (marie<->pierre) shouldn't.
     expect(graph.dimmedLinkIds).to.deep.equal(['marie->polonium']);
-    const searchMirror = el.shadowRoot!.querySelector('[part="search-results"] + .sr-only')!;
+    const searchMirror = el.shadowRoot!.querySelector(
+      '[part="search-results"] + .sr-only'
+    )!;
     expect(searchMirror.getAttribute('role')).to.equal(null);
     expect(searchMirror.getAttribute('aria-live')).to.equal(null);
     expect(searchMirror.getAttribute('aria-hidden')).to.equal('true');
@@ -223,34 +327,43 @@ describe('lr-knowledge-graph-explorer', () => {
     native.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
     const emptyEl = el.shadowRoot!.querySelector('[part="search-empty"]');
-    expect((emptyEl) != null).to.equal(true);
+    expect(emptyEl != null).to.equal(true);
     // `[part="search-empty"]` is a direct child of the `role="list"` `[part="search-results"]`
     // container, same as the real `[part="search-result"]` match rows -- every child of a list
     // role must itself carry role="listitem" (or a small allowed set) or the ARIA is invalid.
     expect(emptyEl!.getAttribute('role')).to.equal('listitem');
     expect(graph.dimmedNodeIds).to.deep.equal(['marie', 'pierre', 'polonium']);
-    expect(graph.dimmedLinkIds).to.deep.equal(['marie->pierre', 'marie->polonium']);
+    expect(graph.dimmedLinkIds).to.deep.equal([
+      'marie->pierre',
+      'marie->polonium',
+    ]);
   });
 
-  it('excludes an unlabeled nonmatch while searching by another node\'s label', async () => {
+  it("excludes an unlabeled nonmatch while searching by another node's label", async () => {
     // The matching node has an id that does not contain the query, so the label path is used;
     // the unrelated unlabeled node must take the same path and safely contribute no match.
-    const testNodes: GraphNode[] = [
+    const testNodes: LyraGraphNode[] = [
       { id: 'alpha', label: 'Needle' },
       { id: 'beta' },
     ];
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${testNodes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${testNodes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
-    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
-    const native = searchInput.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const searchInput = el.shadowRoot!.querySelector(
+      '[part="search"]'
+    ) as LyraInput;
+    const native = searchInput.shadowRoot!.querySelector(
+      'input'
+    ) as HTMLInputElement;
     native.value = 'needle';
     native.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
 
-    const resultLabels = Array.from(el.shadowRoot!.querySelectorAll('[part="search-result"] button')).map(
-      (button) => button.textContent?.trim(),
-    );
+    const resultLabels = Array.from(
+      el.shadowRoot!.querySelectorAll('[part="search-result"] button')
+    ).map((button) => button.textContent?.trim());
     expect(resultLabels).to.deep.equal(['Needle']);
   });
 
@@ -261,19 +374,30 @@ describe('lr-knowledge-graph-explorer', () => {
     // first transition from the default empty `searchQuery` to a real one. Asserts on the actual
     // DOM text content the sink appends, not merely that a method was invoked.
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
     const before = sinkTexts().length;
 
-    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
-    const native = searchInput.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const searchInput = el.shadowRoot!.querySelector(
+      '[part="search"]'
+    ) as LyraInput;
+    const native = searchInput.shadowRoot!.querySelector(
+      'input'
+    ) as HTMLInputElement;
     native.value = 'curie';
     native.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
 
     const after = sinkTexts();
-    expect(after.length, 'exactly one new message should have been appended to the sink').to.equal(before + 1);
+    expect(
+      after.length,
+      'exactly one new message should have been appended to the sink'
+    ).to.equal(before + 1);
     expect(after.at(-1)).to.equal('2 matches');
   });
 
@@ -289,19 +413,23 @@ describe('lr-knowledge-graph-explorer', () => {
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
 
-    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
+    const searchInput = el.shadowRoot!.querySelector(
+      '[part="search"]'
+    ) as LyraInput;
     searchInput.dispatchEvent(
       new CustomEvent('lr-input', {
         detail: { value: 'curie' },
         bubbles: true,
         composed: true,
-      }),
+      })
     );
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelectorAll('[part="search-result"]').length).to.equal(0);
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="search-result"]').length
+    ).to.equal(0);
 
     const neighborList = el.shadowRoot!.querySelector(
-      '[part="detail-card"] lr-neighbor-list',
+      '[part="detail-card"] lr-neighbor-list'
     ) as LyraNeighborList;
     expect(neighborList.rows.length).to.equal(0);
 
@@ -314,7 +442,7 @@ describe('lr-knowledge-graph-explorer', () => {
         detail: { id: 'marie' },
         bubbles: true,
         composed: true,
-      }),
+      })
     );
     await el.updateComplete;
     expect(el.selectedNodeId).to.equal('polonium');
@@ -327,13 +455,17 @@ describe('lr-knowledge-graph-explorer', () => {
       LyraKnowledgeGraphExplorerEventMap['lr-link-click'],
       LyraKnowledgeGraphExplorerEventMap['lr-node-expand'],
       LyraKnowledgeGraphExplorerEventMap['lr-community-click'],
-      LyraKnowledgeGraphExplorerEventMap['lr-relation-activate'],
+      LyraKnowledgeGraphExplorerEventMap['lr-relation-activate']
     ] = [
       new CustomEvent('lr-node-click', { detail: { id: 'a', x: 1, y: 2 } }),
-      new CustomEvent('lr-link-click', { detail: { source: 'a', target: 'b' } }),
+      new CustomEvent('lr-link-click', {
+        detail: { source: 'a', target: 'b' },
+      }),
       new CustomEvent('lr-node-expand', { detail: { id: 'a' } }),
       new CustomEvent('lr-community-click', { detail: { id: 'community' } }),
-      new CustomEvent('lr-relation-activate', { detail: { relation: 'related_to' } }),
+      new CustomEvent('lr-relation-activate', {
+        detail: { relation: 'related_to' },
+      }),
     ];
     expect(events.map((event) => event.type)).to.deep.equal([
       'lr-node-click',
@@ -351,15 +483,23 @@ describe('lr-knowledge-graph-explorer', () => {
         .nodes=${[{ id: 'izmir', label: 'İzmir' }]}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
-    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
+    const searchInput = el.shadowRoot!.querySelector(
+      '[part="search"]'
+    ) as LyraInput;
     searchInput.dispatchEvent(
-      new CustomEvent('lr-input', { detail: { value: 'iz' }, bubbles: true, composed: true }),
+      new CustomEvent('lr-input', {
+        detail: { value: 'iz' },
+        bubbles: true,
+        composed: true,
+      })
     );
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelectorAll('[part="search-result"]').length).to.equal(1);
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="search-result"]').length
+    ).to.equal(1);
   });
 
-  it('dims the selected node\'s neighborhood (nodes and links) once a node is selected', async () => {
+  it("dims the selected node's neighborhood (nodes and links) once a node is selected", async () => {
     const el = await settledFixture();
     el.selectedNodeId = 'polonium';
     await el.updateComplete;
@@ -389,49 +529,77 @@ describe('lr-knowledge-graph-explorer', () => {
     // polonium's (index 2) only neighbor is marie -- pierre sits outside that neighborhood, so
     // hovering polonium should dim exactly pierre.
     const poloniumNode = graphNodeEls(el)[2]!;
-    poloniumNode.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, composed: true }));
+    poloniumNode.dispatchEvent(
+      new MouseEvent('mouseenter', { bubbles: true, composed: true })
+    );
     await el.updateComplete;
     expect(graph.dimmedNodeIds).to.deep.equal(['pierre']);
 
-    poloniumNode.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true, composed: true }));
+    poloniumNode.dispatchEvent(
+      new MouseEvent('mouseleave', { bubbles: true, composed: true })
+    );
     await el.updateComplete;
     expect(graph.dimmedNodeIds).to.deep.equal([]);
   });
 
   it('activating a search result focuses the node and opens the details popover with its entity card', async () => {
     const el = await settledFixture();
-    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
-    const native = searchInput.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const searchInput = el.shadowRoot!.querySelector(
+      '[part="search"]'
+    ) as LyraInput;
+    const native = searchInput.shadowRoot!.querySelector(
+      'input'
+    ) as HTMLInputElement;
     native.value = 'polonium';
     native.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
 
-    const result = el.shadowRoot!.querySelector('[part="search-result"] button') as HTMLButtonElement;
+    const result = el.shadowRoot!.querySelector(
+      '[part="search-result"] button'
+    ) as HTMLButtonElement;
     result.click();
-    await waitUntil(() => (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).open, undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    await waitUntil(
+      () =>
+        (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover)
+          .open,
+      undefined,
+      {
+        timeout: NODE_COUNT_TIMEOUT,
+      }
+    );
     expect(el.selectedNodeId).to.equal('polonium');
-    const card = el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard;
+    const card = el.shadowRoot!.querySelector(
+      '[part="detail-card"]'
+    ) as LyraEntityCard;
     expect(card.entity?.id).to.equal('polonium');
   });
 
   it('emits one value-carrying selection change when a search result changes selection', async () => {
     const el = await settledFixture();
-    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
+    const searchInput = el.shadowRoot!.querySelector(
+      '[part="search"]'
+    ) as LyraInput;
     searchInput.dispatchEvent(
       new CustomEvent('lr-input', {
         detail: { value: 'polonium' },
         bubbles: true,
         composed: true,
-      }),
+      })
     );
     await el.updateComplete;
 
     const events: CustomEvent[] = [];
-    el.addEventListener('lr-selection-change', (event) => events.push(event as CustomEvent));
-    (el.shadowRoot!.querySelector('[part="search-result"] button') as HTMLButtonElement).click();
-    await waitUntil(() => events.length === 1, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    el.addEventListener('lr-selection-change', (event) =>
+      events.push(event as CustomEvent)
+    );
+    (
+      el.shadowRoot!.querySelector(
+        '[part="search-result"] button'
+      ) as HTMLButtonElement
+    ).click();
+    await waitUntil(() => events.length === 1, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
     await aTimeout(0);
 
     expect(events.length).to.equal(1);
@@ -448,8 +616,12 @@ describe('lr-knowledge-graph-explorer', () => {
         .selectedNodeId=${'marie'}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
-    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
-    await waitUntil(() => popover.open, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
+    await waitUntil(() => popover.open, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
     expect(popover.accessibleLabel).to.equal('Marie Curie');
   });
 
@@ -457,8 +629,12 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = await settledFixture();
     el.selectedNodeId = 'polonium';
     await el.updateComplete;
-    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
-    await waitUntil(() => popover.open, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
+    await waitUntil(() => popover.open, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
     expect(popover.accessibleLabel).to.equal('Polonium');
   });
 
@@ -484,18 +660,26 @@ describe('lr-knowledge-graph-explorer', () => {
       });
     el.selectedNodeId = 'marie';
     await el.updateComplete;
-    await waitUntil(() => resolvers.has('marie'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await waitUntil(() => resolvers.has('marie'), undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
     el.selectedNodeId = null;
     await el.updateComplete;
     el.selectedNodeId = 'polonium';
     await el.updateComplete;
-    await waitUntil(() => resolvers.has('polonium'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await waitUntil(() => resolvers.has('polonium'), undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
     resolvers.get('marie')!(true);
     await aTimeout(0);
-    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
     expect(popover.open).to.be.false;
     resolvers.get('polonium')!(true);
-    await waitUntil(() => popover.open, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await waitUntil(() => popover.open, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
     expect(popover.accessibleLabel).to.equal('Polonium');
   });
 
@@ -507,12 +691,16 @@ describe('lr-knowledge-graph-explorer', () => {
       new Promise<boolean>((resolve) => {
         resolvers.set(id, resolve);
       });
-    const activate = (el as unknown as { activateEntity(id: string): Promise<void> }).activateEntity.bind(el);
+    const activate = (
+      el as unknown as { activateEntity(id: string): Promise<void> }
+    ).activateEntity.bind(el);
     const first = activate('marie');
     const second = activate('polonium');
     resolvers.get('polonium')!(true);
     await second;
-    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
     expect(popover.accessibleLabel).to.equal('Polonium');
     resolvers.get('marie')!(true);
     await first;
@@ -523,8 +711,13 @@ describe('lr-knowledge-graph-explorer', () => {
   it('keeps details closed when graph focus rejects an invisible or unavailable node', async () => {
     const el = await settledFixture();
     graphEl(el).focusNode = async () => false;
-    await (el as unknown as { activateEntity(id: string): Promise<void> }).activateEntity('marie');
-    expect((el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).open).to.be.false;
+    await (
+      el as unknown as { activateEntity(id: string): Promise<void> }
+    ).activateEntity('marie');
+    expect(
+      (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover)
+        .open
+    ).to.be.false;
   });
 
   it('pins/unpins nodes, emits lr-pin-change, and reveals "Find path" only at exactly two pins', async () => {
@@ -533,39 +726,53 @@ describe('lr-knowledge-graph-explorer', () => {
     await el.updateComplete;
 
     let listener = oneEvent(el, 'lr-pin-change');
-    (el.shadowRoot!.querySelector('[part="detail-card"] lr-button[slot="actions"]') as HTMLElement).click();
+    (
+      el.shadowRoot!.querySelector(
+        '[part="detail-card"] lr-button[slot="actions"]'
+      ) as HTMLElement
+    ).click();
     let event = await listener;
     expect(event.detail).to.deep.equal({ pinnedNodeIds: ['marie'] });
     expect(el.pinnedNodeIds).to.deep.equal(['marie']);
     expect(el.shadowRoot!.querySelector('[part="pinned"]')).to.exist;
     expect(sinkTexts().at(-1)).to.equal('Marie Curie pinned');
-    const pinMirror = el.shadowRoot!.querySelector('[part="pinned"] + .sr-only')!;
+    const pinMirror = el.shadowRoot!.querySelector(
+      '[part="pinned"] + .sr-only'
+    )!;
     expect(pinMirror.getAttribute('role')).to.equal(null);
     expect(pinMirror.getAttribute('aria-live')).to.equal(null);
     expect(pinMirror.getAttribute('aria-hidden')).to.equal('true');
     // Only one pin so far -- no "Find path" action yet.
-    const pinnedRow = () => el.shadowRoot!.querySelector('[part="pinned"]') as HTMLElement;
+    const pinnedRow = () =>
+      el.shadowRoot!.querySelector('[part="pinned"]') as HTMLElement;
     expect(pinnedRow().querySelectorAll('lr-button').length).to.equal(0);
 
     el.pinnedNodeIds = ['marie', 'pierre'];
     await el.updateComplete;
-    const findPathButton = pinnedRow().querySelector('lr-button') as HTMLElement;
-    expect((findPathButton) != null).to.equal(true);
+    const findPathButton = pinnedRow().querySelector(
+      'lr-button'
+    ) as HTMLElement;
+    expect(findPathButton != null).to.equal(true);
     const pathListener = oneEvent(el, 'lr-path-request');
     findPathButton.click();
     const pathEvent = await pathListener;
-    expect(pathEvent.detail).to.deep.equal({ sourceId: 'marie', targetId: 'pierre' });
+    expect(pathEvent.detail).to.deep.equal({
+      sourceId: 'marie',
+      targetId: 'pierre',
+    });
 
     listener = oneEvent(el, 'lr-pin-change');
     const chip = pinnedRow().querySelector('lr-chip') as HTMLElement;
-    (chip.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement).click();
+    (
+      chip.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement
+    ).click();
     event = await listener;
     expect(event.detail.pinnedNodeIds).to.have.members(['pierre']);
   });
 
   it('releases and reacquires its shared announcement sink across disconnect and reconnect', async () => {
     const el = (await fixture(
-      html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`,
+      html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`
     )) as LyraKnowledgeGraphExplorer;
     expect(sinkElement() !== null).to.be.true;
     el.remove();
@@ -582,16 +789,20 @@ describe('lr-knowledge-graph-explorer', () => {
       activatePresetWhenGraphReady(
         id: string,
         graph: LyraGraph,
-        generation: number,
+        generation: number
       ): Promise<void>;
       activateEntity(id: string): Promise<void>;
     };
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${nodes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
     el.remove();
-    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const iframe = (await fixture(
+      html`<iframe></iframe>`
+    )) as HTMLIFrameElement;
     const frameDocument = iframe.contentDocument!;
     const frameWindow = iframe.contentWindow!;
     const originalMainRequest = window.requestAnimationFrame;
@@ -624,7 +835,10 @@ describe('lr-knowledge-graph-explorer', () => {
 
     try {
       frameDocument.adoptNode(el);
-      expect(frameFrames.size, 'detached adoption must not start skeleton polling').to.equal(0);
+      expect(
+        frameFrames.size,
+        'detached adoption must not start skeleton polling'
+      ).to.equal(0);
       frameDocument.body.append(el);
       const internals = el as unknown as ExplorerInternals;
       Object.defineProperty(el, 'selectedNodeId', {
@@ -640,18 +854,29 @@ describe('lr-knowledge-graph-explorer', () => {
         updateComplete: Promise.resolve(true),
         isConnected: true,
         shadowRoot: {
-          querySelector: (selector: string) => (selector === 'lr-skeleton' ? ({} as Element) : null),
+          querySelector: (selector: string) =>
+            selector === 'lr-skeleton' ? ({} as Element) : null,
         },
       } as unknown as LyraGraph;
-      const originalPresetActivation = internals.activatePresetWhenGraphReady.bind(el);
+      const originalPresetActivation =
+        internals.activatePresetWhenGraphReady.bind(el);
 
       const firstGeneration = ++internals.activationGeneration;
-      const pagehidePending = originalPresetActivation('marie', fakeGraph, firstGeneration);
+      const pagehidePending = originalPresetActivation(
+        'marie',
+        fakeGraph,
+        firstGeneration
+      );
       await Promise.resolve();
       await Promise.resolve();
-      expect(mainFrames.size, 'the parent window must not own an iframe skeleton frame').to.equal(0);
+      expect(
+        mainFrames.size,
+        'the parent window must not own an iframe skeleton frame'
+      ).to.equal(0);
       expect(frameFrames.size).to.equal(1);
-      const [pagehideHandle, pagehideStaleFrame] = Array.from(frameFrames.entries())[0]!;
+      const [pagehideHandle, pagehideStaleFrame] = Array.from(
+        frameFrames.entries()
+      )[0]!;
 
       frameWindow.dispatchEvent(new Event('pagehide'));
       expect(frameCancellations).to.include(pagehideHandle);
@@ -659,34 +884,58 @@ describe('lr-knowledge-graph-explorer', () => {
         pagehidePending.then(() => true),
         aTimeout(100).then(() => false),
       ]);
-      expect(settledOnPagehide, 'owner pagehide resolves the pending skeleton wait').to.be.true;
+      expect(
+        settledOnPagehide,
+        'owner pagehide resolves the pending skeleton wait'
+      ).to.be.true;
       pagehideStaleFrame(0);
-      expect(activations, 'a page-hidden realm callback stays inert').to.equal(0);
+      expect(activations, 'a page-hidden realm callback stays inert').to.equal(
+        0
+      );
 
       const secondGeneration = ++internals.activationGeneration;
-      const adoptionPending = originalPresetActivation('marie', fakeGraph, secondGeneration);
+      const adoptionPending = originalPresetActivation(
+        'marie',
+        fakeGraph,
+        secondGeneration
+      );
       await Promise.resolve();
       await Promise.resolve();
       expect(frameFrames.size).to.equal(1);
-      const [adoptionHandle, adoptionStaleFrame] = Array.from(frameFrames.entries())[0]!;
+      const [adoptionHandle, adoptionStaleFrame] = Array.from(
+        frameFrames.entries()
+      )[0]!;
 
       document.adoptNode(el);
-      expect(frameCancellations, 'adoption cancels through the retained iframe owner').to.include(adoptionHandle);
-      expect(mainFrames.size, 'detached adoption must not re-arm preset activation').to.equal(0);
+      expect(
+        frameCancellations,
+        'adoption cancels through the retained iframe owner'
+      ).to.include(adoptionHandle);
+      expect(
+        mainFrames.size,
+        'detached adoption must not re-arm preset activation'
+      ).to.equal(0);
       const settledOnAdoption = await Promise.race([
         adoptionPending.then(() => true),
         aTimeout(100).then(() => false),
       ]);
-      expect(settledOnAdoption, 'adoption resolves the pending skeleton wait').to.be.true;
+      expect(settledOnAdoption, 'adoption resolves the pending skeleton wait')
+        .to.be.true;
       adoptionStaleFrame(0);
-      expect(activations, 'a canceled source-realm frame cannot activate the adopted explorer').to.equal(0);
+      expect(
+        activations,
+        'a canceled source-realm frame cannot activate the adopted explorer'
+      ).to.equal(0);
 
       let reconnectActivations = 0;
       internals.activatePresetWhenGraphReady = async () => {
         reconnectActivations += 1;
       };
       document.body.append(el);
-      expect(reconnectActivations, 'reconnect resumes the selected preset in the destination').to.equal(1);
+      expect(
+        reconnectActivations,
+        'reconnect resumes the selected preset in the destination'
+      ).to.equal(1);
     } finally {
       el.remove();
       window.requestAnimationFrame = originalMainRequest;
@@ -708,11 +957,15 @@ describe('lr-knowledge-graph-explorer', () => {
       };
     };
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${nodes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
     el.remove();
-    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const iframe = (await fixture(
+      html`<iframe></iframe>`
+    )) as HTMLIFrameElement;
     const frameDocument = iframe.contentDocument!;
     const frameWindow = iframe.contentWindow!;
     const originalQueueMicrotask = frameWindow.queueMicrotask;
@@ -724,7 +977,10 @@ describe('lr-knowledge-graph-explorer', () => {
     try {
       frameDocument.body.append(frameDocument.adoptNode(el));
       const internals = el as unknown as ExplorerInteractionInternals;
-      const foreignNode = frameDocument.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      const foreignNode = frameDocument.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'circle'
+      );
       foreignNode.setAttribute('part', 'node');
       foreignNode.getBoundingClientRect = () =>
         ({ left: 10, top: 20, width: 30, height: 40 } as DOMRect);
@@ -744,13 +1000,19 @@ describe('lr-knowledge-graph-explorer', () => {
           detail: { id: 'marie', x: 0, y: 0 },
           bubbles: true,
           composed: true,
-        }),
+        })
       );
-      expect(ownerMicrotasks.length, 'the iframe window owns the keyboard fallback microtask').to.equal(1);
+      expect(
+        ownerMicrotasks.length,
+        'the iframe window owns the keyboard fallback microtask'
+      ).to.equal(1);
 
       document.adoptNode(el);
       ownerMicrotasks[0]!();
-      expect(activations, 'a queued source-realm fallback cannot activate after adoption').to.equal(0);
+      expect(
+        activations,
+        'a queued source-realm fallback cannot activate after adoption'
+      ).to.equal(0);
     } finally {
       el.remove();
       frameWindow.queueMicrotask = originalQueueMicrotask;
@@ -759,9 +1021,11 @@ describe('lr-knowledge-graph-explorer', () => {
   });
 
   it('renders lr-path-strip only when path is non-empty', async () => {
-    const el = (await fixture(html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`)) as LyraKnowledgeGraphExplorer;
+    const el = (await fixture(
+      html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`
+    )) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="path"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="path"]') == null).to.be.true;
     el.path = [{ kind: 'node', node: { id: 'marie', label: 'Marie Curie' } }];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="path"]')).to.exist;
@@ -770,20 +1034,30 @@ describe('lr-knowledge-graph-explorer', () => {
   it('a direct click on a rendered graph node opens the details popover anchored to that node', async () => {
     const el = await settledFixture();
     const circle = graphNodeEls(el)[0]!;
-    circle.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
-    await waitUntil(() => (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).open, undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    circle.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, composed: true })
+    );
+    await waitUntil(
+      () =>
+        (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover)
+          .open,
+      undefined,
+      {
+        timeout: NODE_COUNT_TIMEOUT,
+      }
+    );
     expect(el.selectedNodeId).to.equal('marie');
-    const popup = (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).shadowRoot!.querySelector(
-      '[part~="popup"]',
-    ) as HTMLElement;
+    const popup = (
+      el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover
+    ).shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
     // showAt() positions the popup as position:fixed with explicit left/top -- proves showAt() was
     // actually invoked with a resolved rect rather than the popover just toggling open with no
     // anchor. `place()`'s own positioning runs through an async computePosition() promise, one or
     // more ticks after `open` itself flips true, so wait for that specifically rather than assuming
     // it settled by the time `open` did.
-    await waitUntil(() => popup.style.left !== '', undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await waitUntil(() => popup.style.left !== '', undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
     expect(popup.style.position).to.equal('fixed');
   });
 
@@ -794,21 +1068,35 @@ describe('lr-knowledge-graph-explorer', () => {
       details.push((event as CustomEvent).detail);
     });
 
-    graphNodeEls(el)[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
-    await waitUntil(() => details.length === 1, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    graphNodeEls(el)[0]!.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, composed: true })
+    );
+    await waitUntil(() => details.length === 1, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
     await aTimeout(0);
 
     expect(details).to.deep.equal([{ selectedNodeId: 'marie' }]);
   });
 
-  it('re-anchors the open popover from lr-graph\'s own lr-viewport-change, and stops once it closes', async () => {
+  it("re-anchors the open popover from lr-graph's own lr-viewport-change, and stops once it closes", async () => {
     const el = await settledFixture();
     const circle = graphNodeEls(el)[0]!;
-    circle.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
-    await waitUntil(() => (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).open, undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
-    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    circle.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, composed: true })
+    );
+    await waitUntil(
+      () =>
+        (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover)
+          .open,
+      undefined,
+      {
+        timeout: NODE_COUNT_TIMEOUT,
+      }
+    );
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
     const showAtCalls: unknown[] = [];
     const originalShowAt = popover.showAt.bind(popover);
     popover.showAt = ((rect: Parameters<LyraPopover['showAt']>[0]) => {
@@ -819,22 +1107,34 @@ describe('lr-knowledge-graph-explorer', () => {
     // Re-anchors purely in response to lr-graph's own event -- this component schedules no
     // requestAnimationFrame loop of its own (see onGraphViewportChange's doc comment).
     const before = showAtCalls.length;
-    graphEl(el).dispatchEvent(new CustomEvent('lr-viewport-change', { detail: { k: 1, x: 0, y: 0 } }));
+    graphEl(el).dispatchEvent(
+      new CustomEvent('lr-viewport-change', { detail: { k: 1, x: 0, y: 0 } })
+    );
     expect(showAtCalls.length).to.equal(before + 1);
 
     popover.open = false;
     const afterClose = showAtCalls.length;
-    graphEl(el).dispatchEvent(new CustomEvent('lr-viewport-change', { detail: { k: 1, x: 0, y: 0 } }));
+    graphEl(el).dispatchEvent(
+      new CustomEvent('lr-viewport-change', { detail: { k: 1, x: 0, y: 0 } })
+    );
     expect(showAtCalls.length).to.equal(afterClose); // no re-anchor once the popover is closed
   });
 
   it('keyboard Enter activation on a graph node (no native click) still opens the details popover', async () => {
     const el = await settledFixture();
     const circle = graphNodeEls(el)[0]!;
-    circle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    await waitUntil(() => (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).open, undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    circle.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+    );
+    await waitUntil(
+      () =>
+        (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover)
+          .open,
+      undefined,
+      {
+        timeout: NODE_COUNT_TIMEOUT,
+      }
+    );
     expect(el.selectedNodeId).to.equal('marie');
   });
 
@@ -842,9 +1142,17 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = await settledFixture();
     el.selectedNodeId = 'marie';
     await el.updateComplete;
-    const neighborList = el.shadowRoot!.querySelector('[part="detail-card"] lr-neighbor-list') as LyraNeighborList;
+    const neighborList = el.shadowRoot!.querySelector(
+      '[part="detail-card"] lr-neighbor-list'
+    ) as LyraNeighborList;
     const listener = oneEvent(el, 'lr-node-expand');
-    neighborList.dispatchEvent(new CustomEvent('lr-node-expand', { detail: { id: 'pierre' }, bubbles: true, composed: true }));
+    neighborList.dispatchEvent(
+      new CustomEvent('lr-node-expand', {
+        detail: { id: 'pierre' },
+        bubbles: true,
+        composed: true,
+      })
+    );
     const event = await listener;
     expect(event.detail).to.deep.equal({ id: 'pierre' });
   });
@@ -853,32 +1161,46 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = await settledFixture();
     el.selectedNodeId = 'marie';
     await el.updateComplete;
-    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
     popover.showAt({ x: 10, y: 10 });
     await el.updateComplete;
     const selectionChange = oneEvent(el, 'lr-selection-change');
     popover.open = false;
     await el.updateComplete;
     expect(el.selectedNodeId).to.equal(null);
-    expect((await selectionChange).detail).to.deep.equal({ selectedNodeId: null });
+    expect((await selectionChange).detail).to.deep.equal({
+      selectedNodeId: null,
+    });
   });
 
   it('localizes the pinned-heading text via this.localize() when .strings overrides graphExplorerPinnedHeading', async () => {
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .strings=${{ graphExplorerPinnedHeading: 'Épinglé' }}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .strings=${{ graphExplorerPinnedHeading: 'Épinglé' }}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     el.pinnedNodeIds = ['marie'];
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="pinned-heading"]')!.textContent).to.equal('Épinglé');
+    expect(
+      el.shadowRoot!.querySelector('[part="pinned-heading"]')!.textContent
+    ).to.equal('Épinglé');
   });
 
   it('renders correctly under dir="rtl" and stays accessible', async () => {
     const wrapper = (await fixture(html`
       <div dir="rtl">
-        <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+        <lr-knowledge-graph-explorer
+          .nodes=${nodes}
+          .links=${links}
+          .nodeTypes=${nodeTypes}
+        ></lr-knowledge-graph-explorer>
       </div>
     `)) as HTMLElement;
-    const el = wrapper.querySelector('lr-knowledge-graph-explorer') as LyraKnowledgeGraphExplorer;
+    const el = wrapper.querySelector(
+      'lr-knowledge-graph-explorer'
+    ) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
     await expect(el).to.be.accessible();
@@ -907,14 +1229,22 @@ describe('lr-knowledge-graph-explorer', () => {
       { kind: 'node', node: { id: 'polonium', label: 'Polonium' } },
     ];
     await el.updateComplete;
-    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
-    const native = searchInput.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const searchInput = el.shadowRoot!.querySelector(
+      '[part="search"]'
+    ) as LyraInput;
+    const native = searchInput.shadowRoot!.querySelector(
+      'input'
+    ) as HTMLInputElement;
     native.value = 'curie';
     native.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
     const circle = graphNodeEls(el)[0]!;
-    circle.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
-    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    circle.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, composed: true })
+    );
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
     await waitUntil(() => popover.open, undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
@@ -925,18 +1255,27 @@ describe('lr-knowledge-graph-explorer', () => {
     // (transitional) opacity, so sampling mid-fade blends its text and background toward each
     // other and reports a false "serious" violation. Finishing it outright matches the idiom
     // overlay.test.ts already uses for this same kind of reveal animation.
-    popover.shadowRoot?.querySelector('[part~="popup"]')?.getAnimations().forEach((animation) => animation.finish());
+    popover.shadowRoot
+      ?.querySelector('[part~="popup"]')
+      ?.getAnimations()
+      .forEach((animation) => animation.finish());
     await expect(el).to.be.accessible();
   });
 
   it('clears a dangling selection and force-closes the popover when the selected node disappears from nodes', async () => {
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
     el.selectedNodeId = 'marie';
     await el.updateComplete;
-    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
     popover.showAt({ x: 10, y: 10 });
     await el.updateComplete;
     expect(popover.open).to.be.true;
@@ -948,14 +1287,18 @@ describe('lr-knowledge-graph-explorer', () => {
     await el.updateComplete;
     expect(el.selectedNodeId).to.equal(null);
     expect(popover.open).to.be.false;
-    expect((await selectionChange).detail).to.deep.equal({ selectedNodeId: null });
+    expect((await selectionChange).detail).to.deep.equal({
+      selectedNodeId: null,
+    });
   });
 
   it('clears a selected node and closes its details when hiddenTypes hides that node type', async () => {
     const el = await settledFixture();
     el.selectedNodeId = 'marie';
     await el.updateComplete;
-    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
     popover.showAt({ x: 10, y: 10 });
     expect(popover.open).to.be.true;
 
@@ -970,7 +1313,9 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = await settledFixture();
     el.selectedNodeId = 'polonium';
     await el.updateComplete;
-    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
     expect(popover.open).to.be.false;
     // The built-in focus button is rendered inside lr-entity-card's own shadow root (unlike the
     // slotted pin lr-button used elsewhere in this file), so it must be resolved through the
@@ -979,104 +1324,172 @@ describe('lr-knowledge-graph-explorer', () => {
     // both entity-card's own update and lr-button's nested update (its internal `buttonEl` --
     // `click()` is overridden to forward to it) need to have actually run before `.click()` does
     // anything.
-    const card = el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard;
+    const card = el.shadowRoot!.querySelector(
+      '[part="detail-card"]'
+    ) as LyraEntityCard;
     await card.updateComplete;
-    const focusButton = card.shadowRoot!.querySelector('[part="focus-button"]') as HTMLElement & { updateComplete: Promise<unknown> };
-    expect((focusButton) != null).to.equal(true);
+    const focusButton = card.shadowRoot!.querySelector(
+      '[part="focus-button"]'
+    ) as HTMLElement & { updateComplete: Promise<unknown> };
+    expect(focusButton != null).to.equal(true);
     await focusButton.updateComplete;
     focusButton.click();
-    await waitUntil(() => popover.open, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await waitUntil(() => popover.open, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
     expect(el.selectedNodeId).to.equal('polonium');
   });
 
   it('a direct click with renderer="canvas" anchors the popover using the click\'s own clientX/clientY (no per-node DOM element to find)', async () => {
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer renderer="canvas" .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        renderer="canvas"
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
     const graph = graphEl(el);
     // Simulates the real gesture order: lr-graph's own lr-node-click fires first (setting the
     // pending node id), then the native click that bubbles out of it -- both dispatched
     // synchronously so the native click consumes pendingNodeId before the queued microtask does.
-    graph.dispatchEvent(new CustomEvent('lr-node-click', { detail: { id: 'marie', x: 0, y: 0 } }));
-    graph.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, clientX: 123, clientY: 45 }));
-    await waitUntil(() => (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).open, undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    graph.dispatchEvent(
+      new CustomEvent('lr-node-click', { detail: { id: 'marie', x: 0, y: 0 } })
+    );
+    graph.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        composed: true,
+        clientX: 123,
+        clientY: 45,
+      })
+    );
+    await waitUntil(
+      () =>
+        (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover)
+          .open,
+      undefined,
+      {
+        timeout: NODE_COUNT_TIMEOUT,
+      }
+    );
     expect(el.selectedNodeId).to.equal('marie');
   });
 
   it('a direct click whose composedPath has no [part="node"] element falls back to clientX/clientY (renderer="svg")', async () => {
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
     const graph = graphEl(el);
     // Dispatched straight on the <lr-graph> host itself (not on a rendered node circle inside its
     // shadow root), so `event.composedPath()` never contains a `[part="node"]` element.
-    graph.dispatchEvent(new CustomEvent('lr-node-click', { detail: { id: 'marie', x: 0, y: 0 } }));
-    graph.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, clientX: 77, clientY: 88 }));
-    await waitUntil(() => (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).open, undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    graph.dispatchEvent(
+      new CustomEvent('lr-node-click', { detail: { id: 'marie', x: 0, y: 0 } })
+    );
+    graph.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        composed: true,
+        clientX: 77,
+        clientY: 88,
+      })
+    );
+    await waitUntil(
+      () =>
+        (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover)
+          .open,
+      undefined,
+      {
+        timeout: NODE_COUNT_TIMEOUT,
+      }
+    );
     expect(el.selectedNodeId).to.equal('marie');
   });
 
   it('a native click on the graph with no prior lr-node-click leaves the popover untouched (no pending node id)', async () => {
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
-    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
     expect(popover.open).to.be.false;
-    graphEl(el).dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    graphEl(el).dispatchEvent(
+      new MouseEvent('click', { bubbles: true, composed: true })
+    );
     await el.updateComplete;
     expect(popover.open).to.be.false;
     expect(el.selectedNodeId).to.equal(null);
   });
 
   it('neighborRowsFor skips dangling link endpoints (no matching node) in both directions', async () => {
-    const testNodes: GraphNode[] = [
+    const testNodes: LyraGraphNode[] = [
       { id: 'marie', label: 'Marie Curie' },
       { id: 'pierre', label: 'Pierre Curie' },
     ];
-    const testLinks: GraphLink[] = [
+    const testLinks: LyraGraphLink[] = [
       { source: 'marie', target: 'pierre', label: 'married_to' },
       { source: 'pierre', target: 'marie', label: 'friend_of' },
       { source: 'marie', target: 'ghost-out', label: 'ghost_out' }, // dangling target
       { source: 'ghost-in', target: 'marie', label: 'ghost_in' }, // dangling source
     ];
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${testNodes} .links=${testLinks}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${testNodes}
+        .links=${testLinks}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     el.selectedNodeId = 'marie';
     await el.updateComplete;
-    const neighborList = el.shadowRoot!.querySelector('[part="detail-card"] lr-neighbor-list') as LyraNeighborList;
+    const neighborList = el.shadowRoot!.querySelector(
+      '[part="detail-card"] lr-neighbor-list'
+    ) as LyraNeighborList;
     expect(neighborList.rows.length).to.equal(2);
-    expect(neighborList.rows.map((r) => r.relation).sort()).to.deep.equal(['friend_of', 'married_to']);
+    expect(neighborList.rows.map((r) => r.relation).sort()).to.deep.equal([
+      'friend_of',
+      'married_to',
+    ]);
   });
 
   it('passes empty relations through for unlabeled incoming and outgoing neighbors', async () => {
-    const testNodes: GraphNode[] = [
+    const testNodes: LyraGraphNode[] = [
       { id: 'origin', label: 'Origin' },
       { id: 'outgoing', label: 'Outgoing' },
       { id: 'incoming', label: 'Incoming' },
     ];
-    const testLinks: GraphLink[] = [
+    const testLinks: LyraGraphLink[] = [
       { source: 'origin', target: 'outgoing' },
       { source: 'incoming', target: 'origin' },
     ];
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${testNodes} .links=${testLinks}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${testNodes}
+        .links=${testLinks}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     el.selectedNodeId = 'origin';
     await el.updateComplete;
 
     const neighborList = el.shadowRoot!.querySelector(
-      '[part="detail-card"] lr-neighbor-list',
+      '[part="detail-card"] lr-neighbor-list'
     ) as LyraNeighborList;
     expect(
-      neighborList.rows.map((row) => ({ id: row.node.id, relation: row.relation, direction: row.direction })),
+      neighborList.rows.map((row) => ({
+        id: row.node.id,
+        relation: row.relation,
+        direction: row.direction,
+      }))
     ).to.deep.equal([
       { id: 'outgoing', relation: '', direction: 'out' },
       { id: 'incoming', relation: '', direction: 'in' },
@@ -1085,7 +1498,11 @@ describe('lr-knowledge-graph-explorer', () => {
 
   it('ignores an lr-node-click from the composed graph when its id is no longer in the data', async () => {
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
     const selections: Array<string | null> = [];
@@ -1094,24 +1511,32 @@ describe('lr-knowledge-graph-explorer', () => {
     });
 
     graphEl(el).dispatchEvent(
-      new CustomEvent('lr-node-click', { detail: { id: 'removed-node', x: 12, y: 34 } }),
+      new CustomEvent('lr-node-click', {
+        detail: { id: 'removed-node', x: 12, y: 34 },
+      })
     );
     await el.updateComplete;
 
-    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
     expect(el.selectedNodeId).to.equal(null);
     expect(popover.open).to.be.false;
     expect(selections).to.deep.equal([]);
   });
 
   it('entityFor falls back to the node id as the label when the node has no label', async () => {
-    const testNodes: GraphNode[] = [{ id: 'unlabeled-entity' }];
+    const testNodes: LyraGraphNode[] = [{ id: 'unlabeled-entity' }];
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${testNodes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${testNodes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     el.selectedNodeId = 'unlabeled-entity';
     await el.updateComplete;
-    const card = el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard;
+    const card = el.shadowRoot!.querySelector(
+      '[part="detail-card"]'
+    ) as LyraEntityCard;
     expect(card.entity?.label).to.equal('unlabeled-entity');
   });
 
@@ -1120,12 +1545,20 @@ describe('lr-knowledge-graph-explorer', () => {
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
         .links=${links}
-        .entityDetails=${{ marie: { description: 'A physicist', properties: { field: 'Physics' }, degree: 42 } }}
+        .entityDetails=${{
+          marie: {
+            description: 'A physicist',
+            properties: { field: 'Physics' },
+            degree: 42,
+          },
+        }}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     el.selectedNodeId = 'marie';
     await el.updateComplete;
-    const card = el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard;
+    const card = el.shadowRoot!.querySelector(
+      '[part="detail-card"]'
+    ) as LyraEntityCard;
     expect(card.entity?.description).to.equal('A physicist');
     expect(card.entity?.properties).to.deep.equal({ field: 'Physics' });
     expect(card.entity?.degree).to.equal(42);
@@ -1136,35 +1569,52 @@ describe('lr-knowledge-graph-explorer', () => {
       { id: 'sci', label: 'Scientists', memberIds: ['marie'] },
       { id: 'unlabeled-community', memberIds: ['radium'] },
     ];
-    const testNodes: GraphNode[] = [
+    const testNodes: LyraGraphNode[] = [
       { id: 'marie', label: 'Marie Curie', communityId: 'sci' },
       { id: 'pierre', label: 'Pierre Curie', communityId: 'ghost-community' },
       { id: 'radium', label: 'Radium', communityId: 'unlabeled-community' },
       { id: 'polonium', label: 'Polonium' },
     ];
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${testNodes} .communities=${testCommunities}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${testNodes}
+        .communities=${testCommunities}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
 
     el.selectedNodeId = 'marie';
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard).communityLabel).to.equal('Scientists');
+    expect(
+      (el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard)
+        .communityLabel
+    ).to.equal('Scientists');
 
     el.selectedNodeId = 'pierre';
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard).communityLabel).to.equal('ghost-community');
+    expect(
+      (el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard)
+        .communityLabel
+    ).to.equal('ghost-community');
 
     el.selectedNodeId = 'radium';
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard).communityLabel).to.equal('unlabeled-community');
+    expect(
+      (el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard)
+        .communityLabel
+    ).to.equal('unlabeled-community');
 
     el.selectedNodeId = 'polonium';
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard).communityLabel).to.equal('');
+    expect(
+      (el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard)
+        .communityLabel
+    ).to.equal('');
   });
 
   it('requestPath is a no-op unless exactly two nodes are pinned', async () => {
-    const el = (await fixture(html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`)) as LyraKnowledgeGraphExplorer;
+    const el = (await fixture(
+      html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`
+    )) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
     let fired = false;
     el.addEventListener('lr-path-request', () => {
@@ -1189,7 +1639,9 @@ describe('lr-knowledge-graph-explorer', () => {
     // Not yet connected: Lit creates `renderRoot` lazily on first connect/update (see
     // av-player.test.ts's identical "seeking before the media element mounts" precedent), so both
     // `@query`-backed `graphEl`/`popoverEl` genuinely resolve to nothing here.
-    const el = document.createElement('lr-knowledge-graph-explorer') as LyraKnowledgeGraphExplorer;
+    const el = document.createElement(
+      'lr-knowledge-graph-explorer'
+    ) as LyraKnowledgeGraphExplorer;
     const priv = el as unknown as {
       activateEntity(id: string): Promise<void>;
       openDetailAt(id: string, rect: { x: number; y: number }): void;
@@ -1198,18 +1650,25 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(el.selectedNodeId).to.equal('marie');
     expect(() => priv.openDetailAt('marie', { x: 10, y: 10 })).to.not.throw();
 
-    const hidden = document.createElement('lr-knowledge-graph-explorer') as LyraKnowledgeGraphExplorer;
+    const hidden = document.createElement(
+      'lr-knowledge-graph-explorer'
+    ) as LyraKnowledgeGraphExplorer;
     hidden.nodes = [{ id: 'hidden', type: 'person' }];
     hidden.hiddenTypes = ['person'];
-    await (hidden as unknown as { activateEntity(id: string): Promise<void> })
-      .activateEntity('hidden');
+    await (
+      hidden as unknown as { activateEntity(id: string): Promise<void> }
+    ).activateEntity('hidden');
     expect(hidden.selectedNodeId).to.equal(null);
   });
 
   it('openDetailAt falls back to an empty accessible label when the given id has no matching entity', async () => {
     const el = await settledFixture();
-    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
-    const priv = el as unknown as { openDetailAt(id: string, rect: { x: number; y: number }): void };
+    const popover = el.shadowRoot!.querySelector(
+      '[part="detail-popover"]'
+    ) as LyraPopover;
+    const priv = el as unknown as {
+      openDetailAt(id: string, rect: { x: number; y: number }): void;
+    };
     priv.openDetailAt('does-not-exist', { x: 10, y: 10 });
     await el.updateComplete;
     expect(popover.accessibleLabel).to.equal('');
@@ -1220,34 +1679,52 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = await settledFixture();
     el.selectedNodeId = 'polonium';
     await el.updateComplete;
-    const card = el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard;
+    const card = el.shadowRoot!.querySelector(
+      '[part="detail-card"]'
+    ) as LyraEntityCard;
     await card.updateComplete;
-    const focusButton = card.shadowRoot!.querySelector('[part="focus-button"]') as HTMLElement & { updateComplete: Promise<unknown> };
+    const focusButton = card.shadowRoot!.querySelector(
+      '[part="focus-button"]'
+    ) as HTMLElement & { updateComplete: Promise<unknown> };
     await focusButton.updateComplete;
     let leaked = false;
     el.addEventListener('lr-entity-activate', () => (leaked = true));
     focusButton.click();
-    await waitUntil(() => (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).open, undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    await waitUntil(
+      () =>
+        (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover)
+          .open,
+      undefined,
+      {
+        timeout: NODE_COUNT_TIMEOUT,
+      }
+    );
     expect(leaked).to.be.false;
   });
 
   it('does not leak the composed lr-graph-legend lr-visibility-change event through the host', async () => {
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
     let leaked = false;
     el.addEventListener('lr-visibility-change', () => (leaked = true));
-    const legend = el.shadowRoot!.querySelector('lr-graph-legend') as LyraGraphLegend;
-    const item = legend.shadowRoot!.querySelectorAll('[part~="item"]')[0] as HTMLButtonElement;
+    const legend = el.shadowRoot!.querySelector(
+      'lr-graph-legend'
+    ) as LyraGraphLegend;
+    const item = legend.shadowRoot!.querySelectorAll(
+      '[part~="item"]'
+    )[0] as HTMLButtonElement;
     item.click();
     await el.updateComplete;
     expect(leaked).to.be.false;
   });
 
-  it('does not leak a pinned chip\'s internal lr-remove event through the host', async () => {
+  it("does not leak a pinned chip's internal lr-remove event through the host", async () => {
     const el = await settledFixture();
     el.selectedNodeId = 'marie';
     await el.updateComplete;
@@ -1255,24 +1732,36 @@ describe('lr-knowledge-graph-explorer', () => {
     await el.updateComplete;
     let leaked = false;
     el.addEventListener('lr-remove', () => (leaked = true));
-    const chip = el.shadowRoot!.querySelector('[part="pinned"] lr-chip') as HTMLElement;
-    (chip.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement).click();
+    const chip = el.shadowRoot!.querySelector(
+      '[part="pinned"] lr-chip'
+    ) as HTMLElement;
+    (
+      chip.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement
+    ).click();
     await el.updateComplete;
     expect(leaked).to.be.false;
   });
 
   it('a search result with no label falls back to displaying the node id', async () => {
-    const testNodes: GraphNode[] = [{ id: 'unlabeled-node' }];
+    const testNodes: LyraGraphNode[] = [{ id: 'unlabeled-node' }];
     const el = (await fixture(html`
-      <lr-knowledge-graph-explorer .nodes=${testNodes}></lr-knowledge-graph-explorer>
+      <lr-knowledge-graph-explorer
+        .nodes=${testNodes}
+      ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
-    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
-    const native = searchInput.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const searchInput = el.shadowRoot!.querySelector(
+      '[part="search"]'
+    ) as LyraInput;
+    const native = searchInput.shadowRoot!.querySelector(
+      'input'
+    ) as HTMLInputElement;
     native.value = 'unlabeled';
     native.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
-    const button = el.shadowRoot!.querySelector('[part="search-result"] button') as HTMLButtonElement;
+    const button = el.shadowRoot!.querySelector(
+      '[part="search-result"] button'
+    ) as HTMLButtonElement;
     expect(button.textContent?.trim()).to.equal('unlabeled-node');
   });
 });
@@ -1280,15 +1769,20 @@ describe('lr-knowledge-graph-explorer', () => {
 describe('lifecycle super calls', () => {
   it('calls super.willUpdate() (regression guard: a future mixin layered under LyraKnowledgeGraphExplorer must still run)', async () => {
     const el = (await fixture(
-      html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`,
+      html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`
     )) as LyraKnowledgeGraphExplorer;
     // The immediate prototype of an instance is LyraElement.prototype -- the exact (shared, across
     // every LyraElement subclass) object `super.willUpdate()` resolves against from inside this
     // component's own override. This component composes several other LyraElement-based children
     // (lr-graph, lr-input, lr-graph-legend, ...), so the patched hook is guarded by `this === el`
     // to count only calls on the instance under test, not every composed child's own willUpdate.
-    const proto = Object.getPrototypeOf(Object.getPrototypeOf(el)) as Record<string, unknown>;
-    const originalWillUpdate = proto.willUpdate as ((changed: unknown) => void) | undefined;
+    const proto = Object.getPrototypeOf(Object.getPrototypeOf(el)) as Record<
+      string,
+      unknown
+    >;
+    const originalWillUpdate = proto.willUpdate as
+      | ((changed: unknown) => void)
+      | undefined;
     let willUpdateCalls = 0;
     proto.willUpdate = function (this: unknown, changed: unknown) {
       if (this === el) willUpdateCalls++;
@@ -1333,23 +1827,34 @@ function renderedClamp(el: HTMLElement, selector: string): string {
 }
 
 it('clamps its floating surface width through the shared popover-viewport-clamp token', async () => {
-  const el = (await fixture(html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`)) as HTMLElement;
-  await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
+  const el = (await fixture(
+    html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`
+  )) as HTMLElement;
+  await (el as HTMLElement & { updateComplete?: Promise<unknown> })
+    .updateComplete;
   expect(renderedClamp(el, "[part='detail-card']")).to.equal('10px');
 });
 
 it('contains long search results horizontally and suppresses the consumed child input event', async () => {
   const longLabel = 'a'.repeat(500);
   const el = (await fixture(
-    html`<lr-knowledge-graph-explorer .nodes=${[{ id: 'long', label: longLabel }]}></lr-knowledge-graph-explorer>`,
+    html`<lr-knowledge-graph-explorer
+      .nodes=${[{ id: 'long', label: longLabel }]}
+    ></lr-knowledge-graph-explorer>`
   )) as LyraKnowledgeGraphExplorer;
   let leaked = 0;
   el.addEventListener('lr-input', () => leaked++);
   el.shadowRoot!.querySelector('[part="search"]')!.dispatchEvent(
-    new CustomEvent('lr-input', { detail: { value: 'aaa' }, bubbles: true, composed: true }),
+    new CustomEvent('lr-input', {
+      detail: { value: 'aaa' },
+      bubbles: true,
+      composed: true,
+    })
   );
   await el.updateComplete;
-  const results = el.shadowRoot!.querySelector('[part="search-results"]') as HTMLElement;
+  const results = el.shadowRoot!.querySelector(
+    '[part="search-results"]'
+  ) as HTMLElement;
   const button = results.querySelector('button') as HTMLButtonElement;
   expect(getComputedStyle(results).overflowX).to.be.oneOf(['clip', 'hidden']);
   expect(getComputedStyle(button).overflowWrap).to.equal('anywhere');

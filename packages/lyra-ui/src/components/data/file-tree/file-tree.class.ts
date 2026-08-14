@@ -2,30 +2,110 @@ import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { finiteCount } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
 import { styles } from './file-tree.styles.js';
-import type { LyraTree, TreeItem, TreeBadge } from '../tree/tree.class.js';
+import type { LyraTree, LyraTreeNodeData, TreeBadge } from '../tree/tree.class.js';
 // Value import (not `import type`) -- revealPath() below needs the real constructor at runtime
 // for its `instanceof` check.
 import { LyraTreeItem } from '../tree/tree-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileTreeDiffSummary, LYRA_DEFAULT_fileTreeLabel, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_loading, LYRA_DEFAULT_open, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileTreeDiffSummary, LYRA_DEFAULT_fileTreeLabel, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 export type GitStatus = 'added' | 'modified' | 'deleted' | 'renamed' | 'untracked' | 'conflicted' | 'ignored';
 
 export interface FileTreeNode {
-  path: string;
-  name?: string;
-  kind?: 'file' | 'directory';
-  mimeType?: string;
-  gitStatus?: GitStatus;
-  additions?: number;
-  deletions?: number;
-  children?: FileTreeNode[];
-  hasChildren?: boolean;
+  readonly path: string;
+  readonly name?: string;
+  readonly kind?: 'file' | 'directory';
+  readonly mimeType?: string;
+  readonly gitStatus?: GitStatus;
+  readonly additions?: number;
+  readonly deletions?: number;
+  readonly children?: readonly FileTreeNode[];
+  readonly hasChildren?: boolean;
+}
+
+const MAX_FILE_TREE_NODES = 10_000;
+const MAX_FILE_TREE_DEPTH = 64;
+const GIT_STATUSES = new Set<GitStatus>(['added', 'modified', 'deleted', 'renamed', 'untracked', 'conflicted', 'ignored']);
+
+interface FileTreeDraft {
+  readonly fields: Omit<FileTreeNode, 'children'>;
+  readonly children: FileTreeDraft[];
+  readonly childrenProvided: boolean;
+  normalized?: FileTreeNode;
+}
+
+function normalizeFileTreeNodes(value: unknown): readonly FileTreeNode[] {
+  let roots: readonly unknown[];
+  try { roots = Array.isArray(value) ? value : []; } catch { roots = []; }
+  const drafts: FileTreeDraft[] = [];
+  const rootDrafts: FileTreeDraft[] = [];
+  const seenObjects = new WeakSet<object>();
+  const seenPaths = new Set<string>();
+  const stack: Array<{ input: readonly unknown[]; output: FileTreeDraft[]; depth: number; index: number }> = [
+    { input: roots, output: rootDrafts, depth: 0, index: 0 },
+  ];
+  while (stack.length > 0 && drafts.length < MAX_FILE_TREE_NODES) {
+    const frame = stack[stack.length - 1]!;
+    if (frame.index >= frame.input.length) {
+      stack.pop();
+      continue;
+    }
+    let candidate: unknown;
+    try { candidate = frame.input[frame.index++]; } catch { continue; }
+    if (typeof candidate !== 'object' || candidate === null || seenObjects.has(candidate)) continue;
+    seenObjects.add(candidate);
+    try {
+      const record = candidate as Record<string, unknown>;
+      const path = record['path'];
+      if (typeof path !== 'string' || path.length === 0 || seenPaths.has(path)) continue;
+      seenPaths.add(path);
+      const name = record['name'];
+      const kind = record['kind'];
+      const mimeType = record['mimeType'];
+      const gitStatus = record['gitStatus'];
+      const additions = record['additions'];
+      const deletions = record['deletions'];
+      const hasChildren = record['hasChildren'];
+      const rawChildren = record['children'];
+      const fields: Omit<FileTreeNode, 'children'> = {
+        path,
+        ...(typeof name === 'string' ? { name } : {}),
+        ...(kind === 'file' || kind === 'directory' ? { kind } : {}),
+        ...(typeof mimeType === 'string' ? { mimeType } : {}),
+        ...(typeof gitStatus === 'string' && GIT_STATUSES.has(gitStatus as GitStatus)
+          ? { gitStatus: gitStatus as GitStatus }
+          : {}),
+        ...(additions === undefined ? {} : { additions: finiteCount(typeof additions === 'number' ? additions : 0) }),
+        ...(deletions === undefined ? {} : { deletions: finiteCount(typeof deletions === 'number' ? deletions : 0) }),
+        ...(hasChildren === undefined ? {} : { hasChildren: Boolean(hasChildren) }),
+      };
+      const childrenProvided = Array.isArray(rawChildren);
+      const draft: FileTreeDraft = { fields, children: [], childrenProvided };
+      frame.output.push(draft);
+      drafts.push(draft);
+      if (childrenProvided && frame.depth < MAX_FILE_TREE_DEPTH) {
+        stack.push({ input: rawChildren, output: draft.children, depth: frame.depth + 1, index: 0 });
+      }
+    } catch {
+      // Retain later valid siblings when a hostile record getter fails.
+    }
+  }
+  for (let index = drafts.length - 1; index >= 0; index--) {
+    const draft = drafts[index]!;
+    draft.normalized = Object.freeze({
+      ...draft.fields,
+      ...(draft.childrenProvided
+        ? { children: Object.freeze(draft.children.map((child) => child.normalized!)) }
+        : {}),
+    });
+  }
+  return Object.freeze(rootDrafts.map((draft) => draft.normalized!));
 }
 
 const GIT_STATUS_LETTER: Record<GitStatus, string> = {
@@ -73,9 +153,9 @@ function isLazyUnloaded(node: FileTreeNode): boolean {
 }
 
 export interface LyraFileTreeEventMap {
-  'lr-file-select': CustomEvent<{ path: string; node: FileTreeNode }>;
-  'lr-file-open': CustomEvent<{ path: string; node: FileTreeNode }>;
-  'lr-load-children': CustomEvent<{ path: string }>;
+  'lr-file-select': CustomEvent<Readonly<{ path: string; node: FileTreeNode }>>;
+  'lr-file-open': CustomEvent<Readonly<{ path: string; node: FileTreeNode }>>;
+  'lr-load-children': CustomEvent<Readonly<{ path: string }>>;
 }
 
 /**
@@ -109,34 +189,53 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     gitStatusRenamed: LYRA_DEFAULT_gitStatusRenamed,
     gitStatusUntracked: LYRA_DEFAULT_gitStatusUntracked,
     loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
 
-  @property({ attribute: false }) nodes: FileTreeNode[] = [];
+  private _nodes: readonly FileTreeNode[] = [];
+  /** Clone-owned, cycle-safe readonly node snapshot. Duplicate paths use the first valid node;
+   *  projection is bounded to 10,000 nodes and 64 descendant levels. */
+  @property({ attribute: false })
+  get nodes(): readonly FileTreeNode[] { return this._nodes; }
+  set nodes(value: readonly FileTreeNode[]) {
+    const previous = this._nodes;
+    this._nodes = normalizeFileTreeNodes(value);
+    this.requestUpdate('nodes', previous);
+  }
   @property({ attribute: 'selected-path' }) selectedPath: string | null = null;
   @property() label = '';
 
   private nodesByPath = new Map<string, FileTreeNode>();
+  private parentPathByPath = new Map<string, string>();
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('nodes')) {
       this.nodesByPath = new Map();
-      const index = (list: FileTreeNode[]) => {
-        for (const n of list) {
-          this.nodesByPath.set(n.path, n);
-          if (n.children) index(n.children);
+      this.parentPathByPath = new Map();
+      const stack = [...this.nodes].reverse().map((node) => ({ node, parentPath: undefined as string | undefined }));
+      while (stack.length > 0) {
+        const { node, parentPath } = stack.pop()!;
+        this.nodesByPath.set(node.path, node);
+        if (parentPath !== undefined) this.parentPathByPath.set(node.path, parentPath);
+        if (node.children) {
+          for (let index = node.children.length - 1; index >= 0; index--) {
+            stack.push({ node: node.children[index]!, parentPath: node.path });
+          }
         }
-      };
-      index(this.nodes);
+      }
     }
   }
 
-  private toTreeItem(node: FileTreeNode): TreeItem {
+  private toTreeItem(node: FileTreeNode): LyraTreeNodeData {
     const badges: TreeBadge[] = [];
     if (node.gitStatus) {
       badges.push({
@@ -152,7 +251,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
           deletions: getNumberFormat(this.effectiveLocale).format(node.deletions ?? 0),
         })
       : undefined;
-    let children: TreeItem[] | undefined;
+    let children: LyraTreeNodeData[] | undefined;
     if (isLazyUnloaded(node)) {
       children = [{ id: `${node.path} loading`, label: this.localize('loading'), disabled: true }];
     } else if (node.children) {
@@ -175,7 +274,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     };
   }
 
-  private get treeItems(): TreeItem[] {
+  private get treeItems(): LyraTreeNodeData[] {
     return this.nodes.map((n) => this.toTreeItem(n));
   }
 
@@ -186,9 +285,9 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     if (!node) return;
     const wasSelected = this.selectedPath === id;
     this.selectedPath = id;
-    this.emit('lr-file-select', { path: id, node });
+    this.emit('lr-file-select', Object.freeze({ path: id, node }));
     if (!isDirectory(node) && wasSelected) {
-      this.emit('lr-file-open', { path: id, node });
+      this.emit('lr-file-open', Object.freeze({ path: id, node }));
     }
   };
 
@@ -198,35 +297,39 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     if (!expanded) return;
     const node = this.nodesByPath.get(id);
     if (node && isLazyUnloaded(node)) {
-      this.emit('lr-load-children', { path: id });
+      this.emit('lr-load-children', Object.freeze({ path: id }));
     }
   };
 
   /** Fulfills a lazy directory's children in place. Expansion state survives because `<lr-tree>`
    *  reconciles top-level items by id and each `<lr-tree-item>` keeps its own `expanded` state. */
-  setChildren(path: string, children: FileTreeNode[]): void {
-    const replace = (list: FileTreeNode[]): FileTreeNode[] =>
-      list.map((n) => {
-        if (n.path === path) return { ...n, children };
-        if (n.children) return { ...n, children: replace(n.children) };
-        return n;
-      });
-    this.nodes = replace(this.nodes);
+  setChildren(path: string, children: readonly FileTreeNode[]): void {
+    const target = this.nodesByPath.get(path);
+    if (!target) return;
+    let currentPath = path;
+    let replacement: FileTreeNode = { ...target, children: normalizeFileTreeNodes(children) };
+    for (;;) {
+      const parentPath = this.parentPathByPath.get(currentPath);
+      if (parentPath === undefined) break;
+      const parent = this.nodesByPath.get(parentPath)!;
+      replacement = {
+        ...parent,
+        children: parent.children?.map((child) => child.path === currentPath ? replacement : child),
+      };
+      currentPath = parentPath;
+    }
+    this.nodes = this.nodes.map((node) => node.path === currentPath ? replacement : node);
   }
 
   private ancestorChain(path: string): string[] {
-    const walk = (list: FileTreeNode[], trail: string[]): string[] | null => {
-      for (const n of list) {
-        const nextTrail = [...trail, n.path];
-        if (n.path === path) return nextTrail;
-        if (n.children) {
-          const found = walk(n.children, nextTrail);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-    return walk(this.nodes, []) ?? [];
+    if (!this.nodesByPath.has(path)) return [];
+    const chain: string[] = [];
+    let current: string | undefined = path;
+    while (current !== undefined) {
+      chain.push(current);
+      current = this.parentPathByPath.get(current);
+    }
+    return chain.reverse();
   }
 
   /** Expands every ancestor of `path` and focuses its row. Resolves `false` when `path` isn't

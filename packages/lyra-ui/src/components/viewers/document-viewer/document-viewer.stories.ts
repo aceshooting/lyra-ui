@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './document-viewer.js';
-import { registerDocumentRenderer } from './registry.js';
+import { createDocumentRendererRegistry } from './registry.js';
 import '../pdf-viewer/pdf-viewer.js';
 import '../../retrieval/citation-badge/citation-badge.js';
 import type { CitationActivateDetail } from '../../retrieval/citation-badge/citation-badge.class.js';
@@ -15,7 +15,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A dialog-hosted, format-dispatching document viewer. Registered MIME types render through the pluggable registry; other formats fall back to lr-document-preview. A host `aria-label` names the nested dialog by attribute presence, including an explicitly empty value, without suppressing the visible `name` heading.',
+          'A dialog-hosted, format-dispatching document viewer. Each instance owns an immutable built-in registry snapshot and may receive an explicit registry; other formats fall back to lr-document-preview. A host `aria-label` names the nested dialog by attribute presence, including an explicitly empty value, without suppressing the visible `name` heading.',
       },
     },
   },
@@ -41,18 +41,20 @@ export const FallbackToDocumentPreview: Story = {
   `,
 };
 
-registerDocumentRenderer('application/x-lr-demo', {
-  render: (file) => html`<p>Custom registered renderer for <strong>${file.name}</strong></p>`,
-});
+const demoRegistry = createDocumentRendererRegistry([[
+  'application/x-lr-demo',
+  { render: (file) => html`<p>Custom registered renderer for <strong>${file.name}</strong></p>` },
+]]);
 
 export const RegisteredRenderer: Story = {
-  name: 'A registerDocumentRenderer() entry',
+  name: 'An instance registry entry',
   render: (_args, context) => html`
     <lr-document-viewer
       .open=${context.viewMode !== 'docs'}
       name="demo.lyra"
       mime-type="application/x-lr-demo"
       src="https://example.com/demo.lyra"
+      .registry=${demoRegistry}
     ></lr-document-viewer>
   `,
 };

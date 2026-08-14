@@ -16,7 +16,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     flex: 0 0 auto;
   }
-  :host(:first-child) [part="separator"] {
+  :host([data-lr-breadcrumb-first]) [part="separator"] {
     display: none;
   }
   [part="base"] {

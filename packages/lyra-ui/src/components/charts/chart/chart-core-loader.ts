@@ -148,14 +148,31 @@ function registerCore(mod: ChartJsModule): void {
   registered = true;
 }
 
+/** Loads and registers the validated Chart.js core, failing closed for either phase. The
+ * registration dependency is injectable solely so the rejection path can be exercised without
+ * perturbing the page-global registration cache. */
+export async function loadAndRegisterChartModule(
+  importChart: () => Promise<unknown> = () => import('chart.js'),
+  register: (mod: ChartJsModule) => void = registerCore,
+): Promise<ChartJsModule | null> {
+  const mod = await loadChartModule(importChart);
+  if (!mod) return null;
+  try {
+    register(mod);
+    return mod;
+  } catch (error: unknown) {
+    console.warn(
+      '<lr-chart> could not register the optional `chart.js` peer:',
+      error,
+    );
+    return null;
+  }
+}
+
 /** Lazily loads the optional `chart.js` peer once per page and registers Lyra's core subset. */
 export function loadChartJs(): Promise<ChartJsModule | null> {
   if (!chartJs) {
-    chartJs = loadChartModule().then((mod) => {
-      if (!mod) return null;
-      registerCore(mod);
-      return mod;
-    });
+    chartJs = loadAndRegisterChartModule();
   }
   return chartJs;
 }

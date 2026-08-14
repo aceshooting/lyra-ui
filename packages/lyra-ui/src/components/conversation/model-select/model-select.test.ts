@@ -1384,6 +1384,24 @@ it('does not open when disabled', async () => {
   expect(el.open).to.be.false;
 });
 
+it('rejects direct open writes while disabled or synchronously fieldset-disabled', async () => {
+  const fieldset = await fixture<HTMLFieldSetElement>(html`
+    <fieldset><lr-model-select .catalog=${CATALOG}></lr-model-select></fieldset>
+  `);
+  const el = fieldset.querySelector('lr-model-select') as LyraModelSelect;
+  el.disabled = true;
+  el.open = true;
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+
+  el.disabled = false;
+  fieldset.disabled = true;
+  el.setAttribute('open', '');
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+});
+
 // -- Label -----------------------------------------------------------------
 
 it('renders initial slotted label content in the standard form-control frame', async () => {

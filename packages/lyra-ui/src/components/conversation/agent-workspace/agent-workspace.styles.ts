@@ -74,12 +74,17 @@ export const styles = css`
     min-inline-size: 0;
     min-block-size: 0;
   }
-  [part='messages'] {
-    display: flex;
-    flex-direction: column;
-    gap: var(--lr-space-m);
+  [part~='messages'] {
+    display: block;
     min-inline-size: 0;
-    padding: var(--lr-space-m);
+    max-inline-size: 100%;
+    margin-block-end: var(--lr-space-m);
+  }
+  slot[name='messages']::slotted(*) {
+    display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    margin-block-end: var(--lr-space-m);
   }
   [part='messages-empty'] {
     margin-block: auto;
@@ -141,7 +146,6 @@ export const styles = css`
     [part='composer'] {
       padding-inline: var(--lr-space-s);
     }
-    [part='messages'],
     [part='details'] {
       padding: var(--lr-space-s);
     }

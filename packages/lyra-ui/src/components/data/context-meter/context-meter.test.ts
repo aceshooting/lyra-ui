@@ -102,7 +102,7 @@ it('clamps the aria-label summary to total, not the raw segment sum, when segmen
   expect(el.shadowRoot!.querySelector('[part="semantic"]')!.getAttribute('aria-label')).to.equal('100 of 100 used');
 });
 
-it('treats a negative or NaN segment value as 0 instead of producing a negative width', async () => {
+it('normalizes a negative or NaN segment value once for geometry and semantic text', async () => {
   const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
   el.segments = [
     { label: 'a', value: -10 },
@@ -115,6 +115,10 @@ it('treats a negative or NaN segment value as 0 instead of producing a negative 
     const basis = parseFloat((s as HTMLElement).style.flexBasis);
     expect(basis).to.equal(0);
   });
+  expect([...segments].map((segment) => segment.getAttribute('title'))).to.deep.equal(['a: 0', 'b: 0']);
+  expect(
+    [...el.shadowRoot!.querySelectorAll('[part="segment-item"]')].map((item) => item.textContent?.trim()),
+  ).to.deep.equal(['a: 0', 'b: 0']);
 });
 
 it('computes a "used of total" aria-label summary from the segment sum, ignoring negative entries', async () => {
@@ -142,7 +146,7 @@ it('prefixes the aria-label summary with the label when provided', async () => {
   );
 });
 
-it('preserves an explicit host aria-label instead of replacing it with the generated summary', async () => {
+it('keeps an explicit host name on the host without duplicating it on the meter owner', async () => {
   const el = (await fixture(html`
     <lr-context-meter aria-label="Context window occupancy" total="10000"></lr-context-meter>
   `)) as LyraContextMeter;
@@ -150,11 +154,12 @@ it('preserves an explicit host aria-label instead of replacing it with the gener
   await el.updateComplete;
 
   const semantic = el.shadowRoot!.querySelector('[part="semantic"]')!;
-  expect(semantic.getAttribute('aria-label')).to.equal('Context window occupancy');
+  expect(el.getAttribute('aria-label')).to.equal('Context window occupancy');
+  expect(semantic.getAttribute('aria-label')).to.equal('8,000 of 10,000 used');
   expect(semantic.getAttribute('role')).to.equal('meter');
 });
 
-it('updates the semantic owner when a host aria-label is added, replaced, or removed after mount', async () => {
+it('does not copy late host aria-label changes onto the meter semantic owner', async () => {
   const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
   el.segments = [{ label: 'Prompt', value: 25 }];
   await el.updateComplete;
@@ -164,11 +169,11 @@ it('updates the semantic owner when a host aria-label is added, replaced, or rem
 
   el.setAttribute('aria-label', 'Custom occupancy');
   await el.updateComplete;
-  expect(semantic().getAttribute('aria-label')).to.equal('Custom occupancy');
+  expect(semantic().getAttribute('aria-label')).to.equal('25 of 100 used');
 
   el.setAttribute('aria-label', 'Replacement occupancy');
   await el.updateComplete;
-  expect(semantic().getAttribute('aria-label')).to.equal('Replacement occupancy');
+  expect(semantic().getAttribute('aria-label')).to.equal('25 of 100 used');
 
   el.removeAttribute('aria-label');
   await el.updateComplete;
@@ -298,16 +303,26 @@ it('omits the label part entirely when label is unset', async () => {
   expect((el.shadowRoot!.querySelector('[part="label"]')) == null).to.be.true;
 });
 
-it('defaults to and reflects the bar variant, rendering a div base', async () => {
+it('defaults to and reflects the bar shape, rendering a div base', async () => {
   const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
-  expect(el.variant).to.equal('bar');
-  expect(el.getAttribute('variant')).to.equal('bar');
+  expect(el.shape).to.equal('bar');
+  expect(el.getAttribute('shape')).to.equal('bar');
+  expect(el.shadowRoot!.querySelector('div[part="base"]')).to.exist;
+});
+
+it('normalizes and reflects a foreign shape token to bar', async () => {
+  const el = (await fixture(
+    html`<lr-context-meter shape="triangle" total="100"></lr-context-meter>`,
+  )) as LyraContextMeter;
+  await el.updateComplete;
+  expect(el.shape).to.equal('bar');
+  expect(el.getAttribute('shape')).to.equal('bar');
   expect(el.shadowRoot!.querySelector('div[part="base"]')).to.exist;
 });
 
 it('renders an svg base with circle segments in ring mode, using stroke-dasharray/-dashoffset geometry', async () => {
   const el = (await fixture(
-    html`<lr-context-meter variant="ring" total="100"></lr-context-meter>`,
+    html`<lr-context-meter shape="ring" total="100"></lr-context-meter>`,
   )) as LyraContextMeter;
   el.segments = [
     { label: 'a', value: 25 },
@@ -345,7 +360,7 @@ it('is accessible with a populated bar meter', async () => {
 
 it('is accessible with a populated ring meter', async () => {
   const el = (await fixture(
-    html`<lr-context-meter variant="ring" total="10000" label="Context"></lr-context-meter>`,
+    html`<lr-context-meter shape="ring" total="10000" label="Context"></lr-context-meter>`,
   )) as LyraContextMeter;
   el.segments = SEGMENTS;
   await el.updateComplete;
@@ -372,6 +387,24 @@ it('can shrink to a 320px allocation with a long visible label', async () => {
 
   expect(getComputedStyle(el).minInlineSize).to.equal('0px');
   expect(el.getBoundingClientRect().width).to.be.at.most(320);
+});
+
+it('bounds a long ring caption inside the ring in LTR and RTL while keeping the full semantic label', async () => {
+  const label = 'A deliberately long translated context-window occupancy label without truncating semantics';
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const el = (await fixture(html`
+      <lr-context-meter dir=${direction} shape="ring" total="100" .label=${label}></lr-context-meter>
+    `)) as LyraContextMeter;
+    const svg = el.shadowRoot!.querySelector('svg[part="base"]') as SVGElement;
+    const caption = el.shadowRoot!.querySelector('[part="label"]') as SVGForeignObjectElement;
+    const svgRect = svg.getBoundingClientRect();
+    const captionRect = caption.getBoundingClientRect();
+    expect(captionRect.left).to.be.at.least(svgRect.left - 1);
+    expect(captionRect.right).to.be.at.most(svgRect.right + 1);
+    expect(captionRect.top).to.be.at.least(svgRect.top - 1);
+    expect(captionRect.bottom).to.be.at.most(svgRect.bottom + 1);
+    expect(el.shadowRoot!.querySelector('[part="semantic"]')!.getAttribute('aria-label')).to.contain(label);
+  }
 });
 
 describe('showLegend', () => {
@@ -443,7 +476,7 @@ describe('showLegend', () => {
 
   it('renders the legend below the ring variant without clipping it', async () => {
     const el = (await fixture(
-      html`<lr-context-meter show-legend variant="ring" total="10000"></lr-context-meter>`,
+      html`<lr-context-meter show-legend shape="ring" total="10000"></lr-context-meter>`,
     )) as LyraContextMeter;
     el.segments = SEGMENTS;
     await el.updateComplete;

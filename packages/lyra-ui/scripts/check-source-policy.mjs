@@ -36,6 +36,8 @@
 //                           margin-inline-*, text-align: start/end, ...) instead of physical
 //                           left/right ones, except inside `:dir()` rules, in rule blocks that
 //                           pin `direction: ltr`, or at explicitly suppressed declarations.
+//   shipped-review-token    Private C-###/O-### review identifiers must not ship in source
+//                           comments or package documentation; use a public technical rationale.
 // Suppressions (pointercancel-pairing / rtl-arrow-keys / physical-css only): a comment on the
 // flagged line, or in the contiguous comment block immediately above it, of the form
 //   policy-allow(rule-id): specific reason
@@ -52,6 +54,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const sourceRoot = path.join(packageDir, 'src');
 const componentsRoot = path.join(packageDir, 'src', 'components');
 const internalRoot = path.join(packageDir, 'src', 'internal');
 const baselinePath = path.join(packageDir, 'scripts', 'source-policy-baselines.json');
@@ -131,6 +134,14 @@ const lineOf = (source, index) => source.slice(0, index).split('\n').length;
 /** Literal NUL bytes are never valid source text, even when JavaScript accepts them in a string. */
 export function findNulByteLines(source) {
   return [...new Set(Array.from(source.matchAll(/\0/gu), (match) => lineOf(source, match.index)))];
+}
+
+/** Private review identifiers are not useful to package consumers and disclose internal process. */
+export function findOpaqueReviewTokens(source) {
+  return Array.from(source.matchAll(/\b(?:C|O)-\d{3}\b/gu), (match) => ({
+    line: lineOf(source, match.index),
+    token: match[0],
+  }));
 }
 
 /**
@@ -831,6 +842,30 @@ export function runSourcePolicy() {
   const notes = [];
   const strippedByFile = new Map();
 
+  const shippedSourceFiles = walk(sourceRoot).filter(
+    (file) =>
+      (file.endsWith('.ts') || file.endsWith('.css')) &&
+      !file.endsWith('.test.ts') &&
+      !file.endsWith('.stories.ts') &&
+      !file.endsWith('.d.ts'),
+  );
+  const packageDocs = [
+    path.join(packageDir, 'README.md'),
+    path.join(packageDir, 'CHANGELOG.md'),
+    ...walk(path.join(packageDir, 'llms')).filter((file) => file.endsWith('.md')),
+    path.join(packageDir, 'llms.txt'),
+    path.join(packageDir, 'llms-full.txt'),
+  ].filter((file) => fs.existsSync(file));
+  for (const file of [...shippedSourceFiles, ...packageDocs]) {
+    const source = fs.readFileSync(file, 'utf8');
+    for (const match of findOpaqueReviewTokens(source)) {
+      findings.push(
+        `${rel(file)}:${match.line} [shipped-review-token] replace private ${match.token} bookkeeping ` +
+          'with a public technical rationale',
+      );
+    }
+  }
+
   for (const file of [...componentTreeFiles, ...internalTreeFiles].filter((candidate) => candidate.endsWith('.ts'))) {
     const source = fs.readFileSync(file, 'utf8');
     for (const line of findNulByteLines(source)) {
@@ -906,4 +941,3 @@ export function runSourcePolicy() {
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) runSourcePolicy();
-

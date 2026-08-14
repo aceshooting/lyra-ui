@@ -7,9 +7,10 @@ import '../../overlays/badge/badge.class.js';
 import '../../layout/details/details.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './policy-summary.styles.js';
+import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_policySummaryAllowCount, LYRA_DEFAULT_policySummaryCategoryGuardrail, LYRA_DEFAULT_policySummaryCategoryPermission, LYRA_DEFAULT_policySummaryCategoryPrivacy, LYRA_DEFAULT_policySummaryCategoryTool, LYRA_DEFAULT_policySummaryDenyCount, LYRA_DEFAULT_policySummaryDetailLabel, LYRA_DEFAULT_policySummaryLabel, LYRA_DEFAULT_policySummaryNeedsReviewCount, LYRA_DEFAULT_policySummaryStateAllow, LYRA_DEFAULT_policySummaryStateDeny, LYRA_DEFAULT_policySummaryStateNeedsReview, LYRA_DEFAULT_restore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_policySummaryAllowCount, LYRA_DEFAULT_policySummaryCategoryGuardrail, LYRA_DEFAULT_policySummaryCategoryPermission, LYRA_DEFAULT_policySummaryCategoryPrivacy, LYRA_DEFAULT_policySummaryCategoryTool, LYRA_DEFAULT_policySummaryDenyCount, LYRA_DEFAULT_policySummaryDetailLabel, LYRA_DEFAULT_policySummaryLabel, LYRA_DEFAULT_policySummaryNeedsReviewCount, LYRA_DEFAULT_policySummaryStateAllow, LYRA_DEFAULT_policySummaryStateDeny, LYRA_DEFAULT_policySummaryStateNeedsReview, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -86,9 +87,9 @@ const STATES: PolicyDecisionState[] = ['allow', 'deny', 'needs-review'];
  * @csspart base - The root wrapper, only rendered while `decisions` is non-empty.
  * @csspart summary - The always-visible allow/deny/needs-review count row.
  * @csspart count - One state's localized count text; carries `data-state`.
- * @csspart list - The `role="list"` wrapper around every decision row. Its accessible name
- *   defaults to the localized `policySummaryLabel`, but a host-level `aria-label` on
- *   `<lr-policy-summary>` wins over that default.
+ * @csspart list - The `role="list"` wrapper around every decision row. Its purpose-specific name
+ *   is the localized `policySummaryLabel`; a host `aria-label` names the host and is not cloned
+ *   onto this nested semantic owner.
  * @csspart decision - One decision row (`role="listitem"`); carries `data-state` and `data-category`.
  * @csspart decision-header - The row's category/label/state-badge line.
  * @csspart category - The decision's localized category text.
@@ -117,6 +118,8 @@ export class LyraPolicySummary extends LyraElement {
     deny: LYRA_DEFAULT_deny,
     details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
     policySummaryAllowCount: LYRA_DEFAULT_policySummaryAllowCount,
@@ -132,17 +135,27 @@ export class LyraPolicySummary extends LyraElement {
     policySummaryStateDeny: LYRA_DEFAULT_policySummaryStateDeny,
     policySummaryStateNeedsReview: LYRA_DEFAULT_policySummaryStateNeedsReview,
     restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
 
   /** The decisions to render, in the given order. Controlled and never mutated by this component
-   *  -- pass a new array to update it. */
+   *  -- pass a new array to update it. Duplicate ids normalize first-wins before counts/rendering. */
   @property({ attribute: false }) decisions: PolicyDecision[] = [];
 
+  private get normalizedDecisions(): PolicyDecision[] {
+    return firstByIdentity(Array.isArray(this.decisions) ? this.decisions : [], (decision) => decision.id);
+  }
+
   private countOf(state: PolicyDecisionState): number {
-    return this.decisions.filter((decision) => decision.state === state).length;
+    return this.normalizedDecisions.filter((decision) => decision.state === state).length;
+  }
+
+  private stopNestedLifecycle(event: Event): void {
+    event.stopPropagation();
   }
 
   private renderDecision(decision: PolicyDecision): TemplateResult {
@@ -157,6 +170,11 @@ export class LyraPolicySummary extends LyraElement {
         <div part="explanation" data-state=${decision.state}>${decision.explanation}</div>
         ${decision.detail
           ? html`<lr-details part="detail" summary=${this.localize('policySummaryDetailLabel')}
+              @lr-toggle=${this.stopNestedLifecycle}
+              @lr-show=${this.stopNestedLifecycle}
+              @lr-after-show=${this.stopNestedLifecycle}
+              @lr-hide=${this.stopNestedLifecycle}
+              @lr-after-hide=${this.stopNestedLifecycle}
               >${decision.detail}</lr-details
             >`
           : nothing}
@@ -165,7 +183,8 @@ export class LyraPolicySummary extends LyraElement {
   }
 
   override render(): TemplateResult {
-    if (this.decisions.length === 0) {
+    const decisions = this.normalizedDecisions;
+    if (decisions.length === 0) {
       return html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`;
     }
     return html`
@@ -182,9 +201,9 @@ export class LyraPolicySummary extends LyraElement {
         <div
           part="list"
           role="list"
-          aria-label=${this.getAttribute('aria-label') || this.localize('policySummaryLabel')}
+          aria-label=${this.localize('policySummaryLabel')}
         >
-          ${this.decisions.map((decision) => this.renderDecision(decision))}
+          ${decisions.map((decision) => this.renderDecision(decision))}
         </div>
       </div>
     `;

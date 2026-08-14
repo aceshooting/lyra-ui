@@ -121,6 +121,56 @@ it('adopts a same-id replacement canvas instead of retaining the removed target 
   expect(minimap.shadowRoot!.querySelectorAll('[part="node"]')).to.have.lengthOf(1);
 });
 
+it('cancels an active viewport drag before binding a same-id replacement canvas', async () => {
+  const root = (await fixture(html`
+    <div>
+      <lr-flow-canvas id="wf" style="width:400px;height:300px"></lr-flow-canvas>
+      <lr-flow-minimap for="wf"></lr-flow-minimap>
+    </div>
+  `)) as HTMLElement;
+  const original = root.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+  original.nodes = nodes;
+  await original.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const minimap = root.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const hitArea = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as SVGElement;
+  (hitArea as unknown as { setPointerCapture(): void }).setPointerCapture = () => {};
+  hitArea.dispatchEvent(new PointerEvent('pointerdown', {
+    pointerId: 305,
+    clientX: 10,
+    clientY: 10,
+    bubbles: true,
+  }));
+  expect((minimap as unknown as { dragState?: unknown }).dragState).to.exist;
+
+  original.remove();
+  const replacement = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
+  replacement.id = 'wf';
+  replacement.nodes = nodes;
+  let replacementMoves = 0;
+  (replacement as unknown as { setViewport: LyraFlowCanvas['setViewport'] }).setViewport = () => {
+    replacementMoves++;
+  };
+  root.prepend(replacement);
+  await replacement.updateComplete;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await minimap.updateComplete;
+
+  expect((minimap as unknown as { dragState?: unknown }).dragState).to.equal(undefined);
+  expect((minimap as unknown as { dragEventWindow?: Window }).dragEventWindow).to.equal(undefined);
+  expect((minimap as unknown as { justDraggedViewport: boolean }).justDraggedViewport).to.be.false;
+  expect((minimap as unknown as { announceNextSnapshot: boolean }).announceNextSnapshot).to.be.false;
+  window.dispatchEvent(new PointerEvent('pointermove', {
+    pointerId: 305,
+    clientX: 80,
+    clientY: 80,
+  }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 305 }));
+  expect(replacementMoves).to.equal(0);
+});
+
 it('draws no edges, only node rects', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas>
@@ -166,11 +216,11 @@ it('lets each node status color be rethemed without changing shared semantic tok
       <lr-flow-minimap
         slot="bottom-end"
         style="
-          --lr-flow-minimap-node-pending-color: rgb(1, 2, 3);
-          --lr-flow-minimap-node-running-color: rgb(4, 5, 6);
-          --lr-flow-minimap-node-success-color: rgb(7, 8, 9);
-          --lr-flow-minimap-node-error-color: rgb(10, 11, 12);
-          --lr-flow-minimap-node-denied-color: rgb(13, 14, 15);
+          --lr-flow-status-pending-color: rgb(1, 2, 3);
+          --lr-flow-status-running-color: rgb(4, 5, 6);
+          --lr-flow-status-success-color: rgb(7, 8, 9);
+          --lr-flow-status-error-color: rgb(10, 11, 12);
+          --lr-flow-status-denied-color: rgb(13, 14, 15);
         "
       ></lr-flow-minimap>
     </lr-flow-canvas>
@@ -247,7 +297,7 @@ it('the viewport rect is the single focusable stop; +/-/Enter/Home/arrows drive 
   await new Promise((r) => requestAnimationFrame(r));
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
-  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as HTMLElement;
   expect(rect.getAttribute('role')).to.equal('group');
   expect(rect.getAttribute('aria-label')).to.equal('Visible area');
   const instructions = minimap.shadowRoot!.querySelector('[part="instructions"]') as HTMLElement;
@@ -269,7 +319,7 @@ it('the "-" key zooms the canvas out', async () => {
   await new Promise((r) => requestAnimationFrame(r));
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
-  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as HTMLElement;
   const zoomBefore = wrapper.viewport.zoom;
   rect.dispatchEvent(new KeyboardEvent('keydown', { key: '-', bubbles: true, cancelable: true }));
   expect(wrapper.viewport.zoom).to.be.lessThan(zoomBefore);
@@ -286,8 +336,9 @@ it('Enter and Home both fit the canvas to its content', async () => {
   await new Promise((r) => requestAnimationFrame(r));
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
-  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as HTMLElement;
 
+  wrapper.setViewport({ x: 0, y: 0, zoom: 1 });
   const before = { ...wrapper.viewport };
   rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
   expect(wrapper.viewport).to.not.deep.equal(before);
@@ -311,7 +362,7 @@ it('arrow keys pan the canvas viewport in each physical direction', async () => 
   await new Promise((r) => requestAnimationFrame(r));
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
-  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as HTMLElement;
 
   rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
   expect(wrapper.viewport.x).to.be.lessThan(0);
@@ -342,7 +393,7 @@ it('announces viewport changes as light-DOM additions and keeps an aria-hidden s
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
   const mirror = minimap.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
-  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as HTMLElement;
   expect(sinkTexts(), 'the first companion snapshot must stay silent').to.deep.equal([]);
   expect(mirror.getAttribute('aria-hidden')).to.equal('true');
   expect(mirror.getAttribute('role')).to.equal(null);
@@ -385,7 +436,7 @@ it('announces click, wheel, and completed pointer-drag viewport changes', async 
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
   const map = minimap.shadowRoot!.querySelector('[part="map"]') as SVGSVGElement;
-  const viewport = minimap.shadowRoot!.querySelector('[part="viewport"]') as SVGElement;
+  const viewport = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as SVGElement;
   (viewport as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {};
   expect(sinkTexts(), 'the initial companion snapshot must stay silent').to.deep.equal([]);
 
@@ -439,7 +490,7 @@ it('re-targets its shared sink with the canvas when adopted into another documen
     frameDocument.body.append(wrapper);
     await new Promise((resolve) => frameWindow.requestAnimationFrame(resolve));
     await minimap.updateComplete;
-    const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as HTMLElement;
     rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
     await new Promise((resolve) => frameWindow.requestAnimationFrame(resolve));
     await minimap.updateComplete;
@@ -463,9 +514,20 @@ it('cannot pan the canvas through minimap keyboard controls while locked', async
   await new Promise((resolve) => requestAnimationFrame(resolve));
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
-  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as HTMLElement;
   wrapper.locked = true;
+  await wrapper.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await minimap.updateComplete;
   const before = { ...wrapper.viewport };
+
+  const base = minimap.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.getAttribute('aria-disabled')).to.equal('true');
+  expect(base.hasAttribute('data-locked')).to.be.true;
+  expect(rect.getAttribute('tabindex')).to.equal('-1');
+  expect(rect.getAttribute('aria-disabled')).to.equal('true');
+  expect(rect.hasAttribute('aria-keyshortcuts')).to.be.false;
+  expect(getComputedStyle(rect).pointerEvents).to.equal('none');
 
   rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
 
@@ -544,7 +606,7 @@ it('cannot drag the viewport rectangle to pan a locked canvas', async () => {
   await new Promise((r) => requestAnimationFrame(r));
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
-  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as SVGElement;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as SVGElement;
   (rect as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {}; // synthetic pointerId throws otherwise
   wrapper.locked = true;
   const calls = stubUnguardedCanvasMethods(wrapper);
@@ -580,7 +642,7 @@ it('tracks an adopted iframe viewport drag on its owner window and releases it s
     frameDocument.body.append(frameDocument.adoptNode(wrapper));
     await new Promise((resolve) => frameWindow.requestAnimationFrame(resolve));
     await minimap.updateComplete;
-    const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as SVGElement;
+    const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as SVGElement;
     (rect as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {};
     rect.dispatchEvent(new frameWindow.PointerEvent('pointerdown', {
       bubbles: true,
@@ -627,7 +689,7 @@ it('pointercancel ends a viewport drag without swallowing the next genuine map c
   await new Promise((r) => requestAnimationFrame(r));
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
-  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as SVGElement;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as SVGElement;
   const map = minimap.shadowRoot!.querySelector('[part="map"]') as SVGSVGElement;
   (rect as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {}; // synthetic pointerId throws otherwise
   rect.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 10, clientY: 10, bubbles: true }));
@@ -642,6 +704,7 @@ it('pointercancel ends a viewport drag without swallowing the next genuine map c
   await new Promise((resolve) => requestAnimationFrame(resolve));
   await minimap.updateComplete;
   expect(sinkTexts(), 'a canceled viewport drag must remain silent').to.deep.equal([]);
+  changes = 0;
 
   map.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 60, clientY: 60 }));
   expect(changes).to.equal(1);
@@ -658,7 +721,7 @@ it('swallows the browser-synthesized click that follows a viewport-rect drag, so
   await new Promise((r) => requestAnimationFrame(r));
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
-  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as SVGElement;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as SVGElement;
   (rect as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {}; // synthetic pointerId throws otherwise
 
   rect.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 10, clientY: 10, bubbles: true }));
@@ -836,8 +899,8 @@ describe('mouse-hover feedback on the viewport rectangle', () => {
   // :hover cannot be synthesized in this test runner (no real pointer), so per this repo's
   // documented exception for genuinely-unsynthesizable pseudo-classes, this asserts against the
   // stylesheet source instead of a rendered/computed effect.
-  it("declares a [part='viewport']:hover rule, matching its :focus-visible affordance", () => {
-    expect(styles.cssText).to.match(/\[part='viewport'\]:hover\s*\{/);
+  it('declares hover feedback from the transparent hit area onto the visible viewport', () => {
+    expect(styles.cssText).to.match(/\[data-viewport-control\]:hover \[part='viewport'\]\s*\{/);
   });
 });
 
@@ -869,7 +932,7 @@ describe('.strings overrides (every localize() key)', () => {
     expect(minimap.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
       'MINIMAP-LABEL-MARKER',
     );
-    expect(minimap.shadowRoot!.querySelector('[part="viewport"]')!.getAttribute('aria-label')).to.equal(
+    expect(minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]')!.getAttribute('aria-label')).to.equal(
       'VIEWPORT-MARKER',
     );
     expect(minimap.shadowRoot!.querySelector('[part="instructions"]')!.textContent!.trim()).to.equal(
@@ -881,9 +944,9 @@ describe('.strings overrides (every localize() key)', () => {
     const minimap = await mountMinimap({
       flowMinimapViewportChanged: 'MOVED-MARKER x={x} y={y} z={zoom}',
     });
-    const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as HTMLElement;
     rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
-    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     await minimap.updateComplete;
     const live = minimap.shadowRoot!.querySelector('[part="live-region"]')!.textContent!.trim();
     expect(live).to.match(/^MOVED-MARKER x=\S+ y=\S+ z=\S+$/);
@@ -908,7 +971,7 @@ describe('viewport-rect minimum pointer target', () => {
       { id: 'b', position: { x: spread, y: spread } },
     ];
     await canvas.updateComplete;
-    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const minimap = canvas.querySelector('lr-flow-minimap') as LyraFlowMinimap;
     await minimap.updateComplete;
     return minimap;
@@ -919,11 +982,12 @@ describe('viewport-rect minimum pointer target', () => {
   const floorPx = (rem: number) =>
     rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
 
-  const rectOf = (minimap: LyraFlowMinimap) =>
+  const visibleRectOf = (minimap: LyraFlowMinimap) =>
     minimap.shadowRoot!.querySelector('[part="viewport"]') as SVGGraphicsElement;
+  const hitRectOf = (minimap: LyraFlowMinimap) =>
+    minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as SVGGraphicsElement;
 
-  const geometry = (minimap: LyraFlowMinimap) => {
-    const rect = rectOf(minimap);
+  const geometry = (rect: SVGGraphicsElement) => {
     return {
       x: Number(rect.getAttribute('x')),
       y: Number(rect.getAttribute('y')),
@@ -936,20 +1000,21 @@ describe('viewport-rect minimum pointer target', () => {
     // Node bounds ~20000 user units across inside a 12rem x 8rem map: with no floor the rect --
     // the ONLY pointer-drag affordance for panning -- renders a couple of physical pixels wide.
     const minimap = await mount(20000);
-    const box = rectOf(minimap).getBoundingClientRect();
+    const box = hitRectOf(minimap).getBoundingClientRect();
     expect(box.width, 'rect width').to.be.at.least(floorPx(1.5) - 0.5);
     expect(box.height, 'rect height').to.be.at.least(floorPx(1.5) - 0.5);
   });
 
   it('proves the unfloored rect really is unusably small, so the floor is what fixes it', async () => {
     const minimap = await mount(20000, '0px');
-    const box = rectOf(minimap).getBoundingClientRect();
+    const box = hitRectOf(minimap).getBoundingClientRect();
     expect(box.width).to.be.below(floorPx(1.5) - 0.5);
   });
 
   it('grows the rect symmetrically, leaving its centre on the true viewport centre', async () => {
-    const floored = geometry(await mount(20000));
-    const raw = geometry(await mount(20000, '0px'));
+    const minimap = await mount(20000);
+    const floored = geometry(hitRectOf(minimap));
+    const raw = geometry(visibleRectOf(minimap));
     expect(floored.width).to.be.greaterThan(raw.width);
     expect(floored.x + floored.width / 2, 'centre x').to.be.closeTo(raw.x + raw.width / 2, 0.001);
     expect(floored.y + floored.height / 2, 'centre y').to.be.closeTo(raw.y + raw.height / 2, 0.001);
@@ -958,13 +1023,24 @@ describe('viewport-rect minimum pointer target', () => {
   it('unset-regression: leaves a naturally large rect exactly where the raw viewport puts it', async () => {
     // Content barely larger than the viewport -- the rect already clears the floor, so the clamp
     // must not move or grow it at all.
-    const floored = geometry(await mount(50));
-    const raw = geometry(await mount(50, '0px'));
+    const minimap = await mount(50);
+    const floored = geometry(hitRectOf(minimap));
+    const raw = geometry(visibleRectOf(minimap));
     expect(floored).to.deep.equal(raw);
   });
 
   it('honours a consumer-raised --lr-flow-minimap-viewport-min-size', async () => {
-    const wider = rectOf(await mount(20000, '3rem')).getBoundingClientRect();
+    const wider = hitRectOf(await mount(20000, '3rem')).getBoundingClientRect();
     expect(wider.width).to.be.at.least(floorPx(3) - 0.5);
+  });
+
+  it('keeps the painted viewport exact while only the transparent hit rectangle is floored', async () => {
+    const defaultFloor = await mount(20000);
+    const noFloor = await mount(20000, '0px');
+    expect(geometry(visibleRectOf(defaultFloor))).to.deep.equal(geometry(visibleRectOf(noFloor)));
+    expect(hitRectOf(defaultFloor).getBoundingClientRect().width).to.be.greaterThan(
+      visibleRectOf(defaultFloor).getBoundingClientRect().width,
+    );
+    expect(getComputedStyle(hitRectOf(defaultFloor)).fill).to.equal('rgba(0, 0, 0, 0)');
   });
 });

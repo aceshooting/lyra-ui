@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
+import { resolveCssLength } from "../../../internal/css-length.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import {
   activateOverlay,
@@ -13,17 +14,17 @@ import { LYRA_DEFAULT_responsivePanel } from '../../../internal/default-strings.
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
+const DEFAULT_OVERLAY_BREAKPOINT = "768px";
 
-/** The `mode` property's literal value -- `'auto'` tracks the viewport
- *  breakpoint live; `'inline'`/`'overlay'` force that presentation
- *  regardless of viewport width. */
-export type ResponsivePanelMode = "inline" | "overlay" | "auto";
+/** The `mode` property's literal value -- `'auto'` tracks the allocation
+ * breakpoint live; `'inline'`/`'overlay'` force that presentation. */
+export type LyraResponsivePanelMode = "inline" | "overlay" | "auto";
 
 /** What `mode` actually resolves to once the breakpoint is taken into
  *  account -- `'auto'` never appears here. */
-export type ResponsivePanelEffectiveMode = "inline" | "overlay";
+export type LyraResponsivePanelEffectiveMode = "inline" | "overlay";
 
-export type ResponsivePanelVariant = "fullscreen" | "bottom-sheet";
+export type LyraResponsivePanelVariant = "fullscreen" | "bottom-sheet";
 
 /** Reason the panel was closed, forwarded as the `lr-close` event detail --
  *  mirrors lr-dialog's own `DialogCloseReason` shape. `'escape'` and
@@ -31,33 +32,33 @@ export type ResponsivePanelVariant = "fullscreen" | "bottom-sheet";
  *  dismiss triggers (they can't occur while inline, since there's no
  *  backdrop/document-keydown trap wired up then); any other string is
  *  whatever a caller passes to `close()`. */
-export type ResponsivePanelCloseReason =
+export type LyraResponsivePanelCloseReason =
   | "escape"
   | "backdrop"
   | "api"
   | (string & Record<never, never>);
 
-export interface ResponsivePanelModeChangeDetail {
-  mode: ResponsivePanelEffectiveMode;
+export interface LyraResponsivePanelModeChangeDetail {
+  mode: LyraResponsivePanelEffectiveMode;
 }
 
 export interface LyraResponsivePanelEventMap {
-  "lr-close": CustomEvent<ResponsivePanelCloseReason>;
-  "lr-mode-change": CustomEvent<ResponsivePanelModeChangeDetail>;
+  "lr-close": CustomEvent<LyraResponsivePanelCloseReason>;
+  "lr-mode-change": CustomEvent<LyraResponsivePanelModeChangeDetail>;
 }
 
 /**
  * Pure resolution of the `mode` prop + current viewport into the actual
- * presentation. Kept separate from the `matchMedia` listener wiring below so
- * it's independently unit-testable, and so the live-viewport-response logic
+ * presentation. Kept separate from the allocation observer wiring below so
+ * it's independently unit-testable, and so the live allocation-response logic
  * can be exercised in tests by calling it (or the instance method that wraps
  * it) directly instead of needing control over the real browser window,
  * which `@web/test-runner` doesn't give.
  */
-export function resolveEffectiveMode(
-  mode: ResponsivePanelMode,
+export function resolveResponsivePanelEffectiveMode(
+  mode: LyraResponsivePanelMode,
   belowBreakpoint: boolean
-): ResponsivePanelEffectiveMode {
+): LyraResponsivePanelEffectiveMode {
   if (mode === "inline" || mode === "overlay") return mode;
   return belowBreakpoint ? "overlay" : "inline";
 }
@@ -65,13 +66,13 @@ export function resolveEffectiveMode(
 /**
  * `<lr-responsive-panel>` — the same slotted content either docked inline
  * in the page's normal layout flow (desktop) or presented as a full-screen/
- * bottom-sheet overlay (mobile), depending on viewport width. Typical uses:
+ * bottom-sheet overlay, depending on its allocated inline size. Typical uses:
  * a settings panel or a conversation-history sidebar that's a permanent
  * docked pane on a wide screen but a modal on a phone.
  *
- * Breakpoint detection uses `matchMedia('(max-width: ' + mobileBreakpoint +
- * ')')`, re-evaluated live while connected -- resizing/rotating a device
- * that crosses the breakpoint while `mode="auto"` (the default) updates the
+ * Breakpoint detection observes this component and compares its allocation with
+ * `overlayBreakpoint`. Resizing a containing layout across the breakpoint while
+ * `mode="auto"` (the default) updates the
  * effective presentation without unmounting or re-creating the slotted
  * content: inline and overlay presentation share the exact same shadow DOM
  * structure (only a css class, and the overlay-only `role`/`aria-modal`
@@ -107,7 +108,7 @@ export function resolveEffectiveMode(
  * @slot - The panel body.
  * @slot header - Optional header content, rendered above the body.
  * @slot footer - Optional footer content (e.g. action buttons), rendered below the body.
- * @event lr-close - `detail: ResponsivePanelCloseReason`. Cancelable pre-close veto, fired by
+ * @event lr-close - `detail: LyraResponsivePanelCloseReason`. Cancelable pre-close veto, fired by
  *   the overlay presentation's built-in dismiss triggers (Escape, backdrop click) and by any
  *   `close()` call, in either presentation. Calling `preventDefault()` keeps the panel open and
  *   leaves any active overlay chrome/focus trap intact. A plain `open = false` property write
@@ -115,7 +116,7 @@ export function resolveEffectiveMode(
  *   a dismissal), and this is deliberately the same event/semantics in both presentations,
  *   rather than only being meaningful for the overlay case, so a consumer only has to wire up one
  *   listener regardless of which presentation is currently active.
- * @event lr-mode-change - `detail: ResponsivePanelModeChangeDetail`. Fired whenever the
+ * @event lr-mode-change - `detail: LyraResponsivePanelModeChangeDetail`. Fired whenever the
  *   *effective* mode (not the `mode` prop's literal value, which may be `'auto'`) changes between
  *   `'inline'` and `'overlay'` -- crossing the breakpoint while `mode="auto"`, or the host
  *   reassigning `mode` to a value that changes the effective presentation. Never fired for the
@@ -157,24 +158,23 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
    *  the overlay presentation this is the actual modal open/closed state. */
   @property({ type: Boolean, reflect: true }) open = false;
 
-  /** `'auto'` (default) tracks `mobile-breakpoint` live; `'inline'`/`'overlay'` force that
-   *  presentation regardless of viewport width. */
-  @property({ reflect: true }) mode: ResponsivePanelMode = "auto";
+  /** `'auto'` (default) tracks `overlay-breakpoint` against this element's allocation;
+   * `'inline'`/`'overlay'` force that presentation. */
+  @property({ reflect: true }) mode: LyraResponsivePanelMode = "auto";
 
   /** Only affects the overlay presentation's visual treatment -- `'fullscreen'` (default) covers
    *  the whole viewport; `'bottom-sheet'` slides up from the bottom and doesn't cover the full
    *  height. */
-  @property({ reflect: true }) variant: ResponsivePanelVariant = "fullscreen";
+  @property({ reflect: true }) variant: LyraResponsivePanelVariant = "fullscreen";
 
   /** Accessible name for the overlay presentation's `role="dialog"`. Unused in the inline
    *  presentation, which has no dialog semantics to name. When empty, falls back to the `header`
    *  slot's content -- see the class doc for the full fallback order. */
   @property() label = "";
 
-  /** CSS length passed to `matchMedia` as `(max-width: <this>)` to decide, in `mode="auto"`,
-   *  whether the effective presentation is `'overlay'` (below/at this width) or `'inline'`
-   *  (above it). */
-  @property({ attribute: "mobile-breakpoint" }) mobileBreakpoint = "768px";
+  /** CSS length compared with this element's allocated inline size in `mode="auto"`.
+   * At or below the breakpoint, the effective presentation is `'overlay'`. */
+  @property({ attribute: "overlay-breakpoint" }) overlayBreakpoint = DEFAULT_OVERLAY_BREAKPOINT;
 
   /** Host-level `aria-label` override for the overlay presentation's accessible name -- wins over
    *  every other source (`label`, the header-slot fallback), matching `<lr-dialog>`'s
@@ -185,13 +185,14 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     | null = null;
 
   @state() private belowBreakpoint = false;
-  @state() private effectiveMode: ResponsivePanelEffectiveMode = "inline";
+  @state() private resolvedMode: LyraResponsivePanelEffectiveMode = "inline";
   @state() private hasHeaderSlot = false;
   @state() private hasFooterSlot = false;
   /** Fallback accessible name sourced from the `header` slot's content -- see `detectHeadingText()`. */
   @state() private headingText?: string;
 
-  private mediaQuery?: MediaQueryList;
+  private resizeObserver?: ResizeObserver;
+  private resizeView?: Window;
   private lastTrigger?: HTMLElement;
   private overlayHandle?: OverlayHandle;
   private headerObserver?: MutationObserver;
@@ -206,6 +207,11 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   private focusOverlayAfterUpdate = false;
   private isFirstUpdate = true;
 
+  /** The currently resolved presentation. Composition/measurement is the sole write authority. */
+  get effectiveMode(): LyraResponsivePanelEffectiveMode {
+    return this.resolvedMode;
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.isFirstUpdate = !this.hasUpdated;
@@ -218,32 +224,15 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
       );
       this.headingText = this.detectHeadingText();
     }
-    // Must run before the effectiveMode computation below reads
-    // belowBreakpoint: setupMediaQuery() -> handleBreakpointChange() mutates
-    // belowBreakpoint synchronously, and a runtime mobileBreakpoint change is
-    // otherwise the only kind of change in this method that doesn't itself
-    // touch mode/belowBreakpoint, so computing effectiveMode first would read
-    // the not-yet-updated belowBreakpoint and never get another chance to
-    // react -- a property write from inside willUpdate doesn't schedule a
-    // fresh update, it only folds into the one already in progress.
-    // mobileBreakpoint is present on the very first willUpdate too (Lit's
-    // changed-properties map includes every class-field default from
-    // construction), but connectedCallback() already called setupMediaQuery()
-    // once before this first update runs, so repeating it here would be
-    // redundant -- only a live post-mount change should re-run it.
-    if (
-      !this.isFirstUpdate &&
-      changed.has("mobileBreakpoint") &&
-      this.isConnected
-    ) {
-      this.setupMediaQuery();
+    if (!this.isFirstUpdate && changed.has("overlayBreakpoint") && this.isConnected) {
+      this.measureAllocation();
     }
     if (
       this.isFirstUpdate ||
       changed.has("mode") ||
       changed.has("belowBreakpoint")
     ) {
-      this.effectiveMode = resolveEffectiveMode(
+      this.resolvedMode = resolveResponsivePanelEffectiveMode(
         this.mode,
         this.belowBreakpoint
       );
@@ -265,7 +254,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
           : undefined;
     }
 
-    const overlayOpen = this.effectiveMode === "overlay" && this.open;
+    const overlayOpen = this.resolvedMode === "overlay" && this.open;
     if (overlayOpen !== this.overlayChromeActive) {
       this.overlayChromeActive = overlayOpen;
       if (overlayOpen) {
@@ -289,9 +278,9 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   // mirrors lr-dialog's identical ordering rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (!this.isFirstUpdate && changed.has("effectiveMode")) {
+    if (!this.isFirstUpdate && changed.has("resolvedMode")) {
       this.emit("lr-mode-change", {
-        mode: this.effectiveMode,
+        mode: this.resolvedMode,
       });
     }
     if (this.focusOverlayAfterUpdate) {
@@ -302,13 +291,14 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.setupMediaQuery();
+    this.measureAllocation();
+    this.observeAllocation();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
     // instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between, so willUpdate never reruns to
     // notice overlay chrome is still supposed to be active -- restore it.
     const overlayOpen =
-      resolveEffectiveMode(this.mode, this.belowBreakpoint) === "overlay" &&
+      resolveResponsivePanelEffectiveMode(this.mode, this.belowBreakpoint) === "overlay" &&
       this.open;
     if (this.hasUpdated && overlayOpen) {
       if (this.overlayHandle?.isActive()) {
@@ -329,17 +319,26 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.mediaQuery?.removeEventListener("change", this.onMediaChange);
-    this.mediaQuery = undefined;
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+    this.resizeView?.removeEventListener("resize", this.onWindowResize);
+    this.resizeView = undefined;
     this.overlayHandle?.suspend();
     this.resetOwnerRealmWork();
+    super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
-    this.mediaQuery?.removeEventListener("change", this.onMediaChange);
-    this.mediaQuery = undefined;
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+    this.resizeView?.removeEventListener("resize", this.onWindowResize);
+    this.resizeView = undefined;
     this.resetOwnerRealmWork();
+    if (this.isConnected) {
+      this.measureAllocation();
+      this.observeAllocation();
+    }
   }
 
   private resetOwnerRealmWork(): void {
@@ -382,28 +381,50 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     this.overlayHandle = undefined;
   }
 
-  private setupMediaQuery(): void {
-    this.mediaQuery?.removeEventListener("change", this.onMediaChange);
+  private observeAllocation(): void {
+    if (!this.isConnected) return;
+    this.resizeView?.removeEventListener("resize", this.onWindowResize);
+    this.resizeView = undefined;
     const view = this.ownerDocument.defaultView;
-    if (!view?.matchMedia) {
-      this.mediaQuery = undefined;
+    const ResizeObserverConstructor = view?.ResizeObserver;
+    if (ResizeObserverConstructor) {
+      this.resizeObserver ??= new ResizeObserverConstructor((entries) => {
+        const entry = entries.find((candidate) => candidate.target === this) ?? entries[0];
+        const inlineSize = entry?.contentBoxSize?.[0]?.inlineSize ?? entry?.contentRect.width;
+        if (inlineSize !== undefined) {
+          // A mode flip can change fixed/flow descendants. Commit after the ResizeObserver
+          // delivery checkpoint so Chromium never reports a loop merely because presentation
+          // chrome changed during observation.
+          this.queueOwnerMicrotask(() => this.applyMeasuredInlineSize(inlineSize));
+        }
+      });
+      this.resizeObserver.observe(this);
       return;
     }
-    this.mediaQuery = view.matchMedia(`(max-width: ${this.mobileBreakpoint})`);
-    this.mediaQuery.addEventListener("change", this.onMediaChange);
-    this.handleBreakpointChange(this.mediaQuery.matches);
+    if (view) {
+      this.resizeView = view;
+      view.addEventListener("resize", this.onWindowResize);
+    }
   }
 
-  private onMediaChange = (e: MediaQueryListEvent): void => {
-    if (!this.isConnected || e.currentTarget !== this.mediaQuery) return;
-    this.handleBreakpointChange(e.matches);
-  };
+  private readonly onWindowResize = (): void => this.measureAllocation();
 
-  /** The breakpoint-response logic itself, kept callable independently of the
-   *  `matchMedia` listener that normally drives it -- tests invoke this
-   *  directly to simulate crossing the breakpoint. */
-  private handleBreakpointChange(matches: boolean): void {
-    this.belowBreakpoint = matches;
+  private measureAllocation(): void {
+    const inlineSize = this.getBoundingClientRect().width;
+    if (inlineSize > 0) this.applyMeasuredInlineSize(inlineSize);
+  }
+
+  /** Applies an authoritative allocation measurement. Kept separate from observer delivery for
+   * deterministic tests and reconnect/adoption reconciliation. */
+  private applyMeasuredInlineSize(inlineSize: number): void {
+    if (!Number.isFinite(inlineSize) || inlineSize < 0) return;
+    const resolved = resolveCssLength(this.overlayBreakpoint, { host: this });
+    const fallback = resolveCssLength(DEFAULT_OVERLAY_BREAKPOINT, { host: this }) ?? 768;
+    const breakpoint = Math.max(
+      0,
+      resolved !== undefined && Number.isFinite(resolved) ? resolved : fallback
+    );
+    this.belowBreakpoint = inlineSize <= breakpoint;
   }
 
   private onHeaderSlotChange = (e: Event): void => {
@@ -493,7 +514,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
    * presentation is active, since the inline presentation never took focus
    * away from anything to begin with.
    */
-  close(reason: ResponsivePanelCloseReason = "api"): void {
+  close(reason: LyraResponsivePanelCloseReason = "api"): void {
     if (!this.open) return;
     if (this.emit("lr-close", reason, { cancelable: true }).defaultPrevented) {
       return;

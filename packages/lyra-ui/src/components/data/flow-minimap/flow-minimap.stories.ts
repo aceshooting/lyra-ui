@@ -97,9 +97,9 @@ export const RetintedRunStates: Story = {
       <lr-flow-minimap
         slot="bottom-end"
         style="
-          --lr-flow-minimap-node-running-color: var(--lr-color-danger);
-          --lr-flow-minimap-node-success-color: var(--lr-color-brand);
-          --lr-flow-minimap-node-denied-color: var(--lr-color-success);
+          --lr-flow-status-running-color: var(--lr-color-danger);
+          --lr-flow-status-success-color: var(--lr-color-brand);
+          --lr-flow-status-denied-color: var(--lr-color-success);
         "
       ></lr-flow-minimap>
     </lr-flow-canvas>

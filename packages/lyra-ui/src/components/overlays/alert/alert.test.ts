@@ -24,6 +24,22 @@ it('is closed by default with the exact Shoelace-compatible property defaults', 
   expect(getComputedStyle(el).display).to.equal('none');
 });
 
+it('serializes the default host role while preserving an authored alternate role across reconnect', async () => {
+  const implicit = (await fixture(html`<lr-alert>Message</lr-alert>`)) as LyraAlert;
+  expect(implicit.role).to.equal('alert');
+  expect(implicit.getAttribute('role')).to.equal('alert');
+
+  const authored = (await fixture(html`<lr-alert role="status">Status update</lr-alert>`)) as LyraAlert;
+  expect(authored.role).to.equal('status');
+  expect(authored.getAttribute('role')).to.equal('status');
+  const parent = authored.parentElement!;
+  authored.remove();
+  parent.append(authored);
+  await authored.updateComplete;
+  expect(authored.role).to.equal('status');
+  expect(authored.getAttribute('role')).to.equal('status');
+});
+
 it('accepts and reflects the complete public attribute vocabulary', async () => {
   const el = (await fixture(html`
     <lr-alert open closable countdown="rtl" duration="2500" variant="danger">Message</lr-alert>

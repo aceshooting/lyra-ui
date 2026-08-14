@@ -10,6 +10,22 @@ describe('lr-env-list', () => {
     expect(el.copyable).to.be.true;
   });
 
+  it('clone-owns and freezes readonly entry snapshots while retaining valid partial input', async () => {
+    const source = { name: 'A', value: 'one', secret: false };
+    const entries = [source];
+    const hostile = {} as { name?: string };
+    Object.defineProperty(hostile, 'name', { get: () => { throw new Error('hostile name'); } });
+    const el = await fixture<LyraEnvList>(html`<lr-env-list></lr-env-list>`);
+    el.entries = [hostile, ...entries] as never;
+    source.value = 'mutated';
+    entries.push({ name: 'B', value: 'two', secret: false });
+    await el.updateComplete;
+
+    expect(el.entries).to.deep.equal([{ name: 'A', value: 'one', secret: false }]);
+    expect(Object.isFrozen(el.entries)).to.be.true;
+    expect(Object.isFrozen(el.entries[0]!)).to.be.true;
+  });
+
   it('gives the reveal and copy buttons a :focus-visible outline (regression)', async () => {
     const el = (await fixture(
       html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'secret1', secret: true }]}></lr-env-list>`,
@@ -151,15 +167,80 @@ describe('lr-env-list', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="copy-button"]').length).to.equal(0);
   });
 
-  it('copy button copies the real value regardless of mask state and emits lr-copy', async () => {
-    const el = (await fixture(
-      html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'secretvalue', secret: true }]}></lr-env-list>`,
-    )) as LyraEnvList;
-    await el.updateComplete;
-    const listener = oneEvent(el, 'lr-copy');
-    (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
-    const event = (await listener) as CustomEvent<{ text: string }>;
-    expect(event.detail.text).to.equal('secretvalue');
+  it('waits for clipboard fulfillment before announcing or emitting a frozen success', async () => {
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    let resolveWrite!: () => void;
+    const pending = new Promise<void>((resolve) => { resolveWrite = resolve; });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => pending },
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'secretvalue', secret: true }]}></lr-env-list>`,
+      )) as LyraEnvList;
+      await el.updateComplete;
+      let emitted = false;
+      el.addEventListener('lr-copy', () => { emitted = true; });
+      const listener = oneEvent(el, 'lr-copy');
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      await Promise.resolve();
+      expect(emitted, 'intent must not be reported as clipboard success').to.be.false;
+      expect(document.querySelector('[data-lr-live-region="polite"]')?.textContent ?? '').not.to.contain('Copied!');
+
+      resolveWrite();
+      const event = (await listener) as CustomEvent<{ readonly ok: true; readonly text: string }>;
+      expect(event.detail).to.deep.equal({ ok: true, text: 'secretvalue' });
+      expect(Object.isFrozen(event.detail)).to.be.true;
+      expect(document.querySelector('[data-lr-live-region="polite"]')?.textContent ?? '').to.contain('Copied!');
+    } finally {
+      if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('localizes clipboard rejection and emits only typed failure outcomes', async () => {
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const error = new Error('platform secret must not be rendered');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async () => { throw error; } },
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-env-list
+          .strings=${{ copyFailed: 'Unable to place value on clipboard' }}
+          .entries=${[{ name: 'TOKEN', value: 'secretvalue', secret: true }]}
+        ></lr-env-list>`,
+      )) as LyraEnvList;
+      await el.updateComplete;
+      let succeeded = false;
+      el.addEventListener('lr-copy', () => { succeeded = true; });
+      const compatibility = oneEvent(el, 'lr-error');
+      const failure = oneEvent(el, 'lr-copy-error');
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      const [, failureEvent] = await Promise.all([compatibility, failure]) as [Event, CustomEvent<{
+        readonly ok: false;
+        readonly text: string;
+        readonly reason: string;
+        readonly error: unknown;
+      }>];
+
+      expect(succeeded).to.be.false;
+      expect(failureEvent.detail).to.deep.equal({
+        ok: false,
+        text: 'secretvalue',
+        reason: 'failed',
+        error,
+      });
+      expect(Object.isFrozen(failureEvent.detail)).to.be.true;
+      const announcement = document.querySelector('[data-lr-live-region="polite"]')?.textContent ?? '';
+      expect(announcement).to.contain('Unable to place value on clipboard');
+      expect(announcement).not.to.contain(error.message);
+    } finally {
+      if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
   });
 
   it('uses the adopted owner clipboard and fails closed in an ownerless document', async () => {
@@ -272,6 +353,24 @@ describe('lr-env-list', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='reveal-button'\]:hover/);
     expect(css).to.match(/\[part='copy-button'\]:hover/);
+  });
+
+  it('fully resets native button foreground and chrome for an explicit dark theme', async () => {
+    const el = await fixture<LyraEnvList>(html`
+      <lr-env-list
+        style="color-scheme:dark; --lr-color-text:rgb(240, 241, 242); --lr-color-border:rgb(80, 81, 82)"
+        .entries=${[{ name: 'A', value: 'one' }]}
+      ></lr-env-list>
+    `);
+    const reveal = el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLButtonElement;
+    const copy = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+    for (const button of [reveal, copy]) {
+      const computed = getComputedStyle(button);
+      expect(computed.color).to.equal('rgb(240, 241, 242)');
+      expect(computed.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+      expect(computed.borderTopColor).to.equal('rgb(80, 81, 82)');
+      expect(computed.fontFamily).to.equal(getComputedStyle(el).fontFamily);
+    }
   });
 
   it('contains long unbroken names, revealed values, and action labels in a 320px allocation', async () => {

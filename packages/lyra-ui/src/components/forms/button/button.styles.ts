@@ -3,6 +3,8 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     /* A host width is meaningful for the public component, so the native
        button follows it. The variable keeps the contract opt-out-able for
        compact inline compositions. */

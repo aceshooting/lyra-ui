@@ -7,32 +7,31 @@ export const styles = css`
     position: relative;
     inline-size: 100%;
     min-inline-size: 0;
-    block-size: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
+    min-block-size: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
+    block-size: auto;
+    container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
     /* Same token names/fallback chain as chart.ts's --lr-chart-* — a host
        already theming lr-chart gets lr-lite-chart themed for free, and
        vice versa. Unlike chart.ts (canvas-rendered, can't consume var()
        directly), this component is plain SVG/DOM, so these are read natively
        by the CSS below — no getComputedStyle()/JS-side resolution needed. */
-    --lr-chart-grid-color: var(--lr-color-border);
-    --lr-chart-tick-color: var(--lr-color-text-quiet);
-    --lr-chart-legend-color: var(--lr-color-text);
-    --lr-chart-tooltip-bg: var(--lr-color-surface);
-    --lr-chart-tooltip-text: var(--lr-color-text);
-    --lr-chart-color-1: var(--lr-color-chart-1);
-    --lr-chart-color-2: var(--lr-color-chart-2);
-    --lr-chart-color-3: var(--lr-color-chart-3);
-    --lr-chart-color-4: var(--lr-color-chart-4);
-    --lr-chart-color-5: var(--lr-color-chart-5);
-    --lr-chart-color-6: var(--lr-color-chart-6);
-    --lr-chart-color-7: var(--lr-color-chart-7);
-    --lr-chart-color-8: var(--lr-color-chart-8);
+    --_lr-chart-grid-color: var(--lr-color-border);
+    --_lr-chart-tick-color: var(--lr-color-text-quiet);
+    --_lr-chart-legend-color: var(--lr-color-text);
+    --_lr-chart-tooltip-bg: var(--lr-color-surface);
+    --_lr-chart-tooltip-text: var(--lr-color-text);
   }
   [part='base'] {
     position: relative;
     inline-size: 100%;
-    block-size: 100%;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'plot'
+      'notice'
+      'legend'
+      'table';
     gap: var(--lr-space-xs);
   }
   /* layout="scroll": the svg below gets an explicit inline-size (its
@@ -46,23 +45,24 @@ export const styles = css`
     overflow-y: hidden;
   }
   svg {
-    flex: 1 1 auto;
+    grid-area: plot;
+    display: block;
     inline-size: 100%;
-    block-size: 100%;
-    min-block-size: 0;
+    block-size: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
+    min-block-size: var(--lr-icon-button-size);
     overflow: hidden;
   }
   [part='grid-line'] {
-    stroke: var(--lr-chart-grid-color);
+    stroke: var(--lr-chart-grid-color, var(--_lr-chart-grid-color));
     stroke-width: var(--lr-border-width-thin);
   }
   [part='axis-label'] {
-    fill: var(--lr-chart-tick-color);
+    fill: var(--lr-chart-tick-color, var(--_lr-chart-tick-color));
     font-size: var(--lr-font-size-2xs);
     font-family: var(--lr-font);
   }
   [part='axis-title'] {
-    fill: var(--lr-chart-tick-color);
+    fill: var(--lr-chart-tick-color, var(--_lr-chart-tick-color));
     font-size: var(--lr-font-size-xs);
     font-weight: var(--lr-font-weight-semibold);
     font-family: var(--lr-font);
@@ -130,6 +130,7 @@ export const styles = css`
     cursor: pointer;
   }
   [part='legend'] {
+    grid-area: legend;
     display: flex;
     flex-wrap: wrap;
     gap: var(--lr-space-s);
@@ -144,7 +145,7 @@ export const styles = css`
     overflow-wrap: anywhere;
     gap: var(--lr-size-0-35em);
     font-size: var(--lr-size-0-8rem);
-    color: var(--lr-chart-legend-color);
+    color: var(--lr-chart-legend-color, var(--_lr-chart-legend-color));
   }
   [part='legend-swatch'] {
     inline-size: var(--lr-size-0-7em);
@@ -155,13 +156,65 @@ export const styles = css`
   ${forcedColorLegendSwatchStyles}
   [part='legend-text'] {
     margin-inline-start: var(--lr-space-2xs);
-    color: var(--lr-chart-tick-color);
+    color: var(--lr-chart-tick-color, var(--_lr-chart-tick-color));
+  }
+  [part='data-table'][data-visually-hidden] {
+    position: absolute;
+    inline-size: var(--lr-size-1px);
+    block-size: var(--lr-size-1px);
+    overflow: clip;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  [part='data-table'] {
+    grid-area: table;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
   [part='data-truncation'] {
+    grid-area: notice;
     margin: 0;
     padding: var(--lr-space-xs);
     color: var(--lr-color-warning);
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
+  }
+  [part='base']:where([data-legend-position='top']) {
+    grid-template-areas:
+      'legend'
+      'plot'
+      'notice'
+      'table';
+  }
+  [part='base']:where([data-legend-position='inline-start']) {
+    grid-template-areas:
+      'legend plot'
+      'notice notice'
+      'table table';
+    grid-template-columns:
+      minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))))
+      minmax(0, 1fr);
+  }
+  [part='base']:where([data-legend-position='inline-end']) {
+    grid-template-areas:
+      'plot legend'
+      'notice notice'
+      'table table';
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))));
+  }
+  @container (max-width: 479px) {
+    [part='base']:where([data-legend-position='inline-start']),
+    [part='base']:where([data-legend-position='inline-end']) {
+      grid-template-areas:
+        'plot'
+        'notice'
+        'legend'
+        'table';
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 `;

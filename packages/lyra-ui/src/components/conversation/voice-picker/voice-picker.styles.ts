@@ -8,6 +8,8 @@ export const styles = css`
     inline-size: 100%;
     min-inline-size: 0;
     max-inline-size: var(--lr-size-24rem);
+    --_lr-voice-picker-gap-default: var(--lr-space-xs);
+    --_lr-voice-picker-radius-default: var(--lr-form-control-radius);
   }
   :host(:disabled) {
     cursor: not-allowed;
@@ -31,21 +33,21 @@ export const styles = css`
   .control-row {
     display: flex;
     align-items: stretch;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-voice-picker-gap, var(--_lr-voice-picker-gap-default));
   }
 
   [part='trigger'],
   [part='combobox'] {
     display: flex;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-voice-picker-gap, var(--_lr-voice-picker-gap-default));
     flex: 1 1 auto;
     min-inline-size: 0;
     min-block-size: var(--lr-form-control-height);
     box-sizing: border-box;
     padding: var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-form-control-radius);
+    border-radius: var(--lr-voice-picker-radius, var(--_lr-voice-picker-radius-default));
     background: var(--lr-color-surface);
     color: inherit;
     font: inherit;
@@ -149,7 +151,7 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-voice-picker-radius, var(--_lr-voice-picker-radius-default));
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     cursor: pointer;
@@ -194,7 +196,7 @@ export const styles = css`
     padding: var(--lr-space-xs);
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-voice-picker-radius, var(--_lr-voice-picker-radius-default));
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-shadow-m);
     visibility: hidden;
@@ -219,12 +221,12 @@ export const styles = css`
   [part='option'] {
     display: flex;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-voice-picker-gap, var(--_lr-voice-picker-gap-default));
     inline-size: 100%;
     box-sizing: border-box;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid transparent;
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-voice-picker-radius, var(--_lr-voice-picker-radius-default));
     background: none;
     color: inherit;
     font: inherit;
@@ -294,7 +296,7 @@ export const styles = css`
     justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-voice-picker-radius, var(--_lr-voice-picker-radius-default));
     color: var(--lr-color-text-quiet);
     cursor: pointer;
   }

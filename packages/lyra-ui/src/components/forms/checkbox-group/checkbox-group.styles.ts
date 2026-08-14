@@ -11,6 +11,13 @@ export const styles = css`
     --lr-checkbox-group-option-gap: calc(var(--lr-form-control-height) * 0.2);
     display: block;
   }
+  fieldset {
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  legend { padding: 0; }
   [part='form-control'] { display: grid; gap: var(--lr-checkbox-group-row-gap); }
   /* The rendered legend's real part is "form-control-label" (see checkbox-group.class.ts's
      render()), not "label" -- this must match it exactly or the rule is dead code. */

@@ -159,28 +159,34 @@ type ResolvedFormValueAdapter<TValue> = Required<Omit<FormValueAdapter<TValue>, 
  *
  * Deliberately conservative about objects: only a *plain* object is inspected by key count, because
  * `Object.keys()` reports `0` for a populated `FormData`, `Map` or `Set` and would silently call a
- * filled-in control empty.
+ * filled-in control empty. Reflection is guarded because this is a public helper and the default
+ * adapter path accepts consumer-defined values: a revoked or hostile Proxy is a real, non-empty
+ * value rather than permission to abort the control's validation/update transaction.
  */
 export function isEmptyFormValue(value: unknown): boolean {
   if (value == null) return true;
   if (typeof value === 'string') return value === '';
-  if (Array.isArray(value)) return value.length === 0;
   if (typeof value === 'object') {
-    const prototype = Object.getPrototypeOf(value);
-    if (prototype === null) return Object.keys(value).length === 0;
-    // A plain object's prototype is its creator realm's Object.prototype, whose own prototype is
-    // null and whose own constructor points back to it. Unlike an ambient Object.prototype
-    // identity comparison, this remains exact after values cross an iframe boundary while still
-    // rejecting class instances and custom prototype chains.
-    if (Object.getPrototypeOf(prototype) === null) {
-      const constructor = Object.getOwnPropertyDescriptor(prototype, 'constructor')?.value;
-      if (
-        typeof constructor === 'function' &&
-        constructor.name === 'Object' &&
-        constructor.prototype === prototype
-      ) {
-        return Object.keys(value).length === 0;
+    try {
+      if (Array.isArray(value)) return value.length === 0;
+      const prototype = Object.getPrototypeOf(value);
+      if (prototype === null) return Object.keys(value).length === 0;
+      // A plain object's prototype is its creator realm's Object.prototype, whose own prototype is
+      // null and whose own constructor points back to it. Unlike an ambient Object.prototype
+      // identity comparison, this remains exact after values cross an iframe boundary while still
+      // rejecting class instances and custom prototype chains.
+      if (Object.getPrototypeOf(prototype) === null) {
+        const constructor = Object.getOwnPropertyDescriptor(prototype, 'constructor')?.value;
+        if (
+          typeof constructor === 'function' &&
+          constructor.name === 'Object' &&
+          constructor.prototype === prototype
+        ) {
+          return Object.keys(value).length === 0;
+        }
       }
+    } catch {
+      return false;
     }
   }
   return false;
@@ -338,6 +344,7 @@ export interface FormAssociatedInterface<TValue = string> {
   disabled: boolean;
   required: boolean;
   readonly effectiveDisabled: boolean;
+  /** Browser-resolved owner on read; accepts an owner id, form element, or `null` on write. */
   get form(): HTMLFormElement | null;
   set form(owner: FormOwnerValue);
   readonly labels: NodeList;

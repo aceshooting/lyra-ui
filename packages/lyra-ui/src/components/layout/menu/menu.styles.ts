@@ -1,27 +1,33 @@
-import { css } from "lit";
+import { css } from 'lit';
 
 export const styles = css`
-  /* Fully transparent to layout -- the visible/clickable surface is entirely
-     the consumer's own slotted trigger element (see [part='trigger'] below),
-     so the host contributes no box of its own for that trigger to sit inside
-     (no stray margin/inline-block quirks around, say, a plain icon button). */
   :host {
-    display: contents;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    min-inline-size: var(--lr-size-10rem);
+    max-inline-size: min(
+      var(--lr-popover-viewport-clamp),
+      var(--lr-size-20rem),
+      100%
+    );
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
   }
-  [part="trigger"] {
-    /* Same reasoning as :host above -- event listeners still fire on a
-       display:contents element (only layout/hit-testing are affected), so
-       click/keydown delegation from the slotted trigger keeps working. */
+  /* A dropdown supplies the visible surface; a submenu supplies the private surface below. */
+  :host([data-contained]),
+  :host([data-submenu]) {
     display: contents;
+    min-inline-size: 0;
+    max-inline-size: none;
+    background: transparent;
+    border: 0;
   }
-  [part="popup"] {
+  .submenu-surface {
     position: fixed;
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
-    /* A column so a filled header/footer keeps its full height and the list
-       gives up space instead (see [part='list']'s min-block-size below). With
-       neither region filled this lays out identically to the plain block box
-       it replaced -- one full-width child, sized by its own content. */
     display: flex;
     flex-direction: column;
     min-inline-size: var(--lr-size-10rem);
@@ -37,47 +43,23 @@ export const styles = css`
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    /* Anchored overlay: a positioner-placed panel floating over page content, not a modal layer. */
     box-shadow: var(--lr-shadow-m);
-    /* Closed state: invisible + slightly raised -- visibility (not
-       display:none) so opacity/transform can actually transition, and so a
-       light-DOM <lr-menu-item>'s inherited visibility (see
-       menu.ts's class doc on tab-order safety) excludes it from sequential
-       focus navigation while closed with no separate tabindex bookkeeping
-       needed. Mirrors lr-select's identical [part='listbox'] treatment. */
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));
+    translate: var(--_lr-menu-item-submenu-translation, 0) 0;
     transition: opacity var(--lr-transition-fast),
       transform var(--lr-transition-fast), visibility var(--lr-transition-fast);
   }
-  /* The open state deliberately drops visibility from its own transition list, keeping it only on
-     the closed state above. A transition reads its property list from the after-change style, so
-     this makes the popup visible in the same frame it opens -- which is what keeps .focus() on
-     its content working synchronously, since a transitioning visibility still computes as hidden
-     for that first frame and a non-rendered element cannot take focus. The closing direction is
-     unaffected and still holds the box visible for the length of the fade. A submenu, whose style
-     first resolves while its ancestor popup is hidden, always transitions on open and so would
-     otherwise land one frame behind its own focus move, every single time. */
-  :host([open]) [part="popup"] {
+  .submenu-surface.open {
     visibility: visible;
     opacity: 1;
     transform: translateY(0);
     transition: opacity var(--lr-transition-fast),
       transform var(--lr-transition-fast);
   }
-  :host([data-standalone]) [part="trigger"] {
-    display: none;
-  }
-  :host([data-standalone]) [part="popup"] {
-    position: relative;
-    visibility: visible;
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
   @media (prefers-reduced-motion: reduce) {
-    [part="popup"] {
+    .submenu-surface {
       transition: none !important;
     }
   }
@@ -90,24 +72,24 @@ export const styles = css`
      the whitespace-only text nodes Lit leaves inside a part, so the rule
      would silently never match -- the host attributes below are set from the
      slots' own slotchange instead. */
-  [part="header"],
-  [part="footer"] {
+  [part='header'],
+  [part='footer'] {
     flex: 0 0 auto;
     padding: var(--lr-space-xs);
   }
-  :host(:not([data-has-header])) [part="header"],
-  :host(:not([data-has-footer])) [part="footer"] {
+  :host(:not([data-has-header])) [part='header'],
+  :host(:not([data-has-footer])) [part='footer'] {
     display: none;
   }
   /* The divider only earns its keep when there are items on the other side of
      it -- a header above an empty list would otherwise draw a stray rule. */
-  :host(:not([data-list-empty])) [part="header"] {
+  :host(:not([data-list-empty])) [part='header'] {
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  :host(:not([data-list-empty])) [part="footer"] {
+  :host(:not([data-list-empty])) [part='footer'] {
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  [part="list"] {
+  [part='list'] {
     display: flex;
     flex-direction: column;
     /* The list, not a filled header/footer, is what scrolls when the popup

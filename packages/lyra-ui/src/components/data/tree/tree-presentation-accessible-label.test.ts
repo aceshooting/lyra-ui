@@ -7,7 +7,7 @@ const data = [
   {
     id: '1',
     label: 'Root',
-    badge: 2,
+    badges: [{ text: '2' }],
     children: [
       { id: '1.1', label: 'Child A' },
       { id: '1.2', label: 'Child B' },

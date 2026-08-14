@@ -1,5 +1,11 @@
 import { expect } from '@open-wc/testing';
-import { buildCalendarGrid, parseIsoDate, quartileBucket } from './calendar-grid.js';
+import {
+  buildCalendarGrid,
+  MAX_CALENDAR_INPUT_DAYS,
+  MAX_CALENDAR_WEEKS,
+  parseIsoDate,
+  quartileBucket,
+} from './calendar-grid.js';
 
 describe('parseIsoDate', () => {
   it('parses yyyy-mm-dd as UTC midnight', () => {
@@ -67,7 +73,7 @@ describe('buildCalendarGrid', () => {
     expect(result.monthLabels).to.deep.equal([]);
   });
 
-  it('does not throw a RangeError building a very large grid (spreading into Math.min/Math.max would blow the call stack)', () => {
+  it('bounds a very large collection before calendar-grid allocation', () => {
     const days = Array.from({ length: 150_000 }, (_, i) => {
       const d = new Date(Date.UTC(2000, 0, 1) + i * 86_400_000);
       const y = d.getUTCFullYear();
@@ -76,8 +82,28 @@ describe('buildCalendarGrid', () => {
       return { date: `${y}-${m}-${day}`, value: i };
     });
     const { cells, weekCount } = buildCalendarGrid(days);
-    expect(cells).to.have.length(150_000);
-    expect(weekCount).to.be.greaterThan(0);
+    expect(cells.length).to.be.at.most(MAX_CALENDAR_INPUT_DAYS);
+    expect(weekCount).to.equal(MAX_CALENDAR_WEEKS);
+  });
+
+  it('uses one last-wins cell for duplicate ISO dates', () => {
+    const result = buildCalendarGrid([
+      { date: '2026-03-05', value: 1 },
+      { date: '2026-03-05', value: 9 },
+    ]);
+    expect(result.cells).to.have.length(1);
+    expect(result.cells[0]!.value).to.equal(9);
+    expect(result.truncated).to.equal(false);
+  });
+
+  it('bounds a sparse multi-decade span before expanding calendar positions', () => {
+    const result = buildCalendarGrid([
+      { date: '1970-01-01', value: 1 },
+      { date: '2070-01-01', value: 2 },
+    ]);
+    expect(result.weekCount).to.equal(MAX_CALENDAR_WEEKS);
+    expect(result.cells).to.have.length(1);
+    expect(result.truncated).to.equal(true);
   });
 
   it('drops a calendar-invalid date (rolled-over day) instead of silently normalizing it', () => {

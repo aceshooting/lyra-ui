@@ -66,5 +66,4 @@ export const styles = css`
   lr-virtual-list::part(entry-size) { flex: 0 0 auto; color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); }
   .empty-note { margin: 0; padding: var(--lr-space-m); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); }
   [part='error'] { margin: 0; padding: var(--lr-space-l); color: var(--lr-color-danger); font-size: var(--lr-font-size-md-sm); text-align: center; }
-  [part='spinner'] { display: flex; justify-content: center; padding: var(--lr-space-l); }
 `;

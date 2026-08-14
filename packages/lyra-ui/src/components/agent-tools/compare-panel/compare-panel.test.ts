@@ -1,7 +1,7 @@
-import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import './compare-panel.js';
 import type { LyraComparePanel } from './compare-panel.js';
-import { styles } from './compare-panel.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 describe('lr-compare-panel', () => {
   it('renders labelA/labelB, falling back to the localized defaults when unset', async () => {
@@ -257,10 +257,16 @@ describe('lr-compare-panel', () => {
     expect(paneB.scrollTop).to.equal(0);
   });
 
-  it('hides the tie/both-bad buttons when hide-tie/hide-both-bad are set', async () => {
-    const el = (await fixture(html`<lr-compare-panel hide-tie hide-both-bad></lr-compare-panel>`)) as LyraComparePanel;
+  it('renders all votes by default and accepts a positive allowedVotes subset', async () => {
+    const el = (await fixture(html`<lr-compare-panel></lr-compare-panel>`)) as LyraComparePanel;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="vote-button"]').length).to.equal(4);
+
+    el.allowedVotes = ['a', 'b'];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="vote-button"]').length).to.equal(2);
+    expect(Array.from(el.shadowRoot!.querySelectorAll('[part="vote-button"]')).map((button) => button.textContent?.trim()))
+      .to.deep.equal(['Response A is better', 'Response B is better']);
   });
 
   it('resets vote to null when itemId changes', async () => {
@@ -270,6 +276,33 @@ describe('lr-compare-panel', () => {
     el.itemId = 'pair-2';
     await el.updateComplete;
     expect(el.vote).to.be.null;
+  });
+
+  it('preserves an explicitly committed vote regardless of coupled assignment order', async () => {
+    const voteFirst = await fixture<LyraComparePanel>(html`
+      <lr-compare-panel item-id="old-a" vote="b"></lr-compare-panel>
+    `);
+    voteFirst.vote = 'a';
+    voteFirst.itemId = 'new-a';
+    await voteFirst.updateComplete;
+    expect(voteFirst.itemId).to.equal('new-a');
+    expect(voteFirst.vote).to.equal('a');
+
+    const itemFirst = await fixture<LyraComparePanel>(html`
+      <lr-compare-panel item-id="old-b" vote="b"></lr-compare-panel>
+    `);
+    itemFirst.itemId = 'new-b';
+    itemFirst.vote = 'a';
+    await itemFirst.updateComplete;
+    expect(itemFirst.vote).to.equal('a');
+
+    const sameVote = await fixture<LyraComparePanel>(html`
+      <lr-compare-panel item-id="old-c" vote="a"></lr-compare-panel>
+    `);
+    sameVote.vote = 'a';
+    sameVote.itemId = 'new-c';
+    await sameVote.updateComplete;
+    expect(sameVote.vote, 'an explicit same-value vote assignment is still intentional').to.equal('a');
   });
 
   it('disables the vote bar when disabled is set', async () => {
@@ -306,7 +339,7 @@ describe('lr-compare-panel', () => {
     expect(el.shadowRoot!.querySelector('[part="vote-bar"]')!.getAttribute('aria-label')).to.equal('Voter');
   });
 
-  it('falls back to the built-in English panel label and lets a host aria-label win', async () => {
+  it('falls back to the built-in label without duplicating a non-empty host semantic owner', async () => {
     const el = (await fixture(html`<lr-compare-panel></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Comparison');
@@ -315,9 +348,17 @@ describe('lr-compare-panel', () => {
       html`<lr-compare-panel aria-label="Eval pair 12"></lr-compare-panel>`,
     )) as LyraComparePanel;
     await withHostLabel.updateComplete;
-    expect(withHostLabel.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
-      'Eval pair 12',
-    );
+    const namedBase = withHostLabel.shadowRoot!.querySelector('[part="base"]')!;
+    expect(withHostLabel.getAttribute('aria-label')).to.equal('Eval pair 12');
+    expect(namedBase.hasAttribute('role')).to.equal(false);
+    expect(namedBase.hasAttribute('aria-label')).to.equal(false);
+
+    const decorative = (await fixture(
+      html`<lr-compare-panel aria-label=""></lr-compare-panel>`,
+    )) as LyraComparePanel;
+    const decorativeBase = decorative.shadowRoot!.querySelector('[part="base"]')!;
+    expect(decorativeBase.getAttribute('role')).to.equal('group');
+    expect(decorativeBase.getAttribute('aria-label')).to.equal('');
   });
 
   it('dims a disabled vote button through the shared disabled-opacity token', async () => {
@@ -396,8 +437,22 @@ describe('lr-compare-panel', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('gives vote-button a hover state', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='vote-button'\]:hover/);
+  it('paints a real vote-button hover state', async () => {
+    const el = await fixture<LyraComparePanel>(html`
+      <lr-compare-panel style="--lr-transition-fast: 0ms"></lr-compare-panel>
+    `);
+    const button = el.shadowRoot!.querySelector('[part="vote-button"]') as HTMLButtonElement;
+    const rest = getComputedStyle(button).backgroundColor;
+    const rect = button.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => getComputedStyle(button).backgroundColor !== rest);
+      expect(getComputedStyle(button).backgroundColor).to.not.equal(rest);
+    } finally {
+      await resetMouse();
+    }
   });
 });

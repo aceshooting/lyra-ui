@@ -96,9 +96,23 @@ test('all nine reviewed Chart snapshots share the exact public surface and prese
         cssProperties: review.surface.cssProperties.length,
         methods: review.surface.methods.length,
       },
-      { properties: 16, attributes: 15, slots: 1, events: 0, parts: 0, cssProperties: 18, methods: 0 },
+      { properties: 17, attributes: 15, slots: 1, events: 0, parts: 0, cssProperties: 18, methods: 1 },
       tag,
     );
+    assert.deepEqual(
+      review.surface.properties.find(({ name }) => name === 'chart'),
+      {
+        name: 'chart',
+        attribute: null,
+        type: 'ChartJS | undefined',
+        readonly: false,
+        reflects: false,
+        deprecated: null,
+        hasDefault: false,
+      },
+      tag,
+    );
+    assert.deepEqual(review.surface.methods.map(({ name }) => name), ['renderChart'], tag);
     assert.equal(review.surface.properties.find(({ name }) => name === 'type').default, typeDefault, tag);
     assert.deepEqual(
       review.surface.properties.filter(({ reflects }) => reflects).map(({ name }) => name),

@@ -186,13 +186,21 @@ describe('lifecycle: super calls', () => {
   });
 });
 
-it('forwards the host aria-label to the actual disclosure button', async () => {
+it('keeps explicit-empty and dynamic host naming distinct from the disclosure button', async () => {
   const el = (await fixture(
     html`<lr-source-list aria-label="Evidence sources"></lr-source-list>`,
   )) as LyraSourceList;
-  expect(el.shadowRoot!.querySelector('[part="header"]')!.getAttribute('aria-label')).to.equal(
-    'Evidence sources',
-  );
+  const header = el.shadowRoot!.querySelector('[part="header"]')!;
+  expect(el.getAttribute('aria-label')).to.equal('Evidence sources');
+  expect(header.getAttribute('aria-label')).to.equal('Sources');
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('');
+  expect(header.getAttribute('aria-label')).to.equal('Sources');
+  el.setAttribute('aria-label', 'Revised evidence sources');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Revised evidence sources');
+  expect(header.getAttribute('aria-label')).to.equal('Sources');
 });
 
 it('exposes slotted cards as list items while preserving author roles on removal', async () => {

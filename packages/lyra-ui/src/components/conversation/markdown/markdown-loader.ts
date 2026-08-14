@@ -35,30 +35,45 @@ interface MarkedTokenBase {
 export interface MarkedRenderer {
   heading(this: MarkedParserContext, token: MarkedTokenBase & { depth: number }): string;
   paragraph(this: MarkedParserContext, token: MarkedTokenBase): string;
-  list(this: MarkedParserContext, token: {
-    ordered: boolean;
-    start: number;
-    items: unknown[];
-  }): string;
-  code(this: MarkedParserContext, token: {
-    lang?: string;
-    text: string;
-    escaped: boolean;
-  }): string;
+  list(
+    this: MarkedParserContext,
+    token: {
+      ordered: boolean;
+      start: number;
+      items: unknown[];
+    },
+  ): string;
+  code(
+    this: MarkedParserContext,
+    token: {
+      lang?: string;
+      text: string;
+      escaped: boolean;
+    },
+  ): string;
   codespan(this: MarkedParserContext, token: { text: string }): string;
   blockquote(this: MarkedParserContext, token: MarkedTokenBase): string;
-  table(this: MarkedParserContext, token: {
-    header: Array<MarkedTokenBase & { align?: string | null }>;
-    rows: Array<Array<MarkedTokenBase & { align?: string | null }>>;
-  }): string;
-  link(this: MarkedParserContext, token: MarkedTokenBase & {
-    href: string;
-    title?: string | null;
-  }): string;
-  image(this: MarkedParserContext, token: MarkedTokenBase & {
-    href: string;
-    title?: string | null;
-  }): string;
+  table(
+    this: MarkedParserContext,
+    token: {
+      header: Array<MarkedTokenBase & { align?: string | null }>;
+      rows: Array<Array<MarkedTokenBase & { align?: string | null }>>;
+    },
+  ): string;
+  link(
+    this: MarkedParserContext,
+    token: MarkedTokenBase & {
+      href: string;
+      title?: string | null;
+    },
+  ): string;
+  image(
+    this: MarkedParserContext,
+    token: MarkedTokenBase & {
+      href: string;
+      title?: string | null;
+    },
+  ): string;
   html(this: MarkedParserContext, token: { text: string }): string;
 }
 
@@ -105,8 +120,8 @@ function isMarkedModule(value: unknown): value is MarkedModule {
 /**
  * The two optional peers `<lr-markdown>` needs, loaded independently (see
  * `loadMarkdownAndSanitizer()`). Either half can be `undefined` on its own —
- * a consumer who only installs `marked` (having explicitly opted out of
- * sanitization via `sanitize="false"`) is a valid, supported combination.
+ * a consumer who only installs `marked` (having explicitly selected
+ * `html-mode="trusted"`) is a valid, supported combination.
  */
 export interface MarkdownDeps {
   marked: MarkedModule | undefined;
@@ -126,7 +141,7 @@ let resolvedDeps: MarkdownDeps | undefined;
  * parsing) and `dompurify` (HTML sanitizing), mirroring `chart-feature-loader.ts`'s
  * `loadChartAndZoom()` shape for two independent optional peers. A partial
  * install — most usefully `marked` alone, for a consumer who has explicitly
- * set `sanitize="false"` and doesn't need `dompurify` at all — degrades to
+ * set `html-mode="trusted"` and doesn't need `dompurify` at all — degrades to
  * "that one half is missing" rather than failing outright. Exported (in
  * addition to the cached `loadMarkdownDeps()` below) so both failure paths —
  * and the real caught error each one logs — are directly testable without
@@ -157,7 +172,7 @@ export async function loadMarkdownAndSanitizer(
   } catch (err) {
     console.warn(
       '<lr-markdown> needs the optional peer dependency `dompurify` to sanitize rendered HTML — install it ' +
-        'with `pnpm add dompurify`. Until then, content only renders when `sanitize="false"` is explicitly set:',
+        'with `pnpm add dompurify`. Until then, content only renders when `html-mode="trusted"` is explicitly set:',
       err,
     );
   }
@@ -178,10 +193,9 @@ export async function loadMarkdownAndSanitizer(
  * `connectedCallback()` paints its plain-text fallback (`data-fallback` on
  * the `content` part) for at least one microtask before the real rendered
  * output replaces it. That window is unconditional, not just a failure
- * path: it ends only once this promise settles. A consumer that wants to
- * skip it can set `eager-load` on `<lr-markdown>`, which calls
- * `getMarkdownDepsIfLoaded()` below instead of awaiting this function —
- * see that property's doc for what "already warm" means in practice.
+ * path: it ends only once this promise settles. A consumer that wants to avoid it can call the
+ * public `preloadMarkdown()` helper before mounting the first instance. Every later instance
+ * adopts the settled cache synchronously.
  */
 export function loadMarkdownDeps(): Promise<MarkdownDeps> {
   if (!deps) {
@@ -200,10 +214,9 @@ export function loadMarkdownDeps(): Promise<MarkdownDeps> {
  * a consumer priming it directly at startup — has already settled by the
  * time this is called, or `undefined` if the cache isn't warm yet (nothing
  * has called `loadMarkdownDeps()` before, or it's still in flight). Used by
- * `eager-load` to skip the dynamic `import()`'s async hop in the common case
- * where the peers are already loaded; it cannot make the *very first*
- * `<lr-markdown>` on a page synchronous, since that first call is what
- * populates the cache in the first place.
+ * every instance to skip the dynamic `import()`'s async hop once the peers are already loaded. It
+ * cannot make the *very first* `<lr-markdown>` on a page synchronous unless a consumer called
+ * `preloadMarkdown()` first.
  */
 export function getMarkdownDepsIfLoaded(): MarkdownDeps | undefined {
   return resolvedDeps;

@@ -151,9 +151,10 @@ export interface LyraAppRailEventMap {
  * @event lr-rail-resize-request - A cancelable request to change the `resizable` rail's width via
  *   drag or keyboard stepping. Call `preventDefault()` to keep `railWidthPx` unchanged. Not fired
  *   when a consumer sets `railWidthPx` directly. `detail: AppRailResizeDetail`.
- * @event lr-rail-resize - The `resizable` rail's width changed via drag or keyboard stepping.
- *   Non-cancelable and emitted after `railWidthPx` is assigned. Not fired when a consumer sets
- *   `railWidthPx` directly. `detail: AppRailResizeDetail`.
+ * @event lr-rail-resize - The `resizable` rail's width was committed: immediately after a genuine
+ *   keyboard step, or once on pointerup after a genuine drag. Non-cancelable; no event is emitted
+ *   for clamped no-ops, canceled/lost gestures, or direct `railWidthPx` writes.
+ *   `detail: AppRailResizeDetail`.
  * @csspart base - The rail root while inline (`'full'`/`'icon-only'` modes).
  * @csspart header - The wrapper around the `header` slot.
  * @csspart nav - The wrapper around the default (nav items) slot.
@@ -242,11 +243,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  — there is no separate `show()`/`hide()` pair. */
   @property({ type: Boolean, reflect: true }) open = false;
 
-  /** Accessible name for the rail's navigation landmark, and for its dialog
-   *  role while the mobile overlay is open. A host-level `aria-label`
-   *  attribute takes precedence over this when both are set -- see
-   *  `accessibleLabel`. */
-  @property() label = 'Navigation';
+  /** Optional accessible name for the rail's navigation landmark and mobile dialog. Every
+   *  nonempty supplied string is literal; only absence/empty uses the localized fallback. A
+   *  host-level `aria-label` attribute takes precedence, including an explicit empty value. */
+  @property() label?: string;
 
   /** Accessible name overriding `label` (and its localized default) for the nav landmark / dialog
    *  role, mirroring `<lr-date-input>`'s `accessibleLabel` pattern. Reads the host's own
@@ -279,7 +279,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   @property({ type: Boolean, reflect: true }) resizable = false;
 
   /** When set, persists the fields selected by `persist` to `localStorage` under
-   *  `lr-app-rail:${storageKey}`, restoring them on the next mount — mirrors `lr-split`'s
+   *  `lr-app-rail:${storageKey}`, restoring them on the next mount — mirrors `lr-multi-split`'s
    *  `storage-key`. Effective `mode` is breakpoint-derived and is never persisted. Unset (the
    *  default) means no persistence, exactly as before. */
   @property({ attribute: 'storage-key' }) storageKey?: string;
@@ -340,6 +340,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private resizeOwnerWindow?: Window;
   private resizeStartX = 0;
   private resizeStartWidth = 0;
+  private resizeGestureChanged = false;
   private managedItems = new Set<HTMLElement>();
 
   private syncSlottedItems(): void {
@@ -548,7 +549,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (
       this.persistReady &&
       (changed.has('open') ||
-        changed.has('railWidthPx') ||
+        (changed.has('railWidthPx') && !this.dragging) ||
         changed.has('preferredMode') ||
         changed.has('persist'))
     ) {
@@ -597,7 +598,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.endResizerGesture();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.teardownMediaQueries();
     this.endResizerGesture();
   }
@@ -752,7 +754,13 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   };
 
   private onResizerPointerDown = (e: PointerEvent): void => {
-    if (!this.resizable || this._mode !== 'full' || this.resizePointerId !== undefined) return;
+    if (
+      !e.isPrimary ||
+      e.button !== 0 ||
+      !this.resizable ||
+      this._mode !== 'full' ||
+      this.resizePointerId !== undefined
+    ) return;
     const resizer = e.currentTarget as HTMLElement;
     const ownerWindow = resizer.ownerDocument.defaultView;
     if (!ownerWindow) return;
@@ -760,6 +768,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.resizeOwnerWindow = ownerWindow;
     this.resizeStartX = e.clientX;
     this.resizeStartWidth = this.effectiveRailWidthPx;
+    this.resizeGestureChanged = false;
     resizer.setPointerCapture(e.pointerId);
     ownerWindow.addEventListener('pointermove', this.onResizerPointerMove);
     ownerWindow.addEventListener('pointerup', this.onResizerPointerUp);
@@ -777,32 +786,42 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     let delta = e.clientX - this.resizeStartX;
     if (isRtl(this)) delta = -delta;
     const next = Math.min(this.safeMaxRailWidthPx, Math.max(this.safeMinRailWidthPx, this.resizeStartWidth + delta));
-    this.requestRailResize(next);
+    this.requestRailResize(next, false);
   };
 
   private onResizerPointerUp = (e: PointerEvent): void => {
     if (e.pointerId !== this.resizePointerId) return;
-    this.endResizerGesture();
+    this.endResizerGesture(e.type === 'pointerup');
   };
 
-  private endResizerGesture(): void {
+  private endResizerGesture(commit = false): void {
     const ownerWindow = this.resizeOwnerWindow;
+    const changed = this.resizeGestureChanged;
+    const widthPx = this.effectiveRailWidthPx;
     this.resizePointerId = undefined;
     this.resizeOwnerWindow = undefined;
+    this.resizeGestureChanged = false;
     this.dragging = false;
     ownerWindow?.removeEventListener('pointermove', this.onResizerPointerMove);
     ownerWindow?.removeEventListener('pointerup', this.onResizerPointerUp);
     ownerWindow?.removeEventListener('pointercancel', this.onResizerPointerUp);
     ownerWindow?.removeEventListener('lostpointercapture', this.onResizerPointerUp);
+    if (commit && changed) {
+      this.emit('lr-rail-resize', { widthPx });
+      if (this.persistReady) this.persistState();
+    }
   }
 
   /** Emits the cancelable proposal before committing, so a vetoed gesture never mutates width or
    *  triggers the existing post-commit resize notification. */
-  private requestRailResize(next: number): void {
+  private requestRailResize(next: number, commit = true): boolean {
+    if (next === this.effectiveRailWidthPx) return false;
     const event = this.emit('lr-rail-resize-request', { widthPx: next }, { cancelable: true });
-    if (event.defaultPrevented) return;
+    if (event.defaultPrevented) return false;
     this.railWidthPx = next;
-    this.emit('lr-rail-resize', { widthPx: next });
+    if (commit) this.emit('lr-rail-resize', { widthPx: next });
+    else this.resizeGestureChanged = true;
+    return true;
   }
 
   private onResizerKeyDown = (e: KeyboardEvent): void => {
@@ -811,13 +830,17 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     const step = 8;
     if (e.key === forwardKey) {
-      e.preventDefault();
       const next = Math.min(this.safeMaxRailWidthPx, this.effectiveRailWidthPx + step);
-      this.requestRailResize(next);
+      if (next !== this.effectiveRailWidthPx) {
+        e.preventDefault();
+        this.requestRailResize(next);
+      }
     } else if (e.key === backwardKey) {
-      e.preventDefault();
       const next = Math.max(this.safeMinRailWidthPx, this.effectiveRailWidthPx - step);
-      this.requestRailResize(next);
+      if (next !== this.effectiveRailWidthPx) {
+        e.preventDefault();
+        this.requestRailResize(next);
+      }
     }
   };
 
@@ -839,7 +862,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         id=${this.navId}
         part=${mobile ? 'panel' : 'base'}
         aria-label=${
-          this.accessibleLabel ?? this.localize('navigation', this.label === 'Navigation' ? undefined : this.label)
+          this.accessibleLabel ?? (this.label ? this.label : this.localize('navigation'))
         }
         role=${this.overlayActive ? 'dialog' : 'navigation'}
         aria-modal=${this.overlayActive ? 'true' : nothing}

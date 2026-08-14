@@ -9,32 +9,23 @@ export const styles = css`
        effectively dead code out of the box. */
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
-    --lr-calendar-day-min-block-size: var(--lr-size-6rem);
   }
-  [part='header'] { display: flex; align-items: center; justify-content: space-between; gap: var(--lr-space-s); margin-block-end: var(--lr-space-s); }
+  [part~='header'] { display: flex; align-items: center; justify-content: space-between; gap: var(--lr-space-s); margin-block-end: var(--lr-space-s); }
   [part='title'] { font-weight: var(--lr-font-weight-semibold); }
-  /* [part='nav'] is carried both by the wrapping span around the 'next' button and by the
-     'previous' button itself (see calendar.class.ts's render()) -- the shared minimum tappable
-     size here applies to whichever of the two a given selector match resolves to, sizing the
-     'previous' button directly and, for the wrapping span, at least as large as its own button
-     content already makes it. */
   /* justify-content on both axes: the nav buttons carry a single icon-only glyph (nav-glyph),
      far narrower than the min-inline-size hit-area floor below, and the default
      justify-content (normal => flex-start) dumped all that slack on the trailing side, leaving
      the chevron visibly off-centre in its button. Only takes effect when there IS slack, so a
      nav box whose content already fills it renders exactly as before. */
-  [part='nav'] { display: flex; justify-content: center; align-items: center; gap: var(--lr-space-xs); min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); }
-  /* button[part='nav'] (a direct-attribute match, not a descendant match) reaches both the
-     'previous' button (carries part="nav" itself) and the 'next' button (now also carries part="nav"
-     directly, in addition to sitting inside a span that also carries it for shared hit-area sizing) --
-     without ever matching that wrapping span itself, which isn't a <button>. */
-  button[part='nav'], [part='day'] { min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-surface); color: var(--lr-color-text); cursor: pointer; }
-  button[part='nav'] { padding-inline: var(--lr-space-s); border-radius: var(--lr-radius); }
-  button[part='nav']:hover, [part='agenda-event']:hover { background: var(--lr-color-brand-quiet); }
+  [part~='nav'] { display: flex; justify-content: center; align-items: center; gap: var(--lr-space-xs); min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); }
+  /* Both navigation buttons expose the shared nav part plus a purpose-specific part. */
+  button[part~='nav'], [part='day'] { min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); background: var(--lr-color-surface); color: var(--lr-color-text); cursor: pointer; }
+  button[part~='nav'] { padding-inline: var(--lr-space-s); border-radius: var(--lr-radius); }
+  button[part~='nav']:hover, [part='agenda-event']:hover { background: var(--lr-color-brand-quiet); }
   /* Pressed: the same hovered fill carried further toward --lr-color-mix-partner (which follows the
      text colour), so the step is visible in either theme instead of relying on a fixed lighten. */
-  button[part='nav']:active, [part='agenda-event']:active { background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
-  button[part='nav']:focus-visible, [part='agenda-event']:focus-visible {
+  button[part~='nav']:active, [part='agenda-event']:active { background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  button[part~='nav']:focus-visible, [part='agenda-event']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }
@@ -63,7 +54,7 @@ export const styles = css`
   [part='weekday'] { padding: var(--lr-space-xs); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); text-align: center; }
   [part='grid'] { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border); border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border); }
   [part='week'] { display: contents; }
-  [part='day'] { display: flex; flex-direction: column; align-items: stretch; min-block-size: var(--lr-calendar-day-min-block-size); padding: var(--lr-space-xs); border-block-start: 0; border-inline-start: 0; text-align: start; }
+  [part='day'] { display: flex; flex-direction: column; align-items: stretch; min-block-size: var(--lr-calendar-day-min-block-size, var(--lr-size-6rem)); padding: var(--lr-space-xs); border-block-start: 0; border-inline-start: 0; text-align: start; }
   [part='day'][data-outside='true'] { color: var(--lr-calendar-day-outside-color, var(--lr-color-text-quiet)); background: var(--lr-calendar-day-outside-bg, var(--lr-color-surface)); }
   [part='day'][data-today='true'] { outline: var(--lr-border-width-medium) solid var(--lr-calendar-day-today-outline-color, var(--lr-color-brand)); outline-offset: calc(var(--lr-border-width-medium) * -1); }
   [part='date'] { font-weight: var(--lr-font-weight-semibold); }
@@ -91,7 +82,29 @@ export const styles = css`
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }
   [part='agenda'] { display: grid; gap: var(--lr-space-s); }
-  [part='agenda-event'] { padding: var(--lr-space-s); border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-brand); background: var(--lr-color-surface); }
+  [part='agenda-event'] { padding: var(--lr-space-s); border: 0; border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-brand); background: var(--lr-color-surface); color: var(--lr-color-text); font: inherit; text-align: start; cursor: pointer; }
   @container (max-inline-size: 28rem) { [part='day'] { min-block-size: var(--lr-calendar-day-min-block-size-narrow, var(--lr-size-4rem)); } [part='event'] { font-size: var(--lr-font-size-xs); } }
   :host(:dir(rtl)) [part='nav-glyph'] { transform: scaleX(-1); }
+
+  @media (forced-colors: active) {
+    [part='day'][data-selected='true'] {
+      outline: var(--lr-border-width-medium) solid Highlight;
+      outline-offset: calc(var(--lr-border-width-medium) * -1);
+    }
+    [part='day'][data-today='true'] {
+      border-style: double;
+    }
+    [part='day']:hover,
+    button[part~='nav']:hover,
+    [part='agenda-event']:hover {
+      outline: var(--lr-border-width-thin) dashed Highlight;
+      outline-offset: calc(var(--lr-border-width-thin) * -1);
+    }
+    [part='event'] {
+      forced-color-adjust: none;
+      border: var(--lr-border-width-thin) solid ButtonText;
+      background: ButtonFace !important;
+      color: ButtonText;
+    }
+  }
 `;

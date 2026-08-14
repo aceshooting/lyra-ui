@@ -35,6 +35,20 @@ afterEach(() => {
   document.querySelectorAll('lr-callout').forEach((callout) => callout.remove());
 });
 
+it('honors inherited and direct public callout hooks without host defaults shadowing them', async () => {
+  const wrapper = await fixture(html`
+    <div style="--lr-callout-background: rgb(1, 2, 3); --lr-callout-padding: 7px">
+      <lr-callout>Inherited</lr-callout>
+      <lr-callout style="--lr-callout-background: rgb(4, 5, 6); --lr-callout-padding: 9px">Direct</lr-callout>
+    </div>
+  `);
+  const [inherited, direct] = Array.from(wrapper.querySelectorAll('lr-callout')) as LyraCallout[];
+  expect(getComputedStyle(inherited!).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(inherited!).paddingTop).to.equal('7px');
+  expect(getComputedStyle(direct!).backgroundColor).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(direct!).paddingTop).to.equal('9px');
+});
+
 async function settleLiveRegion(el: LyraCallout): Promise<void> {
   const view = el.ownerDocument.defaultView;
   if (view) {
@@ -310,6 +324,25 @@ it('extracts only rendered accessible message text and dedupes irrelevant mutati
   el.remove();
 });
 
+it('renders an interactive icon assignment as inert decorative presentation', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <button id="outside" type="button">Outside</button>
+      <lr-callout><button id="icon-action" slot="icon" type="button">Icon action</button>Message</lr-callout>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-callout')!;
+  const presentation = el.shadowRoot!.querySelector<HTMLElement>('[part~="icon"]')!;
+  const outside = wrapper.querySelector<HTMLButtonElement>('#outside')!;
+  const iconAction = wrapper.querySelector<HTMLButtonElement>('#icon-action')!;
+  expect(presentation.getAttribute('aria-hidden')).to.equal('true');
+  expect(presentation.inert).to.equal(true);
+
+  outside.focus();
+  iconAction.focus();
+  expect(wrapper.ownerDocument.activeElement?.id).to.equal('outside');
+});
+
 it('does not announce updates while the host or a composed ancestor is hidden', async () => {
   const wrapper = await fixture(html`
     <section><lr-callout>Initial callout</lr-callout></section>
@@ -364,6 +397,60 @@ it('routes danger mutations assertively and ordinary mutations politely', async 
   el.firstChild!.textContent = 'Ordinary update';
   await Promise.resolve();
   expect(polite.textContent).to.equal('Ordinary update');
+});
+
+it('routes an unset callout through its live composed contextual variant', async () => {
+  const wrapper = await fixture(html`
+    <div variant="danger"><lr-callout>Historical status</lr-callout></div>
+  `);
+  const el = wrapper.querySelector('lr-callout') as LyraCallout;
+  expect(el.hasAttribute('variant')).to.be.false;
+  await settleLiveRegion(el);
+  const assertive = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  )!;
+  const polite = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  const assertiveBefore = assertive.childElementCount;
+  const politeBefore = polite.childElementCount;
+
+  el.firstChild!.textContent = 'Inherited danger update';
+  await flushMutations();
+  expect(assertive.lastElementChild?.textContent).to.equal('Inherited danger update');
+  expect(assertive.childElementCount).to.equal(assertiveBefore + 1);
+  expect(polite.childElementCount).to.equal(politeBefore);
+
+  const assertiveAfterInherited = assertive.childElementCount;
+  el.setAttribute('variant', 'success');
+  el.firstChild!.textContent = 'Explicit ordinary update';
+  await flushMutations();
+  expect(polite.lastElementChild?.textContent).to.equal('Explicit ordinary update');
+  expect(assertive.childElementCount).to.equal(assertiveAfterInherited);
+
+  el.removeAttribute('variant');
+  el.firstChild!.textContent = 'Inherited danger again';
+  await flushMutations();
+  expect(assertive.lastElementChild?.textContent).to.equal('Inherited danger again');
+
+  wrapper.setAttribute('variant', 'success');
+  el.firstChild!.textContent = 'Moved to ordinary context';
+  await flushMutations();
+  expect(polite.lastElementChild?.textContent).to.equal('Moved to ordinary context');
+
+  const dangerContext = wrapper.ownerDocument.createElement('div');
+  dangerContext.setAttribute('variant', 'danger');
+  wrapper.append(dangerContext);
+  dangerContext.append(el);
+  await settleLiveRegion(el);
+  const reconnectedAssertive = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
+  )!;
+  const assertiveBeforeReconnectMutation = reconnectedAssertive.childElementCount;
+  el.firstChild!.textContent = 'Reconnected danger context';
+  await flushMutations();
+  expect(reconnectedAssertive.lastElementChild?.textContent).to.equal('Reconnected danger context');
+  expect(reconnectedAssertive.childElementCount).to.equal(assertiveBeforeReconnectMutation + 1);
 });
 
 it('keeps queued and detached changes silent across reconnect staging', async () => {
@@ -421,6 +508,7 @@ it('rebinds mutation observation and announcement sinks after iframe adoption', 
     document.body.append(el);
     await settleLiveRegion(el);
 
+    frameDocument.body.setAttribute('variant', 'danger');
     frameDocument.body.append(el);
     const frameMessage = frameDocument.createElement('span');
     frameMessage.textContent = 'Iframe initial state';
@@ -433,12 +521,12 @@ it('rebinds mutation observation and announcement sinks after iframe adoption', 
     ).to.be.at.least(2);
     expect(
       frameDocument.querySelector(
-        `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+        `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
       ) !== null,
       'the adopted document owns the live sink',
     ).to.be.true;
     const frameSink = frameDocument.querySelector<HTMLElement>(
-      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
     )!;
     expect(frameSink.childElementCount, 'adoption and staged content stay silent').to.equal(0);
 

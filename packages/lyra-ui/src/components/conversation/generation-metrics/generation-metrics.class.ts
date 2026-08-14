@@ -1,0 +1,499 @@
+import {
+  html,
+  nothing,
+  svg,
+  type TemplateResult,
+  type SVGTemplateResult,
+  type PropertyValues,
+  type ComplexAttributeConverter,
+} from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { literalSetConverter } from '../../../internal/converters.js';
+import { styles } from './generation-metrics.styles.js';
+import { getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_elapsedMinutesSecondsTemplate, LYRA_DEFAULT_generationStatusElapsedSeconds, LYRA_DEFAULT_generationStatusThroughput, LYRA_DEFAULT_generationStatusTokenCount, LYRA_DEFAULT_generationStatusTokensCount, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+
+// Mirrors the shared icon set's viewBox/stroke conventions
+// (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
+// stop glyph to that module -- it's off limits here -- so this one-off icon
+// still reads as part of the same visual language as the rest of the
+// library's inline icons. Identical shape to `<lr-chat-composer>`'s own
+// local `stopIcon()` (the conventional filled-square "stop generating"
+// glyph), duplicated rather than imported since these are two independently
+// consumable components with no dependency between them.
+function stopIcon(): SVGTemplateResult {
+  return svg`
+    <svg
+      width="1em"
+      height="1em"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="none"
+      aria-hidden="true"
+      focusable="false"
+    ><rect x="6" y="6" width="12" height="12" rx="1.5"></rect></svg>
+  `;
+}
+
+interface FormattedElapsed {
+  key: 'generationStatusElapsedSeconds' | 'elapsedMinutesSecondsTemplate';
+  values: Record<string, string>;
+}
+
+/** `4200` produces a localized seconds message; `65000` produces a localized
+ *  minutes-and-seconds message. Sub-minute durations get one
+ *  decimal place of seconds (the common case: most single generations finish
+ *  in single-digit seconds, where whole-second precision would look static
+ *  between ticks); once a full minute is reached, `"Xm Ys"` reads better than
+ *  a fractional-minute or a 3-4 digit seconds count. The `59.95` cutoff (not
+ *  a plain `60`) exists so a value that *rounds* to `"60.0s"` at one-decimal
+ *  precision is displayed as `"1m 0s"` instead -- without it, the two
+ *  branches could each independently round the same instant to a different
+ *  minute. Returning a message key and values keeps all library-owned words
+ *  and punctuation inside the localized template. */
+function formatElapsed(ms: number, locale: string): FormattedElapsed {
+  const totalSeconds = Math.max(0, ms) / 1000;
+  if (totalSeconds < 59.95) {
+    const seconds = getNumberFormat(locale, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }).format(Math.round(totalSeconds * 10) / 10);
+    return { key: 'generationStatusElapsedSeconds', values: { seconds } };
+  }
+  const wholeSeconds = Math.round(totalSeconds);
+  const minutes = Math.floor(wholeSeconds / 60);
+  const seconds = wholeSeconds % 60;
+  const numberFormat = getNumberFormat(locale, { maximumFractionDigits: 0 });
+  return {
+    key: 'elapsedMinutesSecondsTemplate',
+    values: { minutes: numberFormat.format(minutes), seconds: numberFormat.format(seconds) },
+  };
+}
+
+/** Locale-formats a token count after applying the component's documented
+ *  non-negative integer normalization. */
+function formatTokenCount(count: number, locale: string): { rounded: number; formatted: string } {
+  const rounded = Math.max(0, Math.round(count));
+  return { rounded, formatted: getNumberFormat(locale).format(rounded) };
+}
+
+/** `27.4` -> `"27"`; `3.2` -> `"3.2"`. Same shape as this file's
+ *  `formatElapsed`/`<lr-tool-call-chip>`'s `formatDuration`: the low end of
+ *  the range (where a whole-number rounding would flatten every early
+ *  reading to the same "0" or "1") gets one decimal place, while anything at
+ *  or above 10 tok/s rounds to a whole number, which is plenty precise for a
+ *  live-updating throughput figure. The caller interpolates the result into
+ *  the complete localized throughput message. */
+function formatThroughput(value: number, locale: string): string {
+  const clamped = Math.max(0, value);
+  const rounded = clamped < 10 ? Math.round(clamped * 10) / 10 : Math.round(clamped);
+  return getNumberFormat(locale, { maximumFractionDigits: clamped < 10 ? 1 : 0 }).format(rounded);
+}
+
+/**
+ * String-aware boolean attribute converter for `show-stop`. Lit's built-in
+ * `type: Boolean` converter is presence-based -- the attribute's mere
+ * presence (regardless of its string value) maps to `true`, so a plain-
+ * markup consumer writing the literal `show-stop="false"` would actually get
+ * the button *shown*, the opposite of what that string reads as (the same
+ * bug class `<lr-streaming-text>`'s `optionalBooleanConverter` and
+ * `<lr-line-chart>`'s `WithoutBeginAtZero` story both document). Unlike
+ * `<lr-streaming-text>`'s tri-state converter, this property's default is
+ * `true`, not "unset" -- so this one only needs two states: attribute absent
+ * (or removed) -> `true` (the default); `show-stop="false"` -> `false`;
+ * anything else present (no value, `="true"`, ...) -> `true`.
+ */
+const showStopConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    // `true` is this property's default, so there's nothing worth reflecting
+    // for it; only the non-default `false` needs an attribute at all.
+    return value ? null : 'false';
+  },
+};
+
+export interface LyraGenerationMetricsEventMap {
+  'lr-stop': CustomEvent<null>;
+}
+
+export type GenerationMetricsStatus = 'idle' | 'running' | 'complete';
+
+const GENERATION_METRICS_STATUS = literalSetConverter<GenerationMetricsStatus>(
+  ['idle', 'running', 'complete'],
+  'idle',
+);
+/**
+ * `<lr-generation-metrics>` — a compact, ticking status readout shown
+ * alongside an in-progress AI response: elapsed time, token count, and
+ * token-throughput, plus a built-in Stop button. Renders as e.g.
+ * `12.3s · 340 tokens · 27 tok/s [Stop]`.
+ *
+ * This is deliberately a *different* concern than the already-landed
+ * `<lr-stream-status>`: that component is about transport/connection
+ * health (idle/connecting/streaming/stalled, heartbeat-aware stall
+ * detection), while this one is a user-facing metrics readout for a
+ * generation that both components' hosts typically already know is
+ * healthily in progress. Neither imports or depends on the other, and a
+ * consumer building a full generation UI is expected to compose both side by
+ * side rather than pick one.
+ *
+ * `status="running"` drives an internal ~1s `setInterval` ticker that recomputes the
+ * elapsed-time display (a plain interval is sufficient here -- unlike
+ * `<lr-stream-status>`'s stall timer, this never needs to be armed with a
+ * precise deadline, only to refresh a display roughly once a second). The
+ * elapsed clock's start instant is `started-at` when set (an epoch-ms
+ * timestamp -- lets a host that already knows exactly when generation began,
+ * e.g. from its own request-dispatch timestamp, feed that in directly and
+ * survive this component being created slightly later than that instant);
+ * when `started-at` is unset, this component captures `Date.now()` when
+ * `status` enters `running`. Entering `complete` clears the ticker and freezes
+ * the elapsed summary; entering `idle` clears it and resets the readout to
+ * zero. This keeps never-started and completed generations distinct.
+ *
+ * `tokens-per-second`, when the host supplies a finite value directly (e.g. from its own
+ * smoothed/windowed rate calculation), is clamped to zero or above and used. Non-finite values
+ * are treated as omitted. When omitted,
+ * this component derives a live figure itself from `token-count` divided by
+ * elapsed seconds -- but only once at least one full second of elapsed time
+ * has accumulated, since dividing by a sub-second elapsed window can produce
+ * wildly-swinging, misleading early readings (e.g. 3 tokens in 40ms reading
+ * as "75 tok/s"). A host that wants a stable figure from the very first tick
+ * should supply `tokens-per-second` itself. The tokens segment and the
+ * throughput segment are independently optional: either, both, or neither
+ * may render depending on what's available, per each property's own doc.
+ *
+ * Accessibility: this readout ticks roughly once per second while running,
+ * which is exactly the kind of high-frequency update
+ * `<lr-live-region>`/`Announcer` (`../../internal/announcer.js`) exists to
+ * *prevent* from being read aloud verbatim -- routing a per-second numeric
+ * tick through even a throttled announcer would still narrate a new number
+ * to a screen-reader user roughly once every throttle window for as long as
+ * generation runs, which is noise, not information. This component
+ * therefore carries no `role="status"`/`aria-live` of its own and never
+ * announces anything; a host that wants generation-start/-end announced
+ * should pair this with something that announces state *transitions* (e.g.
+ * `<lr-typing-indicator>`'s mount-time announcement), not this ticking
+ * readout. The one genuinely actionable, infrequent control here -- the Stop
+ * button -- gets a normal, always-present `aria-label`, no different from
+ * any other icon-only button in this library.
+ *
+ * @customElement lr-generation-metrics
+ * @event lr-stop - The built-in Stop button was clicked. No detail payload.
+ * @csspart base - The root inline layout container.
+ * @csspart elapsed - The elapsed-time segment, e.g. `"12.3s"`. Always rendered (reads `"0.0s"` while idle).
+ * @csspart tokens - The token-count segment, e.g. `"340 tokens"`. Only rendered when `token-count` is set.
+ * @csspart throughput - The throughput segment, e.g. `"27 tok/s"`. Only rendered when a value is available (host-supplied or derived; see the class doc).
+ * @csspart stop-button - The built-in Stop button. Only rendered while `status="running"` and `show-stop` is true.
+ * @status stable
+ * @since 4.0.0
+ */
+export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    elapsedMinutesSecondsTemplate: LYRA_DEFAULT_elapsedMinutesSecondsTemplate,
+    generationStatusElapsedSeconds: LYRA_DEFAULT_generationStatusElapsedSeconds,
+    generationStatusThroughput: LYRA_DEFAULT_generationStatusThroughput,
+    generationStatusTokenCount: LYRA_DEFAULT_generationStatusTokenCount,
+    generationStatusTokensCount: LYRA_DEFAULT_generationStatusTokensCount,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
+    stopGenerating: LYRA_DEFAULT_stopGenerating,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
+  static override styles = [LyraElement.styles, styles];
+
+  private _status: GenerationMetricsStatus = 'idle';
+
+  /** Generation lifecycle. `idle` is never-started/reset, `running` ticks and permits Stop, and
+   *  `complete` freezes the final metrics. Invalid attribute or JavaScript writes fail closed to
+   *  `idle`. */
+  @property({ reflect: true, converter: GENERATION_METRICS_STATUS })
+  get status(): GenerationMetricsStatus {
+    return this._status;
+  }
+  set status(next: GenerationMetricsStatus) {
+    const normalized = GENERATION_METRICS_STATUS.normalize(next);
+    const old = this._status;
+    if (old === normalized) return;
+    this._status = normalized;
+    this.requestUpdate('status', old);
+  }
+
+  /** Epoch-ms timestamp of when generation began. Optional -- when unset (or
+   *  when set to a value that fails to parse as a finite number, e.g. an
+   *  ISO-8601 date string) while `status` is `running`, this component captures
+   *  the current time itself the moment `status` becomes `running` and counts
+   *  from there instead (see the class doc). */
+  @property({ type: Number, attribute: 'started-at' }) startedAt?: number;
+
+  /** Running token count so far. Finite values are rounded to a non-negative integer; unset or
+   *  non-finite values omit the `tokens` segment entirely. */
+  @property({ type: Number, attribute: 'token-count' }) tokenCount?: number;
+
+  /** Host-computed tokens/sec figure. Finite values are clamped to zero or above; unset and
+   *  non-finite values fall back to a derived `token-count / elapsed-seconds` rate once at least
+   *  one second has elapsed. */
+  @property({ type: Number, attribute: 'tokens-per-second' }) tokensPerSecond?: number;
+
+  /** Whether the built-in Stop button renders at all. Defaults to `true`.
+   *  Uses {@link showStopConverter} rather than Lit's default presence-based
+   *  `type: Boolean` handling, so a plain-HTML consumer with no way to write
+   *  a `.showStop` property binding can still turn this off with
+   *  `show-stop="false"`; a Lit template can do the same with either that
+   *  attribute string or a `.showStop=${false}` property binding. */
+  @property({ attribute: 'show-stop', converter: showStopConverter }) showStop = true;
+
+  // Recomputed on activation and on every ~1s tick; frozen (not reset) once
+  // `status` becomes complete -- see the class doc's "ticker" paragraph.
+  @state() private elapsedMs = 0;
+
+  private tickTimer?: number;
+  private tickTimerOwner?: Window;
+  private tickTimerDocument?: Document;
+  private tickerGeneration = 0;
+
+  // Only ever set/read while `startedAt` is unset -- see the class doc.
+  private fallbackStartMs?: number;
+
+  constructor() {
+    super();
+    // The accessor's private backing field does not pass through Lit's field initializer, so seed
+    // the default reflected `status="idle"` value explicitly.
+    this.requestUpdate('status', undefined);
+  }
+
+  // A re-parenting host (e.g. a virtualized/reordering list) disconnects and
+  // reconnects this element without ever changing `status` -- `willUpdate`/
+  // `updated` only react to *changes* of `status`, so with no override here
+  // a still-running element would come back with `disconnectedCallback`'s
+  // cleared ticker never restarted, freezing the readout even though
+  // `status` (still `running`) says generation is ongoing. Restarting from
+  // `computeElapsedMs()` (rather than resuming a stale in-flight interval)
+  // matches how `startTicker()` already re-baselines on every fresh start.
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.status === 'running') {
+      this.elapsedMs = this.computeElapsedMs();
+      this.startTicker();
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.stopTicker();
+    super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.stopTicker();
+    if (this.isConnected && this.status === 'running') this.startTicker();
+  }
+
+  // Recomputing `elapsedMs` here (rather than in `updated()`) matters: Lit
+  // runs `willUpdate()` *before* render, as part of the same update pass, so
+  // a property set here is picked up by this same render with no extra
+  // cycle. Setting a reactive property from inside `updated()` instead would
+  // schedule a *second* update after the first has already completed (Lit
+  // warns about exactly this in dev mode) -- meaning a caller doing
+  // `el.status = 'running'; await el.updateComplete;` would still observe the
+  // stale pre-activation `elapsedMs` once that first promise resolves.
+  //
+  // `changed.has('status')` fires on the very first update too when the
+  // element mounts already `running` (the parsed-attribute/property value
+  // differs from the `idle` field-initializer default that was seen first)
+  // -- same mechanism `<lr-stream-status>`'s `onPhaseChanged` relies on to
+  // arm its stall timer on a `phase="streaming"` mount, so mounting this
+  // component already running correctly seeds `elapsedMs` with no separate
+  // first-update special case needed.
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has('status')) {
+      if (this.status === 'running') {
+        if (this.validStartedAt == null) this.fallbackStartMs = Date.now();
+        this.elapsedMs = this.computeElapsedMs();
+      } else if (this.status === 'idle') {
+        this.fallbackStartMs = undefined;
+        this.elapsedMs = 0;
+      }
+    } else if (this.status === 'running' && changed.has('startedAt')) {
+      // A `started-at` that arrives (or changes) mid-generation should
+      // immediately re-baseline the displayed elapsed time rather than wait
+      // up to ~1s for the next tick.
+      if (this.validStartedAt == null) {
+        // Preserve the elapsed duration accumulated against the prior valid clock while switching
+        // to the fallback clock, instead of resetting to zero and leaving no fallback to tick.
+        this.fallbackStartMs = Date.now() - this.elapsedMs;
+      } else {
+        this.fallbackStartMs = undefined;
+      }
+      this.elapsedMs = this.computeElapsedMs();
+    }
+  }
+
+  // Starting/stopping the interval is a genuine side effect (not a reactive-
+  // property write), so it belongs in `updated()`, unlike the `elapsedMs`
+  // computation above.
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (changed.has('status')) {
+      if (this.status === 'running') this.startTicker();
+      else this.stopTicker();
+    }
+  }
+
+  private startTicker(): void {
+    this.stopTicker();
+    if (!this.isConnected || this.status !== 'running') return;
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    const generation = this.tickerGeneration;
+    // Setting `elapsedMs` here (unlike inside `updated()`, see that method's
+    // doc) is fine: an interval callback is a wholly separate future task,
+    // not a continuation of an in-progress Lit update, so this starts a
+    // normal, self-contained update cycle rather than a same-tick "second
+    // update" scheduled mid-render.
+    const handle = ownerWindow.setInterval(() => {
+      if (
+        this.tickTimer !== handle ||
+        this.tickTimerOwner !== ownerWindow ||
+        this.tickTimerDocument !== ownerDocument ||
+        this.tickerGeneration !== generation ||
+        !this.isConnected ||
+        this.status !== 'running' ||
+        this.ownerDocument !== ownerDocument
+      ) {
+        return;
+      }
+      this.elapsedMs = this.computeElapsedMs();
+    }, 1000);
+    this.tickTimer = handle;
+    this.tickTimerOwner = ownerWindow;
+    this.tickTimerDocument = ownerDocument;
+  }
+
+  private stopTicker(): void {
+    this.tickerGeneration += 1;
+    if (this.tickTimer !== undefined) {
+      this.tickTimerOwner?.clearInterval(this.tickTimer);
+    }
+    this.tickTimer = undefined;
+    this.tickTimerOwner = undefined;
+    this.tickTimerDocument = undefined;
+  }
+
+  // `startedAt` is host-supplied and, unlike `tokenCount`/`tokensPerSecond`
+  // (both already guarded at their read sites), had no `Number.isFinite`
+  // check of its own -- a non-numeric `started-at` attribute (e.g. an
+  // ISO-8601 date string that failed the `type: Number` conversion, landing
+  // as `NaN`) would flow straight into `Date.now() - start`, permanently
+  // rendering the literal text "NaNm NaNs" with no fallback or recovery.
+  // Treating an invalid value the same as "unset" here restores this
+  // property's own documented fallback-clock behavior instead.
+  private get validStartedAt(): number | undefined {
+    if (this.startedAt == null || !Number.isFinite(this.startedAt)) return undefined;
+    // Clamped to non-negative -- any finite epoch-ms instant is otherwise accepted as-is (no
+    // upper bound: a slightly future, clock-skewed timestamp is still a real instant); only a
+    // negative value (nonsensical for "when generation began") is floored to 0.
+    return finiteRange(this.startedAt, this.startedAt, 0);
+  }
+
+  private computeElapsedMs(): number {
+    const start = this.validStartedAt ?? this.fallbackStartMs;
+    return start == null ? 0 : Math.max(0, Date.now() - start);
+  }
+
+  /** `tokenCount` normalized to a finite, non-negative integer -- `undefined` while unset or
+   *  non-finite (the `tokens` segment is omitted entirely; see the class doc). */
+  private get validTokenCount(): number | undefined {
+    if (this.tokenCount == null || !Number.isFinite(this.tokenCount)) return undefined;
+    return finiteCount(Math.round(this.tokenCount));
+  }
+
+  /** `tokens-per-second` when set; otherwise a derived figure once enough
+   *  elapsed time has accumulated for it to be meaningful; otherwise
+   *  `undefined` (the throughput segment doesn't render at all). */
+  private get effectiveTokensPerSecond(): number | undefined {
+    if (this.tokensPerSecond != null && Number.isFinite(this.tokensPerSecond)) {
+      // Clamped to non-negative -- a host-supplied negative rate is never a meaningful reading.
+      return finiteRange(this.tokensPerSecond, this.tokensPerSecond, 0);
+    }
+    const tokenCount = this.validTokenCount;
+    if (tokenCount !== undefined) {
+      const elapsedSeconds = this.elapsedMs / 1000;
+      if (elapsedSeconds >= 1) return tokenCount / elapsedSeconds;
+    }
+    return undefined;
+  }
+
+  private onStopClick = (): void => {
+    this.emit('lr-stop', null);
+  };
+
+  override render(): TemplateResult {
+    const validTokenCount = this.validTokenCount;
+    const hasTokens = validTokenCount !== undefined;
+    const throughput = this.effectiveTokensPerSecond;
+    const hasThroughput = throughput !== undefined;
+    const locale = this.effectiveLocale;
+    const elapsed = formatElapsed(this.elapsedMs, locale);
+    const tokenCount = hasTokens ? formatTokenCount(validTokenCount!, locale) : undefined;
+    const tokenMessageKey =
+      tokenCount && getPluralRules(locale).select(tokenCount.rounded) === 'one'
+        ? 'generationStatusTokenCount'
+        : 'generationStatusTokensCount';
+
+    return html`
+      <div part="base">
+        <span part="elapsed">${this.localize(elapsed.key, undefined, elapsed.values)}</span>
+        ${hasTokens
+          ? html`<span part="tokens"
+              >${this.localize(tokenMessageKey, undefined, { count: tokenCount!.formatted })}</span
+            >`
+          : nothing}
+        ${hasThroughput
+          ? html`<span part="throughput"
+              >${this.localize('generationStatusThroughput', undefined, {
+                rate: formatThroughput(throughput!, locale),
+              })}</span
+            >`
+          : nothing}
+        ${this.showStop && this.status === 'running'
+          ? html`
+              <button
+                part="stop-button"
+                type="button"
+                aria-label=${this.localize('stopGenerating')}
+                @click=${this.onStopClick}
+              >
+                ${stopIcon()}
+              </button>
+            `
+          : nothing}
+      </div>
+    `;
+  }
+}
+
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'lr-generation-metrics': LyraGenerationMetrics;
+  }
+}

@@ -14,6 +14,21 @@ const sample = {
   address: { city: 'London', country: 'UK' },
 };
 
+let originalClipboard: PropertyDescriptor | undefined;
+
+beforeEach(() => {
+  originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: () => Promise.resolve() },
+  });
+});
+
+afterEach(() => {
+  if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard);
+  else Reflect.deleteProperty(navigator, 'clipboard');
+});
+
 async function withData(data: unknown): Promise<LyraJsonViewer> {
   const el = (await fixture(html`<lr-json-viewer></lr-json-viewer>`)) as LyraJsonViewer;
   el.data = data;
@@ -28,7 +43,7 @@ it('renders object keys and primitive values with typed parts', async () => {
 
   const values = el.shadowRoot!.querySelectorAll('[part="value"]');
   const stringValue = Array.from(values).find((v) => v.textContent === '"Ada Lovelace"');
-  expect((stringValue) != null).to.equal(true);
+  expect(stringValue != null).to.equal(true);
   expect(stringValue!.getAttribute('data-type')).to.equal('string');
 
   const numberValue = Array.from(values).find((v) => v.textContent === '36');
@@ -63,7 +78,7 @@ it('collapsed-depth="0" collapses the top-level node immediately', async () => {
   await el.updateComplete;
 
   // Collapsed root shows a preview instead of rendering any nested keys/values.
-  expect((el.shadowRoot!.querySelector('[part="key"]')) == null).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="key"]') == null).to.be.true;
   expect(el.shadowRoot!.querySelector('.preview')).to.exist;
 });
 
@@ -72,7 +87,7 @@ it('normalizes a NaN collapsedDepth to 0 (fully collapsed) instead of silently d
   el.collapsedDepth = NaN;
   await el.updateComplete;
 
-  expect((el.shadowRoot!.querySelector('[part="key"]')) == null).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="key"]') == null).to.be.true;
   expect(el.shadowRoot!.querySelector('.preview')).to.exist;
 });
 
@@ -119,7 +134,7 @@ it('hides the toggle button for leaf/empty nodes but keeps its layout box', asyn
 it('renders an empty object/array as a bare pair of brackets with no item count', async () => {
   const el = await withData({ emptyObject: {}, emptyArray: [] });
   await el.updateComplete;
-  expect((el.shadowRoot!.querySelector('.preview')) == null).to.be.true;
+  expect(el.shadowRoot!.querySelector('.preview') == null).to.be.true;
 });
 
 it('shows an item/key count preview only for a collapsed, non-empty container', async () => {
@@ -128,6 +143,18 @@ it('shows an item/key count preview only for a collapsed, non-empty container', 
   await el.updateComplete;
   const preview = el.shadowRoot!.querySelector('.preview');
   expect(preview!.textContent).to.equal('6 keys');
+});
+
+it('labels a budget-truncated collapsed preview as a lower bound instead of a false total', async () => {
+  const broad: Record<string, number> = {};
+  for (let index = 0; index < 6000; index += 1) broad[`key-${index}`] = index;
+  const el = (await fixture(
+    html`<lr-json-viewer collapsed-depth="0" .data=${broad}></lr-json-viewer>`,
+  )) as LyraJsonViewer;
+  const preview = el.shadowRoot!.querySelector('.preview')!;
+  expect(preview.textContent?.trim().startsWith('≥')).to.be.true;
+  expect(preview.textContent).not.to.equal('5000 keys');
+  expect(el.shadowRoot!.querySelectorAll('[part="limit"]').length).to.equal(1);
 });
 
 it('locale-formats collapsed item/key counts before interpolation', async () => {
@@ -158,9 +185,7 @@ it('forwards a host aria-label to the root list owner', async () => {
 });
 
 it('forwards an explicitly empty host aria-label to the root list owner', async () => {
-  const el = (await fixture(
-    html`<lr-json-viewer aria-label="" .data=${sample}></lr-json-viewer>`,
-  )) as LyraJsonViewer;
+  const el = (await fixture(html`<lr-json-viewer aria-label="" .data=${sample}></lr-json-viewer>`)) as LyraJsonViewer;
   const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
   expect(tree.hasAttribute('aria-label')).to.equal(true);
   expect(tree.getAttribute('aria-label')).to.equal('');
@@ -184,7 +209,7 @@ it('keeps a dynamically emptied host aria-label on the root list owner and remov
 
 it('does not render a copy button by default', async () => {
   const el = await withData(sample);
-  expect((el.shadowRoot!.querySelector('[part="copy-button"]')) == null).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="copy-button"]') == null).to.be.true;
 });
 
 it('gives tree toggles and copy controls the shared minimum hit area', async () => {
@@ -206,11 +231,12 @@ it('renders a top-level copy button when copyable, and emits lr-copy with the fu
   await el.updateComplete;
 
   const toolbarButton = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
-  expect((toolbarButton) != null).to.equal(true);
+  expect(toolbarButton != null).to.equal(true);
 
   setTimeout(() => toolbarButton.click());
   const event = await oneEvent(el, 'lr-copy');
-  expect(event.detail.text).to.equal(JSON.stringify(sample, null, 2));
+  expect(event.detail).to.deep.equal({ ok: true, text: JSON.stringify(sample, null, 2) });
+  expect(Object.isFrozen(event.detail)).to.equal(true);
 });
 
 it('renders per-node copy buttons when copyable, and copies just that node on click', async () => {
@@ -222,8 +248,8 @@ it('renders per-node copy buttons when copyable, and copies just that node on cl
   // toolbar button + one per rendered row.
   expect(nodeButtons.length).to.be.greaterThan(1);
 
-  const ageRow = Array.from(el.shadowRoot!.querySelectorAll('.row')).find((row) =>
-    row.querySelector('[part="key"]')?.textContent === 'age',
+  const ageRow = Array.from(el.shadowRoot!.querySelectorAll('.row')).find(
+    (row) => row.querySelector('[part="key"]')?.textContent === 'age',
   ) as HTMLElement;
   const copyBtn = ageRow.querySelector('[part="copy-button"]') as HTMLButtonElement;
 
@@ -232,21 +258,67 @@ it('renders per-node copy buttons when copyable, and copies just that node on cl
   expect(event.detail.text).to.equal('36');
 });
 
-it('fires lr-copy even when navigator.clipboard is unavailable', async () => {
+it('emits frozen shared failure outcomes and no success event when the Clipboard API is unavailable', async () => {
   const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
-  Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+  Object.defineProperty(navigator, 'clipboard', {
+    value: undefined,
+    configurable: true,
+  });
 
   try {
     const el = await withData(sample);
     el.copyable = true;
+    el.strings = { copyFailed: 'JSON copy failed' };
     await el.updateComplete;
     const toolbarButton = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+    let successes = 0;
+    let errors = 0;
+    el.addEventListener('lr-copy', () => successes++);
+    el.addEventListener('lr-error', () => errors++);
 
-    setTimeout(() => toolbarButton.click());
-    const event = await oneEvent(el, 'lr-copy');
-    expect(event.detail.text).to.equal(JSON.stringify(sample, null, 2));
+    const failed = oneEvent(el, 'lr-copy-error');
+    toolbarButton.click();
+    const event = await failed;
+    expect(event.detail).to.include({
+      ok: false,
+      text: JSON.stringify(sample, null, 2),
+      reason: 'unsupported',
+    });
+    expect(Object.isFrozen(event.detail)).to.equal(true);
+    expect(successes).to.equal(0);
+    expect(errors).to.equal(1);
+    expect(document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)?.textContent).to.contain(
+      'JSON copy failed',
+    );
   } finally {
     if (original) Object.defineProperty(navigator, 'clipboard', original);
+    else Reflect.deleteProperty(navigator, 'clipboard');
+  }
+});
+
+it('classifies a rejected clipboard write as denied without rendering the raw error', async () => {
+  const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  const rejection = new DOMException('private clipboard detail', 'NotAllowedError');
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: () => Promise.reject(rejection) },
+  });
+  try {
+    const el = await withData({ secret: 'redacted' });
+    el.copyable = true;
+    el.strings = { copyFailed: 'Unable to copy JSON' };
+    await el.updateComplete;
+    const failed = oneEvent(el, 'lr-copy-error');
+    (el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement).click();
+    const event = await failed;
+
+    expect(event.detail).to.include({ ok: false, reason: 'denied', error: rejection });
+    const sink = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+    expect(sink.textContent).to.contain('Unable to copy JSON');
+    expect(sink.textContent).not.to.contain('private clipboard detail');
+  } finally {
+    if (original) Object.defineProperty(navigator, 'clipboard', original);
+    else Reflect.deleteProperty(navigator, 'clipboard');
   }
 });
 
@@ -294,7 +366,7 @@ it('highlights matching keys/values with data-match when search is set', async (
   await el.updateComplete;
 
   const match = el.shadowRoot!.querySelector('[part="value"][data-match]');
-  expect((match) != null).to.equal(true);
+  expect(match != null).to.equal(true);
   expect(match!.textContent).to.equal('"Ada Lovelace"');
 });
 
@@ -306,10 +378,8 @@ it('auto-expands ancestors of a match even under a collapsing collapsed-depth', 
 
   // Root is forced open by the match living inside `address`, and `address`
   // itself is forced open too, so the matching value is actually rendered.
-  const match = Array.from(el.shadowRoot!.querySelectorAll('[part="value"]')).find(
-    (v) => v.textContent === '"London"',
-  );
-  expect((match) != null).to.equal(true);
+  const match = Array.from(el.shadowRoot!.querySelectorAll('[part="value"]')).find((v) => v.textContent === '"London"');
+  expect(match != null).to.equal(true);
   expect(match!.hasAttribute('data-match')).to.be.true;
 });
 
@@ -318,9 +388,7 @@ it('matches keys as well as values', async () => {
   el.search = 'address';
   await el.updateComplete;
 
-  const keyMatch = Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).find(
-    (k) => k.textContent === 'address',
-  );
+  const keyMatch = Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).find((k) => k.textContent === 'address');
   expect(keyMatch!.hasAttribute('data-match')).to.be.true;
 });
 
@@ -328,7 +396,7 @@ it('does not highlight anything when search is empty', async () => {
   const el = await withData(sample);
   el.search = '';
   await el.updateComplete;
-  expect((el.shadowRoot!.querySelector('[data-match]')) == null).to.be.true;
+  expect(el.shadowRoot!.querySelector('[data-match]') == null).to.be.true;
 });
 
 it('preserves manual toggle overrides across a data reassignment with the same shape', async () => {
@@ -382,7 +450,9 @@ it('bounds valid acyclic deep rendering and reports the localized resource limit
     html`<lr-json-viewer
       lang="ar-EG"
       .data=${data}
-      .strings=${{ jsonViewerLimit: 'Limited to {count} JSON nodes and {depth} nesting levels.' }}
+      .strings=${{
+        jsonViewerLimit: 'Limited to {count} JSON nodes and {depth} nesting levels.',
+      }}
     ></lr-json-viewer>`,
   )) as LyraJsonViewer;
   const rows = el.shadowRoot!.querySelectorAll('.row');
@@ -448,13 +518,13 @@ it('copies a value with the same object reachable via two non-cyclic paths witho
   expect(event.detail.text).to.equal(JSON.stringify({ a: { id: 1 }, b: { id: 1 } }, null, 2));
 });
 
-it('sizes the closing-bracket spacer to the toggle\'s real (min-inline-size-driven) width, keeping brackets aligned', async () => {
+it("sizes the closing-bracket spacer to the toggle's real (min-inline-size-driven) width, keeping brackets aligned", async () => {
   const el = await withData({ nested: { a: 1 } });
   await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]:not([hidden])') as HTMLElement;
   const spacer = el.shadowRoot!.querySelector('.toggle-space') as HTMLElement;
-  expect((toggle) != null, 'the nested object should render expanded with a real toggle').to.equal(true);
-  expect((spacer) != null, 'the closing-bracket row should render its alignment spacer').to.equal(true);
+  expect(toggle != null, 'the nested object should render expanded with a real toggle').to.equal(true);
+  expect(spacer != null, 'the closing-bracket row should render its alignment spacer').to.equal(true);
   expect(getComputedStyle(spacer).getPropertyValue('inline-size')).to.equal(
     getComputedStyle(toggle).getPropertyValue('inline-size'),
   );
@@ -563,7 +633,7 @@ it('renders a root primitive with no key label', async () => {
   const el = await withData('just a string');
   const value = el.shadowRoot!.querySelector('[part="value"]');
   expect(value!.textContent).to.equal('"just a string"');
-  expect((el.shadowRoot!.querySelector('[part="key"]')) == null).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="key"]') == null).to.be.true;
 });
 
 it('respects max-height by setting the scoped custom property on the base part', async () => {
@@ -592,11 +662,7 @@ it('keeps the tree LTR in RTL: a collapsed chevron still points right, expanded 
   // than mirroring -- collapsed points right (rotate 0), expanded points down (rotate 90).
   const wrapper = await fixture(html`
     <div dir="rtl">
-      <lr-json-viewer
-        .data=${{ nested: true }}
-        collapsed-depth="0"
-        style="--lr-transition-fast: 0s"
-      ></lr-json-viewer>
+      <lr-json-viewer .data=${{ nested: true }} collapsed-depth="0" style="--lr-transition-fast: 0s"></lr-json-viewer>
     </div>
   `);
   const el = wrapper.querySelector('lr-json-viewer') as LyraJsonViewer;
@@ -660,7 +726,11 @@ it('defaults to English "array"/"object" when no strings override is set', async
 });
 
 describe('imperative search API', () => {
-  const SAMPLE = { name: 'Ada', role: 'Mathematician', team: { name: 'Analytical Engine', size: 3 } };
+  const SAMPLE = {
+    name: 'Ada',
+    role: 'Mathematician',
+    team: { name: 'Analytical Engine', size: 3 },
+  };
 
   // NB: the convenience method is `runSearch()`, not `search()` -- `search` is already this
   // component's pre-existing declarative `@property()` string (predating this quartet), and a
@@ -741,10 +811,7 @@ describe('imperative search API', () => {
       expect(mirror.getAttribute('aria-hidden')).to.equal('true');
       expect(mirror.hasAttribute('role')).to.be.false;
       expect(mirror.hasAttribute('aria-live')).to.be.false;
-      expect(Array.from(sink.children, (child) => child.textContent)).to.deep.equal([
-        'Match 1 of 2',
-        'Match 2 of 2',
-      ]);
+      expect(Array.from(sink.children, (child) => child.textContent)).to.deep.equal(['Match 1 of 2', 'Match 2 of 2']);
       expect(scrolledPart).to.equal('key');
 
       el.remove();
@@ -758,13 +825,9 @@ describe('imperative search API', () => {
   });
 
   it('keeps public search navigation silent while the viewer host is hidden', async () => {
-    const el = (await fixture(
-      html`<lr-json-viewer hidden .data=${SAMPLE}></lr-json-viewer>`,
-    )) as LyraJsonViewer;
+    const el = (await fixture(html`<lr-json-viewer hidden .data=${SAMPLE}></lr-json-viewer>`)) as LyraJsonViewer;
     await el.runSearch('name');
-    const sink = document.querySelector<HTMLElement>(
-      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
-    )!;
+    const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
 
     expect(await el.searchNext()).to.be.true;
     expect(sink.childElementCount, 'a hidden source must not speak through a document sink').to.equal(0);
@@ -775,9 +838,7 @@ describe('imperative search API', () => {
   });
 
   it('treats a detached cursor update that flushes after reconnect as the new silent baseline', async () => {
-    const el = (await fixture(
-      html`<lr-json-viewer .data=${SAMPLE}></lr-json-viewer>`,
-    )) as LyraJsonViewer;
+    const el = (await fixture(html`<lr-json-viewer .data=${SAMPLE}></lr-json-viewer>`)) as LyraJsonViewer;
     await el.runSearch('name');
     await el.searchNext();
     el.remove();
@@ -786,9 +847,7 @@ describe('imperative search API', () => {
     document.body.append(el);
     await pendingMove;
     await el.updateComplete;
-    const sink = document.querySelector<HTMLElement>(
-      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
-    )!;
+    const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
     expect(sink.childElementCount, 'the detached cursor becomes reconnect state').to.equal(0);
 
     await el.searchNext();
@@ -834,18 +893,24 @@ describe('imperative search API', () => {
     }) as typeof frameWindow.matchMedia;
     Object.defineProperty(window.navigator, 'clipboard', {
       configurable: true,
-      value: { writeText: async (text: string) => { parentWrites.push(text); } },
+      value: {
+        writeText: async (text: string) => {
+          parentWrites.push(text);
+        },
+      },
     });
     Object.defineProperty(frameWindow.navigator, 'clipboard', {
       configurable: true,
-      value: { writeText: async (text: string) => { frameWrites.push(text); } },
+      value: {
+        writeText: async (text: string) => {
+          frameWrites.push(text);
+        },
+      },
     });
 
     let el: LyraJsonViewer | undefined;
     try {
-      el = (await fixture(html`
-        <lr-json-viewer copyable .data=${SAMPLE}></lr-json-viewer>
-      `)) as LyraJsonViewer;
+      el = (await fixture(html` <lr-json-viewer copyable .data=${SAMPLE}></lr-json-viewer> `)) as LyraJsonViewer;
       await el.runSearch('name');
       el.remove();
       frameDocument.body.append(frameDocument.adoptNode(el));
@@ -855,11 +920,12 @@ describe('imperative search API', () => {
       expect(frameMediaQueries > 0).to.be.true;
       expect(parentMediaQueries).to.equal(0);
 
-      el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toolbar"] [part="copy-button"]')!
-        .click();
-      await Promise.resolve();
+      const copied = oneEvent(el, 'lr-copy');
+      el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toolbar"] [part="copy-button"]')!.click();
+      const copyEvent = await copied;
       expect(frameWrites).to.deep.equal([JSON.stringify(SAMPLE, null, 2)]);
       expect(parentWrites).to.deep.equal([]);
+      expect(copyEvent.detail.ok).to.equal(true);
     } finally {
       el?.remove();
       window.matchMedia = parentMatchMedia;
@@ -896,13 +962,38 @@ describe('imperative search API', () => {
     await el.runSearch('name');
     const listener = oneEvent(el, 'lr-search-change');
     el.clearSearch();
-    const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
-    expect(event.detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
+    const event = (await listener) as CustomEvent<{
+      query: string;
+      matchCount: number;
+      matchCountExact: boolean;
+      activeIndex: number;
+    }>;
+    expect(event.detail).to.deep.equal({
+      query: '',
+      matchCount: 0,
+      matchCountExact: true,
+      activeIndex: -1,
+    });
     expect(el.search).to.equal('');
   });
 
+  it('marks search event counts as lower bounds when traversal is truncated', async () => {
+    const broad: Record<string, string> = {};
+    for (let index = 0; index < 6000; index += 1) broad[`key-${index}`] = `value-${index}`;
+    const el = (await fixture(html`<lr-json-viewer .data=${broad}></lr-json-viewer>`)) as LyraJsonViewer;
+    let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+    el.addEventListener('lr-search-change', (event) => {
+      detail = (event as CustomEvent<{ matchCount: number; matchCountExact: boolean }>).detail;
+    });
+    await el.runSearch('key-0');
+    expect(detail!.matchCount).to.equal(1);
+    expect(detail!.matchCountExact).to.be.false;
+  });
+
   it('back-compat: rendered DOM is unchanged until a cursor exists', async () => {
-    const before = (await fixture(html`<lr-json-viewer .data=${SAMPLE} search="name"></lr-json-viewer>`)) as LyraJsonViewer;
+    const before = (await fixture(
+      html`<lr-json-viewer .data=${SAMPLE} search="name"></lr-json-viewer>`,
+    )) as LyraJsonViewer;
     await before.updateComplete;
     const after = (await fixture(html`<lr-json-viewer .data=${SAMPLE}></lr-json-viewer>`)) as LyraJsonViewer;
     await after.runSearch('name');
@@ -912,9 +1003,39 @@ describe('imperative search API', () => {
     expect(afterMatches.map((match) => match.textContent)).to.deep.equal(
       beforeMatches.map((match) => match.textContent),
     );
-    expect((after.shadowRoot!.querySelector('[data-active]')) == null).to.be.true;
+    expect(after.shadowRoot!.querySelector('[data-active]') == null).to.be.true;
     expect(afterMatches.every((match) => match.getAttribute('aria-current') === 'false')).to.be.true;
   });
+});
+
+it('keeps per-node copy actions visible in coarse/no-hover mode without overflowing a narrow row', async () => {
+  const el = (await fixture(html`
+    <lr-json-viewer
+      copyable
+      style="display:block;inline-size:12rem"
+      .data=${{ 'a-very-long-property-name-that-must-wrap': 'value' }}
+    ></lr-json-viewer>
+  `)) as LyraJsonViewer;
+  const mediaRule = el
+    .shadowRoot!.adoptedStyleSheets.flatMap((sheet) => [...sheet.cssRules])
+    .find(
+      (rule): rule is CSSMediaRule =>
+        rule instanceof CSSMediaRule &&
+        rule.conditionText.includes('hover: none') &&
+        rule.conditionText.includes('pointer: coarse'),
+    );
+  expect(mediaRule !== undefined).to.be.true;
+  const original = mediaRule!.media.mediaText;
+  try {
+    mediaRule!.media.mediaText = 'all';
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const button = [...el.shadowRoot!.querySelectorAll<HTMLElement>('.row [part="copy-button"]')][0]!;
+    const row = button.closest('.row') as HTMLElement;
+    expect(getComputedStyle(button).opacity).to.equal('1');
+    expect(button.getBoundingClientRect().right).to.be.at.most(row.getBoundingClientRect().right + 1);
+  } finally {
+    mediaRule!.media.mediaText = original;
+  }
 });
 
 describe('hover-rule specificity (::part() theming escape hatch)', () => {
@@ -929,7 +1050,9 @@ describe('hover-rule specificity (::part() theming escape hatch)', () => {
 
   it("wraps the toggle's hover retheme rule in :where() so a consumer's ::part(toggle):hover wins", () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/:where\(\[part='toggle'\]\):hover:where\(:not\(\[hidden\]\)\)\s*\{[^}]*background:\s*var\(--lr-color-brand-quiet\)/);
+    expect(css).to.match(
+      /:where\(\[part='toggle'\]\):hover:where\(:not\(\[hidden\]\)\)\s*\{[^}]*background:\s*var\(--lr-color-brand-quiet\)/,
+    );
   });
 
   it('a ::part(copy-button):hover override actually wins over the internal reveal rule', async () => {

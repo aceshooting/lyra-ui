@@ -21,7 +21,7 @@ it('maps an A2UI-style component graph into a versioned allowlisted widget docum
     { Column: 'col', Text: 'text', Button: 'button' },
   );
 
-  expect(document?.version).to.equal('1');
+  expect(document?.version).to.equal('2');
   expect(document?.root.type).to.equal('col');
   expect(document?.root.children).to.have.lengthOf(2);
   expect((document?.root.children?.[1] as { actionId?: string }).actionId).to.equal('open-source');
@@ -92,4 +92,73 @@ it('enforces component-count and traversal-depth ceilings', () => {
   }
   expect(depth).to.equal(32);
   expect(node?.id).to.equal('node-32');
+});
+
+it('fails closed for malformed surfaces, component records, and type maps without throwing', () => {
+  const values = [null, undefined, [], 'surface', {}, { rootId: 'root', components: [null] }];
+  for (const value of values) {
+    expect(() => adaptA2UiSurface(value as never, { Text: 'text' })).not.to.throw();
+    expect(adaptA2UiSurface(value as never, { Text: 'text' })).to.equal(null);
+  }
+  expect(() => adaptA2UiSurface({ rootId: 'root', components: [] }, null as never)).not.to.throw();
+  expect(adaptA2UiSurface({ rootId: 'root', components: [] }, null as never)).to.equal(null);
+});
+
+it('uses one output budget across repeated references and stops before unbounded fan-out', () => {
+  const document = adaptA2UiSurface(
+    {
+      rootId: 'root',
+      components: [
+        { id: 'root', type: 'Column', children: Array.from({ length: 20 }, () => 'shared') },
+        { id: 'shared', type: 'Text', text: 'Repeated' },
+      ],
+    },
+    { Column: 'col', Text: 'text' },
+    { maxOutputNodes: 10, maxChildrenPerComponent: 100 },
+  );
+  expect(document).to.equal(null);
+
+  const oversizedChildren = adaptA2UiSurface(
+    {
+      rootId: 'root',
+      components: [
+        { id: 'root', type: 'Column', children: Array.from({ length: 101 }, () => 'shared') },
+        { id: 'shared', type: 'Text' },
+      ],
+    },
+    { Column: 'col', Text: 'text' },
+    { maxOutputNodes: 500, maxChildrenPerComponent: 100 },
+  );
+  expect(oversizedChildren).to.equal(null);
+});
+
+it('recursively snapshots props, action payloads, and state across the adapter boundary', () => {
+  const props = { nested: { value: 'original' } };
+  const payload = { nested: { value: 'original' } };
+  const data = { nested: { value: 'original' } };
+  const document = adaptA2UiSurface(
+    {
+      rootId: 'root',
+      components: [{ id: 'root', type: 'Button', props, action: { id: 'act', payload } }],
+      data,
+    },
+    { Button: 'button' },
+  );
+  props.nested.value = 'mutated';
+  payload.nested.value = 'mutated';
+  data.nested.value = 'mutated';
+
+  expect(document?.root.props).to.deep.equal({ nested: { value: 'original' } });
+  expect(document?.root.payload).to.deep.equal({ nested: { value: 'original' } });
+  expect(document?.state).to.deep.equal({ nested: { value: 'original' } });
+});
+
+it('rejects non-serializable nested records without retaining provider aliases', () => {
+  expect(adaptA2UiSurface(
+    {
+      rootId: 'root',
+      components: [{ id: 'root', type: 'Text', props: { callback: () => undefined } }],
+    },
+    { Text: 'text' },
+  )).to.equal(null);
 });

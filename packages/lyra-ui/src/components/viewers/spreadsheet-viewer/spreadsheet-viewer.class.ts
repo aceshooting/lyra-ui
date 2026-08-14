@@ -3,7 +3,6 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { assertTableDimensions, assertTableSize, isAbortError, isResourceLimitError, LyraResourceLimitError, LyraUserFacingError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
-import { srOnly } from '../../../internal/a11y.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
@@ -14,6 +13,8 @@ import { styles } from './spreadsheet-viewer.styles.js';
 import { assertXlsxArchiveWithinLimits } from './xlsx-resource-guard.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_noData, LYRA_DEFAULT_spreadsheetViewerLabel, LYRA_DEFAULT_spreadsheetViewerUnavailable } from '../../../internal/default-strings.generated.js';
@@ -90,7 +91,7 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  *   emits `lr-highlight-activate` on click or Enter/Space. Its accessible name localizes the
  *   complete cell-value and annotation message through separate `{value}` and `{label}`
  *   placeholders.
- * @csspart spinner - The loading status region.
+ * @csspart spinner - Visible ordinary loading content with a motion-safe progress indicator.
  * @csspart error - The error message region.
  * @cssprop [--lr-spreadsheet-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a
  *   highlighted cell. The active highlight sets it inline to
@@ -125,7 +126,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, viewerLoadingStyles];
   /** URL to fetch and parse. */
   @property() src = '';
   /** Source filename or display name, used as the viewer's accessible name. */
@@ -169,7 +170,8 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.cancelPendingAnimationFrames();
     this.announcements.adopted();
   }
@@ -379,19 +381,30 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
       row-index-offset="1"
       @lr-load-more=${this.stopInternalEvent}
       @lr-visible-range-changed=${this.stopInternalEvent}
-      @lr-scroll=${this.stopInternalEvent}
+      @lr-virtual-scroll=${this.stopInternalEvent}
     ></lr-virtual-list></div>`;
   }
 
   private renderLoaded(sheets: SpreadsheetSheet[]): TemplateResult {
     if (!sheets.length) return html`<p class="empty-note">${this.localize('noData')}</p>`;
     if (sheets.length === 1) return this.renderSheet(sheets[0]!, 0);
-    return html`<lr-tab-group part="tabs" .active=${`sheet-${this.activeSheetIndex}`} @lr-tab-show=${this.onTabsChange}>${sheets.map((sheet, index) => html`<div slot=${`sheet-${index}`} label=${sheet.name}>${this.renderSheet(sheet, index)}</div>`)}</lr-tab-group>`;
+    return html`<lr-tab-group
+      part="tabs"
+      .active=${`sheet-${this.activeSheetIndex}`}
+      @lr-tab-show=${this.onTabsChange}
+    >${sheets.map(
+      (sheet, index) => html`<lr-tab panel=${`sheet-${index}`}>${sheet.name}</lr-tab>`,
+    )}${sheets.map(
+      (sheet, index) => html`<lr-tab-panel name=${`sheet-${index}`}>${this.renderSheet(
+        sheet,
+        index,
+      )}</lr-tab-panel>`,
+    )}</lr-tab-group>`;
   }
 
-  private onTabsChange = (e: CustomEvent<{ tabId: string }>): void => {
+  private onTabsChange = (e: CustomEvent<{ name: string }>): void => {
     e.stopPropagation();
-    const match = /^sheet-(\d+)$/.exec(e.detail.tabId);
+    const match = /^sheet-(\d+)$/.exec(e.detail.name);
     if (match) this.activeSheetIndex = Number(match[1]);
   };
 
@@ -526,13 +539,14 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
   private stopInternalEvent = (event: Event): void => { event.stopPropagation(); };
 
   override render(): TemplateResult {
-    const body = this.fetchState.kind === 'loaded' ? this.renderLoaded(this.fetchState.sheets) : this.fetchState.kind === 'loading' ? html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>` : this.fetchState.kind === 'error' ? html`<div part="error">${this.fetchState.message}</div>` : html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
+    const body = this.fetchState.kind === 'loaded' ? this.renderLoaded(this.fetchState.sheets) : this.fetchState.kind === 'loading' ? renderViewerLoading(this.localize('loadingDocument')) : this.fetchState.kind === 'error' ? html`<div part="error">${this.fetchState.message}</div>` : html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     const maxHeight = sanitizeCssLength(this.maxHeight);
     return html`<div
       part="base"
-      role="region"
+      role=${viewerSemanticRole(this, 'region') ?? nothing}
       style=${maxHeight ? styleMap({ '--lr-spreadsheet-viewer-max-height': maxHeight }) : nothing}
-      aria-label=${this.getAttribute('aria-label') || this.name || this.localize('spreadsheetViewerLabel')}
+      aria-label=${viewerSemanticLabel(this, this.name || this.localize('spreadsheetViewerLabel')) ?? nothing}
+      aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'}
     ><div part="body">${body}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }

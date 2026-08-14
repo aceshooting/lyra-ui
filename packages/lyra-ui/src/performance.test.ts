@@ -198,13 +198,18 @@ it('keeps heatmap data churn within the matrix budget', async () => {
   const values = Array.from({ length: 50 }, (_, row) =>
     Array.from({ length: 50 }, (_, column) => row * 50 + column),
   );
-  host.rowLabels = values.map((_, index) => `row-${index}`);
-  host.colLabels = values[0]!.map((_, index) => `col-${index}`);
-  host.values = values;
+  const rowLabels = values.map((_, index) => `row-${index}`);
+  const colLabels = values[0]!.map((_, index) => `col-${index}`);
+  host.data = { kind: 'matrix', rowLabels, colLabels, values };
   const result = await benchmark(host, (iteration) => {
-    host.values = values.map((row, rowIndex) =>
-      row.map((value, columnIndex) => (rowIndex === iteration ? value + columnIndex : value)),
-    );
+    host.data = {
+      kind: 'matrix',
+      rowLabels,
+      colLabels,
+      values: values.map((row, rowIndex) =>
+        row.map((value, columnIndex) => (rowIndex === iteration ? value + columnIndex : value)),
+      ),
+    };
   }, () => host.updateComplete);
   report('heatmap/50x50', result);
   expect(result.medianMs).to.be.below(BUDGETS.heatmapMs);

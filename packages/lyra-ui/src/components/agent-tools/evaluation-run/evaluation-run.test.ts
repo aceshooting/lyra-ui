@@ -10,23 +10,21 @@ const examples: EvaluationExampleResult[] = [
     id: 'ex-1',
     label: 'Refund policy question',
     status: { kind: 'done' },
-    input: 'What is the refund policy?',
-    output: 'Refunds are available within 30 days.',
+    input: { text: 'What is the refund policy?' },
+    output: { text: 'Refunds are available within 30 days.' },
     grounding: { supportedClaims: 3, unsupportedClaims: 1, coverage: 0.85, confidence: 0.9 },
   },
   {
     id: 'ex-2',
     status: { kind: 'running' },
-    input: 'print("hi")',
-    inputFormat: 'code',
-    inputLanguage: 'python',
-    output: '',
+    input: { text: 'print("hi")', format: 'code', language: 'python' },
+    output: { text: '' },
   },
   {
     id: 'ex-3',
     status: { kind: 'error', message: 'Timed out' },
-    input: 'What is 2+2?',
-    output: '',
+    input: { text: 'What is 2+2?' },
+    output: { text: '' },
   },
 ];
 
@@ -127,6 +125,27 @@ it('renders a per-example status badge with the right text', async () => {
   expect(rows[2]!.querySelector('[part="example-status"]')!.textContent!.trim()).to.equal('Error');
 });
 
+it('renders caller status presentation and counts a custom terminal kind as complete', async () => {
+  const custom: EvaluationExampleResult[] = [{
+    id: 'custom',
+    status: {
+      kind: 'provider-complete',
+      label: 'Archived',
+      variant: 'success',
+      terminal: true,
+      message: 'Stored by the provider',
+    },
+    input: { text: 'input' },
+    output: { text: 'output' },
+  }];
+  const el = await fixture<LyraEvaluationRun>(html`<lr-evaluation-run .examples=${custom}></lr-evaluation-run>`);
+  const badge = el.shadowRoot!.querySelector('lr-badge[part="example-status"]') as HTMLElement & { variant: string };
+  expect(badge.textContent!.trim()).to.equal('Archived');
+  expect(badge.variant).to.equal('success');
+  expect(el.shadowRoot!.querySelector('[part="example-status-message"]')!.textContent).to.equal('Stored by the provider');
+  expect(el.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('value')).to.equal('1');
+});
+
 it('renders plain-text input/output via lr-markdown by default', async () => {
   const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
   const row = await expandExample(el);
@@ -164,11 +183,11 @@ it('composes lr-grounding-summary with the example assessment and citations when
 
 it('renders every non-primary status label, including a title-cased fallback for an unrecognized kind', async () => {
   const statusExamples: EvaluationExampleResult[] = [
-    { id: 's-idle', status: { kind: 'idle' }, input: 'a', output: '' },
-    { id: 's-wi', status: { kind: 'waiting-input' }, input: 'b', output: '' },
-    { id: 's-wa', status: { kind: 'waiting-approval' }, input: 'c', output: '' },
-    { id: 's-cancel', status: { kind: 'cancelled' }, input: 'd', output: '' },
-    { id: 's-unknown', status: { kind: 'custom_state-x' }, input: 'e', output: '' },
+    { id: 's-idle', status: { kind: 'idle' }, input: { text: 'a' }, output: { text: '' } },
+    { id: 's-wi', status: { kind: 'waiting-input' }, input: { text: 'b' }, output: { text: '' } },
+    { id: 's-wa', status: { kind: 'waiting-approval' }, input: { text: 'c' }, output: { text: '' } },
+    { id: 's-cancel', status: { kind: 'cancelled' }, input: { text: 'd' }, output: { text: '' } },
+    { id: 's-unknown', status: { kind: 'custom_state-x' }, input: { text: 'e' }, output: { text: '' } },
   ];
   const el = (await fixture(html`<lr-evaluation-run .examples=${statusExamples}></lr-evaluation-run>`)) as LyraEvaluationRun;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="example"]')] as HTMLElement[];
@@ -184,7 +203,7 @@ it('renders every non-primary status label, including a title-cased fallback for
 
 it('falls back to an empty language attribute when a code-formatted example omits its language', async () => {
   const noLanguage: EvaluationExampleResult[] = [
-    { id: 'ex-nolang', status: { kind: 'done' }, input: 'x = 1', inputFormat: 'code', output: '' },
+    { id: 'ex-nolang', status: { kind: 'done' }, input: { text: 'x = 1', format: 'code' }, output: { text: '' } },
   ];
   const el = (await fixture(html`<lr-evaluation-run .examples=${noLanguage}></lr-evaluation-run>`)) as LyraEvaluationRun;
   const row = await expandExample(el);
@@ -203,7 +222,7 @@ it('deletes the id from expandedIds (and reports expanded: false) when an exampl
   const firing = oneEvent(el, 'lr-example-toggle');
   summary.click(); // was open -> collapses
   const event = await firing;
-  expect((event as CustomEvent).detail).to.deep.equal({ id: 'ex-1', expanded: false });
+  expect((event as CustomEvent).detail).to.deep.equal({ exampleId: 'ex-1', expanded: false });
 });
 
 it('forgets an expanded example id once that example is removed', async () => {
@@ -240,7 +259,7 @@ it('fires lr-example-toggle (not a raw lr-toggle) when an example is expanded', 
   const firing = oneEvent(el, 'lr-example-toggle');
   summary.click();
   const event = await firing;
-  expect((event as CustomEvent).detail).to.deep.equal({ id: 'ex-1', expanded: true });
+  expect((event as CustomEvent).detail).to.deep.equal({ exampleId: 'ex-1', expanded: true });
 });
 
 it('correlates a nested grounding-summary citation selection with its example id via lr-example-citation-select', async () => {
@@ -276,6 +295,52 @@ it('correlates a nested tool-approval decision with its example id via lr-exampl
     approved: true,
     args: { query: 'refund policy' },
   });
+});
+
+it('contains nested lifecycle/tool events and correlates the second example at its boundary', async () => {
+  const withTwoTraces: EvaluationExampleResult[] = [
+    { ...examples[0]!, toolTrace },
+    { ...examples[1]!, toolTrace: [{ ...toolTrace[0]!, id: 'call-2', sourceKey: 'run-b' }] },
+  ];
+  const el = await fixture<LyraEvaluationRun>(html`
+    <lr-evaluation-run .examples=${withTwoTraces}></lr-evaluation-run>
+  `);
+  let rawShows = 0;
+  let rawActivations = 0;
+  let rawRenderErrors = 0;
+  el.addEventListener('lr-show', () => rawShows++);
+  el.addEventListener('lr-tool-activate', () => rawActivations++);
+  el.addEventListener('lr-tool-render-error', () => rawRenderErrors++);
+  const second = await expandExample(el, 1);
+  expect(rawShows).to.equal(0);
+  const timeline = second.querySelector('lr-tool-timeline')!;
+
+  const activated = oneEvent(el, 'lr-example-tool-activate');
+  timeline.dispatchEvent(new CustomEvent('lr-tool-activate', {
+    bubbles: true,
+    composed: true,
+    detail: { invocationId: 'call-2', sourceKey: 'run-b' },
+  }));
+  expect((await activated).detail).to.deep.equal({
+    exampleId: 'ex-2',
+    invocationId: 'call-2',
+    sourceKey: 'run-b',
+  });
+
+  const failed = oneEvent(el, 'lr-example-tool-render-error');
+  timeline.dispatchEvent(new CustomEvent('lr-tool-render-error', {
+    bubbles: true,
+    composed: true,
+    detail: { invocationId: 'call-2', sourceKey: 'run-b', toolName: 'search', error: 'failed' },
+  }));
+  expect((await failed).detail).to.deep.equal({
+    exampleId: 'ex-2',
+    invocationId: 'call-2',
+    sourceKey: 'run-b',
+    toolName: 'search',
+    error: 'failed',
+  });
+  expect([rawActivations, rawRenderErrors]).to.deep.equal([0, 0]);
 });
 
 it('keeps the real nested approval pending when the correlated wrapper decision is vetoed', async () => {
@@ -451,4 +516,17 @@ it('does not mount heavy example bodies until their disclosure opens', async () 
   first.dispatchEvent(new CustomEvent('lr-toggle', { bubbles: true, composed: true, detail: { open: true } }));
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('lr-markdown').length).to.equal(2);
+});
+
+it('normalizes duplicate example ids first-wins before progress and disclosures', async () => {
+  const el = await fixture<LyraEvaluationRun>(html`
+    <lr-evaluation-run .examples=${[
+      { id: 'same', label: 'First example', status: { kind: 'done' }, input: { text: 'first' }, output: { text: 'first' } },
+      { id: 'same', label: 'Later example', status: { kind: 'error' }, input: { text: 'later' }, output: { text: 'later' } },
+    ]}></lr-evaluation-run>
+  `);
+  const rows = el.shadowRoot!.querySelectorAll('[part="example"]');
+  expect(rows).to.have.length(1);
+  expect(rows[0]!.textContent).to.contain('First example');
+  expect(rows[0]!.textContent).not.to.contain('Later example');
 });

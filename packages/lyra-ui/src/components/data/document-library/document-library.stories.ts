@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "A searchable, filterable document inventory with versions, tags, owners, freshness, and bulk selection, built on lr-table, lr-chip-group, lr-input, lr-combobox, and lr-file-icon.",
+          "A bounded searchable document inventory with controlled searchTerm, canonical sort request/commit events, detached clone-owned readonly collections (including Date values), and bulk selection, built on lr-table, lr-chip-group, lr-input, lr-combobox, and lr-file-icon.",
       },
     },
   },
@@ -77,8 +77,38 @@ export const WithSelection: Story = {
     ></lr-document-library>`,
 };
 
-/** Search, tag, and checkbox child events stop inside the component. Interact with the inventory;
- * the log receives only the documented library-level filter and selection events. */
+export const ControlledSearchAndSort: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "The public search-term/sort-key/sort-dir axes drive the initial view. Header activation emits a cancelable lr-sort-request followed by a committed lr-sort carrying the same sortKey/sortDir vocabulary.",
+      },
+    },
+  },
+  render: () => {
+    const report = (event: CustomEvent): void => {
+      const output = (event.currentTarget as HTMLElement).parentElement?.querySelector("output");
+      if (output) output.textContent = `${event.type}: ${JSON.stringify(event.detail)}`;
+    };
+    return html`
+      <div style="display:grid;gap:var(--lr-space-s)">
+        <lr-document-library
+          .documents=${documents}
+          search-term="ops"
+          sort-key="updatedAt"
+          sort-dir="desc"
+          @lr-sort-request=${report}
+          @lr-sort=${report}
+        ></lr-document-library>
+        <output aria-live="polite">Activate a sortable header</output>
+      </div>
+    `;
+  },
+};
+
+/** Search, tag, and checkbox native/prefixed value events stop inside the component. Interact with
+ * the inventory; the log receives only the documented library-level filter and selection events. */
 export const TranslatedHostEvents: Story = {
   render: () => {
     const report = (event: Event): void => {
@@ -92,6 +122,7 @@ export const TranslatedHostEvents: Story = {
         style="display:grid;gap:var(--lr-space-s)"
         @lr-filter-change=${report}
         @lr-selection-change=${report}
+        @input=${report}
         @lr-input=${report}
         @lr-change=${report}
         @change=${report}

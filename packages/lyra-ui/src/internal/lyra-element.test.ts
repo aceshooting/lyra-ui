@@ -33,6 +33,13 @@ class DemoLocale extends LyraElement {
 }
 customElements.define(tag('demo-locale'), DemoLocale);
 
+class DemoDirection extends LyraElement {
+  render() {
+    return html`<span>${this.effectiveDirection}</span>`;
+  }
+}
+customElements.define(tag('demo-direction'), DemoDirection);
+
 class DemoHostAria extends LyraElement {
   render() {
     return html`<div
@@ -293,6 +300,74 @@ it('reads computed direction live after ancestor style and class changes', async
   expect(el.exposedDirection).to.equal('rtl');
 });
 
+it('shares inherited-context observation and resolves direction only for consumers', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+  const NativeMutationObserver = window.MutationObserver;
+  const getComputedStyleDescriptor = Object.getOwnPropertyDescriptor(window, 'getComputedStyle');
+  const nativeGetComputedStyle = window.getComputedStyle.bind(window);
+  let observerConstructions = 0;
+  let contextDirectionReads = 0;
+
+  class TrackingMutationObserver extends NativeMutationObserver {
+    constructor(callback: MutationCallback) {
+      super(callback);
+      observerConstructions++;
+    }
+  }
+
+  Object.defineProperty(window, 'MutationObserver', {
+    configurable: true,
+    value: TrackingMutationObserver,
+  });
+  Object.defineProperty(window, 'getComputedStyle', {
+    configurable: true,
+    value(target: Element, pseudo?: string | null) {
+      if (target.localName === tag('demo-direction') || target.localName === tag('demo-base')) {
+        contextDirectionReads++;
+      }
+      return nativeGetComputedStyle(target, pseudo);
+    },
+  });
+
+  const style = document.createElement('style');
+  style.textContent = '.shared-rtl-context { direction: rtl; }';
+  document.head.append(style);
+  const wrapper = document.createElement('div');
+  wrapper.dir = 'ltr';
+  for (let index = 0; index < 100; index++) {
+    wrapper.append(document.createElement(tag('demo-base')));
+  }
+  const directionConsumer = document.createElement(tag('demo-direction')) as DemoDirection;
+  wrapper.append(directionConsumer);
+
+  try {
+    document.body.append(wrapper);
+    await directionConsumer.updateComplete;
+    expect(
+      observerConstructions,
+      'one document/root observer must serve every connected descendant',
+    ).to.equal(1);
+
+    contextDirectionReads = 0;
+    wrapper.removeAttribute('dir');
+    wrapper.className = 'shared-rtl-context';
+    await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+    await directionConsumer.updateComplete;
+
+    expect(
+      contextDirectionReads,
+      'one comparison plus the resulting render must be independent of passive descendants',
+    ).to.equal(2);
+    expect(directionConsumer.shadowRoot?.textContent?.trim()).to.equal('rtl');
+  } finally {
+    wrapper.remove();
+    style.remove();
+    if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
+    else Object.defineProperty(window, 'MutationObserver', { configurable: true, value: NativeMutationObserver });
+    if (getComputedStyleDescriptor) Object.defineProperty(window, 'getComputedStyle', getComputedStyleDescriptor);
+  }
+});
+
 it('reads computed direction live after a host style change', async () => {
   const el = await fixture<DemoLocale>(html`<lr-demo-locale style="direction: ltr"></lr-demo-locale>`);
   expect(el.exposedDirection).to.equal('ltr');
@@ -410,6 +485,9 @@ it('does not force a getComputedStyle() read for an ancestor style mutation unre
     // window whose `getComputedStyle` is now instrumented.
     iframe.contentDocument!.body.append(wrapper);
     await el.updateComplete;
+    // Opt this host into direction-sensitive observation. Components that never consume
+    // effectiveDirection deliberately remain dormant under ancestor class/style churn.
+    expect(el.exposedDirection).to.equal('ltr');
 
     calls = 0;
     wrapper.style.setProperty('--some-unrelated-token', '1000');
@@ -427,11 +505,11 @@ it('does not force a getComputedStyle() read for an ancestor style mutation unre
   }
 });
 
-it('keeps a synthetic message locale raw while exposing a safe effective locale', async () => {
+it('canonicalizes a synthetic message locale while exposing a safe effective locale', async () => {
   const locale = `x_synthetic_${Date.now().toString(36)}`;
   const el = await fixture<DemoLocale>(html`<lr-demo-locale locale=${locale}></lr-demo-locale>`);
 
-  expect(el.exposedMessageLocale).to.equal(locale);
+  expect(el.exposedMessageLocale).to.equal(locale.replaceAll('_', '-'));
   expect(el.exposedLocale).to.equal('en');
   expect(el.exposedIntlLocale).to.equal('en');
 });

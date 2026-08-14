@@ -190,13 +190,58 @@ describe('<lr-kbd> rendering', () => {
   });
 
   it('renders one [part="key"] per token, in order', async () => {
-    const el = (await fixture(html`<lr-kbd keys="mod+shift+p"></lr-kbd>`)) as LyraKbd;
+    const el = (await fixture(html`<lr-kbd keys="mod+shift+p" platform="linux"></lr-kbd>`)) as LyraKbd;
     const keys = Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).map((k) => k.textContent?.trim());
     // This test environment (Playwright Chromium on Linux) is not macOS, so
     // "mod" resolves to "Ctrl" here — the mac-glyph branch is covered
     // directly (and platform-independently) by the shortcutTokenLabel unit
     // tests above.
     expect(keys).to.deep.equal(['Ctrl', '⇧', 'P']);
+  });
+
+  it('supports deterministic platform rendering and exposes the resolved platform', async () => {
+    const el = (await fixture(
+      html`<lr-kbd keys="mod+alt+k" platform="mac"></lr-kbd>`,
+    )) as LyraKbd;
+    const visuals = (): string[] => Array.from(el.shadowRoot!.querySelectorAll('[part="key"]'))
+      .map((key) => key.textContent?.trim() ?? '');
+
+    expect(el.platform).to.equal('mac');
+    expect(el.effectivePlatform).to.equal('mac');
+    expect(visuals()).to.deep.equal(['⌘', '⌥', 'K']);
+
+    el.platform = 'windows';
+    await el.updateComplete;
+    expect(el.getAttribute('platform')).to.equal('windows');
+    expect(el.effectivePlatform).to.equal('windows');
+    expect(visuals()).to.deep.equal(['Ctrl', 'Alt', 'K']);
+  });
+
+  it('resolves platform="auto" to a concrete serializable platform', async () => {
+    const el = (await fixture(html`<lr-kbd keys="mod+k"></lr-kbd>`)) as LyraKbd;
+    expect(el.platform).to.equal('auto');
+    expect(['mac', 'windows', 'linux']).to.include(el.effectivePlatform);
+    expect(
+      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('data-effective-platform'),
+    ).to.equal(el.effectivePlatform);
+  });
+
+  it('adopts a server-serialized effective platform on a hydration-shaped first update', async () => {
+    const el = document.createElement('lr-kbd') as LyraKbd;
+    el.keys = 'mod+k';
+    el.attachShadow({ mode: 'open' }).innerHTML =
+      '<span part="base" data-effective-platform="mac"></span>';
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(el.platform).to.equal('auto');
+      expect(el.effectivePlatform).to.equal('mac');
+      expect(
+        Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).map((key) => key.textContent),
+      ).to.deep.equal(['⌘', 'K']);
+    } finally {
+      el.remove();
+    }
   });
 
   it('separates key caps with a "+" separator between them, none before the first', async () => {

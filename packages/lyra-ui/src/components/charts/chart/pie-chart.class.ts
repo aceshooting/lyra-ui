@@ -1,12 +1,12 @@
-import { LyraChart, lockChartType } from './chart.class.js';
+import { LyraChart, type LyraChartType } from './chart.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 /**
- * `<lr-pie-chart>` — `<lr-chart>` with `type` locked to `"pie"`. Single-series:
+ * `<lr-pie-chart>` — `<lr-chart>` with a `"pie"` default and the mirrored writable type. Single-series:
  * one `Series` with `data: number[]` and `color: string[]` as the slice palette.
  *
  * @customElement lr-pie-chart
@@ -20,14 +20,16 @@ export class LyraPieChart extends LyraChart {
     ...super.defaultStrings,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  declare type: 'pie';
+  override type: LyraChartType = 'pie';
 }
-
-lockChartType(LyraPieChart, 'pie');
 
 
 declare global {
@@ -35,4 +37,3 @@ declare global {
     'lr-pie-chart': LyraPieChart;
   }
 }
-

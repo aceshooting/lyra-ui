@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './tool-call-chip.js';
+import type { LyraToolCallChip } from './tool-call-chip.js';
 // A sibling batch component that already exists on disk — used here purely
 // to demonstrate the intended integration: this chip fires an event, the
 // consumer decides what (if anything) opens in response.
@@ -15,7 +16,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A compact inline status pill for one tool/function call an agent made mid-conversation. It renders no detail surface of its own — clicking it fires `lr-tool-call-chip-select`, and the consumer decides what to do (typically opening a `<lr-tool-result-dialog>`).',
+          'A compact inline status pill for one tool/function call an agent made mid-conversation. It renders no interactive detail surface of its own — clicking it fires `lr-tool-call-chip-select`, and the consumer decides what to do (typically opening a `<lr-tool-result-dialog>`). Its default slot is a read-only, inert tooltip preview; actions belong in that selected detail surface.',
       },
     },
   },
@@ -95,7 +96,15 @@ export const CustomIconViaSlot: Story = {
 };
 
 export const HoverDetailTooltip: Story = {
-  name: 'Hover/focus detail tooltip (default slot)',
+  name: 'Hover/focus read-only preview (default slot)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The preview accepts text and rich formatting, but its flattened subtree is inert by design. Use `lr-tool-call-chip-select` to open any interactive detail UI.',
+      },
+    },
+  },
   render: () => html`
     <lr-tool-call-chip name="search_web" category="research" status="success" summary="Found 8 results" duration-ms="1450">
       <div style="min-width:14rem;">
@@ -104,6 +113,31 @@ export const HoverDetailTooltip: Story = {
       </div>
     </lr-tool-call-chip>
   `,
+  play: async ({ canvasElement }) => {
+    const chip = canvasElement.querySelector<LyraToolCallChip>('lr-tool-call-chip');
+    chip?.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.dispatchEvent(new MouseEvent('mouseenter'));
+    await chip?.updateComplete;
+  },
+};
+
+export const ConstrainedTallPreview: Story = {
+  name: 'Read-only preview constrained on both axes',
+  parameters: { viewport: { defaultViewport: 'mobile1' } },
+  render: () => html`
+    <lr-tool-call-chip name="inspect_payload" status="success" summary="Preview ready">
+      <div>
+        ${Array.from(
+          { length: 24 },
+          (_, index) => html`<p>Field ${index + 1}: ${'UnbrokenPreviewValue'.repeat(12)}</p>`,
+        )}
+      </div>
+    </lr-tool-call-chip>
+  `,
+  play: async ({ canvasElement }) => {
+    const chip = canvasElement.querySelector<LyraToolCallChip>('lr-tool-call-chip');
+    chip?.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.dispatchEvent(new MouseEvent('mouseenter'));
+    await chip?.updateComplete;
+  },
 };
 
 function openResultDialog(e: CustomEvent<{ name: string; callId: string }>): void {
@@ -154,6 +188,39 @@ export const Events: Story = {
         }}
       ></lr-tool-call-chip>
       <p id="tool-call-chip-log">No event fired yet.</p>
+    </div>
+  `,
+};
+
+export const HostMethodForwarding: Story = {
+  name: 'Host focus, blur, and click forwarding',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The custom-element host forwards `focus()`, `blur()`, and `click()` to its current internal button. Use the controls below to exercise the same contract generic form/control adapters rely on.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:grid;gap:0.75rem;justify-items:start">
+      <lr-tool-call-chip
+        id="forwarding-chip"
+        name="web_search"
+        status="success"
+        summary="Ready"
+        call-id="forwarding-call"
+        @lr-tool-call-chip-select=${() => {
+          const output = document.getElementById('forwarding-output');
+          if (output) output.textContent = 'Host click() activated the chip.';
+        }}
+      ></lr-tool-call-chip>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+        <button type="button" @click=${() => document.querySelector<HTMLElement>('#forwarding-chip')?.focus()}>Host focus()</button>
+        <button type="button" @click=${() => document.querySelector<HTMLElement>('#forwarding-chip')?.blur()}>Host blur()</button>
+        <button type="button" @click=${() => document.querySelector<HTMLElement>('#forwarding-chip')?.click()}>Host click()</button>
+      </div>
+      <p id="forwarding-output">No forwarded activation yet.</p>
     </div>
   `,
 };

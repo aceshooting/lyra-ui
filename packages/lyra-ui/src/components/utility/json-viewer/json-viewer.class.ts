@@ -11,11 +11,15 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './json-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
+import {
+  writeClipboardText,
+  type LyraClipboardWriteFailure,
+  type LyraClipboardWriteSuccess,
+} from '../../../internal/clipboard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_circularReference, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyJson, LYRA_DEFAULT_jsonArray, LYRA_DEFAULT_jsonCollapseLabel, LYRA_DEFAULT_jsonCopyLabel, LYRA_DEFAULT_jsonExpandLabel, LYRA_DEFAULT_jsonItemCount, LYRA_DEFAULT_jsonKeyCount, LYRA_DEFAULT_jsonObject, LYRA_DEFAULT_jsonValue, LYRA_DEFAULT_jsonViewerLimit, LYRA_DEFAULT_viewerSearchActiveMatch } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_circularReference, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_copyJson, LYRA_DEFAULT_jsonArray, LYRA_DEFAULT_jsonCollapseLabel, LYRA_DEFAULT_jsonCopyLabel, LYRA_DEFAULT_jsonExpandLabel, LYRA_DEFAULT_jsonItemCount, LYRA_DEFAULT_jsonKeyCount, LYRA_DEFAULT_jsonObject, LYRA_DEFAULT_jsonValue, LYRA_DEFAULT_jsonViewerLimit, LYRA_DEFAULT_viewerSearchActiveMatch } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 type JsonPathSegment = string | number;
 
@@ -62,26 +66,43 @@ function isPlainContainer(value: unknown): value is Record<string, unknown> {
 function entriesOf(
   value: unknown,
   limit: number,
-): { entries: [JsonPathSegment, unknown][]; truncated: boolean } {
+): {
+  entries: [JsonPathSegment, unknown][];
+  truncated: boolean;
+  total: number;
+  exact: boolean;
+} {
   const entries: [JsonPathSegment, unknown][] = [];
   if (Array.isArray(value)) {
     const count = Math.min(value.length, limit);
     for (let index = 0; index < count; index += 1) entries.push([index, value[index]]);
-    return { entries, truncated: value.length > count };
+    return {
+      entries,
+      truncated: value.length > count,
+      total: value.length,
+      exact: true,
+    };
   }
   if (isPlainContainer(value)) {
     let truncated = false;
+    let total = 0;
+    let exact = true;
     for (const key in value) {
       if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
-      if (entries.length >= limit) {
+      total += 1;
+      if (entries.length < limit) entries.push([key, value[key]]);
+      else truncated = true;
+      // Counting the complete object must remain bounded too. One more than the traversal budget
+      // proves the displayed count is a lower bound without enumerating an arbitrary object.
+      if (total > MAX_JSON_NODES) {
+        exact = false;
         truncated = true;
         break;
       }
-      entries.push([key, value[key]]);
     }
-    return { entries, truncated };
+    return { entries, truncated, total, exact };
   }
-  return { entries, truncated: false };
+  return { entries, truncated: false, total: 0, exact: true };
 }
 
 function valueType(value: unknown): JsonValueType {
@@ -115,8 +136,15 @@ function formatPrimitive(value: unknown, type: JsonValueType): string {
 }
 
 export interface LyraJsonViewerEventMap {
-  'lr-copy': CustomEvent<{ text: string }>;
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
+  'lr-error': CustomEvent<undefined>;
+  'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
+  'lr-search-change': CustomEvent<{
+    query: string;
+    matchCount: number;
+    matchCountExact: boolean;
+    activeIndex: number;
+  }>;
 }
 /**
  * `<lr-json-viewer>` — a collapsible, copyable tree view for an arbitrary
@@ -133,10 +161,15 @@ export interface LyraJsonViewerEventMap {
  * shadow tree retains only an `aria-hidden` text mirror.
  *
  * @customElement lr-json-viewer
- * @event lr-copy - `detail: { text }` -- fired by the top-level copy button or a per-node one. Fires even when `navigator.clipboard` is unavailable, so a consumer can still observe copy *intent*.
+ * @event lr-copy - Clipboard writing from the top-level or per-node action fulfilled. The frozen
+ *   shared outcome detail is `{ ok: true, text }`.
+ * @event lr-error - Clipboard writing failed. Bubbling, composed, and carries no detail.
+ * @event lr-copy-error - Clipboard writing failed. The frozen shared outcome detail is
+ *   `{ ok: false, text, reason, error }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active-match cursor
  *   changes -- from `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()`, or a direct
- *   `search`/`data` property write. `detail: { query, matchCount, activeIndex }`.
+ *   `search`/`data` property write. `detail: { query, matchCount, matchCountExact, activeIndex }`;
+ *   `matchCountExact=false` means the bounded count is a known lower bound.
  * @csspart base - The root scroll container; respects `max-height`.
  * @csspart toolbar - The wrapper around the top-level copy button (only rendered when `copyable`).
  * @csspart tree - The wrapper around the rendered node tree.
@@ -170,7 +203,9 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     circularReference: LYRA_DEFAULT_circularReference,
+    copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
+    copyFailed: LYRA_DEFAULT_copyFailed,
     copyJson: LYRA_DEFAULT_copyJson,
     jsonArray: LYRA_DEFAULT_jsonArray,
     jsonCollapseLabel: LYRA_DEFAULT_jsonCollapseLabel,
@@ -190,7 +225,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   /** The value to render. Any JSON-serializable value, plus `undefined`. */
   @property({ attribute: false }) data: unknown;
   /** Nodes at or beyond this nesting depth (root = 0) start collapsed. Omit/undefined: nothing auto-collapses. */
-  @property({ type: Number, attribute: 'collapsed-depth' }) collapsedDepth?: number;
+  @property({ type: Number, attribute: 'collapsed-depth' })
+  collapsedDepth?: number;
   /** A CSS length (e.g. `"20rem"`); once set, the viewer scrolls internally past this height
    * instead of growing the page. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
@@ -253,17 +289,24 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     return this.collapsedDepth === undefined ? undefined : finiteCount(this.collapsedDepth);
   }
 
-  private previewText(type: 'object' | 'array', count: number): string {
+  private previewText(type: 'object' | 'array', count: number, exact = true): string {
     // {count} is interpolated via the values arg (not string-concatenated) --
     // same pluralized-message pattern as toolCount, so the count's position
     // relative to the noun stays translatable rather than fixed to English's
     // "number space noun" order. `count` carries the locale-grouped string for
     // display; `pluralCount` carries the raw number that selects the category.
-    const localizedCount = getNumberFormat(this.effectiveLocale).format(count);
+    const formattedCount = getNumberFormat(this.effectiveLocale).format(count);
+    const localizedCount = exact ? formattedCount : `≥${formattedCount}`;
     if (type === 'array') {
-      return this.localize('jsonItemCount', undefined, { count: localizedCount, pluralCount: count });
+      return this.localize('jsonItemCount', undefined, {
+        count: localizedCount,
+        pluralCount: count,
+      });
     }
-    return this.localize('jsonKeyCount', undefined, { count: localizedCount, pluralCount: count });
+    return this.localize('jsonKeyCount', undefined, {
+      count: localizedCount,
+      pluralCount: count,
+    });
   }
 
   private isExpanded(pathKey: string, depth: number, forceExpand: Set<string>): boolean {
@@ -281,22 +324,31 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     this.expandedOverrides = next;
   }
 
-  private writeClipboard(text: string): void {
-    try {
-      // navigator.clipboard is absent in insecure contexts / older browsers,
-      // and some engines throw synchronously rather than rejecting -- either
-      // way this is best-effort; copy() below always emits lr-copy
-      // regardless of whether the OS clipboard was actually reached.
-      void this.ownerDocument.defaultView?.navigator.clipboard?.writeText(text)?.catch(() => {});
-    } catch {
-      // see above
-    }
+  private reportCopyFailure(outcome: LyraClipboardWriteFailure): void {
+    this.searchAnnouncementSink?.announce(this.localize('copyFailed'));
+    this.emit('lr-error');
+    this.emit('lr-copy-error', outcome);
   }
 
-  private copy(value: unknown): void {
-    const text = value === undefined ? 'undefined' : this.stringifyForClipboard(value);
-    this.writeClipboard(text);
-    this.emit('lr-copy', { text });
+  private async copy(value: unknown): Promise<void> {
+    let text = '';
+    try {
+      text = value === undefined ? 'undefined' : this.stringifyForClipboard(value);
+    } catch (error) {
+      if (this.isConnected) {
+        this.reportCopyFailure(Object.freeze({ ok: false, text, reason: 'failed', error }));
+      }
+      return;
+    }
+    const owner = this.isConnected ? this.ownerDocument.defaultView : null;
+    const outcome = await writeClipboardText(owner, text);
+    if (!this.isConnected || this.ownerDocument.defaultView !== owner) return;
+    if (!outcome.ok) {
+      this.reportCopyFailure(outcome);
+      return;
+    }
+    this.searchAnnouncementSink?.announce(this.localize('copied'));
+    this.emit('lr-copy', outcome);
   }
 
   /**
@@ -354,7 +406,12 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     };
 
     type WalkFrame =
-      | { kind: 'visit'; value: unknown; path: JsonPathSegment[]; keyLabel?: string }
+      | {
+          kind: 'visit';
+          value: unknown;
+          path: JsonPathSegment[];
+          keyLabel?: string;
+        }
       | { kind: 'leave'; value: object };
     const stack: WalkFrame[] = [{ kind: 'visit', value: this.data, path: [] }];
     let visited = 0;
@@ -404,12 +461,24 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         stack.push({ kind: 'leave', value: value as object });
         for (let index = entries.length - 1; index >= 0; index -= 1) {
           const [key, child] = entries[index]!;
-          stack.push({ kind: 'visit', value: child, path: [...path, key], keyLabel: String(key) });
+          stack.push({
+            kind: 'visit',
+            value: child,
+            path: [...path, key],
+            keyLabel: String(key),
+          });
         }
       }
     }
 
-    return { keyMatches, valueMatches, forceExpand, paths, orderedMatches, truncated };
+    return {
+      keyMatches,
+      valueMatches,
+      forceExpand,
+      paths,
+      orderedMatches,
+      truncated,
+    };
   }
 
   private renderCopyButton(value: unknown, label: string | undefined): TemplateResult | typeof nothing {
@@ -424,10 +493,12 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       <button
         part="copy-button"
         type="button"
-        aria-label=${this.localize('jsonCopyLabel', undefined, { label: resolvedLabel })}
+        aria-label=${this.localize('jsonCopyLabel', undefined, {
+          label: resolvedLabel,
+        })}
         @click=${(e: Event) => {
           e.stopPropagation();
-          this.copy(value);
+          void this.copy(value);
         }}
       >
         ${this.localize('copy')}
@@ -455,7 +526,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const isContainer = (type === 'object' || type === 'array') && !isCircular;
     const entrySlice = isContainer
       ? entriesOf(value, Math.max(0, budget.remaining))
-      : { entries: [], truncated: false };
+      : { entries: [], truncated: false, total: 0, exact: true };
     const entries = entrySlice.entries;
     if (entrySlice.truncated) budget.truncated = true;
     const hasEntries = entries.length > 0;
@@ -470,8 +541,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       (type === 'array'
         ? this.localize('jsonArray')
         : type === 'object'
-          ? this.localize('jsonObject')
-          : this.localize('jsonValue'));
+        ? this.localize('jsonObject')
+        : this.localize('jsonValue'));
     const openBracket = type === 'array' ? '[' : '{';
     const closeBracket = type === 'array' ? ']' : '}';
 
@@ -490,9 +561,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
           break;
         }
         renderedEntries.push([key, child]);
-        childRows.push(
-          this.renderNode(child, [...path, key], String(key), depth + 1, search, ancestors, budget),
-        );
+        childRows.push(this.renderNode(child, [...path, key], String(key), depth + 1, search, ancestors, budget));
       }
       ancestors.delete(value as object);
     }
@@ -506,28 +575,26 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
           tabindex=${toggleable ? nothing : -1}
           aria-hidden=${toggleable ? nothing : 'true'}
           aria-expanded=${toggleable ? (expanded ? 'true' : 'false') : nothing}
-          aria-label=${
-            toggleable
-              ? // Interpolated via the values arg (not string-concatenated) so word
-                // order stays translatable -- same rationale as renderCopyButton()'s
-                // "Copy {label}" above; toggleLabel is either caller data (a JSON
-                // key/index) or an already-localized type noun.
-                this.localize(expanded ? 'jsonCollapseLabel' : 'jsonExpandLabel', undefined, { label: toggleLabel })
-              : nothing
-          }
+          aria-label=${toggleable
+            ? // Interpolated via the values arg (not string-concatenated) so word
+              // order stays translatable -- same rationale as renderCopyButton()'s
+              // "Copy {label}" above; toggleLabel is either caller data (a JSON
+              // key/index) or an already-localized type noun.
+              this.localize(expanded ? 'jsonCollapseLabel' : 'jsonExpandLabel', undefined, { label: toggleLabel })
+            : nothing}
           @click=${() => toggleable && this.toggleNode(pathKey, expanded)}
         >
           <span class="chevron">${chevronIcon()}</span>
         </button>
         ${keyLabel !== undefined
           ? html`<span
-              part="key"
-              ?data-match=${search.keyMatches.has(pathKey)}
-              ?data-active=${!!activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'key'}
-              aria-current=${
-                activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'key' ? 'true' : 'false'
-              }
-              >${keyLabel}</span
+                part="key"
+                ?data-match=${search.keyMatches.has(pathKey)}
+                ?data-active=${!!activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'key'}
+                aria-current=${activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'key'
+                  ? 'true'
+                  : 'false'}
+                >${keyLabel}</span
               ><span class="colon">:</span>`
           : nothing}
         ${isCircular
@@ -537,23 +604,23 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
               <span part="bracket">${closeBracket}</span>
             `
           : isContainer
-            ? html`
-                <span part="bracket">${openBracket}</span>
-                ${hasEntries && !expanded
-                          ? html`<span class="preview">${this.previewText(type, entries.length)}</span>`
-                  : nothing}
-                ${!expanded ? html`<span part="bracket">${closeBracket}</span>` : nothing}
-              `
-            : html`<span
-                part="value"
-                data-type=${type}
-                ?data-match=${search.valueMatches.has(pathKey)}
-                ?data-active=${!!activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'value'}
-                aria-current=${
-                  activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'value' ? 'true' : 'false'
-                }
-                >${formatPrimitive(value, type)}</span
-              >`}
+          ? html`
+              <span part="bracket">${openBracket}</span>
+              ${hasEntries && !expanded
+                ? html`<span class="preview">${this.previewText(type, entrySlice.total, entrySlice.exact)}</span>`
+                : nothing}
+              ${!expanded ? html`<span part="bracket">${closeBracket}</span>` : nothing}
+            `
+          : html`<span
+              part="value"
+              data-type=${type}
+              ?data-match=${search.valueMatches.has(pathKey)}
+              ?data-active=${!!activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'value'}
+              aria-current=${activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'value'
+                ? 'true'
+                : 'false'}
+              >${formatPrimitive(value, type)}</span
+            >`}
         ${this.renderCopyButton(value, toggleLabel)}
       </div>
     `;
@@ -627,6 +694,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     this.emit('lr-search-change', {
       query: this.search,
       matchCount: this.searchState.orderedMatches.length,
+      matchCountExact: !this.searchState.truncated,
       activeIndex: this.activeSearchIndex,
     });
   }
@@ -657,7 +725,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const numberFormat = getNumberFormat(this.effectiveLocale);
     return this.localize('viewerSearchActiveMatch', undefined, {
       current: numberFormat.format(this.activeSearchIndex + 1),
-      total: numberFormat.format(total),
+      total: this.searchState.truncated ? `≥${numberFormat.format(total)}` : numberFormat.format(total),
     });
   }
 
@@ -718,14 +786,19 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   }
 
   override render(): TemplateResult {
-    const budget: RenderBudget = { remaining: MAX_JSON_NODES, truncated: false };
+    const budget: RenderBudget = {
+      remaining: MAX_JSON_NODES,
+      truncated: false,
+    };
     const tree = this.renderNode(this.data, [], undefined, 0, this.searchState, new WeakSet(), budget);
     const limited = budget.truncated || this.searchState.truncated;
     return html`
       <div
         part="base"
         style=${sanitizeCssLength(this.maxHeight)
-          ? styleMap({ '--lr-json-viewer-max-height': sanitizeCssLength(this.maxHeight)! })
+          ? styleMap({
+              '--lr-json-viewer-max-height': sanitizeCssLength(this.maxHeight)!,
+            })
           : nothing}
       >
         ${this.copyable
@@ -734,33 +807,24 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
                 part="copy-button"
                 type="button"
                 aria-label=${this.localize('copyJson')}
-                @click=${() => this.copy(this.data)}
+                @click=${() => void this.copy(this.data)}
               >
                 ${this.localize('copy')}
               </button>
             </div>`
           : nothing}
-        <div
-          part="tree"
-          role="list"
-          aria-label=${hostAriaLabel(this) ?? nothing}
-        >
-          ${tree}
-        </div>
+        <div part="tree" role="list" aria-label=${hostAriaLabel(this) ?? nothing}>${tree}</div>
         ${limited
           ? html`<p part="limit">${this.localize('jsonViewerLimit', undefined, {
               count: getNumberFormat(this.effectiveLocale).format(MAX_JSON_NODES),
               depth: getNumberFormat(this.effectiveLocale).format(MAX_JSON_DEPTH),
             })}</p>`
           : nothing}
-        <span class="sr-only" aria-hidden="true"
-          >${this.activeSearchAnnouncement()}</span
-        >
+        <span class="sr-only" aria-hidden="true">${this.activeSearchAnnouncement()}</span>
       </div>
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

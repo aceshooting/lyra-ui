@@ -51,7 +51,8 @@ it('disables viewport controls and preserves the viewport while the canvas is lo
   await wrapper.updateComplete;
   wrapper.setViewport({ x: 23, y: 17, zoom: 1 });
   wrapper.locked = true;
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await wrapper.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
   const controls = wrapper.querySelector('lr-flow-controls') as LyraFlowControls;
   await controls.updateComplete;
   const before = { ...wrapper.viewport };
@@ -111,13 +112,15 @@ it('the lock button toggles the canvas locked attribute and mirrors aria-pressed
   expect(lockButton.getAttribute('aria-pressed')).to.equal('false');
   lockButton.click();
   expect(wrapper.locked).to.be.true;
-  await new Promise((r) => setTimeout(r, 0));
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
   await controls.updateComplete;
   expect(lockButton.getAttribute('aria-pressed')).to.equal('true');
 
   // An externally-set lock (not via this button) stays in sync too.
   wrapper.locked = false;
-  await new Promise((r) => setTimeout(r, 0));
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
   await controls.updateComplete;
   expect(lockButton.getAttribute('aria-pressed')).to.equal('false');
 });
@@ -136,7 +139,7 @@ describe('--lr-flow-controls-lock-active-color', () => {
     canvas.nodes = nodes;
     canvas.locked = true;
     await canvas.updateComplete;
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
     await controls.updateComplete;
     return controls;
   };
@@ -290,7 +293,7 @@ it('dims a disabled toolbar button through the shared disabled-opacity token', a
   expect(getComputedStyle(button).opacity).to.equal('0.25');
 });
 
-it('recreates both canvas observers in the adopted owner realm', async () => {
+it('recreates its shared target observer in the adopted owner realm', async () => {
   const wrapper = await fixture<HTMLElement>(html`<div>
     <lr-flow-canvas id="owner-flow"></lr-flow-canvas>
     <lr-flow-controls for="owner-flow"></lr-flow-controls>
@@ -333,9 +336,9 @@ it('recreates both canvas observers in the adopted owner realm', async () => {
     frameDocument.body.append(frameDocument.adoptNode(wrapper));
     await controls.updateComplete;
     expect(rootObservations, 'the destination window watches for replacement canvases').to.equal(1);
-    expect(lockObservations, 'the destination window watches the resolved canvas lock').to.equal(1);
+    expect(lockObservations, 'lock state arrives through the immutable companion snapshot').to.equal(0);
     document.adoptNode(wrapper);
-    expect(relevantDisconnects, 'adoption disconnects both owner observers').to.be.at.least(2);
+    expect(relevantDisconnects, 'adoption disconnects the owner-root observer').to.be.at.least(1);
   } finally {
     frameWindow.MutationObserver = originalMutationObserver;
     if (wrapper.ownerDocument !== document) document.adoptNode(wrapper);
@@ -370,12 +373,28 @@ it('forwards a live host aria-label to the semantic group', async () => {
   )) as LyraFlowControls;
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
   expect(base.getAttribute('aria-label')).to.equal('Workflow controls');
-  el.setAttribute('aria-label', 'Canvas controls');
+  el.setAttribute('aria-label', 'Transient workflow controls');
   await el.updateComplete;
-  expect(base.getAttribute('aria-label')).to.equal('Canvas controls');
+  expect(base.getAttribute('aria-label')).to.equal('Transient workflow controls');
   el.removeAttribute('aria-label');
   await el.updateComplete;
   expect(base.getAttribute('aria-label')).to.equal('Canvas controls');
+  el.strings = { flowControlsLabel: 'Commandes distinctives' };
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Commandes distinctives');
+});
+
+it('contains long built-in and slotted controls in a 319px horizontal allocation', async () => {
+  const el = (await fixture(html`
+    <lr-flow-controls orientation="horizontal" style="display:block;inline-size:319px">
+      <button type="button">A deliberately long exported workflow action</button>
+    </lr-flow-controls>
+  `)) as LyraFlowControls;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.scrollWidth).to.be.at.most(Math.ceil(base.clientWidth) + 1);
+  const slotted = el.querySelector('button') as HTMLButtonElement;
+  expect(slotted.scrollWidth).to.be.at.most(Math.ceil(slotted.getBoundingClientRect().width) + 1);
 });
 
 describe('frame', () => {

@@ -42,7 +42,7 @@ export const ArbitraryCategoryColors: Story = {
 
 export const Ring: Story = {
   render: () => html`
-    <lr-context-meter variant="ring" total="131072" label="Context"></lr-context-meter>
+    <lr-context-meter shape="ring" total="131072" label="Context"></lr-context-meter>
   `,
   play: async ({ canvasElement }) => {
     withSegments(canvasElement.querySelector('lr-context-meter')!, CONTEXT_SEGMENTS);
@@ -83,7 +83,7 @@ export const EmptyState: Story = {
   render: () => html`
     <div class="flex flex-wrap items-center gap-8">
       <lr-context-meter total="131072" label="128K context window"></lr-context-meter>
-      <lr-context-meter variant="ring" total="131072" label="Context"></lr-context-meter>
+      <lr-context-meter shape="ring" total="131072" label="Context"></lr-context-meter>
     </div>
   `,
 };
@@ -131,7 +131,7 @@ export const WithLegend: Story = {
         label="128K context window"
         style="max-inline-size: 24rem;"
       ></lr-context-meter>
-      <lr-context-meter show-legend variant="ring" total="131072" label="128K"></lr-context-meter>
+      <lr-context-meter show-legend shape="ring" total="131072" label="128K"></lr-context-meter>
     </div>
   `,
   play: async ({ canvasElement }) => {

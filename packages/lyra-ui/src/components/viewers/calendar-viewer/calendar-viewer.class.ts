@@ -1,7 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import {
@@ -12,11 +12,13 @@ import {
   readResponseText,
   resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
-import { loadIcal } from './calendar-loader.js';
+import { loadIcal, type IcalTimeApi } from './calendar-loader.js';
 import { styles } from './calendar-viewer.styles.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -24,7 +26,19 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export interface ParsedCalendarEvent { uid: string; summary: string; start: Date | null; end: Date | null; location: string; description: string; }
+export type ParsedCalendarTimeKind = 'date' | 'date-time';
+export interface ParsedCalendarEvent {
+  uid: string;
+  summary: string;
+  start: Date | null;
+  end: Date | null;
+  /** Preserves RFC 5545 DATE versus DATE-TIME semantics through the parse model. */
+  startKind: ParsedCalendarTimeKind | null;
+  /** Preserves the end value's type; DATE ends are exclusive when formatted. */
+  endKind: ParsedCalendarTimeKind | null;
+  location: string;
+  description: string;
+}
 type CalendarFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; events: ParsedCalendarEvent[] } | { kind: 'error'; message: string };
 export interface LyraCalendarViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -32,19 +46,59 @@ export interface LyraCalendarViewerEventMap extends LyraTextViewerTargetEventMap
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-text-select': CustomEvent<TextSelectDetail>;
 }
-const MAX_CALENDAR_EVENTS = 10_000;
+const MAX_CALENDAR_EVENTS = 250;
+const MAX_CALENDAR_RENDERED_CHARS = 2 * 1024 * 1024;
 
-function formatEventTime(start: Date | null, end: Date | null, locale: string): string {
-  if (!start) return '';
+function formatEventTime(event: ParsedCalendarEvent, locale: string): string {
+  if (!event.start) return '';
+  if (event.startKind === 'date') {
+    const formatter = getDateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' });
+    if (!event.end || event.endKind !== 'date') return formatter.format(event.start);
+    // RFC 5545 DTEND on a DATE is exclusive. Convert it to the inclusive displayed final date;
+    // a same-day/reversed end is invalid and therefore collapses to the start date.
+    const inclusiveEnd = new Date(event.end.getTime());
+    inclusiveEnd.setUTCDate(inclusiveEnd.getUTCDate() - 1);
+    if (inclusiveEnd.getTime() <= event.start.getTime()) return formatter.format(event.start);
+    return formatter.formatRange(event.start, inclusiveEnd);
+  }
   const formatter = getDateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' });
-  return end ? formatter.formatRange(start, end) : formatter.format(start);
+  return event.end && event.endKind === 'date-time'
+    ? formatter.formatRange(event.start, event.end)
+    : formatter.format(event.start);
+}
+
+function parseCalendarTime(time: IcalTimeApi | undefined): {
+  value: Date;
+  kind: ParsedCalendarTimeKind;
+} | null {
+  if (!time) return null;
+  let value: Date;
+  if (
+    time.isDate === true
+    && Number.isInteger(time.year)
+    && Number.isInteger(time.month)
+    && Number.isInteger(time.day)
+  ) {
+    value = new Date(Date.UTC(time.year!, time.month! - 1, time.day!));
+    if (
+      value.getUTCFullYear() !== time.year
+      || value.getUTCMonth() + 1 !== time.month
+      || value.getUTCDate() !== time.day
+    ) throw new Error('Invalid all-day calendar date.');
+  } else {
+    value = time.toJSDate();
+  }
+  if (!Number.isFinite(value.getTime())) throw new Error('Invalid calendar date.');
+  return { value, kind: time.isDate === true ? 'date' : 'date-time' };
 }
 
 class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
 
 /**
  * Parses `.ics` calendars with the optional `ical.js` peer and renders each
- * VEVENT as plain text, preserving summaries, times, locations, and details.
+ * VEVENT as plain text, preserving summaries, DATE/DATE-TIME semantics, locations, and details.
+ * At most 250 events and 2 MiB of rendered event text are retained so search, selection and
+ * fragment/text anchors continue to cover the complete accepted document without eager 10k-row DOM.
  *
  * @customElement lr-calendar-viewer
  * @event lr-render-error - Fired when fetching or parsing the calendar fails.
@@ -57,7 +111,7 @@ class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
  * @event {CustomEvent<TextSelectDetail>} lr-text-select - Fired after a selection ends inside the
  *   rendered calendar. `detail: { text: string; anchor: LyraAnchor | null; rects: DOMRect[] }`.
  *   Bubbling, composed, and non-cancelable.
- * @csspart base - The root container.
+ * @csspart base - The root container with explicit `aria-busy` loading state.
  * @csspart body - The scrollable calendar body.
  * @csspart event-list - The event list.
  * @csspart event - One calendar event.
@@ -66,7 +120,7 @@ class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
  * @csspart event-location - The event location.
  * @csspart event-description - The event description.
  * @csspart error - The error region.
- * @csspart spinner - The loading region.
+ * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
  * @cssprop [--lr-calendar-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  * @status stable
@@ -93,12 +147,12 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
   /** URL to fetch and parse as an iCalendar document. */
   @property() src = '';
-  /** Display name associated with the calendar. Used as the accessible name of `[part='base']`
-   *  when the host has no `aria-label`, and before the localized `calendarViewerLabel` default.
-   *  Host `aria-label` wins by attribute presence, including an empty value. */
+  /** Display name associated with the calendar. It names `[part='base']` when host `aria-label` is
+   *  absent, before the localized fallback. A non-empty host label remains on the host; an
+   *  explicitly empty one is preserved on the shadow owner. */
   @property() name = '';
   /** CSS length that caps the scrollable event body. */
   /** A CSS `max-height`; invalid values are ignored. */
@@ -128,7 +182,8 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     super.disconnectedCallback();
   }
 
-  adoptedCallback(): void {
+  override adoptedCallback(): void {
+    super.adoptedCallback();
     this.announcements.adopted();
   }
 
@@ -180,29 +235,45 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     if (subcomponents.length > MAX_CALENDAR_EVENTS) {
       throw new LyraResourceLimitError('The calendar contains too many events.');
     }
+    let renderedChars = 0;
     const events = subcomponents.map((subcomponent) => {
       const event = new ical.Event(subcomponent);
-      const start = event.startDate ? event.startDate.toJSDate() : null;
-      const parsedEnd = event.endDate ? event.endDate.toJSDate() : null;
-      const end = start && parsedEnd && parsedEnd.getTime() < start.getTime() ? null : parsedEnd;
+      const parsedStart = parseCalendarTime(event.startDate);
+      const parsedEnd = parseCalendarTime(event.endDate);
+      const end = parsedStart && parsedEnd && (
+        parsedStart.kind !== parsedEnd.kind
+        || parsedEnd.value.getTime() < parsedStart.value.getTime()
+      ) ? null : parsedEnd;
+      const uid = event.uid ?? '';
+      const summary = event.summary ?? '';
+      const location = event.location ?? '';
+      const description = event.description ?? '';
+      renderedChars += uid.length + summary.length + location.length + description.length;
+      if (renderedChars > MAX_CALENDAR_RENDERED_CHARS) {
+        throw new LyraResourceLimitError('The calendar contains too much rendered text.');
+      }
       return {
-        uid: event.uid ?? '', summary: event.summary ?? '',
-        start,
-        end,
-        location: event.location ?? '', description: event.description ?? '',
+        uid,
+        summary,
+        start: parsedStart?.value ?? null,
+        end: end?.value ?? null,
+        startKind: parsedStart?.kind ?? null,
+        endKind: end?.kind ?? null,
+        location,
+        description,
       } as ParsedCalendarEvent;
     });
     return events;
   }
 
   private renderEvent(event: ParsedCalendarEvent): TemplateResult {
-    return html`<li part="event"><span part="event-summary">${event.summary || this.localize('calendarViewerNoSummary')}</span><span part="event-time">${formatEventTime(event.start, event.end, this.effectiveLocale)}</span>${event.location ? html`<span part="event-location">${event.location}</span>` : nothing}${event.description ? html`<p part="event-description">${event.description}</p>` : nothing}</li>`;
+    return html`<li part="event"><span part="event-summary">${event.summary || this.localize('calendarViewerNoSummary')}</span><span part="event-time">${formatEventTime(event, this.effectiveLocale)}</span>${event.location ? html`<span part="event-location">${event.location}</span>` : nothing}${event.description ? html`<p part="event-description">${event.description}</p>` : nothing}</li>`;
   }
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
       case 'loaded': return this.fetchState.events.length ? html`<ul part="event-list">${this.fetchState.events.map((event) => this.renderEvent(event))}</ul>` : html`<p class="empty-note">${this.localize('calendarViewerEmpty')}</p>`;
-      case 'loading': return html`<div part="spinner"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+      case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeCalendar') })}</p>`;
     }
@@ -210,7 +281,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
 
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-calendar-viewer-max-height': maxHeight }) : nothing} aria-label=${hostAriaLabel(this) ?? (this.name || this.localize('calendarViewerLabel'))}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
+    return html`<div part="base" role=${viewerSemanticRole(this, 'region') ?? nothing} style=${maxHeight ? styleMap({ '--lr-calendar-viewer-max-height': maxHeight }) : nothing} aria-label=${viewerSemanticLabel(this, this.name || this.localize('calendarViewerLabel')) ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

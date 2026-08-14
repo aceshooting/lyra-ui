@@ -8,6 +8,7 @@ import '../../utility/live-region/live-region.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './branch-picker.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_branchNext, LYRA_DEFAULT_branchPickerLabel, LYRA_DEFAULT_branchPosition, LYRA_DEFAULT_branchPrevious } from '../../../internal/default-strings.generated.js';
@@ -16,6 +17,7 @@ import { LYRA_DEFAULT_branchNext, LYRA_DEFAULT_branchPickerLabel, LYRA_DEFAULT_b
 
 export interface LyraBranchPickerEventMap {
   'lr-branch-change': CustomEvent<{ index: number }>;
+  'lr-toolbar-actions-change': Event;
 }
 
 /**
@@ -74,6 +76,38 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
    *  announcements. */
   private isMounting = true;
 
+  private readonly previousToolbarAction = this.createToolbarAction('previous');
+  private readonly nextToolbarAction = this.createToolbarAction('next');
+
+  private createToolbarAction(direction: 'previous' | 'next'): LyraToolbarAction {
+    const host = this;
+    const button = () => direction === 'previous' ? host.previousButtonEl : host.nextButtonEl;
+    return {
+      id: direction,
+      get disabled() {
+        return !button() || button()!.disabled;
+      },
+      focus(options) {
+        button()?.focus(options);
+      },
+      setTabIndex(tabIndex) {
+        const target = button();
+        if (target) target.tabIndex = tabIndex;
+      },
+      matchesEventPath(path) {
+        const target = button();
+        return target !== undefined && path.includes(target);
+      },
+    };
+  }
+
+  /** Ordered logical actions exposed to an enclosing toolbar without exposing shadow nodes. */
+  getToolbarActions(): readonly LyraToolbarAction[] {
+    return this.normalizedCount < 2
+      ? []
+      : [this.previousToolbarAction, this.nextToolbarAction];
+  }
+
   /** Read-time-safe view of `count` -- non-negative, finite, truncated to a whole branch count.
    *  Both `index` and `count` are fully controlled (this component never writes to them), so an
    *  out-of-range/non-finite value assigned from outside would otherwise reach the `count - 1`/
@@ -124,6 +158,14 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
       const formatter = getNumberFormat(this.effectiveLocale);
       this.liveRegion?.announce(this.formatPosition(formatter), { force: true });
     }
+    if (changed.has('index') || changed.has('count')) {
+      this.emit('lr-toolbar-actions-change');
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.isMounting = true;
+    super.disconnectedCallback();
   }
 
   private formatPosition(formatter = getNumberFormat(this.effectiveLocale)): string {
@@ -147,7 +189,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
     if (count < 2) return html``;
     const index = this.normalizedIndex;
     const label = this.label || this.localize('branchPickerLabel');
-    const ariaLabel = this.getAttribute('aria-label') || label;
+    const ariaLabel = this.getAttribute('aria-label') ?? label;
     const formatter = getNumberFormat(this.effectiveLocale);
     return html`
       <div part="base" id=${this.groupId} role="group" aria-label=${ariaLabel}>

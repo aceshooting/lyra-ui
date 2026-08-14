@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent } from '@open-wc/testing';
+import { fixture, expect, oneEvent, waitUntil } from '@open-wc/testing';
 import { html as litHtml, nothing, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from './lyra-element.js';
@@ -13,9 +13,14 @@ class StubTextViewerBase extends LyraElement<LyraTextViewerTargetEventMap> {
   @property({ type: Boolean, attribute: 'no-body' }) noBody = false;
   /** Optional id placed on the body root itself, for the "root IS the fragment target" case. */
   @property({ attribute: 'root-id' }) rootId: string | null = null;
+  @property({ attribute: false }) bodyText: string | null = null;
 
   render() {
     if (this.noBody) return litHtml`<div part="not-body">no body here</div>${this.renderAnchorLiveRegion()}`;
+    if (this.bodyText !== null) {
+      return litHtml`<div part="body" id=${this.rootId ?? nothing}><p>${this.bodyText}</p></div
+      >${this.renderAnchorLiveRegion()}`;
+    }
     return litHtml`<div part="body" id=${this.rootId ?? nothing}
       ><p id="section-one">${PARAGRAPH_ONE}</p><p>${PARAGRAPH_TWO}</p><p>İzmir</p></div
     >${this.renderAnchorLiveRegion()}`;
@@ -45,14 +50,23 @@ declare global {
 
 type Internals = {
   searchActiveIndex: number;
-  searchMatches: { start: number; end: number }[];
+  searchMatches: { length: number; matchCountExact: boolean };
+  searchMatchCountExact: boolean;
   activeSearchRange(): Range | null;
   searchQuery: string;
   selectionRoot: Element | null;
   selectionCleanup?: () => void;
-  searchHandle?: { release(): void; setRanges: unknown; setActive: unknown; flash: unknown };
+  searchHandle?: {
+    release(): void;
+    setRanges: unknown;
+    setActive(range: Range | null): void;
+    flash: unknown;
+  };
   anchorRetryIntervalMs: number;
   anchorTimeoutMs: number;
+  textScopeBuildCount(): number;
+  textQuoteScanCount(): number;
+  highlightPaintedRangeCount(): number;
 };
 
 function internals(el: StubTextViewer): Internals {
@@ -84,7 +98,7 @@ describe('TextViewerTarget mixin', () => {
     expect(count).to.equal(2);
     expect(internals(el).searchActiveIndex).to.equal(0);
     const { detail } = await eventPromise;
-    expect(detail).to.deep.equal({ query: 'fox', matchCount: 2, activeIndex: 0 });
+    expect(detail).to.deep.equal({ query: 'fox', matchCount: 2, matchCountExact: true, activeIndex: 0 });
     expect(scrolled).to.be.true;
   });
 
@@ -103,7 +117,7 @@ describe('TextViewerTarget mixin', () => {
     expect(count).to.equal(0);
     expect(internals(el).searchActiveIndex).to.equal(-1);
     const { detail } = await eventPromise;
-    expect(detail).to.deep.equal({ query: 'no-such-phrase-in-body', matchCount: 0, activeIndex: -1 });
+    expect(detail).to.deep.equal({ query: 'no-such-phrase-in-body', matchCount: 0, matchCountExact: true, activeIndex: -1 });
   });
 
   it('recomputes an active search with locale-aware case folding when the inherited locale changes', async () => {
@@ -114,7 +128,12 @@ describe('TextViewerTarget mixin', () => {
     await el.updateComplete;
     expect(await el.search('izmir')).to.equal(0);
 
-    let localeChangeDetail: { query: string; matchCount: number; activeIndex: number } | undefined;
+    let localeChangeDetail: {
+      query: string;
+      matchCount: number;
+      matchCountExact: boolean;
+      activeIndex: number;
+    } | undefined;
     el.addEventListener('lr-search-change', (event) => {
       localeChangeDetail = event.detail;
     });
@@ -128,7 +147,7 @@ describe('TextViewerTarget mixin', () => {
     // The mixin retains offsets, not Ranges; materialize the active one to read its text.
     expect(internals(el).activeSearchRange()!.toString()).to.equal('İzmir');
     expect(internals(el).searchActiveIndex).to.equal(0);
-    expect(localeChangeDetail).to.deep.equal({ query: 'izmir', matchCount: 1, activeIndex: 0 });
+    expect(localeChangeDetail).to.deep.equal({ query: 'izmir', matchCount: 1, matchCountExact: true, activeIndex: 0 });
   });
 
   it('does not consume a viewer load callback when locale search recomputation is also queued', async () => {
@@ -175,21 +194,21 @@ describe('TextViewerTarget mixin', () => {
     let ok = await el.searchPrevious();
     expect(ok).to.be.true;
     expect(internals(el).searchActiveIndex).to.equal(1);
-    expect((await eventPromise).detail).to.deep.equal({ query: 'fox', matchCount: 2, activeIndex: 1 });
+    expect((await eventPromise).detail).to.deep.equal({ query: 'fox', matchCount: 2, matchCountExact: true, activeIndex: 1 });
 
     // forward wrap: last (1) -> 0
     eventPromise = oneEvent(el, 'lr-search-change');
     ok = await el.searchNext();
     expect(ok).to.be.true;
     expect(internals(el).searchActiveIndex).to.equal(0);
-    expect((await eventPromise).detail).to.deep.equal({ query: 'fox', matchCount: 2, activeIndex: 0 });
+    expect((await eventPromise).detail).to.deep.equal({ query: 'fox', matchCount: 2, matchCountExact: true, activeIndex: 0 });
 
     // normal forward step: 0 -> 1
     eventPromise = oneEvent(el, 'lr-search-change');
     ok = await el.searchNext();
     expect(ok).to.be.true;
     expect(internals(el).searchActiveIndex).to.equal(1);
-    expect((await eventPromise).detail).to.deep.equal({ query: 'fox', matchCount: 2, activeIndex: 1 });
+    expect((await eventPromise).detail).to.deep.equal({ query: 'fox', matchCount: 2, matchCountExact: true, activeIndex: 1 });
   });
 
   it('searchNext()/searchPrevious() return false and emit nothing when there are no ranges', async () => {
@@ -210,9 +229,10 @@ describe('TextViewerTarget mixin', () => {
     const eventPromise = oneEvent(el, 'lr-search-change');
     el.clearSearch();
     const { detail } = await eventPromise;
-    expect(detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
+    expect(detail).to.deep.equal({ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
     expect(internals(el).searchQuery).to.equal('');
-    expect(internals(el).searchMatches).to.deep.equal([]);
+    expect(internals(el).searchMatches.length).to.equal(0);
+    expect(internals(el).searchMatchCountExact).to.be.true;
     expect(internals(el).searchActiveIndex).to.equal(-1);
     // ranges are really gone, not just index reset
     expect(await el.searchNext()).to.be.false;
@@ -283,6 +303,95 @@ describe('TextViewerTarget mixin', () => {
   });
 
   describe('paintRanges()/updated() search-handle lifecycle', () => {
+    it('reuses one scope across highlight/search/active-only updates', async () => {
+      const el = await stubFixture();
+      await el.search('fox');
+      const builds = internals(el).textScopeBuildCount();
+
+      el.highlights = [{ id: 'same', anchor: { kind: 'text-quote', quote: 'fox' } }];
+      await el.updateComplete;
+      el.activeHighlightId = 'same';
+      await el.updateComplete;
+      el.requestUpdate();
+      await el.updateComplete;
+
+      expect(internals(el).textScopeBuildCount()).to.equal(builds);
+    });
+
+    it('invalidates the cached scope and active search after an external DOM mutation', async () => {
+      const el = await stubFixture();
+      await el.search('fox');
+      const builds = internals(el).textScopeBuildCount();
+      let latest: { matchCount: number; matchCountExact: boolean } | undefined;
+      el.addEventListener('lr-search-change', (event) => {
+        latest = event.detail;
+      });
+
+      el.shadowRoot!.querySelector('#section-one')!.textContent = 'No animal remains.';
+      await waitUntil(() => latest?.matchCount === 1);
+
+      expect(latest!.matchCountExact).to.be.true;
+      expect(internals(el).textScopeBuildCount()).to.be.greaterThan(builds);
+    });
+
+    it('reuses identical quote occurrences and bounds distinct highlight scan work', async () => {
+      const el = await stubFixture();
+      el.bodyText = `${'needle '.repeat(70_000)}target`;
+      await el.updateComplete;
+      const identical = Array.from({ length: 100 }, (_, index) => ({
+        id: `same-${index}`,
+        anchor: { kind: 'text-quote' as const, quote: 'target' },
+      }));
+      el.highlights = identical;
+      await el.updateComplete;
+      const afterIdentical = internals(el).textQuoteScanCount();
+      expect(afterIdentical).to.equal(1);
+
+      el.highlights = Array.from({ length: 100 }, (_, index) => ({
+        id: `distinct-${index}`,
+        anchor: { kind: 'text-quote' as const, quote: `absent-${index}` },
+      }));
+      await el.updateComplete;
+      expect(internals(el).textQuoteScanCount() - afterIdentical).to.be.at.most(8);
+      expect(internals(el).highlightPaintedRangeCount()).to.be.at.most(100);
+    });
+
+    it('resolves the active host highlight even when it lies beyond the paint cardinality cap', async () => {
+      const el = await stubFixture();
+      const handle = internals(el).searchHandle!;
+      let activeText = '';
+      const originalSetActive = handle.setActive as (range: Range | null) => void;
+      handle.setActive = ((range: Range | null) => {
+        activeText = range?.toString() ?? '';
+        originalSetActive.call(handle, range);
+      }) as typeof handle.setActive;
+      el.highlights = [
+        ...Array.from({ length: 100 }, (_, index) => ({
+          id: `ordinary-${index}`,
+          anchor: { kind: 'text-quote' as const, quote: 'fox' },
+        })),
+        { id: 'active-after-cap', anchor: { kind: 'text-quote', quote: 'İzmir' } },
+      ];
+      el.activeHighlightId = 'active-after-cap';
+      await el.updateComplete;
+
+      expect(activeText).to.equal('İzmir');
+      expect(internals(el).highlightPaintedRangeCount()).to.be.at.most(100);
+    });
+
+    it('reports a retained lower bound when the shared match ceiling is exceeded', async () => {
+      const el = await stubFixture();
+      el.bodyText = 'x '.repeat(10_001);
+      await el.updateComplete;
+      let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+      el.addEventListener('lr-search-change', (event) => {
+        detail = event.detail;
+      });
+
+      expect(await el.search('x')).to.equal(10_000);
+      expect(detail).to.deep.include({ matchCount: 10_000, matchCountExact: false });
+    });
+
     it('releases the search highlight handle when the body root disappears on re-render', async () => {
       const el = await stubFixture();
       await el.updateComplete;

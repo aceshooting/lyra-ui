@@ -1,6 +1,11 @@
 import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './document-viewer.js';
-import { clearDocumentRenderers, registerDocumentRenderer, type DocumentFile } from './registry.js';
+import {
+  clearDocumentRenderers,
+  registerDocumentRenderer,
+  type DocumentFile,
+  type LyraAvDocumentRendererPayload,
+} from './registry.js';
 import type { LyraDocumentViewer } from './document-viewer.js';
 import type { DialogCloseReason } from '../../overlays/dialog/dialog.class.js';
 
@@ -16,6 +21,7 @@ describe('defaults', () => {
     expect(el.mimeType).to.equal('');
     expect(el.src).to.equal('');
     expect(el.alt).to.equal(undefined);
+    expect(el.payload).to.equal(undefined);
   });
 });
 
@@ -92,10 +98,13 @@ describe('registry dispatch', () => {
   });
 
   it('renders ordinary visible error text without a shadow-root live region', async () => {
-    registerDocumentRenderer('application/pdf', { matches: () => true });
-    const el = (await fixture(html`
-      <lr-document-viewer open name="f" mime-type="application/pdf" src="https://example.test/f"></lr-document-viewer>
-    `)) as LyraDocumentViewer;
+    const el = (await fixture(html`<lr-document-viewer></lr-document-viewer>`)) as LyraDocumentViewer;
+    el.registry = new Map([['application/pdf', { matches: () => true } as never]]);
+    el.name = 'f';
+    el.mimeType = 'application/pdf';
+    el.src = 'https://example.test/f';
+    el.open = true;
+    await el.updateComplete;
     await el.updateComplete;
     const body = el.shadowRoot!.querySelector('[part="body"]')!;
     expect(body.textContent).to.include('Something went wrong.');
@@ -112,6 +121,30 @@ describe('registry dispatch', () => {
     el.src = 'https://example.test/f';
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('#custom-registry-output')).to.exist;
+  });
+
+  it('keeps each default registry snapshot isolated from later registrations', async () => {
+    const existing = await fixture<LyraDocumentViewer>(html`<lr-document-viewer></lr-document-viewer>`);
+    registerDocumentRenderer('application/x-late', {
+      render: () => html`<p id="late-registry-output"></p>`,
+    });
+    existing.name = 'existing.bin';
+    existing.mimeType = 'application/x-late; charset=binary';
+    existing.src = 'https://example.test/existing.bin';
+    existing.open = true;
+    await existing.updateComplete;
+    expect(existing.shadowRoot!.querySelector('#late-registry-output') === null).to.equal(true);
+
+    const later = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer
+        open
+        name="later.bin"
+        mime-type="APPLICATION/X-LATE; charset=binary"
+        src="https://example.test/later.bin"
+      ></lr-document-viewer>
+    `);
+    await later.updateComplete;
+    expect(later.shadowRoot!.querySelector('#late-registry-output')).to.exist;
   });
 
   it('preserves unset, explicit-empty, and nonempty alt values for registered renderers', async () => {
@@ -508,5 +541,113 @@ describe('anchor/highlights/alt widening', () => {
     });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(fired).to.be.false; // no anchor was ever set, so the event contract remains inactive
+  });
+});
+
+describe('renderer payload authority', () => {
+  it('uses an opt-in payload file for dispatch, rendering, heading, and download ahead of scalar props', async () => {
+    let received: DocumentFile | undefined;
+    registerDocumentRenderer('application/x-payload', {
+      render: (file) => {
+        received = file;
+        return html`<p id="payload-result">${file.name}</p>`;
+      },
+    });
+    const authored = {
+      kind: 'document' as const,
+      file: {
+        name: 'payload.lyra',
+        mimeType: 'application/x-payload',
+        src: 'https://example.test/payload.lyra',
+      },
+    };
+    const el = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer
+        open
+        name="legacy.pdf"
+        mime-type="application/pdf"
+        src="https://example.test/legacy.pdf"
+        .payload=${authored}
+      ></lr-document-viewer>
+    `);
+    await el.updateComplete;
+
+    expect(received?.name).to.equal('payload.lyra');
+    expect(received?.mimeType).to.equal('application/x-payload');
+    expect(el.shadowRoot!.querySelector('#payload-result')?.textContent).to.equal('payload.lyra');
+    expect(el.shadowRoot!.querySelector('lr-dialog')?.getAttribute('heading')).to.equal('payload.lyra');
+    const download = el.shadowRoot!.querySelector('[part="download-link"]') as HTMLAnchorElement;
+    expect(download.href).to.equal('https://example.test/payload.lyra');
+    expect(download.download).to.equal('payload.lyra');
+  });
+
+  it('snapshots an AV payload immediately so later author mutations cannot change an assignment', async () => {
+    const authored = {
+      kind: 'av' as const,
+      file: {
+        name: 'episode.mp3',
+        mimeType: 'audio/mpeg',
+        src: 'https://example.test/episode.mp3',
+      },
+      cues: [{ id: 'cue-1', start: 0, text: 'Original transcript' }],
+      tracks: [{
+        src: 'https://example.test/en.vtt',
+        kind: 'captions' as const,
+        srclang: 'en',
+        label: 'English',
+      }],
+    };
+    const el = await fixture<LyraDocumentViewer>(html`<lr-document-viewer></lr-document-viewer>`);
+    el.payload = authored;
+
+    authored.file.name = 'mutated.mp3';
+    authored.cues[0]!.text = 'Mutated transcript';
+    authored.tracks[0]!.label = 'Mutated track';
+
+    const payload = el.payload as LyraAvDocumentRendererPayload;
+    expect(payload).not.to.equal(authored);
+    expect(payload.file.name).to.equal('episode.mp3');
+    expect(payload.cues[0]!.text).to.equal('Original transcript');
+    expect(payload.tracks[0]!.label).to.equal('English');
+    expect(Object.isFrozen(payload)).to.equal(true);
+    expect(Object.isFrozen(payload.cues[0]!)).to.equal(true);
+    expect(Object.isFrozen(payload.tracks[0]!)).to.equal(true);
+  });
+
+  it('re-dispatches from a fresh immutable snapshot when payload is replaced', async () => {
+    registerDocumentRenderer('application/x-one', { render: (file) => html`<p>${file.name}</p>` });
+    registerDocumentRenderer('application/x-two', { render: (file) => html`<p>${file.name}</p>` });
+    const el = await fixture<LyraDocumentViewer>(html`<lr-document-viewer open></lr-document-viewer>`);
+    el.payload = {
+      kind: 'document',
+      file: { name: 'one', mimeType: 'application/x-one', src: 'https://example.test/one' },
+    };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="body"]')?.textContent).to.include('one');
+
+    el.payload = {
+      kind: 'document',
+      file: { name: 'two', mimeType: 'application/x-two', src: 'https://example.test/two' },
+    };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="body"]')?.textContent).to.include('two');
+  });
+
+  it('keeps legacy scalar-property rendering unchanged while payload is unset', async () => {
+    registerDocumentRenderer('application/pdf', {
+      render: (file) => html`<p id="legacy-file">${file.name}|${file.mimeType}|${file.src}</p>`,
+    });
+    const el = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer
+        open
+        name="legacy.pdf"
+        mime-type="application/pdf"
+        src="https://example.test/legacy.pdf"
+      ></lr-document-viewer>
+    `);
+    await el.updateComplete;
+    expect(el.payload).to.equal(undefined);
+    expect(el.shadowRoot!.querySelector('#legacy-file')?.textContent)
+      .to.equal('legacy.pdf|application/pdf|https://example.test/legacy.pdf');
   });
 });
