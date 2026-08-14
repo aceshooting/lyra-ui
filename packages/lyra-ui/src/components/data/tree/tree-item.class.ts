@@ -29,7 +29,7 @@ import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.ge
 const CHILDREN_SLOT = 'children';
 
 /** Same-name forwarding keeps every public part reachable through each recursively rendered
- * data-model child. Keep this list aligned with the class JSDoc's complete @csspart vocabulary. */
+ * data-model child. Keep this list aligned with the class JSDoc's complete CSS-part vocabulary. */
 const TREE_ITEM_EXPORT_PARTS = [
   'base',
   'tree-item',
