@@ -793,8 +793,12 @@ describe('lr-video public contract', () => {
       const el = await fixture<LyraVideo>(html`
         <lr-video thumbnails="https://example.test/capped.vtt"></lr-video>
       `);
-      await aTimeout(0);
       const internal = el as unknown as { thumbnailCues: unknown[] };
+      await waitUntil(
+        () => internal.thumbnailCues.length === 2_000,
+        'thumbnail cue cap did not load',
+        { timeout: 5_000 },
+      );
       expect(internal.thumbnailCues.length).to.equal(2_000);
     } finally {
       window.fetch = originalFetch;

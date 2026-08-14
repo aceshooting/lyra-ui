@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './token-input.js';
 import '../button/button.js';
@@ -1318,7 +1318,10 @@ describe('editable tokens', () => {
     }
   });
 
-  it('themes edit and remove hover/pressed surfaces independently', async () => {
+  it('themes edit and remove hover/pressed surfaces independently', async function () {
+    // Four live pointer surfaces require several Playwright browser-command round-trips. Keep
+    // their full-sweep contention budget scoped to this rendered contract.
+    this.timeout(15_000);
     const el = (await fixture(html`
       <lr-token-input
         editable
@@ -1339,9 +1342,17 @@ describe('editable tokens', () => {
     };
     try {
       await sendMouse({ type: 'move', position: center(label) });
-      expect(getComputedStyle(label).backgroundColor).to.equal('rgb(1, 2, 3)');
+      // A remote mouse command completing is not a paint barrier in Firefox. Poll each live
+      // pseudo-class surface while its pointer state is still held instead of snapshotting once.
+      await waitUntil(
+        () => getComputedStyle(label).backgroundColor === 'rgb(1, 2, 3)',
+        'the edit hover surface never painted',
+      );
       await sendMouse({ type: 'down' });
-      expect(getComputedStyle(label).backgroundColor).to.equal('rgb(4, 5, 6)');
+      await waitUntil(
+        () => getComputedStyle(label).backgroundColor === 'rgb(4, 5, 6)',
+        'the edit pressed surface never painted',
+      );
       await sendMouse({ type: 'move', position: [0, 0] });
       await sendMouse({ type: 'up' });
 
@@ -1353,9 +1364,15 @@ describe('editable tokens', () => {
       }
       remove = el.shadowRoot!.querySelector('[part="remove"]') as HTMLElement;
       await sendMouse({ type: 'move', position: center(remove) });
-      expect(getComputedStyle(remove).backgroundColor).to.equal('rgb(7, 8, 9)');
+      await waitUntil(
+        () => getComputedStyle(remove).backgroundColor === 'rgb(7, 8, 9)',
+        'the remove hover surface never painted',
+      );
       await sendMouse({ type: 'down' });
-      expect(getComputedStyle(remove).backgroundColor).to.equal('rgb(10, 11, 12)');
+      await waitUntil(
+        () => getComputedStyle(remove).backgroundColor === 'rgb(10, 11, 12)',
+        'the remove pressed surface never painted',
+      );
       await sendMouse({ type: 'up' });
     } finally {
       await resetMouse();

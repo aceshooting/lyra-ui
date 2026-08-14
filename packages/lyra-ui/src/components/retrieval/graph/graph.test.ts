@@ -105,6 +105,17 @@ const NODE_COUNT_TIMEOUT = 5000;
 // or it fails on every run, not just loaded ones.
 const ALPHA_SETTLE_TIMEOUT = 15_000;
 
+async function waitForCanvasBackingStore(canvas: HTMLCanvasElement): Promise<void> {
+  const dpr = canvas.ownerDocument.defaultView?.devicePixelRatio || 1;
+  await waitUntil(
+    () =>
+      canvas.width === Math.round(canvas.clientWidth * dpr) &&
+      canvas.height === Math.round(canvas.clientHeight * dpr),
+    'canvas backing store did not finish sizing for pointer hit-testing',
+    { timeout: NODE_COUNT_TIMEOUT },
+  );
+}
+
 interface FakeIntersectionObserverInstance {
   callback: IntersectionObserverCallback;
   options?: IntersectionObserverInit;
@@ -3449,17 +3460,24 @@ it('keeps a dangling stub synced to its source node across ticks, instead of fre
     (c) => c.getAttribute('aria-label') === 'A',
   ) as SVGCircleElement;
   const stub = el.shadowRoot!.querySelector('[part="link"][data-dangling]') as SVGLineElement;
+  const internal = el as unknown as {
+    simulation?: { stop(): void };
+    simNodes: Array<{ id: string; x?: number; y?: number }>;
+    onTick(): void;
+  };
+  internal.simulation?.stop();
+  const sourceNode = internal.simNodes.find((node) => node.id === 'a')!;
 
-  await aTimeout(50);
+  internal.onTick();
   const firstSourceX = sourceCircle.getAttribute('cx');
   expect(stub.getAttribute('x1')).to.equal(firstSourceX);
   expect(stub.getAttribute('y1')).to.equal(sourceCircle.getAttribute('cy'));
 
-  await aTimeout(200); // let the settle continue moving the source node
+  sourceNode.x = (sourceNode.x ?? 0) + 47;
+  sourceNode.y = (sourceNode.y ?? 0) + 31;
+  internal.onTick();
   const laterSourceX = sourceCircle.getAttribute('cx');
-  expect(laterSourceX, 'sanity check: the source node keeps moving while the simulation settles').to.not.equal(
-    firstSourceX,
-  );
+  expect(laterSourceX, 'sanity check: the controlled tick moves the source node').to.not.equal(firstSourceX);
   // Before the fix, onTick() recomputed the stub's synthetic target but never wrote x1/y1/x2/y2
   // to its <line> element, so the stub stayed rendered at its very first tick's position while
   // the source node it hangs off kept animating away from it.
@@ -4407,7 +4425,8 @@ describe('coverage: canvas renderer internals', () => {
     el.links = [{ source: 'a', target: 'b' }];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
-    await aTimeout(50);
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    await waitForCanvasBackingStore(canvas);
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
     const a = el.simNodes.find((n) => n.id === 'a')!;
     const b = el.simNodes.find((n) => n.id === 'b')!;
@@ -4417,7 +4436,6 @@ describe('coverage: canvas renderer internals', () => {
     b.x = 350;
     b.y = 150;
     (el as unknown as { pickDirty: boolean }).pickDirty = true;
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     let detail: { source: string; target: string } | undefined;
     el.addEventListener('lr-link-click', (e) => (detail = (e as CustomEvent).detail));
@@ -4441,7 +4459,8 @@ describe('coverage: canvas renderer internals', () => {
     el.links = [];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
-    await aTimeout(50);
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    await waitForCanvasBackingStore(canvas);
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
     const [a, b, c] = el.simNodes;
     a!.x = 100;
@@ -4451,7 +4470,6 @@ describe('coverage: canvas renderer internals', () => {
     c!.x = 200;
     c!.y = 250;
     (el as unknown as { pickDirty: boolean }).pickDirty = true;
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     let detail: { id: string } | undefined;
     el.addEventListener('lr-community-click', (e) => (detail = (e as CustomEvent).detail));

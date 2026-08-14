@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import {
   type LyraPhoneInput,
   type PhoneNumberAdapter,
@@ -1302,9 +1302,6 @@ it('is accessible with flags enabled', async () => {
   await expect(el).to.be.accessible();
 });
 
-/** Comfortably past --lr-transition-fast, whose duration token this component transitions on. */
-const TRANSITION_SETTLE_MS = 400;
-
 // The country cell's press target is the invisible native <select> stretched over the visible
 // trigger, so its pressed rule has to hang off that select's own :active -- a `[part='country-
 // trigger']:active` rule would never match, because that div is not the element being activated.
@@ -1313,7 +1310,11 @@ const TRANSITION_SETTLE_MS = 400;
 // elements -- a DOM node as chai's actual/expected hangs the whole file.
 it('tints the country trigger while the invisible select over it is hovered, and deepens it while pressed', async () => {
   const el = (await fixture(
-    html`<lr-phone-input default-country="LU" .adapter=${adapter}></lr-phone-input>`,
+    html`<lr-phone-input
+      default-country="LU"
+      style="--lr-transition-fast: 0s"
+      .adapter=${adapter}
+    ></lr-phone-input>`,
   )) as LyraPhoneInput;
   await el.updateComplete;
   const trigger = el.shadowRoot!.querySelector('[part="country-trigger"]') as HTMLElement;
@@ -1325,13 +1326,16 @@ it('tints the country trigger while the invisible select over it is hovered, and
   const rest = getComputedStyle(trigger).backgroundColor;
   try {
     await sendMouse({ type: 'move', position: centre });
-    // This part transitions background-color, so the value right after the state change is still
-    // the transition's start colour -- settle past --lr-transition-fast before reading. Real
-    // timers with a margin: @sinonjs/fake-timers does not work under wtr.
-    await aTimeout(TRANSITION_SETTLE_MS);
+    await waitUntil(
+      () => getComputedStyle(trigger).backgroundColor !== rest,
+      'country trigger hover paint must settle',
+    );
     const hovered = getComputedStyle(trigger).backgroundColor;
     await sendMouse({ type: 'down' });
-    await aTimeout(TRANSITION_SETTLE_MS);
+    await waitUntil(
+      () => getComputedStyle(trigger).backgroundColor !== hovered,
+      'country trigger pressed paint must settle',
+    );
     const pressed = getComputedStyle(trigger).backgroundColor;
     await sendMouse({ type: 'up' });
     expect(hovered, 'hover must tint the resting background').to.not.equal(rest);

@@ -157,6 +157,40 @@ const mediaCommandPlugin = {
   },
 };
 
+function parseTestServerPort(value) {
+  if (value === undefined) return undefined;
+  if (!/^[1-9]\d*$/.test(value)) {
+    throw new Error(
+      `WTR_PORT must be an integer from 1024 through 65535; received ${JSON.stringify(value)}.`,
+    );
+  }
+  const port = Number(value);
+  if (!Number.isSafeInteger(port) || port < 1024 || port > 65535) {
+    throw new Error(
+      `WTR_PORT must be an integer from 1024 through 65535; received ${JSON.stringify(value)}.`,
+    );
+  }
+  return port;
+}
+
+function parseTestConcurrency(value) {
+  if (value === undefined) return undefined;
+  if (!/^[1-9]\d*$/.test(value)) {
+    throw new Error(
+      `WTR_CONCURRENCY must be a positive safe integer; received ${JSON.stringify(value)}.`,
+    );
+  }
+  const concurrency = Number(value);
+  if (!Number.isSafeInteger(concurrency)) {
+    throw new Error(
+      `WTR_CONCURRENCY must be a positive safe integer; received ${JSON.stringify(value)}.`,
+    );
+  }
+  return concurrency;
+}
+
+const testServerPort = parseTestServerPort(process.env.WTR_PORT);
+const testConcurrency = parseTestConcurrency(process.env.WTR_CONCURRENCY);
 const browserProduct = (process.env.WTR_BROWSER ?? 'chromium').toLowerCase();
 const browserLaunchers = {
   chromium: { product: 'chromium' },
@@ -197,14 +231,22 @@ const testRunnerHtml = (testRunnerImport) => `
 
 export default {
   files: 'src/**/*.test.ts',
+  // Parallel aggregate runs assign a port per lane. Without an explicit port, WTR's portfinder
+  // probe releases the candidate before the server binds it, so two processes can select the
+  // same port and one then fails with EADDRINUSE. Ordinary standalone runs retain auto-discovery.
+  ...(testServerPort === undefined ? {} : { port: testServerPort }),
   nodeResolve: true,
   browsers: [playwrightLauncher(launcherConfig)],
-  // The runner otherwise opens half the host's reported CPU count in browser pages. Coverage
-  // instrumentation makes each page import most of the source graph, so high-core hosts can
-  // exhaust Chromium's request/process resources before tests start. Keep ordinary and platform
-  // runs on the runner default; coverage trades a little throughput for a deterministic ceiling
-  // while retaining one runner process and therefore one combined report.
-  ...(collectCoverage ? { concurrency: 1 } : {}),
+  // The runner otherwise opens half the host's reported CPU count in browser pages. Standalone
+  // ordinary/platform runs retain that automatic default; parallel aggregate scripts can opt in
+  // to a per-process ceiling so multiple WTR processes do not each claim half the machine.
+  // Coverage always stays at one: instrumentation makes each page import most of the source graph,
+  // and one runner process is required for a deterministic combined report.
+  ...(collectCoverage
+    ? { concurrency: 1 }
+    : testConcurrency === undefined
+      ? {}
+      : { concurrency: testConcurrency }),
   // Keep the complete browser-session watchdog high enough for a slow worker to report the actual
   // result while still failing resource leaks and unresolved tests within a bounded five minutes.
   testsFinishTimeout: 300000,

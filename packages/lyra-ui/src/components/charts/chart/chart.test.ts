@@ -2761,23 +2761,29 @@ it('caps the generated table at 1,000 endpoint-preserving records and announces 
   );
 });
 
-it('keeps an initially sampled dataset silent, then announces a later sampling transition', async () => {
-  const sampledLabels = Array.from({ length: 1001 }, (_, index) => `C${index}`);
-  const sampledDatasets = [{ label: 'Revenue', data: sampledLabels.map((_, index) => index) }];
-  const el = (await fixture(html`<lr-chart
-    .strings=${{ chartDataSampled: 'Sampled records; use a custom table.' }}
-    .labels=${sampledLabels}
-    .datasets=${sampledDatasets}
-  ></lr-chart>`)) as LyraChart;
-  await waitUntil(() => (el as any).chart != null);
+it('keeps initial sampling silent and announces only a later transition into sampling', async () => {
+  // The preceding integration test proves real high-cardinality data reaches the sampling notice.
+  // A controllable predicate isolates its mount-versus-transition announcement lifecycle here.
+  let sampled = true;
+  const el = document.createElement('lr-chart') as LyraChart;
+  (el as any).generatedDataIsSampled = () => sampled;
+  el.strings = { chartDataSampled: 'Sampled records; use a custom table.' };
+  el.labels = ['C0'];
+  el.datasets = [{ label: 'Series 0', data: [0] }];
+  el.withoutAnimation = true;
+  el.withoutLegend = true;
+  const mount = await fixture(html`<div></div>`);
+  mount.append(el);
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, 'chart never became ready', { timeout: 5_000 });
 
   expect(announcementTexts()).to.deep.equal([]);
 
-  el.labels = ['C0'];
-  el.datasets = [{ label: 'Revenue', data: [0] }];
+  sampled = false;
+  el.requestUpdate();
   await el.updateComplete;
-  el.labels = sampledLabels;
-  el.datasets = sampledDatasets;
+  sampled = true;
+  el.requestUpdate();
   await el.updateComplete;
 
   expect(announcementTexts()).to.deep.equal(['Sampled records; use a custom table.']);

@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, aTimeout, html } from '@open-wc/testing';
+import { fixture, expect, oneEvent, aTimeout, html, waitUntil } from '@open-wc/testing';
 import './push-to-talk.js';
 import '../../utility/live-region/live-region.js';
 import type { LyraPushToTalk } from './push-to-talk.js';
@@ -317,10 +317,13 @@ it('keeps the server unsupported branch for the first hydration update before en
     expect(trigger(el).disabled).to.be.true;
     expect(status(el)).to.equal('Recording is not supported in this browser');
 
-    // Firefox can resolve the first update promise before the deferred hydration seed queues its
-    // follow-up update. Give that promise reaction one task before awaiting the new update.
-    await aTimeout(0);
-    await el.updateComplete;
+    // The deferred seed is intentionally queued from the first update's settled promise, so
+    // re-reading updateComplete can still return that already-settled promise before Firefox has
+    // exposed the corrective update. Wait for the rendered contract instead of a fixed tick count.
+    await waitUntil(
+      () => !trigger(el).disabled && status(el) === '',
+      'capture should become available after the hydration update',
+    );
     expect(trigger(el).disabled).to.be.false;
     expect(status(el)).to.equal('');
   } finally {

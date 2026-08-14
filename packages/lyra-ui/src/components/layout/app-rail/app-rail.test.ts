@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './app-rail.js';
 import { computeAppRailMode, type LyraAppRail, type AppRailModeChangeDetail, type AppRailToggleDetail } from './app-rail.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -23,7 +23,8 @@ beforeEach(() => {
     }) as unknown as MediaQueryList) as typeof window.matchMedia;
 });
 
-it('inherits independent toggle and resizer hover/pressed paint from an ancestor', async () => {
+it('inherits independent toggle and resizer hover/pressed paint from an ancestor', async function () {
+  this.timeout(15_000);
   const mobileWrapper = await fixture<HTMLElement>(html`
     <div style="
       --lr-app-rail-toggle-hover-bg: rgb(1, 2, 3);
@@ -40,9 +41,17 @@ it('inherits independent toggle and resizer hover/pressed paint from an ancestor
   let rect = toggle.getBoundingClientRect();
   try {
     await sendMouse({ type: 'move', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+    await waitUntil(
+      () => getComputedStyle(toggle).backgroundColor === 'rgb(1, 2, 3)' && getComputedStyle(toggle).color === 'rgb(4, 5, 6)',
+      'toggle hover paint did not settle',
+    );
     expect(getComputedStyle(toggle).backgroundColor).to.equal('rgb(1, 2, 3)');
     expect(getComputedStyle(toggle).color).to.equal('rgb(4, 5, 6)');
     await sendMouse({ type: 'down' });
+    await waitUntil(
+      () => getComputedStyle(toggle).backgroundColor === 'rgb(7, 8, 9)' && getComputedStyle(toggle).color === 'rgb(10, 11, 12)',
+      'toggle pressed paint did not settle',
+    );
     expect(getComputedStyle(toggle).backgroundColor).to.equal('rgb(7, 8, 9)');
     expect(getComputedStyle(toggle).color).to.equal('rgb(10, 11, 12)');
   } finally {
@@ -71,8 +80,16 @@ it('inherits independent toggle and resizer hover/pressed paint from an ancestor
   rect = resizer.getBoundingClientRect();
   try {
     await sendMouse({ type: 'move', position: [Math.round(rect.left + 10), Math.round(rect.top + rect.height / 2)] });
+    await waitUntil(
+      () => getComputedStyle(track).backgroundColor === 'rgb(13, 14, 15)',
+      'resizer hover paint did not settle',
+    );
     expect(getComputedStyle(track).backgroundColor).to.equal('rgb(13, 14, 15)');
     await sendMouse({ type: 'down' });
+    await waitUntil(
+      () => getComputedStyle(track).backgroundColor === 'rgb(16, 17, 18)',
+      'resizer pressed paint did not settle',
+    );
     expect(getComputedStyle(track).backgroundColor).to.equal('rgb(16, 17, 18)');
   } finally {
     await resetMouse();

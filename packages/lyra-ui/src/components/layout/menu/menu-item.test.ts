@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './menu-item.js';
 import './dropdown-item.js';
 import type { LyraMenuItem } from './menu-item.js';
@@ -99,7 +99,8 @@ describe('danger-state cssprops', () => {
   const base = (el: LyraMenuItem): HTMLElement =>
     el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
-  it('inherits destructive foreground, hover, and pressed-fill hooks through both menu-item names without retinting ordinary rows', async () => {
+  it('inherits destructive foreground, hover, and pressed-fill hooks through both menu-item names without retinting ordinary rows', async function () {
+    this.timeout(15_000);
     const wrapper = (await fixture(html`
       <div>
         <lr-menu-item destructive value="delete">Delete</lr-menu-item>
@@ -136,17 +137,23 @@ describe('danger-state cssprops', () => {
     expect(getComputedStyle(variantBase).color).to.equal(getComputedStyle(destructiveBase).color);
 
     try {
+      const defaultHover = resolveInShadow('background: var(--lr-color-danger-quiet)', 'background-color');
+      const defaultActive = resolveInShadow(
+        'background: color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+        'background-color',
+      );
       await sendMouse({ type: 'move', position: destructiveCentre });
-      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal(
-        resolveInShadow('background: var(--lr-color-danger-quiet)', 'background-color'),
+      await waitUntil(
+        () => getComputedStyle(destructiveBase).backgroundColor === defaultHover,
+        'destructive hover paint did not settle',
       );
+      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal(defaultHover);
       await sendMouse({ type: 'down' });
-      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal(
-        resolveInShadow(
-          'background: color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
-          'background-color',
-        ),
+      await waitUntil(
+        () => getComputedStyle(destructiveBase).backgroundColor === defaultActive,
+        'destructive pressed paint did not settle',
       );
+      expect(getComputedStyle(destructiveBase).backgroundColor).to.equal(defaultActive);
       await sendMouse({ type: 'up' });
 
       wrapper.style.setProperty('--lr-menu-item-danger-color', 'rgb(1, 2, 3)');
@@ -156,21 +163,48 @@ describe('danger-state cssprops', () => {
       expect(getComputedStyle(variantBase).color).to.equal('rgb(1, 2, 3)');
       expect(getComputedStyle(dropdownBase).color).to.equal('rgb(1, 2, 3)');
       expect(getComputedStyle(ordinaryBase).color).to.not.equal('rgb(1, 2, 3)');
+      await sendMouse({ type: 'move', position: destructiveCentre });
+      await waitUntil(
+        () => getComputedStyle(destructiveBase).backgroundColor === 'rgb(4, 5, 6)',
+        'themed destructive hover paint did not settle',
+      );
       expect(getComputedStyle(destructiveBase).backgroundColor).to.equal('rgb(4, 5, 6)');
 
       await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(destructiveBase).backgroundColor === 'rgb(7, 8, 9)',
+        'themed destructive pressed paint did not settle',
+      );
       expect(getComputedStyle(destructiveBase).backgroundColor).to.equal('rgb(7, 8, 9)');
       await sendMouse({ type: 'up' });
 
       await sendMouse({ type: 'move', position: centerOf(dropdownBase) });
+      await waitUntil(
+        () => getComputedStyle(dropdownBase).backgroundColor === 'rgb(4, 5, 6)',
+        'dropdown danger hover paint did not settle',
+      );
       expect(getComputedStyle(dropdownBase).backgroundColor).to.equal('rgb(4, 5, 6)');
       await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(dropdownBase).backgroundColor === 'rgb(7, 8, 9)',
+        'dropdown danger pressed paint did not settle',
+      );
       expect(getComputedStyle(dropdownBase).backgroundColor).to.equal('rgb(7, 8, 9)');
       await sendMouse({ type: 'up' });
 
+      const ordinaryResting = getComputedStyle(ordinaryBase).backgroundColor;
       await sendMouse({ type: 'move', position: centerOf(ordinaryBase) });
-      expect(getComputedStyle(ordinaryBase).backgroundColor).to.not.equal('rgb(4, 5, 6)');
+      await waitUntil(
+        () => getComputedStyle(ordinaryBase).backgroundColor !== ordinaryResting,
+        'ordinary hover paint did not settle',
+      );
+      const ordinaryHover = getComputedStyle(ordinaryBase).backgroundColor;
+      expect(ordinaryHover).to.not.equal('rgb(4, 5, 6)');
       await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(ordinaryBase).backgroundColor !== ordinaryHover,
+        'ordinary pressed paint did not settle',
+      );
       expect(getComputedStyle(ordinaryBase).backgroundColor).to.not.equal('rgb(7, 8, 9)');
     } finally {
       await resetMouse();

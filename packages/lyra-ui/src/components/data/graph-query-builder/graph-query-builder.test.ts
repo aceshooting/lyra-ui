@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './graph-query-builder.js';
 import type {
   LyraGraphQueryBuilder,
@@ -878,7 +878,8 @@ describe('lr-graph-query-builder', () => {
     expect(getComputedStyle(remove).color).to.equal('rgb(22, 23, 24)');
   });
 
-  it('inherits independent hover and pressed action colors from an ancestor', async () => {
+  it('inherits independent hover and pressed action colors from an ancestor', async function () {
+    this.timeout(15_000);
     const saved: GraphQuerySavedItem[] = [{ id: 's1', name: 'Coworkers', query: query() }];
     const wrapper = (await fixture(html`
       <div
@@ -915,12 +916,25 @@ describe('lr-graph-query-builder', () => {
           type: 'move',
           position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
         });
-        if (hovered) expect(getComputedStyle(button)[hovered.property], `${part} hover`).to.equal(hovered.value);
+        if (hovered) {
+          await waitUntil(
+            () => getComputedStyle(button)[hovered.property] === hovered.value,
+            `${part} hover paint did not settle`,
+          );
+          expect(getComputedStyle(button)[hovered.property], `${part} hover`).to.equal(hovered.value);
+        }
         await sendMouse({ type: 'down' });
+        await waitUntil(
+          () => {
+            const pressedStyle = getComputedStyle(button);
+            return active.every(({ property, value }) => pressedStyle[property] === value);
+          },
+          `${part} active paint did not settle`,
+        );
         const pressedStyle = getComputedStyle(button);
         for (const expectation of active) {
           expect(pressedStyle[expectation.property], `${part} active ${expectation.property}`).to.equal(
-            expectation.value
+            expectation.value,
           );
         }
       } finally {
@@ -959,9 +973,20 @@ describe('lr-graph-query-builder', () => {
       ];
       try {
         await sendMouse({ type: 'move', position });
+        await waitUntil(
+          () => getComputedStyle(button).backgroundColor !== resting,
+          `${part} hover paint did not settle`,
+        );
         const hovered = getComputedStyle(button).backgroundColor;
         expect(hovered, 'hovered fill must differ from the resting one').to.not.equal(resting);
         await sendMouse({ type: 'down' });
+        await waitUntil(
+          () => {
+            const current = getComputedStyle(button).backgroundColor;
+            return current !== hovered && current !== resting;
+          },
+          `${part} pressed paint did not settle`,
+        );
         const pressed = getComputedStyle(button).backgroundColor;
         expect(pressed, 'pressed fill must differ from the hovered one').to.not.equal(hovered);
         expect(pressed, 'pressed fill must differ from the resting one').to.not.equal(resting);

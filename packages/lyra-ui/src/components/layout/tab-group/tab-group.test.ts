@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, html, aTimeout } from "@open-wc/testing";
+import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from "@open-wc/testing";
 import "./tab-group.js";
 import "./tab.js";
 import "./tab-panel.js";
@@ -1000,9 +1000,22 @@ describe("selected/hover cssprops", () => {
     try {
       await resetMouse();
       await moveMouseTo(control);
+      await waitUntil(
+        () => getComputedStyle(control).color === "rgb(7, 8, 9)",
+        "scroll-control hover color did not settle"
+      );
       expect(getComputedStyle(control).color).to.equal("rgb(7, 8, 9)");
       await sendMouse({ type: "down" });
-      await new Promise((resolve) => requestAnimationFrame(resolve));
+      // A remote mouse command completing is not a DOM-event or paint barrier in Firefox.
+      await waitUntil(
+        () => {
+          const computed = getComputedStyle(control);
+          return control.hasAttribute("data-pressed") &&
+            computed.backgroundColor === "rgb(10, 11, 12)" &&
+            computed.color === "rgb(13, 14, 15)";
+        },
+        "scroll-control pressed theme did not settle"
+      );
       expect(control.hasAttribute("data-pressed")).to.equal(true);
       expect(getComputedStyle(control).backgroundColor).to.equal("rgb(10, 11, 12)");
       expect(getComputedStyle(control).color).to.equal("rgb(13, 14, 15)");
@@ -1017,26 +1030,34 @@ describe("selected/hover cssprops", () => {
   it("retains the existing scroll-control hover and pressed rendering when the new props are unset", async () => {
     const el = await crowded();
     const control = scrollControl(el, "end");
+    const expectedColor = resolvedInShadow(el, "color: var(--lr-color-text)", "color");
+    const expectedBackground = resolvedInShadow(
+      el,
+      "background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))",
+      "background-color"
+    );
 
     try {
       await resetMouse();
       await moveMouseTo(control);
-      expect(getComputedStyle(control).color).to.equal(
-        resolvedInShadow(el, "color: var(--lr-color-text)", "color")
+      await waitUntil(
+        () => getComputedStyle(control).color === expectedColor,
+        "default scroll-control hover color did not settle"
       );
+      expect(getComputedStyle(control).color).to.equal(expectedColor);
       await sendMouse({ type: "down" });
-      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await waitUntil(
+        () => {
+          const computed = getComputedStyle(control);
+          return control.hasAttribute("data-pressed") &&
+            computed.backgroundColor === expectedBackground &&
+            computed.color === expectedColor;
+        },
+        "default scroll-control pressed theme did not settle"
+      );
       expect(control.hasAttribute("data-pressed")).to.equal(true);
-      expect(getComputedStyle(control).backgroundColor).to.equal(
-        resolvedInShadow(
-          el,
-          "background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))",
-          "background-color"
-        )
-      );
-      expect(getComputedStyle(control).color).to.equal(
-        resolvedInShadow(el, "color: var(--lr-color-text)", "color")
-      );
+      expect(getComputedStyle(control).backgroundColor).to.equal(expectedBackground);
+      expect(getComputedStyle(control).color).to.equal(expectedColor);
     } finally {
       await resetMouse();
     }

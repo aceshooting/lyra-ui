@@ -30,6 +30,26 @@ cd "$(dirname "$0")/.."
 
 export CI=true
 
+# WTR's automatic port probe is not atomic with its later server bind. Concurrent lanes can both
+# select the same apparently-free port, then one fails with EADDRINUSE. Keep the three WTR lanes
+# on deterministic, distinct ports below the platform's ephemeral range; the other lanes use
+# server-assigned ephemeral ports and do not share this runner configuration.
+declare -Ar WTR_LANE_PORTS=(
+  [chromium]=18080
+  [firefox]=18081
+  [webkit]=18082
+)
+
+# An ordinary WTR process opens half the host's reported CPU count in browser pages. Running two
+# full-engine processes with that default alongside coverage overcommits the machine (8 + 8 + 1
+# pages on a 16-core host), producing unrelated timer and paint failures. Bound this aggregate to
+# nine browser pages while leaving standalone WTR commands on their automatic default.
+declare -Ar WTR_LANE_CONCURRENCY=(
+  [chromium]=1
+  [firefox]=4
+  [webkit]=4
+)
+
 SERIAL=0
 for arg in "$@"; do
   case "$arg" in
@@ -79,17 +99,25 @@ lane_chromium() {
   pnpm --filter @aceshooting/lyra-ui check:component-quality:built
   pnpm --filter @aceshooting/lyra-ui test:ssr
   pnpm --filter @aceshooting/lyra-ui test:hydration
-  pnpm --filter @aceshooting/lyra-ui test:coverage
+  WTR_PORT="${WTR_LANE_PORTS[chromium]}" \
+    WTR_CONCURRENCY="${WTR_LANE_CONCURRENCY[chromium]}" \
+    pnpm --filter @aceshooting/lyra-ui test:coverage
   pnpm --filter @aceshooting/lyra-ui check:coverage-floors
 }
 
 lane_firefox() {
-  WTR_BROWSER=firefox WTR_STRICT_CONSOLE=1 WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=1 \
+  WTR_PORT="${WTR_LANE_PORTS[firefox]}" \
+    WTR_CONCURRENCY="${WTR_LANE_CONCURRENCY[firefox]}" \
+    WTR_BROWSER=firefox WTR_STRICT_CONSOLE=1 \
+    WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=1 \
     pnpm --filter @aceshooting/lyra-ui test:full-engine-shard
 }
 
 lane_webkit() {
-  WTR_BROWSER=webkit WTR_STRICT_CONSOLE=1 WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=1 \
+  WTR_PORT="${WTR_LANE_PORTS[webkit]}" \
+    WTR_CONCURRENCY="${WTR_LANE_CONCURRENCY[webkit]}" \
+    WTR_BROWSER=webkit WTR_STRICT_CONSOLE=1 \
+    WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=1 \
     pnpm --filter @aceshooting/lyra-ui test:full-engine-shard
 }
 

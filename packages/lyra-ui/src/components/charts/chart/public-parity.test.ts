@@ -133,7 +133,11 @@ it("shows the legend by default, lets without-legend hide it, and keeps legend a
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.datasets = [{ label: "Revenue", data: [1, 2] }];
   await el.updateComplete;
-  await waitUntil(() => el.shadowRoot!.querySelectorAll("canvas").length === 1);
+  await waitUntil(
+    () => el.shadowRoot!.querySelectorAll("canvas").length === 1,
+    "chart canvas never rendered",
+    { timeout: 5000 }
+  );
   expect(el.shadowRoot!.querySelectorAll('[part="legend"]').length).to.equal(1);
 
   el.withoutLegend = true;
@@ -154,7 +158,11 @@ it("forwards label and description to the semantic canvas and description node",
     ></lr-chart>
   `)) as LyraChart;
   await el.updateComplete;
-  await waitUntil(() => el.shadowRoot!.querySelectorAll("canvas").length === 1);
+  await waitUntil(
+    () => el.shadowRoot!.querySelectorAll("canvas").length === 1,
+    "chart canvas never rendered",
+    { timeout: 5000 }
+  );
 
   expect(
     el.shadowRoot!.querySelector("canvas")?.getAttribute("aria-label")

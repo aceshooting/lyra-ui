@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './pagination.js';
 import type { LyraPagination } from './pagination.js';
 import { styles } from './pagination.styles.js';
@@ -649,7 +649,8 @@ describe('state color hooks', () => {
     expect(getComputedStyle(current).color).to.equal('rgb(16, 17, 18)');
   });
 
-  it('inherits independent hover and pressed colors for ordinary and current controls', async () => {
+  it('inherits independent hover and pressed colors for ordinary and current controls', async function () {
+    this.timeout(15_000);
     const wrapper = (await fixture(html`
       <div
         style="
@@ -683,9 +684,23 @@ describe('state color hooks', () => {
           type: 'move',
           position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
         });
+        await waitUntil(
+          () => {
+            const style = getComputedStyle(target);
+            return style.backgroundColor === hoverBg && style.borderTopColor === hoverBorder;
+          },
+          'pagination hover paint did not settle',
+        );
         expect(getComputedStyle(target).backgroundColor).to.equal(hoverBg);
         expect(getComputedStyle(target).borderTopColor).to.equal(hoverBorder);
         await sendMouse({ type: 'down' });
+        await waitUntil(
+          () => {
+            const style = getComputedStyle(target);
+            return style.backgroundColor === activeBg && style.borderTopColor === activeBorder;
+          },
+          'pagination pressed paint did not settle',
+        );
         expect(getComputedStyle(target).backgroundColor).to.equal(activeBg);
         expect(getComputedStyle(target).borderTopColor).to.equal(activeBorder);
       } finally {

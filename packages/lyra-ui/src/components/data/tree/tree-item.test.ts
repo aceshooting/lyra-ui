@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './tree-item.js';
 import './tree.js';
 import { LyraTreeItem } from './tree-item.js';
@@ -802,7 +802,10 @@ it('is accessible with a realistic, expanded, badged item', async () => {
 // item is the one a user presses next, so it must not be the single row with no press feedback.
 // Rendered assertion only: the selector is exactly the kind of thing that reads correct and matches
 // nothing.
-it('shows a pressed fill on a selected row, and none on a disabled one', async () => {
+it('shows a pressed fill on a selected row, and none on a disabled one', async function () {
+  // Two complete Playwright pointer gestures require several browser-command round-trips. Keep
+  // their full-sweep contention budget scoped to this rendered contract.
+  this.timeout(15_000);
   const wrapper = await fixture(
     html`<div role="tree">
       <lr-tree-item .item=${{ id: 's', label: 'Selected', selected: true }} .setSize=${2} .posInSet=${1}></lr-tree-item>
@@ -813,10 +816,14 @@ it('shows a pressed fill on a selected row, and none on a disabled one', async (
   await selectedItem!.updateComplete;
   await disabledItem!.updateComplete;
 
-  const press = async (host: LyraTreeItem): Promise<{ resting: string; pressed: string }> => {
+  const press = async (
+    host: LyraTreeItem,
+    expectChange: boolean,
+  ): Promise<{ resting: string; pressed: string }> => {
     const row = host.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
     row.scrollIntoView();
-    const resting = getComputedStyle(row).backgroundColor;
+    const fill = (): string => getComputedStyle(row).backgroundColor;
+    const resting = fill();
     const rect = row.getBoundingClientRect();
     try {
       await sendMouse({
@@ -824,17 +831,25 @@ it('shows a pressed fill on a selected row, and none on a disabled one', async (
         position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
       });
       await sendMouse({ type: 'down' });
-      return { resting, pressed: getComputedStyle(row).backgroundColor };
+      // Firefox may resolve the remote mouse command before the pointer pseudo-class is reflected
+      // in rendered style under full-suite load. Hold the button while polling the real state.
+      await waitUntil(
+        () => row.matches(':active') && (expectChange ? fill() !== resting : fill() === resting),
+        expectChange
+          ? 'the selected row never painted its pressed fill'
+          : 'the disabled row did not remain inert while pointer-active',
+      );
+      return { resting, pressed: fill() };
     } finally {
       await sendMouse({ type: 'up' });
       await resetMouse();
     }
   };
 
-  const selected = await press(selectedItem!);
+  const selected = await press(selectedItem!, true);
   expect(selected.pressed, 'a selected row must still acknowledge the press').to.not.equal(selected.resting);
 
-  const disabled = await press(disabledItem!);
+  const disabled = await press(disabledItem!, false);
   expect(disabled.pressed, 'a disabled row must stay inert under the pointer').to.equal(disabled.resting);
 });
 

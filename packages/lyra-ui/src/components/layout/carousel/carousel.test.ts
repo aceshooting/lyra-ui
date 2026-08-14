@@ -1843,17 +1843,23 @@ describe("touch scrolling and scroll-snap", () => {
       : slideRect.left - viewportRect.left;
   }
 
-  /** Waits for a smooth scroll to actually stop. Engines differ by a lot here -- Firefox's easing
-   *  is still shedding its last couple of pixels well after Chromium has finished -- so the tests
-   *  wait for the scroller to stop moving rather than for a fixed budget. */
+  /** Waits for the active real slide to reach the viewport and remain there through the 120ms
+   *  scroll-settle window. A smooth scroll may not start during the first polling interval on a
+   *  loaded engine, so two initially equal scroll offsets are not evidence that it has settled. */
   async function scrollAtRest(el: LyraCarousel): Promise<void> {
-    const viewport = viewportOf(el);
-    let previous = Number.NaN;
-    for (let attempt = 0; attempt < 40; attempt += 1) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 50));
-      if (viewport.scrollLeft === previous) return;
-      previous = viewport.scrollLeft;
-    }
+    let alignedSamples = 0;
+    await waitUntil(
+      () => {
+        const activeSlide = slidesOf(el)[el.index];
+        alignedSamples =
+          activeSlide !== undefined && Math.abs(inlineDelta(el, activeSlide)) <= 2
+            ? alignedSamples + 1
+            : 0;
+        return alignedSamples >= 4;
+      },
+      "the active slide did not settle flush with the viewport",
+      { interval: 50, timeout: 5000 },
+    );
   }
 
   async function sized(direction?: "rtl"): Promise<LyraCarousel> {

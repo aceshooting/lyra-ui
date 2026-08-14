@@ -469,17 +469,16 @@ describe('lr-terminal', () => {
       lines: { number: number }[];
     };
     const { perLine, owners } = priv.resolvedHighlightLines();
+    const expectedOwners = new Map<LyraHighlight, number>();
 
     for (const line of priv.lines) {
       const expected = bruteForceHighlightForLine(highlights, line.number);
+      if (expected && !expectedOwners.has(expected)) expectedOwners.set(expected, line.number);
       expect(perLine.get(line.number)?.id, `perLine at line ${line.number}`).to.equal(expected?.id);
     }
 
     for (const h of highlights) {
-      const expectedOwnerLine = priv.lines.find(
-        (line) => bruteForceHighlightForLine(highlights, line.number)?.id === h.id,
-      )?.number;
-      expect(owners.get(h), `owner line of ${h.id}`).to.equal(expectedOwnerLine);
+      expect(owners.get(h), `owner line of ${h.id}`).to.equal(expectedOwners.get(h));
     }
   });
 
