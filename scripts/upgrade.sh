@@ -36,7 +36,9 @@ pnpm dlx npm-check-updates@latest \
 
 echo
 echo "==> Installing workspace dependencies and refreshing pnpm-lock.yaml"
-pnpm install --prod=false
+# npm-check-updates has just changed the workspace manifests, so override pnpm's CI default of a
+# frozen lockfile and persist the upgraded dependency graph before building generated artifacts.
+pnpm install --prod=false --no-frozen-lockfile
 
 echo
 echo "==> Building all workspace packages"

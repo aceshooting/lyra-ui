@@ -99,9 +99,10 @@ export interface LyraToastItemEventMap {
  * the item. Bounded traversal appends an explicit truncation marker to a prefix, or uses a localized
  * incomplete-content fallback when no prefix fits, instead of presenting partial content as whole.
  * When a focused toast finishes hiding, focus moves to an adjacent toast or back to the pre-toast
- * control. A hide interrupted by disconnect resumes to one terminal completion if the same item
- * reconnects. Region-owned items beyond the active window stay hidden, inert, and timer-paused
- * until FIFO promotion, including an already-visible standalone item reparented into a full region.
+ * control. An accepted show or hide interrupted by disconnect resumes to one terminal completion
+ * if the same item reconnects. Region-owned items beyond the active window stay hidden, inert, and
+ * timer-paused until FIFO promotion, including an already-visible standalone item reparented into
+ * a full region.
  * Mirrors the Web Awesome `<wa-toast-item>` API under the `lr-` prefix.
  *
  * @customElement lr-toast-item

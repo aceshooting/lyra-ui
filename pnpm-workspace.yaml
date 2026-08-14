@@ -21,15 +21,15 @@ minimumReleaseAgeExclude:
   - secretlint@13.0.4
   - '@publint/pack@0.1.6'
   - publint@0.3.22 || 0.3.23
-  - '@storybook/addon-a11y@10.5.4 || 10.5.6 || 10.5.7'
-  - '@storybook/addon-docs@10.5.4 || 10.5.6 || 10.5.7'
-  - '@storybook/builder-vite@10.5.4 || 10.5.6 || 10.5.7'
-  - '@storybook/csf-plugin@10.5.4 || 10.5.6 || 10.5.7'
-  - '@storybook/react-dom-shim@10.5.4 || 10.5.6 || 10.5.7'
-  - '@storybook/web-components-vite@10.5.4 || 10.5.6 || 10.5.7'
-  - '@storybook/web-components@10.5.4 || 10.5.6 || 10.5.7'
-  - storybook@10.5.4 || 10.5.6 || 10.5.7
-  - libphonenumber-js@1.13.10
+  - '@storybook/addon-a11y@10.5.4 || 10.5.6 || 10.5.7 || 10.5.8'
+  - '@storybook/addon-docs@10.5.4 || 10.5.6 || 10.5.7 || 10.5.8'
+  - '@storybook/builder-vite@10.5.4 || 10.5.6 || 10.5.7 || 10.5.8'
+  - '@storybook/csf-plugin@10.5.4 || 10.5.6 || 10.5.7 || 10.5.8'
+  - '@storybook/react-dom-shim@10.5.4 || 10.5.6 || 10.5.7 || 10.5.8'
+  - '@storybook/web-components-vite@10.5.4 || 10.5.6 || 10.5.7 || 10.5.8'
+  - '@storybook/web-components@10.5.4 || 10.5.6 || 10.5.7 || 10.5.8'
+  - storybook@10.5.4 || 10.5.6 || 10.5.7 || 10.5.8
+  - libphonenumber-js@1.13.10 || 1.13.11
   - vite@8.2.0 || 8.2.1
   - '@oxc-parser/binding-android-arm-eabi@0.143.0'
   - '@oxc-parser/binding-android-arm64@0.143.0'
@@ -92,6 +92,7 @@ minimumReleaseAgeExclude:
   - '@changesets/write@1.0.0'
   - knip@6.32.2
   - svelte@5.56.9
+  - papaparse@5.6.0
 allowBuilds:
   esbuild: true
   rs-module-lexer: true

@@ -55,6 +55,8 @@ export interface LyraToastEventMap {
  * `<lr-toast>` — the stacking toast region. One per page is recommended. It keeps at most three
  * items active and twenty more in a hidden, inert FIFO queue. Further admissions discard the
  * oldest queued work and report the coalesced loss through an event and polite announcement.
+ * Membership is reconciled before every admission and reasserted after reconnect/reparent; a
+ * lasting region disconnect discards managed work instead of retaining nodes that could resurrect.
  * Mirrors the Web Awesome `<wa-toast>` API under the `lr-` prefix.
  *
  * @customElement lr-toast

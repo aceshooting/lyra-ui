@@ -76,6 +76,8 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
  * message is therefore the one assertive semantic surface for both static and later-open alerts,
  * without a duplicate shadow or shared live region. The optional icon wrapper remains visible as
  * decorative chrome while its flattened subtree is inert and hidden from the accessibility tree.
+ * Accepted transitions resume after reconnect and emit at most one matching terminal event;
+ * method promises still settle if a disconnect proves lasting.
  *
  * @customElement lr-alert
  * @slot - The alert's main content.
