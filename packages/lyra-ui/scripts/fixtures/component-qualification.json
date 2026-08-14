@@ -47287,7 +47287,7 @@
             },
             {
               "file": "src/components/data/tree/tree-item.test.ts",
-              "line": 772,
+              "line": 859,
               "test": "is accessible with a realistic, expanded, badged item",
               "target": "node",
               "state": "populated"
@@ -47420,7 +47420,7 @@
           "evidence": [
             {
               "file": "src/components/data/tree/tree-item.class.ts",
-              "line": 773,
+              "line": 810,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -47516,7 +47516,7 @@
             },
             {
               "file": "src/components/data/tree/tree-item.test.ts",
-              "line": 772,
+              "line": 859,
               "test": "is accessible with a realistic, expanded, badged item",
               "target": "node",
               "state": "populated"
@@ -47639,7 +47639,7 @@
           "evidence": [
             {
               "file": "src/components/data/tree/tree-item.class.ts",
-              "line": 773,
+              "line": 810,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

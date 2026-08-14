@@ -251,6 +251,10 @@ groups the primary label and optional wrapping secondary description while prese
 interactive treeitem per row. `icon`, `description` and `badge` render only in the data model —
 the declarative model has no icon/description/badge inputs, so a row written as markup renders
 `row`/`toggle`/`content`/`label` (and `group` while expanded) and nothing else.
+In the data model, every recursively rendered child forwards this complete part list under the
+same names, so one selector on the outer item, such as `lr-tree-item::part(row)`, reaches matching
+parts at every rendered depth. Declarative children remain light-DOM hosts and can be matched
+directly as `<lr-tree-item>` elements.
 
 **Themeable custom properties:** `--lr-tree-depth` (internal, set inline per row for indentation);
 `--show-duration`/`--hide-duration` (both default through `--lr-duration-base`);
