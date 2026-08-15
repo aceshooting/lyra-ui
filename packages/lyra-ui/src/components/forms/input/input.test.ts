@@ -911,14 +911,38 @@ describe('lr-input', () => {
     expect(getComputedStyle(row(el)).minBlockSize).to.equal('20px');
   });
 
-  it('keeps an action-bearing row on the shared hit-floor-aware height ladder', async () => {
-    const expected: Record<string, number> = { '2xs': 42, xs: 42, s: 42, m: 42, l: 48, xl: 56 };
+  it('keeps m and up on the 40px hit-area floor, but yields to a smaller tier\'s own control height below that', async () => {
+    // Below m, --lr-form-control-height is smaller than the 40px --lr-icon-button-size: the clear
+    // button's own icon+padding content (not the floor being widened here) still exceeds a 2xs/xs
+    // field's bare control height, so this is a smaller, tier-scaled jump rather than none at all --
+    // m and up are untouched because their own control height already covers the 40px target.
+    const expected: Record<string, number> = { '2xs': 29, xs: 29, s: 32, m: 42, l: 48, xl: 56 };
     for (const [size, height] of Object.entries(expected)) {
       const el = (await fixture(html`
         <lr-input size=${size} clearable value="content" aria-label="Name"></lr-input>
       `)) as LyraInput;
       const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!;
       expect(row.getBoundingClientRect().height, `size=${size}`).to.equal(height);
+    }
+  });
+
+  it('scales the clear-button hit-area floor with the active size tier, instead of forcing every undersized field open to the same flat height (bug)', async () => {
+    for (const size of ['2xs', 'xs', 's']) {
+      const empty = (await fixture(html`<lr-input size=${size} clearable aria-label="Name"></lr-input>`)) as LyraInput;
+      const filled = (await fixture(html`
+        <lr-input size=${size} clearable value="content" aria-label="Name"></lr-input>
+      `)) as LyraInput;
+      const emptyHeight = empty.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!.getBoundingClientRect().height;
+      const filledHeight = filled.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!.getBoundingClientRect().height;
+      // Before the fix, every tier below m was floored to the exact same ~42px the instant the
+      // clear button appeared, regardless of the field's own height -- i.e. the jump equalled
+      // 42 - emptyHeight for every one of them. A tier-scaled floor must jump by strictly less.
+      const previousUnscaledJump = 42 - emptyHeight;
+      expect(
+        filledHeight - emptyHeight,
+        `size=${size}: the clear button's hit-area floor must yield to this smaller tier's own ` +
+          'control height, not force the same jump every undersized tier saw under the flat 40px floor',
+      ).to.be.lessThan(previousUnscaledJump);
     }
   });
 

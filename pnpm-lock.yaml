@@ -80,6 +80,9 @@ importers:
       maplibre-gl:
         specifier: ^6.3.0
         version: 6.3.0
+      pdfjs-dist:
+        specifier: ^6.2.108
+        version: 6.2.108
       playwright:
         specifier: ^1.62.1
         version: 1.62.1

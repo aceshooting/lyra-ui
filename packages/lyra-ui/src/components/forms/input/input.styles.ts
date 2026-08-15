@@ -194,6 +194,11 @@ export const styles = css`
     cursor: pointer;
     color: var(--lr-color-text-quiet);
     padding: var(--lr-space-xs);
+    /* This button only exists once the field has a value/is clearable-eligible, so an unscaled
+       --lr-icon-button-size floor here would grow a field shorter than 40px the moment it appears
+       -- min() caps that floor at the active tier's own --lr-form-control-height instead, so m and
+       up (already >= 40px) keep the full WCAG 2.5.8 hit-area target untouched while 2xs/xs/s never
+       get forced open past their own control height. */
     min-inline-size: min(var(--lr-icon-button-size), var(--lr-form-control-height));
     min-block-size: min(var(--lr-icon-button-size), var(--lr-form-control-height));
     line-height: var(--lr-line-height-none);
