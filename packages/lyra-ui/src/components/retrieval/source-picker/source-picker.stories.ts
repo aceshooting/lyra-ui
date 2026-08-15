@@ -28,7 +28,7 @@ export const Default: Story = {
 };
 
 export const WithSelection: Story = {
-  render: () => html`<lr-source-picker .sources=${sources} .selectedSourceIds=${['doc1']}></lr-source-picker>`,
+  render: () => html`<lr-source-picker .sources=${sources} .selectedIds=${['doc1']}></lr-source-picker>`,
 };
 
 export const NoSelectAllNoSearch: Story = {
@@ -49,7 +49,6 @@ export const ResourceBoundedInput: Story = {
     const root: LyraSourceEntry = { id: 'root', label: 'Reports', children: [] };
     root.children = [
       root,
-      { id: '   ', label: 'blank id skipped' },
       { id: 'report', label: 'annual-report.pdf', mimeType: 'application/pdf' },
       { id: 'report', label: 'duplicate id skipped' },
     ];
@@ -81,7 +80,7 @@ export const Narrow: Story = {
             mimeType: 'text/csv',
           },
         ] satisfies LyraSourceEntry[]}
-        .selectedSourceIds=${['long-document']}
+        .selectedIds=${['long-document']}
       ></lr-source-picker>
     </div>
   `,
@@ -101,7 +100,7 @@ export const ThemedCheckedState: Story = {
     <lr-source-picker
       style="--lr-source-picker-checked-bg: ${storyColor('warningQuiet')}; --lr-source-picker-checked-border: ${storyColor('warning')}; --lr-source-picker-mixed-bg: ${storyColor('successQuiet')};"
       .sources=${sources}
-      .selectedSourceIds=${['doc1']}
+      .selectedIds=${['doc1']}
     ></lr-source-picker>
   `,
 };

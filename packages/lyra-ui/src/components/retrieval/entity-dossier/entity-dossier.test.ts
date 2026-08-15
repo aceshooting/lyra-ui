@@ -171,7 +171,7 @@ it('lets a deeply-nested composed event (lr-entity-activate from lr-entity-card,
   const listener = oneEvent(el, 'lr-entity-activate');
   focusButton.click();
   const event = await listener;
-  expect(event.detail).to.deep.equal({ entityId: 'e1' });
+  expect(event.detail).to.deep.equal({ id: 'e1' });
 });
 
 describe('provenance-tab conduit events', () => {
@@ -219,7 +219,7 @@ describe('provenance-tab conduit events', () => {
     const drill = card.shadowRoot!.querySelector('[part="drill-button"]') as HTMLElement;
     const listener = oneEvent(host(panel), 'lr-drill');
     drill.click();
-    expect((await listener).detail).to.deep.equal({ communityId: 'c1' });
+    expect((await listener).detail).to.deep.equal({ id: 'c1' });
   });
 
   it("surfaces an entity chip's lr-entity-open through the dossier host", async () => {
@@ -230,7 +230,7 @@ describe('provenance-tab conduit events', () => {
     (chip.shadowRoot!.querySelector('[part="base"]') as HTMLElement).dispatchEvent(
       new MouseEvent('dblclick', { bubbles: true, composed: true }),
     );
-    expect((await listener).detail).to.deep.equal({ entityId: 'e1' });
+    expect((await listener).detail).to.deep.equal({ id: 'e1' });
   });
 
   it("surfaces a relationship path strip's lr-relation-activate through the dossier host", async () => {
@@ -240,16 +240,10 @@ describe('provenance-tab conduit events', () => {
     const relation = strip.shadowRoot!.querySelector('[part="relation"]') as HTMLElement;
     const listener = oneEvent(host(panel), 'lr-relation-activate');
     relation.click();
-    const detail = (await listener).detail as {
-      relation: string;
-      sourceNodeId?: string;
-      targetNodeId?: string;
-      occurrenceIndex: number;
-    };
+    const detail = (await listener).detail as { relation: string; sourceId?: string; targetId?: string };
     expect(detail.relation).to.equal('discovered');
-    expect(detail.sourceNodeId).to.equal('e1');
-    expect(detail.targetNodeId).to.equal('elem1');
-    expect(detail.occurrenceIndex).to.equal(1);
+    expect(detail.sourceId).to.equal('e1');
+    expect(detail.targetId).to.equal('elem1');
   });
 });
 

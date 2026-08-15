@@ -9,10 +9,6 @@ import '../../overlays/chip/chip.class.js';
 import '../../forms/button/button.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './community-card.styles.js';
-import {
-  firstByRetrievalIdentity,
-  isNonBlankIdentity,
-} from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_communityDrillIn, LYRA_DEFAULT_communityMemberCount, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_showMoreCount, LYRA_DEFAULT_untitledCommunity } from '../../../internal/default-strings.generated.js';
@@ -33,8 +29,8 @@ export type CommunityCardAppearance = LyraFrame;
 
 export interface LyraCommunityCardEventMap {
   /** The drill button, header, or overflow chip -- all three mean "show me this whole community". */
-  'lr-drill': CustomEvent<{ communityId: string }>;
-  'lr-entity-activate': CustomEvent<{ entityId: string }>;
+  'lr-drill': CustomEvent<{ id: string }>;
+  'lr-entity-activate': CustomEvent<{ id: string }>;
 }
 
 /**
@@ -48,8 +44,8 @@ export interface LyraCommunityCardEventMap {
  *
  * @customElement lr-community-card
  * @slot actions - Extra header actions alongside the built-in drill button.
- * @event lr-drill - `detail: { communityId }`.
- * @event lr-entity-activate - A member chip was activated. `detail: { entityId }`.
+ * @event lr-drill - `detail: { id }`.
+ * @event lr-entity-activate - A member chip was activated. `detail: { id }`.
  * @csspart base - The outer bordered container.
  * @csspart header - The header row.
  * @csspart title - The community label, `role="heading" aria-level="3"` wrapping a `<button>`.
@@ -105,33 +101,27 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   }
 
   private onDrill = (): void => {
-    if (this.community && isNonBlankIdentity(this.community.id)) {
-      this.emit('lr-drill', { communityId: this.community.id });
-    }
+    if (this.community) this.emit('lr-drill', { id: this.community.id });
   };
 
   override render(): TemplateResult {
-    if (!this.community || !isNonBlankIdentity(this.community.id)) {
+    if (!this.community) {
       return html`<div part="base">
         <lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>
       </div>`;
     }
     const community = this.community;
-    const members = firstByRetrievalIdentity(
-      this.members,
-      (member) => member?.id
-    );
     const titleText = community.label || this.localize('untitledCommunity');
     const suppliedMemberCount = community.memberCount;
     const memberCount = Math.max(
-      members.length,
+      this.members.length,
       suppliedMemberCount !== undefined &&
         Number.isSafeInteger(suppliedMemberCount) &&
         suppliedMemberCount >= 0
         ? suppliedMemberCount
-        : members.length
+        : this.members.length
     );
-    const visibleMembers = members.slice(0, this.effectiveMaxMembers);
+    const visibleMembers = this.members.slice(0, this.effectiveMaxMembers);
     const overflowCount = Math.max(0, memberCount - visibleMembers.length);
     const numberFormat = getNumberFormat(this.effectiveLocale);
 
@@ -164,8 +154,7 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
                 (m) => html`<button
                   part="member"
                   type="button"
-                  @click=${() =>
-                    this.emit('lr-entity-activate', { entityId: m.id })}
+                  @click=${() => this.emit('lr-entity-activate', { id: m.id })}
                 >
                   <lr-chip>${m.label || m.id}</lr-chip>
                 </button>`

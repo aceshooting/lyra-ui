@@ -17,7 +17,6 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
-import { isNonBlankIdentity } from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_noData, LYRA_DEFAULT_pathNodeStatus, LYRA_DEFAULT_pathRelationStatus, LYRA_DEFAULT_pathStripLabel } from '../../../internal/default-strings.generated.js';
@@ -28,22 +27,12 @@ export type LyraPathElement =
   | { kind: 'edge'; relation: string; directed?: boolean; reverse?: boolean };
 
 export interface LyraPathStripEventMap {
-  'lr-entity-activate': CustomEvent<{
-    entityId: string;
-    occurrenceIndex: number;
-  }>;
+  'lr-entity-activate': CustomEvent<{ id: string }>;
   'lr-relation-activate': CustomEvent<{
     relation: string;
-    sourceNodeId?: string;
-    targetNodeId?: string;
-    occurrenceIndex: number;
+    sourceId?: string;
+    targetId?: string;
   }>;
-}
-
-interface PathOccurrence {
-  readonly element: LyraPathElement;
-  /** Index in the caller's original path, retained so repeated identities stay addressable. */
-  readonly occurrenceIndex: number;
 }
 
 /**
@@ -55,11 +44,10 @@ interface PathOccurrence {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-path-strip
- * @event lr-entity-activate - A node element activated. `detail: { entityId, occurrenceIndex }`.
- * @event lr-relation-activate - An edge element activated. `detail: { relation, sourceNodeId?,
- * targetNodeId?, occurrenceIndex }` — source/target resolved from the adjacent retained node
- * elements, `undefined` when the path is malformed at that position. `occurrenceIndex` is the
- * element's index in the supplied path, so deliberately repeated identities remain distinct.
+ * @event lr-entity-activate - A node element activated. `detail: { id }`.
+ * @event lr-relation-activate - An edge element activated. `detail: { relation, sourceId?,
+ * targetId? }` — source/target resolved from the adjacent node elements, `undefined` when the
+ * path is malformed at that position.
  * @csspart base - The root wrapper, hosting the delegated roving-tabindex keydown handler.
  * @csspart node - One `node`-kind element (a `<button>`).
  * @csspart relation - One `edge`-kind element's relation label (a `<button>`).
@@ -94,31 +82,6 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   @state() private liveText = '';
   private restoreFocusAfterPathChange = false;
   private announcementSink?: AnnouncementSink;
-  private pathOccurrenceSource?: readonly LyraPathElement[];
-  private pathOccurrenceSnapshot: readonly PathOccurrence[] = [];
-
-  private get pathOccurrences(): readonly PathOccurrence[] {
-    if (this.pathOccurrenceSource === this.path)
-      return this.pathOccurrenceSnapshot;
-    this.pathOccurrenceSource = this.path;
-    const source = Array.isArray(this.path) ? this.path : [];
-    this.pathOccurrenceSnapshot = Object.freeze(
-      source.flatMap((element, occurrenceIndex): PathOccurrence[] => {
-        if (element?.kind === 'node') {
-          return isNonBlankIdentity(element.node?.id)
-            ? [{ element, occurrenceIndex }]
-            : [];
-        }
-        if (element?.kind === 'edge') {
-          return isNonBlankIdentity(element.relation)
-            ? [{ element, occurrenceIndex }]
-            : [];
-        }
-        return [];
-      })
-    );
-    return this.pathOccurrenceSnapshot;
-  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -143,7 +106,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
       ) ?? false;
     this.activeIndex = Math.min(
       this.activeIndex,
-      Math.max(0, this.pathOccurrences.length - 1)
+      Math.max(0, this.path.length - 1)
     );
   }
 
@@ -155,7 +118,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     // Run it after this update completes so that reactive announcement does not schedule another
     // update from inside updated() and trigger Lit's change-in-update warning.
     this.scheduleAfterUpdate(() => {
-      if (this.pathOccurrences.length === 0) {
+      if (this.path.length === 0) {
         this.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();
         return;
       }
@@ -167,30 +130,25 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   }
 
   private activate(index: number): void {
-    const occurrence = this.pathOccurrences[index];
-    if (!occurrence) return;
-    const el = occurrence.element;
+    const el = this.path[index];
+    if (!el) return;
     if (el.kind === 'node') {
-      this.emit('lr-entity-activate', {
-        entityId: el.node.id,
-        occurrenceIndex: occurrence.occurrenceIndex,
-      });
+      this.emit('lr-entity-activate', { id: el.node.id });
       return;
     }
-    const source = this.pathOccurrences[index - 1]?.element;
-    const target = this.pathOccurrences[index + 1]?.element;
+    const source = this.path[index - 1];
+    const target = this.path[index + 1];
     this.emit('lr-relation-activate', {
       relation: el.relation,
-      sourceNodeId: source?.kind === 'node' ? source.node.id : undefined,
-      targetNodeId: target?.kind === 'node' ? target.node.id : undefined,
-      occurrenceIndex: occurrence.occurrenceIndex,
+      sourceId: source?.kind === 'node' ? source.node.id : undefined,
+      targetId: target?.kind === 'node' ? target.node.id : undefined,
     });
   }
 
   private onElementFocus(index: number): void {
     this.activeIndex = index;
-    const el = this.pathOccurrences[index]?.element;
-    const total = this.pathOccurrences.length;
+    const el = this.path[index];
+    const total = this.path.length;
     const numberFormat = getNumberFormat(this.effectiveLocale);
     this.liveText =
       el?.kind === 'node'
@@ -228,7 +186,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    const count = this.pathOccurrences.length;
+    const count = this.path.length;
     if (count === 0) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -297,13 +255,12 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   }
 
   override render(): TemplateResult {
-    const path = this.pathOccurrences;
     const label = retrievalSemanticLabel(
       this,
       this.label || this.localize('pathStripLabel')
     );
     const role = retrievalSemanticRole(this, 'group');
-    if (path.length === 0) {
+    if (this.path.length === 0) {
       return html`<div
         part="base"
         role=${role ?? nothing}
@@ -321,10 +278,10 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
         @keydown=${this.onKeyDown}
       >
         <lr-scroller orientation="horizontal" controls>
-          ${path.map((occurrence, i) =>
-            occurrence.element.kind === 'node'
-              ? this.renderNode(occurrence.element.node, i)
-              : this.renderEdge(occurrence.element, i)
+          ${this.path.map((el, i) =>
+            el.kind === 'node'
+              ? this.renderNode(el.node, i)
+              : this.renderEdge(el, i)
           )}
         </lr-scroller>
         <div class="sr-only" aria-hidden="true">${this.liveText}</div>

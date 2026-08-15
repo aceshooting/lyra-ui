@@ -14,7 +14,6 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
-import { firstByIdentity } from '../../agent-tools/collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_retrievalCompareDenseScore, LYRA_DEFAULT_retrievalCompareEmpty, LYRA_DEFAULT_retrievalCompareFinalScore, LYRA_DEFAULT_retrievalCompareLabel, LYRA_DEFAULT_retrievalCompareOverlap, LYRA_DEFAULT_retrievalCompareRank, LYRA_DEFAULT_retrievalCompareRerankScore, LYRA_DEFAULT_retrievalCompareSparseScore } from '../../../internal/default-strings.generated.js';
@@ -38,8 +37,6 @@ export interface LyraRetrievalCompareEventMap {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
- * Blank set ids and later duplicates are ignored before overlap, rendering, or activation. Within
- * each retained set, blank chunk ids and later duplicates are likewise ignored. First records win.
  *
  * @customElement lr-retrieval-compare
  * @event lr-chunk-select - A result was activated. `detail: { setId, chunk }`.
@@ -101,18 +98,8 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     return Math.max(1, finiteCount(this.topK, 10));
   }
 
-  private get normalizedSets(): RetrievalComparisonSet[] {
-    return firstByIdentity(
-      Array.isArray(this.sets) ? this.sets : [],
-      (set) => set.id
-    );
-  }
-
   private orderedChunks(set: RetrievalComparisonSet): RetrievalChunk[] {
-    return firstByIdentity(
-      Array.isArray(set.chunks) ? set.chunks : [],
-      (chunk) => chunk.id
-    )
+    return set.chunks
       .map((chunk, index) => ({ chunk, index, rank: this.rank(chunk, index) }))
       .sort(
         (a, b) =>
@@ -139,19 +126,19 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     }).format(finiteRange(value, 0, 0, 1));
   }
 
-  private overlaps(sets: readonly RetrievalComparisonSet[]): string[] {
+  private overlaps(): string[] {
     const summaries: string[] = [];
-    for (let leftIndex = 0; leftIndex < sets.length; leftIndex += 1) {
-      const leftSet = sets[leftIndex]!;
+    for (let leftIndex = 0; leftIndex < this.sets.length; leftIndex += 1) {
+      const leftSet = this.sets[leftIndex]!;
       const left = new Set(
         this.orderedChunks(leftSet).map((chunk) => chunk.id)
       );
       for (
         let rightIndex = leftIndex + 1;
-        rightIndex < sets.length;
+        rightIndex < this.sets.length;
         rightIndex += 1
       ) {
-        const rightSet = sets[rightIndex]!;
+        const rightSet = this.sets[rightIndex]!;
         const right = new Set(
           this.orderedChunks(rightSet).map((chunk) => chunk.id)
         );
@@ -233,13 +220,12 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
   };
 
   override render(): TemplateResult {
-    const sets = this.normalizedSets;
     const label = retrievalSemanticLabel(
       this,
       this.label || this.localize('retrievalCompareLabel')
     );
     const role = retrievalSemanticRole(this, 'region');
-    if (!sets.length) {
+    if (!this.sets.length) {
       return html`<section
         part="base"
         role=${role ?? nothing}
@@ -251,7 +237,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
         ></lr-empty>
       </section>`;
     }
-    const overlaps = this.overlaps(sets);
+    const overlaps = this.overlaps();
     return html`
       <section
         part="base"
@@ -260,7 +246,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
       >
         ${overlaps.map((summary) => html`<p part="overlap">${summary}</p>`)}
         <div part="sets">
-          ${sets.map((set, index) => this.renderSet(set, index))}
+          ${this.sets.map((set, index) => this.renderSet(set, index))}
         </div>
       </section>
     `;

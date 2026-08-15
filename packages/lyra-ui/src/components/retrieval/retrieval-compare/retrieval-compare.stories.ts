@@ -8,14 +8,6 @@ const meta: Meta = {
   title: 'Retrieval Compare',
   component: 'lr-retrieval-compare',
   tags: ['autodocs'],
-  parameters: {
-    docs: {
-      description: {
-        component:
-          'A retrieval workbench that canonicalizes set ids and each set\'s nested chunk ids first-wins before overlap/count calculations, ranking, selection, rendering, and events.',
-      },
-    },
-  },
 };
 export default meta;
 type Story = StoryObj;

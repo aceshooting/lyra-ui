@@ -3,19 +3,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './embedding-explorer.js';
 import type { EmbeddingPoint } from './embedding-explorer.class.js';
 
-const meta: Meta = {
-  title: 'EmbeddingExplorer',
-  component: 'lr-embedding-explorer',
-  tags: ['autodocs'],
-  parameters: {
-    docs: {
-      description: {
-        component:
-          'An accessible projection viewer that omits non-finite, blank-id, and later duplicate points before roving focus, selectedPointId state, rendering, and point events.',
-      },
-    },
-  },
-};
+const meta: Meta = { title: 'EmbeddingExplorer', component: 'lr-embedding-explorer', tags: ['autodocs'] };
 export default meta;
 type Story = StoryObj;
 
@@ -45,7 +33,7 @@ const denseLongLabelPoints: EmbeddingPoint[] = [
   { id: '12', x: -0.6, y: -0.4, label: 'unbrokenidentifierstringusedtoexercisenarrowallocationwrapping', cluster: 'reference' },
 ];
 
-export const Default: Story = { render: () => html`<lr-embedding-explorer .points=${points} .selectedPointId=${'3'}></lr-embedding-explorer>` };
+export const Default: Story = { render: () => html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>` };
 export const Empty: Story = { render: () => html`<lr-embedding-explorer></lr-embedding-explorer>` };
 
 /** `height` sizes the plot through `--lr-embedding-explorer-height`. */

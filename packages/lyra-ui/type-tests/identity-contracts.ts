@@ -25,22 +25,12 @@ import type {
   LyraThreadListEventMap,
 } from '../src/components/conversation/thread-list/thread-list.class.js';
 import type { LyraRetrievalTraceEventMap } from '../src/components/retrieval/retrieval-trace/retrieval-trace.class.js';
-import type { LyraChunkInspectorEventMap } from '../src/components/retrieval/chunk-inspector/chunk-inspector.class.js';
 import type {
   LyraDocumentLibrary,
   LyraDocumentLibraryEventMap,
 } from '../src/components/data/document-library/document-library.class.js';
 import type { LyraFlowCanvasEventMap } from '../src/components/data/flow-canvas/flow-canvas.class.js';
 import type { LyraEnvListEventMap } from '../src/components/data/env-list/env-list.class.js';
-import type { LyraGraphQueryBuilderEventMap } from '../src/components/data/graph-query-builder/graph-query-builder.class.js';
-import type { LyraConditionBuilderEventMap } from '../src/components/data/condition-builder/condition-builder.class.js';
-import type { LyraMemoryPanelEventMap } from '../src/components/retrieval/memory-panel/memory-panel.class.js';
-import type { LyraEmbeddingExplorer } from '../src/components/retrieval/embedding-explorer/embedding-explorer.class.js';
-import type { LyraVirtualList } from '../src/components/layout/virtual-list/virtual-list.class.js';
-import type {
-  DataGridSelectionDetail,
-  LyraDataGrid,
-} from '../src/components/data/data-grid/data-grid.class.js';
 
 const command: LyraCommand = { commandId: 'save', label: 'Save' };
 
@@ -137,45 +127,6 @@ const legacyGroupToggle: LyraThreadListEventMap['lr-group-toggle']['detail'] = {
 const stageSelection: LyraRetrievalTraceEventMap['lr-stage-select']['detail'] = { stageId: 'retrieve' };
 // @ts-expect-error stage selection detail uses stageId.
 const legacyStageSelection: LyraRetrievalTraceEventMap['lr-stage-select']['detail'] = { id: 'retrieve' };
-const stageChunkAction: LyraRetrievalTraceEventMap['lr-stage-chunk-action']['detail'] = {
-  stageId: 'retrieve',
-  action: 'open',
-  chunkId: 'chunk-a',
-  sourceId: 'document-a',
-};
-// @ts-expect-error stage chunk actions use chunkId.
-const legacyStageChunkAction: LyraRetrievalTraceEventMap['lr-stage-chunk-action']['detail'] = { stageId: 'retrieve', action: 'open', id: 'chunk-a', sourceId: 'document-a' };
-const chunkOpen: LyraChunkInspectorEventMap['lr-chunk-open']['detail'] = {
-  chunkId: 'chunk-a',
-  sourceId: 'document-a',
-};
-// @ts-expect-error chunk activation detail uses chunkId.
-const legacyChunkOpen: LyraChunkInspectorEventMap['lr-chunk-open']['detail'] = { id: 'chunk-a', sourceId: 'document-a' };
-const chunkExpand: LyraChunkInspectorEventMap['lr-expand']['detail'] = {
-  chunkId: 'chunk-a',
-  expanded: true,
-};
-
-const memoryAdd: LyraMemoryPanelEventMap['lr-add']['detail'] = {
-  memory: { id: 'memory-a', text: 'Remember this' },
-};
-// @ts-expect-error memory additions expose the domain-named memory field.
-const legacyMemoryAdd: LyraMemoryPanelEventMap['lr-add']['detail'] = { item: { id: 'memory-a', text: 'Remember this' } };
-const memoryRemove: LyraMemoryPanelEventMap['lr-remove']['detail'] = {
-  memoryId: 'memory-a',
-  scope: 'long-term',
-};
-const memoryExpand: LyraMemoryPanelEventMap['lr-expand']['detail'] = {
-  memoryId: 'memory-a',
-  scope: 'long-term',
-  expanded: true,
-};
-// @ts-expect-error memory actions use memoryId instead of a generic id.
-const legacyMemoryRemove: LyraMemoryPanelEventMap['lr-remove']['detail'] = { id: 'memory-a', scope: 'long-term' };
-declare const embeddingExplorer: LyraEmbeddingExplorer;
-embeddingExplorer.selectedPointId = 'point-a';
-// @ts-expect-error controlled embedding selection uses selectedPointId.
-embeddingExplorer.selectedId = 'point-a';
 
 const documentOpen: LyraDocumentLibraryEventMap['lr-open']['detail'] = { documentId: 'document-a' };
 // @ts-expect-error document open detail uses documentId.
@@ -206,43 +157,6 @@ const revealChange: LyraEnvListEventMap['lr-reveal-change']['detail'] = {
 // @ts-expect-error reveal detail uses envName.
 const legacyRevealChange: LyraEnvListEventMap['lr-reveal-change']['detail'] = { name: 'SERVICE_TOKEN', revealed: true };
 
-const queryLoad: LyraGraphQueryBuilderEventMap['lr-query-load']['detail'] = {
-  queryId: 'query-a',
-  query: {
-    startId: 'node-a',
-    endId: '',
-    relationshipTypes: [],
-    nodeTypes: [],
-    direction: 'both',
-    minHops: 1,
-    maxHops: 3,
-  },
-};
-// @ts-expect-error saved-query actions use queryId.
-const legacyQueryDelete: LyraGraphQueryBuilderEventMap['lr-query-delete']['detail'] = { id: 'query-a' };
-const conditionRemove: LyraConditionBuilderEventMap['lr-remove-condition']['detail'] = {
-  conditionId: 'condition-a',
-};
-// @ts-expect-error condition removal uses conditionId.
-const legacyConditionRemove: LyraConditionBuilderEventMap['lr-remove-condition']['detail'] = { id: 'condition-a' };
-
-declare const virtualList: LyraVirtualList;
-virtualList.activeItemId = 'row-a';
-// @ts-expect-error controlled virtual-row identity uses activeItemId.
-virtualList.activeId = 'row-a';
-
-declare const dataGrid: LyraDataGrid;
-dataGrid.selectedRowKeys = ['row-a'];
-dataGrid.expandedRowKeys = ['row-a'];
-// Mirrored compatibility aliases remain accepted.
-dataGrid.selectedKeys = ['row-a'];
-dataGrid.expandedKeys = ['row-a'];
-const dataGridSelection: DataGridSelectionDetail = {
-  selectedRowKeys: ['row-a'],
-  selectedKeys: ['row-a'],
-  selectedRows: [],
-};
-
 void view;
 void legacyView;
 void step;
@@ -267,16 +181,6 @@ void groupToggle;
 void legacyGroupToggle;
 void stageSelection;
 void legacyStageSelection;
-void stageChunkAction;
-void legacyStageChunkAction;
-void chunkOpen;
-void legacyChunkOpen;
-void chunkExpand;
-void memoryAdd;
-void legacyMemoryAdd;
-void memoryRemove;
-void memoryExpand;
-void legacyMemoryRemove;
 void documentOpen;
 void legacyDocumentOpen;
 void documentSelection;
@@ -286,8 +190,3 @@ void legacyNodeActivation;
 void edgeActivation;
 void revealChange;
 void legacyRevealChange;
-void queryLoad;
-void legacyQueryDelete;
-void conditionRemove;
-void legacyConditionRemove;
-void dataGridSelection;

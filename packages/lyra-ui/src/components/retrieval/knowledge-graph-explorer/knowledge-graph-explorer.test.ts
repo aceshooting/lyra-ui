@@ -12,7 +12,7 @@ import type {
   LyraKnowledgeGraphExplorerEventMap,
 } from './knowledge-graph-explorer.js';
 import type {
-  LyraGraphCommunity,
+  GraphCommunity,
   LyraGraph,
   LyraGraphLink,
   LyraGraphNode,
@@ -439,7 +439,7 @@ describe('lr-knowledge-graph-explorer', () => {
     });
     el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
       new CustomEvent('lr-entity-activate', {
-        detail: { entityId: 'marie' },
+        detail: { id: 'marie' },
         bubbles: true,
         composed: true,
       })
@@ -457,18 +457,14 @@ describe('lr-knowledge-graph-explorer', () => {
       LyraKnowledgeGraphExplorerEventMap['lr-community-click'],
       LyraKnowledgeGraphExplorerEventMap['lr-relation-activate']
     ] = [
-      new CustomEvent('lr-node-click', {
-        detail: { nodeId: 'a', x: 1, y: 2 },
-      }),
+      new CustomEvent('lr-node-click', { detail: { id: 'a', x: 1, y: 2 } }),
       new CustomEvent('lr-link-click', {
-        detail: { sourceNodeId: 'a', targetNodeId: 'b' },
+        detail: { source: 'a', target: 'b' },
       }),
-      new CustomEvent('lr-node-expand', { detail: { nodeId: 'a' } }),
-      new CustomEvent('lr-community-click', {
-        detail: { communityId: 'community' },
-      }),
+      new CustomEvent('lr-node-expand', { detail: { id: 'a' } }),
+      new CustomEvent('lr-community-click', { detail: { id: 'community' } }),
       new CustomEvent('lr-relation-activate', {
-        detail: { relation: 'related_to', occurrenceIndex: 0 },
+        detail: { relation: 'related_to' },
       }),
     ];
     expect(events.map((event) => event.type)).to.deep.equal([
@@ -761,8 +757,8 @@ describe('lr-knowledge-graph-explorer', () => {
     findPathButton.click();
     const pathEvent = await pathListener;
     expect(pathEvent.detail).to.deep.equal({
-      sourceNodeId: 'marie',
-      targetNodeId: 'pierre',
+      sourceId: 'marie',
+      targetId: 'pierre',
     });
 
     listener = oneEvent(el, 'lr-pin-change');
@@ -1001,7 +997,7 @@ describe('lr-knowledge-graph-explorer', () => {
       };
       graphEl(el).dispatchEvent(
         new CustomEvent('lr-node-click', {
-          detail: { nodeId: 'marie', x: 0, y: 0 },
+          detail: { id: 'marie', x: 0, y: 0 },
           bubbles: true,
           composed: true,
         })
@@ -1152,13 +1148,13 @@ describe('lr-knowledge-graph-explorer', () => {
     const listener = oneEvent(el, 'lr-node-expand');
     neighborList.dispatchEvent(
       new CustomEvent('lr-node-expand', {
-        detail: { nodeId: 'pierre' },
+        detail: { id: 'pierre' },
         bubbles: true,
         composed: true,
       })
     );
     const event = await listener;
-    expect(event.detail).to.deep.equal({ nodeId: 'pierre' });
+    expect(event.detail).to.deep.equal({ id: 'pierre' });
   });
 
   it('closing the details popover clears the current selection', async () => {
@@ -1359,9 +1355,7 @@ describe('lr-knowledge-graph-explorer', () => {
     // pending node id), then the native click that bubbles out of it -- both dispatched
     // synchronously so the native click consumes pendingNodeId before the queued microtask does.
     graph.dispatchEvent(
-      new CustomEvent('lr-node-click', {
-        detail: { nodeId: 'marie', x: 0, y: 0 },
-      })
+      new CustomEvent('lr-node-click', { detail: { id: 'marie', x: 0, y: 0 } })
     );
     graph.dispatchEvent(
       new MouseEvent('click', {
@@ -1396,9 +1390,7 @@ describe('lr-knowledge-graph-explorer', () => {
     // Dispatched straight on the <lr-graph> host itself (not on a rendered node circle inside its
     // shadow root), so `event.composedPath()` never contains a `[part="node"]` element.
     graph.dispatchEvent(
-      new CustomEvent('lr-node-click', {
-        detail: { nodeId: 'marie', x: 0, y: 0 },
-      })
+      new CustomEvent('lr-node-click', { detail: { id: 'marie', x: 0, y: 0 } })
     );
     graph.dispatchEvent(
       new MouseEvent('click', {
@@ -1520,7 +1512,7 @@ describe('lr-knowledge-graph-explorer', () => {
 
     graphEl(el).dispatchEvent(
       new CustomEvent('lr-node-click', {
-        detail: { nodeId: 'removed-node', x: 12, y: 34 },
+        detail: { id: 'removed-node', x: 12, y: 34 },
       })
     );
     await el.updateComplete;
@@ -1573,7 +1565,7 @@ describe('lr-knowledge-graph-explorer', () => {
   });
 
   it('communityLabelFor resolves a known label, falls back for unknown or unlabeled communities, and to empty when absent', async () => {
-    const testCommunities: LyraGraphCommunity[] = [
+    const testCommunities: GraphCommunity[] = [
       { id: 'sci', label: 'Scientists', memberIds: ['marie'] },
       { id: 'unlabeled-community', memberIds: ['radium'] },
     ];

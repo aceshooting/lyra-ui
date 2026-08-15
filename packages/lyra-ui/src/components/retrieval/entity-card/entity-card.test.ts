@@ -1,31 +1,31 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import './entity-card.js';
-import type { LyraEntityCard, LyraEntity } from './entity-card.js';
-import { styles } from './entity-card.styles.js';
-import type { LyraResultField } from '../../agent-tools/result-card/result-field.class.js';
+import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import "./entity-card.js";
+import type { LyraEntityCard, LyraEntity } from "./entity-card.js";
+import { styles } from "./entity-card.styles.js";
+import type { LyraResultField } from "../../agent-tools/result-card/result-field.class.js";
 
 const entity: LyraEntity = {
-  id: 'e1',
-  label: 'Marie Curie',
-  type: 'person',
-  description: 'Physicist and chemist.',
-  properties: { born: 1867, field: 'Physics' },
+  id: "e1",
+  label: "Marie Curie",
+  type: "person",
+  description: "Physicist and chemist.",
+  properties: { born: 1867, field: "Physics" },
   degree: 5,
-  communityId: 'c1',
+  communityId: "c1",
 };
 
-const types = [{ id: 'person', label: 'Person', color: '#7c3aed' }];
+const types = [{ id: "person", label: "Person", color: "#7c3aed" }];
 
-it('renders the noData empty state when entity is null (the default)', async () => {
+it("renders the noData empty state when entity is null (the default)", async () => {
   const el = (await fixture(
     html`<lr-entity-card></lr-entity-card>`
   )) as LyraEntityCard;
   expect(el.entity).to.equal(null);
-  expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
+  expect(el.shadowRoot!.querySelector("lr-empty")).to.exist;
   expect(el.shadowRoot!.querySelector('[part="header"]') == null).to.be.true;
 });
 
-it('renders label, description, and property rows for a given entity', async () => {
+it("renders label, description, and property rows for a given entity", async () => {
   const el = (await fixture(
     html`<lr-entity-card></lr-entity-card>`
   )) as LyraEntityCard;
@@ -33,26 +33,26 @@ it('renders label, description, and property rows for a given entity', async () 
   await el.updateComplete;
   expect(
     el.shadowRoot!.querySelector('[part="title"]')!.textContent
-  ).to.include('Marie Curie');
+  ).to.include("Marie Curie");
   expect(
     el.shadowRoot!.querySelector('[part="description"]')!.textContent
-  ).to.include('Physicist');
+  ).to.include("Physicist");
   const rows = el.shadowRoot!.querySelectorAll('[part="property"]');
   expect(rows.length).to.equal(2);
 });
 
-it('falls back to untitledEntity when label is missing', async () => {
+it("falls back to untitledEntity when label is missing", async () => {
   const el = (await fixture(
     html`<lr-entity-card></lr-entity-card>`
   )) as LyraEntityCard;
-  el.entity = { id: 'e2', label: '' };
+  el.entity = { id: "e2", label: "" };
   await el.updateComplete;
   expect(
     el.shadowRoot!.querySelector('[part="title"]')!.textContent
-  ).to.include('Untitled entity');
+  ).to.include("Untitled entity");
 });
 
-it('resolves the type badge label/color against types, falling back to the raw type id', async () => {
+it("resolves the type badge label/color against types, falling back to the raw type id", async () => {
   const el = (await fixture(
     html`<lr-entity-card></lr-entity-card>`
   )) as LyraEntityCard;
@@ -61,37 +61,37 @@ it('resolves the type badge label/color against types, falling back to the raw t
   await el.updateComplete;
   expect(
     el.shadowRoot!.querySelector('[part="type-badge"]')!.textContent
-  ).to.include('Person');
+  ).to.include("Person");
 
-  el.entity = { ...entity, type: 'unknown-type' };
+  el.entity = { ...entity, type: "unknown-type" };
   await el.updateComplete;
   expect(
     el.shadowRoot!.querySelector('[part="type-badge"]')!.textContent
-  ).to.include('unknown-type');
+  ).to.include("unknown-type");
 });
 
-it('renders degree and community rows with their localized labels', async () => {
+it("renders degree and community rows with their localized labels", async () => {
   const el = (await fixture(
     html`<lr-entity-card></lr-entity-card>`
   )) as LyraEntityCard;
   el.entity = entity;
-  el.communityLabel = 'Nobel laureates';
+  el.communityLabel = "Nobel laureates";
   await el.updateComplete;
   const degree = el.shadowRoot!.querySelector(
     '[part="degree"]'
   ) as LyraResultField;
-  expect(degree.label).to.equal('Connections');
-  expect(degree.value).to.equal('5');
+  expect(degree.label).to.equal("Connections");
+  expect(degree.value).to.equal("5");
   const community = el.shadowRoot!.querySelector(
     '[part="community"]'
   ) as LyraResultField;
-  expect(community.label).to.equal('Community');
-  expect(community.textContent).to.include('Nobel laureates');
+  expect(community.label).to.equal("Community");
+  expect(community.textContent).to.include("Nobel laureates");
 });
 
-it('localizes the degree row label via this.localize() when .strings overrides entityDegree', async () => {
+it("localizes the degree row label via this.localize() when .strings overrides entityDegree", async () => {
   const el = (await fixture(html`
-    <lr-entity-card .strings=${{ entityDegree: 'Connexions' }}></lr-entity-card>
+    <lr-entity-card .strings=${{ entityDegree: "Connexions" }}></lr-entity-card>
   `)) as LyraEntityCard;
   el.entity = entity;
   await el.updateComplete;
@@ -101,10 +101,10 @@ it('localizes the degree row label via this.localize() when .strings overrides e
   await degree.updateComplete;
   expect(
     degree.shadowRoot!.querySelector('[part="label"]')!.textContent
-  ).to.include('Connexions');
+  ).to.include("Connexions");
 });
 
-it('emits lr-entity-activate from the built-in focus button', async () => {
+it("emits lr-entity-activate from the built-in focus button", async () => {
   const el = (await fixture(
     html`<lr-entity-card></lr-entity-card>`
   )) as LyraEntityCard;
@@ -113,13 +113,13 @@ it('emits lr-entity-activate from the built-in focus button', async () => {
   const button = el.shadowRoot!.querySelector(
     '[part="focus-button"]'
   ) as HTMLElement;
-  const listener = oneEvent(el, 'lr-entity-activate');
+  const listener = oneEvent(el, "lr-entity-activate");
   button.click();
   const event = await listener;
-  expect(event.detail).to.deep.equal({ entityId: 'e1' });
+  expect(event.detail).to.deep.equal({ id: "e1" });
 });
 
-it('hides the focus button when showFocusButton is false', async () => {
+it("hides the focus button when showFocusButton is false", async () => {
   const el = (await fixture(
     html`<lr-entity-card></lr-entity-card>`
   )) as LyraEntityCard;
@@ -145,13 +145,13 @@ it('show-focus-button="false" (plain HTML attribute) also hides the focus button
   ).to.equal(0);
 });
 
-it('is accessible with a full entity', async () => {
+it("is accessible with a full entity", async () => {
   const el = (await fixture(
     html`<lr-entity-card></lr-entity-card>`
   )) as LyraEntityCard;
   el.entity = entity;
   el.types = types;
-  el.communityLabel = 'Nobel laureates';
+  el.communityLabel = "Nobel laureates";
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
@@ -184,54 +184,54 @@ it('defaults to compact=false and frame="card", rendering identically to those v
   )) as LyraEntityCard;
 
   expect(implicit.compact).to.be.false;
-  expect(implicit.frame).to.equal('card');
-  expect(implicit.hasAttribute('compact')).to.be.false;
-  expect(implicit.getAttribute('frame')).to.equal('card');
+  expect(implicit.frame).to.equal("card");
+  expect(implicit.hasAttribute("compact")).to.be.false;
+  expect(implicit.getAttribute("frame")).to.equal("card");
 
   expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
   const chrome = baseChrome(implicit);
-  expect(chrome.paddingTop).to.equal('12px'); // --lr-space-m
-  expect(chrome.rowGap).to.equal('8px'); // --lr-space-s
-  expect(chrome.borderTopWidth).to.equal('1px');
-  expect(chrome.borderTopStyle).to.equal('solid');
-  expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  expect(chrome.paddingTop).to.equal("12px"); // --lr-space-m
+  expect(chrome.rowGap).to.equal("8px"); // --lr-space-s
+  expect(chrome.borderTopWidth).to.equal("1px");
+  expect(chrome.borderTopStyle).to.equal("solid");
+  expect(chrome.backgroundColor).to.not.equal("rgba(0, 0, 0, 0)");
 });
 
-it('reflects compact and tightens the base padding/gap, keeping the card border', async () => {
+it("reflects compact and tightens the base padding/gap, keeping the card border", async () => {
   const el = (await fixture(
     html`<lr-entity-card compact .entity=${entity}></lr-entity-card>`
   )) as LyraEntityCard;
-  expect(el.hasAttribute('compact')).to.be.true;
+  expect(el.hasAttribute("compact")).to.be.true;
   const chrome = baseChrome(el);
-  expect(chrome.paddingTop).to.equal('8px'); // --lr-space-s
-  expect(chrome.rowGap).to.equal('4px'); // --lr-space-xs
-  expect(chrome.borderTopWidth).to.equal('1px');
-  expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  expect(chrome.paddingTop).to.equal("8px"); // --lr-space-s
+  expect(chrome.rowGap).to.equal("4px"); // --lr-space-xs
+  expect(chrome.borderTopWidth).to.equal("1px");
+  expect(chrome.backgroundColor).to.not.equal("rgba(0, 0, 0, 0)");
 });
 
-it('lets a consumer retune the compact values through --lr-entity-card-compact-*', async () => {
+it("lets a consumer retune the compact values through --lr-entity-card-compact-*", async () => {
   const el = (await fixture(
     html`<lr-entity-card compact .entity=${entity}></lr-entity-card>`
   )) as LyraEntityCard;
-  el.style.setProperty('--lr-entity-card-compact-padding', '3px');
-  el.style.setProperty('--lr-entity-card-compact-gap', '5px');
+  el.style.setProperty("--lr-entity-card-compact-padding", "3px");
+  el.style.setProperty("--lr-entity-card-compact-gap", "5px");
   await el.updateComplete;
   const chrome = baseChrome(el);
-  expect(chrome.paddingTop).to.equal('3px');
-  expect(chrome.rowGap).to.equal('5px');
+  expect(chrome.paddingTop).to.equal("3px");
+  expect(chrome.rowGap).to.equal("5px");
 });
 
 it('drops border, background, padding and radius under frame="plain"', async () => {
   const el = (await fixture(
     html`<lr-entity-card frame="plain" .entity=${entity}></lr-entity-card>`
   )) as LyraEntityCard;
-  expect(el.getAttribute('frame')).to.equal('plain');
+  expect(el.getAttribute("frame")).to.equal("plain");
   const chrome = baseChrome(el);
-  expect(chrome.borderTopWidth).to.equal('0px');
-  expect(chrome.borderTopLeftRadius).to.equal('0px');
-  expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
-  expect(chrome.paddingTop).to.equal('0px');
-  expect(chrome.paddingLeft).to.equal('0px');
+  expect(chrome.borderTopWidth).to.equal("0px");
+  expect(chrome.borderTopLeftRadius).to.equal("0px");
+  expect(chrome.backgroundColor).to.equal("rgba(0, 0, 0, 0)");
+  expect(chrome.paddingTop).to.equal("0px");
+  expect(chrome.paddingLeft).to.equal("0px");
 });
 
 // The container treatment moved off `appearance` (which now means only how a control FILLS
@@ -242,23 +242,23 @@ it('ignores a stale appearance="plain", leaving the card chrome intact', async (
   const stale = (await fixture(
     html`<lr-entity-card appearance="plain" .entity=${entity}></lr-entity-card>`
   )) as LyraEntityCard;
-  expect(stale.frame).to.equal('card');
+  expect(stale.frame).to.equal("card");
   const chrome = baseChrome(stale);
-  expect(chrome.paddingTop).to.equal('12px'); // --lr-space-m, i.e. the untouched card padding
-  expect(chrome.borderTopWidth).to.equal('1px');
-  expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  expect(chrome.paddingTop).to.equal("12px"); // --lr-space-m, i.e. the untouched card padding
+  expect(chrome.borderTopWidth).to.equal("1px");
+  expect(chrome.backgroundColor).to.not.equal("rgba(0, 0, 0, 0)");
 });
 
 it('orders :host([frame="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
   const css = styles.cssText;
-  const compactAt = css.indexOf(':host([compact])');
+  const compactAt = css.indexOf(":host([compact])");
   const plainAt = css.indexOf(":host([frame='plain'])");
   expect(compactAt).to.be.greaterThan(-1);
   expect(plainAt).to.be.greaterThan(-1);
   expect(plainAt).to.be.greaterThan(compactAt);
 });
 
-it('lets plain win over compact when both are set', async () => {
+it("lets plain win over compact when both are set", async () => {
   const el = (await fixture(
     html`<lr-entity-card
       compact
@@ -267,11 +267,11 @@ it('lets plain win over compact when both are set', async () => {
     ></lr-entity-card>`
   )) as LyraEntityCard;
   const chrome = baseChrome(el);
-  expect(chrome.paddingTop).to.equal('0px');
-  expect(chrome.borderTopWidth).to.equal('0px');
+  expect(chrome.paddingTop).to.equal("0px");
+  expect(chrome.borderTopWidth).to.equal("0px");
 });
 
-it('is accessible in the populated compact and plain states', async () => {
+it("is accessible in the populated compact and plain states", async () => {
   const compactEl = (await fixture(
     html`<lr-entity-card
       compact
@@ -293,7 +293,7 @@ it('is accessible in the populated compact and plain states', async () => {
   await expect(plainEl).to.be.accessible();
 });
 
-it('formats numeric properties and degree with the effective locale', async () => {
+it("formats numeric properties and degree with the effective locale", async () => {
   const el = (await fixture(
     html`<lr-entity-card lang="ar-u-nu-arab"></lr-entity-card>`
   )) as LyraEntityCard;
@@ -305,55 +305,59 @@ it('formats numeric properties and degree with the effective locale', async () =
   const degree = el.shadowRoot!.querySelector(
     '[part="degree"]'
   ) as LyraResultField;
-  expect(property.value).to.equal('١٬٨٦٧');
-  expect(degree.value).to.equal('١٬٢٣٤');
+  expect(property.value).to.equal("١٬٨٦٧");
+  expect(degree.value).to.equal("١٬٢٣٤");
 });
 
-it('rejects a non-color type badge color (url() CSS-injection hardening)', async () => {
+it("rejects a non-color type badge color (url() CSS-injection hardening)", async () => {
   const el = (await fixture(
     html`<lr-entity-card></lr-entity-card>`
   )) as LyraEntityCard;
   el.entity = entity;
   el.types = [
     {
-      id: 'person',
-      label: 'Person',
-      color: 'url(https://evil.example/exfil.png)',
+      id: "person",
+      label: "Person",
+      color: "url(https://evil.example/exfil.png)",
     },
   ];
   await el.updateComplete;
   const badge = el.shadowRoot!.querySelector(
     '[part="type-badge"]'
   ) as HTMLElement;
-  expect(badge.style.getPropertyValue('--lr-badge-color')).to.equal('');
-  expect(badge.style.getPropertyValue('--lr-badge-background')).to.equal('');
-  expect(badge.style.getPropertyValue('--lr-badge-border')).to.equal('');
+  expect(badge.style.getPropertyValue("--lr-badge-color")).to.equal("");
+  expect(badge.style.getPropertyValue("--lr-badge-background")).to.equal("");
+  expect(badge.style.getPropertyValue("--lr-badge-border")).to.equal("");
 });
 
-it('uses caller type colors only as an accent and retains semantic foreground contrast', async () => {
-  for (const color of ['#000000', '#ffffff', 'rgba(255, 255, 255, 0.05)']) {
+it("uses caller type colors only as an accent and retains semantic foreground contrast", async () => {
+  for (const color of [
+    "#000000",
+    "#ffffff",
+    "rgba(255, 255, 255, 0.05)",
+  ]) {
     const el = (await fixture(
       html`<lr-entity-card></lr-entity-card>`
     )) as LyraEntityCard;
     el.entity = entity;
-    el.types = [{ id: 'person', label: 'Person', color }];
+    el.types = [{ id: "person", label: "Person", color }];
     await el.updateComplete;
     const badge = el.shadowRoot!.querySelector(
       '[part="type-badge"]'
     ) as HTMLElement;
-    expect(badge.style.getPropertyValue('--lr-badge-color')).to.equal(
-      'var(--lr-color-text)'
+    expect(badge.style.getPropertyValue("--lr-badge-color")).to.equal(
+      "var(--lr-color-text)"
     );
-    expect(badge.style.getPropertyValue('--lr-badge-border')).to.equal(color);
-    expect(badge.style.getPropertyValue('--lr-badge-background')).to.include(
+    expect(badge.style.getPropertyValue("--lr-badge-border")).to.equal(color);
+    expect(badge.style.getPropertyValue("--lr-badge-background")).to.include(
       `${color} 12%`
     );
     await expect(el).to.be.accessible();
   }
 });
 
-it('routes forced-color badge paint back through the system-owned semantic tokens', async () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
+it("routes forced-color badge paint back through the system-owned semantic tokens", async () => {
+  const css = styles.cssText.replace(/\s+/g, " ");
   expect(css).to.match(
     /@media \(forced-colors: active\).*--lr-badge-color: var\(--lr-color-text\) !important.*--lr-badge-background: var\(--lr-color-surface\) !important.*--lr-badge-border: var\(--lr-color-border-strong\) !important/
   );
@@ -362,15 +366,15 @@ it('routes forced-color badge paint back through the system-owned semantic token
     html`<lr-entity-card></lr-entity-card>`
   )) as LyraEntityCard;
   el.entity = entity;
-  el.types = [{ id: 'person', label: 'Person', color: '#ffffff' }];
+  el.types = [{ id: "person", label: "Person", color: "#ffffff" }];
   await el.updateComplete;
-  const forcedSheet = document.createElement('style');
+  const forcedSheet = document.createElement("style");
   forcedSheet.textContent = styles.cssText.replace(
-    '@media (forced-colors: active)',
-    '@media all'
+    "@media (forced-colors: active)",
+    "@media all"
   );
   el.shadowRoot!.append(forcedSheet);
-  const badge = el.shadowRoot!.querySelector('lr-badge') as HTMLElement & {
+  const badge = el.shadowRoot!.querySelector("lr-badge") as HTMLElement & {
     updateComplete: Promise<unknown>;
     shadowRoot: ShadowRoot;
   };

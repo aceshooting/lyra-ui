@@ -29,24 +29,6 @@ it('wraps multiple roots in an implicit hub whose label is the given hubLabel', 
   expect(result.links.length).to.equal(2);
 });
 
-it('keeps the synthetic hub distinct when a caller owns the usual hub spelling', () => {
-  const topics: LyraTopic[] = [
-    { id: '__hub__', label: 'Caller hub' },
-    { id: 'other', label: 'Other' },
-  ];
-  const result = layoutMindMap(topics, 'Synthetic hub', {
-    ringGap: 96,
-    rtl: false,
-    isExpanded: alwaysExpanded,
-  });
-  const root = result.placed.find((topic) => topic.depth === 0)!;
-  expect(root.id).to.not.equal('__hub__');
-  expect(result.placed.some((topic) => topic.id === '__hub__')).to.be.true;
-  expect(new Set(result.placed.map((topic) => topic.id)).size).to.equal(
-    result.placed.length
-  );
-});
-
 it("subdivides a parent arc proportionally to each child subtree's visible leaf count", () => {
   const topics: LyraTopic[] = [
     { id: 'root', label: 'Root', children: [{ id: 'c1', label: 'C1' }, { id: 'c2', label: 'C2' }] },

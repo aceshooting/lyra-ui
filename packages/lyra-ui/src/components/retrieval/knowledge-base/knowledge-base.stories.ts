@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A controlled knowledge-source list that omits malformed, blank-id, and later duplicate sources first-wins before summary totals, empty state, table rows, and source actions.',
+          'A knowledge-base source list: sync status, indexing health, permissions, and per-row create/sync/pause/delete affordances. A controlled data view -- it emits lr-source-create/-sync/-pause/-delete request events for the host to act on and reflect back into a new `sources` value.',
       },
     },
   },

@@ -5,24 +5,24 @@ import {
   waitUntil,
   aTimeout,
   oneEvent,
-} from '@open-wc/testing';
-import { select } from 'd3-selection';
-import './graph.js';
-import { LyraGraph } from './graph.js';
-import { layeredLayout } from '../../../internal/layered-layout.js';
-import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
-import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+} from "@open-wc/testing";
+import { select } from "d3-selection";
+import "./graph.js";
+import { LyraGraph } from "./graph.js";
+import { layeredLayout } from "../../../internal/layered-layout.js";
+import { invalidateLyraTheme } from "../../../internal/theme-watcher.js";
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 const nodes = [
-  { id: 'a', label: 'A' },
-  { id: 'b', label: 'B' },
+  { id: "a", label: "A" },
+  { id: "b", label: "B" },
 ];
-const links = [{ source: 'a', target: 'b' }];
+const links = [{ source: "a", target: "b" }];
 
 function announcementSink(
   doc: Document = document,
-  politeness: 'polite' | 'assertive' = 'polite'
+  politeness: "polite" | "assertive" = "polite"
 ): HTMLElement | null {
   return doc.querySelector<HTMLElement>(
     `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`
@@ -31,11 +31,11 @@ function announcementSink(
 
 function announcementTexts(
   doc: Document = document,
-  politeness: 'polite' | 'assertive' = 'polite'
+  politeness: "polite" | "assertive" = "polite"
 ): string[] {
   const sink = announcementSink(doc, politeness);
   return sink
-    ? Array.from(sink.children).map((child) => child.textContent ?? '')
+    ? Array.from(sink.children).map((child) => child.textContent ?? "")
     : [];
 }
 
@@ -45,18 +45,18 @@ function stubPointerCapture(canvas: HTMLCanvasElement): {
 } {
   const setDescriptor = Object.getOwnPropertyDescriptor(
     canvas,
-    'setPointerCapture'
+    "setPointerCapture"
   );
   const releaseDescriptor = Object.getOwnPropertyDescriptor(
     canvas,
-    'releasePointerCapture'
+    "releasePointerCapture"
   );
   const captured = new Set<number>();
-  Object.defineProperty(canvas, 'setPointerCapture', {
+  Object.defineProperty(canvas, "setPointerCapture", {
     configurable: true,
     value: (pointerId: number) => captured.add(pointerId),
   });
-  Object.defineProperty(canvas, 'releasePointerCapture', {
+  Object.defineProperty(canvas, "releasePointerCapture", {
     configurable: true,
     value: (pointerId: number) => captured.delete(pointerId),
   });
@@ -64,14 +64,14 @@ function stubPointerCapture(canvas: HTMLCanvasElement): {
     captured,
     restore() {
       if (setDescriptor)
-        Object.defineProperty(canvas, 'setPointerCapture', setDescriptor);
+        Object.defineProperty(canvas, "setPointerCapture", setDescriptor);
       else
         delete (canvas as unknown as { setPointerCapture?: unknown })
           .setPointerCapture;
       if (releaseDescriptor)
         Object.defineProperty(
           canvas,
-          'releasePointerCapture',
+          "releasePointerCapture",
           releaseDescriptor
         );
       else
@@ -89,14 +89,14 @@ function stubNoOwnerWindow(el: LyraGraph): () => void {
   const real = el.ownerDocument;
   const fake = new Proxy(real, {
     get(target, prop, _receiver) {
-      if (prop === 'defaultView') return null;
+      if (prop === "defaultView") return null;
       const value = Reflect.get(target, prop, target);
-      return typeof value === 'function'
+      return typeof value === "function"
         ? (value as (...args: unknown[]) => unknown).bind(target)
         : value;
     },
   });
-  Object.defineProperty(el, 'ownerDocument', {
+  Object.defineProperty(el, "ownerDocument", {
     configurable: true,
     value: fake,
   });
@@ -105,7 +105,7 @@ function stubNoOwnerWindow(el: LyraGraph): () => void {
   };
 }
 
-it('invalidates the cached canvas scene after an out-of-band theme change', async () => {
+it("invalidates the cached canvas scene after an out-of-band theme change", async () => {
   const el = (await fixture(
     html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
   )) as LyraGraph;
@@ -145,7 +145,7 @@ async function waitForCanvasBackingStore(
     () =>
       canvas.width === Math.round(canvas.clientWidth * dpr) &&
       canvas.height === Math.round(canvas.clientHeight * dpr),
-    'canvas backing store did not finish sizing for pointer hit-testing',
+    "canvas backing store did not finish sizing for pointer hit-testing",
     { timeout: NODE_COUNT_TIMEOUT }
   );
 }
@@ -210,7 +210,7 @@ function stubIntersectionObserver() {
 // Each graph owns its measurement canvas in the same document realm as the host. Stubbing the
 // canvas prototype before the first width read exercises the no-2D-context fallback without
 // sharing or poisoning another document's cached context.
-it('edgeLabelWidth falls back to a character-count heuristic when its owner-realm canvas has no 2D context', async () => {
+it("edgeLabelWidth falls back to a character-count heuristic when its owner-realm canvas has no 2D context", async () => {
   const originalGetContext = HTMLCanvasElement.prototype.getContext;
   (
     HTMLCanvasElement.prototype as unknown as {
@@ -225,7 +225,7 @@ it('edgeLabelWidth falls back to a character-count heuristic when its owner-real
       edgeLabelWidth: (t: string) => number;
       edgeLabelFontPx: () => number;
     };
-    const text = 'no-ctx-fallback-probe';
+    const text = "no-ctx-fallback-probe";
     const width = internal.edgeLabelWidth(text);
     expect(width).to.equal(text.length * internal.edgeLabelFontPx() * 0.6);
   } finally {
@@ -233,25 +233,25 @@ it('edgeLabelWidth falls back to a character-count heuristic when its owner-real
   }
 });
 
-it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg', async () => {
+it("shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg", async () => {
   const el = (await fixture(
-    html`<lr-graph .strings=${{ loading: 'Loading graph data' }}></lr-graph>`
+    html`<lr-graph .strings=${{ loading: "Loading graph data" }}></lr-graph>`
   )) as LyraGraph;
-  expect(el.getAttribute('aria-busy')).to.equal('true');
-  const skeleton = el.shadowRoot!.querySelector('lr-skeleton')!;
+  expect(el.getAttribute("aria-busy")).to.equal("true");
+  const skeleton = el.shadowRoot!.querySelector("lr-skeleton")!;
   expect(skeleton !== null).to.be.true;
   await (skeleton as HTMLElement & { updateComplete: Promise<unknown> })
     .updateComplete;
-  expect(el.shadowRoot!.querySelector('.loading-label')!.textContent).to.equal(
-    'Loading graph data'
+  expect(el.shadowRoot!.querySelector(".loading-label")!.textContent).to.equal(
+    "Loading graph data"
   );
   expect(
     el.shadowRoot!.querySelector(
       '[role="alert"], [role="status"], [aria-live]'
     ) === null,
-    'the controller-owned loading state must not create a second shadow live region'
+    "the controller-owned loading state must not create a second shadow live region"
   ).to.be.true;
-  expect(el.shadowRoot!.querySelector('svg') == null).to.equal(true);
+  expect(el.shadowRoot!.querySelector("svg") == null).to.equal(true);
 
   el.nodes = nodes;
   el.links = links;
@@ -264,14 +264,14 @@ it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg
     }
   );
 
-  expect(el.getAttribute('aria-busy')).to.equal('false');
-  expect(el.shadowRoot!.querySelector('lr-skeleton') == null).to.be.true;
-  expect(el.shadowRoot!.querySelector('svg') != null).to.equal(true);
+  expect(el.getAttribute("aria-busy")).to.equal("false");
+  expect(el.shadowRoot!.querySelector("lr-skeleton") == null).to.be.true;
+  expect(el.shadowRoot!.querySelector("svg") != null).to.equal(true);
 });
 
-it('announces graph navigation through one light-DOM sink without speaking the initial item', async () => {
+it("announces graph navigation through one light-DOM sink without speaking the initial item", async () => {
   const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
-  el.strings = { graphItemAnnouncement: '{item}, position {index} of {total}' };
+  el.strings = { graphItemAnnouncement: "{item}, position {index} of {total}" };
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -286,43 +286,43 @@ it('announces graph navigation through one light-DOM sink without speaking the i
   const sink = announcementSink();
   expect(
     sink !== null,
-    'a connected graph must acquire its sink before announcing'
+    "a connected graph must acquire its sink before announcing"
   ).to.be.true;
   expect(
     sink!.getRootNode() === document,
-    'the live region must be in document light DOM'
+    "the live region must be in document light DOM"
   ).to.be.true;
   expect(
     announcementTexts(),
-    'mounting a graph must not announce its initial graph item'
+    "mounting a graph must not announce its initial graph item"
   ).to.deep.equal([]);
 
   const mirror = el.shadowRoot!.querySelector(
     '[part="live-region"]'
   ) as HTMLElement;
-  expect(mirror.getAttribute('aria-hidden')).to.equal('true');
+  expect(mirror.getAttribute("aria-hidden")).to.equal("true");
   expect(
-    mirror.hasAttribute('aria-live'),
-    'the mirror must not be a second live region'
+    mirror.hasAttribute("aria-live"),
+    "the mirror must not be a second live region"
   ).to.be.false;
-  expect(mirror.hasAttribute('role')).to.be.false;
-  expect(mirror.textContent).to.contain('position 1 of 3');
+  expect(mirror.hasAttribute("role")).to.be.false;
+  expect(mirror.textContent).to.contain("position 1 of 3");
 
   const firstNode = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
   firstNode.dispatchEvent(
-    new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
+    new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
   );
   await el.updateComplete;
   expect(announcementTexts()).to.have.length(1);
-  expect(announcementTexts()[0]).to.contain('position 2 of 3');
+  expect(announcementTexts()[0]).to.contain("position 2 of 3");
 });
 
-it('releases and reacquires its announcement sink when adopted into another document', async () => {
+it("releases and reacquires its announcement sink when adopted into another document", async () => {
   const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
   const foreignDocument = frame.contentDocument!;
-  const el = document.createElement('lr-graph') as LyraGraph;
+  const el = document.createElement("lr-graph") as LyraGraph;
   el.seed = 7;
-  el.selectionMode = 'single';
+  el.selectionMode = "single";
   el.nodes = nodes;
   el.links = links;
   document.body.appendChild(el);
@@ -337,48 +337,48 @@ it('releases and reacquires its announcement sink when adopted into another docu
       }
     );
     const originalSink = announcementSink();
-    const originalAssertiveSink = announcementSink(document, 'assertive');
+    const originalAssertiveSink = announcementSink(document, "assertive");
     expect(
       originalSink !== null,
-      'the original document must own the connected graph sink'
+      "the original document must own the connected graph sink"
     ).to.be.true;
     expect(originalAssertiveSink !== null).to.be.true;
 
     foreignDocument.adoptNode(el);
     expect(
       originalSink!.isConnected,
-      'adoption must release the old document sink'
+      "adoption must release the old document sink"
     ).to.be.false;
     expect(originalAssertiveSink!.isConnected).to.be.false;
     foreignDocument.body.appendChild(el);
     await el.updateComplete;
 
     const adoptedSink = announcementSink(foreignDocument);
-    const adoptedAssertiveSink = announcementSink(foreignDocument, 'assertive');
+    const adoptedAssertiveSink = announcementSink(foreignDocument, "assertive");
     expect(
       adoptedSink !== null,
-      'reconnect must acquire a sink in the adopted document'
+      "reconnect must acquire a sink in the adopted document"
     ).to.be.true;
     expect(adoptedAssertiveSink !== null).to.be.true;
     expect(adoptedSink!.ownerDocument === foreignDocument).to.be.true;
     expect(
       announcementTexts(foreignDocument),
-      'reconnect must not re-announce stale state'
+      "reconnect must not re-announce stale state"
     ).to.deep.equal([]);
 
-    el.selectedNodeIds = ['a'];
+    el.selectedNodeIds = ["a"];
     await el.updateComplete;
     expect(announcementTexts(foreignDocument)).to.have.length(1);
-    expect(announcementTexts(foreignDocument)[0]).to.contain('1 selected');
+    expect(announcementTexts(foreignDocument)[0]).to.contain("1 selected");
     expect(
       announcementTexts(),
-      'nothing may be announced into the old document'
+      "nothing may be announced into the old document"
     ).to.deep.equal([]);
 
     el.remove();
     expect(
       adoptedSink!.isConnected,
-      'disconnect must release the adopted document sink'
+      "disconnect must release the adopted document sink"
     ).to.be.false;
     expect(adoptedAssertiveSink!.isConnected).to.be.false;
   } finally {
@@ -387,19 +387,19 @@ it('releases and reacquires its announcement sink when adopted into another docu
   }
 });
 
-it('rebinds canvas observers, DPR/media state, frames, styles, and offscreen surfaces after adoption', async () => {
+it("rebinds canvas observers, DPR/media state, frames, styles, and offscreen surfaces after adoption", async () => {
   const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
   const foreignDocument = frame.contentDocument!;
   const foreignWindow = frame.contentWindow!;
-  const el = document.createElement('lr-graph') as LyraGraph;
-  el.renderer = 'canvas';
+  const el = document.createElement("lr-graph") as LyraGraph;
+  el.renderer = "canvas";
   el.seed = 7;
   el.nodes = nodes;
   el.links = links;
   document.body.appendChild(el);
   await el.updateComplete;
   await waitUntil(
-    () => el.shadowRoot!.querySelectorAll('canvas').length === 1,
+    () => el.shadowRoot!.querySelectorAll("canvas").length === 1,
     undefined,
     {
       timeout: NODE_COUNT_TIMEOUT,
@@ -439,7 +439,7 @@ it('rebinds canvas observers, DPR/media state, frames, styles, and offscreen sur
   }
   class RealmIntersectionObserver {
     readonly root = null;
-    readonly rootMargin = '0px';
+    readonly rootMargin = "0px";
     readonly thresholds = [0];
     constructor(_callback: IntersectionObserverCallback) {
       intersectionObservers += 1;
@@ -506,7 +506,7 @@ it('rebinds canvas observers, DPR/media state, frames, styles, and offscreen sur
 
     expect(resizeObservers).to.equal(1);
     expect(intersectionObservers).to.equal(1);
-    expect(mediaQueries.some((query) => query.startsWith('(resolution: '))).to
+    expect(mediaQueries.some((query) => query.startsWith("(resolution: "))).to
       .be.true;
     const internals = el as unknown as {
       pickCanvas?: HTMLCanvasElement;
@@ -515,12 +515,12 @@ it('rebinds canvas observers, DPR/media state, frames, styles, and offscreen sur
       onCanvasPointerMove(event: PointerEvent): void;
     };
     expect(internals.pickCanvas?.ownerDocument === foreignDocument).to.be.true;
-    expect(createdNames).to.include('canvas');
+    expect(createdNames).to.include("canvas");
     internals.drawCanvas();
     expect(styleReads).to.be.greaterThan(0);
     internals.scheduleViewportChange();
     internals.onCanvasPointerMove({ clientX: 1, clientY: 1 } as PointerEvent);
-    const focusResult = el.focusNode('a');
+    const focusResult = el.focusNode("a");
     expect(requestedFrames.length).to.be.greaterThan(3);
 
     const pendingFrames = [...requestedFrames];
@@ -546,7 +546,7 @@ it('rebinds canvas observers, DPR/media state, frames, styles, and offscreen sur
   }
 });
 
-it('renders an svg with a circle per node once d3 loads', async () => {
+it("renders an svg with a circle per node once d3 loads", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -561,7 +561,7 @@ it('renders an svg with a circle per node once d3 loads', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="link"]').length).to.equal(1);
 });
 
-it('keeps SVG node, link, and conditional-hull pointer geometry at least 24px under scale', async () => {
+it("keeps SVG node, link, and conditional-hull pointer geometry at least 24px under scale", async () => {
   const el = (await fixture(
     html`<lr-graph
       seed="7"
@@ -570,12 +570,12 @@ it('keeps SVG node, link, and conditional-hull pointer geometry at least 24px un
       style="inline-size:400px;block-size:300px"
     ></lr-graph>`
   )) as LyraGraph;
-  el.communities = [{ id: 'team', memberIds: ['a', 'b'] }];
+  el.communities = [{ id: "team", memberIds: ["a", "b"] }];
   el.nodes = [
-    { id: 'a', label: 'A', communityId: 'team', radius: 6 },
-    { id: 'b', label: 'B', communityId: 'team', radius: 6 },
+    { id: "a", label: "A", communityId: "team", radius: 6 },
+    { id: "b", label: "B", communityId: "team", radius: 6 },
   ];
-  el.links = [{ id: 'ab', source: 'a', target: 'b', width: 1 }];
+  el.links = [{ id: "ab", source: "a", target: "b", width: 1 }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -601,19 +601,19 @@ it('keeps SVG node, link, and conditional-hull pointer geometry at least 24px un
   expect(hits.hull).to.have.length(1);
   for (const [kind, elements] of Object.entries(hits)) {
     for (const hit of elements) {
-      expect(hit.hasAttribute('part'), `${kind} hit is internal`).to.be.false;
+      expect(hit.hasAttribute("part"), `${kind} hit is internal`).to.be.false;
       expect(
-        hit.getAttribute('aria-hidden'),
+        hit.getAttribute("aria-hidden"),
         `${kind} hit is not duplicated for AT`
-      ).to.equal('true');
+      ).to.equal("true");
       expect(
         Number.parseFloat(getComputedStyle(hit).strokeWidth),
         `${kind} stroke`
       ).to.be.at.least(24);
     }
   }
-  expect(await el.focusNode('a', { zoom: 0.25 })).to.equal(true);
-  el.scrollIntoView({ block: 'center', inline: 'center' });
+  expect(await el.focusNode("a", { zoom: 0.25 })).to.equal(true);
+  el.scrollIntoView({ block: "center", inline: "center" });
   await aTimeout(0);
   const nodeHit = hits.node[0] as SVGLineElement;
   const renderedNode =
@@ -627,30 +627,30 @@ it('keeps SVG node, link, and conditional-hull pointer geometry at least 24px un
   // outer SVG for this coordinate even though native hit testing correctly reaches the line; a
   // failed DOM-node equality assertion also makes WTR recursively serialize the SVG tree.
   let pointerActivations = 0;
-  el.addEventListener('lr-node-click', () => pointerActivations++);
+  el.addEventListener("lr-node-click", () => pointerActivations++);
   try {
     await resetMouse();
     await sendMouse({
-      type: 'click',
+      type: "click",
       position: [Math.round(nodeCenter.x + 11), Math.round(nodeCenter.y)],
     });
-    expect(pointerActivations, 'scaled node pointer edge').to.equal(1);
+    expect(pointerActivations, "scaled node pointer edge").to.equal(1);
   } finally {
     await resetMouse();
   }
-  expect(select(hits.node[0]!).on('mousedown.drag')).to.be.a('function');
+  expect(select(hits.node[0]!).on("mousedown.drag")).to.be.a("function");
 
   const activations: string[] = [];
-  el.addEventListener('lr-node-click', () => activations.push('node'));
-  el.addEventListener('lr-link-click', () => activations.push('link'));
-  el.addEventListener('lr-community-click', () => activations.push('hull'));
-  hits.node[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  hits.link[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  hits.hull[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  expect(activations).to.deep.equal(['node', 'link', 'hull']);
+  el.addEventListener("lr-node-click", () => activations.push("node"));
+  el.addEventListener("lr-link-click", () => activations.push("link"));
+  el.addEventListener("lr-community-click", () => activations.push("hull"));
+  hits.node[0]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  hits.link[0]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  hits.hull[0]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  expect(activations).to.deep.equal(["node", "link", "hull"]);
 });
 
-it('uses the named host as the sole graph owner and restores the inner owner when removed', async () => {
+it("uses the named host as the sole graph owner and restores the inner owner when removed", async () => {
   const el = (await fixture(html`
     <lr-graph aria-label="Citation relationships"></lr-graph>
   `)) as LyraGraph;
@@ -665,44 +665,44 @@ it('uses the named host as the sole graph owner and restores the inner owner whe
     }
   );
 
-  const svg = el.shadowRoot!.querySelector('svg')!;
-  expect(el.getAttribute('role')).to.equal('group');
-  expect(el.getAttribute('aria-label')).to.equal('Citation relationships');
-  expect(svg.hasAttribute('role')).to.equal(false);
-  expect(svg.hasAttribute('aria-label')).to.equal(false);
+  const svg = el.shadowRoot!.querySelector("svg")!;
+  expect(el.getAttribute("role")).to.equal("group");
+  expect(el.getAttribute("aria-label")).to.equal("Citation relationships");
+  expect(svg.hasAttribute("role")).to.equal(false);
+  expect(svg.hasAttribute("aria-label")).to.equal(false);
 
-  el.setAttribute('aria-label', '');
+  el.setAttribute("aria-label", "");
   await el.updateComplete;
-  expect(el.getAttribute('role')).to.equal('group');
-  expect(svg.hasAttribute('aria-label')).to.equal(false);
+  expect(el.getAttribute("role")).to.equal("group");
+  expect(svg.hasAttribute("aria-label")).to.equal(false);
 
-  el.removeAttribute('aria-label');
+  el.removeAttribute("aria-label");
   await el.updateComplete;
-  expect(el.hasAttribute('role')).to.equal(false);
-  expect(svg.getAttribute('role')).to.equal('group');
-  expect(svg.getAttribute('aria-label')).to.match(/2 nodes/);
+  expect(el.hasAttribute("role")).to.equal(false);
+  expect(svg.getAttribute("role")).to.equal("group");
+  expect(svg.getAttribute("aria-label")).to.match(/2 nodes/);
 });
 
-it('shares one bounded description-first tooltip model across SVG titles and the data summary', async () => {
-  const nodeDescription = `  Node   description ${'n'.repeat(700)}  `;
-  const linkDescription = `  Link   description ${'l'.repeat(700)}  `;
+it("shares one bounded description-first tooltip model across SVG titles and the data summary", async () => {
+  const nodeDescription = `  Node   description ${"n".repeat(700)}  `;
+  const linkDescription = `  Link   description ${"l".repeat(700)}  `;
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = [
     {
-      id: 'a',
-      label: 'A',
-      accessibleLabel: 'Spoken A',
+      id: "a",
+      label: "A",
+      accessibleLabel: "Spoken A",
       description: nodeDescription,
     },
-    { id: 'b', label: 'B' },
+    { id: "b", label: "B" },
   ];
   el.links = [
     {
-      id: 'ab',
-      source: 'a',
-      target: 'b',
-      label: 'Visible link label',
-      accessibleLabel: 'Spoken link label',
+      id: "ab",
+      source: "a",
+      target: "b",
+      label: "Visible link label",
+      accessibleLabel: "Spoken link label",
       description: linkDescription,
     },
   ];
@@ -719,15 +719,15 @@ it('shares one bounded description-first tooltip model across SVG titles and the
     .textContent!;
   const linkTitle = el.shadowRoot!.querySelector('[part="link"] title')!
     .textContent!;
-  expect(nodeTitle.startsWith('Node description ')).to.equal(true);
-  expect(linkTitle.startsWith('Link description ')).to.equal(true);
+  expect(nodeTitle.startsWith("Node description ")).to.equal(true);
+  expect(linkTitle.startsWith("Link description ")).to.equal(true);
   expect(nodeTitle.length).to.be.at.most(513);
   expect(linkTitle.length).to.be.at.most(513);
-  expect(nodeTitle.endsWith('…')).to.equal(true);
-  expect(linkTitle.endsWith('…')).to.equal(true);
+  expect(nodeTitle.endsWith("…")).to.equal(true);
+  expect(linkTitle.endsWith("…")).to.equal(true);
   const summaries = [
     ...el.shadowRoot!.querySelectorAll('[part="data-list"] li'),
-  ].map((item) => item.textContent ?? '');
+  ].map((item) => item.textContent ?? "");
   expect(summaries.some((summary) => summary.includes(nodeTitle))).to.equal(
     true
   );
@@ -736,49 +736,49 @@ it('shares one bounded description-first tooltip model across SVG titles and the
   );
 });
 
-it('keeps zero-width and fully transparent links non-operable while retaining topology summaries', async () => {
+it("keeps zero-width and fully transparent links non-operable while retaining topology summaries", async () => {
   const el = (await fixture(
     html`<lr-graph style="--transparent-link: transparent"></lr-graph>`
   )) as LyraGraph;
   el.nodes = nodes;
   el.links = [
-    { id: 'zero', source: 'a', target: 'b', width: 0, label: 'Zero width' },
+    { id: "zero", source: "a", target: "b", width: 0, label: "Zero width" },
     {
-      id: 'clear',
-      source: 'a',
-      target: 'b',
-      color: 'rgba(1, 2, 3, 0)',
-      label: 'Transparent',
+      id: "clear",
+      source: "a",
+      target: "b",
+      color: "rgba(1, 2, 3, 0)",
+      label: "Transparent",
     },
     {
-      id: 'clear-hex',
-      source: 'a',
-      target: 'b',
-      color: '#1230',
-      label: 'Transparent hex',
+      id: "clear-hex",
+      source: "a",
+      target: "b",
+      color: "#1230",
+      label: "Transparent hex",
     },
     {
-      id: 'clear-hsl',
-      source: 'a',
-      target: 'b',
-      color: 'hsl(120 50% 50% / 0)',
-      label: 'Transparent HSL',
+      id: "clear-hsl",
+      source: "a",
+      target: "b",
+      color: "hsl(120 50% 50% / 0)",
+      label: "Transparent HSL",
     },
     {
-      id: 'clear-token',
-      source: 'a',
-      target: 'b',
-      color: 'var(--transparent-link)',
-      label: 'Transparent token',
+      id: "clear-token",
+      source: "a",
+      target: "b",
+      color: "var(--transparent-link)",
+      label: "Transparent token",
     },
     {
-      id: 'clear-mix',
-      source: 'a',
-      target: 'b',
-      color: 'color-mix(in srgb, red 0%, transparent)',
-      label: 'Transparent mix',
+      id: "clear-mix",
+      source: "a",
+      target: "b",
+      color: "color-mix(in srgb, red 0%, transparent)",
+      label: "Transparent mix",
     },
-    { id: 'visible', source: 'a', target: 'b', label: 'Visible' },
+    { id: "visible", source: "a", target: "b", label: "Visible" },
   ];
   await el.updateComplete;
   await waitUntil(
@@ -794,28 +794,29 @@ it('keeps zero-width and fully transparent links non-operable while retaining to
   expect(
     rendered
       .slice(0, 6)
-      .map((link) => [link.getAttribute('role'), link.getAttribute('tabindex')])
+      .map((link) => [link.getAttribute("role"), link.getAttribute("tabindex")])
   ).to.deep.equal(Array.from({ length: 6 }, () => [null, null]));
   expect(
     rendered
       .slice(0, 6)
-      .every((link) => link.getAttribute('aria-hidden') === 'true')
+      .every((link) => link.getAttribute("aria-hidden") === "true")
   ).to.equal(true);
-  expect(rendered[6]!.getAttribute('role')).to.equal('button');
+  expect(rendered[6]!.getAttribute("role")).to.equal("button");
   expect(
     [...el.shadowRoot!.querySelectorAll('[part="data-list"] li')].filter(
-      (item) => /Zero width|Transparent|Visible/.test(item.textContent ?? '')
+      (item) =>
+        /Zero width|Transparent|Visible/.test(item.textContent ?? "")
     ).length
   ).to.equal(7);
   let activations = 0;
-  el.addEventListener('lr-link-click', () => activations++);
+  el.addEventListener("lr-link-click", () => activations++);
   for (const link of rendered.slice(0, 6))
-    link.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    link.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   expect(activations).to.equal(0);
 
-  el.renderer = 'canvas';
+  el.renderer = "canvas";
   await el.updateComplete;
-  await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+  await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
     timeout: NODE_COUNT_TIMEOUT,
   });
   expect(
@@ -827,12 +828,12 @@ it('keeps zero-width and fully transparent links non-operable while retaining to
   ).to.equal(1);
 });
 
-it('uses the effective default link paint when deciding whether a link is operable', async () => {
+it("uses the effective default link paint when deciding whether a link is operable", async () => {
   const el = (await fixture(
     html`<lr-graph style="--lr-link-color: transparent"></lr-graph>`
   )) as LyraGraph;
   el.nodes = nodes;
-  el.links = [{ id: 'default-paint', source: 'a', target: 'b' }];
+  el.links = [{ id: "default-paint", source: "a", target: "b" }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -840,19 +841,19 @@ it('uses the effective default link paint when deciding whether a link is operab
     { timeout: NODE_COUNT_TIMEOUT }
   );
   const link = el.shadowRoot!.querySelector('[part="link"]')!;
-  expect(link.getAttribute('role')).to.equal(null);
-  expect(link.getAttribute('tabindex')).to.equal(null);
-  expect(link.getAttribute('aria-hidden')).to.equal('true');
+  expect(link.getAttribute("role")).to.equal(null);
+  expect(link.getAttribute("tabindex")).to.equal(null);
+  expect(link.getAttribute("aria-hidden")).to.equal("true");
 
-  el.style.setProperty('--lr-link-color', 'rgb(1, 2, 3)');
+  el.style.setProperty("--lr-link-color", "rgb(1, 2, 3)");
   el.requestUpdate();
   await el.updateComplete;
-  expect(link.getAttribute('role')).to.equal('button');
-  expect(link.getAttribute('tabindex')).to.equal('-1');
-  expect(link.getAttribute('aria-hidden')).to.equal(null);
+  expect(link.getAttribute("role")).to.equal("button");
+  expect(link.getAttribute("tabindex")).to.equal("-1");
+  expect(link.getAttribute("aria-hidden")).to.equal(null);
 });
 
-it('emits lr-node-click when a node is activated', async () => {
+it("emits lr-node-click when a node is activated", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -864,21 +865,21 @@ it('emits lr-node-click when a node is activated', async () => {
       timeout: NODE_COUNT_TIMEOUT,
     }
   );
-  let detail: { nodeId: string; x: number; y: number } | undefined;
+  let detail: { id: string; x: number; y: number } | undefined;
   el.addEventListener(
-    'lr-node-click',
+    "lr-node-click",
     (e) => (detail = (e as CustomEvent).detail)
   );
   (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).dispatchEvent(
-    new MouseEvent('click', { bubbles: true })
+    new MouseEvent("click", { bubbles: true })
   );
   expect(detail).to.exist;
-  expect(detail!.nodeId).to.equal('a');
-  expect(detail!.x).to.be.a('number');
-  expect(detail!.y).to.be.a('number');
+  expect(detail!.id).to.equal("a");
+  expect(detail!.x).to.be.a("number");
+  expect(detail!.y).to.be.a("number");
 });
 
-it('emits lr-link-click with the source/target ids when a link is activated', async () => {
+it("emits lr-link-click with the source/target ids when a link is activated", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -890,18 +891,18 @@ it('emits lr-link-click with the source/target ids when a link is activated', as
       timeout: NODE_COUNT_TIMEOUT,
     }
   );
-  let detail: { sourceNodeId: string; targetNodeId: string } | undefined;
+  let detail: { source: string; target: string } | undefined;
   el.addEventListener(
-    'lr-link-click',
+    "lr-link-click",
     (e) => (detail = (e as CustomEvent).detail)
   );
   (el.shadowRoot!.querySelector('[part="link"]') as HTMLElement).dispatchEvent(
-    new MouseEvent('click', { bubbles: true })
+    new MouseEvent("click", { bubbles: true })
   );
-  expect(detail).to.deep.equal({ sourceNodeId: 'a', targetNodeId: 'b' });
+  expect(detail).to.deep.equal({ source: "a", target: "b" });
 });
 
-it('exposes resolved node coordinates for click-anchored overlays', async () => {
+it("exposes resolved node coordinates for click-anchored overlays", async () => {
   const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -914,15 +915,15 @@ it('exposes resolved node coordinates for click-anchored overlays', async () => 
     }
   );
 
-  const position = el.getNodePosition('a');
+  const position = el.getNodePosition("a");
   expect(position).to.exist;
-  expect(position!.x).to.be.a('number');
-  expect(position!.y).to.be.a('number');
-  expect(el.getNodePosition('missing')).to.be.undefined;
+  expect(position!.x).to.be.a("number");
+  expect(position!.y).to.be.a("number");
+  expect(el.getNodePosition("missing")).to.be.undefined;
 });
 
-describe('hover events', () => {
-  it('emits lr-node-enter/lr-node-leave and toggles data-hovered on the node element', async () => {
+describe("hover events", () => {
+  it("emits lr-node-enter/lr-node-leave and toggles data-hovered on the node element", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -936,27 +937,27 @@ describe('hover events', () => {
     );
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
 
-    let enterDetail: { nodeId: string } | undefined;
-    let leaveDetail: { nodeId: string } | undefined;
+    let enterDetail: { id: string } | undefined;
+    let leaveDetail: { id: string } | undefined;
     el.addEventListener(
-      'lr-node-enter',
+      "lr-node-enter",
       (e) => (enterDetail = (e as CustomEvent).detail)
     );
     el.addEventListener(
-      'lr-node-leave',
+      "lr-node-leave",
       (e) => (leaveDetail = (e as CustomEvent).detail)
     );
 
-    nodeEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-    expect(enterDetail).to.deep.equal({ nodeId: 'a' });
-    expect(nodeEl.hasAttribute('data-hovered')).to.be.true;
+    nodeEl.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+    expect(enterDetail).to.deep.equal({ id: "a" });
+    expect(nodeEl.hasAttribute("data-hovered")).to.be.true;
 
-    nodeEl.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-    expect(leaveDetail).to.deep.equal({ nodeId: 'a' });
-    expect(nodeEl.hasAttribute('data-hovered')).to.be.false;
+    nodeEl.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+    expect(leaveDetail).to.deep.equal({ id: "a" });
+    expect(nodeEl.hasAttribute("data-hovered")).to.be.false;
   });
 
-  it('emits lr-link-enter/lr-link-leave with source/target ids and toggles data-hovered on the link element', async () => {
+  it("emits lr-link-enter/lr-link-leave with source/target ids and toggles data-hovered on the link element", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -970,21 +971,21 @@ describe('hover events', () => {
     );
     const linkEl = el.shadowRoot!.querySelector('[part="link"]') as SVGElement;
 
-    let enterDetail: { sourceNodeId: string; targetNodeId: string } | undefined;
+    let enterDetail: { source: string; target: string } | undefined;
     el.addEventListener(
-      'lr-link-enter',
+      "lr-link-enter",
       (e) => (enterDetail = (e as CustomEvent).detail)
     );
 
-    linkEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-    expect(enterDetail).to.deep.equal({ sourceNodeId: 'a', targetNodeId: 'b' });
-    expect(linkEl.hasAttribute('data-hovered')).to.be.true;
+    linkEl.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+    expect(enterDetail).to.deep.equal({ source: "a", target: "b" });
+    expect(linkEl.hasAttribute("data-hovered")).to.be.true;
 
-    linkEl.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-    expect(linkEl.hasAttribute('data-hovered')).to.be.false;
+    linkEl.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+    expect(linkEl.hasAttribute("data-hovered")).to.be.false;
   });
 
-  it('suppresses hover events and the data-hovered attribute while a drag is in progress', async () => {
+  it("suppresses hover events and the data-hovered attribute while a drag is in progress", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1000,13 +1001,13 @@ describe('hover events', () => {
 
     (el as unknown as { isDragging: boolean }).isDragging = true;
     let fired = false;
-    el.addEventListener('lr-node-enter', () => (fired = true));
-    nodeEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    el.addEventListener("lr-node-enter", () => (fired = true));
+    nodeEl.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
     expect(fired).to.be.false;
-    expect(nodeEl.hasAttribute('data-hovered')).to.be.false;
+    expect(nodeEl.hasAttribute("data-hovered")).to.be.false;
   });
 
-  it('suppresses hover events while panning', async () => {
+  it("suppresses hover events while panning", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1022,12 +1023,12 @@ describe('hover events', () => {
 
     (el as unknown as { isPanning: boolean }).isPanning = true;
     let fired = false;
-    el.addEventListener('lr-node-enter', () => (fired = true));
-    nodeEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    el.addEventListener("lr-node-enter", () => (fired = true));
+    nodeEl.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
     expect(fired).to.be.false;
   });
 
-  it('suppresses hover events during a programmatic camera tween (regression)', async () => {
+  it("suppresses hover events during a programmatic camera tween (regression)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1043,19 +1044,19 @@ describe('hover events', () => {
 
     (el as unknown as { isCameraTweening: boolean }).isCameraTweening = true;
     let fired = false;
-    el.addEventListener('lr-node-enter', () => (fired = true));
-    nodeEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    el.addEventListener("lr-node-enter", () => (fired = true));
+    nodeEl.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
     expect(fired).to.be.false;
   });
 
-  it('does not fire lr-link-enter/lr-link-leave or set data-hovered for a dangling-stub link', async () => {
+  it("does not fire lr-link-enter/lr-link-leave or set data-hovered for a dangling-stub link", async () => {
     // A dangling stub's `target` is a synthetic stand-in that never resolves to a real node (see
     // SimLink.dangling) -- emitting a link-identity hover event for it would hand a consumer an id
     // guaranteed to never match anything in `nodes`, so the stub is deliberately excluded from
     // hover wiring the same way it's excluded from click/focus/keydown/tooltip/accessible-list.
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes; // ids: a, b
-    el.links = [...links, { source: 'a', target: 'does-not-exist' }];
+    el.links = [...links, { source: "a", target: "does-not-exist" }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1070,19 +1071,19 @@ describe('hover events', () => {
     expect(stub != null).to.equal(true);
 
     let fired = false;
-    el.addEventListener('lr-link-enter', () => (fired = true));
-    el.addEventListener('lr-link-leave', () => (fired = true));
+    el.addEventListener("lr-link-enter", () => (fired = true));
+    el.addEventListener("lr-link-leave", () => (fired = true));
 
-    stub.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    stub.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
     expect(fired).to.be.false;
-    expect(stub.hasAttribute('data-hovered')).to.be.false;
+    expect(stub.hasAttribute("data-hovered")).to.be.false;
 
-    stub.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    stub.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
     expect(fired).to.be.false;
-    expect(stub.hasAttribute('data-hovered')).to.be.false;
+    expect(stub.hasAttribute("data-hovered")).to.be.false;
   });
 
-  it('suppresses lr-link-enter/lr-link-leave and data-hovered while dragging (onLinkEnter/onLinkLeave twin of the node guard)', async () => {
+  it("suppresses lr-link-enter/lr-link-leave and data-hovered while dragging (onLinkEnter/onLinkLeave twin of the node guard)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1098,22 +1099,22 @@ describe('hover events', () => {
 
     (el as unknown as { isDragging: boolean }).isDragging = true;
     let fired = false;
-    el.addEventListener('lr-link-enter', () => (fired = true));
-    el.addEventListener('lr-link-leave', () => (fired = true));
+    el.addEventListener("lr-link-enter", () => (fired = true));
+    el.addEventListener("lr-link-leave", () => (fired = true));
 
-    linkEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    linkEl.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
     expect(fired).to.be.false;
-    expect(linkEl.hasAttribute('data-hovered')).to.be.false;
+    expect(linkEl.hasAttribute("data-hovered")).to.be.false;
 
-    linkEl.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    linkEl.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
     expect(fired).to.be.false;
-    expect(linkEl.hasAttribute('data-hovered')).to.be.false;
+    expect(linkEl.hasAttribute("data-hovered")).to.be.false;
   });
 
   it("includes the link's explicit id in lr-link-enter/lr-link-leave detail when the link has one", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = [{ id: 'e1', source: 'a', target: 'b' }];
+    el.links = [{ id: "e1", source: "a", target: "b" }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1125,42 +1126,34 @@ describe('hover events', () => {
     const linkEl = el.shadowRoot!.querySelector('[part="link"]') as SVGElement;
 
     let enterDetail:
-      | { sourceNodeId: string; targetNodeId: string; linkId?: string }
+      | { source: string; target: string; id?: string }
       | undefined;
     let leaveDetail:
-      | { sourceNodeId: string; targetNodeId: string; linkId?: string }
+      | { source: string; target: string; id?: string }
       | undefined;
     el.addEventListener(
-      'lr-link-enter',
+      "lr-link-enter",
       (e) => (enterDetail = (e as CustomEvent).detail)
     );
     el.addEventListener(
-      'lr-link-leave',
+      "lr-link-leave",
       (e) => (leaveDetail = (e as CustomEvent).detail)
     );
 
-    linkEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-    expect(enterDetail).to.deep.equal({
-      sourceNodeId: 'a',
-      targetNodeId: 'b',
-      linkId: 'e1',
-    });
+    linkEl.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+    expect(enterDetail).to.deep.equal({ source: "a", target: "b", id: "e1" });
 
-    linkEl.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-    expect(leaveDetail).to.deep.equal({
-      sourceNodeId: 'a',
-      targetNodeId: 'b',
-      linkId: 'e1',
-    });
+    linkEl.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+    expect(leaveDetail).to.deep.equal({ source: "a", target: "b", id: "e1" });
   });
 });
 
-it('renders directed links with arrowheads shortened to the target radius', async () => {
+it("renders directed links with arrowheads shortened to the target radius", async () => {
   const el = (await fixture(
     html`<lr-graph seed="42"></lr-graph>`
   )) as LyraGraph;
   el.nodes = nodes;
-  el.links = [{ source: 'a', target: 'b', directed: true }];
+  el.links = [{ source: "a", target: "b", directed: true }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1173,32 +1166,32 @@ it('renders directed links with arrowheads shortened to the target radius', asyn
   const target = el.shadowRoot!.querySelectorAll(
     '[part="node"]'
   )[1] as SVGCircleElement;
-  expect(link.getAttribute('marker-end')).to.match(/^url\(#lr-graph-arrow-/);
-  expect(link.getAttribute('x2')).to.not.equal(target.getAttribute('cx'));
+  expect(link.getAttribute("marker-end")).to.match(/^url\(#lr-graph-arrow-/);
+  expect(link.getAttribute("x2")).to.not.equal(target.getAttribute("cx"));
   expect(el.shadowRoot!.querySelector('[part="arrowhead"]')).to.exist;
 });
 
-it('uses rich accessible labels/descriptions and carries a stable link id through activation', async () => {
+it("uses rich accessible labels/descriptions and carries a stable link id through activation", async () => {
   const el = (await fixture(
     html`<lr-graph seed="42"></lr-graph>`
   )) as LyraGraph;
   el.nodes = [
     {
-      id: 'a',
-      label: 'A',
-      accessibleLabel: 'Document A, 12 citations',
-      description: 'Primary authority',
+      id: "a",
+      label: "A",
+      accessibleLabel: "Document A, 12 citations",
+      description: "Primary authority",
     },
-    { id: 'b', label: 'B' },
+    { id: "b", label: "B" },
   ];
   el.links = [
     {
-      id: 'citation-7',
-      source: 'a',
-      target: 'b',
-      label: 'cites',
-      accessibleLabel: 'Document A cites document B seven times',
-      description: 'Seven citations',
+      id: "citation-7",
+      source: "a",
+      target: "b",
+      label: "cites",
+      accessibleLabel: "Document A cites document B seven times",
+      description: "Seven citations",
     },
   ];
   await el.updateComplete;
@@ -1213,37 +1206,31 @@ it('uses rich accessible labels/descriptions and carries a stable link id throug
     '[part="node"]'
   ) as SVGCircleElement;
   const link = el.shadowRoot!.querySelector('[part="link"]') as SVGLineElement;
-  expect(firstNode.getAttribute('aria-label')).to.equal(
-    'Document A, 12 citations'
+  expect(firstNode.getAttribute("aria-label")).to.equal(
+    "Document A, 12 citations"
   );
-  expect(firstNode.querySelector('title')?.textContent).to.equal(
-    'Primary authority'
+  expect(firstNode.querySelector("title")?.textContent).to.equal(
+    "Primary authority"
   );
-  expect(link.getAttribute('aria-label')).to.equal(
-    'Document A cites document B seven times'
+  expect(link.getAttribute("aria-label")).to.equal(
+    "Document A cites document B seven times"
   );
-  expect(link.querySelector('title')?.textContent).to.equal('Seven citations');
-  let detail:
-    | { sourceNodeId: string; targetNodeId: string; linkId?: string }
-    | undefined;
+  expect(link.querySelector("title")?.textContent).to.equal("Seven citations");
+  let detail: { source: string; target: string; id?: string } | undefined;
   el.addEventListener(
-    'lr-link-click',
+    "lr-link-click",
     (e) => (detail = (e as CustomEvent).detail)
   );
-  link.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  expect(detail).to.deep.equal({
-    sourceNodeId: 'a',
-    targetNodeId: 'b',
-    linkId: 'citation-7',
-  });
+  link.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  expect(detail).to.deep.equal({ source: "a", target: "b", id: "citation-7" });
 });
 
-it('applies sanitized per-link color and numeric dash styling', async () => {
+it("applies sanitized per-link color and numeric dash styling", async () => {
   const el = (await fixture(
     html`<lr-graph seed="42"></lr-graph>`
   )) as LyraGraph;
   el.nodes = nodes;
-  el.links = [{ source: 'a', target: 'b', color: '#ff0000', dash: [4, 2] }];
+  el.links = [{ source: "a", target: "b", color: "#ff0000", dash: [4, 2] }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1253,14 +1240,14 @@ it('applies sanitized per-link color and numeric dash styling', async () => {
     }
   );
   const link = el.shadowRoot!.querySelector('[part="link"]') as SVGLineElement;
-  expect(getComputedStyle(link).stroke).to.equal('rgb(255, 0, 0)');
-  expect(link.getAttribute('stroke-dasharray')).to.equal('4 2');
+  expect(getComputedStyle(link).stroke).to.equal("rgb(255, 0, 0)");
+  expect(link.getAttribute("stroke-dasharray")).to.equal("4 2");
 
   el.links = [
     {
-      source: 'a',
-      target: 'b',
-      color: 'red; position: fixed',
+      source: "a",
+      target: "b",
+      color: "red; position: fixed",
       dash: [4, -2, Number.NaN],
     },
   ];
@@ -1268,15 +1255,15 @@ it('applies sanitized per-link color and numeric dash styling', async () => {
   expect(
     (el.shadowRoot!.querySelector('[part="link"]') as SVGLineElement).style
       .position
-  ).to.equal('');
+  ).to.equal("");
   expect(
     (
       el.shadowRoot!.querySelector('[part="link"]') as SVGLineElement
-    ).hasAttribute('stroke-dasharray')
+    ).hasAttribute("stroke-dasharray")
   ).to.be.false;
 });
 
-it('emits lr-node-click when a node is activated via keyboard (Enter/Space)', async () => {
+it("emits lr-node-click when a node is activated via keyboard (Enter/Space)", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -1288,20 +1275,20 @@ it('emits lr-node-click when a node is activated via keyboard (Enter/Space)', as
       timeout: NODE_COUNT_TIMEOUT,
     }
   );
-  let detail: { nodeId: string; x: number; y: number } | undefined;
+  let detail: { id: string; x: number; y: number } | undefined;
   el.addEventListener(
-    'lr-node-click',
+    "lr-node-click",
     (e) => (detail = (e as CustomEvent).detail)
   );
   (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).dispatchEvent(
-    new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+    new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
   );
-  expect(detail?.nodeId).to.equal('a');
-  expect(detail?.x).to.be.a('number');
-  expect(detail?.y).to.be.a('number');
+  expect(detail?.id).to.equal("a");
+  expect(detail?.x).to.be.a("number");
+  expect(detail?.y).to.be.a("number");
 });
 
-it('emits lr-link-click when a link is activated via keyboard (Enter/Space)', async () => {
+it("emits lr-link-click when a link is activated via keyboard (Enter/Space)", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -1313,18 +1300,18 @@ it('emits lr-link-click when a link is activated via keyboard (Enter/Space)', as
       timeout: NODE_COUNT_TIMEOUT,
     }
   );
-  let detail: { sourceNodeId: string; targetNodeId: string } | undefined;
+  let detail: { source: string; target: string } | undefined;
   el.addEventListener(
-    'lr-link-click',
+    "lr-link-click",
     (e) => (detail = (e as CustomEvent).detail)
   );
   (el.shadowRoot!.querySelector('[part="link"]') as HTMLElement).dispatchEvent(
-    new KeyboardEvent('keydown', { key: ' ', bubbles: true })
+    new KeyboardEvent("keydown", { key: " ", bubbles: true })
   );
-  expect(detail).to.deep.equal({ sourceNodeId: 'a', targetNodeId: 'b' });
+  expect(detail).to.deep.equal({ source: "a", target: "b" });
 });
 
-it('gives the svg an accessible name summarizing the diagram, and hides duplicate node labels from assistive tech', async () => {
+it("gives the svg an accessible name summarizing the diagram, and hides duplicate node labels from assistive tech", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -1336,18 +1323,18 @@ it('gives the svg an accessible name summarizing the diagram, and hides duplicat
       timeout: NODE_COUNT_TIMEOUT,
     }
   );
-  const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-  expect(svgEl.getAttribute('aria-label')).to.match(/2 nodes/);
+  const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+  expect(svgEl.getAttribute("aria-label")).to.match(/2 nodes/);
   const label = el.shadowRoot!.querySelector(
     '[part="label"]'
   ) as SVGTextElement;
-  expect(label.getAttribute('aria-hidden')).to.equal('true');
+  expect(label.getAttribute("aria-hidden")).to.equal("true");
 });
 
-it('uses one roving tab stop with arrow/Home/End navigation and a data-list alternative', async () => {
+it("uses one roving tab stop with arrow/Home/End navigation and a data-list alternative", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.strings = {
-    graphItemAnnouncement: '{item}, position {index} sur {total}',
+    graphItemAnnouncement: "{item}, position {index} sur {total}",
   };
   el.nodes = nodes;
   el.links = links;
@@ -1366,38 +1353,38 @@ it('uses one roving tab stop with arrow/Home/End navigation and a data-list alte
       ...el.shadowRoot!.querySelectorAll('[part="link"]'),
     ] as SVGElement[];
   expect(
-    items().filter((item) => item.getAttribute('tabindex') === '0')
+    items().filter((item) => item.getAttribute("tabindex") === "0")
   ).to.have.length(1);
   expect(
-    items().filter((item) => item.getAttribute('tabindex') === '-1')
+    items().filter((item) => item.getAttribute("tabindex") === "-1")
   ).to.have.length(2);
 
   items()[0]!.dispatchEvent(
-    new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
+    new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
   );
   await el.updateComplete;
-  expect(items()[1]!.getAttribute('tabindex')).to.equal('0');
+  expect(items()[1]!.getAttribute("tabindex")).to.equal("0");
   expect(
     el.shadowRoot!.querySelector('[part="live-region"]')!.textContent
-  ).to.contain('position 2 sur 3');
+  ).to.contain("position 2 sur 3");
 
   items()[1]!.dispatchEvent(
-    new KeyboardEvent('keydown', { key: 'End', bubbles: true })
+    new KeyboardEvent("keydown", { key: "End", bubbles: true })
   );
   await el.updateComplete;
-  expect(items()[2]!.getAttribute('tabindex')).to.equal('0');
+  expect(items()[2]!.getAttribute("tabindex")).to.equal("0");
   items()[2]!.dispatchEvent(
-    new KeyboardEvent('keydown', { key: 'Home', bubbles: true })
+    new KeyboardEvent("keydown", { key: "Home", bubbles: true })
   );
   await el.updateComplete;
-  expect(items()[0]!.getAttribute('tabindex')).to.equal('0');
+  expect(items()[0]!.getAttribute("tabindex")).to.equal("0");
 
   expect(
     el.shadowRoot!.querySelectorAll('[part="data-list"] li')
   ).to.have.length(3);
 });
 
-it('preserves existing node positions across an incremental nodes/links update instead of restarting the whole layout', async () => {
+it("preserves existing node positions across an incremental nodes/links update instead of restarting the whole layout", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -1414,24 +1401,24 @@ it('preserves existing node positions across an incremental nodes/links update i
   await aTimeout(200);
   const beforeA = (
     el.shadowRoot!.querySelectorAll('[part="node"]')[0] as SVGCircleElement
-  ).getAttribute('cx');
+  ).getAttribute("cx");
 
   // Append a new node — e.g. a live/streaming data feed pushing one incremental update.
-  el.nodes = [...nodes, { id: 'c', label: 'C' }];
-  el.links = [...links, { source: 'a', target: 'c' }];
+  el.nodes = [...nodes, { id: "c", label: "C" }];
+  el.links = [...links, { source: "a", target: "c" }];
   await el.updateComplete;
 
   const afterA = (
     el.shadowRoot!.querySelectorAll('[part="node"]')[0] as SVGCircleElement
-  ).getAttribute('cx');
+  ).getAttribute("cx");
   expect(afterA).to.equal(beforeA);
 });
 
-it('applies a per-node LyraGraphNode.color as the actual rendered fill', async () => {
+it("applies a per-node LyraGraphNode.color as the actual rendered fill", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = [
-    { id: 'a', label: 'A', color: '#ff0000' },
-    { id: 'b', label: 'B' },
+    { id: "a", label: "A", color: "#ff0000" },
+    { id: "b", label: "B" },
   ];
   el.links = links;
   await el.updateComplete;
@@ -1448,31 +1435,31 @@ it('applies a per-node LyraGraphNode.color as the actual rendered fill', async (
   // A stylesheet rule always beats a bare presentation attribute in the SVG/CSS
   // cascade, so this must actually change the computed fill (not just the
   // attribute) to prove the per-node color isn't silently overridden.
-  expect(getComputedStyle(coloredEl).fill).to.equal('rgb(255, 0, 0)');
+  expect(getComputedStyle(coloredEl).fill).to.equal("rgb(255, 0, 0)");
   expect(getComputedStyle(coloredEl).fill).to.not.equal(
     getComputedStyle(defaultEl).fill
   );
 });
 
-describe('node typing', () => {
+describe("node typing", () => {
   const nodeTypes = [
-    { id: 'person', label: 'Person', shape: 'square' as const },
+    { id: "person", label: "Person", shape: "square" as const },
     {
-      id: 'doc',
-      label: 'Document',
-      color: '#112233',
-      shape: 'diamond' as const,
+      id: "doc",
+      label: "Document",
+      color: "#112233",
+      shape: "diamond" as const,
     },
-    { id: 'concept', label: 'Concept' }, // no color, no shape -> categorical fallback + circle
+    { id: "concept", label: "Concept" }, // no color, no shape -> categorical fallback + circle
   ];
   const typedNodes = [
-    { id: 'a', label: 'A', type: 'person' },
-    { id: 'b', label: 'B', type: 'doc' },
-    { id: 'c', label: 'C', type: 'concept' },
-    { id: 'd', label: 'D', type: 'unknown-type' }, // falls back to untyped
-    { id: 'e', label: 'E', type: 'concept', color: '#ff0000' }, // node.color wins
+    { id: "a", label: "A", type: "person" },
+    { id: "b", label: "B", type: "doc" },
+    { id: "c", label: "C", type: "concept" },
+    { id: "d", label: "D", type: "unknown-type" }, // falls back to untyped
+    { id: "e", label: "E", type: "concept", color: "#ff0000" }, // node.color wins
   ];
-  const typedLinks = [{ source: 'a', target: 'b' }];
+  const typedLinks = [{ source: "a", target: "b" }];
 
   async function mountTyped(): Promise<LyraGraph> {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
@@ -1490,42 +1477,42 @@ describe('node typing', () => {
     return el;
   }
 
-  it('renders circle/square/diamond shape elements per nodeTypes entry, untyped/unknown-type as circle', async () => {
+  it("renders circle/square/diamond shape elements per nodeTypes entry, untyped/unknown-type as circle", async () => {
     const el = await mountTyped();
     const items = el.shadowRoot!.querySelectorAll('[part="node"]');
-    expect(items[0]!.tagName).to.equal('path'); // a: person -> square
-    expect(items[1]!.tagName).to.equal('path'); // b: doc -> diamond
-    expect(items[2]!.tagName).to.equal('circle'); // c: concept -> circle (no shape given)
-    expect(items[3]!.tagName).to.equal('circle'); // d: unknown-type -> untyped circle
-    expect(items[4]!.tagName).to.equal('circle'); // e: concept -> circle
+    expect(items[0]!.tagName).to.equal("path"); // a: person -> square
+    expect(items[1]!.tagName).to.equal("path"); // b: doc -> diamond
+    expect(items[2]!.tagName).to.equal("circle"); // c: concept -> circle (no shape given)
+    expect(items[3]!.tagName).to.equal("circle"); // d: unknown-type -> untyped circle
+    expect(items[4]!.tagName).to.equal("circle"); // e: concept -> circle
   });
 
-  it('resolves fill precedence: node.color > type.color > categorical palette by nodeTypes index > default token', async () => {
+  it("resolves fill precedence: node.color > type.color > categorical palette by nodeTypes index > default token", async () => {
     const el = await mountTyped();
     const items = [
       ...el.shadowRoot!.querySelectorAll('[part="node"]'),
     ] as SVGElement[];
-    expect(items[1]!.getAttribute('style')).to.include(
-      '--lr-node-fill:#112233'
+    expect(items[1]!.getAttribute("style")).to.include(
+      "--lr-node-fill:#112233"
     ); // b: doc.color
-    expect(items[2]!.getAttribute('style') ?? '').to.include(
-      '--lr-graph-cat-3'
+    expect(items[2]!.getAttribute("style") ?? "").to.include(
+      "--lr-graph-cat-3"
     ); // c: concept is nodeTypes[2]
-    expect(items[3]!.hasAttribute('style')).to.be.false; // d: unknown type -> no inline fill override
-    expect(items[4]!.getAttribute('style')).to.include(
-      '--lr-node-fill:#ff0000'
+    expect(items[3]!.hasAttribute("style")).to.be.false; // d: unknown type -> no inline fill override
+    expect(items[4]!.getAttribute("style")).to.include(
+      "--lr-node-fill:#ff0000"
     ); // e: node.color wins over type
   });
 
-  it('wraps the categorical index at the 9th nodeTypes entry (typeIndex % 8)', async () => {
+  it("wraps the categorical index at the 9th nodeTypes entry (typeIndex % 8)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodeTypes = Array.from({ length: 9 }, (_, i) => ({
       id: `t${i}`,
       label: `T${i}`,
     }));
     el.nodes = [
-      { id: 'first', type: 't0' },
-      { id: 'ninth', type: 't8' },
+      { id: "first", type: "t0" },
+      { id: "ninth", type: "t8" },
     ];
     el.links = [];
     await el.updateComplete;
@@ -1539,38 +1526,38 @@ describe('node typing', () => {
     const items = [
       ...el.shadowRoot!.querySelectorAll('[part="node"]'),
     ] as SVGElement[];
-    expect(items[0]!.getAttribute('style')).to.include('--lr-graph-cat-1'); // index 0 % 8 -> slot 1
-    expect(items[1]!.getAttribute('style')).to.include('--lr-graph-cat-1'); // index 8 % 8 -> slot 1 again
+    expect(items[0]!.getAttribute("style")).to.include("--lr-graph-cat-1"); // index 0 % 8 -> slot 1
+    expect(items[1]!.getAttribute("style")).to.include("--lr-graph-cat-1"); // index 8 % 8 -> slot 1 again
   });
 
-  it('positions square/diamond shapes via a per-tick transform, not cx/cy', async () => {
+  it("positions square/diamond shapes via a per-tick transform, not cx/cy", async () => {
     const el = await mountTyped();
     const squareEl = el.shadowRoot!.querySelector(
       '[part="node"]'
     ) as SVGPathElement;
     await aTimeout(50);
-    expect(squareEl.getAttribute('transform')).to.match(
+    expect(squareEl.getAttribute("transform")).to.match(
       /^translate\(-?\d+(\.\d+)?,-?\d+(\.\d+)?\)$/
     );
-    expect(squareEl.hasAttribute('cx')).to.be.false;
+    expect(squareEl.hasAttribute("cx")).to.be.false;
   });
 
-  it('wraps typed node spoken text via graphTypedNode', async () => {
+  it("wraps typed node spoken text via graphTypedNode", async () => {
     const el = await mountTyped();
     const items = [
       ...el.shadowRoot!.querySelectorAll('[part="node"]'),
     ] as SVGElement[];
-    expect(items[0]!.getAttribute('aria-label')).to.equal('A (Person)');
-    expect(items[2]!.getAttribute('aria-label')).to.equal('C (Concept)');
-    expect(items[3]!.getAttribute('aria-label')).to.equal('D'); // unknown type -> unwrapped
+    expect(items[0]!.getAttribute("aria-label")).to.equal("A (Person)");
+    expect(items[2]!.getAttribute("aria-label")).to.equal("C (Concept)");
+    expect(items[3]!.getAttribute("aria-label")).to.equal("D"); // unknown type -> unwrapped
   });
 
-  it('is accessible with typed, mixed-shape nodes', async () => {
+  it("is accessible with typed, mixed-shape nodes", async () => {
     const el = await mountTyped();
     await expect(el).to.be.accessible();
   });
 
-  it('existing graph usage unaffected: no type/nodeTypes set renders identical circles and unwrapped labels', async () => {
+  it("existing graph usage unaffected: no type/nodeTypes set renders identical circles and unwrapped labels", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1585,13 +1572,13 @@ describe('node typing', () => {
     const items = [
       ...el.shadowRoot!.querySelectorAll('[part="node"]'),
     ] as SVGElement[];
-    expect(items.every((i) => i.tagName === 'circle')).to.be.true;
-    expect(items[0]!.getAttribute('aria-label')).to.equal('A');
-    expect(items[0]!.hasAttribute('cx')).to.be.true;
-    expect(items[0]!.hasAttribute('style')).to.be.false;
+    expect(items.every((i) => i.tagName === "circle")).to.be.true;
+    expect(items[0]!.getAttribute("aria-label")).to.equal("A");
+    expect(items[0]!.hasAttribute("cx")).to.be.true;
+    expect(items[0]!.hasAttribute("style")).to.be.false;
   });
 
-  it('refreshes the cached nodeEls when nodeTypes alone changes a shape post-mount (regression)', async () => {
+  it("refreshes the cached nodeEls when nodeTypes alone changes a shape post-mount (regression)", async () => {
     // A consumer mutating nodeTypes without also reassigning nodes/links (e.g.
     // flipping one type's shape from the default circle to 'square') swaps the
     // rendered element (different tag = different DOM node) via Lit's own
@@ -1599,8 +1586,8 @@ describe('node typing', () => {
     // be refreshed in that case too, or it keeps pointing at the stale,
     // now-detached element -- see this file's guard in applyInteractions().
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodeTypes = [{ id: 'concept', label: 'Concept' }]; // no shape -> defaults to circle
-    el.nodes = [{ id: 'a', label: 'A', type: 'concept' }];
+    el.nodeTypes = [{ id: "concept", label: "Concept" }]; // no shape -> defaults to circle
+    el.nodes = [{ id: "a", label: "A", type: "concept" }];
     el.links = [];
     await el.updateComplete;
     await waitUntil(
@@ -1611,14 +1598,14 @@ describe('node typing', () => {
       }
     );
     expect(el.shadowRoot!.querySelector('[part="node"]')!.tagName).to.equal(
-      'circle'
+      "circle"
     );
 
     // Mutate nodeTypes ALONE -- nodes/links are not reassigned.
-    el.nodeTypes = [{ id: 'concept', label: 'Concept', shape: 'square' }];
+    el.nodeTypes = [{ id: "concept", label: "Concept", shape: "square" }];
     await el.updateComplete;
     await waitUntil(
-      () => el.shadowRoot!.querySelector('[part="node"]')?.tagName === 'path',
+      () => el.shadowRoot!.querySelector('[part="node"]')?.tagName === "path",
       undefined,
       {
         timeout: NODE_COUNT_TIMEOUT,
@@ -1635,8 +1622,8 @@ describe('node typing', () => {
   });
 });
 
-describe('drawn edge labels', () => {
-  const labeledLinks = [{ source: 'a', target: 'b', label: 'cites' }];
+describe("drawn edge labels", () => {
+  const labeledLinks = [{ source: "a", target: "b", label: "cites" }];
 
   async function mountLabeled(showEdgeLabels = true): Promise<LyraGraph> {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
@@ -1654,24 +1641,24 @@ describe('drawn edge labels', () => {
     return el;
   }
 
-  it('defaults showEdgeLabels to false and renders no link-label text', async () => {
+  it("defaults showEdgeLabels to false and renders no link-label text", async () => {
     const el = await mountLabeled(false);
     expect(el.shadowRoot!.querySelector('[part="link-label"]') == null).to.be
       .true;
   });
 
-  it('draws a link-label per labeled link when showEdgeLabels is set, aria-hidden and text-anchor middle', async () => {
+  it("draws a link-label per labeled link when showEdgeLabels is set, aria-hidden and text-anchor middle", async () => {
     const el = await mountLabeled(true);
     const label = el.shadowRoot!.querySelector(
       '[part="link-label"]'
     ) as SVGTextElement;
     expect(label != null).to.equal(true);
-    expect(label.textContent).to.equal('cites');
-    expect(label.getAttribute('aria-hidden')).to.equal('true');
-    expect(label.getAttribute('text-anchor')).to.equal('middle');
+    expect(label.textContent).to.equal("cites");
+    expect(label.getAttribute("aria-hidden")).to.equal("true");
+    expect(label.getAttribute("text-anchor")).to.equal("middle");
   });
 
-  it('does not draw a link-label for a link with no label text', async () => {
+  it("does not draw a link-label for a link with no label text", async () => {
     const el = (await fixture(
       html`<lr-graph show-edge-labels></lr-graph>`
     )) as LyraGraph;
@@ -1689,21 +1676,21 @@ describe('drawn edge labels', () => {
       .true;
   });
 
-  it('hides all edge labels below edgeLabelMinZoom via a data-edge-labels-hidden toggle on the zoomed g, without a Lit re-render', async () => {
+  it("hides all edge labels below edgeLabelMinZoom via a data-edge-labels-hidden toggle on the zoomed g, without a Lit re-render", async () => {
     const el = await mountLabeled(true);
-    const g = el.shadowRoot!.querySelector('g') as SVGGElement;
-    expect(g.hasAttribute('data-edge-labels-hidden')).to.be.false;
+    const g = el.shadowRoot!.querySelector("g") as SVGGElement;
+    expect(g.hasAttribute("data-edge-labels-hidden")).to.be.false;
     (
       el as unknown as { updateEdgeLabelZoomGate: (k: number) => void }
     ).updateEdgeLabelZoomGate(0.3);
-    expect(g.getAttribute('data-edge-labels-hidden')).to.equal('');
+    expect(g.getAttribute("data-edge-labels-hidden")).to.equal("");
     (
       el as unknown as { updateEdgeLabelZoomGate: (k: number) => void }
     ).updateEdgeLabelZoomGate(1);
-    expect(g.hasAttribute('data-edge-labels-hidden')).to.be.false;
+    expect(g.hasAttribute("data-edge-labels-hidden")).to.be.false;
   });
 
-  it('applies the edge-label zoom gate at initial mount, before any pan/zoom gesture (regression)', async () => {
+  it("applies the edge-label zoom gate at initial mount, before any pan/zoom gesture (regression)", async () => {
     // edgeLabelMinZoom set above the initial identity transform's k=1 -- the gate must already be
     // applied by the time the graph first paints, not only reactively after the user's first
     // pan/zoom gesture (see updateEdgeLabelZoomGate()'s own doc comment).
@@ -1721,11 +1708,11 @@ describe('drawn edge labels', () => {
       }
     );
 
-    const g = el.shadowRoot!.querySelector('g') as SVGGElement;
-    expect(g.hasAttribute('data-edge-labels-hidden')).to.be.true;
+    const g = el.shadowRoot!.querySelector("g") as SVGGElement;
+    expect(g.hasAttribute("data-edge-labels-hidden")).to.be.true;
   });
 
-  it('spoken output (link accessible name) is identical whether showEdgeLabels is on or off', async () => {
+  it("spoken output (link accessible name) is identical whether showEdgeLabels is on or off", async () => {
     const off = await mountLabeled(false);
     const on = await mountLabeled(true);
     const offLink = off.shadowRoot!.querySelector(
@@ -1734,17 +1721,17 @@ describe('drawn edge labels', () => {
     const onLink = on.shadowRoot!.querySelector(
       '[part="link"]'
     ) as SVGLineElement;
-    expect(offLink.getAttribute('aria-label')).to.equal(
-      onLink.getAttribute('aria-label')
+    expect(offLink.getAttribute("aria-label")).to.equal(
+      onLink.getAttribute("aria-label")
     );
   });
 
-  it('is accessible with edge labels drawn', async () => {
+  it("is accessible with edge labels drawn", async () => {
     const el = await mountLabeled(true);
     await expect(el).to.be.accessible();
   });
 
-  it('existing graph usage unaffected: showEdgeLabels unset draws nothing and every existing link/node assertion still holds', async () => {
+  it("existing graph usage unaffected: showEdgeLabels unset draws nothing and every existing link/node assertion still holds", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1760,11 +1747,11 @@ describe('drawn edge labels', () => {
       el.shadowRoot!.querySelectorAll('[part="link-label"]').length
     ).to.equal(0);
     expect(
-      el.shadowRoot!.querySelector('g')!.hasAttribute('data-edge-labels-hidden')
+      el.shadowRoot!.querySelector("g")!.hasAttribute("data-edge-labels-hidden")
     ).to.be.false;
   });
 
-  it('does not wrap a link in an extra per-link <g> when showEdgeLabels is unset (byte-for-byte link DOM, regression)', async () => {
+  it("does not wrap a link in an extra per-link <g> when showEdgeLabels is unset (byte-for-byte link DOM, regression)", async () => {
     // The link must remain a direct child of the outer zoomed <g transform=""> (the only <g> in
     // this part of the template that carries a transform attribute) -- not nested inside a
     // per-link <g> introduced for the (here, unused) drawn-edge-label <text> sibling.
@@ -1783,10 +1770,10 @@ describe('drawn edge labels', () => {
     const linkEl = el.shadowRoot!.querySelector(
       '[part="link"]:not([data-dangling])'
     )!;
-    expect(linkEl.parentElement?.getAttribute('transform')).to.equal('');
+    expect(linkEl.parentElement?.getAttribute("transform")).to.equal("");
   });
 
-  it('refreshes the cached linkLabelEls when showEdgeLabels toggles true post-mount (regression)', async () => {
+  it("refreshes the cached linkLabelEls when showEdgeLabels toggles true post-mount (regression)", async () => {
     // Flipping showEdgeLabels false -> true without reassigning nodes/links triggers a normal
     // Lit re-render that creates the <text part="link-label"> element, but applyInteractions()'s
     // node/link/label DOM cache must be refreshed for a showEdgeLabels-only change too -- or
@@ -1817,8 +1804,8 @@ describe('drawn edge labels', () => {
   });
 });
 
-describe('expand affordance', () => {
-  it('dblclick on a node emits exactly one lr-node-expand after two lr-node-click events, and stops propagation', async () => {
+describe("expand affordance", () => {
+  it("dblclick on a node emits exactly one lr-node-expand after two lr-node-click events, and stops propagation", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1832,24 +1819,24 @@ describe('expand affordance', () => {
     );
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     let clickCount = 0;
-    let expandDetail: { nodeId: string } | undefined;
+    let expandDetail: { id: string } | undefined;
     let expandCount = 0;
-    el.addEventListener('lr-node-click', () => clickCount++);
-    el.addEventListener('lr-node-expand', (e) => {
+    el.addEventListener("lr-node-click", () => clickCount++);
+    el.addEventListener("lr-node-expand", (e) => {
       expandCount++;
       expandDetail = (e as CustomEvent).detail;
     });
-    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    nodeEl.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    nodeEl.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     nodeEl.dispatchEvent(
-      new MouseEvent('dblclick', { bubbles: true, cancelable: true })
+      new MouseEvent("dblclick", { bubbles: true, cancelable: true })
     );
     expect(clickCount).to.equal(2);
     expect(expandCount).to.equal(1);
-    expect(expandDetail).to.deep.equal({ nodeId: 'a' });
+    expect(expandDetail).to.deep.equal({ id: "a" });
   });
 
-  it('background dblclick (not on a node) still reaches the svg for d3-zoom default zoom-in (event not stopped)', async () => {
+  it("background dblclick (not on a node) still reaches the svg for d3-zoom default zoom-in (event not stopped)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1861,9 +1848,9 @@ describe('expand affordance', () => {
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-    const g = el.shadowRoot!.querySelector('g') as SVGGElement;
-    expect(g.getAttribute('transform')).to.equal('');
+    const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+    const g = el.shadowRoot!.querySelector("g") as SVGGElement;
+    expect(g.getAttribute("transform")).to.equal("");
     // d3-zoom's own dblclick handler calls stopImmediatePropagation() on the matched element (see
     // d3-zoom's `noevent()`), so a sibling listener added after the graph mounts would never
     // observe the event either way -- assert the actual, observable effect instead (matching how
@@ -1874,13 +1861,13 @@ describe('expand affordance', () => {
     // `.transition()` (its own default 250ms duration) rather than applying it synchronously, so
     // this waits out that transition before reading the resulting attribute.
     svgEl.dispatchEvent(
-      new MouseEvent('dblclick', { bubbles: true, cancelable: true })
+      new MouseEvent("dblclick", { bubbles: true, cancelable: true })
     );
     await aTimeout(350);
-    expect(g.getAttribute('transform')).to.match(/scale\(/);
+    expect(g.getAttribute("transform")).to.match(/scale\(/);
   });
 
-  it('double-Enter within 500ms on the same focused node emits lr-node-expand; outside the window it does not', async () => {
+  it("double-Enter within 500ms on the same focused node emits lr-node-expand; outside the window it does not", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -1894,19 +1881,19 @@ describe('expand affordance', () => {
     );
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     let expandCount = 0;
-    el.addEventListener('lr-node-expand', () => expandCount++);
+    el.addEventListener("lr-node-expand", () => expandCount++);
     nodeEl.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
     );
     nodeEl.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
     );
     expect(expandCount).to.equal(1);
 
     // Outside the window: reset by waiting past EXPAND_KEY_INTERVAL_MS.
     await aTimeout(600);
     nodeEl.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
     );
     expect(expandCount).to.equal(1); // first of a new pair, not yet a second
   });
@@ -1914,8 +1901,8 @@ describe('expand affordance', () => {
   it('renders a "+" expand-indicator only for nodes with expandable: true, tracked per tick', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = [
-      { id: 'a', label: 'A', expandable: true },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A", expandable: true },
+      { id: "b", label: "B" },
     ];
     el.links = [];
     await el.updateComplete;
@@ -1932,17 +1919,17 @@ describe('expand affordance', () => {
     const indicator = el.shadowRoot!.querySelector(
       '[part="expand-indicator"]'
     ) as SVGGElement;
-    expect(indicator.getAttribute('aria-hidden')).to.equal('true');
+    expect(indicator.getAttribute("aria-hidden")).to.equal("true");
     await aTimeout(50);
-    expect(indicator.getAttribute('transform')).to.match(
+    expect(indicator.getAttribute("transform")).to.match(
       /^translate\(-?\d+(\.\d+)?,-?\d+(\.\d+)?\)$/
     );
   });
 
-  it('wraps expandable node spoken text via graphExpandableItem, composing with the typed-node label', async () => {
+  it("wraps expandable node spoken text via graphExpandableItem, composing with the typed-node label", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodeTypes = [{ id: 'doc', label: 'Document' }];
-    el.nodes = [{ id: 'a', label: 'A', type: 'doc', expandable: true }];
+    el.nodeTypes = [{ id: "doc", label: "Document" }];
+    el.nodes = [{ id: "a", label: "A", type: "doc", expandable: true }];
     el.links = [];
     await el.updateComplete;
     await waitUntil(
@@ -1953,16 +1940,16 @@ describe('expand affordance', () => {
       }
     );
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
-    expect(nodeEl.getAttribute('aria-label')).to.equal(
-      'A (Document), expandable'
+    expect(nodeEl.getAttribute("aria-label")).to.equal(
+      "A (Document), expandable"
     );
   });
 
-  it('a new node linked to an already-settled node spawns near that neighbor instead of a random position', async () => {
+  it("a new node linked to an already-settled node spawns near that neighbor instead of a random position", async () => {
     const el = (await fixture(
       html`<lr-graph seed="7" link-distance="100"></lr-graph>`
     )) as LyraGraph;
-    el.nodes = [{ id: 'a', label: 'A' }];
+    el.nodes = [{ id: "a", label: "A" }];
     el.links = [];
     await el.updateComplete;
     await waitUntil(
@@ -1972,31 +1959,31 @@ describe('expand affordance', () => {
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    const before = el.simNodes.find((n) => n.id === 'a')!;
+    const before = el.simNodes.find((n) => n.id === "a")!;
     const aX = before.x!;
     const aY = before.y!;
 
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.links = [{ source: "a", target: "b" }];
     await el.updateComplete;
     // Reduced-motion / seeded settles happen synchronously inside rebuildSimulation(), so the new
     // node's spawn position is assigned before this await resolves; assert immediately.
-    const spawnedB = el.simNodes.find((n) => n.id === 'b')!;
+    const spawnedB = el.simNodes.find((n) => n.id === "b")!;
     const distance = Math.hypot(spawnedB.x! - aX, spawnedB.y! - aY);
     // Within a small multiple of linkDistance/2 (the documented jitter radius) -- nowhere close to
     // a fully random position across the whole width/height canvas.
     expect(distance).to.be.lessThan(el.linkDistance);
     // 'a' itself must not have moved (only nodes with no carried-over position are affected).
-    expect(el.simNodes.find((n) => n.id === 'a')!.x).to.equal(aX);
-    expect(el.simNodes.find((n) => n.id === 'a')!.y).to.equal(aY);
+    expect(el.simNodes.find((n) => n.id === "a")!.x).to.equal(aX);
+    expect(el.simNodes.find((n) => n.id === "a")!.y).to.equal(aY);
   });
 
-  it('is accessible with an expandable node', async () => {
+  it("is accessible with an expandable node", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodes = [{ id: 'a', label: 'A', expandable: true }];
+    el.nodes = [{ id: "a", label: "A", expandable: true }];
     el.links = [];
     await el.updateComplete;
     await waitUntil(
@@ -2009,7 +1996,7 @@ describe('expand affordance', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('existing graph usage unaffected: no expandable set never emits lr-node-expand and renders no indicator', async () => {
+  it("existing graph usage unaffected: no expandable set never emits lr-node-expand and renders no indicator", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -2025,15 +2012,15 @@ describe('expand affordance', () => {
       el.shadowRoot!.querySelectorAll('[part="expand-indicator"]').length
     ).to.equal(0);
     let fired = false;
-    el.addEventListener('lr-node-expand', () => (fired = true));
+    el.addEventListener("lr-node-expand", () => (fired = true));
     (el.shadowRoot!.querySelector('[part="node"]') as SVGElement).dispatchEvent(
-      new MouseEvent('dblclick', { bubbles: true })
+      new MouseEvent("dblclick", { bubbles: true })
     );
     expect(fired).to.be.true; // dblclick always emits, regardless of `expandable` (an affordance flag, not a gate)
   });
 });
 
-describe('focus and camera fit', () => {
+describe("focus and camera fit", () => {
   async function mountWide(): Promise<LyraGraph> {
     const el = (await fixture(
       html`<lr-graph
@@ -2044,10 +2031,10 @@ describe('focus and camera fit', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.links = [{ source: "a", target: "b" }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2059,19 +2046,19 @@ describe('focus and camera fit', () => {
     return el;
   }
 
-  it('focusNode resolves false for an unknown id without moving the camera', async () => {
+  it("focusNode resolves false for an unknown id without moving the camera", async () => {
     const el = await mountWide();
-    const result = await el.focusNode('does-not-exist');
+    const result = await el.focusNode("does-not-exist");
     expect(result).to.be.false;
   });
 
-  it('focusNode resolves true and centers the requested node at the viewport center for the given zoom', async () => {
+  it("focusNode resolves true and centers the requested node at the viewport center for the given zoom", async () => {
     const el = await mountWide();
-    const target = el.simNodes.find((n) => n.id === 'a')!;
-    const ok = await el.focusNode('a', { zoom: 2 });
+    const target = el.simNodes.find((n) => n.id === "a")!;
+    const ok = await el.focusNode("a", { zoom: 2 });
     expect(ok).to.be.true;
-    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-    const transform = svgEl.querySelector('g')!.getAttribute('transform')!;
+    const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+    const transform = svgEl.querySelector("g")!.getAttribute("transform")!;
     const match = transform.match(
       /translate\(([-\d.]+),\s*([-\d.]+)\)\s*scale\(([-\d.]+)\)/
     );
@@ -2083,28 +2070,28 @@ describe('focus and camera fit', () => {
     expect(k * target.y! + ty).to.be.closeTo(300, 1);
   });
 
-  it('focusNode clamps an out-of-range zoom to minZoom/maxZoom', async () => {
+  it("focusNode clamps an out-of-range zoom to minZoom/maxZoom", async () => {
     const el = await mountWide();
-    await el.focusNode('a', { zoom: 100 });
-    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-    const transform = svgEl.querySelector('g')!.getAttribute('transform')!;
+    await el.focusNode("a", { zoom: 100 });
+    const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+    const transform = svgEl.querySelector("g")!.getAttribute("transform")!;
     const k = Number(transform.match(/scale\(([-\d.]+)\)/)![1]);
     expect(k).to.be.closeTo(8, 0.01); // max-zoom
   });
 
-  it('focusNode announces graphNodeFocused through the light-DOM sink and shadow mirror', async () => {
+  it("focusNode announces graphNodeFocused through the light-DOM sink and shadow mirror", async () => {
     const el = await mountWide();
-    await el.focusNode('a');
+    await el.focusNode("a");
     expect(
       el.shadowRoot!.querySelector('[part="live-region"]')!.textContent
-    ).to.contain('Centered on A');
-    expect(announcementTexts().at(-1)).to.contain('Centered on A');
+    ).to.contain("Centered on A");
+    expect(announcementTexts().at(-1)).to.contain("Centered on A");
   });
 
-  it('jumps in a single transform write under prefers-reduced-motion (no rAF tween)', async () => {
+  it("jumps in a single transform write under prefers-reduced-motion (no rAF tween)", async () => {
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = ((query: string) => ({
-      matches: query.includes('prefers-reduced-motion'),
+      matches: query.includes("prefers-reduced-motion"),
       media: query,
       addEventListener() {},
       removeEventListener() {},
@@ -2118,7 +2105,7 @@ describe('focus and camera fit', () => {
         return originalRaf(cb);
       }) as typeof window.requestAnimationFrame;
       try {
-        await el.focusNode('a');
+        await el.focusNode("a");
       } finally {
         window.requestAnimationFrame = originalRaf;
       }
@@ -2131,22 +2118,22 @@ describe('focus and camera fit', () => {
     }
   });
 
-  it('emits lr-viewport-change with the live camera transform after a focusNode jump', async () => {
+  it("emits lr-viewport-change with the live camera transform after a focusNode jump", async () => {
     // Reduced-motion writes the transform in one synchronous jump (see the test above), so the
     // single lr-viewport-change it schedules is guaranteed to reflect the arrived-at transform --
     // a real tween instead emits progressively across every frame, and this only needs to prove
     // the payload shape/value, not the tween's own settling behavior.
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = ((query: string) => ({
-      matches: query.includes('prefers-reduced-motion'),
+      matches: query.includes("prefers-reduced-motion"),
       media: query,
       addEventListener() {},
       removeEventListener() {},
     })) as typeof window.matchMedia;
     try {
       const el = await mountWide();
-      const changed = oneEvent(el, 'lr-viewport-change');
-      await el.focusNode('a', { zoom: 2 });
+      const changed = oneEvent(el, "lr-viewport-change");
+      await el.focusNode("a", { zoom: 2 });
       const detail = (await changed).detail as {
         k: number;
         x: number;
@@ -2158,15 +2145,15 @@ describe('focus and camera fit', () => {
     }
   });
 
-  it('coalesces a real pan/zoom gesture into a single lr-viewport-change per frame', async () => {
+  it("coalesces a real pan/zoom gesture into a single lr-viewport-change per frame", async () => {
     const el = await mountWide();
     let changeCount = 0;
-    el.addEventListener('lr-viewport-change', () => changeCount++);
-    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+    el.addEventListener("lr-viewport-change", () => changeCount++);
+    const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
     // Two wheel events land well within the same animation frame -- both should fold into one
     // scheduled emission rather than firing twice.
     svgEl.dispatchEvent(
-      new WheelEvent('wheel', {
+      new WheelEvent("wheel", {
         bubbles: true,
         cancelable: true,
         deltaY: -100,
@@ -2175,7 +2162,7 @@ describe('focus and camera fit', () => {
       })
     );
     svgEl.dispatchEvent(
-      new WheelEvent('wheel', {
+      new WheelEvent("wheel", {
         bubbles: true,
         cancelable: true,
         deltaY: -100,
@@ -2189,9 +2176,9 @@ describe('focus and camera fit', () => {
     expect(changeCount).to.equal(1);
   });
 
-  it('disconnect cancels an in-flight camera tween instead of animating a detached tree (regression)', async () => {
+  it("disconnect cancels an in-flight camera tween instead of animating a detached tree (regression)", async () => {
     const el = await mountWide();
-    const call = el.focusNode('a');
+    const call = el.focusNode("a");
     el.remove();
     // cancelCameraTween() both stops the rAF loop (no more frames scheduled against the detached
     // tree) and settles the caller's Promise with `false` instead of leaving it hanging.
@@ -2200,20 +2187,20 @@ describe('focus and camera fit', () => {
       .undefined;
   });
 
-  it('a superseded focusNode() call resolves false instead of hanging (regression)', async () => {
+  it("a superseded focusNode() call resolves false instead of hanging (regression)", async () => {
     const el = await mountWide();
-    const firstCall = el.focusNode('a');
-    const secondCall = el.focusNode('b');
+    const firstCall = el.focusNode("a");
+    const secondCall = el.focusNode("b");
     expect(await firstCall).to.be.false;
     expect(await secondCall).to.be.true;
   });
 
-  it('a real user pan/zoom gesture interrupting focusNode() resolves it false instead of hanging (regression)', async () => {
+  it("a real user pan/zoom gesture interrupting focusNode() resolves it false instead of hanging (regression)", async () => {
     const el = await mountWide();
-    const call = el.focusNode('a');
-    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+    const call = el.focusNode("a");
+    const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
     svgEl.dispatchEvent(
-      new WheelEvent('wheel', {
+      new WheelEvent("wheel", {
         bubbles: true,
         cancelable: true,
         deltaY: -100,
@@ -2224,12 +2211,12 @@ describe('focus and camera fit', () => {
     expect(await call).to.be.false;
   });
 
-  it('fit() frames the bounding box of all visible node positions within width/height minus padding', async () => {
+  it("fit() frames the bounding box of all visible node positions within width/height minus padding", async () => {
     const el = await mountWide();
     el.fit({ padding: 10 });
     await aTimeout(400); // let the default (non-reduced-motion) tween settle
-    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-    const transform = svgEl.querySelector('g')!.getAttribute('transform')!;
+    const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+    const transform = svgEl.querySelector("g")!.getAttribute("transform")!;
     const match = transform.match(
       /translate\(([-\d.]+),\s*([-\d.]+)\)\s*scale\(([-\d.]+)\)/
     );
@@ -2244,13 +2231,13 @@ describe('focus and camera fit', () => {
     }
   });
 
-  it('focusNodeId declaratively centers once when it first resolves, and does not fight later panning', async () => {
+  it("focusId declaratively centers once when it first resolves, and does not fight later panning", async () => {
     const el = (await fixture(
-      html`<lr-graph width="800" height="600" focus-node-id="b"></lr-graph>`
+      html`<lr-graph width="800" height="600" focus-id="b"></lr-graph>`
     )) as LyraGraph;
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
     ];
     el.links = [];
     await el.updateComplete;
@@ -2265,24 +2252,24 @@ describe('focus and camera fit', () => {
     const halo = el.shadowRoot!.querySelector(
       '[part="focus-halo"]'
     ) as SVGCircleElement;
-    expect(halo.hasAttribute('hidden')).to.be.false;
-    const target = el.simNodes.find((n) => n.id === 'b')!;
-    expect(Number(halo.getAttribute('cx'))).to.be.closeTo(target.x!, 0.5);
+    expect(halo.hasAttribute("hidden")).to.be.false;
+    const target = el.simNodes.find((n) => n.id === "b")!;
+    expect(Number(halo.getAttribute("cx"))).to.be.closeTo(target.x!, 0.5);
   });
 
-  it('focus-halo is hidden when focusNodeId is unset or unresolved', async () => {
+  it("focus-halo is hidden when focusId is unset or unresolved", async () => {
     const el = await mountWide();
     const halo = el.shadowRoot!.querySelector(
       '[part="focus-halo"]'
     ) as SVGCircleElement;
-    expect(halo.hasAttribute('hidden')).to.be.true;
+    expect(halo.hasAttribute("hidden")).to.be.true;
   });
 
-  it('is accessible with focusNodeId set', async () => {
+  it("is accessible with focusId set", async () => {
     const el = (await fixture(
-      html`<lr-graph focus-node-id="a"></lr-graph>`
+      html`<lr-graph focus-id="a"></lr-graph>`
     )) as LyraGraph;
-    el.nodes = [{ id: 'a', label: 'A' }];
+    el.nodes = [{ id: "a", label: "A" }];
     el.links = [];
     await el.updateComplete;
     await waitUntil(
@@ -2295,16 +2282,16 @@ describe('focus and camera fit', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('existing graph usage unaffected: no focusNodeId set never shows the halo and the transform stays untouched by mount', async () => {
+  it("existing graph usage unaffected: no focusId set never shows the halo and the transform stays untouched by mount", async () => {
     const el = await mountWide();
-    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-    expect(svgEl.querySelector('g')!.getAttribute('transform')).to.equal('');
+    const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+    expect(svgEl.querySelector("g")!.getAttribute("transform")).to.equal("");
   });
 });
 
-describe('selection', () => {
+describe("selection", () => {
   async function mountSelectable(
-    mode: 'single' | 'multiple'
+    mode: "single" | "multiple"
   ): Promise<LyraGraph> {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.selectionMode = mode;
@@ -2321,7 +2308,7 @@ describe('selection', () => {
     return el;
   }
 
-  it('defaults selectionMode to none: no aria-pressed/data-selected, no lr-selection-change on click', async () => {
+  it("defaults selectionMode to none: no aria-pressed/data-selected, no lr-selection-change on click", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -2334,117 +2321,117 @@ describe('selection', () => {
       }
     );
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
-    expect(nodeEl.hasAttribute('aria-pressed')).to.be.false;
+    expect(nodeEl.hasAttribute("aria-pressed")).to.be.false;
     let fired = false;
-    el.addEventListener('lr-selection-change', () => (fired = true));
-    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    el.addEventListener("lr-selection-change", () => (fired = true));
+    nodeEl.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(fired).to.be.false;
   });
 
-  it('single mode: clicking an unselected node emits a replace intent; clicking it again emits clear', async () => {
-    const el = await mountSelectable('single');
+  it("single mode: clicking an unselected node emits a replace intent; clicking it again emits clear", async () => {
+    const el = await mountSelectable("single");
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
     el.addEventListener(
-      'lr-selection-change',
+      "lr-selection-change",
       (e) => (detail = (e as CustomEvent).detail)
     );
-    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(detail).to.deep.equal({ nodeIds: ['a'], linkIds: [] });
+    nodeEl.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(detail).to.deep.equal({ nodeIds: ["a"], linkIds: [] });
 
-    el.selectedNodeIds = ['a']; // host reflects the controlled prop back, per the contract
+    el.selectedNodeIds = ["a"]; // host reflects the controlled prop back, per the contract
     await el.updateComplete;
-    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    nodeEl.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(detail).to.deep.equal({ nodeIds: [], linkIds: [] });
   });
 
-  it('multiple mode: plain click replaces; Ctrl/Meta-click toggles, preserving other selected ids', async () => {
-    const el = await mountSelectable('multiple');
+  it("multiple mode: plain click replaces; Ctrl/Meta-click toggles, preserving other selected ids", async () => {
+    const el = await mountSelectable("multiple");
     const [nodeA, nodeB] = [
       ...el.shadowRoot!.querySelectorAll('[part="node"]'),
     ] as SVGElement[];
     let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
     el.addEventListener(
-      'lr-selection-change',
+      "lr-selection-change",
       (e) => (detail = (e as CustomEvent).detail)
     );
 
-    nodeA!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(detail).to.deep.equal({ nodeIds: ['a'], linkIds: [] });
+    nodeA!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(detail).to.deep.equal({ nodeIds: ["a"], linkIds: [] });
 
-    el.selectedNodeIds = ['a'];
+    el.selectedNodeIds = ["a"];
     await el.updateComplete;
     nodeB!.dispatchEvent(
-      new MouseEvent('click', { bubbles: true, ctrlKey: true })
+      new MouseEvent("click", { bubbles: true, ctrlKey: true })
     );
-    expect(detail).to.deep.equal({ nodeIds: ['a', 'b'], linkIds: [] });
+    expect(detail).to.deep.equal({ nodeIds: ["a", "b"], linkIds: [] });
 
-    el.selectedNodeIds = ['a', 'b'];
+    el.selectedNodeIds = ["a", "b"];
     await el.updateComplete;
     nodeA!.dispatchEvent(
-      new MouseEvent('click', { bubbles: true, metaKey: true })
+      new MouseEvent("click", { bubbles: true, metaKey: true })
     );
-    expect(detail).to.deep.equal({ nodeIds: ['b'], linkIds: [] });
+    expect(detail).to.deep.equal({ nodeIds: ["b"], linkIds: [] });
   });
 
-  it('Ctrl+Enter toggles in multiple mode the same way as Ctrl-click', async () => {
-    const el = await mountSelectable('multiple');
+  it("Ctrl+Enter toggles in multiple mode the same way as Ctrl-click", async () => {
+    const el = await mountSelectable("multiple");
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
     el.addEventListener(
-      'lr-selection-change',
+      "lr-selection-change",
       (e) => (detail = (e as CustomEvent).detail)
     );
     nodeEl.dispatchEvent(
-      new KeyboardEvent('keydown', {
-        key: 'Enter',
+      new KeyboardEvent("keydown", {
+        key: "Enter",
         bubbles: true,
         ctrlKey: true,
       })
     );
-    expect(detail).to.deep.equal({ nodeIds: ['a'], linkIds: [] });
+    expect(detail).to.deep.equal({ nodeIds: ["a"], linkIds: [] });
   });
 
-  it('background click and Escape clear the selection in multiple mode', async () => {
-    const el = await mountSelectable('multiple');
-    el.selectedNodeIds = ['a'];
+  it("background click and Escape clear the selection in multiple mode", async () => {
+    const el = await mountSelectable("multiple");
+    el.selectedNodeIds = ["a"];
     await el.updateComplete;
     let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
     el.addEventListener(
-      'lr-selection-change',
+      "lr-selection-change",
       (e) => (detail = (e as CustomEvent).detail)
     );
-    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-    svgEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+    svgEl.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(detail).to.deep.equal({ nodeIds: [], linkIds: [] });
 
     detail = undefined;
-    el.selectedNodeIds = ['a'];
+    el.selectedNodeIds = ["a"];
     await el.updateComplete;
     svgEl.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
     );
     expect(detail).to.deep.equal({ nodeIds: [], linkIds: [] });
   });
 
-  it('reflects controlled selectedNodeIds/selectedLinkIds as data-selected + aria-pressed, and never self-mutates them', async () => {
-    const el = await mountSelectable('single');
-    el.selectedNodeIds = ['a'];
+  it("reflects controlled selectedNodeIds/selectedLinkIds as data-selected + aria-pressed, and never self-mutates them", async () => {
+    const el = await mountSelectable("single");
+    el.selectedNodeIds = ["a"];
     await el.updateComplete;
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
-    expect(nodeEl.hasAttribute('data-selected')).to.be.true;
-    expect(nodeEl.getAttribute('aria-pressed')).to.equal('true');
-    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true })); // emits clear, but component doesn't self-apply
-    expect(el.selectedNodeIds).to.deep.equal(['a']); // unchanged -- host owns the prop
+    expect(nodeEl.hasAttribute("data-selected")).to.be.true;
+    expect(nodeEl.getAttribute("aria-pressed")).to.equal("true");
+    nodeEl.dispatchEvent(new MouseEvent("click", { bubbles: true })); // emits clear, but component doesn't self-apply
+    expect(el.selectedNodeIds).to.deep.equal(["a"]); // unchanged -- host owns the prop
   });
 
-  it('announces graphSelectionCount when the controlled props change', async () => {
-    const el = await mountSelectable('single');
-    el.selectedNodeIds = ['a'];
+  it("announces graphSelectionCount when the controlled props change", async () => {
+    const el = await mountSelectable("single");
+    el.selectedNodeIds = ["a"];
     await el.updateComplete;
     expect(
       el.shadowRoot!.querySelector('[part="live-region"]')!.textContent
-    ).to.contain('1 selected');
+    ).to.contain("1 selected");
   });
 
   it('does not spuriously announce "0 selected" when an equivalent-but-fresh empty selectedNodeIds/selectedLinkIds array arrives on an unrelated re-render', async () => {
@@ -2460,74 +2447,74 @@ describe('selection', () => {
     // untouched '' default to a genuinely new "0 selected" string is what let it slip past the
     // `changed.has('graphLiveText')` safety net too, doubling up whatever unrelated announcement
     // (e.g. a search-result count on a composing host) happened to land in that same update.
-    const el = await mountSelectable('single');
-    expect(announcementTexts(), 'mount must stay silent').to.deep.equal([]);
+    const el = await mountSelectable("single");
+    expect(announcementTexts(), "mount must stay silent").to.deep.equal([]);
 
     el.selectedNodeIds = []; // fresh reference, still empty -- no real selection change
     el.selectedLinkIds = [];
     await el.updateComplete;
     expect(
       announcementTexts(),
-      'an equivalent empty array reference must not announce'
+      "an equivalent empty array reference must not announce"
     ).to.deep.equal([]);
 
     // A genuine selection still announces -- the fix compares values, it doesn't just suppress
     // the gate outright.
-    el.selectedNodeIds = ['a'];
+    el.selectedNodeIds = ["a"];
     await el.updateComplete;
     expect(announcementTexts()).to.have.length(1);
-    expect(announcementTexts()[0]).to.contain('1 selected');
+    expect(announcementTexts()[0]).to.contain("1 selected");
   });
 
-  it('keeps the initial item only in the aria-hidden mirror without announcing a mount-time selection', async () => {
+  it("keeps the initial item only in the aria-hidden mirror without announcing a mount-time selection", async () => {
     // selectedNodeIds/selectedLinkIds both default to `[]`, a non-undefined default -- Lit marks
     // a property "changed" on the component's very first update whenever it has one, so an
     // unguarded willUpdate() would set graphLiveText to the localized "0 selected" immediately on
     // mount and permanently block render()'s `this.graphLiveText || graphItemAnnouncement(...)`
     // inspection fallback for the focused node/link/community, even with no selection ever made.
-    const el = await mountSelectable('single');
+    const el = await mountSelectable("single");
     const mirror = el.shadowRoot!.querySelector('[part="live-region"]')!;
     const liveText = mirror.textContent;
-    expect(liveText).to.not.contain('0 selected');
-    expect(liveText).to.contain('Node A');
-    expect(mirror.getAttribute('aria-hidden')).to.equal('true');
+    expect(liveText).to.not.contain("0 selected");
+    expect(liveText).to.contain("Node A");
+    expect(mirror.getAttribute("aria-hidden")).to.equal("true");
     expect(
       announcementTexts(),
-      'initial item and selection state must both stay silent'
+      "initial item and selection state must both stay silent"
     ).to.deep.equal([]);
   });
 
-  it('is accessible with a selection applied', async () => {
-    const el = await mountSelectable('multiple');
-    el.selectedNodeIds = ['a'];
+  it("is accessible with a selection applied", async () => {
+    const el = await mountSelectable("multiple");
+    el.selectedNodeIds = ["a"];
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
 
-  it('existing graph usage unaffected: lr-node-click/lr-link-click still fire unchanged alongside selection', async () => {
-    const el = await mountSelectable('single');
+  it("existing graph usage unaffected: lr-node-click/lr-link-click still fire unchanged alongside selection", async () => {
+    const el = await mountSelectable("single");
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
-    let clickDetail: { nodeId: string; x: number; y: number } | undefined;
+    let clickDetail: { id: string; x: number; y: number } | undefined;
     el.addEventListener(
-      'lr-node-click',
+      "lr-node-click",
       (e) => (clickDetail = (e as CustomEvent).detail)
     );
-    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(clickDetail?.nodeId).to.equal('a');
-    expect(clickDetail?.x).to.be.a('number');
-    expect(clickDetail?.y).to.be.a('number');
+    nodeEl.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(clickDetail?.id).to.equal("a");
+    expect(clickDetail?.x).to.be.a("number");
+    expect(clickDetail?.y).to.be.a("number");
   });
 });
 
-describe('type filtering', () => {
+describe("type filtering", () => {
   const typedFilterNodes = [
-    { id: 'a', label: 'A', type: 'person' },
-    { id: 'b', label: 'B', type: 'doc' },
-    { id: 'c', label: 'C' }, // untyped -- never hidden by hiddenTypes
+    { id: "a", label: "A", type: "person" },
+    { id: "b", label: "B", type: "doc" },
+    { id: "c", label: "C" }, // untyped -- never hidden by hiddenTypes
   ];
   const typedFilterLinks = [
-    { source: 'a', target: 'b' }, // incident to a hidden 'person' node when 'person' is hidden
-    { source: 'b', target: 'c' },
+    { source: "a", target: "b" }, // incident to a hidden 'person' node when 'person' is hidden
+    { source: "b", target: "c" },
   ];
 
   async function mountFiltered(hiddenTypes: string[] = []): Promise<LyraGraph> {
@@ -2554,7 +2541,7 @@ describe('type filtering', () => {
     return el;
   }
 
-  it('defaults hiddenTypes to empty and renders every node/link', async () => {
+  it("defaults hiddenTypes to empty and renders every node/link", async () => {
     const el = await mountFiltered();
     expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(3);
     expect(
@@ -2563,32 +2550,32 @@ describe('type filtering', () => {
     ).to.equal(2);
   });
 
-  it('hides every node whose raw type is listed, plus incident links, from the DOM/simulation/data-list/aria counts', async () => {
-    const el = await mountFiltered(['person']);
+  it("hides every node whose raw type is listed, plus incident links, from the DOM/simulation/data-list/aria counts", async () => {
+    const el = await mountFiltered(["person"]);
     const ids = el.simNodes.map((n) => n.id);
-    expect(ids).to.not.include('a');
-    expect(ids).to.have.members(['b', 'c']);
+    expect(ids).to.not.include("a");
+    expect(ids).to.have.members(["b", "c"]);
     expect(el.simLinks.length).to.equal(1); // only b-c survives; a-b is incident to hidden 'a'
     expect(
       el.shadowRoot!.querySelectorAll('[part="data-list"] li').length
     ).to.equal(3); // 2 nodes + 1 link
-    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-    expect(svgEl.getAttribute('aria-label')).to.match(/2 nodes/);
+    const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+    expect(svgEl.getAttribute("aria-label")).to.match(/2 nodes/);
   });
 
-  it('filters by a raw type string with no matching nodeTypes entry', async () => {
-    const el = await mountFiltered(['doc']);
-    expect(el.simNodes.map((n) => n.id)).to.have.members(['a', 'c']);
+  it("filters by a raw type string with no matching nodeTypes entry", async () => {
+    const el = await mountFiltered(["doc"]);
+    expect(el.simNodes.map((n) => n.id)).to.have.members(["a", "c"]);
   });
 
   it('mirrors an initial hidden count silently, then announces the live clear to "0 of N"', async () => {
-    const el = await mountFiltered(['person']);
+    const el = await mountFiltered(["person"]);
     expect(
       el.shadowRoot!.querySelector('[part="live-region"]')!.textContent
-    ).to.contain('1 of 3 nodes hidden');
+    ).to.contain("1 of 3 nodes hidden");
     expect(
       announcementTexts(),
-      'initially configured filtering must not announce on mount'
+      "initially configured filtering must not announce on mount"
     ).to.deep.equal([]);
     el.hiddenTypes = [];
     await el.updateComplete;
@@ -2601,18 +2588,18 @@ describe('type filtering', () => {
     );
     expect(
       el.shadowRoot!.querySelector('[part="live-region"]')!.textContent
-    ).to.contain('0 of 3 nodes hidden');
-    expect(announcementTexts().at(-1)).to.contain('0 of 3 nodes hidden');
+    ).to.contain("0 of 3 nodes hidden");
+    expect(announcementTexts().at(-1)).to.contain("0 of 3 nodes hidden");
   });
 
-  it('hide then re-show restores each node at its remembered settled position (distance ~ 0)', async () => {
+  it("hide then re-show restores each node at its remembered settled position (distance ~ 0)", async () => {
     const el = await mountFiltered();
     await aTimeout(400); // let the force layout settle
     const before = new Map(
       el.simNodes.map((n) => [n.id, { x: n.x!, y: n.y! }])
     );
 
-    el.hiddenTypes = ['person'];
+    el.hiddenTypes = ["person"];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2630,18 +2617,18 @@ describe('type filtering', () => {
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    const after = el.simNodes.find((n) => n.id === 'a')!;
-    const beforePos = before.get('a')!;
+    const after = el.simNodes.find((n) => n.id === "a")!;
+    const beforePos = before.get("a")!;
     const distance = Math.hypot(after.x! - beforePos.x, after.y! - beforePos.y);
     expect(distance).to.be.lessThan(1);
   });
 
-  it('prunes the remembered-position cache when a node is removed from nodes entirely (not just hidden)', async () => {
+  it("prunes the remembered-position cache when a node is removed from nodes entirely (not just hidden)", async () => {
     const el = await mountFiltered();
     await aTimeout(400);
-    el.nodes = typedFilterNodes.filter((n) => n.id !== 'a');
+    el.nodes = typedFilterNodes.filter((n) => n.id !== "a");
     el.links = typedFilterLinks.filter(
-      (l) => l.source !== 'a' && l.target !== 'a'
+      (l) => l.source !== "a" && l.target !== "a"
     );
     await el.updateComplete;
     await waitUntil(
@@ -2656,16 +2643,16 @@ describe('type filtering', () => {
         el as unknown as {
           lastPositionById: Map<string, { x: number; y: number }>;
         }
-      ).lastPositionById.has('a')
+      ).lastPositionById.has("a")
     ).to.be.false;
   });
 
-  it('clamps the roving index when the active item is hidden', async () => {
+  it("clamps the roving index when the active item is hidden", async () => {
     const el = await mountFiltered();
     (el.shadowRoot!.querySelector('[part="node"]') as SVGElement).dispatchEvent(
-      new MouseEvent('click', { bubbles: true })
+      new MouseEvent("click", { bubbles: true })
     ); // no-op for focus, just mount interaction; roving index defaults to 0 ('a')
-    el.hiddenTypes = ['person']; // hides index 0's node
+    el.hiddenTypes = ["person"]; // hides index 0's node
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2679,20 +2666,20 @@ describe('type filtering', () => {
       ...el.shadowRoot!.querySelectorAll('[part="link"]'),
     ] as SVGElement[];
     expect(
-      items.filter((i) => i.getAttribute('tabindex') === '0')
+      items.filter((i) => i.getAttribute("tabindex") === "0")
     ).to.have.length(1);
   });
 
-  it('moves real DOM focus to a surviving node when filtering shrinks it to an earlier DOM index', async () => {
+  it("moves real DOM focus to a surviving node when filtering shrinks it to an earlier DOM index", async () => {
     const el = await mountFiltered();
     const lastNode =
       el.shadowRoot!.querySelectorAll<SVGElement>('[part="node"]')[2]!;
     lastNode.focus();
-    expect(el.shadowRoot!.activeElement?.getAttribute('aria-label')).to.equal(
-      'C'
+    expect(el.shadowRoot!.activeElement?.getAttribute("aria-label")).to.equal(
+      "C"
     );
 
-    el.hiddenTypes = ['doc'];
+    el.hiddenTypes = ["doc"];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2702,15 +2689,15 @@ describe('type filtering', () => {
       }
     );
     await waitUntil(
-      () => el.shadowRoot!.activeElement?.getAttribute('part') === 'node',
+      () => el.shadowRoot!.activeElement?.getAttribute("part") === "node",
       undefined,
       {
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
 
-    expect(el.shadowRoot!.activeElement?.getAttribute('aria-label')).to.equal(
-      'C'
+    expect(el.shadowRoot!.activeElement?.getAttribute("aria-label")).to.equal(
+      "C"
     );
     expect(
       el.shadowRoot!.querySelectorAll(
@@ -2719,14 +2706,14 @@ describe('type filtering', () => {
     ).to.have.length(1);
   });
 
-  it('is accessible with a type hidden', async () => {
-    const el = await mountFiltered(['person']);
+  it("is accessible with a type hidden", async () => {
+    const el = await mountFiltered(["person"]);
     await expect(el).to.be.accessible();
   });
 
   it("hides the persistent focus-halo when the focused node's type is hidden, and restores it when shown again", async () => {
     const el = (await fixture(
-      html`<lr-graph focus-node-id="a"></lr-graph>`
+      html`<lr-graph focus-id="a"></lr-graph>`
     )) as LyraGraph;
     el.nodes = typedFilterNodes;
     el.links = typedFilterLinks;
@@ -2742,9 +2729,9 @@ describe('type filtering', () => {
     const halo = el.shadowRoot!.querySelector(
       '[part="focus-halo"]'
     ) as SVGCircleElement;
-    expect(halo.hasAttribute('hidden')).to.be.false;
+    expect(halo.hasAttribute("hidden")).to.be.false;
 
-    el.hiddenTypes = ['person'];
+    el.hiddenTypes = ["person"];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2753,7 +2740,7 @@ describe('type filtering', () => {
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    expect(halo.hasAttribute('hidden')).to.be.true;
+    expect(halo.hasAttribute("hidden")).to.be.true;
 
     el.hiddenTypes = [];
     await el.updateComplete;
@@ -2764,15 +2751,15 @@ describe('type filtering', () => {
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    expect(halo.hasAttribute('hidden')).to.be.false;
+    expect(halo.hasAttribute("hidden")).to.be.false;
   });
 
-  it('does not let a selected/focused node id linger after its type is hidden -- it simply stops rendering, unmutated, and resumes if shown again', async () => {
+  it("does not let a selected/focused node id linger after its type is hidden -- it simply stops rendering, unmutated, and resumes if shown again", async () => {
     const el = await mountFiltered();
-    el.selectionMode = 'single';
-    el.selectedNodeIds = ['a'];
+    el.selectionMode = "single";
+    el.selectedNodeIds = ["a"];
     await el.updateComplete;
-    el.hiddenTypes = ['person'];
+    el.hiddenTypes = ["person"];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2782,8 +2769,8 @@ describe('type filtering', () => {
       }
     );
     // The controlled selectedNodeIds array is untouched by the component -- it's the host's to own.
-    expect(el.selectedNodeIds).to.deep.equal(['a']);
-    expect(el.shadowRoot!.querySelector('[data-selected]') === null).to.be.true; // hidden node can't render selected
+    expect(el.selectedNodeIds).to.deep.equal(["a"]);
+    expect(el.shadowRoot!.querySelector("[data-selected]") === null).to.be.true; // hidden node can't render selected
 
     el.hiddenTypes = [];
     await el.updateComplete;
@@ -2794,11 +2781,11 @@ describe('type filtering', () => {
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    const nodeA = el.shadowRoot!.querySelector('[data-selected]') as SVGElement;
-    expect(nodeA.getAttribute('aria-label')).to.contain('A');
+    const nodeA = el.shadowRoot!.querySelector("[data-selected]") as SVGElement;
+    expect(nodeA.getAttribute("aria-label")).to.contain("A");
   });
 
-  it('existing graph usage unaffected: no hiddenTypes set renders every node/link exactly as before', async () => {
+  it("existing graph usage unaffected: no hiddenTypes set renders every node/link exactly as before", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -2817,13 +2804,13 @@ describe('type filtering', () => {
   });
 });
 
-describe('community hulls', () => {
+describe("community hulls", () => {
   const communityNodes = [
-    { id: 'a', label: 'A', communityId: 'team-1' },
-    { id: 'b', label: 'B', communityId: 'team-1' },
-    { id: 'c', label: 'C' },
+    { id: "a", label: "A", communityId: "team-1" },
+    { id: "b", label: "B", communityId: "team-1" },
+    { id: "c", label: "C" },
   ];
-  const communities = [{ id: 'team-1', label: 'Team One', memberIds: [] }];
+  const communities = [{ id: "team-1", label: "Team One", memberIds: [] }];
 
   async function mountHulls(): Promise<LyraGraph> {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
@@ -2841,7 +2828,7 @@ describe('community hulls', () => {
     return el;
   }
 
-  it('concatenates the keyboard cursor index space as nodes, then links, then hulls', async () => {
+  it("concatenates the keyboard cursor index space as nodes, then links, then hulls", async () => {
     // The four call sites that translate between a roving index and a node/link/hull all derive
     // their segment offsets from one pair of helpers. This pins the ordering those helpers encode:
     // a reorder or a new item kind that only reaches some of the sites shows up here as focus
@@ -2856,9 +2843,9 @@ describe('community hulls', () => {
     )) as LyraGraph;
     el.communities = communities;
     el.nodes = communityNodes;
-    el.links = [{ source: 'a', target: 'b' }];
+    el.links = [{ source: "a", target: "b" }];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50);
@@ -2866,37 +2853,37 @@ describe('community hulls', () => {
     const items = [
       ...el.shadowRoot!.querySelectorAll('[part="cursor-item"]'),
     ] as HTMLButtonElement[];
-    expect(items.length, '3 nodes + 1 link + 1 hull').to.equal(5);
+    expect(items.length, "3 nodes + 1 link + 1 hull").to.equal(5);
     expect(
-      items.slice(0, 3).map((item) => item.getAttribute('aria-label'))
-    ).to.deep.equal(['A', 'B', 'C']);
+      items.slice(0, 3).map((item) => item.getAttribute("aria-label"))
+    ).to.deep.equal(["A", "B", "C"]);
 
     const live = () =>
-      el.shadowRoot!.querySelector('[part="live-region"]')!.textContent ?? '';
+      el.shadowRoot!.querySelector('[part="live-region"]')!.textContent ?? "";
     items[0]!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'End', bubbles: true })
+      new KeyboardEvent("keydown", { key: "End", bubbles: true })
     );
     await el.updateComplete;
     expect(
-      items[4]!.getAttribute('tabindex'),
-      'End lands on the last hull'
-    ).to.equal('0');
+      items[4]!.getAttribute("tabindex"),
+      "End lands on the last hull"
+    ).to.equal("0");
     expect(
       live(),
-      'and announces it as the community, not a node or link'
-    ).to.include('Team One');
+      "and announces it as the community, not a node or link"
+    ).to.include("Team One");
 
     items[4]!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })
+      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
     );
     await el.updateComplete;
     expect(
-      items[3]!.getAttribute('tabindex'),
-      'one step back is the link segment'
-    ).to.equal('0');
+      items[3]!.getAttribute("tabindex"),
+      "one step back is the link segment"
+    ).to.equal("0");
   });
 
-  it('renders no hull when communities is empty', async () => {
+  it("renders no hull when communities is empty", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -2911,23 +2898,23 @@ describe('community hulls', () => {
     expect(el.shadowRoot!.querySelector('[part="hull"]') == null).to.be.true;
   });
 
-  it('renders one hull per community, membership = union of memberIds and matching communityId', async () => {
+  it("renders one hull per community, membership = union of memberIds and matching communityId", async () => {
     const el = await mountHulls();
     expect(el.shadowRoot!.querySelectorAll('[part="hull"]').length).to.equal(1);
     const hull = el.shadowRoot!.querySelector(
       '[part="hull"]'
     ) as SVGPathElement;
-    expect(hull.getAttribute('d')).to.not.equal('');
+    expect(hull.getAttribute("d")).to.not.equal("");
   });
 
-  it('renders no hull for a community whose members are all hidden', async () => {
+  it("renders no hull for a community whose members are all hidden", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodeTypes = [{ id: 'x', label: 'X' }];
-    el.hiddenTypes = ['x'];
-    el.communities = [{ id: 'team-1', label: 'Team', memberIds: ['a', 'b'] }];
+    el.nodeTypes = [{ id: "x", label: "X" }];
+    el.hiddenTypes = ["x"];
+    el.communities = [{ id: "team-1", label: "Team", memberIds: ["a", "b"] }];
     el.nodes = [
-      { id: 'a', label: 'A', type: 'x' },
-      { id: 'b', label: 'B', type: 'x' },
+      { id: "a", label: "A", type: "x" },
+      { id: "b", label: "B", type: "x" },
     ];
     el.links = [];
     await el.updateComplete;
@@ -2941,10 +2928,10 @@ describe('community hulls', () => {
     expect(el.shadowRoot!.querySelector('[part="hull"]') == null).to.be.true;
   });
 
-  it('a 1-member community draws a degenerate (zero-length) hull path', async () => {
+  it("a 1-member community draws a degenerate (zero-length) hull path", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.communities = [{ id: 'solo', memberIds: ['a'] }];
-    el.nodes = [{ id: 'a', label: 'A' }];
+    el.communities = [{ id: "solo", memberIds: ["a"] }];
+    el.nodes = [{ id: "a", label: "A" }];
     el.links = [];
     await el.updateComplete;
     await waitUntil(
@@ -2957,73 +2944,73 @@ describe('community hulls', () => {
     const hull = el.shadowRoot!.querySelector(
       '[part="hull"]'
     ) as SVGPathElement;
-    expect(hull.getAttribute('d')).to.match(
+    expect(hull.getAttribute("d")).to.match(
       /^M [\d.-]+ [\d.-]+ L [\d.-]+ [\d.-]+$/
     );
   });
 
-  it('hulls stack before links/nodes in DOM order', async () => {
+  it("hulls stack before links/nodes in DOM order", async () => {
     const el = await mountHulls();
-    const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+    const g = el.shadowRoot!.querySelector("g") as SVGGElement;
     const children = [...g.children].map(
       (c) =>
-        c.querySelector('[part]')?.getAttribute('part') ??
-        c.getAttribute('part')
+        c.querySelector("[part]")?.getAttribute("part") ??
+        c.getAttribute("part")
     );
-    const hullIndex = children.findIndex((p) => p === 'hull');
-    const nodeIndex = children.findIndex((p) => p === 'node');
+    const hullIndex = children.findIndex((p) => p === "hull");
+    const nodeIndex = children.findIndex((p) => p === "node");
     expect(hullIndex).to.be.lessThan(nodeIndex);
   });
 
-  it('click and Enter/Space on a hull emit lr-community-click', async () => {
+  it("click and Enter/Space on a hull emit lr-community-click", async () => {
     const el = await mountHulls();
     const hull = el.shadowRoot!.querySelector(
       '[part="hull"]'
     ) as SVGPathElement;
-    let detail: { communityId: string } | undefined;
+    let detail: { id: string; x: number; y: number } | undefined;
     el.addEventListener(
-      'lr-community-click',
+      "lr-community-click",
       (e) => (detail = (e as CustomEvent).detail)
     );
-    hull.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(detail).to.deep.equal({ communityId: 'team-1' });
+    hull.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(detail).to.deep.equal({ id: "team-1" });
     detail = undefined;
     hull.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
     );
-    expect(detail).to.deep.equal({ communityId: 'team-1' });
+    expect(detail).to.deep.equal({ id: "team-1" });
   });
 
-  it('hulls join the roving ring after nodes and links, with a matching data-list entry', async () => {
+  it("hulls join the roving ring after nodes and links, with a matching data-list entry", async () => {
     const el = await mountHulls();
     const items = [
       ...el.shadowRoot!.querySelectorAll('[part="node"]'),
       ...el.shadowRoot!.querySelectorAll('[part="link"]'),
       ...el.shadowRoot!.querySelectorAll('[part="hull"]'),
     ] as SVGElement[];
-    expect(items[items.length - 1]!.getAttribute('part')).to.equal('hull');
+    expect(items[items.length - 1]!.getAttribute("part")).to.equal("hull");
     expect(
       el.shadowRoot!.querySelectorAll('[part="data-list"] li')
     ).to.have.length(4); // 3 nodes + 1 hull
   });
 
-  it('fit() bounding box accounts for hull padding when communities render', async () => {
+  it("fit() bounding box accounts for hull padding when communities render", async () => {
     const el = await mountHulls();
     el.fit({ padding: 10 });
     await aTimeout(400);
-    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-    const transform = svgEl.querySelector('g')!.getAttribute('transform')!;
+    const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+    const transform = svgEl.querySelector("g")!.getAttribute("transform")!;
     expect(transform).to.match(
       /translate\([-\d.]+,\s*[-\d.]+\)\s*scale\([-\d.]+\)/
     );
   });
 
-  it('is accessible with hulls rendered', async () => {
+  it("is accessible with hulls rendered", async () => {
     const el = await mountHulls();
     await expect(el).to.be.accessible();
   });
 
-  it('existing graph usage unaffected: no communities set renders no hulls and an unchanged roving ring', async () => {
+  it("existing graph usage unaffected: no communities set renders no hulls and an unchanged roving ring", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -3040,11 +3027,11 @@ describe('community hulls', () => {
       ...el.shadowRoot!.querySelectorAll('[part="link"]'),
     ] as SVGElement[];
     expect(
-      items.filter((i) => i.getAttribute('tabindex') === '0')
+      items.filter((i) => i.getAttribute("tabindex") === "0")
     ).to.have.length(1);
   });
 
-  it('memoizes the per-community member walk once per structural update instead of once per graphItemCount() call site', async () => {
+  it("memoizes the per-community member walk once per structural update instead of once per graphItemCount() call site", async () => {
     const el = await mountHulls();
     type WithCommunityMembers = { communityMembers: (c: unknown) => unknown };
     let calls = 0;
@@ -3062,7 +3049,7 @@ describe('community hulls', () => {
     // independently re-walking `communities` × `simNodes`.
     el.nodes = [
       ...communityNodes,
-      { id: 'd', label: 'D', communityId: 'team-1' },
+      { id: "d", label: "D", communityId: "team-1" },
     ];
     await el.updateComplete;
     await waitUntil(
@@ -3076,15 +3063,15 @@ describe('community hulls', () => {
   });
 });
 
-describe('layered layout', () => {
+describe("layered layout", () => {
   const chainLinks = [
-    { source: 'a', target: 'b' },
-    { source: 'b', target: 'c' },
+    { source: "a", target: "b" },
+    { source: "b", target: "c" },
   ];
 
-  it('defaults layout to force (unchanged today behavior)', async () => {
+  it("defaults layout to force (unchanged today behavior)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    expect(el.layout).to.equal('force');
+    expect(el.layout).to.equal("force");
   });
 
   it('layout="layered" positions nodes deterministically, top-to-bottom by longest path, without a settle animation', async () => {
@@ -3092,9 +3079,9 @@ describe('layered layout', () => {
       html`<lr-graph layout="layered" width="800" height="600"></lr-graph>`
     )) as LyraGraph;
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
-      { id: 'c', label: 'C' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
+      { id: "c", label: "C" },
     ];
     el.links = chainLinks;
     await el.updateComplete;
@@ -3105,18 +3092,18 @@ describe('layered layout', () => {
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    const a = el.simNodes.find((n) => n.id === 'a')!;
-    const b = el.simNodes.find((n) => n.id === 'b')!;
-    const c = el.simNodes.find((n) => n.id === 'c')!;
+    const a = el.simNodes.find((n) => n.id === "a")!;
+    const b = el.simNodes.find((n) => n.id === "b")!;
+    const c = el.simNodes.find((n) => n.id === "c")!;
     expect(a.y!).to.be.lessThan(b.y!);
     expect(b.y!).to.be.lessThan(c.y!);
   });
 
-  it('node drag is disabled in layered mode (no d3-drag bound)', async () => {
+  it("node drag is disabled in layered mode (no d3-drag bound)", async () => {
     const el = (await fixture(
       html`<lr-graph layout="layered"></lr-graph>`
     )) as LyraGraph;
-    el.nodes = [{ id: 'a', label: 'A' }];
+    el.nodes = [{ id: "a", label: "A" }];
     el.links = [];
     await el.updateComplete;
     await waitUntil(
@@ -3128,15 +3115,15 @@ describe('layered layout', () => {
     );
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     const before = {
-      x: nodeEl.getAttribute('cx'),
-      y: nodeEl.getAttribute('cy'),
+      x: nodeEl.getAttribute("cx"),
+      y: nodeEl.getAttribute("cy"),
     };
     // `view: window` matches a real user-dispatched event (jsdom/browsers leave it `null` on a
     // bare synthetic MouseEvent) -- with no d3-drag bound to intercept and stop propagation, this
     // mousedown now bubbles to the svg's own d3-zoom pan-start handler, which reads
     // `event.view.document` internally and throws on a `null` view.
     nodeEl.dispatchEvent(
-      new MouseEvent('mousedown', {
+      new MouseEvent("mousedown", {
         bubbles: true,
         clientX: 0,
         clientY: 0,
@@ -3144,7 +3131,7 @@ describe('layered layout', () => {
       })
     );
     document.dispatchEvent(
-      new MouseEvent('mousemove', {
+      new MouseEvent("mousemove", {
         bubbles: true,
         clientX: 100,
         clientY: 100,
@@ -3152,14 +3139,14 @@ describe('layered layout', () => {
       })
     );
     document.dispatchEvent(
-      new MouseEvent('mouseup', { bubbles: true, view: window })
+      new MouseEvent("mouseup", { bubbles: true, view: window })
     );
     await el.updateComplete;
-    expect(nodeEl.getAttribute('cx')).to.equal(before.x);
-    expect(nodeEl.getAttribute('cy')).to.equal(before.y);
+    expect(nodeEl.getAttribute("cx")).to.equal(before.x);
+    expect(nodeEl.getAttribute("cy")).to.equal(before.y);
   });
 
-  it('linkDistance retunes the layer gap in layered mode', async () => {
+  it("linkDistance retunes the layer gap in layered mode", async () => {
     const tight = (await fixture(
       html`<lr-graph
         layout="layered"
@@ -3169,10 +3156,10 @@ describe('layered layout', () => {
       ></lr-graph>`
     )) as LyraGraph;
     tight.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
     ];
-    tight.links = [{ source: 'a', target: 'b' }];
+    tight.links = [{ source: "a", target: "b" }];
     await tight.updateComplete;
     await waitUntil(
       () => tight.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -3182,33 +3169,33 @@ describe('layered layout', () => {
       }
     );
     const gapBefore =
-      tight.simNodes.find((n) => n.id === 'b')!.y! -
-      tight.simNodes.find((n) => n.id === 'a')!.y!;
+      tight.simNodes.find((n) => n.id === "b")!.y! -
+      tight.simNodes.find((n) => n.id === "a")!.y!;
     tight.linkDistance = 300;
     await tight.updateComplete;
     await waitUntil(
       () =>
-        tight.simNodes.find((n) => n.id === 'b')!.y! -
-          tight.simNodes.find((n) => n.id === 'a')!.y! !==
+        tight.simNodes.find((n) => n.id === "b")!.y! -
+          tight.simNodes.find((n) => n.id === "a")!.y! !==
         gapBefore,
       undefined,
       { timeout: NODE_COUNT_TIMEOUT }
     );
     const gapAfter =
-      tight.simNodes.find((n) => n.id === 'b')!.y! -
-      tight.simNodes.find((n) => n.id === 'a')!.y!;
+      tight.simNodes.find((n) => n.id === "b")!.y! -
+      tight.simNodes.find((n) => n.id === "a")!.y!;
     expect(gapAfter).to.be.greaterThan(gapBefore);
   });
 
-  it('keyboard roving/announcements are identical in layered mode', async () => {
+  it("keyboard roving/announcements are identical in layered mode", async () => {
     const el = (await fixture(
       html`<lr-graph layout="layered"></lr-graph>`
     )) as LyraGraph;
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.links = [{ source: "a", target: "b" }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -3220,21 +3207,21 @@ describe('layered layout', () => {
     const items = () =>
       [...el.shadowRoot!.querySelectorAll('[part="node"]')] as SVGElement[];
     items()[0]!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
     await el.updateComplete;
-    expect(items()[1]!.getAttribute('tabindex')).to.equal('0');
+    expect(items()[1]!.getAttribute("tabindex")).to.equal("0");
   });
 
-  it('both lr-graph and the shared util produce the same node ordering (no forked algorithm)', async () => {
+  it("both lr-graph and the shared util produce the same node ordering (no forked algorithm)", async () => {
     const el = (await fixture(
       html`<lr-graph layout="layered" width="800" height="600"></lr-graph>`
     )) as LyraGraph;
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.links = [{ source: "a", target: "b" }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -3245,26 +3232,26 @@ describe('layered layout', () => {
     );
     const { positions: direct } = layeredLayout({
       nodes: [
-        { id: 'a', width: 30, height: 30 },
-        { id: 'b', width: 30, height: 30 },
+        { id: "a", width: 30, height: 30 },
+        { id: "b", width: 30, height: 30 },
       ],
-      edges: [{ source: 'a', target: 'b' }],
+      edges: [{ source: "a", target: "b" }],
       options: { gapX: 12, gapY: el.linkDistance },
     });
-    const a = el.simNodes.find((n) => n.id === 'a')!;
-    const b = el.simNodes.find((n) => n.id === 'b')!;
+    const a = el.simNodes.find((n) => n.id === "a")!;
+    const b = el.simNodes.find((n) => n.id === "b")!;
     // Same relative gap (component centers the drawing, so compare deltas, not absolute coords).
     expect(b.y! - a.y!).to.be.closeTo(
-      direct.get('b')!.y - direct.get('a')!.y,
+      direct.get("b")!.y - direct.get("a")!.y,
       0.01
     );
   });
 
-  it('is accessible in layered mode', async () => {
+  it("is accessible in layered mode", async () => {
     const el = (await fixture(
       html`<lr-graph layout="layered"></lr-graph>`
     )) as LyraGraph;
-    el.nodes = [{ id: 'a', label: 'A' }];
+    el.nodes = [{ id: "a", label: "A" }];
     el.links = [];
     await el.updateComplete;
     await waitUntil(
@@ -3277,14 +3264,14 @@ describe('layered layout', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('hiddenTypes filtering announces graphNodesHidden in layered mode too, same as force mode', async () => {
+  it("hiddenTypes filtering announces graphNodesHidden in layered mode too, same as force mode", async () => {
     const el = (await fixture(
       html`<lr-graph layout="layered"></lr-graph>`
     )) as LyraGraph;
-    el.hiddenTypes = ['person'];
+    el.hiddenTypes = ["person"];
     el.nodes = [
-      { id: 'a', label: 'A', type: 'person' },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A", type: "person" },
+      { id: "b", label: "B" },
     ];
     el.links = [];
     await el.updateComplete;
@@ -3297,10 +3284,10 @@ describe('layered layout', () => {
     );
     expect(
       el.shadowRoot!.querySelector('[part="live-region"]')!.textContent
-    ).to.contain('1 of 2 nodes hidden');
+    ).to.contain("1 of 2 nodes hidden");
   });
 
-  it('existing graph usage unaffected: layout unset uses the untouched force-directed path', async () => {
+  it("existing graph usage unaffected: layout unset uses the untouched force-directed path", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -3316,7 +3303,7 @@ describe('layered layout', () => {
   });
 });
 
-describe('canvas renderer — static draw', () => {
+describe("canvas renderer — static draw", () => {
   async function mountCanvas(): Promise<LyraGraph> {
     const el = (await fixture(
       html`<lr-graph
@@ -3329,20 +3316,20 @@ describe('canvas renderer — static draw', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50); // let the draw rAF fire
     return el;
   }
 
-  it('defaults renderer to svg', async () => {
+  it("defaults renderer to svg", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    expect(el.renderer).to.equal('svg');
-    expect(el.shadowRoot!.querySelector('canvas') == null).to.equal(true);
+    expect(el.renderer).to.equal("svg");
+    expect(el.shadowRoot!.querySelector("canvas") == null).to.equal(true);
   });
 
-  it('keeps host naming on one owner in canvas mode too', async () => {
+  it("keeps host naming on one owner in canvas mode too", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -3355,31 +3342,31 @@ describe('canvas renderer — static draw', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    const canvas = el.shadowRoot!.querySelector('canvas')!;
-    expect(el.getAttribute('role')).to.equal('group');
-    expect(canvas.hasAttribute('role')).to.equal(false);
-    expect(canvas.hasAttribute('aria-label')).to.equal(false);
+    const canvas = el.shadowRoot!.querySelector("canvas")!;
+    expect(el.getAttribute("role")).to.equal("group");
+    expect(canvas.hasAttribute("role")).to.equal(false);
+    expect(canvas.hasAttribute("aria-label")).to.equal(false);
   });
 
   it('renderer="canvas" renders a canvas element instead of an svg, no [part="node"]/[part="link"] elements', async () => {
     const el = await mountCanvas();
-    expect(el.shadowRoot!.querySelector('canvas') != null).to.equal(true);
-    expect(el.shadowRoot!.querySelector('svg') == null).to.equal(true);
+    expect(el.shadowRoot!.querySelector("canvas") != null).to.equal(true);
+    expect(el.shadowRoot!.querySelector("svg") == null).to.equal(true);
     expect(el.shadowRoot!.querySelector('[part="node"]') == null).to.be.true;
   });
 
-  it('sizes the backing store to CSS size * devicePixelRatio', async () => {
+  it("sizes the backing store to CSS size * devicePixelRatio", async () => {
     const el = await mountCanvas();
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const dpr = window.devicePixelRatio || 1;
     expect(canvas.width).to.equal(Math.round(canvas.clientWidth * dpr));
     expect(canvas.height).to.equal(Math.round(canvas.clientHeight * dpr));
   });
 
-  it('every event/method/prop still works identically in canvas mode (selectionMode, hiddenTypes, showEdgeLabels)', async () => {
+  it("every event/method/prop still works identically in canvas mode (selectionMode, hiddenTypes, showEdgeLabels)", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -3391,21 +3378,21 @@ describe('canvas renderer — static draw', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = [{ source: 'a', target: 'b', label: 'cites' }];
+    el.links = [{ source: "a", target: "b", label: "cites" }];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    const ok = await el.focusNode('a');
+    const ok = await el.focusNode("a");
     expect(ok).to.be.true;
   });
 
-  it('is accessible in canvas mode', async () => {
+  it("is accessible in canvas mode", async () => {
     const el = await mountCanvas();
     await expect(el).to.be.accessible();
   });
 
-  it('canvas mode mirrors the first graph item without announcing it before focus/navigation', async () => {
+  it("canvas mode mirrors the first graph item without announcing it before focus/navigation", async () => {
     // graphLiveText (the `||` left side of render()'s canvas-mode mirror expression) starts
     // out empty and activeGraphItem defaults to 0, so a fresh mount with items present already
     // exercises the `normalizedGraphItem() >= 0` true side of the ternary on its own, with no
@@ -3421,27 +3408,27 @@ describe('canvas renderer — static draw', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     const liveRegion = el.shadowRoot!.querySelector(
       '[part="live-region"]'
     ) as HTMLElement;
     // graphItemCount() === simNodes.length(2) + simLinks.length(1) + communities(0) === 3.
-    expect(liveRegion.textContent).to.contain('(1 of 3)');
-    expect(liveRegion.getAttribute('aria-hidden')).to.equal('true');
+    expect(liveRegion.textContent).to.contain("(1 of 3)");
+    expect(liveRegion.getAttribute("aria-hidden")).to.equal("true");
     expect(announcementTexts()).to.deep.equal([]);
   });
 
-  it('switching renderer back to svg tears down the canvas resize watcher (no observer stacking across round trips, regression)', async () => {
+  it("switching renderer back to svg tears down the canvas resize watcher (no observer stacking across round trips, regression)", async () => {
     const el = await mountCanvas();
     expect(
       (el as unknown as { canvasResizeObserver?: ResizeObserver })
         .canvasResizeObserver
     ).to.exist;
-    el.renderer = 'svg';
+    el.renderer = "svg";
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('svg'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("svg"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     // Re-entering canvas mode re-arms a fresh observer; leaving it must disconnect the old one,
@@ -3452,7 +3439,7 @@ describe('canvas renderer — static draw', () => {
     ).to.be.undefined;
   });
 
-  it('existing graph usage unaffected: renderer unset renders the untouched svg path', async () => {
+  it("existing graph usage unaffected: renderer unset renders the untouched svg path", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -3464,10 +3451,10 @@ describe('canvas renderer — static draw', () => {
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    expect(el.shadowRoot!.querySelector('canvas') == null).to.equal(true);
+    expect(el.shadowRoot!.querySelector("canvas") == null).to.equal(true);
   });
 
-  it('feeds dimmedNodeIds/dimmedLinkIds into the drawn canvas scene', async function () {
+  it("feeds dimmedNodeIds/dimmedLinkIds into the drawn canvas scene", async function () {
     this.timeout(ALPHA_SETTLE_TIMEOUT + 1000);
     const el = (await fixture(
       html`<lr-graph
@@ -3479,10 +3466,10 @@ describe('canvas renderer — static draw', () => {
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
-    el.dimmedNodeIds = ['a'];
-    el.style.setProperty('--lr-graph-dimmed-opacity', '0');
+    el.dimmedNodeIds = ["a"];
+    el.style.setProperty("--lr-graph-dimmed-opacity", "0");
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50); // let the draw rAF fire
@@ -3506,7 +3493,7 @@ describe('canvas renderer — static draw', () => {
   // The expand indicator is SVG-only today: renderer="canvas" has no per-node DOM to query
   // for [part="expand-indicator"], so this asserts the same expandable-only gating via the drawn
   // canvasScene instead.
-  it('feeds only expandable: true nodes into the drawn canvas scene as expand indicators', async () => {
+  it("feeds only expandable: true nodes into the drawn canvas scene as expand indicators", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -3516,12 +3503,12 @@ describe('canvas renderer — static draw', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = [
-      { id: 'a', label: 'A', expandable: true },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A", expandable: true },
+      { id: "b", label: "B" },
     ];
     el.links = [];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
@@ -3539,7 +3526,7 @@ describe('canvas renderer — static draw', () => {
 
   // Canvas counterpart of "existing graph usage unaffected: no expandable set ... renders no
   // indicator", which is SVG-only today.
-  it('existing canvas usage unaffected: no expandable nodes draw zero expand indicators', async () => {
+  it("existing canvas usage unaffected: no expandable nodes draw zero expand indicators", async () => {
     const el = await mountCanvas();
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
     type Internals = { canvasScene?: { expandIndicators: unknown[] } };
@@ -3552,7 +3539,7 @@ describe('canvas renderer — static draw', () => {
     expect(scene.expandIndicators.length).to.equal(0);
   });
 
-  it('resolves --lr-graph-hull-opacity into the drawn canvas scene instead of a hardcoded value', async () => {
+  it("resolves --lr-graph-hull-opacity into the drawn canvas scene instead of a hardcoded value", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -3563,10 +3550,10 @@ describe('canvas renderer — static draw', () => {
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
-    el.communities = [{ id: 'c1', memberIds: ['a', 'b'] }];
-    el.style.setProperty('--lr-graph-hull-opacity', '0.5');
+    el.communities = [{ id: "c1", memberIds: ["a", "b"] }];
+    el.style.setProperty("--lr-graph-hull-opacity", "0.5");
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
@@ -3581,7 +3568,7 @@ describe('canvas renderer — static draw', () => {
   });
 });
 
-describe('canvas renderer — interaction and a11y', () => {
+describe("canvas renderer — interaction and a11y", () => {
   async function mountCanvas(): Promise<LyraGraph> {
     const el = (await fixture(
       html`<lr-graph
@@ -3594,29 +3581,29 @@ describe('canvas renderer — interaction and a11y', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(400); // let the force layout settle so node positions are stable for hit-testing
     return el;
   }
 
-  it('clicking a node (via pointer hit-test) emits lr-node-click, same detail shape as svg mode', async () => {
+  it("clicking a node (via pointer hit-test) emits lr-node-click, same detail shape as svg mode", async () => {
     const el = await mountCanvas();
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
     const clientX = rect.left + target.x!;
     const clientY = rect.top + target.y!;
-    let detail: { nodeId: string; x: number; y: number } | undefined;
+    let detail: { id: string; x: number; y: number } | undefined;
     el.addEventListener(
-      'lr-node-click',
+      "lr-node-click",
       (e) => (detail = (e as CustomEvent).detail)
     );
     const capture = stubPointerCapture(canvas);
     try {
       canvas.dispatchEvent(
-        new PointerEvent('pointerdown', {
+        new PointerEvent("pointerdown", {
           bubbles: true,
           clientX,
           clientY,
@@ -3625,7 +3612,7 @@ describe('canvas renderer — interaction and a11y', () => {
       );
       expect(capture.captured.has(1)).to.equal(true);
       canvas.dispatchEvent(
-        new PointerEvent('pointerup', {
+        new PointerEvent("pointerup", {
           bubbles: true,
           clientX,
           clientY,
@@ -3633,15 +3620,15 @@ describe('canvas renderer — interaction and a11y', () => {
         })
       );
       expect(capture.captured.has(1)).to.equal(false);
-      expect(detail?.nodeId).to.equal(target.id);
-      expect(detail?.x).to.be.a('number');
-      expect(detail?.y).to.be.a('number');
+      expect(detail?.id).to.equal(target.id);
+      expect(detail?.x).to.be.a("number");
+      expect(detail?.y).to.be.a("number");
     } finally {
       capture.restore();
     }
   });
 
-  it('continues a canvas node click when pointer capture rejects a synthetic pointer id', async () => {
+  it("continues a canvas node click when pointer capture rejects a synthetic pointer id", async () => {
     // A seeded one-node graph settles at the center synchronously, so this can exercise the
     // browser-facing fallback without reading graph internals for a hit-test coordinate.
     const el = (await fixture(
@@ -3653,36 +3640,36 @@ describe('canvas renderer — interaction and a11y', () => {
         style="width:200px;height:200px"
       ></lr-graph>`
     )) as LyraGraph;
-    el.nodes = [{ id: 'only', label: 'Only node' }];
+    el.nodes = [{ id: "only", label: "Only node" }];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     const originalSetPointerCapture = Object.getOwnPropertyDescriptor(
       canvas,
-      'setPointerCapture'
+      "setPointerCapture"
     );
-    Object.defineProperty(canvas, 'setPointerCapture', {
+    Object.defineProperty(canvas, "setPointerCapture", {
       configurable: true,
       value: (_pointerId: number) => {
         throw new DOMException(
-          'Synthetic pointer id is not active',
-          'InvalidStateError'
+          "Synthetic pointer id is not active",
+          "InvalidStateError"
         );
       },
     });
-    let detail: { nodeId: string; x: number; y: number } | undefined;
+    let detail: { id: string; x: number; y: number } | undefined;
     el.addEventListener(
-      'lr-node-click',
+      "lr-node-click",
       (event) => (detail = (event as CustomEvent).detail)
     );
     try {
       const clientX = rect.left + rect.width / 2;
       const clientY = rect.top + rect.height / 2;
       canvas.dispatchEvent(
-        new PointerEvent('pointerdown', {
+        new PointerEvent("pointerdown", {
           bubbles: true,
           clientX,
           clientY,
@@ -3690,7 +3677,7 @@ describe('canvas renderer — interaction and a11y', () => {
         })
       );
       canvas.dispatchEvent(
-        new PointerEvent('pointerup', {
+        new PointerEvent("pointerup", {
           bubbles: true,
           clientX,
           clientY,
@@ -3698,12 +3685,12 @@ describe('canvas renderer — interaction and a11y', () => {
         })
       );
 
-      expect(detail?.nodeId).to.equal('only');
+      expect(detail?.id).to.equal("only");
     } finally {
       if (originalSetPointerCapture)
         Object.defineProperty(
           canvas,
-          'setPointerCapture',
+          "setPointerCapture",
           originalSetPointerCapture
         );
       else
@@ -3712,7 +3699,7 @@ describe('canvas renderer — interaction and a11y', () => {
     }
   });
 
-  it('clicking empty canvas space with no hit clears the selection when selectionMode is set', async () => {
+  it("clicking empty canvas space with no hit clears the selection when selectionMode is set", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -3724,21 +3711,21 @@ describe('canvas renderer — interaction and a11y', () => {
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
-    el.selectedNodeIds = ['a'];
+    el.selectedNodeIds = ["a"];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(400);
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
     el.addEventListener(
-      'lr-selection-change',
+      "lr-selection-change",
       (e) => (detail = (e as CustomEvent).detail)
     );
     canvas.dispatchEvent(
-      new PointerEvent('pointerdown', {
+      new PointerEvent("pointerdown", {
         bubbles: true,
         clientX: rect.left + 399,
         clientY: rect.top + 299,
@@ -3746,7 +3733,7 @@ describe('canvas renderer — interaction and a11y', () => {
       })
     );
     canvas.dispatchEvent(
-      new PointerEvent('pointerup', {
+      new PointerEvent("pointerup", {
         bubbles: true,
         clientX: rect.left + 399,
         clientY: rect.top + 299,
@@ -3756,25 +3743,25 @@ describe('canvas renderer — interaction and a11y', () => {
     expect(detail).to.deep.equal({ nodeIds: [], linkIds: [] });
   });
 
-  it('dblclick on a node emits lr-node-expand in canvas mode too', async () => {
+  it("dblclick on a node emits lr-node-expand in canvas mode too", async () => {
     const el = await mountCanvas();
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
-    let detail: { nodeId: string } | undefined;
+    let detail: { id: string } | undefined;
     el.addEventListener(
-      'lr-node-expand',
+      "lr-node-expand",
       (e) => (detail = (e as CustomEvent).detail)
     );
     canvas.dispatchEvent(
-      new MouseEvent('dblclick', {
+      new MouseEvent("dblclick", {
         bubbles: true,
         clientX: rect.left + target.x!,
         clientY: rect.top + target.y!,
       })
     );
-    expect(detail?.nodeId).to.equal(target.id);
-    expect(detail).to.deep.equal({ nodeId: target.id });
+    expect(detail?.id).to.equal(target.id);
+    expect(detail).to.deep.equal({ id: target.id });
   });
 
   // Seeded so the force layout converges synchronously: hover hit-testing is coalesced to one per
@@ -3793,20 +3780,20 @@ describe('canvas renderer — interaction and a11y', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50); // let the draw rAF fire so the backing store is sized for hit-testing
     return el;
   }
 
-  it('shows a hover tooltip with the item label on pointer hover, hides it off-item', async () => {
+  it("shows a hover tooltip with the item label on pointer hover, hides it off-item", async () => {
     const el = await mountSettledCanvas();
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
     canvas.dispatchEvent(
-      new PointerEvent('pointermove', {
+      new PointerEvent("pointermove", {
         bubbles: true,
         clientX: rect.left + target.x!,
         clientY: rect.top + target.y!,
@@ -3819,8 +3806,8 @@ describe('canvas renderer — interaction and a11y', () => {
     // Hover hit-testing is coalesced to one per animation frame, so the tooltip appears on the
     // frame after the pointermove, not synchronously within its dispatch.
     await waitUntil(
-      () => !tooltip.hasAttribute('hidden'),
-      'coalesced hover should resolve on the next frame'
+      () => !tooltip.hasAttribute("hidden"),
+      "coalesced hover should resolve on the next frame"
     );
     // nodeTooltipText() is private -- read it via the same `unknown` cast this file already
     // uses elsewhere for private-member assertions, to compute the exact expected label.
@@ -3830,7 +3817,7 @@ describe('canvas renderer — interaction and a11y', () => {
     expect(tooltip.textContent).to.equal(expectedLabel);
 
     canvas.dispatchEvent(
-      new PointerEvent('pointermove', {
+      new PointerEvent("pointermove", {
         bubbles: true,
         clientX: rect.left + 399,
         clientY: rect.top + 299,
@@ -3838,8 +3825,8 @@ describe('canvas renderer — interaction and a11y', () => {
       })
     );
     await waitUntil(
-      () => tooltip.hasAttribute('hidden'),
-      'off-item hover should hide the tooltip on the next frame'
+      () => tooltip.hasAttribute("hidden"),
+      "off-item hover should hide the tooltip on the next frame"
     );
   });
 
@@ -3855,19 +3842,19 @@ describe('canvas renderer — interaction and a11y', () => {
         ></lr-graph>
       </div>
     `)) as HTMLElement;
-    const el = container.querySelector('lr-graph') as LyraGraph;
+    const el = container.querySelector("lr-graph") as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50);
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
     canvas.dispatchEvent(
-      new PointerEvent('pointermove', {
+      new PointerEvent("pointermove", {
         bubbles: true,
         clientX: rect.left + target.x!,
         clientY: rect.top + target.y!,
@@ -3878,37 +3865,37 @@ describe('canvas renderer — interaction and a11y', () => {
       '[part="tooltip"]'
     ) as HTMLElement;
     await waitUntil(
-      () => !tooltip.hasAttribute('hidden'),
-      'coalesced hover should resolve on the next frame'
+      () => !tooltip.hasAttribute("hidden"),
+      "coalesced hover should resolve on the next frame"
     );
     // The offset is computed from the canvas's physical left edge, so it must land on the physical
     // `left` property -- `inset-inline-start` maps to `right` under RTL, which would mirror the
     // tooltip across the canvas instead of placing it at the cursor.
     expect(parseFloat(tooltip.style.left)).to.be.closeTo(target.x!, 1);
     expect(parseFloat(tooltip.style.top)).to.be.closeTo(target.y!, 1);
-    expect(tooltip.style.insetInlineStart).to.equal('');
+    expect(tooltip.style.insetInlineStart).to.equal("");
   });
 
-  it('renders one offscreen cursor-item button per node/link, in the same roving order as svg mode, driving the same keyboard/announcement logic', async () => {
+  it("renders one offscreen cursor-item button per node/link, in the same roving order as svg mode, driving the same keyboard/announcement logic", async () => {
     const el = await mountCanvas();
     const items = [
       ...el.shadowRoot!.querySelectorAll('[part="cursor-item"]'),
     ] as HTMLButtonElement[];
     expect(items).to.have.length(3); // 2 nodes + 1 link
     expect(
-      items.filter((i) => i.getAttribute('tabindex') === '0')
+      items.filter((i) => i.getAttribute("tabindex") === "0")
     ).to.have.length(1);
     items[0]!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
     await el.updateComplete;
-    expect(items[1]!.getAttribute('tabindex')).to.equal('0');
+    expect(items[1]!.getAttribute("tabindex")).to.equal("0");
     expect(
       el.shadowRoot!.querySelector('[part="live-region"]')!.textContent
-    ).to.not.equal('');
+    ).to.not.equal("");
   });
 
-  it('exposes explicit selection state on canvas virtual-cursor nodes and links', async () => {
+  it("exposes explicit selection state on canvas virtual-cursor nodes and links", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -3920,20 +3907,20 @@ describe('canvas renderer — interaction and a11y', () => {
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
-    el.selectedNodeIds = ['a'];
-    el.selectedLinkIds = ['a->b'];
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    el.selectedNodeIds = ["a"];
+    el.selectedLinkIds = ["a->b"];
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     const items = [...el.shadowRoot!.querySelectorAll('[part="cursor-item"]')];
     expect(
-      items.map((item) => item.getAttribute('aria-pressed'))
-    ).to.deep.equal(['true', 'false', 'true']);
+      items.map((item) => item.getAttribute("aria-pressed"))
+    ).to.deep.equal(["true", "false", "true"]);
   });
 
-  it('clamps the canvas tooltip inside the visible canvas and viewport bounds', async () => {
+  it("clamps the canvas tooltip inside the visible canvas and viewport bounds", async () => {
     const el = await mountCanvas();
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const tooltip = el.shadowRoot!.querySelector(
       '[part="tooltip"]'
     ) as HTMLDivElement;
@@ -3966,13 +3953,13 @@ describe('canvas renderer — interaction and a11y', () => {
     try {
       const internals = el as unknown as {
         updateCanvasTooltip(
-          hit: { kind: 'node'; node: (typeof el.simNodes)[number] },
+          hit: { kind: "node"; node: (typeof el.simNodes)[number] },
           clientX: number,
           clientY: number
         ): void;
       };
       internals.updateCanvasTooltip(
-        { kind: 'node', node: el.simNodes[0]! },
+        { kind: "node", node: el.simNodes[0]! },
         395,
         5
       );
@@ -3984,25 +3971,25 @@ describe('canvas renderer — interaction and a11y', () => {
     }
   });
 
-  it('Enter/Space on a cursor-item activates the same click handler as pointer interaction', async () => {
+  it("Enter/Space on a cursor-item activates the same click handler as pointer interaction", async () => {
     const el = await mountCanvas();
     const items = [
       ...el.shadowRoot!.querySelectorAll('[part="cursor-item"]'),
     ] as HTMLButtonElement[];
-    let detail: { nodeId: string; x: number; y: number } | undefined;
+    let detail: { id: string; x: number; y: number } | undefined;
     el.addEventListener(
-      'lr-node-click',
+      "lr-node-click",
       (e) => (detail = (e as CustomEvent).detail)
     );
     items[0]!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
     );
-    expect(detail?.nodeId).to.equal(el.simNodes[0]!.id);
-    expect(detail?.x).to.be.a('number');
-    expect(detail?.y).to.be.a('number');
+    expect(detail?.id).to.equal(el.simNodes[0]!.id);
+    expect(detail?.x).to.be.a("number");
+    expect(detail?.y).to.be.a("number");
   });
 
-  it('is accessible with interactions and a selection applied in canvas mode', async () => {
+  it("is accessible with interactions and a selection applied in canvas mode", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -4014,15 +4001,15 @@ describe('canvas renderer — interaction and a11y', () => {
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
-    el.selectedNodeIds = ['a'];
+    el.selectedNodeIds = ["a"];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await expect(el).to.be.accessible();
   });
 
-  it('starts in the shared loading state before any renderer-specific markup, same as svg mode', () => {
+  it("starts in the shared loading state before any renderer-specific markup, same as svg mode", () => {
     // The existing peer-missing fallback (graph-loader.ts's console.warn path) is renderer-
     // agnostic -- render()'s loading branch is checked before the renderer==='canvas' branch, and
     // this.loading never resolves false without this.d3, so canvas mode shows the same loading
@@ -4031,17 +4018,17 @@ describe('canvas renderer — interaction and a11y', () => {
     // resolved the module-level lazy d3 loader for earlier tests -- a fresh element's loadD3()
     // .then() callback could plausibly settle before a later assertion runs, making "still loading
     // right after mount" an unreliable thing to assert on here specifically.
-    const el = document.createElement('lr-graph') as LyraGraph;
-    el.renderer = 'canvas';
+    const el = document.createElement("lr-graph") as LyraGraph;
+    el.renderer = "canvas";
     expect((el as unknown as { loading: boolean }).loading).to.be.true;
   });
 });
 
-it('does not let a LyraGraphNode.color value inject extra CSS declarations via the node style attribute', async () => {
+it("does not let a LyraGraphNode.color value inject extra CSS declarations via the node style attribute", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = [
-    { id: 'a', label: 'A', color: 'red; position: fixed; top: 0px' },
-    { id: 'b', label: 'B' },
+    { id: "a", label: "A", color: "red; position: fixed; top: 0px" },
+    { id: "b", label: "B" },
   ];
   el.links = links;
   await el.updateComplete;
@@ -4059,20 +4046,20 @@ it('does not let a LyraGraphNode.color value inject extra CSS declarations via t
   // which reports 'static' for SVG shape elements regardless of what's
   // declared) — this is what actually detects a second CSS declaration
   // having been injected into the style attribute via string concatenation.
-  expect(coloredEl.style.position).to.equal('');
-  expect(coloredEl.style.top).to.equal('');
+  expect(coloredEl.style.position).to.equal("");
+  expect(coloredEl.style.top).to.equal("");
 });
 
-it('rejects url paint servers from node, type, link, and community colors', async () => {
+it("rejects url paint servers from node, type, link, and community colors", async () => {
   const paintServer = 'url("data:image/svg+xml,<svg/>")';
   const el = await fixture<LyraGraph>(html`<lr-graph seed="42"></lr-graph>`);
-  el.nodeTypes = [{ id: 'unsafe', label: 'Unsafe', color: paintServer }];
+  el.nodeTypes = [{ id: "unsafe", label: "Unsafe", color: paintServer }];
   el.nodes = [
-    { id: 'a', label: 'A', type: 'unsafe', communityId: 'team' },
-    { id: 'b', label: 'B', color: paintServer, communityId: 'team' },
+    { id: "a", label: "A", type: "unsafe", communityId: "team" },
+    { id: "b", label: "B", color: paintServer, communityId: "team" },
   ];
-  el.links = [{ source: 'a', target: 'b', color: paintServer }];
-  el.communities = [{ id: 'team', memberIds: [], color: paintServer }];
+  el.links = [{ source: "a", target: "b", color: paintServer }];
+  el.communities = [{ id: "team", memberIds: [], color: paintServer }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4084,23 +4071,23 @@ it('rejects url paint servers from node, type, link, and community colors', asyn
   for (const node of el.shadowRoot!.querySelectorAll<SVGElement>(
     '[part="node"]'
   )) {
-    expect(node.style.getPropertyValue('--lr-node-fill')).to.not.contain(
-      'url('
+    expect(node.style.getPropertyValue("--lr-node-fill")).to.not.contain(
+      "url("
     );
   }
   expect(
     (
       el.shadowRoot!.querySelector('[part="link"]') as SVGElement
-    ).style.getPropertyValue('--lr-link-color')
-  ).to.equal('');
+    ).style.getPropertyValue("--lr-link-color")
+  ).to.equal("");
   expect(
     (
       el.shadowRoot!.querySelector('[part="hull"]') as SVGElement
-    ).style.getPropertyValue('--lr-graph-hull-fill')
-  ).to.equal('');
+    ).style.getPropertyValue("--lr-graph-hull-fill")
+  ).to.equal("");
 });
 
-it('wires up d3-drag on each draggable node', async () => {
+it("wires up d3-drag on each draggable node", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -4115,10 +4102,10 @@ it('wires up d3-drag on each draggable node', async () => {
   const nodeEl = el.shadowRoot!.querySelector(
     '[part="node"]'
   ) as SVGCircleElement;
-  expect(select(nodeEl).on('mousedown.drag')).to.be.a('function');
+  expect(select(nodeEl).on("mousedown.drag")).to.be.a("function");
 });
 
-it('wires up d3-zoom pan/zoom on the svg', async () => {
+it("wires up d3-zoom pan/zoom on the svg", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -4130,13 +4117,13 @@ it('wires up d3-zoom pan/zoom on the svg', async () => {
       timeout: NODE_COUNT_TIMEOUT,
     }
   );
-  const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-  const g = el.shadowRoot!.querySelector('g') as SVGGElement;
-  expect(select(svgEl).on('wheel.zoom')).to.be.a('function');
-  expect(g.getAttribute('transform')).to.equal('');
+  const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+  const g = el.shadowRoot!.querySelector("g") as SVGGElement;
+  expect(select(svgEl).on("wheel.zoom")).to.be.a("function");
+  expect(g.getAttribute("transform")).to.equal("");
 
   svgEl.dispatchEvent(
-    new WheelEvent('wheel', {
+    new WheelEvent("wheel", {
       bubbles: true,
       cancelable: true,
       deltaY: -100,
@@ -4145,10 +4132,10 @@ it('wires up d3-zoom pan/zoom on the svg', async () => {
     })
   );
   await el.updateComplete;
-  expect(g.getAttribute('transform')).to.match(/scale\(/);
+  expect(g.getAttribute("transform")).to.match(/scale\(/);
 });
 
-it('bounds zoom to a sane scaleExtent instead of zooming in unbounded', async () => {
+it("bounds zoom to a sane scaleExtent instead of zooming in unbounded", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -4160,13 +4147,13 @@ it('bounds zoom to a sane scaleExtent instead of zooming in unbounded', async ()
       timeout: NODE_COUNT_TIMEOUT,
     }
   );
-  const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-  const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+  const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+  const g = el.shadowRoot!.querySelector("g") as SVGGElement;
 
   // A single huge wheel delta would zoom far past any sane bound if
   // scaleExtent isn't set.
   svgEl.dispatchEvent(
-    new WheelEvent('wheel', {
+    new WheelEvent("wheel", {
       bubbles: true,
       cancelable: true,
       deltaY: -100000,
@@ -4175,12 +4162,12 @@ it('bounds zoom to a sane scaleExtent instead of zooming in unbounded', async ()
     })
   );
   await el.updateComplete;
-  const match = /scale\(([^)]+)\)/.exec(g.getAttribute('transform') ?? '');
+  const match = /scale\(([^)]+)\)/.exec(g.getAttribute("transform") ?? "");
   expect(match).to.exist;
   expect(Number(match![1])).to.be.at.most(8);
 });
 
-it('retunes the live zoom scaleExtent when minZoom/maxZoom change after the svg has already been bound', async () => {
+it("retunes the live zoom scaleExtent when minZoom/maxZoom change after the svg has already been bound", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -4199,13 +4186,13 @@ it('retunes the live zoom scaleExtent when minZoom/maxZoom change after the svg 
   el.maxZoom = 2;
   await el.updateComplete;
 
-  const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-  const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+  const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+  const g = el.shadowRoot!.querySelector("g") as SVGGElement;
 
   // A huge wheel delta would zoom well past 2 if the live scaleExtent hadn't
   // actually been retuned.
   svgEl.dispatchEvent(
-    new WheelEvent('wheel', {
+    new WheelEvent("wheel", {
       bubbles: true,
       cancelable: true,
       deltaY: -100000,
@@ -4214,12 +4201,12 @@ it('retunes the live zoom scaleExtent when minZoom/maxZoom change after the svg 
     })
   );
   await el.updateComplete;
-  const match = /scale\(([^)]+)\)/.exec(g.getAttribute('transform') ?? '');
+  const match = /scale\(([^)]+)\)/.exec(g.getAttribute("transform") ?? "");
   expect(match).to.exist;
   expect(Number(match![1])).to.be.at.most(2);
 });
 
-it('updates the charge/link forces in place when chargeStrength/linkDistance change after mount', async () => {
+it("updates the charge/link forces in place when chargeStrength/linkDistance change after mount", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -4244,7 +4231,7 @@ it('updates the charge/link forces in place when chargeStrength/linkDistance cha
   expect(linkForce.distance()()).to.equal(250);
 });
 
-it('still retunes chargeStrength/linkDistance when width/height change in the same update batch', async () => {
+it("still retunes chargeStrength/linkDistance when width/height change in the same update batch", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -4270,7 +4257,7 @@ it('still retunes chargeStrength/linkDistance when width/height change in the sa
   expect(chargeForce.strength()()).to.equal(-900);
 });
 
-it('recenters the simulation and bumps alpha when width/height change post-mount', async function () {
+it("recenters the simulation and bumps alpha when width/height change post-mount", async function () {
   // Waiting for a *full* default-alphaDecay settle (ALPHA_SETTLE_TIMEOUT
   // below) genuinely takes close to 5s on its own -- raise this test's own
   // Mocha timeout (web-test-runner.config.js sets a 6s default for every
@@ -4307,7 +4294,7 @@ it('recenters the simulation and bumps alpha when width/height change post-mount
   el.height = 400;
   await el.updateComplete;
 
-  const center = simulation.force('center');
+  const center = simulation.force("center");
   expect(center.x()).to.equal(500);
   expect(center.y()).to.equal(200);
   expect(simulation.alpha()).to.be.greaterThan(simulation.alphaMin());
@@ -4318,7 +4305,7 @@ it('recenters the simulation and bumps alpha when width/height change post-mount
 // invalid attribute value used to flow straight into forceCenter()/d3-force's strength()/
 // distance()/scaleExtent() and the SVG viewBox, poisoning the simulation and rendered geometry
 // with NaN instead of being clamped like every other numeric property in this library.
-it('normalizes non-finite/non-positive width or height so the viewBox and force-center stay finite', async () => {
+it("normalizes non-finite/non-positive width or height so the viewBox and force-center stay finite", async () => {
   const el = (await fixture(
     html`<lr-graph width="NaN" height="-100"></lr-graph>`
   )) as LyraGraph;
@@ -4333,27 +4320,27 @@ it('normalizes non-finite/non-positive width or height so the viewBox and force-
     }
   );
 
-  const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-  expect(svgEl.getAttribute('viewBox')).to.not.match(/NaN|Infinity|-100/);
+  const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+  expect(svgEl.getAttribute("viewBox")).to.not.match(/NaN|Infinity|-100/);
 
   const simulation = (el as any).simulation as {
     force: (name: string) => { x: () => number; y: () => number };
   };
-  const center = simulation.force('center');
+  const center = simulation.force("center");
   expect(Number.isFinite(center.x())).to.be.true;
   expect(Number.isFinite(center.y())).to.be.true;
 });
 
-it('normalizes public link widths before SVG, canvas, and picking geometry consume them', async () => {
+it("normalizes public link widths before SVG, canvas, and picking geometry consume them", async () => {
   const el = (await fixture(
     html`<lr-graph layout="layered"></lr-graph>`
   )) as LyraGraph;
   el.nodes = nodes;
   el.links = [
-    { id: 'nan', source: 'a', target: 'b', width: NaN },
-    { id: 'negative', source: 'a', target: 'b', width: -4 },
-    { id: 'infinite', source: 'a', target: 'b', width: Infinity },
-    { id: 'valid', source: 'a', target: 'b', width: 2.25 },
+    { id: "nan", source: "a", target: "b", width: NaN },
+    { id: "negative", source: "a", target: "b", width: -4 },
+    { id: "infinite", source: "a", target: "b", width: Infinity },
+    { id: "valid", source: "a", target: "b", width: 2.25 },
   ];
   await el.updateComplete;
   await waitUntil(
@@ -4364,11 +4351,11 @@ it('normalizes public link widths before SVG, canvas, and picking geometry consu
     }
   );
   const svgWidths = [...el.shadowRoot!.querySelectorAll('[part="link"]')].map(
-    (link) => Number(link.getAttribute('stroke-width'))
+    (link) => Number(link.getAttribute("stroke-width"))
   );
   expect(svgWidths).to.deep.equal([1.5, 0, 1.5, 2.25]);
 
-  el.renderer = 'canvas';
+  el.renderer = "canvas";
   await el.updateComplete;
   type Internals = {
     canvasScene?: { links: { width: number }[] };
@@ -4385,7 +4372,7 @@ it('normalizes public link widths before SVG, canvas, and picking geometry consu
   ).to.deep.equal([1.5, 0, 1.5, 2.25]);
 });
 
-it('normalizes non-finite/negative min-zoom or max-zoom so the live scaleExtent and zoomed scale stay finite', async () => {
+it("normalizes non-finite/negative min-zoom or max-zoom so the live scaleExtent and zoomed scale stay finite", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -4417,10 +4404,10 @@ it('normalizes non-finite/negative min-zoom or max-zoom so the live scaleExtent 
   expect(Number.isFinite(hi)).to.be.true;
   expect(hi).to.be.greaterThan(0);
 
-  const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-  const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+  const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+  const g = el.shadowRoot!.querySelector("g") as SVGGElement;
   svgEl.dispatchEvent(
-    new WheelEvent('wheel', {
+    new WheelEvent("wheel", {
       bubbles: true,
       cancelable: true,
       deltaY: -100000,
@@ -4429,12 +4416,12 @@ it('normalizes non-finite/negative min-zoom or max-zoom so the live scaleExtent 
     })
   );
   await el.updateComplete;
-  const match = /scale\(([^)]+)\)/.exec(g.getAttribute('transform') ?? '');
+  const match = /scale\(([^)]+)\)/.exec(g.getAttribute("transform") ?? "");
   expect(match).to.exist;
   expect(Number.isFinite(Number(match![1]))).to.be.true;
 });
 
-it('orders inverted zoom bounds before configuring d3 and imperative camera operations', async () => {
+it("orders inverted zoom bounds before configuring d3 and imperative camera operations", async () => {
   const el = (await fixture(
     html`<lr-graph min-zoom="10" max-zoom="2"></lr-graph>`
   )) as LyraGraph;
@@ -4454,18 +4441,18 @@ it('orders inverted zoom bounds before configuring d3 and imperative camera oper
   };
   expect(zoomBehavior.scaleExtent()).to.deep.equal([2, 10]);
 
-  expect(await el.focusNode('a', { zoom: Number.NaN })).to.equal(true);
+  expect(await el.focusNode("a", { zoom: Number.NaN })).to.equal(true);
   el.fit({ padding: Number.POSITIVE_INFINITY });
   await new Promise((resolve) => setTimeout(resolve, 350));
   const transform = el
-    .shadowRoot!.querySelector('g')!
-    .getAttribute('transform')!;
+    .shadowRoot!.querySelector("g")!
+    .getAttribute("transform")!;
   const scale = Number(transform.match(/scale\(([-\d.]+)\)/)?.[1]);
   expect(Number.isFinite(scale)).to.equal(true);
   expect(scale).to.be.within(2, 10);
 });
 
-it('normalizes non-finite charge-strength and non-finite/negative link-distance so the live d3-force objects never receive NaN', async () => {
+it("normalizes non-finite charge-strength and non-finite/negative link-distance so the live d3-force objects never receive NaN", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -4496,7 +4483,7 @@ it('normalizes non-finite charge-strength and non-finite/negative link-distance 
   expect(Number.isFinite(chargeForce.strength()())).to.be.true;
 });
 
-it('normalizes a non-finite seed to a finite integer instead of poisoning the deterministic spawn hash', async () => {
+it("normalizes a non-finite seed to a finite integer instead of poisoning the deterministic spawn hash", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.seed = Number.NaN;
   el.nodes = nodes;
@@ -4535,18 +4522,18 @@ it('normalizes a non-finite seed to a finite integer instead of poisoning the de
   }
 });
 
-it('leaves seed undefined (unseeded/random) alone -- only a defined-but-non-finite seed is normalized', async () => {
+it("leaves seed undefined (unseeded/random) alone -- only a defined-but-non-finite seed is normalized", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   expect(el.seed).to.be.undefined;
   expect((el as any).safeSeed).to.be.undefined;
 });
 
-it('normalizes a non-finite edge-label-min-zoom so the live edge-label visibility gate keeps working instead of never hiding', async () => {
+it("normalizes a non-finite edge-label-min-zoom so the live edge-label visibility gate keeps working instead of never hiding", async () => {
   const el = (await fixture(
     html`<lr-graph show-edge-labels></lr-graph>`
   )) as LyraGraph;
   el.nodes = nodes;
-  el.links = [{ source: 'a', target: 'b', label: 'A to B' }];
+  el.links = [{ source: "a", target: "b", label: "A to B" }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4563,10 +4550,10 @@ it('normalizes a non-finite edge-label-min-zoom so the live edge-label visibilit
   // Un-normalized, `k < NaN` is always false, so the labels would never hide no matter how far
   // out the camera zooms -- zoom out past the (fallback-normalized) default threshold and confirm
   // the gate still engages.
-  const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-  const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+  const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+  const g = el.shadowRoot!.querySelector("g") as SVGGElement;
   svgEl.dispatchEvent(
-    new WheelEvent('wheel', {
+    new WheelEvent("wheel", {
       bubbles: true,
       cancelable: true,
       deltaY: 100000,
@@ -4575,10 +4562,10 @@ it('normalizes a non-finite edge-label-min-zoom so the live edge-label visibilit
     })
   );
   await el.updateComplete;
-  expect(g.hasAttribute('data-edge-labels-hidden')).to.be.true;
+  expect(g.hasAttribute("data-edge-labels-hidden")).to.be.true;
 });
 
-it('does not reassign simNodes/simLinks references on tick, only positions (avoids a full Lit re-render every animation frame)', async () => {
+it("does not reassign simNodes/simLinks references on tick, only positions (avoids a full Lit re-render every animation frame)", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -4597,7 +4584,7 @@ it('does not reassign simNodes/simLinks references on tick, only positions (avoi
   const simLinksRef = (el as any).simLinks;
   const initialCx = (
     el.shadowRoot!.querySelector('[part="node"]') as SVGCircleElement
-  ).getAttribute('cx');
+  ).getAttribute("cx");
 
   // Let the simulation tick for a while.
   await aTimeout(300);
@@ -4611,14 +4598,14 @@ it('does not reassign simNodes/simLinks references on tick, only positions (avoi
   // reassign the reactive simNodes/simLinks array references.
   const laterCx = (
     el.shadowRoot!.querySelector('[part="node"]') as SVGCircleElement
-  ).getAttribute('cx');
+  ).getAttribute("cx");
   expect(laterCx).to.not.equal(initialCx);
 });
 
-it('skips the settle animation under prefers-reduced-motion (jumps straight to a converged layout)', async () => {
+it("skips the settle animation under prefers-reduced-motion (jumps straight to a converged layout)", async () => {
   const originalMatchMedia = window.matchMedia;
   window.matchMedia = ((query: string) => ({
-    matches: query === '(prefers-reduced-motion: reduce)',
+    matches: query === "(prefers-reduced-motion: reduce)",
     media: query,
     addEventListener: () => {},
     removeEventListener: () => {},
@@ -4647,21 +4634,21 @@ it('skips the settle animation under prefers-reduced-motion (jumps straight to a
   }
 });
 
-it('seeded layout: two separate instances with the same nodes/links/seed converge to bit-identical final positions', async () => {
+it("seeded layout: two separate instances with the same nodes/links/seed converge to bit-identical final positions", async () => {
   const seededNodes = [
-    { id: 'a', label: 'A' },
-    { id: 'b', label: 'B' },
-    { id: 'c', label: 'C' },
+    { id: "a", label: "A" },
+    { id: "b", label: "B" },
+    { id: "c", label: "C" },
   ];
   const seededLinks = [
-    { source: 'a', target: 'b' },
-    { source: 'b', target: 'c' },
+    { source: "a", target: "b" },
+    { source: "b", target: "c" },
   ];
 
   const positionsOf = (el: LyraGraph) =>
     Array.from(el.shadowRoot!.querySelectorAll('[part="node"]')).map((n) => ({
-      cx: n.getAttribute('cx'),
-      cy: n.getAttribute('cy'),
+      cx: n.getAttribute("cx"),
+      cy: n.getAttribute("cy"),
     }));
 
   const elA = (await fixture(
@@ -4700,9 +4687,9 @@ it('seeded layout: two separate instances with the same nodes/links/seed converg
   const byLabel = (el: LyraGraph) => {
     const map = new Map<string, { cx: string | null; cy: string | null }>();
     el.shadowRoot!.querySelectorAll('[part="node"]').forEach((n) => {
-      map.set(n.getAttribute('aria-label')!, {
-        cx: n.getAttribute('cx'),
-        cy: n.getAttribute('cy'),
+      map.set(n.getAttribute("aria-label")!, {
+        cx: n.getAttribute("cx"),
+        cy: n.getAttribute("cy"),
       });
     });
     return map;
@@ -4720,15 +4707,15 @@ it('seeded layout: two separate instances with the same nodes/links/seed converg
     .true;
 });
 
-it('seeded layout: different seeds produce different final positions', async () => {
+it("seeded layout: different seeds produce different final positions", async () => {
   const seededNodes = [
-    { id: 'a', label: 'A' },
-    { id: 'b', label: 'B' },
-    { id: 'c', label: 'C' },
+    { id: "a", label: "A" },
+    { id: "b", label: "B" },
+    { id: "c", label: "C" },
   ];
   const seededLinks = [
-    { source: 'a', target: 'b' },
-    { source: 'b', target: 'c' },
+    { source: "a", target: "b" },
+    { source: "b", target: "c" },
   ];
 
   const elA = (await fixture(
@@ -4761,14 +4748,14 @@ it('seeded layout: different seeds produce different final positions', async () 
 
   const posA = Array.from(
     elA.shadowRoot!.querySelectorAll('[part="node"]')
-  ).map((n) => [n.getAttribute('cx'), n.getAttribute('cy')]);
+  ).map((n) => [n.getAttribute("cx"), n.getAttribute("cy")]);
   const posB = Array.from(
     elB.shadowRoot!.querySelectorAll('[part="node"]')
-  ).map((n) => [n.getAttribute('cx'), n.getAttribute('cy')]);
+  ).map((n) => [n.getAttribute("cx"), n.getAttribute("cy")]);
   expect(posA).to.not.deep.equal(posB);
 });
 
-it('seeded layout: settles synchronously (like prefers-reduced-motion) so the layout is reproducible without waiting on animation frames', async () => {
+it("seeded layout: settles synchronously (like prefers-reduced-motion) so the layout is reproducible without waiting on animation frames", async () => {
   const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -4788,7 +4775,7 @@ it('seeded layout: settles synchronously (like prefers-reduced-motion) so the la
   expect(simulation.alpha()).to.be.at.most(simulation.alphaMin());
 });
 
-it('seed unset: layout is unaffected (still uses forceSimulation()s own random initial start, not the deterministic PRNG)', async () => {
+it("seed unset: layout is unaffected (still uses forceSimulation()s own random initial start, not the deterministic PRNG)", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -4810,7 +4797,7 @@ it('seed unset: layout is unaffected (still uses forceSimulation()s own random i
   expect(simulation.alpha()).to.be.greaterThan(simulation.alphaMin());
 });
 
-it('user-initiated drag still works normally after a seeded synchronous settle', async () => {
+it("user-initiated drag still works normally after a seeded synchronous settle", async () => {
   const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -4826,15 +4813,15 @@ it('user-initiated drag still works normally after a seeded synchronous settle',
   const nodeEl = el.shadowRoot!.querySelector(
     '[part="node"]'
   ) as SVGCircleElement;
-  expect(select(nodeEl).on('mousedown.drag')).to.be.a('function');
+  expect(select(nodeEl).on("mousedown.drag")).to.be.a("function");
 });
 
-it('changing seed after nodes/links already have positions is a documented no-op (does not retroactively reposition)', async () => {
+it("changing seed after nodes/links already have positions is a documented no-op (does not retroactively reposition)", async () => {
   const seededNodes = [
-    { id: 'a', label: 'A' },
-    { id: 'b', label: 'B' },
+    { id: "a", label: "A" },
+    { id: "b", label: "B" },
   ];
-  const seededLinks = [{ source: 'a', target: 'b' }];
+  const seededLinks = [{ source: "a", target: "b" }];
 
   const el = (await fixture(html`<lr-graph seed="1"></lr-graph>`)) as LyraGraph;
   el.nodes = seededNodes;
@@ -4850,7 +4837,7 @@ it('changing seed after nodes/links already have positions is a documented no-op
 
   const before = Array.from(
     el.shadowRoot!.querySelectorAll('[part="node"]')
-  ).map((n) => [n.getAttribute('cx'), n.getAttribute('cy')]);
+  ).map((n) => [n.getAttribute("cx"), n.getAttribute("cy")]);
 
   // A different seed, supplied after nodes/links already assigned every
   // node a settled position, must not reshuffle the existing layout.
@@ -4859,16 +4846,16 @@ it('changing seed after nodes/links already have positions is a documented no-op
 
   const after = Array.from(
     el.shadowRoot!.querySelectorAll('[part="node"]')
-  ).map((n) => [n.getAttribute('cx'), n.getAttribute('cy')]);
+  ).map((n) => [n.getAttribute("cx"), n.getAttribute("cy")]);
   expect(after).to.deep.equal(before);
 });
 
-it('clamps an out-of-range LyraGraphNode.radius so the node still renders visibly-sized and focusable', async () => {
+it("clamps an out-of-range LyraGraphNode.radius so the node still renders visibly-sized and focusable", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = [
-    { id: 'a', label: 'A', radius: 0 },
-    { id: 'b', label: 'B', radius: -50 },
-    { id: 'c', label: 'C', radius: 1000 },
+    { id: "a", label: "A", radius: 0 },
+    { id: "b", label: "B", radius: -50 },
+    { id: "c", label: "C", radius: 1000 },
   ];
   el.links = [];
   await el.updateComplete;
@@ -4884,15 +4871,15 @@ it('clamps an out-of-range LyraGraphNode.radius so the node still renders visibl
     el.shadowRoot!.querySelectorAll('[part="node"]')
   ) as SVGCircleElement[];
   for (const [index, circle] of circles.entries()) {
-    const r = Number(circle.getAttribute('r'));
+    const r = Number(circle.getAttribute("r"));
     expect(r).to.be.at.least(6);
     expect(r).to.be.at.most(24);
-    expect(circle.getAttribute('tabindex')).to.equal(index === 0 ? '0' : '-1');
-    expect(circle.getAttribute('role')).to.equal('button');
+    expect(circle.getAttribute("tabindex")).to.equal(index === 0 ? "0" : "-1");
+    expect(circle.getAttribute("role")).to.equal("button");
   }
 });
 
-it('stops the force simulation on disconnect so a detached instance stops ticking', async () => {
+it("stops the force simulation on disconnect so a detached instance stops ticking", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -4915,7 +4902,7 @@ it('stops the force simulation on disconnect so a detached instance stops tickin
   };
 
   el.remove();
-  expect(stopped, 'disconnectedCallback should call simulation.stop()').to.be
+  expect(stopped, "disconnectedCallback should call simulation.stop()").to.be
     .true;
 
   // With the timer actually stopped, alpha can no longer decay via further
@@ -4926,7 +4913,7 @@ it('stops the force simulation on disconnect so a detached instance stops tickin
   expect(simulation.alpha()).to.equal(alphaAfterDisconnect);
 });
 
-it('does not restart the simulation from scratch on a reconnect (e.g. a drag-and-drop reparent)', async () => {
+it("does not restart the simulation from scratch on a reconnect (e.g. a drag-and-drop reparent)", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -4952,7 +4939,7 @@ it('does not restart the simulation from scratch on a reconnect (e.g. a drag-and
     }
   );
 
-  const otherContainer = document.createElement('div');
+  const otherContainer = document.createElement("div");
   document.body.appendChild(otherContainer);
   otherContainer.appendChild(el); // reparenting an already-connected node fires disconnectedCallback then connectedCallback synchronously
 
@@ -4972,10 +4959,10 @@ it('does not restart the simulation from scratch on a reconnect (e.g. a drag-and
   otherContainer.remove();
 });
 
-it('renders a dangling-target link as a stub off the source instead of dropping it', async () => {
+it("renders a dangling-target link as a stub off the source instead of dropping it", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes; // ids: a, b
-  el.links = [...links, { source: 'a', target: 'does-not-exist' }];
+  el.links = [...links, { source: "a", target: "does-not-exist" }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4988,15 +4975,15 @@ it('renders a dangling-target link as a stub off the source instead of dropping 
 
   const linkEls = [...el.shadowRoot!.querySelectorAll('[part="link"]')];
   expect(linkEls).to.have.length(2); // the real a-b link, plus a dangling stub off 'a'
-  const stub = linkEls.find((l) => l.hasAttribute('data-dangling'))!;
+  const stub = linkEls.find((l) => l.hasAttribute("data-dangling"))!;
   expect(stub != null).to.equal(true);
-  expect(stub.getAttribute('aria-hidden')).to.equal('true');
+  expect(stub.getAttribute("aria-hidden")).to.equal("true");
 });
 
-it('keeps a dangling stub synced to its source node across ticks, instead of freezing at its initial position', async () => {
+it("keeps a dangling stub synced to its source node across ticks, instead of freezing at its initial position", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes; // ids: a, b
-  el.links = [...links, { source: 'a', target: 'does-not-exist' }];
+  el.links = [...links, { source: "a", target: "does-not-exist" }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5008,7 +4995,7 @@ it('keeps a dangling stub synced to its source node across ticks, instead of fre
 
   const sourceCircle = [
     ...el.shadowRoot!.querySelectorAll('[part="node"]'),
-  ].find((c) => c.getAttribute('aria-label') === 'A') as SVGCircleElement;
+  ].find((c) => c.getAttribute("aria-label") === "A") as SVGCircleElement;
   const stub = el.shadowRoot!.querySelector(
     '[part="link"][data-dangling]'
   ) as SVGLineElement;
@@ -5018,32 +5005,32 @@ it('keeps a dangling stub synced to its source node across ticks, instead of fre
     onTick(): void;
   };
   internal.simulation?.stop();
-  const sourceNode = internal.simNodes.find((node) => node.id === 'a')!;
+  const sourceNode = internal.simNodes.find((node) => node.id === "a")!;
 
   internal.onTick();
-  const firstSourceX = sourceCircle.getAttribute('cx');
-  expect(stub.getAttribute('x1')).to.equal(firstSourceX);
-  expect(stub.getAttribute('y1')).to.equal(sourceCircle.getAttribute('cy'));
+  const firstSourceX = sourceCircle.getAttribute("cx");
+  expect(stub.getAttribute("x1")).to.equal(firstSourceX);
+  expect(stub.getAttribute("y1")).to.equal(sourceCircle.getAttribute("cy"));
 
   sourceNode.x = (sourceNode.x ?? 0) + 47;
   sourceNode.y = (sourceNode.y ?? 0) + 31;
   internal.onTick();
-  const laterSourceX = sourceCircle.getAttribute('cx');
+  const laterSourceX = sourceCircle.getAttribute("cx");
   expect(
     laterSourceX,
-    'sanity check: the controlled tick moves the source node'
+    "sanity check: the controlled tick moves the source node"
   ).to.not.equal(firstSourceX);
   // Before the fix, onTick() recomputed the stub's synthetic target but never wrote x1/y1/x2/y2
   // to its <line> element, so the stub stayed rendered at its very first tick's position while
   // the source node it hangs off kept animating away from it.
-  expect(stub.getAttribute('x1')).to.equal(laterSourceX);
-  expect(stub.getAttribute('y1')).to.equal(sourceCircle.getAttribute('cy'));
+  expect(stub.getAttribute("x1")).to.equal(laterSourceX);
+  expect(stub.getAttribute("y1")).to.equal(sourceCircle.getAttribute("cy"));
 });
 
-it('silently drops a link whose source id has no matching node, without throwing, and still renders the valid links', async () => {
+it("silently drops a link whose source id has no matching node, without throwing, and still renders the valid links", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes; // ids: a, b
-  el.links = [...links, { source: 'does-not-exist', target: 'b' }];
+  el.links = [...links, { source: "does-not-exist", target: "b" }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5056,12 +5043,12 @@ it('silently drops a link whose source id has no matching node, without throwing
 
   const linkEls = el.shadowRoot!.querySelectorAll('[part="link"]');
   expect(linkEls.length).to.equal(1);
-  expect((linkEls[0] as SVGLineElement).getAttribute('aria-label')).to.equal(
-    'Link from A to B'
+  expect((linkEls[0] as SVGLineElement).getAttribute("aria-label")).to.equal(
+    "Link from A to B"
   );
 });
 
-it('is accessible', async () => {
+it("is accessible", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
@@ -5076,7 +5063,7 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
-describe('data-list aria-label localization', () => {
+describe("data-list aria-label localization", () => {
   it('defaults the data-list aria-label to the built-in English "Graph data"', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
@@ -5092,13 +5079,13 @@ describe('data-list aria-label localization', () => {
     const list = el.shadowRoot!.querySelector(
       '[part="data-list"]'
     ) as HTMLElement;
-    expect(list.getAttribute('aria-label')).to.equal('Graph data');
+    expect(list.getAttribute("aria-label")).to.equal("Graph data");
   });
 
-  it('localizes the data-list aria-label via .strings (graphDataList)', async () => {
+  it("localizes the data-list aria-label via .strings (graphDataList)", async () => {
     const el = (await fixture(
       html`<lr-graph
-        .strings=${{ graphDataList: 'Données du graphe' }}
+        .strings=${{ graphDataList: "Données du graphe" }}
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
@@ -5114,11 +5101,11 @@ describe('data-list aria-label localization', () => {
     const list = el.shadowRoot!.querySelector(
       '[part="data-list"]'
     ) as HTMLElement;
-    expect(list.getAttribute('aria-label')).to.equal('Données du graphe');
+    expect(list.getAttribute("aria-label")).to.equal("Données du graphe");
   });
 });
 
-describe('RTL keyboard navigation', () => {
+describe("RTL keyboard navigation", () => {
   // Matches the `forwardKey`/`backwardKey` swap this library's other
   // "physical arrow key drives sequential previous/next" components
   // (lr-tab-group, lr-slider, lr-segmented) apply under dir="rtl": the
@@ -5127,7 +5114,7 @@ describe('RTL keyboard navigation', () => {
     const wrapper = (await fixture(
       html`<div dir="rtl"><lr-graph></lr-graph></div>`
     )) as HTMLDivElement;
-    const el = wrapper.querySelector('lr-graph') as LyraGraph;
+    const el = wrapper.querySelector("lr-graph") as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -5148,28 +5135,28 @@ describe('RTL keyboard navigation', () => {
     // ArrowRight is the "backward" physical key under RTL -- from index 0
     // it stays clamped at the first item instead of advancing.
     items()[0]!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
     await el.updateComplete;
-    expect(items()[0]!.getAttribute('tabindex')).to.equal('0');
+    expect(items()[0]!.getAttribute("tabindex")).to.equal("0");
 
     // ArrowLeft is the "forward" physical key under RTL -- advances to the next item.
     items()[0]!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })
+      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
     );
     await el.updateComplete;
-    expect(items()[1]!.getAttribute('tabindex')).to.equal('0');
+    expect(items()[1]!.getAttribute("tabindex")).to.equal("0");
 
     // ArrowRight then moves back to the previous item.
     items()[1]!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
     await el.updateComplete;
-    expect(items()[0]!.getAttribute('tabindex')).to.equal('0');
+    expect(items()[0]!.getAttribute("tabindex")).to.equal("0");
   });
 });
 
-describe('dimming (adjacency highlight)', () => {
+describe("dimming (adjacency highlight)", () => {
   async function mountDimmable(): Promise<LyraGraph> {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
@@ -5185,27 +5172,27 @@ describe('dimming (adjacency highlight)', () => {
     return el;
   }
 
-  it('defaults dimmedNodeIds/dimmedLinkIds to empty arrays: no data-dimmed anywhere', async () => {
+  it("defaults dimmedNodeIds/dimmedLinkIds to empty arrays: no data-dimmed anywhere", async () => {
     const el = await mountDimmable();
     expect(el.dimmedNodeIds).to.deep.equal([]);
     expect(el.dimmedLinkIds).to.deep.equal([]);
-    expect(el.shadowRoot!.querySelector('[data-dimmed]') === null).to.be.true;
+    expect(el.shadowRoot!.querySelector("[data-dimmed]") === null).to.be.true;
   });
 
-  it('applies data-dimmed to a matching node, not to an unmatched one', async () => {
+  it("applies data-dimmed to a matching node, not to an unmatched one", async () => {
     const el = await mountDimmable();
-    el.dimmedNodeIds = ['b'];
+    el.dimmedNodeIds = ["b"];
     await el.updateComplete;
     const [nodeA, nodeB] = [
       ...el.shadowRoot!.querySelectorAll('[part="node"]'),
     ] as SVGElement[];
-    expect(nodeA!.hasAttribute('data-dimmed')).to.be.false;
-    expect(nodeB!.hasAttribute('data-dimmed')).to.be.true;
+    expect(nodeA!.hasAttribute("data-dimmed")).to.be.false;
+    expect(nodeB!.hasAttribute("data-dimmed")).to.be.true;
   });
 
-  it('is visibly dimmed by default -- no host styling required to see the effect', async () => {
+  it("is visibly dimmed by default -- no host styling required to see the effect", async () => {
     const el = await mountDimmable();
-    el.dimmedNodeIds = ['b'];
+    el.dimmedNodeIds = ["b"];
     await el.updateComplete;
     const nodeB = el.shadowRoot!.querySelectorAll(
       '[part="node"]'
@@ -5215,49 +5202,49 @@ describe('dimming (adjacency highlight)', () => {
     expect(opacity).to.be.lessThan(1);
   });
 
-  it('applies data-dimmed to a matching link via its linkKey (id, else source->target)', async () => {
+  it("applies data-dimmed to a matching link via its linkKey (id, else source->target)", async () => {
     const el = await mountDimmable();
-    el.dimmedLinkIds = ['a->b'];
+    el.dimmedLinkIds = ["a->b"];
     await el.updateComplete;
     const linkEl = el.shadowRoot!.querySelector(
       '[part="link"]:not([data-dangling])'
     ) as SVGElement;
-    expect(linkEl.hasAttribute('data-dimmed')).to.be.true;
+    expect(linkEl.hasAttribute("data-dimmed")).to.be.true;
   });
 
-  it('never self-mutates dimmedNodeIds/dimmedLinkIds -- purely controlled, like selectedNodeIds', async () => {
+  it("never self-mutates dimmedNodeIds/dimmedLinkIds -- purely controlled, like selectedNodeIds", async () => {
     const el = await mountDimmable();
-    el.dimmedNodeIds = ['a'];
-    el.dimmedLinkIds = ['a->b'];
+    el.dimmedNodeIds = ["a"];
+    el.dimmedLinkIds = ["a->b"];
     await el.updateComplete;
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
-    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(el.dimmedNodeIds).to.deep.equal(['a']);
-    expect(el.dimmedLinkIds).to.deep.equal(['a->b']);
+    nodeEl.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(el.dimmedNodeIds).to.deep.equal(["a"]);
+    expect(el.dimmedLinkIds).to.deep.equal(["a->b"]);
   });
 
-  it('data-dimmed and data-selected can coexist on the same element independently', async () => {
+  it("data-dimmed and data-selected can coexist on the same element independently", async () => {
     const el = await mountDimmable();
-    el.selectionMode = 'multiple';
-    el.selectedNodeIds = ['a'];
-    el.dimmedNodeIds = ['a'];
+    el.selectionMode = "multiple";
+    el.selectedNodeIds = ["a"];
+    el.dimmedNodeIds = ["a"];
     await el.updateComplete;
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
-    expect(nodeEl.hasAttribute('data-selected')).to.be.true;
-    expect(nodeEl.hasAttribute('data-dimmed')).to.be.true;
+    expect(nodeEl.hasAttribute("data-selected")).to.be.true;
+    expect(nodeEl.hasAttribute("data-dimmed")).to.be.true;
   });
 
-  it('existing rendering is byte-identical when dimmedNodeIds/dimmedLinkIds are left unset', async () => {
+  it("existing rendering is byte-identical when dimmedNodeIds/dimmedLinkIds are left unset", async () => {
     const el = await mountDimmable();
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
-    expect(nodeEl.hasAttribute('data-dimmed')).to.be.false;
-    expect(nodeEl.getAttribute('style') || '').to.not.include('dimmed');
+    expect(nodeEl.hasAttribute("data-dimmed")).to.be.false;
+    expect(nodeEl.getAttribute("style") || "").to.not.include("dimmed");
   });
 
-  it('is accessible with dimming applied', async () => {
+  it("is accessible with dimming applied", async () => {
     const el = await mountDimmable();
-    el.dimmedNodeIds = ['a'];
-    el.dimmedLinkIds = ['a->b'];
+    el.dimmedNodeIds = ["a"];
+    el.dimmedLinkIds = ["a->b"];
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
@@ -5270,8 +5257,8 @@ describe('dimming (adjacency highlight)', () => {
 // regression test above -- a direct call to a private helper when there's no reasonable way to
 // reach it purely through public DOM events).
 
-describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
-  it('reconnecting a canvas-mode instance (e.g. a drag-and-drop reparent) re-arms the resize watcher and marks the canvas dirty', async () => {
+describe("coverage: canvas lifecycle (reconnect/disconnect edge cases)", () => {
+  it("reconnecting a canvas-mode instance (e.g. a drag-and-drop reparent) re-arms the resize watcher and marks the canvas dirty", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -5283,7 +5270,7 @@ describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50);
@@ -5294,7 +5281,7 @@ describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
     const observerBefore = (el as unknown as Internals).canvasResizeObserver;
     expect(observerBefore).to.exist;
 
-    const otherContainer = document.createElement('div');
+    const otherContainer = document.createElement("div");
     document.body.appendChild(otherContainer);
     otherContainer.appendChild(el); // fires disconnectedCallback then connectedCallback synchronously
 
@@ -5308,7 +5295,7 @@ describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
     otherContainer.remove();
   });
 
-  it('removing a canvas-mode instance while a hover is still coalesced (pending rAF) cancels the frame instead of leaking it', async () => {
+  it("removing a canvas-mode instance while a hover is still coalesced (pending rAF) cancels the frame instead of leaking it", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -5321,15 +5308,15 @@ describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50);
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
     canvas.dispatchEvent(
-      new PointerEvent('pointermove', {
+      new PointerEvent("pointermove", {
         bubbles: true,
         clientX: rect.left + target.x!,
         clientY: rect.top + target.y!,
@@ -5337,7 +5324,7 @@ describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
       })
     );
     expect((el as unknown as { hoverRafId?: number }).hoverRafId).to.be.a(
-      'number'
+      "number"
     );
     el.remove();
     expect((el as unknown as { hoverRafId?: number }).hoverRafId).to.be
@@ -5347,8 +5334,8 @@ describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
   });
 });
 
-describe('canvas visibility gating (perf)', () => {
-  it('gates canvas redraw behind IntersectionObserver visibility -- no draws while off-screen, catches up once visible again', async () => {
+describe("canvas visibility gating (perf)", () => {
+  it("gates canvas redraw behind IntersectionObserver visibility -- no draws while off-screen, catches up once visible again", async () => {
     const io = stubIntersectionObserver();
     try {
       // `seed` converges the settle synchronously (see rebuildSimulation()'s own doc comment) --
@@ -5368,7 +5355,7 @@ describe('canvas visibility gating (perf)', () => {
       el.links = links;
       await el.updateComplete;
       await waitUntil(
-        () => !!el.shadowRoot!.querySelector('canvas'),
+        () => !!el.shadowRoot!.querySelector("canvas"),
         undefined,
         { timeout: NODE_COUNT_TIMEOUT }
       );
@@ -5394,7 +5381,7 @@ describe('canvas visibility gating (perf)', () => {
       );
       internals.markCanvasDirty();
       await aTimeout(100); // several animation frames' worth of headroom
-      expect(drawCalls, 'no redraw should happen while off-screen').to.equal(0);
+      expect(drawCalls, "no redraw should happen while off-screen").to.equal(0);
 
       // Report back on-screen -- the deferred draw request must be honored, not silently dropped.
       latest.callback(
@@ -5404,14 +5391,14 @@ describe('canvas visibility gating (perf)', () => {
       await aTimeout(100);
       expect(
         drawCalls,
-        'becoming visible again must issue the deferred draw'
+        "becoming visible again must issue the deferred draw"
       ).to.be.greaterThan(0);
     } finally {
       io.restore();
     }
   });
 
-  it('disconnects the IntersectionObserver on disconnectedCallback', async () => {
+  it("disconnects the IntersectionObserver on disconnectedCallback", async () => {
     const io = stubIntersectionObserver();
     try {
       const el = (await fixture(
@@ -5427,7 +5414,7 @@ describe('canvas visibility gating (perf)', () => {
     }
   });
 
-  it('treats an empty IntersectionObserver entries array as visible (entries[0]?.isIntersecting ?? true fallback)', async () => {
+  it("treats an empty IntersectionObserver entries array as visible (entries[0]?.isIntersecting ?? true fallback)", async () => {
     const io = stubIntersectionObserver();
     try {
       const el = (await fixture(
@@ -5455,8 +5442,8 @@ describe('canvas visibility gating (perf)', () => {
   });
 });
 
-describe('lifecycle: super calls', () => {
-  it('calls super.willUpdate()/super.updated() so a future shared mixin layered under LyraElement keeps running', async () => {
+describe("lifecycle: super calls", () => {
+  it("calls super.willUpdate()/super.updated() so a future shared mixin layered under LyraElement keeps running", async () => {
     // Neither LyraElement nor LitElement override willUpdate/updated today (both are true no-ops
     // on ReactiveElement.prototype), so this can only be proven by spying on the inherited method
     // itself and confirming lr-graph's own override still reaches it via `super.<method>()` --
@@ -5468,11 +5455,11 @@ describe('lifecycle: super calls', () => {
     };
     const hadOwnWillUpdate = Object.prototype.hasOwnProperty.call(
       proto,
-      'willUpdate'
+      "willUpdate"
     );
     const hadOwnUpdated = Object.prototype.hasOwnProperty.call(
       proto,
-      'updated'
+      "updated"
     );
     const originalWillUpdate = proto.willUpdate;
     const originalUpdated = proto.updated;
@@ -5500,10 +5487,10 @@ describe('lifecycle: super calls', () => {
   });
 });
 
-describe('coverage: private-helper direct branches', () => {
-  it('falls back nodeRadius to the clamped default average when radius is non-finite (NaN)', async () => {
+describe("coverage: private-helper direct branches", () => {
+  it("falls back nodeRadius to the clamped default average when radius is non-finite (NaN)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodes = [{ id: 'a', label: 'A', radius: Number.NaN }];
+    el.nodes = [{ id: "a", label: "A", radius: Number.NaN }];
     el.links = [];
     await el.updateComplete;
     await waitUntil(
@@ -5516,86 +5503,77 @@ describe('coverage: private-helper direct branches', () => {
     const r = Number(
       (
         el.shadowRoot!.querySelector('[part="node"]') as SVGCircleElement
-      ).getAttribute('r')
+      ).getAttribute("r")
     );
     expect(r).to.be.at.least(6);
     expect(r).to.be.at.most(24);
   });
 
-  it('tweenCamera resolves false without animating when d3/zoomedEl/zoomBehavior are unavailable', async () => {
+  it("tweenCamera resolves false without animating when d3/zoomedEl/zoomBehavior are unavailable", async () => {
     // A fresh, never-connected element: this.d3 is still undefined, so tweenCamera()'s own internal
     // guard (the same shape as focusNode()/fit()'s public-facing guards, but exercised directly here
     // since both public callers already gate on the identical condition before ever reaching it).
-    const el = document.createElement('lr-graph') as LyraGraph;
+    const el = document.createElement("lr-graph") as LyraGraph;
     const resolved = await (
       el as unknown as { tweenCamera: (fn: () => unknown) => Promise<boolean> }
     ).tweenCamera(() => ({ k: 1, x: 0, y: 0 }));
     expect(resolved).to.be.false;
   });
 
-  it('linkKey/linkAccessibleText/onLinkClick fall back to String(source/target) for a raw (unresolved) id pair', async () => {
+  it("linkKey/linkAccessibleText/onLinkClick fall back to String(source/target) for a raw (unresolved) id pair", async () => {
     // Every SimLink this component itself ever constructs (resolveLinksAgainst()) has object
     // source/target -- but the type (SimulationLinkDatum<SimNode>) also allows a bare string id, and
     // these methods' own typeof branch handles it. Exercised directly since there's no public path
     // that ever hands them anything but an already-resolved SimLink.
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    const raw = { source: 'raw-a', target: 'raw-b' };
+    const raw = { source: "raw-a", target: "raw-b" };
     const key = (el as unknown as { linkKey: (l: unknown) => string }).linkKey(
       raw
     );
-    expect(key).to.equal('raw-a->raw-b');
+    expect(key).to.equal("raw-a->raw-b");
     const text = (
       el as unknown as { linkAccessibleText: (l: unknown) => string }
     ).linkAccessibleText(raw);
-    expect(text).to.equal('Link from raw-a to raw-b');
+    expect(text).to.equal("Link from raw-a to raw-b");
 
-    let detail: { sourceNodeId: string; targetNodeId: string } | undefined;
+    let detail: { source: string; target: string } | undefined;
     el.addEventListener(
-      'lr-link-click',
+      "lr-link-click",
       (e) => (detail = (e as CustomEvent).detail)
     );
     (el as unknown as { onLinkClick: (l: unknown) => void }).onLinkClick(raw);
-    expect(detail).to.deep.equal({
-      sourceNodeId: 'raw-a',
-      targetNodeId: 'raw-b',
-    });
+    expect(detail).to.deep.equal({ source: "raw-a", target: "raw-b" });
   });
 
-  it('onLinkEnter/onLinkLeave resolve raw string source/target ids the same way', async () => {
+  it("onLinkEnter/onLinkLeave resolve raw string source/target ids the same way", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    const raw = { source: 'raw-a', target: 'raw-b' };
-    const fakeEl = document.createElement('div');
+    const raw = { source: "raw-a", target: "raw-b" };
+    const fakeEl = document.createElement("div");
 
-    let enterDetail: { sourceNodeId: string; targetNodeId: string } | undefined;
+    let enterDetail: { source: string; target: string } | undefined;
     el.addEventListener(
-      'lr-link-enter',
+      "lr-link-enter",
       (e) => (enterDetail = (e as CustomEvent).detail)
     );
     (
       el as unknown as { onLinkEnter: (l: unknown, e: unknown) => void }
     ).onLinkEnter(raw, { currentTarget: fakeEl });
-    expect(enterDetail).to.deep.equal({
-      sourceNodeId: 'raw-a',
-      targetNodeId: 'raw-b',
-    });
-    expect(fakeEl.hasAttribute('data-hovered')).to.be.true;
+    expect(enterDetail).to.deep.equal({ source: "raw-a", target: "raw-b" });
+    expect(fakeEl.hasAttribute("data-hovered")).to.be.true;
 
-    let leaveDetail: { sourceNodeId: string; targetNodeId: string } | undefined;
+    let leaveDetail: { source: string; target: string } | undefined;
     el.addEventListener(
-      'lr-link-leave',
+      "lr-link-leave",
       (e) => (leaveDetail = (e as CustomEvent).detail)
     );
     (
       el as unknown as { onLinkLeave: (l: unknown, e: unknown) => void }
     ).onLinkLeave(raw, { currentTarget: fakeEl });
-    expect(leaveDetail).to.deep.equal({
-      sourceNodeId: 'raw-a',
-      targetNodeId: 'raw-b',
-    });
-    expect(fakeEl.hasAttribute('data-hovered')).to.be.false;
+    expect(leaveDetail).to.deep.equal({ source: "raw-a", target: "raw-b" });
+    expect(fakeEl.hasAttribute("data-hovered")).to.be.false;
   });
 
-  it('linkCoordinates/edgeLabelPosition handle a zero-length link (coincident source/target) without dividing by zero', async () => {
+  it("linkCoordinates/edgeLabelPosition handle a zero-length link (coincident source/target) without dividing by zero", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     const coincident = {
       source: { x: 5, y: 5 },
@@ -5622,7 +5600,7 @@ describe('coverage: private-helper direct branches', () => {
     expect(pos).to.deep.equal({ x: 5, y: 5 });
   });
 
-  it('evicts the oldest edgeLabelWidth cache entry once EDGE_LABEL_WIDTH_CACHE_MAX distinct labels have been measured', async () => {
+  it("evicts the oldest edgeLabelWidth cache entry once EDGE_LABEL_WIDTH_CACHE_MAX distinct labels have been measured", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     const measure = (
       el as unknown as { edgeLabelWidth: (t: string) => number }
@@ -5632,35 +5610,35 @@ describe('coverage: private-helper direct branches', () => {
     ).edgeLabelWidthCache;
     for (let i = 0; i < 513; i++) measure(`label-${i}`);
     expect(cache.size).to.equal(512);
-    expect(cache.has('label-0')).to.be.false; // oldest evicted
-    expect(cache.has('label-512')).to.be.true;
+    expect(cache.has("label-0")).to.be.false; // oldest evicted
+    expect(cache.has("label-512")).to.be.true;
   });
 
-  it('edgeLabelFontPx resolves px, rem, and em tokens against their live font sizes', async () => {
+  it("edgeLabelFontPx resolves px, rem, and em tokens against their live font sizes", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     const fontPx = (
       el as unknown as { edgeLabelFontPx: () => number }
     ).edgeLabelFontPx.bind(el);
-    el.style.setProperty('--lr-font-size-2xs', '12px');
+    el.style.setProperty("--lr-font-size-2xs", "12px");
     expect(fontPx()).to.equal(12);
     const previousRootFontSize = document.documentElement.style.fontSize;
     const previousOwnFontSize = el.style.fontSize;
     try {
-      document.documentElement.style.fontSize = '20px';
-      el.style.setProperty('--lr-font-size-2xs', '0.5rem');
+      document.documentElement.style.fontSize = "20px";
+      el.style.setProperty("--lr-font-size-2xs", "0.5rem");
       expect(fontPx()).to.equal(10);
-      el.style.fontSize = '24px';
-      el.style.setProperty('--lr-font-size-2xs', '0.5em');
+      el.style.fontSize = "24px";
+      el.style.setProperty("--lr-font-size-2xs", "0.5em");
       expect(fontPx()).to.equal(12);
     } finally {
       document.documentElement.style.fontSize = previousRootFontSize;
       el.style.fontSize = previousOwnFontSize;
     }
-    el.style.setProperty('--lr-font-size-2xs', 'not-a-number');
+    el.style.setProperty("--lr-font-size-2xs", "not-a-number");
     expect(fontPx()).to.equal(10);
   });
 
-  it('graphItemText returns an empty string for an out-of-range index (past every node/link/hull)', async () => {
+  it("graphItemText returns an empty string for an out-of-range index (past every node/link/hull)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -5675,14 +5653,14 @@ describe('coverage: private-helper direct branches', () => {
     const text = (
       el as unknown as { graphItemText: (i: number) => string }
     ).graphItemText(999);
-    expect(text).to.equal('');
+    expect(text).to.equal("");
   });
 
-  it('onGraphItemFocus/focusGraphItem no-op when graphItemCount() is 0 (every node hidden)', async () => {
+  it("onGraphItemFocus/focusGraphItem no-op when graphItemCount() is 0 (every node hidden)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodeTypes = [{ id: 'x', label: 'X' }];
-    el.hiddenTypes = ['x'];
-    el.nodes = [{ id: 'a', label: 'A', type: 'x' }];
+    el.nodeTypes = [{ id: "x", label: "X" }];
+    el.hiddenTypes = ["x"];
+    el.nodes = [{ id: "a", label: "A", type: "x" }];
     el.links = [];
     await el.updateComplete;
     await waitUntil(
@@ -5710,14 +5688,14 @@ describe('coverage: private-helper direct branches', () => {
 
     let fired = false;
     (el as unknown as Internals).onGraphKeyDown(
-      new KeyboardEvent('keydown', { key: 'ArrowRight' }),
+      new KeyboardEvent("keydown", { key: "ArrowRight" }),
       0,
       () => (fired = true)
     );
     expect(fired).to.be.false;
   });
 
-  it('an unhandled key on a node/link falls through onGraphKeyDown without moving the roving tab stop', async () => {
+  it("an unhandled key on a node/link falls through onGraphKeyDown without moving the roving tab stop", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -5731,13 +5709,13 @@ describe('coverage: private-helper direct branches', () => {
     );
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     nodeEl.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true })
+      new KeyboardEvent("keydown", { key: "PageDown", bubbles: true })
     );
     await el.updateComplete;
-    expect(nodeEl.getAttribute('tabindex')).to.equal('0'); // unchanged -- no branch matched, so onGraphKeyDown just returns
+    expect(nodeEl.getAttribute("tabindex")).to.equal("0"); // unchanged -- no branch matched, so onGraphKeyDown just returns
   });
 
-  it('updateEdgeLabelZoomGate no-ops when gEl is unset (canvas mode has no bound <g>)', async () => {
+  it("updateEdgeLabelZoomGate no-ops when gEl is unset (canvas mode has no bound <g>)", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -5749,7 +5727,7 @@ describe('coverage: private-helper direct branches', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     expect(() =>
@@ -5759,7 +5737,7 @@ describe('coverage: private-helper direct branches', () => {
     ).to.not.throw();
   });
 
-  it('graphItemText returns an empty string for a negative index (simNodes[-1] is undefined despite -1 < simNodes.length)', async () => {
+  it("graphItemText returns an empty string for a negative index (simNodes[-1] is undefined despite -1 < simNodes.length)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -5774,10 +5752,10 @@ describe('coverage: private-helper direct branches', () => {
     const text = (
       el as unknown as { graphItemText: (i: number) => string }
     ).graphItemText(-1);
-    expect(text).to.equal('');
+    expect(text).to.equal("");
   });
 
-  it('graphItemText returns an empty string for a fractional index landing past simNodes but short of simLinks.length', async () => {
+  it("graphItemText returns an empty string for a fractional index landing past simNodes but short of simLinks.length", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -5795,28 +5773,28 @@ describe('coverage: private-helper direct branches', () => {
     const text = (
       el as unknown as { graphItemText: (i: number) => string }
     ).graphItemText(2.5);
-    expect(text).to.equal('');
+    expect(text).to.equal("");
   });
 
-  it('onNodeClick emits a fallback (0,0) position for a node with no settled x/y yet', async () => {
+  it("onNodeClick emits a fallback (0,0) position for a node with no settled x/y yet", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    let detail: { nodeId: string; x: number; y: number } | undefined;
+    let detail: { id: string; x: number; y: number } | undefined;
     el.addEventListener(
-      'lr-node-click',
+      "lr-node-click",
       (e) => (detail = (e as CustomEvent).detail)
     );
     (el as unknown as { onNodeClick: (n: { id: string }) => void }).onNodeClick(
-      { id: 'unsettled' }
+      { id: "unsettled" }
     );
-    expect(detail).to.deep.equal({ nodeId: 'unsettled', x: 0, y: 0 });
+    expect(detail).to.deep.equal({ id: "unsettled", x: 0, y: 0 });
   });
 
-  it('applyInteractions skips (re)binding a stale node element with no matching simNodes entry (data shrinking ahead of a re-render)', async () => {
+  it("applyInteractions skips (re)binding a stale node element with no matching simNodes entry (data shrinking ahead of a re-render)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
-      { id: 'c', label: 'C' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
+      { id: "c", label: "C" },
     ];
     el.links = [];
     await el.updateComplete;
@@ -5849,7 +5827,7 @@ describe('coverage: private-helper direct branches', () => {
       // re-render) while `simNodes` has been shrunk to 1 -- the exact "data shrinking below an
       // index" scenario applyInteractions()'s `if (!n) return;` guards against.
       internal.simNodes = fullSimNodes.slice(0, 1);
-      internal.applyInteractions(new Map([['simNodes', fullSimNodes]]));
+      internal.applyInteractions(new Map([["simNodes", fullSimNodes]]));
       expect(addCalls).to.equal(2);
     } finally {
       internal.simNodes = fullSimNodes;
@@ -5861,7 +5839,7 @@ describe('coverage: private-helper direct branches', () => {
     const el = (await fixture(
       html`<lr-graph link-distance="100"></lr-graph>`
     )) as LyraGraph;
-    el.nodes = [{ id: 'existing', label: 'Existing' }];
+    el.nodes = [{ id: "existing", label: "Existing" }];
     el.links = [];
     await el.updateComplete;
     await waitUntil(
@@ -5877,32 +5855,32 @@ describe('coverage: private-helper direct branches', () => {
     // impossible here (the search predicate that finds `neighbor` already requires `x != null`);
     // `neighbor.y` has no equivalent guarantee, so corrupting only y is the one way to exercise its
     // `?? 0` twin.
-    const existing = el.simNodes.find((n) => n.id === 'existing')!;
+    const existing = el.simNodes.find((n) => n.id === "existing")!;
     existing.y = undefined;
 
     el.nodes = [
-      { id: 'existing', label: 'Existing' },
-      { id: 'newbie', label: 'Newbie' },
+      { id: "existing", label: "Existing" },
+      { id: "newbie", label: "Newbie" },
     ];
-    el.links = [{ source: 'existing', target: 'newbie' }];
+    el.links = [{ source: "existing", target: "newbie" }];
     await el.updateComplete;
 
-    const newbie = el.simNodes.find((n) => n.id === 'newbie')!;
+    const newbie = el.simNodes.find((n) => n.id === "newbie")!;
     expect(Number.isFinite(newbie.y)).to.be.true;
   });
 
   it("onTick/linkCoordinates/updateFocusHalo default a node's still-undefined x/y to 0 (seeded settle, then corrupted mid-flight state)", async () => {
     const el = (await fixture(
-      html`<lr-graph seed="7" focus-node-id="a"></lr-graph>`
+      html`<lr-graph seed="7" focus-id="a"></lr-graph>`
     )) as LyraGraph;
-    el.nodeTypes = [{ id: 'sq', label: 'Square', shape: 'square' }];
+    el.nodeTypes = [{ id: "sq", label: "Square", shape: "square" }];
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B', type: 'sq' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B", type: "sq" },
     ];
     el.links = [
-      { source: 'a', target: 'b' },
-      { source: 'a', target: 'ghost' }, // dangling -- "ghost" has no matching node
+      { source: "a", target: "b" },
+      { source: "a", target: "ghost" }, // dangling -- "ghost" has no matching node
     ];
     await el.updateComplete;
     await waitUntil(
@@ -5916,8 +5894,8 @@ describe('coverage: private-helper direct branches', () => {
     // `seed` converges the settle synchronously and stops the simulation (see this file's own
     // "gates canvas redraw..." precedent comment) -- corrupting positions here is safe from a real
     // background tick racing in and overwriting them before the manual onTick() call below runs.
-    const nodeA = el.simNodes.find((n) => n.id === 'a')!;
-    const nodeB = el.simNodes.find((n) => n.id === 'b')!;
+    const nodeA = el.simNodes.find((n) => n.id === "a")!;
+    const nodeB = el.simNodes.find((n) => n.id === "b")!;
     nodeA.x = undefined;
     nodeA.y = undefined;
     nodeB.x = undefined;
@@ -5927,14 +5905,14 @@ describe('coverage: private-helper direct branches', () => {
     const circleA = el.shadowRoot!.querySelector(
       '[part="node"]'
     ) as SVGCircleElement;
-    expect(circleA.getAttribute('cx')).to.equal('0');
-    expect(circleA.getAttribute('cy')).to.equal('0');
+    expect(circleA.getAttribute("cx")).to.equal("0");
+    expect(circleA.getAttribute("cy")).to.equal("0");
 
     const nodeEls = Array.from(
       el.shadowRoot!.querySelectorAll('[part="node"]')
     );
     const pathB = nodeEls[1] as SVGPathElement; // shape="square" renders <path>, positioned via transform
-    expect(pathB.getAttribute('transform')).to.equal('translate(0,0)');
+    expect(pathB.getAttribute("transform")).to.equal("translate(0,0)");
 
     const labelA = el.shadowRoot!.querySelector(
       '[part="label"]'
@@ -5942,35 +5920,35 @@ describe('coverage: private-helper direct branches', () => {
     const radiusA = (
       el as unknown as { nodeRadius: (n: unknown) => number }
     ).nodeRadius(nodeA);
-    expect(labelA.getAttribute('x')).to.equal(String(radiusA + 2));
-    expect(labelA.getAttribute('y')).to.equal('0');
+    expect(labelA.getAttribute("x")).to.equal(String(radiusA + 2));
+    expect(labelA.getAttribute("y")).to.equal("0");
 
     const realLink = el.shadowRoot!.querySelector(
       '[part="link"]:not([data-dangling])'
     ) as SVGLineElement;
-    expect(realLink.getAttribute('x1')).to.equal('0');
-    expect(realLink.getAttribute('y1')).to.equal('0');
-    expect(realLink.getAttribute('x2')).to.equal('0');
-    expect(realLink.getAttribute('y2')).to.equal('0');
+    expect(realLink.getAttribute("x1")).to.equal("0");
+    expect(realLink.getAttribute("y1")).to.equal("0");
+    expect(realLink.getAttribute("x2")).to.equal("0");
+    expect(realLink.getAttribute("y2")).to.equal("0");
 
     const danglingLine = el.shadowRoot!.querySelector(
       '[part="link"][data-dangling]'
     ) as SVGLineElement;
-    expect(danglingLine.getAttribute('x1')).to.equal('0');
-    expect(danglingLine.getAttribute('y1')).to.equal('0');
-    expect(danglingLine.getAttribute('x2')).to.equal('14'); // source.x??0 (0) + STUB_OFFSET_PX (14)
-    expect(danglingLine.getAttribute('y2')).to.equal('14');
+    expect(danglingLine.getAttribute("x1")).to.equal("0");
+    expect(danglingLine.getAttribute("y1")).to.equal("0");
+    expect(danglingLine.getAttribute("x2")).to.equal("14"); // source.x??0 (0) + STUB_OFFSET_PX (14)
+    expect(danglingLine.getAttribute("y2")).to.equal("14");
 
     const halo = el.shadowRoot!.querySelector(
       '[part="focus-halo"]'
     ) as SVGCircleElement;
-    expect(halo.getAttribute('cx')).to.equal('0');
-    expect(halo.getAttribute('cy')).to.equal('0');
+    expect(halo.getAttribute("cx")).to.equal("0");
+    expect(halo.getAttribute("cy")).to.equal("0");
   });
 });
 
-describe('coverage: canvas renderer internals', () => {
-  it('re-arms the DPR watcher and marks the canvas dirty when the devicePixelRatio media query changes', async () => {
+describe("coverage: canvas renderer internals", () => {
+  it("re-arms the DPR watcher and marks the canvas dirty when the devicePixelRatio media query changes", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -5982,7 +5960,7 @@ describe('coverage: canvas renderer internals', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     // Stop the simulation before observing canvasScene: onTick() unconditionally nulls it on every
@@ -6001,11 +5979,11 @@ describe('coverage: canvas renderer internals', () => {
     const query = (el as unknown as Internals).canvasDprQuery;
     expect(query).to.exist;
     expect((el as unknown as Internals).canvasScene).to.exist;
-    query!.dispatchEvent(new Event('change'));
+    query!.dispatchEvent(new Event("change"));
     expect((el as unknown as Internals).canvasScene).to.be.undefined; // markCanvasDirty() cleared it
   });
 
-  it('resolves a var(--x) node/link color to its cascaded value in the canvas scene (categorical fallback + explicit var() link color)', async () => {
+  it("resolves a var(--x) node/link color to its cascaded value in the canvas scene (categorical fallback + explicit var() link color)", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -6014,14 +5992,14 @@ describe('coverage: canvas renderer internals', () => {
         style="width:400px;height:300px"
       ></lr-graph>`
     )) as LyraGraph;
-    el.nodeTypes = [{ id: 'person', label: 'Person' }]; // no explicit color -> categorical var(--lr-graph-cat-1) fallback
+    el.nodeTypes = [{ id: "person", label: "Person" }]; // no explicit color -> categorical var(--lr-graph-cat-1) fallback
     el.nodes = [
-      { id: 'a', label: 'A', type: 'person' },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A", type: "person" },
+      { id: "b", label: "B" },
     ];
-    el.links = [{ source: 'a', target: 'b', color: 'var(--lr-color-danger)' }];
+    el.links = [{ source: "a", target: "b", color: "var(--lr-color-danger)" }];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
@@ -6036,15 +6014,15 @@ describe('coverage: canvas renderer internals', () => {
     const scene = (el as unknown as Internals).canvasScene!;
     expect(scene.nodes.length).to.equal(2);
     for (const n of scene.nodes) {
-      expect(n.fill).to.not.include('var(');
-      expect(n.fill).to.not.equal('');
+      expect(n.fill).to.not.include("var(");
+      expect(n.fill).to.not.equal("");
     }
     expect(scene.links.length).to.equal(1);
-    expect(scene.links[0]!.color).to.not.include('var(');
-    expect(scene.links[0]!.color).to.not.equal('');
+    expect(scene.links[0]!.color).to.not.include("var(");
+    expect(scene.links[0]!.color).to.not.equal("");
   });
 
-  it('reuses the cached canvas scene on a same-band pan/zoom repaint instead of rebuilding it every frame', async () => {
+  it("reuses the cached canvas scene on a same-band pan/zoom repaint instead of rebuilding it every frame", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -6056,7 +6034,7 @@ describe('coverage: canvas renderer internals', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
@@ -6068,12 +6046,12 @@ describe('coverage: canvas renderer internals', () => {
     );
     const sceneBefore = (el as unknown as Internals).canvasScene;
     expect(sceneBefore).to.exist;
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     // A small in-band zoom (doesn't cross the node-label/edge-label visibility thresholds) triggers
     // markCanvasCameraDirty() -- camera-only, so drawCanvas() reuses the existing scene rather than
     // rebuilding it (see drawCanvas()'s own comment on canvasScene reuse).
     canvas.dispatchEvent(
-      new WheelEvent('wheel', {
+      new WheelEvent("wheel", {
         bubbles: true,
         cancelable: true,
         deltaY: -10,
@@ -6085,7 +6063,7 @@ describe('coverage: canvas renderer internals', () => {
     expect((el as unknown as Internals).canvasScene).to.equal(sceneBefore);
   });
 
-  it('dragging a node in canvas mode live-updates its fx/fy via onCanvasPointerMove, clearing them on release', async () => {
+  it("dragging a node in canvas mode live-updates its fx/fy via onCanvasPointerMove, clearing them on release", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -6097,25 +6075,25 @@ describe('coverage: canvas renderer internals', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     // Stop the simulation and pin a deterministic position (matching this describe block's other
     // pointer-hit-testing tests) so the hit-test target is exact and stable instead of racing a
     // still-ticking layout.
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
-    const target = el.simNodes.find((n) => n.id === 'a')!;
+    const target = el.simNodes.find((n) => n.id === "a")!;
     target.x = 100;
     target.y = 100;
     (el as unknown as { pickDirty: boolean }).pickDirty = true;
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     const startX = rect.left + target.x;
     const startY = rect.top + target.y;
     const capture = stubPointerCapture(canvas);
     try {
       canvas.dispatchEvent(
-        new PointerEvent('pointerdown', {
+        new PointerEvent("pointerdown", {
           bubbles: true,
           clientX: startX,
           clientY: startY,
@@ -6124,17 +6102,17 @@ describe('coverage: canvas renderer internals', () => {
       );
       expect(capture.captured.has(1)).to.equal(true);
       canvas.dispatchEvent(
-        new PointerEvent('pointermove', {
+        new PointerEvent("pointermove", {
           bubbles: true,
           clientX: startX + 40,
           clientY: startY + 20,
           pointerId: 1,
         })
       );
-      expect(target.fx).to.be.a('number');
-      expect(target.fy).to.be.a('number');
+      expect(target.fx).to.be.a("number");
+      expect(target.fy).to.be.a("number");
       canvas.dispatchEvent(
-        new PointerEvent('pointerup', {
+        new PointerEvent("pointerup", {
           bubbles: true,
           clientX: startX + 40,
           clientY: startY + 20,
@@ -6149,7 +6127,7 @@ describe('coverage: canvas renderer internals', () => {
     }
   });
 
-  it('cancels a canvas node drag on pointercancel and lostpointercapture', async () => {
+  it("cancels a canvas node drag on pointercancel and lostpointercapture", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -6161,7 +6139,7 @@ describe('coverage: canvas renderer internals', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
 
@@ -6174,11 +6152,11 @@ describe('coverage: canvas renderer internals', () => {
     };
     const internals = el as unknown as Internals;
     internals.simulation?.stop();
-    const target = el.simNodes.find((node) => node.id === 'a')!;
+    const target = el.simNodes.find((node) => node.id === "a")!;
     target.x = 100;
     target.y = 100;
     internals.pickDirty = true;
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     const startX = rect.left + target.x;
     const startY = rect.top + target.y;
@@ -6188,7 +6166,7 @@ describe('coverage: canvas renderer internals', () => {
     canvas.releasePointerCapture = (pointerId) => released.push(pointerId);
 
     canvas.dispatchEvent(
-      new PointerEvent('pointerdown', {
+      new PointerEvent("pointerdown", {
         bubbles: true,
         clientX: startX,
         clientY: startY,
@@ -6198,7 +6176,7 @@ describe('coverage: canvas renderer internals', () => {
     expect(target.fx).to.equal(100);
     expect(target.fy).to.equal(100);
     canvas.dispatchEvent(
-      new PointerEvent('pointercancel', { bubbles: true, pointerId: 41 })
+      new PointerEvent("pointercancel", { bubbles: true, pointerId: 41 })
     );
     expect(target.fx).to.be.null;
     expect(target.fy).to.be.null;
@@ -6211,7 +6189,7 @@ describe('coverage: canvas renderer internals', () => {
 
     internals.pickDirty = true;
     canvas.dispatchEvent(
-      new PointerEvent('pointerdown', {
+      new PointerEvent("pointerdown", {
         bubbles: true,
         clientX: startX,
         clientY: startY,
@@ -6220,7 +6198,7 @@ describe('coverage: canvas renderer internals', () => {
     );
     expect(target.fx).to.equal(100);
     canvas.dispatchEvent(
-      new PointerEvent('lostpointercapture', { bubbles: true, pointerId: 42 })
+      new PointerEvent("lostpointercapture", { bubbles: true, pointerId: 42 })
     );
     expect(target.fx).to.be.null;
     expect(target.fy).to.be.null;
@@ -6232,7 +6210,7 @@ describe('coverage: canvas renderer internals', () => {
     expect(released).to.deep.equal([41]);
   });
 
-  it('cleans up a live canvas node drag when disconnected', async () => {
+  it("cleans up a live canvas node drag when disconnected", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -6244,7 +6222,7 @@ describe('coverage: canvas renderer internals', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
 
@@ -6257,17 +6235,17 @@ describe('coverage: canvas renderer internals', () => {
     };
     const internals = el as unknown as Internals;
     internals.simulation?.stop();
-    const target = el.simNodes.find((node) => node.id === 'a')!;
+    const target = el.simNodes.find((node) => node.id === "a")!;
     target.x = 100;
     target.y = 100;
     internals.pickDirty = true;
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     const released: number[] = [];
     canvas.setPointerCapture = () => {};
     canvas.releasePointerCapture = (pointerId) => released.push(pointerId);
     canvas.dispatchEvent(
-      new PointerEvent('pointerdown', {
+      new PointerEvent("pointerdown", {
         bubbles: true,
         clientX: rect.left + target.x,
         clientY: rect.top + target.y,
@@ -6286,7 +6264,7 @@ describe('coverage: canvas renderer internals', () => {
     expect(released).to.deep.equal([43]);
   });
 
-  it('canvas pointer click resolves a link (not a node) and emits lr-link-click', async () => {
+  it("canvas pointer click resolves a link (not a node) and emits lr-link-click", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -6296,19 +6274,19 @@ describe('coverage: canvas renderer internals', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.links = [{ source: "a", target: "b" }];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     await waitForCanvasBackingStore(canvas);
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
-    const a = el.simNodes.find((n) => n.id === 'a')!;
-    const b = el.simNodes.find((n) => n.id === 'b')!;
+    const a = el.simNodes.find((n) => n.id === "a")!;
+    const b = el.simNodes.find((n) => n.id === "b")!;
     // Deterministic, well-separated positions so the link midpoint is far from both node circles.
     a.x = 50;
     a.y = 150;
@@ -6316,15 +6294,15 @@ describe('coverage: canvas renderer internals', () => {
     b.y = 150;
     (el as unknown as { pickDirty: boolean }).pickDirty = true;
     const rect = canvas.getBoundingClientRect();
-    let detail: { sourceNodeId: string; targetNodeId: string } | undefined;
+    let detail: { source: string; target: string } | undefined;
     el.addEventListener(
-      'lr-link-click',
+      "lr-link-click",
       (e) => (detail = (e as CustomEvent).detail)
     );
     const midX = rect.left + 200;
     const midY = rect.top + 150;
     canvas.dispatchEvent(
-      new PointerEvent('pointerdown', {
+      new PointerEvent("pointerdown", {
         bubbles: true,
         clientX: midX,
         clientY: midY,
@@ -6332,17 +6310,17 @@ describe('coverage: canvas renderer internals', () => {
       })
     );
     canvas.dispatchEvent(
-      new PointerEvent('pointerup', {
+      new PointerEvent("pointerup", {
         bubbles: true,
         clientX: midX,
         clientY: midY,
         pointerId: 32,
       })
     );
-    expect(detail).to.deep.equal({ sourceNodeId: 'a', targetNodeId: 'b' });
+    expect(detail).to.deep.equal({ source: "a", target: "b" });
   });
 
-  it('canvas pointer click resolves a community hull (not a node/link) and emits lr-community-click', async () => {
+  it("canvas pointer click resolves a community hull (not a node/link) and emits lr-community-click", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -6351,18 +6329,18 @@ describe('coverage: canvas renderer internals', () => {
         style="width:400px;height:300px"
       ></lr-graph>`
     )) as LyraGraph;
-    el.communities = [{ id: 'team-1', memberIds: [] }]; // no label -- also exercises the id fallback
+    el.communities = [{ id: "team-1", memberIds: [] }]; // no label -- also exercises the id fallback
     el.nodes = [
-      { id: 'a', label: 'A', communityId: 'team-1' },
-      { id: 'b', label: 'B', communityId: 'team-1' },
-      { id: 'c', label: 'C', communityId: 'team-1' },
+      { id: "a", label: "A", communityId: "team-1" },
+      { id: "b", label: "B", communityId: "team-1" },
+      { id: "c", label: "C", communityId: "team-1" },
     ];
     el.links = [];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     await waitForCanvasBackingStore(canvas);
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
     const [a, b, c] = el.simNodes;
@@ -6374,15 +6352,15 @@ describe('coverage: canvas renderer internals', () => {
     c!.y = 250;
     (el as unknown as { pickDirty: boolean }).pickDirty = true;
     const rect = canvas.getBoundingClientRect();
-    let detail: { communityId: string } | undefined;
+    let detail: { id: string } | undefined;
     el.addEventListener(
-      'lr-community-click',
+      "lr-community-click",
       (e) => (detail = (e as CustomEvent).detail)
     );
     const cx = rect.left + 200;
     const cy = rect.top + 150; // centroid of the a/b/c triangle, well inside the hull, away from every node
     canvas.dispatchEvent(
-      new PointerEvent('pointerdown', {
+      new PointerEvent("pointerdown", {
         bubbles: true,
         clientX: cx,
         clientY: cy,
@@ -6390,17 +6368,17 @@ describe('coverage: canvas renderer internals', () => {
       })
     );
     canvas.dispatchEvent(
-      new PointerEvent('pointerup', {
+      new PointerEvent("pointerup", {
         bubbles: true,
         clientX: cx,
         clientY: cy,
         pointerId: 33,
       })
     );
-    expect(detail).to.deep.equal({ communityId: 'team-1' });
+    expect(detail).to.deep.equal({ id: "team-1" });
   });
 
-  it('pointerleave cancels an in-flight coalesced hover and hides the tooltip (canvas mode)', async () => {
+  it("pointerleave cancels an in-flight coalesced hover and hides the tooltip (canvas mode)", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -6413,15 +6391,15 @@ describe('coverage: canvas renderer internals', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50);
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
     canvas.dispatchEvent(
-      new PointerEvent('pointermove', {
+      new PointerEvent("pointermove", {
         bubbles: true,
         clientX: rect.left + target.x!,
         clientY: rect.top + target.y!,
@@ -6429,18 +6407,18 @@ describe('coverage: canvas renderer internals', () => {
       })
     );
     // Leave before the coalesced rAF hover has a chance to resolve.
-    canvas.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
+    canvas.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true }));
     expect((el as unknown as { hoverRafId?: number }).hoverRafId).to.be
       .undefined;
     const tooltip = el.shadowRoot!.querySelector(
       '[part="tooltip"]'
     ) as HTMLElement;
-    expect(tooltip.hasAttribute('hidden')).to.be.true;
+    expect(tooltip.hasAttribute("hidden")).to.be.true;
     await aTimeout(50); // the canceled frame must never fire and re-show it
-    expect(tooltip.hasAttribute('hidden')).to.be.true;
+    expect(tooltip.hasAttribute("hidden")).to.be.true;
   });
 
-  it('nodeAtCanvasPoint finds the nearest node within radius, undefined when nothing is close (dblclick geometric fallback)', async () => {
+  it("nodeAtCanvasPoint finds the nearest node within radius, undefined when nothing is close (dblclick geometric fallback)", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -6453,11 +6431,11 @@ describe('coverage: canvas renderer internals', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50);
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
     const nodeAtCanvasPoint = (
@@ -6474,11 +6452,11 @@ describe('coverage: canvas renderer internals', () => {
     expect(miss).to.be.undefined;
   });
 
-  it('canvas mode draws the focus halo in the built scene when focusNodeId resolves', async () => {
+  it("canvas mode draws the focus halo in the built scene when focusId resolves", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
-        focus-node-id="a"
+        focus-id="a"
         width="400"
         height="300"
         style="width:400px;height:300px"
@@ -6487,7 +6465,7 @@ describe('coverage: canvas renderer internals', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
@@ -6502,7 +6480,7 @@ describe('coverage: canvas renderer internals', () => {
     expect((el as unknown as Internals).canvasScene?.focusHalo).to.exist;
   });
 
-  it('canvas mode paints the cue for the actually focused node, link, or hull only', async () => {
+  it("canvas mode paints the cue for the actually focused node, link, or hull only", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -6512,8 +6490,8 @@ describe('coverage: canvas renderer internals', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = [{ id: 'ab', source: 'a', target: 'b' }];
-    el.communities = [{ id: 'team', memberIds: ['a', 'b'] }];
+    el.links = [{ id: "ab", source: "a", target: "b" }];
+    el.communities = [{ id: "team", memberIds: ["a", "b"] }];
     await el.updateComplete;
     await waitUntil(
       () =>
@@ -6567,7 +6545,7 @@ describe('coverage: canvas renderer internals', () => {
 
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = ((query: string) => ({
-      matches: query === '(forced-colors: active)',
+      matches: query === "(forced-colors: active)",
       media: query,
       onchange: null,
       addEventListener() {},
@@ -6577,13 +6555,13 @@ describe('coverage: canvas renderer internals', () => {
       dispatchEvent: () => true,
     })) as typeof window.matchMedia;
     try {
-      expect(build().haloColor).to.equal('CanvasText');
+      expect(build().haloColor).to.equal("CanvasText");
     } finally {
       window.matchMedia = originalMatchMedia;
     }
   });
 
-  it('canvas mode with zero visible items becomes the tab stop itself, with no keyboard focus ring/halo in the scene', async () => {
+  it("canvas mode with zero visible items becomes the tab stop itself, with no keyboard focus ring/halo in the scene", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -6592,12 +6570,12 @@ describe('coverage: canvas renderer internals', () => {
         style="width:400px;height:300px"
       ></lr-graph>`
     )) as LyraGraph;
-    el.nodeTypes = [{ id: 'x', label: 'X' }];
-    el.hiddenTypes = ['x'];
-    el.nodes = [{ id: 'a', label: 'A', type: 'x' }];
+    el.nodeTypes = [{ id: "x", label: "X" }];
+    el.hiddenTypes = ["x"];
+    el.nodes = [{ id: "a", label: "A", type: "x" }];
     el.links = [];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
@@ -6610,20 +6588,20 @@ describe('coverage: canvas renderer internals', () => {
       { timeout: NODE_COUNT_TIMEOUT }
     );
     expect(el.simNodes.length).to.equal(0); // sanity: every node is hidden
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-    expect(canvas.getAttribute('tabindex')).to.equal('0'); // no roving items -- the canvas itself is the tab stop
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
+    expect(canvas.getAttribute("tabindex")).to.equal("0"); // no roving items -- the canvas itself is the tab stop
     // Every node being hidden always produces a "0 of 1"-style hidden-count announcement (see
     // announceHiddenNodeCount()) -- graphLiveText is therefore never empty here, so this doesn't
     // (and can't, through any public API) exercise the live-region's own empty-string fallback.
     expect(
       el.shadowRoot!.querySelector('[part="live-region"]')!.textContent
-    ).to.contain('1 of 1 nodes hidden');
+    ).to.contain("1 of 1 nodes hidden");
     expect((el as unknown as Internals).canvasScene?.keyboardFocusRing).to.be
       .undefined;
     expect((el as unknown as Internals).canvasScene?.focusHalo).to.be.undefined;
   });
 
-  it('a canvas cursor-item roving sequence can advance from nodes into a link (tabindex true branch for a link cursor-item)', async () => {
+  it("a canvas cursor-item roving sequence can advance from nodes into a link (tabindex true branch for a link cursor-item)", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -6635,7 +6613,7 @@ describe('coverage: canvas renderer internals', () => {
     el.nodes = nodes; // a, b
     el.links = links; // one link a->b
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     const items = () =>
@@ -6643,17 +6621,17 @@ describe('coverage: canvas renderer internals', () => {
         ...el.shadowRoot!.querySelectorAll('[part="cursor-item"]'),
       ] as HTMLButtonElement[];
     items()[0]!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
     await el.updateComplete;
     items()[1]!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
     await el.updateComplete;
-    expect(items()[2]!.getAttribute('tabindex')).to.equal('0'); // the link cursor-item is now active
+    expect(items()[2]!.getAttribute("tabindex")).to.equal("0"); // the link cursor-item is now active
   });
 
-  it('canvas mode renders one cursor-item per community, driving lr-community-click via click and Enter, with an id fallback when unlabeled', async () => {
+  it("canvas mode renders one cursor-item per community, driving lr-community-click via click and Enter, with an id fallback when unlabeled", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -6662,14 +6640,14 @@ describe('coverage: canvas renderer internals', () => {
         style="width:400px;height:300px"
       ></lr-graph>`
     )) as LyraGraph;
-    el.communities = [{ id: 'team-1', memberIds: [] }]; // no label -> falls back to the id
+    el.communities = [{ id: "team-1", memberIds: [] }]; // no label -> falls back to the id
     el.nodes = [
-      { id: 'a', label: 'A', communityId: 'team-1' },
-      { id: 'b', label: 'B', communityId: 'team-1' },
+      { id: "a", label: "A", communityId: "team-1" },
+      { id: "b", label: "B", communityId: "team-1" },
     ];
     el.links = [];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     const items = [
@@ -6677,35 +6655,35 @@ describe('coverage: canvas renderer internals', () => {
     ] as HTMLButtonElement[];
     expect(items).to.have.length(3); // 2 nodes + 1 hull, no links
     const hullItem = items[2]!;
-    expect(hullItem.getAttribute('aria-label')).to.contain('team-1');
-    let detail: { communityId: string } | undefined;
+    expect(hullItem.getAttribute("aria-label")).to.contain("team-1");
+    let detail: { id: string } | undefined;
     el.addEventListener(
-      'lr-community-click',
+      "lr-community-click",
       (e) => (detail = (e as CustomEvent).detail)
     );
-    hullItem.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(detail).to.deep.equal({ communityId: 'team-1' });
+    hullItem.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(detail).to.deep.equal({ id: "team-1" });
     detail = undefined;
     hullItem.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
     );
-    expect(detail).to.deep.equal({ communityId: 'team-1' });
+    expect(detail).to.deep.equal({ id: "team-1" });
   });
 });
 
-describe('coverage: selection/drag/hover edge cases', () => {
-  it('multiple mode: Ctrl-click toggles a LINK selection too, preserving other selected link ids', async () => {
+describe("coverage: selection/drag/hover edge cases", () => {
+  it("multiple mode: Ctrl-click toggles a LINK selection too, preserving other selected link ids", async () => {
     const el = (await fixture(
       html`<lr-graph selection-mode="multiple"></lr-graph>`
     )) as LyraGraph;
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
-      { id: 'c', label: 'C' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
+      { id: "c", label: "C" },
     ];
     el.links = [
-      { source: 'a', target: 'b' },
-      { source: 'b', target: 'c' },
+      { source: "a", target: "b" },
+      { source: "b", target: "c" },
     ];
     await el.updateComplete;
     await waitUntil(
@@ -6720,31 +6698,31 @@ describe('coverage: selection/drag/hover edge cases', () => {
     ] as SVGElement[];
     let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
     el.addEventListener(
-      'lr-selection-change',
+      "lr-selection-change",
       (e) => (detail = (e as CustomEvent).detail)
     );
 
     linkEls[0]!.dispatchEvent(
-      new MouseEvent('click', { bubbles: true, ctrlKey: true })
+      new MouseEvent("click", { bubbles: true, ctrlKey: true })
     );
-    expect(detail).to.deep.equal({ nodeIds: [], linkIds: ['a->b'] });
+    expect(detail).to.deep.equal({ nodeIds: [], linkIds: ["a->b"] });
 
-    el.selectedLinkIds = ['a->b'];
+    el.selectedLinkIds = ["a->b"];
     await el.updateComplete;
     linkEls[1]!.dispatchEvent(
-      new MouseEvent('click', { bubbles: true, ctrlKey: true })
+      new MouseEvent("click", { bubbles: true, ctrlKey: true })
     );
-    expect(detail).to.deep.equal({ nodeIds: [], linkIds: ['a->b', 'b->c'] });
+    expect(detail).to.deep.equal({ nodeIds: [], linkIds: ["a->b", "b->c"] });
 
-    el.selectedLinkIds = ['a->b', 'b->c'];
+    el.selectedLinkIds = ["a->b", "b->c"];
     await el.updateComplete;
     linkEls[0]!.dispatchEvent(
-      new MouseEvent('click', { bubbles: true, ctrlKey: true })
+      new MouseEvent("click", { bubbles: true, ctrlKey: true })
     );
-    expect(detail).to.deep.equal({ nodeIds: [], linkIds: ['b->c'] });
+    expect(detail).to.deep.equal({ nodeIds: [], linkIds: ["b->c"] });
   });
 
-  it('dragging a node (svg mode) sets fx/fy live and clears them + isDragging on release (d3-drag start/drag/end)', async () => {
+  it("dragging a node (svg mode) sets fx/fy live and clears them + isDragging on release (d3-drag start/drag/end)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -6759,9 +6737,9 @@ describe('coverage: selection/drag/hover edge cases', () => {
     const nodeEl = el.shadowRoot!.querySelector(
       '[part="node"]'
     ) as SVGCircleElement;
-    const target = el.simNodes.find((n) => n.id === 'a')!;
+    const target = el.simNodes.find((n) => n.id === "a")!;
     nodeEl.dispatchEvent(
-      new MouseEvent('mousedown', {
+      new MouseEvent("mousedown", {
         bubbles: true,
         clientX: 0,
         clientY: 0,
@@ -6770,24 +6748,24 @@ describe('coverage: selection/drag/hover edge cases', () => {
     );
     expect((el as unknown as { isDragging: boolean }).isDragging).to.be.true;
     document.dispatchEvent(
-      new MouseEvent('mousemove', {
+      new MouseEvent("mousemove", {
         bubbles: true,
         clientX: 60,
         clientY: 40,
         view: window,
       })
     );
-    expect(target.fx).to.be.a('number');
-    expect(target.fy).to.be.a('number');
+    expect(target.fx).to.be.a("number");
+    expect(target.fy).to.be.a("number");
     document.dispatchEvent(
-      new MouseEvent('mouseup', { bubbles: true, view: window })
+      new MouseEvent("mouseup", { bubbles: true, view: window })
     );
     expect((el as unknown as { isDragging: boolean }).isDragging).to.be.false;
     expect(target.fx).to.be.null;
     expect(target.fy).to.be.null;
   });
 
-  it('suppresses lr-node-leave and leaves data-hovered untouched while panning (mouseleave, mirrors the existing mouseenter suppression tests)', async () => {
+  it("suppresses lr-node-leave and leaves data-hovered untouched while panning (mouseleave, mirrors the existing mouseenter suppression tests)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -6800,20 +6778,20 @@ describe('coverage: selection/drag/hover edge cases', () => {
       }
     );
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
-    nodeEl.setAttribute('data-hovered', ''); // as if entered before the pan started
+    nodeEl.setAttribute("data-hovered", ""); // as if entered before the pan started
     (el as unknown as { isPanning: boolean }).isPanning = true;
     let fired = false;
-    el.addEventListener('lr-node-leave', () => (fired = true));
-    nodeEl.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    el.addEventListener("lr-node-leave", () => (fired = true));
+    nodeEl.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
     expect(fired).to.be.false;
-    expect(nodeEl.hasAttribute('data-hovered')).to.be.true; // untouched -- the guard returned early
+    expect(nodeEl.hasAttribute("data-hovered")).to.be.true; // untouched -- the guard returned early
   });
 
-  it('an unseeded new node linked to an existing neighbor still spawns near it (Math.random() jitter branch)', async () => {
+  it("an unseeded new node linked to an existing neighbor still spawns near it (Math.random() jitter branch)", async () => {
     const el = (await fixture(
       html`<lr-graph link-distance="100"></lr-graph>`
     )) as LyraGraph;
-    el.nodes = [{ id: 'a', label: 'A' }];
+    el.nodes = [{ id: "a", label: "A" }];
     el.links = [];
     await el.updateComplete;
     await waitUntil(
@@ -6823,23 +6801,23 @@ describe('coverage: selection/drag/hover edge cases', () => {
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    const before = el.simNodes.find((n) => n.id === 'a')!;
+    const before = el.simNodes.find((n) => n.id === "a")!;
     const aX = before.x!;
     const aY = before.y!;
 
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.links = [{ source: "a", target: "b" }];
     await el.updateComplete;
-    const spawnedB = el.simNodes.find((n) => n.id === 'b')!;
+    const spawnedB = el.simNodes.find((n) => n.id === "b")!;
     const distance = Math.hypot(spawnedB.x! - aX, spawnedB.y! - aY);
     expect(distance).to.be.lessThan(el.linkDistance);
   });
 });
 
-describe('coverage: drawn edge label declutter gate (onTick, real ticks)', () => {
+describe("coverage: drawn edge label declutter gate (onTick, real ticks)", () => {
   it('a labelless link with showEdgeLabels on does not throw across a real tick (edgeLabelWidth("") fallback)', async () => {
     const el = (await fixture(
       html`<lr-graph show-edge-labels></lr-graph>`
@@ -6859,7 +6837,7 @@ describe('coverage: drawn edge label declutter gate (onTick, real ticks)', () =>
       .true;
   });
 
-  it('hides a drawn edge label once its measured width exceeds the length-declutter gate (visibility toggle)', async () => {
+  it("hides a drawn edge label once its measured width exceeds the length-declutter gate (visibility toggle)", async () => {
     const el = (await fixture(
       html`<lr-graph
         show-edge-labels
@@ -6871,9 +6849,9 @@ describe('coverage: drawn edge label declutter gate (onTick, real ticks)', () =>
     el.nodes = nodes;
     el.links = [
       {
-        source: 'a',
-        target: 'b',
-        label: 'a very long label that will not fit on a short edge',
+        source: "a",
+        target: "b",
+        label: "a very long label that will not fit on a short edge",
       },
     ];
     await el.updateComplete;
@@ -6888,11 +6866,11 @@ describe('coverage: drawn edge label declutter gate (onTick, real ticks)', () =>
     const label = el.shadowRoot!.querySelector(
       '[part="link-label"]'
     ) as SVGTextElement;
-    expect(label.getAttribute('visibility')).to.equal('hidden');
+    expect(label.getAttribute("visibility")).to.equal("hidden");
   });
 });
 
-describe('coverage: ownerWindow-unavailable fallbacks', () => {
+describe("coverage: ownerWindow-unavailable fallbacks", () => {
   it("computedStyle/cameraTransitionMs fall back to the element's own inline style when ownerWindow is unavailable", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     const restore = stubNoOwnerWindow(el);
@@ -6906,14 +6884,14 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     }
   });
 
-  it('scheduleViewportChange/scheduleCanvasDraw/tweenCamera no-op instead of throwing when ownerWindow is unavailable', async () => {
+  it("scheduleViewportChange/scheduleCanvasDraw/tweenCamera no-op instead of throwing when ownerWindow is unavailable", async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     type Internals = {
@@ -6934,9 +6912,9 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     await aTimeout(100);
     expect(
       internal.viewportChangeRafId,
-      'precondition: no frame already pending'
+      "precondition: no frame already pending"
     ).to.be.undefined;
-    expect(internal.canvasDrawRafId, 'precondition: no frame already pending')
+    expect(internal.canvasDrawRafId, "precondition: no frame already pending")
       .to.be.undefined;
     const restore = stubNoOwnerWindow(el);
     try {
@@ -6952,17 +6930,17 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     }
   });
 
-  it('drawCanvas/redrawPickCanvas/hitTest default devicePixelRatio to 1 when ownerWindow is unavailable', async () => {
+  it("drawCanvas/redrawPickCanvas/hitTest default devicePixelRatio to 1 when ownerWindow is unavailable", async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const restore = stubNoOwnerWindow(el);
     try {
       type Internals = {
@@ -6982,17 +6960,17 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     }
   });
 
-  it('updateCanvasTooltip skips viewport clamping when ownerWindow is unavailable', async () => {
+  it("updateCanvasTooltip skips viewport clamping when ownerWindow is unavailable", async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    const a = el.simNodes.find((n) => n.id === 'a')!;
+    const a = el.simNodes.find((n) => n.id === "a")!;
     const restore = stubNoOwnerWindow(el);
     try {
       const updateCanvasTooltip = (
@@ -7001,10 +6979,10 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
         }
       ).updateCanvasTooltip.bind(el);
       const rect = (
-        el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement
+        el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement
       ).getBoundingClientRect();
       expect(() =>
-        updateCanvasTooltip({ kind: 'node', node: a }, 12, 34)
+        updateCanvasTooltip({ kind: "node", node: a }, 12, 34)
       ).to.not.throw();
       const tooltip = el.shadowRoot!.querySelector(
         '[part="tooltip"]'
@@ -7035,7 +7013,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     try {
       expect(() =>
         nodeEl.dispatchEvent(
-          new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+          new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
         )
       ).to.not.throw();
     } finally {
@@ -7050,7 +7028,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     type Internals = {
@@ -7067,7 +7045,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     // emitting against a stale/foreign realm.
     let viewportChangeFired = false;
     el.addEventListener(
-      'lr-viewport-change',
+      "lr-viewport-change",
       () => (viewportChangeFired = true)
     );
     internal.scheduleViewportChange();
@@ -7091,7 +7069,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     // tweenCamera() (via focusNode()): a real, multi-frame tween started against the real window,
     // then the realm changes mid-flight -- the step() callback's own guard must abort and resolve
     // false instead of continuing to animate against a stale frameOwner.
-    const call = el.focusNode('a', { zoom: 2 });
+    const call = el.focusNode("a", { zoom: 2 });
     await aTimeout(30); // let at least one real frame elapse so the tween is genuinely mid-flight
     restore = stubNoOwnerWindow(el);
     try {
@@ -7101,7 +7079,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     }
   });
 
-  it('onCanvasPointerMove ignores a hover when ownerWindow is unavailable at dispatch time', async () => {
+  it("onCanvasPointerMove ignores a hover when ownerWindow is unavailable at dispatch time", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -7113,17 +7091,17 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50);
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
     const restore = stubNoOwnerWindow(el);
     try {
       canvas.dispatchEvent(
-        new PointerEvent('pointermove', {
+        new PointerEvent("pointermove", {
           bubbles: true,
           clientX: rect.left + target.x!,
           clientY: rect.top + target.y!,
@@ -7138,15 +7116,15 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
   });
 });
 
-describe('coverage: canvas surface setup edge cases', () => {
-  it('watchCanvasResize disconnects an existing observer and falls back gracefully when ResizeObserver is unavailable', async () => {
+describe("coverage: canvas surface setup edge cases", () => {
+  it("watchCanvasResize disconnects an existing observer and falls back gracefully when ResizeObserver is unavailable", async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     type Internals = {
@@ -7166,14 +7144,14 @@ describe('coverage: canvas surface setup edge cases', () => {
     }
   });
 
-  it('watchCanvasDpr falls back gracefully when matchMedia is unavailable', async () => {
+  it("watchCanvasDpr falls back gracefully when matchMedia is unavailable", async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     type Internals = { watchCanvasDpr: () => void; canvasDprQuery?: unknown };
@@ -7189,7 +7167,7 @@ describe('coverage: canvas surface setup edge cases', () => {
     }
   });
 
-  it('setUpCanvasSurface tolerates a missing 2D context and a missing tooltip element; ensureCanvasOwnerRealm skips an unchanged realm', async () => {
+  it("setUpCanvasSurface tolerates a missing 2D context and a missing tooltip element; ensureCanvasOwnerRealm skips an unchanged realm", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -7199,9 +7177,9 @@ describe('coverage: canvas surface setup edge cases', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = [{ source: 'a', target: 'b', label: 'edge' }];
+    el.links = [{ source: "a", target: "b", label: "edge" }];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(300); // let a real tick call edgeLabelWidth() at least once, creating edgeLabelMeasureCanvas
@@ -7239,7 +7217,7 @@ describe('coverage: canvas surface setup edge cases', () => {
     }
   });
 
-  it('drawCanvas falls back to safeWidth/safeHeight when the canvas has no rendered client box', async () => {
+  it("drawCanvas falls back to safeWidth/safeHeight when the canvas has no rendered client box", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -7251,10 +7229,10 @@ describe('coverage: canvas surface setup edge cases', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     expect(canvas.clientWidth).to.equal(0); // precondition: the host itself is zero-sized
     expect(canvas.clientHeight).to.equal(0);
     (el as unknown as { drawCanvas: () => void }).drawCanvas();
@@ -7262,21 +7240,21 @@ describe('coverage: canvas surface setup edge cases', () => {
     expect(canvas.height).to.equal(222);
   });
 
-  it('edgeLabelWidth falls back to a sans-serif font family when --lr-font resolves empty (disconnected element, no cascade)', async () => {
-    const el = document.createElement('lr-graph') as LyraGraph;
+  it("edgeLabelWidth falls back to a sans-serif font family when --lr-font resolves empty (disconnected element, no cascade)", async () => {
+    const el = document.createElement("lr-graph") as LyraGraph;
     const width = (
       el as unknown as { edgeLabelWidth: (t: string) => number }
-    ).edgeLabelWidth('probe');
+    ).edgeLabelWidth("probe");
     expect(Number.isFinite(width)).to.be.true;
     const ctx = (
       el as unknown as { edgeLabelMeasureCtx?: CanvasRenderingContext2D }
     ).edgeLabelMeasureCtx;
-    expect(ctx?.font).to.contain('sans-serif');
+    expect(ctx?.font).to.contain("sans-serif");
   });
 });
 
-describe('coverage: announcement-sink re-sync and camera/color-resolution edge cases', () => {
-  it('syncAnnouncementSinks is a no-op when the sinks are already held in the current owner document (idempotent re-sync)', async () => {
+describe("coverage: announcement-sink re-sync and camera/color-resolution edge cases", () => {
+  it("syncAnnouncementSinks is a no-op when the sinks are already held in the current owner document (idempotent re-sync)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     type Internals = {
       syncAnnouncementSinks: () => void;
@@ -7295,11 +7273,11 @@ describe('coverage: announcement-sink re-sync and camera/color-resolution edge c
     );
   });
 
-  it('fit() no-ops without throwing when every node is hidden (simNodes empty), and defaults its padding option', async () => {
+  it("fit() no-ops without throwing when every node is hidden (simNodes empty), and defaults its padding option", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodeTypes = [{ id: 'x', label: 'X' }];
-    el.hiddenTypes = ['x'];
-    el.nodes = [{ id: 'a', label: 'A', type: 'x' }];
+    el.nodeTypes = [{ id: "x", label: "X" }];
+    el.hiddenTypes = ["x"];
+    el.nodes = [{ id: "a", label: "A", type: "x" }];
     el.links = [];
     await el.updateComplete;
     await waitUntil(
@@ -7327,27 +7305,27 @@ describe('coverage: announcement-sink re-sync and camera/color-resolution edge c
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    const a = el.simNodes.find((n) => n.id === 'a')!;
+    const a = el.simNodes.find((n) => n.id === "a")!;
     a.x = undefined;
     a.y = undefined;
     expect(() => el.fit()).to.not.throw();
   });
 
-  it('resolveCssColorValue returns a plain color as-is, and falls back to the original var() string when the referenced token is unset', async () => {
+  it("resolveCssColorValue returns a plain color as-is, and falls back to the original var() string when the referenced token is unset", async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
-      { id: 'c', label: 'C' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
+      { id: "c", label: "C" },
     ];
     el.links = [
-      { source: 'a', target: 'b', color: '#ff0000' },
-      { source: 'a', target: 'c', color: 'var(--totally-unset-token-xyz)' },
+      { source: "a", target: "b", color: "#ff0000" },
+      { source: "a", target: "c", color: "var(--totally-unset-token-xyz)" },
     ];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
@@ -7358,13 +7336,13 @@ describe('coverage: announcement-sink re-sync and camera/color-resolution edge c
       { timeout: NODE_COUNT_TIMEOUT }
     );
     const scene = (el as unknown as Internals).canvasScene!;
-    expect(scene.links[0]!.color).to.equal('#ff0000'); // no var() match -- returned as-is
-    expect(scene.links[1]!.color).to.equal('var(--totally-unset-token-xyz)'); // match found, resolves empty -> falls back
+    expect(scene.links[0]!.color).to.equal("#ff0000"); // no var() match -- returned as-is
+    expect(scene.links[1]!.color).to.equal("var(--totally-unset-token-xyz)"); // match found, resolves empty -> falls back
   });
 });
 
-describe('coverage: canvas pointer and hover edge cases', () => {
-  it('redrawPickCanvas/hitTest/nodeAtCanvasPoint/updateCanvasTooltip no-op when there is no canvas surface at all (svg renderer)', async () => {
+describe("coverage: canvas pointer and hover edge cases", () => {
+  it("redrawPickCanvas/hitTest/nodeAtCanvasPoint/updateCanvasTooltip no-op when there is no canvas surface at all (svg renderer)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -7389,26 +7367,26 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     expect(internal.nodeAtCanvasPoint(10, 10)).to.be.undefined;
     expect(internal.canvasTooltipEl).to.be.undefined;
     expect(() =>
-      internal.updateCanvasTooltip({ kind: 'node', node: {} }, 10, 10)
+      internal.updateCanvasTooltip({ kind: "node", node: {} }, 10, 10)
     ).to.not.throw();
   });
 
-  it('bindCanvasZoom no-ops when called before d3 has loaded (defensive guard, direct call)', async () => {
-    const el = document.createElement('lr-graph') as LyraGraph;
-    el.renderer = 'canvas';
+  it("bindCanvasZoom no-ops when called before d3 has loaded (defensive guard, direct call)", async () => {
+    const el = document.createElement("lr-graph") as LyraGraph;
+    el.renderer = "canvas";
     expect(() =>
       (el as unknown as { bindCanvasZoom: () => void }).bindCanvasZoom()
     ).to.not.throw();
   });
 
-  it('hitTest returns undefined for coordinates far outside the canvas backing store (out-of-bounds guard)', async () => {
+  it("hitTest returns undefined for coordinates far outside the canvas backing store (out-of-bounds guard)", async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     const hitTest = (
@@ -7417,17 +7395,17 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     expect(hitTest(-99999, -99999)).to.be.undefined;
   });
 
-  it('onCanvasPointerDown ignores a non-primary button, and arms no node drag in layered layout', async () => {
+  it("onCanvasPointerDown ignores a non-primary button, and arms no node drag in layered layout", async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     type Internals = {
       canvasPointerDownAt?: unknown;
@@ -7436,7 +7414,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     const internal = el as unknown as Internals;
 
     canvas.dispatchEvent(
-      new PointerEvent('pointerdown', {
+      new PointerEvent("pointerdown", {
         bubbles: true,
         button: 2,
         clientX: rect.left + 5,
@@ -7446,10 +7424,10 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     );
     expect(internal.canvasPointerDownAt).to.be.undefined; // secondary button -- entirely ignored
 
-    el.layout = 'layered';
+    el.layout = "layered";
     await el.updateComplete;
     canvas.dispatchEvent(
-      new PointerEvent('pointerdown', {
+      new PointerEvent("pointerdown", {
         bubbles: true,
         button: 0,
         clientX: rect.left + 5,
@@ -7461,23 +7439,23 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     expect(internal.canvasDragNode).to.be.undefined; // ...but no node drag armed in layered layout
   });
 
-  it('takeCanvasPointerDown returns undefined for a pointerup whose id does not match the tracked pointerdown', async () => {
+  it("takeCanvasPointerDown returns undefined for a pointerup whose id does not match the tracked pointerdown", async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     let clicked = false;
-    el.addEventListener('lr-node-click', () => (clicked = true));
-    el.addEventListener('lr-community-click', () => (clicked = true));
+    el.addEventListener("lr-node-click", () => (clicked = true));
+    el.addEventListener("lr-community-click", () => (clicked = true));
     canvas.dispatchEvent(
-      new PointerEvent('pointerdown', {
+      new PointerEvent("pointerdown", {
         bubbles: true,
         clientX: rect.left + 5,
         clientY: rect.top + 5,
@@ -7485,7 +7463,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       })
     );
     canvas.dispatchEvent(
-      new PointerEvent('pointerup', {
+      new PointerEvent("pointerup", {
         bubbles: true,
         clientX: rect.left + 5,
         clientY: rect.top + 5,
@@ -7495,29 +7473,29 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     expect(clicked).to.equal(false); // mismatched pointerId -- takeCanvasPointerDown() returns undefined, click dropped
   });
 
-  it('finishCanvasNodeDrag swallows a releasePointerCapture that throws (capture already revoked by the browser)', async () => {
+  it("finishCanvasNodeDrag swallows a releasePointerCapture that throws (capture already revoked by the browser)", async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
-    const target = el.simNodes.find((n) => n.id === 'a')!;
+    const target = el.simNodes.find((n) => n.id === "a")!;
     target.x = 100;
     target.y = 100;
     (el as unknown as { pickDirty: boolean }).pickDirty = true;
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     canvas.setPointerCapture = () => {};
     canvas.releasePointerCapture = () => {
-      throw new DOMException('already released', 'InvalidStateError');
+      throw new DOMException("already released", "InvalidStateError");
     };
     const rect = canvas.getBoundingClientRect();
     canvas.dispatchEvent(
-      new PointerEvent('pointerdown', {
+      new PointerEvent("pointerdown", {
         bubbles: true,
         clientX: rect.left + 100,
         clientY: rect.top + 100,
@@ -7526,7 +7504,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     );
     expect(() =>
       canvas.dispatchEvent(
-        new PointerEvent('pointerup', {
+        new PointerEvent("pointerup", {
           bubbles: true,
           clientX: rect.left + 100,
           clientY: rect.top + 100,
@@ -7536,7 +7514,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     ).to.not.throw();
   });
 
-  it('a hover over a link shows its bounded tooltip text in the canvas tooltip', async () => {
+  it("a hover over a link shows its bounded tooltip text in the canvas tooltip", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -7547,27 +7525,27 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.links = [{ source: "a", target: "b" }];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50);
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
-    const a = el.simNodes.find((n) => n.id === 'a')!;
-    const b = el.simNodes.find((n) => n.id === 'b')!;
+    const a = el.simNodes.find((n) => n.id === "a")!;
+    const b = el.simNodes.find((n) => n.id === "b")!;
     a.x = 50;
     a.y = 150;
     b.x = 350;
     b.y = 150;
     (el as unknown as { pickDirty: boolean }).pickDirty = true;
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     canvas.dispatchEvent(
-      new PointerEvent('pointermove', {
+      new PointerEvent("pointermove", {
         bubbles: true,
         clientX: rect.left + 200,
         clientY: rect.top + 150,
@@ -7578,8 +7556,8 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       '[part="tooltip"]'
     ) as HTMLElement;
     await waitUntil(
-      () => !tooltip.hasAttribute('hidden'),
-      'coalesced hover should resolve on the next frame'
+      () => !tooltip.hasAttribute("hidden"),
+      "coalesced hover should resolve on the next frame"
     );
     const expectedLabel = (
       el as unknown as { linkTooltipText: (l: unknown) => string }
@@ -7587,7 +7565,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     expect(tooltip.textContent).to.equal(expectedLabel);
   });
 
-  it('updateCanvasTooltip clamps against the left/top canvas edges when the tooltip would overflow them (direct call)', async () => {
+  it("updateCanvasTooltip clamps against the left/top canvas edges when the tooltip would overflow them (direct call)", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -7599,11 +7577,11 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    const a = el.simNodes.find((n) => n.id === 'a')!;
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const a = el.simNodes.find((n) => n.id === "a")!;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     const updateCanvasTooltip = (
       el as unknown as {
@@ -7613,7 +7591,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     // Coordinates above/left of the canvas's own top-left corner -- the tooltip is anchored there
     // and would overflow past the canvas's left/top edge without the clamp.
     updateCanvasTooltip(
-      { kind: 'node', node: a },
+      { kind: "node", node: a },
       rect.left - 50,
       rect.top - 50
     );
@@ -7627,7 +7605,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     expect(parseFloat(tooltip.style.top)).to.be.greaterThan(-50);
   });
 
-  it('a second pointermove within the same coalesced frame is a no-op (already-scheduled short-circuit)', async () => {
+  it("a second pointermove within the same coalesced frame is a no-op (already-scheduled short-circuit)", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -7639,15 +7617,15 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50);
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
     canvas.dispatchEvent(
-      new PointerEvent('pointermove', {
+      new PointerEvent("pointermove", {
         bubbles: true,
         clientX: rect.left + target.x!,
         clientY: rect.top + target.y!,
@@ -7657,7 +7635,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     const firstRafId = (el as unknown as { hoverRafId?: number }).hoverRafId;
     expect(firstRafId).to.exist;
     canvas.dispatchEvent(
-      new PointerEvent('pointermove', {
+      new PointerEvent("pointermove", {
         bubbles: true,
         clientX: rect.left + target.x! + 1,
         clientY: rect.top + target.y!,
@@ -7671,10 +7649,10 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     const tooltip = el.shadowRoot!.querySelector(
       '[part="tooltip"]'
     ) as HTMLElement;
-    await waitUntil(() => !tooltip.hasAttribute('hidden'));
+    await waitUntil(() => !tooltip.hasAttribute("hidden"));
   });
 
-  it('the coalesced hover callback no-ops if pendingHover was cleared before its frame fires (regression)', async () => {
+  it("the coalesced hover callback no-ops if pendingHover was cleared before its frame fires (regression)", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -7686,15 +7664,15 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50);
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
     canvas.dispatchEvent(
-      new PointerEvent('pointermove', {
+      new PointerEvent("pointermove", {
         bubbles: true,
         clientX: rect.left + target.x!,
         clientY: rect.top + target.y!,
@@ -7706,23 +7684,23 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     const tooltip = el.shadowRoot!.querySelector(
       '[part="tooltip"]'
     ) as HTMLElement;
-    expect(tooltip.hasAttribute('hidden')).to.be.true; // never resolved -- the frame found nothing pending
+    expect(tooltip.hasAttribute("hidden")).to.be.true; // never resolved -- the frame found nothing pending
   });
 
-  it('the coalesced hover callback defers resolution while the simulation is still actively ticking (unsettled, non-seeded)', async () => {
+  it("the coalesced hover callback defers resolution while the simulation is still actively ticking (unsettled, non-seeded)", async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph; // no seed -- a real, multi-hundred-tick settle animation
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     canvas.dispatchEvent(
-      new PointerEvent('pointermove', {
+      new PointerEvent("pointermove", {
         bubbles: true,
         clientX: rect.left + 50,
         clientY: rect.top + 50,
@@ -7733,20 +7711,20 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     const tooltip = el.shadowRoot!.querySelector(
       '[part="tooltip"]'
     ) as HTMLElement;
-    expect(tooltip.hasAttribute('hidden')).to.be.true; // hover deferred, never resolved this frame
+    expect(tooltip.hasAttribute("hidden")).to.be.true; // hover deferred, never resolved this frame
   });
 });
-describe('coverage: render()/buildCanvasScene position fallbacks and shape-branch parity', () => {
+describe("coverage: render()/buildCanvasScene position fallbacks and shape-branch parity", () => {
   it("render() defaults a node's / dangling stub's still-undefined x/y to 0 across every svg template branch (regression, forced re-render)", async () => {
     const el = (await fixture(
       html`<lr-graph seed="1"></lr-graph>`
     )) as LyraGraph;
-    el.nodeTypes = [{ id: 'sq', label: 'Square', shape: 'square' }];
+    el.nodeTypes = [{ id: "sq", label: "Square", shape: "square" }];
     el.nodes = [
-      { id: 'a', label: 'A', expandable: true },
-      { id: 'b', label: 'B', type: 'sq' },
+      { id: "a", label: "A", expandable: true },
+      { id: "b", label: "B", type: "sq" },
     ];
-    el.links = [{ source: 'a', target: 'ghost' }]; // dangling -- ghost has no matching node, stub hangs off 'a'
+    el.links = [{ source: "a", target: "ghost" }]; // dangling -- ghost has no matching node, stub hangs off 'a'
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -7756,8 +7734,8 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
       }
     );
 
-    const a = el.simNodes.find((n) => n.id === 'a')!;
-    const b = el.simNodes.find((n) => n.id === 'b')!;
+    const a = el.simNodes.find((n) => n.id === "a")!;
+    const b = el.simNodes.find((n) => n.id === "b")!;
     a.x = undefined;
     a.y = undefined;
     b.x = undefined;
@@ -7768,47 +7746,47 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
     const circleA = el.shadowRoot!.querySelector(
       '[part="node"]'
     ) as SVGCircleElement;
-    expect(circleA.getAttribute('cx')).to.equal('0');
-    expect(circleA.getAttribute('cy')).to.equal('0');
+    expect(circleA.getAttribute("cx")).to.equal("0");
+    expect(circleA.getAttribute("cy")).to.equal("0");
 
     const hitA = el.shadowRoot!.querySelector(
       '[data-hit-area="node"]'
     ) as SVGLineElement;
-    expect(hitA.getAttribute('x1')).to.equal('-0.5'); // (n.x??0) - NODE_HIT_SEGMENT_HALF(0.5)
-    expect(hitA.getAttribute('x2')).to.equal('0.5');
-    expect(hitA.getAttribute('y1')).to.equal('0');
+    expect(hitA.getAttribute("x1")).to.equal("-0.5"); // (n.x??0) - NODE_HIT_SEGMENT_HALF(0.5)
+    expect(hitA.getAttribute("x2")).to.equal("0.5");
+    expect(hitA.getAttribute("y1")).to.equal("0");
 
     const nodeEls = el.shadowRoot!.querySelectorAll('[part="node"]');
     const pathB = nodeEls[1] as SVGPathElement; // shape="square" renders <path>, positioned via transform
-    expect(pathB.getAttribute('transform')).to.equal('translate(0,0)');
+    expect(pathB.getAttribute("transform")).to.equal("translate(0,0)");
 
     const labelA = el.shadowRoot!.querySelector(
       '[part="label"]'
     ) as SVGTextElement;
-    expect(labelA.getAttribute('y')).to.equal('0');
+    expect(labelA.getAttribute("y")).to.equal("0");
 
     const expandIndicator = el.shadowRoot!.querySelector(
       '[part="expand-indicator"]'
     ) as SVGGElement;
-    expect(expandIndicator.getAttribute('transform')).to.equal(
-      'translate(0,0)'
+    expect(expandIndicator.getAttribute("transform")).to.equal(
+      "translate(0,0)"
     );
 
     const danglingLine = el.shadowRoot!.querySelector(
       '[part="link"][data-dangling]'
     ) as SVGLineElement;
-    expect(danglingLine.getAttribute('x1')).to.equal('0');
-    expect(danglingLine.getAttribute('y1')).to.equal('0');
+    expect(danglingLine.getAttribute("x1")).to.equal("0");
+    expect(danglingLine.getAttribute("y1")).to.equal("0");
   });
 
-  it('a path-shaped (square) node supports click/dblclick and reflects aria-pressed identically to a circle node', async () => {
+  it("a path-shaped (square) node supports click/dblclick and reflects aria-pressed identically to a circle node", async () => {
     const el = (await fixture(
       html`<lr-graph selection-mode="single"></lr-graph>`
     )) as LyraGraph;
-    el.nodeTypes = [{ id: 'sq', label: 'Square', shape: 'square' }];
-    el.nodes = [{ id: 'a', label: 'A', type: 'sq' }];
+    el.nodeTypes = [{ id: "sq", label: "Square", shape: "square" }];
+    el.nodes = [{ id: "a", label: "A", type: "sq" }];
     el.links = [];
-    el.selectedNodeIds = ['a'];
+    el.selectedNodeIds = ["a"];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -7820,36 +7798,36 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
     const pathEl = el.shadowRoot!.querySelector(
       '[part="node"]'
     ) as SVGPathElement;
-    expect(pathEl.tagName).to.equal('path');
-    expect(pathEl.getAttribute('aria-pressed')).to.equal('true');
+    expect(pathEl.tagName).to.equal("path");
+    expect(pathEl.getAttribute("aria-pressed")).to.equal("true");
 
-    let clickDetail: { nodeId: string } | undefined;
-    let expandDetail: { nodeId: string } | undefined;
+    let clickDetail: { id: string } | undefined;
+    let expandDetail: { id: string } | undefined;
     el.addEventListener(
-      'lr-node-click',
+      "lr-node-click",
       (e) => (clickDetail = (e as CustomEvent).detail)
     );
     el.addEventListener(
-      'lr-node-expand',
+      "lr-node-expand",
       (e) => (expandDetail = (e as CustomEvent).detail)
     );
-    pathEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(clickDetail?.nodeId).to.equal('a');
-    pathEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-    expect(expandDetail?.nodeId).to.equal('a');
+    pathEl.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(clickDetail?.id).to.equal("a");
+    pathEl.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    expect(expandDetail?.id).to.equal("a");
 
-    pathEl.dispatchEvent(new MouseEvent('mouseenter'));
-    expect(pathEl.hasAttribute('data-hovered')).to.be.true;
-    pathEl.dispatchEvent(new MouseEvent('mouseleave'));
-    expect(pathEl.hasAttribute('data-hovered')).to.be.false;
+    pathEl.dispatchEvent(new MouseEvent("mouseenter"));
+    expect(pathEl.hasAttribute("data-hovered")).to.be.true;
+    pathEl.dispatchEvent(new MouseEvent("mouseleave"));
+    expect(pathEl.hasAttribute("data-hovered")).to.be.false;
   });
 
-  it('an SVG-rendered community hull applies its own sanitized color as a style override (fill true branch)', async () => {
+  it("an SVG-rendered community hull applies its own sanitized color as a style override (fill true branch)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.communities = [{ id: 'team', memberIds: [], color: '#3355ff' }];
+    el.communities = [{ id: "team", memberIds: [], color: "#3355ff" }];
     el.nodes = [
-      { id: 'a', label: 'A', communityId: 'team' },
-      { id: 'b', label: 'B', communityId: 'team' },
+      { id: "a", label: "A", communityId: "team" },
+      { id: "b", label: "B", communityId: "team" },
     ];
     el.links = [];
     await el.updateComplete;
@@ -7863,21 +7841,21 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
     const hullEl = el.shadowRoot!.querySelector(
       '[part="hull"]'
     ) as SVGPathElement;
-    expect(hullEl.getAttribute('style')).to.include(
-      '--lr-graph-hull-fill:#3355ff'
+    expect(hullEl.getAttribute("style")).to.include(
+      "--lr-graph-hull-fill:#3355ff"
     );
   });
 
-  it('buildCanvasScene falls back dimmedOpacity/hullOpacity to their defaults when the token is set to a non-numeric value', async () => {
+  it("buildCanvasScene falls back dimmedOpacity/hullOpacity to their defaults when the token is set to a non-numeric value", async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
-    el.style.setProperty('--lr-graph-dimmed-opacity', 'not-a-number');
-    el.style.setProperty('--lr-graph-hull-opacity', 'not-a-number');
+    el.style.setProperty("--lr-graph-dimmed-opacity", "not-a-number");
+    el.style.setProperty("--lr-graph-hull-opacity", "not-a-number");
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     const scene = (
@@ -7892,23 +7870,23 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
     expect(scene.hullOpacity).to.equal(0.12);
   });
 
-  it('buildCanvasScene defaults undefined node/focusHalo/keyboardFocusRing positions to 0 (regression, canvas mode)', async () => {
+  it("buildCanvasScene defaults undefined node/focusHalo/keyboardFocusRing positions to 0 (regression, canvas mode)", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
         seed="1"
-        focus-node-id="a"
+        focus-id="a"
         width="200"
         height="200"
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.links = [{ source: "a", target: "b" }];
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     type Internals = {
@@ -7920,7 +7898,7 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
     el.shadowRoot!.querySelector<HTMLButtonElement>(
       '[part="cursor-item"]'
     )!.focus();
-    const a = el.simNodes.find((n) => n.id === 'a')!;
+    const a = el.simNodes.find((n) => n.id === "a")!;
     a.x = undefined;
     a.y = undefined;
 
@@ -7942,7 +7920,7 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
   });
 });
 
-describe('coverage: selection and keyboard edge cases', () => {
+describe("coverage: selection and keyboard edge cases", () => {
   it('clicking a link in single selection mode emits a link-only selection intent (kind==="link" branch)', async () => {
     const el = (await fixture(
       html`<lr-graph selection-mode="single"></lr-graph>`
@@ -7960,14 +7938,14 @@ describe('coverage: selection and keyboard edge cases', () => {
     const linkEl = el.shadowRoot!.querySelector('[part="link"]') as SVGElement;
     let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
     el.addEventListener(
-      'lr-selection-change',
+      "lr-selection-change",
       (e) => (detail = (e as CustomEvent).detail)
     );
-    linkEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(detail).to.deep.equal({ nodeIds: [], linkIds: ['a->b'] });
+    linkEl.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(detail).to.deep.equal({ nodeIds: [], linkIds: ["a->b"] });
   });
 
-  it('background click is a no-op when selectionMode is none, and again in single mode once nothing is selected (clearSelection early returns)', async () => {
+  it("background click is a no-op when selectionMode is none, and again in single mode once nothing is selected (clearSelection early returns)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph; // selectionMode defaults to 'none'
     el.nodes = nodes;
     el.links = links;
@@ -7980,18 +7958,18 @@ describe('coverage: selection and keyboard edge cases', () => {
       }
     );
     let fired = false;
-    el.addEventListener('lr-selection-change', () => (fired = true));
-    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
-    svgEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    el.addEventListener("lr-selection-change", () => (fired = true));
+    const svgEl = el.shadowRoot!.querySelector("svg") as SVGSVGElement;
+    svgEl.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(fired).to.equal(false); // selectionMode 'none' -- clearSelection's own early return
 
-    el.selectionMode = 'single';
+    el.selectionMode = "single";
     await el.updateComplete;
-    svgEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    svgEl.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(fired).to.equal(false); // nothing was ever selected -- clearSelection's "already empty" early return
   });
 
-  it('Escape on the canvas cursor-items container clears the selection (canvas mode)', async () => {
+  it("Escape on the canvas cursor-items container clears the selection (canvas mode)", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -8003,26 +7981,26 @@ describe('coverage: selection and keyboard edge cases', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    el.selectedNodeIds = ['a'];
+    el.selectedNodeIds = ["a"];
     await el.updateComplete;
     let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
     el.addEventListener(
-      'lr-selection-change',
+      "lr-selection-change",
       (e) => (detail = (e as CustomEvent).detail)
     );
     const cursorItems = el.shadowRoot!.querySelector(
       '[part="cursor-items"]'
     ) as HTMLElement;
     cursorItems.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
     );
     expect(detail).to.deep.equal({ nodeIds: [], linkIds: [] });
   });
 
-  it('clearing every node while one is DOM-focused resolves the pending base-focus fallback without throwing (all items removed)', async () => {
+  it("clearing every node while one is DOM-focused resolves the pending base-focus fallback without throwing (all items removed)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
@@ -8049,14 +8027,14 @@ describe('coverage: selection and keyboard edge cases', () => {
   });
 });
 
-describe('coverage: remaining branch gaps', () => {
-  it('tweenCamera jumps in a single frame (t=1) when --lr-transition-base resolves to a non-positive duration', async () => {
+describe("coverage: remaining branch gaps", () => {
+  it("tweenCamera jumps in a single frame (t=1) when --lr-transition-base resolves to a non-positive duration", async () => {
     const el = (await fixture(
       html`<lr-graph width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
     el.links = links;
-    el.style.setProperty('--lr-transition-base', '0');
+    el.style.setProperty("--lr-transition-base", "0");
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -8065,10 +8043,10 @@ describe('coverage: remaining branch gaps', () => {
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    expect(await el.focusNode('a', { zoom: 2 })).to.equal(true);
+    expect(await el.focusNode("a", { zoom: 2 })).to.equal(true);
   });
 
-  it('redrawPickCanvas tolerates a node with still-undefined x/y in its pick-scene mapping (regression)', async () => {
+  it("redrawPickCanvas tolerates a node with still-undefined x/y in its pick-scene mapping (regression)", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -8080,11 +8058,11 @@ describe('coverage: remaining branch gaps', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
-    const a = el.simNodes.find((n) => n.id === 'a')!;
+    const a = el.simNodes.find((n) => n.id === "a")!;
     a.x = undefined;
     a.y = undefined;
     expect(() =>
@@ -8092,7 +8070,7 @@ describe('coverage: remaining branch gaps', () => {
     ).to.not.throw();
   });
 
-  it('onCanvasPointerMove ignores a hover whose frame finds the connection/realm has changed mid-flight (no disconnect)', async () => {
+  it("onCanvasPointerMove ignores a hover whose frame finds the connection/realm has changed mid-flight (no disconnect)", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -8104,15 +8082,15 @@ describe('coverage: remaining branch gaps', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50);
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
     canvas.dispatchEvent(
-      new PointerEvent('pointermove', {
+      new PointerEvent("pointermove", {
         bubbles: true,
         clientX: rect.left + target.x!,
         clientY: rect.top + target.y!,
@@ -8126,13 +8104,13 @@ describe('coverage: remaining branch gaps', () => {
       const tooltip = el.shadowRoot!.querySelector(
         '[part="tooltip"]'
       ) as HTMLElement;
-      expect(tooltip.hasAttribute('hidden')).to.be.true; // the frame bailed instead of resolving the hover
+      expect(tooltip.hasAttribute("hidden")).to.be.true; // the frame bailed instead of resolving the hover
     } finally {
       restore();
     }
   });
 
-  it('onCanvasDblClick falls back to the geometric nearest-node search when the pick canvas misses, and no-ops off every node', async () => {
+  it("onCanvasDblClick falls back to the geometric nearest-node search when the pick canvas misses, and no-ops off every node", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -8145,15 +8123,15 @@ describe('coverage: remaining branch gaps', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
     await aTimeout(50);
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
-    const target = el.simNodes.find((n) => n.id === 'a')!;
+    const target = el.simNodes.find((n) => n.id === "a")!;
     target.x = 100;
     target.y = 100;
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     // Deliberately stale/dirty pick canvas so hitTest() at the dblclick's own coordinates misses,
     // forcing onCanvasDblClick() onto its geometric nodeAtCanvasPoint() fallback -- exactly the
@@ -8165,23 +8143,23 @@ describe('coverage: remaining branch gaps', () => {
     (el as unknown as { hitTest: (x: number, y: number) => unknown }).hitTest =
       () => undefined;
     try {
-      let expandDetail: { nodeId: string } | undefined;
+      let expandDetail: { id: string } | undefined;
       el.addEventListener(
-        'lr-node-expand',
+        "lr-node-expand",
         (e) => (expandDetail = (e as CustomEvent).detail)
       );
       canvas.dispatchEvent(
-        new MouseEvent('dblclick', {
+        new MouseEvent("dblclick", {
           bubbles: true,
           clientX: rect.left + 100,
           clientY: rect.top + 100,
         })
       );
-      expect(expandDetail?.nodeId).to.equal('a'); // found geometrically despite the pick-canvas miss
+      expect(expandDetail?.id).to.equal("a"); // found geometrically despite the pick-canvas miss
 
       expandDetail = undefined;
       canvas.dispatchEvent(
-        new MouseEvent('dblclick', {
+        new MouseEvent("dblclick", {
           bubbles: true,
           clientX: rect.left + 399,
           clientY: rect.top + 299,
@@ -8202,10 +8180,10 @@ describe('coverage: remaining branch gaps', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    const a = el.simNodes.find((n) => n.id === 'a')!;
+    const a = el.simNodes.find((n) => n.id === "a")!;
     a.x = undefined;
     a.y = undefined;
     const nodeAtCanvasPoint = (
@@ -8214,7 +8192,7 @@ describe('coverage: remaining branch gaps', () => {
     expect(() => nodeAtCanvasPoint(0, 0)).to.not.throw();
   });
 
-  it('updateCanvasTooltip clamps against the right/bottom canvas edges when the tooltip would overflow them (direct call)', async () => {
+  it("updateCanvasTooltip clamps against the right/bottom canvas edges when the tooltip would overflow them (direct call)", async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -8226,11 +8204,11 @@ describe('coverage: remaining branch gaps', () => {
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+    await waitUntil(() => !!el.shadowRoot!.querySelector("canvas"), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    const a = el.simNodes.find((n) => n.id === 'a')!;
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const a = el.simNodes.find((n) => n.id === "a")!;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     const updateCanvasTooltip = (
       el as unknown as {
@@ -8240,7 +8218,7 @@ describe('coverage: remaining branch gaps', () => {
     // Coordinates beyond the canvas's own bottom-right corner -- the tooltip is anchored there and
     // would overflow past the canvas's right/bottom edge without the clamp.
     updateCanvasTooltip(
-      { kind: 'node', node: a },
+      { kind: "node", node: a },
       rect.right + 50,
       rect.bottom + 50
     );
@@ -8255,10 +8233,10 @@ describe('coverage: remaining branch gaps', () => {
 
   it("resolves a real DOM focus's pending 'base' fallback onto the still-rendered svg root when every item becomes hidden", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodeTypes = [{ id: 'x', label: 'X' }];
+    el.nodeTypes = [{ id: "x", label: "X" }];
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B', type: 'x' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B", type: "x" },
     ];
     el.links = [];
     await el.updateComplete;
@@ -8280,26 +8258,26 @@ describe('coverage: remaining branch gaps', () => {
     // Hides every node (nodes.length stays > 0, so the svg root itself keeps rendering) -- the
     // previously node-focused item vanishes entirely, landing pendingGraphItemFocus on 'base' while
     // an actual [part="svg"] element still exists to receive the fallback focus() call.
-    el.hiddenTypes = ['x'];
-    el.nodeTypes = [{ id: 'x', label: 'X' }];
+    el.hiddenTypes = ["x"];
+    el.nodeTypes = [{ id: "x", label: "X" }];
     (el as unknown as { nodes: unknown }).nodes = [
-      { id: 'a', label: 'A', type: 'x' },
-      { id: 'b', label: 'B', type: 'x' },
+      { id: "a", label: "A", type: "x" },
+      { id: "b", label: "B", type: "x" },
     ];
     await el.updateComplete;
     expect(el.simNodes.length).to.equal(0);
-    const svgEl = el.shadowRoot!.querySelector('svg');
+    const svgEl = el.shadowRoot!.querySelector("svg");
     expect(el.shadowRoot!.activeElement === svgEl).to.equal(true);
   });
 
-  it('removing the focused LINK/COMMUNITY entirely falls back activeGraphItem to a plain re-clamp (graphItemIndex -1 branch)', async () => {
+  it("removing the focused LINK/COMMUNITY entirely falls back activeGraphItem to a plain re-clamp (graphItemIndex -1 branch)", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.communities = [{ id: 'team', memberIds: ['a', 'b'] }];
+    el.communities = [{ id: "team", memberIds: ["a", "b"] }];
     el.nodes = [
-      { id: 'a', label: 'A', communityId: 'team' },
-      { id: 'b', label: 'B', communityId: 'team' },
+      { id: "a", label: "A", communityId: "team" },
+      { id: "b", label: "B", communityId: "team" },
     ];
-    el.links = [{ source: 'a', target: 'b', id: 'ab' }];
+    el.links = [{ source: "a", target: "b", id: "ab" }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -8328,14 +8306,14 @@ describe('coverage: remaining branch gaps', () => {
   });
 });
 
-describe('coverage: focus-node-identity retention across structural change', () => {
+describe("coverage: focus-identity retention across structural change", () => {
   it("retains a focused LINK's identity by id (not raw index) across a structural nodes change that shifts its index", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = [
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
     ];
-    el.links = [{ source: 'a', target: 'b', id: 'ab' }];
+    el.links = [{ source: "a", target: "b", id: "ab" }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -8353,11 +8331,11 @@ describe('coverage: focus-node-identity retention across structural change', () 
     expect(internal.activeGraphItem).to.equal(2);
 
     el.nodes = [
-      { id: 'z', label: 'Z' },
-      { id: 'a', label: 'A' },
-      { id: 'b', label: 'B' },
+      { id: "z", label: "Z" },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
     ];
-    el.links = [{ source: 'a', target: 'b', id: 'ab' }];
+    el.links = [{ source: "a", target: "b", id: "ab" }];
     await el.updateComplete;
     // simNodes.length is now 3 -- the SAME link ('ab') must be retained at its NEW computed index
     // (3 + 0), not left pointing at the stale raw index 2 (which would now land on a node).
@@ -8366,10 +8344,10 @@ describe('coverage: focus-node-identity retention across structural change', () 
 
   it("retains a focused COMMUNITY hull's identity by id across a structural change that shifts its index", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.communities = [{ id: 'team', memberIds: ['a', 'b'] }];
+    el.communities = [{ id: "team", memberIds: ["a", "b"] }];
     el.nodes = [
-      { id: 'a', label: 'A', communityId: 'team' },
-      { id: 'b', label: 'B', communityId: 'team' },
+      { id: "a", label: "A", communityId: "team" },
+      { id: "b", label: "B", communityId: "team" },
     ];
     el.links = [];
     await el.updateComplete;
@@ -8389,22 +8367,22 @@ describe('coverage: focus-node-identity retention across structural change', () 
     expect(internal.activeGraphItem).to.equal(2);
 
     el.nodes = [
-      { id: 'z', label: 'Z' },
-      { id: 'a', label: 'A', communityId: 'team' },
-      { id: 'b', label: 'B', communityId: 'team' },
+      { id: "z", label: "Z" },
+      { id: "a", label: "A", communityId: "team" },
+      { id: "b", label: "B", communityId: "team" },
     ];
     await el.updateComplete;
     expect(internal.activeGraphItem).to.equal(3); // simNodes.length(3) + simLinks.length(0)
   });
 });
 
-describe('coverage: dangling link DOM-cache shrink', () => {
-  it('onTick skips a dangling stub whose cached DOM line is shorter than danglingLinks (data shrinking below the cache, regression)', async () => {
+describe("coverage: dangling link DOM-cache shrink", () => {
+  it("onTick skips a dangling stub whose cached DOM line is shorter than danglingLinks (data shrinking below the cache, regression)", async () => {
     const el = (await fixture(
       html`<lr-graph seed="3"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes; // a, b
-    el.links = [{ source: 'a', target: 'ghost' }]; // dangling -- ghost has no matching node
+    el.links = [{ source: "a", target: "ghost" }]; // dangling -- ghost has no matching node
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -8421,22 +8399,22 @@ describe('coverage: dangling link DOM-cache shrink', () => {
   });
 });
 
-describe('coverage: connectedCallback lazy-load resolution edge case', () => {
-  it('bails out of the post-load resolution when updateComplete rejects mid-flight (catch branch)', async () => {
-    const el = document.createElement('lr-graph') as LyraGraph;
+describe("coverage: connectedCallback lazy-load resolution edge case", () => {
+  it("bails out of the post-load resolution when updateComplete rejects mid-flight (catch branch)", async () => {
+    const el = document.createElement("lr-graph") as LyraGraph;
     let descriptor: PropertyDescriptor | undefined;
     for (
       let proto = Object.getPrototypeOf(el) as object | null;
       proto;
       proto = Object.getPrototypeOf(proto)
     ) {
-      descriptor = Object.getOwnPropertyDescriptor(proto, 'updateComplete');
+      descriptor = Object.getOwnPropertyDescriptor(proto, "updateComplete");
       if (descriptor) break;
     }
-    Object.defineProperty(el, 'updateComplete', {
+    Object.defineProperty(el, "updateComplete", {
       configurable: true,
       get: () =>
-        Promise.reject(new Error('synthetic updateComplete rejection')),
+        Promise.reject(new Error("synthetic updateComplete rejection")),
     });
     document.body.appendChild(el);
     try {
@@ -8444,12 +8422,12 @@ describe('coverage: connectedCallback lazy-load resolution edge case', () => {
       expect((el as unknown as { loading: boolean }).loading).to.equal(true); // catch{return;} bailed first
     } finally {
       el.remove();
-      if (descriptor) Object.defineProperty(el, 'updateComplete', descriptor);
+      if (descriptor) Object.defineProperty(el, "updateComplete", descriptor);
       else delete (el as unknown as Record<string, unknown>).updateComplete;
     }
   });
 });
-describe('styling', () => {
+describe("styling", () => {
   // A real browser :hover/:active pseudo-class can't be forced from a dispatched event (it tracks
   // the physical pointer), so each state rule's value is read off the shipped rule and then
   // *painted* on a probe inside the graph's own shadow root: every --lr-* in the expression resolves
@@ -8461,7 +8439,7 @@ describe('styling', () => {
     property: string
   ): string {
     const normalize = (text: string) =>
-      text.replace(/"/g, "'").replace(/\s+/g, ' ').trim();
+      text.replace(/"/g, "'").replace(/\s+/g, " ").trim();
     for (const sheet of root.adoptedStyleSheets ?? []) {
       for (const rule of sheet.cssRules) {
         if (
@@ -8473,7 +8451,7 @@ describe('styling', () => {
         }
       }
     }
-    return '';
+    return "";
   }
 
   function paintProbe(root: ShadowRoot) {
@@ -8481,7 +8459,7 @@ describe('styling', () => {
       apply: (probe: HTMLElement) => void,
       read: (style: CSSStyleDeclaration) => string
     ) => {
-      const probe = document.createElement('span');
+      const probe = document.createElement("span");
       apply(probe);
       root.appendChild(probe);
       const computed = read(getComputedStyle(probe));
@@ -8496,7 +8474,7 @@ describe('styling', () => {
         measure(
           (probe) =>
             (probe.style.backgroundColor = `color-mix(in oklab, ${
-              value || 'transparent'
+              value || "transparent"
             }, transparent 0%)`),
           (style) => style.backgroundColor
         ),
@@ -8516,7 +8494,7 @@ describe('styling', () => {
     return Math.hypot(...a.map((value, index) => value - (b[index] ?? 0)));
   }
 
-  it('mixes node/link/hull toward the shared partner on hover and further again on press', async () => {
+  it("mixes node/link/hull toward the shared partner on hover and further again on press", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     await el.updateComplete;
     const root = el.shadowRoot!;
@@ -8545,12 +8523,12 @@ describe('styling', () => {
       );
     };
 
-    assertPressedIsStronger('node', 'fill');
-    assertPressedIsStronger('link', 'stroke');
-    assertPressedIsStronger('hull', 'fill');
+    assertPressedIsStronger("node", "fill");
+    assertPressedIsStronger("link", "stroke");
+    assertPressedIsStronger("hull", "fill");
   });
 
-  it('tints the canvas box on hover rather than filtering the scene painted into it', async () => {
+  it("tints the canvas box on hover rather than filtering the scene painted into it", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     await el.updateComplete;
     const root = el.shadowRoot!;
@@ -8558,9 +8536,9 @@ describe('styling', () => {
 
     // The <canvas> is cleared to transparent wherever nothing is drawn, so a background tints only
     // the empty plot area; the drawn nodes, links and labels keep the colours the renderer computed.
-    const resting = probes.render('transparent');
+    const resting = probes.render("transparent");
     const hovered = probes.render(
-      declaredValue(root, "[part='canvas']:hover", 'background')
+      declaredValue(root, "[part='canvas']:hover", "background")
     );
     expect(hovered).to.not.equal(resting);
 
@@ -8573,9 +8551,9 @@ describe('styling', () => {
       "[part='hull']:hover",
     ]) {
       expect(
-        probes.renderFilter(declaredValue(root, selector, 'filter')),
+        probes.renderFilter(declaredValue(root, selector, "filter")),
         selector
-      ).to.equal('none');
+      ).to.equal("none");
     }
   });
 });
@@ -8583,11 +8561,11 @@ describe('styling', () => {
 // A missing optional D3 peer must fail closed during lifecycle-driven initialization. When the
 // optional `d3` peers fail to load, <lr-graph> must render a visible, accessible error state plus
 // a light-DOM assertive announcement instead of leaving a permanently blank surface.
-describe('optional d3 peer failure', () => {
-  it('renders a visible, accessible error state instead of a blank surface when the d3 peers fail to load', async () => {
+describe("optional d3 peer failure", () => {
+  it("renders a visible, accessible error state instead of a blank surface when the d3 peers fail to load", async () => {
     // Deliberately not using fixture(): loadLibrary must be overridden *before* the element ever
     // connects, since connectedCallback() calls it unconditionally on connect.
-    const el = document.createElement('lr-graph') as unknown as LyraGraph;
+    const el = document.createElement("lr-graph") as unknown as LyraGraph;
     (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary =
       () => Promise.resolve(null);
     el.nodes = nodes;
@@ -8596,7 +8574,7 @@ describe('optional d3 peer failure', () => {
     try {
       await waitUntil(
         () => el.shadowRoot!.querySelector('[part="error"]') != null,
-        'error state never rendered',
+        "error state never rendered",
         {
           timeout: 2000,
         }
@@ -8605,47 +8583,47 @@ describe('optional d3 peer failure', () => {
         '[part="error"]'
       ) as HTMLElement;
       expect(
-        errorEl.hasAttribute('aria-hidden'),
-        'the visible error must remain discoverable'
+        errorEl.hasAttribute("aria-hidden"),
+        "the visible error must remain discoverable"
       ).to.be.false;
       expect(
-        errorEl.hasAttribute('role'),
-        'the shadow mirror must not be a second alert'
+        errorEl.hasAttribute("role"),
+        "the shadow mirror must not be a second alert"
       ).to.be.false;
       expect(errorEl.textContent!.trim().length).to.be.greaterThan(0);
-      expect(announcementTexts(document, 'assertive')).to.deep.equal([
+      expect(announcementTexts(document, "assertive")).to.deep.equal([
         errorEl.textContent!.trim(),
       ]);
-      expect(el.getAttribute('aria-busy')).to.equal('false');
-      expect(el.shadowRoot!.querySelectorAll('svg, canvas').length).to.equal(0);
-      expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
+      expect(el.getAttribute("aria-busy")).to.equal("false");
+      expect(el.shadowRoot!.querySelectorAll("svg, canvas").length).to.equal(0);
+      expect(el.shadowRoot!.querySelectorAll("lr-skeleton").length).to.equal(0);
     } finally {
       el.remove();
     }
   });
 
-  it('routes the d3 peer-missing error through a .strings override', async () => {
-    const el = document.createElement('lr-graph') as unknown as LyraGraph;
+  it("routes the d3 peer-missing error through a .strings override", async () => {
+    const el = document.createElement("lr-graph") as unknown as LyraGraph;
     (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary =
       () => Promise.resolve(null);
     (el as unknown as { strings: Record<string, string> }).strings = {
-      graphMissingLibrary: 'Bibliothèque de graphe absente',
+      graphMissingLibrary: "Bibliothèque de graphe absente",
     };
     el.nodes = nodes;
     document.body.appendChild(el);
     try {
       await waitUntil(
         () => el.shadowRoot!.querySelector('[part="error"]') != null,
-        'error state never rendered',
+        "error state never rendered",
         {
           timeout: 2000,
         }
       );
       expect(
         el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim()
-      ).to.equal('Bibliothèque de graphe absente');
-      expect(announcementTexts(document, 'assertive')).to.deep.equal([
-        'Bibliothèque de graphe absente',
+      ).to.equal("Bibliothèque de graphe absente");
+      expect(announcementTexts(document, "assertive")).to.deep.equal([
+        "Bibliothèque de graphe absente",
       ]);
     } finally {
       el.remove();

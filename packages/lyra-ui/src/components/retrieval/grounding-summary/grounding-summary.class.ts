@@ -4,10 +4,10 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   finiteCount,
+  finiteInteger,
   finiteRange,
 } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import '../../data/stat/stat.class.js';
 import '../citation-badge/citation-badge.class.js';
@@ -26,7 +26,6 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
-import { firstByIdentity } from '../../agent-tools/collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -36,6 +35,9 @@ export interface LyraGroundingSummaryEventMap {
   'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
   'lr-claim-select': CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
 }
+
+/** Document-outline level used by the warnings and evidence section headings. */
+export type GroundingSummaryHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
 /**
  * `<lr-grounding-summary>` -- the claim-level scorecard for one generated answer: supported/
@@ -57,8 +59,6 @@ export interface LyraGroundingSummaryEventMap {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
- * Blank claim/citation ids and later duplicates are ignored before counts, lookup, rendering, or
- * activation. The first record for an id wins.
  *
  * @customElement lr-grounding-summary
  * @event lr-citation-select - An evidence citation badge was activated. `detail: { citation }`.
@@ -150,45 +150,25 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   })
   showClaims = true;
 
-  /** Semantic level of the warnings and evidence section headings. Use `none` to keep the visual
-   *  heading text without exposing it to heading navigation. Invalid untyped values use level 3. */
-  @property({ attribute: 'heading-level' })
-  headingLevel: LyraHeadingLevel = '3';
-
-  private get normalizedCitations(): Citation[] {
-    return firstByIdentity(
-      Array.isArray(this.citations) ? this.citations : [],
-      (citation) => citation.id
-    );
-  }
-
-  private normalizedClaims(
-    assessment: Readonly<GroundingAssessment>
-  ): GroundedClaim[] {
-    return firstByIdentity(
-      Array.isArray(assessment.claims) ? assessment.claims : [],
-      (claim) => claim.id
-    );
-  }
+  /** Heading level for the warnings and evidence sections. Clamped to the HTML outline range. */
+  @property({ type: Number, attribute: 'heading-level' })
+  headingLevel: GroundingSummaryHeadingLevel = 3;
 
   private sectionHeading(part: string, text: string): TemplateResult {
-    const level = resolveHeadingLevel(this.headingLevel);
+    const level = finiteInteger(this.headingLevel, 3, 1, 6);
     switch (level) {
-      case '1':
+      case 1:
         return html`<h1 part=${part}>${text}</h1>`;
-      case '2':
+      case 2:
         return html`<h2 part=${part}>${text}</h2>`;
-      case '4':
+      case 4:
         return html`<h4 part=${part}>${text}</h4>`;
-      case '5':
+      case 5:
         return html`<h5 part=${part}>${text}</h5>`;
-      case '6':
+      case 6:
         return html`<h6 part=${part}>${text}</h6>`;
-      case '3':
-        return html`<h3 part=${part}>${text}</h3>`;
       default:
-        // 'none': visual text with no heading semantics -- the shared opt-out.
-        return html`<span part=${part}>${text}</span>`;
+        return html`<h3 part=${part}>${text}</h3>`;
     }
   }
 
@@ -272,8 +252,6 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     const hasConfidence = typeof a.confidence === 'number';
     const warnings = a.warnings ?? [];
     const numberFormat = getNumberFormat(this.effectiveLocale);
-    const claims = this.normalizedClaims(a);
-    const citations = this.normalizedCitations;
 
     return html`
       <div
@@ -325,16 +303,16 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
               </div>
             `
           : nothing}
-        ${this.showClaims && claims.length
+        ${this.showClaims && a.claims?.length
           ? html`
               <lr-claim-evidence
                 part="claims"
-                .claims=${claims}
-                .citations=${citations}
+                .claims=${a.claims}
+                .citations=${this.citations}
               ></lr-claim-evidence>
             `
           : nothing}
-        ${citations.length > 0
+        ${this.citations.length > 0
           ? html`
               <div part="evidence">
                 ${this.sectionHeading(
@@ -342,10 +320,10 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
                   this.localize('groundingSummaryEvidenceHeading')
                 )}
                 <span part="evidence-count"
-                  >${numberFormat.format(citations.length)}</span
+                  >${numberFormat.format(this.citations.length)}</span
                 >
                 <ul part="evidence-list">
-                  ${citations.map((citation, index) =>
+                  ${this.citations.map((citation, index) =>
                     this.renderEvidenceItem(citation, index)
                   )}
                 </ul>

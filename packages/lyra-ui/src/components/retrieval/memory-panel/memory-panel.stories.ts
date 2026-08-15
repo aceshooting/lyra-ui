@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'An agent\'s working memory surface. Each list omits blank and later duplicate memory ids first-wins before counts, state, rendering, confirmations, and actions; action details use memory or memoryId instead of generic item/id fields.',
+          "An agent's working memory surface: short-term context and long-term memories, each item's confidence and optional grounding provenance, and add/remove/forget actions gated behind an explicit lr-confirm-bar confirmation.",
       },
     },
   },

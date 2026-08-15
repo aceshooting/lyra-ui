@@ -15,81 +15,53 @@ declare const dossier: LyraEntityDossier;
 declare const panel: LyraProvenancePanel;
 
 dossier.addEventListener('lr-drill', (event) => {
-  const communityId: string = event.detail.communityId;
-  void communityId;
+  const id: string = event.detail.id;
+  void id;
 });
 dossier.addEventListener('lr-entity-open', (event) => {
-  const entityId: string = event.detail.entityId;
-  void entityId;
+  const id: string = event.detail.id;
+  void id;
 });
 dossier.addEventListener('lr-entity-activate', (event) => {
-  const entityId: string = event.detail.entityId;
-  const occurrenceIndex: number | undefined = event.detail.occurrenceIndex;
-  void entityId;
-  void occurrenceIndex;
+  const id: string = event.detail.id;
+  void id;
 });
 dossier.addEventListener('lr-relation-activate', (event) => {
   const relation: string = event.detail.relation;
-  const sourceNodeId: string | undefined = event.detail.sourceNodeId;
-  const targetNodeId: string | undefined = event.detail.targetNodeId;
-  const occurrenceIndex: number = event.detail.occurrenceIndex;
+  const sourceId: string | undefined = event.detail.sourceId;
+  const targetId: string | undefined = event.detail.targetId;
   void relation;
-  void sourceNodeId;
-  void targetNodeId;
-  void occurrenceIndex;
+  void sourceId;
+  void targetId;
 });
 
 panel.addEventListener('lr-drill', (event) => {
-  const communityId: string = event.detail.communityId;
-  void communityId;
+  const id: string = event.detail.id;
+  void id;
 });
 panel.addEventListener('lr-entity-open', (event) => {
-  const entityId: string = event.detail.entityId;
-  void entityId;
+  const id: string = event.detail.id;
+  void id;
 });
 panel.addEventListener('lr-entity-activate', (event) => {
-  const entityId: string = event.detail.entityId;
-  const occurrenceIndex: number | undefined = event.detail.occurrenceIndex;
-  void entityId;
-  void occurrenceIndex;
+  const id: string = event.detail.id;
+  void id;
 });
 panel.addEventListener('lr-relation-activate', (event) => {
   const relation: string = event.detail.relation;
-  const sourceNodeId: string | undefined = event.detail.sourceNodeId;
-  const targetNodeId: string | undefined = event.detail.targetNodeId;
-  const occurrenceIndex: number = event.detail.occurrenceIndex;
+  const sourceId: string | undefined = event.detail.sourceId;
+  const targetId: string | undefined = event.detail.targetId;
   void relation;
-  void sourceNodeId;
-  void targetNodeId;
-  void occurrenceIndex;
-});
-panel.addEventListener('lr-chunk-open', (event) => {
-  const chunkId: string = event.detail.chunkId;
-  const sourceId: string = event.detail.sourceId;
-  void chunkId;
   void sourceId;
-});
-panel.addEventListener('lr-expand', (event) => {
-  const chunkId: string = event.detail.chunkId;
-  const expanded: boolean = event.detail.expanded;
-  void chunkId;
-  void expanded;
+  void targetId;
 });
 
-const dossierDrill: LyraEntityDossierEventMap['lr-drill'] | undefined =
-  undefined;
-const dossierOpen: LyraEntityDossierEventMap['lr-entity-open'] | undefined =
-  undefined;
-const dossierRelation:
-  | LyraEntityDossierEventMap['lr-relation-activate']
-  | undefined = undefined;
-const panelDrill: LyraProvenancePanelEventMap['lr-drill'] | undefined =
-  undefined;
-const panelOpen: LyraProvenancePanelEventMap['lr-entity-open'] | undefined =
-  undefined;
-const panelRelation:
-  | LyraProvenancePanelEventMap['lr-relation-activate']
-  | undefined = undefined;
+const dossierDrill: LyraEntityDossierEventMap['lr-drill'] | undefined = undefined;
+const dossierOpen: LyraEntityDossierEventMap['lr-entity-open'] | undefined = undefined;
+const dossierRelation: LyraEntityDossierEventMap['lr-relation-activate'] | undefined = undefined;
+const panelDrill: LyraProvenancePanelEventMap['lr-drill'] | undefined = undefined;
+const panelOpen: LyraProvenancePanelEventMap['lr-entity-open'] | undefined = undefined;
+const panelRelation: LyraProvenancePanelEventMap['lr-relation-activate'] | undefined = undefined;
 void dossierDrill;
 void dossierOpen;
 void dossierRelation;

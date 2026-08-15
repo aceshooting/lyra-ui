@@ -47,7 +47,7 @@ export const ThemedCurrentChunk: Story = {
     docs: {
       description: {
         story:
-          '`--lr-chunk-inspector-current-bg` and `--lr-chunk-inspector-current-color` retint the chunk matching `active-chunk-id` without touching library-wide `--lr-color-brand-quiet`. Set either on the element or any ancestor — neither is declared on `:host`, so an ancestor value is never shadowed. They are a **contrast-sensitive pair**: the score line is deliberately lifted off `--lr-color-text-quiet` (only ~4.24:1 against the default tint), so keep 4.5:1 between whatever you set.',
+          '`--lr-chunk-inspector-current-bg` and `--lr-chunk-inspector-current-color` retint the chunk matching `active-id` without touching library-wide `--lr-color-brand-quiet`. Set either on the element or any ancestor — neither is declared on `:host`, so an ancestor value is never shadowed. They are a **contrast-sensitive pair**: the score line is deliberately lifted off `--lr-color-text-quiet` (only ~4.24:1 against the default tint), so keep 4.5:1 between whatever you set.',
       },
     },
   },
@@ -55,7 +55,7 @@ export const ThemedCurrentChunk: Story = {
     <lr-chunk-inspector
       style="--lr-chunk-inspector-current-bg: ${storyColor('warningQuiet')}; --lr-chunk-inspector-current-color: ${storyColor('text')};"
       .chunks=${chunks}
-      active-chunk-id="c1"
+      active-id="c1"
     ></lr-chunk-inspector>
   `,
 };

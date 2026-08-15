@@ -9,7 +9,7 @@ import {
 } from '../../../internal/numbers.js';
 import type { DocumentLocator, RetrievalChunk } from '../../../ai/types.js';
 import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
-import type { LyraVirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
+import type { VirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './retrieval-results.styles.js';
 import {
   retrievalSemanticLabel,
@@ -23,20 +23,16 @@ import {
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
-import {
-  canonicalIdentityList,
-  firstByRetrievalIdentity,
-} from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_retrievalResultsSelectRow, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** `lr-select`'s detail: the complete updated selection, both as bare ids and as one deterministic
- * canonical `RetrievalChunk` record per id. The legacy `dedupe` setting cannot reintroduce
- * duplicate rows or derived selection records. */
+ *  canonical `RetrievalChunk` record per id. This event contract is independent of the visible
+ *  `dedupe` projection: duplicate rows never duplicate derived selection records. */
 export interface RetrievalResultsSelectDetail {
-  chunkIds: string[];
+  ids: string[];
   chunks: RetrievalChunk[];
 }
 
@@ -44,7 +40,7 @@ export interface LyraRetrievalResultsEventMap {
   'lr-select': CustomEvent<LyraEventDetailSnapshot<RetrievalResultsSelectDetail>>;
   'lr-load-more': CustomEvent<null>;
   'lr-chunk-open': CustomEvent<LyraEventDetailSnapshot<{
-    chunkId: string;
+    id: string;
     sourceId: string;
     anchor?: DocumentLocator;
   }>>;
@@ -77,9 +73,8 @@ function safeScore(score: number): number {
  * `<lr-retrieval-results>` — the orchestration-level ranked-chunk-list surface: takes raw
  * `RetrievalChunk[]` (the shared retrieval-and-grounding type from `src/ai/types.ts`) and adds
  * everything a single retrieval call's result set needs beyond what one chunk's own rendering
- * provides -- canonical identity handling, optional grouping by source, multi-selection,
- * pagination/infinite loading, and a compact/expanded presentation switch -- while composing
- * existing primitives for
+ * provides -- deduplication, optional grouping by source, multi-selection, pagination/infinite
+ * loading, and a compact/expanded presentation switch -- while composing existing primitives for
  * every part that already has one, never re-implementing chunk/score/source rendering itself.
  *
  * **Composition, not reinvention.** Each rendered row wraps exactly one chunk in an internal
@@ -92,17 +87,15 @@ function safeScore(score: number): number {
  * row's rendered content therefore lives inside `<lr-virtual-list>`'s own shadow root, not this
  * component's, whenever virtualization is active (see that component's own doc for why).
  *
- * **Controlled component.** `chunks`/`selectedChunkIds`/`loading`/`errorText`/`hasMore` are all
- * host-owned;
+ * **Controlled component.** `chunks`/`selectedIds`/`loading`/`errorText`/`hasMore` are all host-owned;
  * this component never fetches, retries, or mutates its own copy of `chunks`. Selecting a row
- * updates `selectedChunkIds` locally *then* emits `lr-select` (the same "update own copy, then
- * emit; reassign to control" convention `<lr-source-picker>` already uses) so a host can either
- * accept the update as-is or override it before the next render.
+ * updates `selectedIds` locally *then* emits `lr-select` (the same "update own copy, then emit;
+ * reassign to control" convention `<lr-source-picker>` already uses) so a host can either accept
+ * the update as-is or override it before the next render.
  *
- * **Identity.** Blank chunk ids and later duplicates are always omitted first-wins before sorting,
- * grouping, selection, rendering, or events. The `dedupe` switch is retained for compatibility but
- * cannot reintroduce ambiguous duplicate identities. **Grouping** (`grouping="source"`) buckets the
- * canonical, score-sorted list by `source.id`, each bucket
+ * **Deduplication** keeps, per duplicate `id`, whichever chunk has the higher `score` -- set
+ * `dedupe="false"` to see every raw entry `chunks` contains, duplicates included. **Grouping**
+ * (`grouping="source"`) buckets the deduplicated, score-sorted list by `source.id`, each bucket
  * ordered by its own best-scoring chunk first, and always renders through the internal
  * `<lr-virtual-list>` (regardless of `virtualize-at`) so group headers have a single rendering path
  * — `<lr-thread-list>`'s own date-bucket grouping takes the identical approach.
@@ -117,14 +110,14 @@ function safeScore(score: number): number {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-retrieval-results
- * @event lr-select - The selected-chunk set changed. `detail: { chunkIds, chunks }` — `chunkIds`
- * is the complete updated selection (not just the toggled id), `chunks` the matching canonical
+ * @event lr-select - The selected-chunk set changed. `detail: { ids, chunks }` — `ids` is the
+ * complete updated selection (not just the toggled id), `chunks` the matching deduplicated
  * `RetrievalChunk` records.
  * @event lr-load-more - More results were requested — via the internal `<lr-virtual-list>`'s own
  * scroll-near-bottom detection while virtualized, or the built-in `[part="load-more"]` button
  * otherwise. Only ever fires while `has-more` is true and `loading` is false.
  * @event lr-chunk-open - A row's title/open button was activated, forwarded verbatim from the
- * per-row `<lr-chunk-inspector>`'s own `lr-chunk-open`. `detail: { chunkId, sourceId, anchor? }` — the
+ * per-row `<lr-chunk-inspector>`'s own `lr-chunk-open`. `detail: { id, sourceId, anchor? }` — the
  * event a host routes into `<lr-document-viewer>`.
  * @csspart base - The outer container and programmatic focus fallback when a controlled
  * collection/state transition removes every focused result action.
@@ -178,7 +171,7 @@ function safeScore(score: number): number {
  * @since 4.1.0
  */
 export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['chunks', 'selectedChunkIds', 'groupOrder']);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['chunks', 'selectedIds', 'groupOrder']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -198,14 +191,13 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     'lr-chunk-open',
   ]);
 
-  /** The raw (not sorted/grouped) result set. Blank ids and later duplicates are omitted
-   * first-wins before every derived path. Host-owned. */
+  /** The raw (not deduplicated/sorted/grouped) result set. Host-owned. */
   @property({ attribute: false }) chunks: readonly RetrievalChunk[] = [];
 
-  /** Controlled selection, by chunk `id`. Blank, duplicate, and absent ids are pruned against the
-   *  canonical chunks. The component updates its own copy on toggle *then* emits `lr-select`;
-   *  reassign to control. */
-  @property({ attribute: false }) selectedChunkIds: readonly string[] = [];
+  /** Controlled selection, by chunk `id`. The component updates its own copy on toggle *then*
+   *  emits `lr-select`; reassign to control. An id with no matching chunk is harmless -- it simply
+   *  never renders a checked row. */
+  @property({ attribute: false }) selectedIds: readonly string[] = [];
 
   /** Shows a per-row `<lr-checkbox>`. */
   @property({
@@ -215,7 +207,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   })
   selectable = true;
 
-  /** Retained for compatibility. Identity is always nonblank and first-wins even when false. */
+  /** Drops duplicate `id`s before rendering, keeping whichever duplicate has the higher `score`. */
   @property({
     type: Boolean,
     reflect: true,
@@ -223,7 +215,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   })
   dedupe = true;
 
-  /** `'score'` (default) sorts the canonical list descending by `score`; `'none'` preserves
+  /** `'score'` (default) sorts the deduplicated list descending by `score`; `'none'` preserves
    *  `chunks`' own given order. */
   @property() sort: 'score' | 'none' = 'score';
 
@@ -234,7 +226,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   /** `grouping="custom"`: derives an arbitrary group id for every visible chunk (a date bucket, a
    *  relevance tier, a domain-specific bucket). Left unset, `'custom'` degrades to a flat list
-   *  rather than inventing a key, so the built-in identity/sort/virtualization pipeline stays usable
+   *  rather than inventing a key, so the built-in dedup/sort/virtualization pipeline stays usable
    *  either way. Mirrors `<lr-thread-list>`'s identical escape hatch. */
   @property({ attribute: false }) groupBy?: (chunk: RetrievalChunk) => string;
 
@@ -262,14 +254,13 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     medium: 0.5,
   };
 
-  /** Above this many rows (after identity canonicalization, before grouping), rendering switches
-   *  from a plain list to the internal `<lr-virtual-list>`. Grouped mode always virtualizes
-   *  regardless of this value. */
+  /** Above this many rows (after dedup, before grouping), rendering switches from a plain list to
+   *  the internal `<lr-virtual-list>`. Grouped mode always virtualizes regardless of this value. */
   @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 50;
 
   /** Marks the chunk currently open in a viewer -- forwarded to each per-row `<lr-chunk-inspector>`
    *  and to the internal `<lr-virtual-list>` (which scrolls the matching row into view). */
-  @property({ attribute: 'active-chunk-id' }) activeChunkId = '';
+  @property({ attribute: 'active-id' }) activeId = '';
 
   /** Marks retrieval as pending, selecting the initial spinner or load-more progress state. */
   @property({ type: Boolean, reflect: true }) loading = false;
@@ -296,13 +287,13 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private focusRestoreGeneration = 0;
   private isMounting = true;
   private errorAnnouncementSink?: AnnouncementSink;
-  // Memoizes `computeProcessedChunks()` (identity + sort + group) for the current render cycle.
+  // Memoizes `computeProcessedChunks()` (dedup-build + sort + group) for the current render cycle.
   // `willUpdate()` refreshes it exactly once whenever an input it actually depends on (`chunks`,
   // `dedupe`, `sort`, `grouping`) changed, so `updated()` and `render()` each read the same
-  // already-computed result instead of independently repeating the full identity/sort/group work.
+  // already-computed result instead of independently repeating the full dedup/sort/group work.
   private processedChunksCache?: {
     chunks: readonly RetrievalChunk[];
-    groups: LyraVirtualListGroup[];
+    groups: VirtualListGroup[];
   };
 
   override connectedCallback(): void {
@@ -354,8 +345,8 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    // Only the identity/sort/group inputs actually affect the processed chunk pipeline --
-    // an unrelated update (e.g. `selectedChunkIds`, `presentation`) leaves the cache as-is.
+    // Only the dedup/sort/group inputs actually affect the dedup-build + sort + group pipeline --
+    // an unrelated update (e.g. `selectedIds`, `presentation`) leaves the cache as-is.
     if (
       this.processedChunksCache === undefined ||
       changed.has('chunks') ||
@@ -367,15 +358,6 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       changed.has('groupOrder')
     ) {
       this.processedChunksCache = this.computeProcessedChunks();
-    }
-    if (changed.has('chunks') || changed.has('selectedChunkIds')) {
-      const normalized = this.normalizedSelectedChunkIds();
-      if (
-        normalized.length !== this.selectedChunkIds.length ||
-        normalized.some((id, index) => id !== this.selectedChunkIds[index])
-      ) {
-        this.selectedChunkIds = normalized;
-      }
     }
     if (
       !changed.has('chunks') &&
@@ -482,16 +464,20 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     return finiteCount(this.virtualizeAt, 50);
   }
 
-  /** Keeps the first valid occurrence for every nonblank chunk id. */
-  private canonicalChunks(): RetrievalChunk[] {
-    return firstByRetrievalIdentity(this.chunks, (chunk) => chunk.id);
+  private get dedupedChunks(): readonly RetrievalChunk[] {
+    if (!this.dedupe) return this.chunks;
+    return this.canonicalChunks();
   }
 
-  private normalizedSelectedChunkIds(): string[] {
-    const validIds = new Set(this.canonicalChunks().map((chunk) => chunk.id));
-    return canonicalIdentityList(this.selectedChunkIds).filter((id) =>
-      validIds.has(id)
-    );
+  /** Highest finite score wins for a duplicate id; equal scores retain first appearance. */
+  private canonicalChunks(): RetrievalChunk[] {
+    const byId = new Map<string, RetrievalChunk>();
+    for (const chunk of this.chunks) {
+      const existing = byId.get(chunk.id);
+      if (!existing || safeScore(chunk.score) > safeScore(existing.score))
+        byId.set(chunk.id, chunk);
+    }
+    return [...byId.values()];
   }
 
   // Reads the memoized result `willUpdate()` refreshes -- always fresh by the time `updated()` or
@@ -500,20 +486,20 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   // direct call from a test), so it can never observably return stale data.
   private get processedChunks(): {
     chunks: readonly RetrievalChunk[];
-    groups: LyraVirtualListGroup[];
+    groups: VirtualListGroup[];
   } {
     return (this.processedChunksCache ??= this.computeProcessedChunks());
   }
 
   private computeProcessedChunks(): {
     chunks: readonly RetrievalChunk[];
-    groups: LyraVirtualListGroup[];
+    groups: VirtualListGroup[];
   } {
-    const canonical = this.canonicalChunks();
+    const deduped = this.dedupedChunks;
     const sorted =
       this.sort === 'score'
-        ? canonical.sort((a, b) => safeScore(b.score) - safeScore(a.score))
-        : canonical;
+        ? [...deduped].sort((a, b) => safeScore(b.score) - safeScore(a.score))
+        : deduped;
     if (this.grouping === 'source') {
       return this.bucketed(
         sorted,
@@ -554,7 +540,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     sorted: readonly RetrievalChunk[],
     keyOf: (chunk: RetrievalChunk) => string,
     labelOf: (id: string, chunks: RetrievalChunk[]) => string
-  ): { chunks: RetrievalChunk[]; groups: LyraVirtualListGroup[] } {
+  ): { chunks: RetrievalChunk[]; groups: VirtualListGroup[] } {
     const grouped = new Map<string, RetrievalChunk[]>();
     for (const chunk of sorted) {
       const key = keyOf(chunk);
@@ -563,7 +549,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       else grouped.set(key, [chunk]);
     }
     const rows: RetrievalChunk[] = [];
-    const groups: LyraVirtualListGroup[] = [];
+    const groups: VirtualListGroup[] = [];
     for (const key of this.orderedGroupKeys(grouped)) {
       const groupChunks = grouped.get(key);
       if (!groupChunks || groupChunks.length === 0) continue;
@@ -578,13 +564,13 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   }
 
   private toggleSelect(chunk: RetrievalChunk): void {
-    const next = new Set(this.normalizedSelectedChunkIds());
+    const next = new Set(this.selectedIds);
     if (next.has(chunk.id)) next.delete(chunk.id);
     else next.add(chunk.id);
-    const chunkIds = [...next];
-    this.selectedChunkIds = chunkIds;
+    const ids = [...next];
+    this.selectedIds = ids;
     const selectedChunks = this.canonicalChunks().filter((c) => next.has(c.id));
-    this.emit('lr-select', { chunkIds, chunks: selectedChunks });
+    this.emit('lr-select', { ids, chunks: selectedChunks });
   }
 
   private formatMetadataValue(value: unknown): string {
@@ -629,7 +615,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   // within the same shadow tree and duplicate `role="listitem"` semantics.
   private renderRow = (item: unknown): TemplateResult => {
     const chunk = item as RetrievalChunk;
-    const selected = this.selectedChunkIds.includes(chunk.id);
+    const selected = this.selectedIds.includes(chunk.id);
     const rowLabel = chunk.source.name || this.localize('untitledSource');
     return html`
       ${this.selectable
@@ -656,11 +642,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
           .chunks=${[toLyraChunk(chunk)]}
           .thresholds=${this.thresholds}
           ?compact=${this.presentation === 'compact'}
-          .activeChunkId=${this.activeChunkId}
+          active-id=${this.activeId}
           label=${rowLabel}
           @lr-chunk-open=${(
             e: CustomEvent<{
-              chunkId: string;
+              id: string;
               sourceId: string;
               anchor?: DocumentLocator;
             }>
@@ -749,7 +735,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
               .renderItem=${this.renderRow}
               .keyFunction=${(item: unknown) => (item as RetrievalChunk).id}
               .groups=${processed.groups}
-              .activeItemId=${this.activeChunkId || ''}
+              .activeId=${this.activeId || ''}
               ?loading=${this.loading}
               ?has-more=${this.hasMore}
               @lr-load-more=${(e: Event) => {

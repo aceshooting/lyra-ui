@@ -26,23 +26,6 @@ export const Empty: Story = {
   render: () => html`<lr-path-strip></lr-path-strip>`,
 };
 
-export const RepeatedOccurrences: Story = {
-  render: () => html`
-    <lr-path-strip
-      .path=${[
-        { kind: 'node', node: { id: 'e1', label: 'Marie Curie' } },
-        { kind: 'edge', relation: 'collaborated with', directed: true },
-        { kind: 'node', node: { id: 'e2', label: 'Pierre Curie' } },
-        { kind: 'edge', relation: 'returned to', directed: true },
-        { kind: 'node', node: { id: 'e1', label: 'Marie Curie' } },
-      ] satisfies LyraPathElement[]}
-    ></lr-path-strip>
-  `,
-};
-
 export const Narrow: Story = {
-  render: () =>
-    html`<div style="max-width: 320px;">
-      <lr-path-strip .path=${path}></lr-path-strip>
-    </div>`,
+  render: () => html`<div style="max-width: 320px;"><lr-path-strip .path=${path}></lr-path-strip></div>`,
 };

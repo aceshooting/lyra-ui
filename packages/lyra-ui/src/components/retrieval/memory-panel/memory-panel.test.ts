@@ -210,8 +210,7 @@ describe("lr-memory-panel", () => {
     const listener = oneEvent(el, "lr-expand");
     toggle.click();
     const event = await listener;
-    expect(event.detail.memoryId).to.equal("l1");
-    expect(event.detail.scope).to.equal("long-term");
+    expect(event.detail.id).to.equal("l1");
     expect(event.detail.expanded).to.equal(true);
     await el.updateComplete;
     expect(toggle.getAttribute("aria-expanded")).to.equal("true");
@@ -240,11 +239,7 @@ describe("lr-memory-panel", () => {
     const listener = oneEvent(el, "lr-expand");
     toggle.click();
     const event = await listener;
-    expect(event.detail).to.deep.equal({
-      memoryId: "l1",
-      scope: "long-term",
-      expanded: false,
-    });
+    expect(event.detail).to.deep.equal({ id: "l1", expanded: false });
     await el.updateComplete;
     expect(toggle.getAttribute("aria-expanded")).to.equal("false");
     const body = el.shadowRoot!.querySelector(
@@ -288,7 +283,7 @@ describe("lr-memory-panel", () => {
     expect(longRow.querySelector('[part="remove-button"]')).to.exist;
   });
 
-  it("Add opens an inline lr-confirm-bar; approving emits lr-add with the memory and reverts the row, mutating nothing itself", async () => {
+  it("Add opens an inline lr-confirm-bar; approving emits lr-add with the item and reverts the row, mutating nothing itself", async () => {
     const el = await populated();
     const originalShortTerm = el.shortTerm;
     const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')!;
@@ -312,7 +307,7 @@ describe("lr-memory-panel", () => {
       ) as HTMLButtonElement
     ).click();
     const event = await listener;
-    expect(event.detail).to.deep.equal({ memory: shortTermItems[0] });
+    expect(event.detail).to.deep.equal({ item: shortTermItems[0] });
     await el.updateComplete;
 
     expect(row.querySelector("lr-confirm-bar") == null).to.be.true;
@@ -320,7 +315,7 @@ describe("lr-memory-panel", () => {
     expect(el.shortTerm).to.equal(originalShortTerm); // controlled: never mutated by the component itself
   });
 
-  it("Remove opens a danger-tone lr-confirm-bar; approving emits lr-remove with memoryId and scope", async () => {
+  it("Remove opens a danger-tone lr-confirm-bar; approving emits lr-remove with id and scope", async () => {
     const el = await populated();
     const row = el.shadowRoot!.querySelector('[part="item"][data-id="l2"]')!;
     (row.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
@@ -338,10 +333,7 @@ describe("lr-memory-panel", () => {
       ) as HTMLButtonElement
     ).click();
     const event = await listener;
-    expect(event.detail).to.deep.equal({
-      memoryId: "l2",
-      scope: "long-term",
-    });
+    expect(event.detail).to.deep.equal({ id: "l2", scope: "long-term" });
   });
 
   it("Deny cancels the pending action silently: no lr-add/lr-remove/lr-forget fires, and the row reverts", async () => {
@@ -1385,40 +1377,5 @@ describe("lr-memory-panel controlled-list focus restoration", () => {
     el.longTerm = [];
     await settleFocus(el);
     expect(el.shadowRoot!.activeElement === before).to.equal(true);
-  });
-});
-
-it('omits blank and later duplicate memory ids before rows, counts, and actions', async () => {
-  const first = { id: 'same', text: 'First memory' };
-  const el = (await fixture(
-    html`<lr-memory-panel></lr-memory-panel>`
-  )) as LyraMemoryPanel;
-  el.shortTerm = [
-    { id: '', text: 'Empty id' },
-    { id: '   ', text: 'Blank id' },
-    first,
-    { id: 'same', text: 'Later duplicate' },
-  ];
-  await el.updateComplete;
-
-  const rows = el.shadowRoot!.querySelectorAll('[part="item"]');
-  expect(rows.length).to.equal(1);
-  expect(rows[0]!.textContent).to.contain('First memory');
-  expect(rows[0]!.textContent).not.to.contain('Later duplicate');
-
-  const pending = oneEvent(el, 'lr-remove');
-  (
-    rows[0]!.querySelector('[part="remove-button"]') as HTMLButtonElement
-  ).click();
-  await el.updateComplete;
-  const confirm = await readyConfirmBar(rows[0]!);
-  (
-    confirm.shadowRoot!.querySelector(
-      '[part="approve-button"]'
-    ) as HTMLButtonElement
-  ).click();
-  expect((await pending).detail).to.deep.equal({
-    memoryId: 'same',
-    scope: 'short-term',
   });
 });

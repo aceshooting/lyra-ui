@@ -8,7 +8,6 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { styles } from './embedding-explorer.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
-import { firstByIdentity } from '../../agent-tools/collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_embeddingExplorerEmpty, LYRA_DEFAULT_embeddingExplorerLabel, LYRA_DEFAULT_embeddingExplorerPoint } from '../../../internal/default-strings.generated.js';
@@ -50,8 +49,6 @@ export interface LyraEmbeddingExplorerEventMap {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
- * Points with non-finite coordinates or blank ids and later valid duplicates are ignored before
- * focus, selection, rendering, or activation. The first valid point for an id wins.
  *
  * @customElement lr-embedding-explorer
  * @event lr-point-select - A point was activated. `detail: { point }`.
@@ -95,7 +92,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   /** Projected points in host order. Non-finite coordinates are omitted. */
   @property({ attribute: false }) points: readonly EmbeddingPoint[] = [];
   /** The selected point id. Controlled by the host. */
-  @property({ attribute: 'selected-point-id' }) selectedPointId = '';
+  @property({ attribute: 'selected-id' }) selectedId = '';
   /**
    * The plot's block size, as any CSS length the browser accepts for `block-size` — including
    * `auto`, which restores the aspect-ratio-preserved size derived from the `viewBox`. It is
@@ -110,12 +107,8 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   private refocusAfterUpdate = false;
 
   private get validPoints(): EmbeddingPoint[] {
-    return firstByIdentity(
-      Array.isArray(this.points) ? this.points : [],
-      (point) =>
-        Number.isFinite(point.x) && Number.isFinite(point.y)
-          ? point.id
-          : undefined
+    return this.points.filter(
+      (point) => Number.isFinite(point.x) && Number.isFinite(point.y)
     );
   }
 
@@ -230,7 +223,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   ): TemplateResult {
     const { x, y } = this.position(point, bounds);
     const label = this.announceLabel(point, index);
-    const selected = point.id === this.selectedPointId;
+    const selected = point.id === this.selectedId;
     return svg`<g
       part="point"
       data-index=${index}

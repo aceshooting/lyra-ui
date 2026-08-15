@@ -1,5 +1,4 @@
 import { minMax } from '../../data/heatmap/heatmap-scale.js';
-import { isNonBlankIdentity } from '../retrieval-identity.js';
 
 /** One topic in the hierarchy. Owns the shared `LyraTopic` shape for the whole component, the same
  *  way `word-cloud-layout.ts` owns `WordCloudWord`. */
@@ -44,39 +43,6 @@ export interface MindMapLayoutResult {
   centerY: number;
 }
 
-/** Returns the first occurrence of each nonblank topic identity across the complete hierarchy.
- * Invalid/duplicate roots drop their subtree; duplicate descendants are omitted from the later
- * parent. Retained ids and labels are never trimmed or rewritten. */
-export function normalizeMindMapTopics(
-  topics: readonly LyraTopic[]
-): readonly LyraTopic[] {
-  const seen = new Set<string>();
-  const normalize = (values: readonly LyraTopic[]): readonly LyraTopic[] => {
-    const source = Array.isArray(values) ? values : [];
-    const retained: LyraTopic[] = [];
-    for (const topic of source) {
-      if (
-        topic === null ||
-        typeof topic !== 'object' ||
-        !isNonBlankIdentity(topic.id) ||
-        seen.has(topic.id)
-      ) {
-        continue;
-      }
-      seen.add(topic.id);
-      const children = normalize(topic.children ?? []);
-      retained.push(
-        Object.freeze({
-          ...topic,
-          ...(topic.children === undefined ? {} : { children }),
-        })
-      );
-    }
-    return Object.freeze(retained);
-  };
-  return normalize(topics);
-}
-
 interface InternalNode {
   id: string;
   label: string;
@@ -84,20 +50,6 @@ interface InternalNode {
 }
 
 const LAYOUT_PADDING = 60;
-
-function syntheticHubIdentity(topics: readonly LyraTopic[]): string {
-  const ids = new Set<string>();
-  const collect = (values: readonly LyraTopic[]): void => {
-    for (const topic of values) {
-      ids.add(topic.id);
-      collect(topic.children ?? []);
-    }
-  };
-  collect(topics);
-  let identity = '__hub__';
-  while (ids.has(identity)) identity = `_${identity}`;
-  return identity;
-}
 
 function visibleLeafCount(node: LyraTopic, depth: number, opts: MindMapLayoutOptions): number {
   const children = node.children ?? [];
@@ -158,34 +110,13 @@ function place(
  * implicit `'__hub__'`-id center node labeled `hubLabel`. Pure function, no DOM access -- see
  * `<lr-mind-map>` for the component wrapping this.
  */
-export function layoutMindMap(
-  topics: readonly LyraTopic[],
-  hubLabel: string,
-  opts: MindMapLayoutOptions
-): MindMapLayoutResult {
-  const normalizedTopics = normalizeMindMapTopics(topics);
-  if (normalizedTopics.length === 0)
-    return {
-      placed: [],
-      links: [],
-      width: 0,
-      height: 0,
-      centerX: 0,
-      centerY: 0,
-    };
+export function layoutMindMap(topics: readonly LyraTopic[], hubLabel: string, opts: MindMapLayoutOptions): MindMapLayoutResult {
+  if (topics.length === 0) return { placed: [], links: [], width: 0, height: 0, centerX: 0, centerY: 0 };
 
   const root: InternalNode =
-    normalizedTopics.length === 1
-      ? {
-          id: normalizedTopics[0]!.id,
-          label: normalizedTopics[0]!.label,
-          children: normalizedTopics[0]!.children ?? [],
-        }
-      : {
-          id: syntheticHubIdentity(normalizedTopics),
-          label: hubLabel,
-          children: normalizedTopics,
-        };
+    topics.length === 1
+      ? { id: topics[0]!.id, label: topics[0]!.label, children: topics[0]!.children ?? [] }
+      : { id: '__hub__', label: hubLabel, children: topics };
 
   const placed: PlacedTopic[] = [];
   const links: { fromId: string; toId: string }[] = [];

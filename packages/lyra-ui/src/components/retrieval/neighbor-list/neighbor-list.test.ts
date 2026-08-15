@@ -1,27 +1,27 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import './neighbor-list.js';
-import type { LyraNeighborList, LyraNeighborRow } from './neighbor-list.js';
-import { styles } from './neighbor-list.styles.js';
+import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import "./neighbor-list.js";
+import type { LyraNeighborList, LyraNeighborRow } from "./neighbor-list.js";
+import { styles } from "./neighbor-list.styles.js";
 
 const rows: LyraNeighborRow[] = [
   {
-    relation: 'works_for',
-    direction: 'out',
-    node: { id: 'org1', label: 'Acme Corp', type: 'org', degree: 3 },
+    relation: "works_for",
+    direction: "out",
+    node: { id: "org1", label: "Acme Corp", type: "org", degree: 3 },
   },
   {
-    relation: 'married_to',
-    direction: 'both',
-    node: { id: 'p2', label: 'Pierre Curie' },
+    relation: "married_to",
+    direction: "both",
+    node: { id: "p2", label: "Pierre Curie" },
   },
   {
-    relation: 'discovered',
-    direction: 'in',
-    node: { id: 'elem1', label: 'Polonium' },
+    relation: "discovered",
+    direction: "in",
+    node: { id: "elem1", label: "Polonium" },
   },
 ];
 
-it('defaults to empty rows, groupByRelation=false, expandable=false, virtualizeAt=100', async () => {
+it("defaults to empty rows, groupByRelation=false, expandable=false, virtualizeAt=100", async () => {
   const el = (await fixture(
     html`<lr-neighbor-list></lr-neighbor-list>`
   )) as LyraNeighborList;
@@ -31,7 +31,7 @@ it('defaults to empty rows, groupByRelation=false, expandable=false, virtualizeA
   expect(el.virtualizeAt).to.equal(100);
 });
 
-it('includes visible type and localized degree metadata in the row description', async () => {
+it("includes visible type and localized degree metadata in the row description", async () => {
   const el = (await fixture(
     html`<lr-neighbor-list
       lang="ar-u-nu-arab"
@@ -39,50 +39,50 @@ it('includes visible type and localized degree metadata in the row description',
     ></lr-neighbor-list>`
   )) as LyraNeighborList;
   const button = el.shadowRoot!.querySelector('[part="node-label"]')!;
-  expect(button.getAttribute('aria-description')).to.contain('org');
-  expect(button.getAttribute('aria-description')).to.contain('٣');
+  expect(button.getAttribute("aria-description")).to.contain("org");
+  expect(button.getAttribute("aria-description")).to.contain("٣");
 });
 
-it('formats relation-group counts with the effective locale', async () => {
+it("formats relation-group counts with the effective locale", async () => {
   const el = (await fixture(
     html`<lr-neighbor-list
       lang="ar-u-nu-arab"
       group-by-relation
       .rows=${[
         rows[0]!,
-        { ...rows[0]!, node: { ...rows[0]!.node, id: 'org2' } },
+        { ...rows[0]!, node: { ...rows[0]!.node, id: "org2" } },
       ]}
     ></lr-neighbor-list>`
   )) as LyraNeighborList;
   expect(
     el.shadowRoot!.querySelector('[part="group-header"]')!.textContent
-  ).to.contain('٢');
+  ).to.contain("٢");
 });
 
-it('formats multi-value node metadata as a locale-aware list instead of fixed punctuation', async () => {
+it("formats multi-value node metadata as a locale-aware list instead of fixed punctuation", async () => {
   const el = (await fixture(
     html`<lr-neighbor-list
       lang="fr"
       .rows=${[
         {
-          relation: 'works_for',
-          direction: 'out',
-          node: { id: 'acme', label: 'Acme', type: 'organisation', degree: 3 },
+          relation: "works_for",
+          direction: "out",
+          node: { id: "acme", label: "Acme", type: "organisation", degree: 3 },
         },
       ]}
     ></lr-neighbor-list>`
   )) as LyraNeighborList;
   const meta = el.shadowRoot!.querySelector('[part="node-meta"]')!;
   expect(meta.textContent).to.equal(
-    new Intl.ListFormat('fr', { style: 'short', type: 'unit' }).format([
-      'organisation',
-      '3',
+    new Intl.ListFormat("fr", { style: "short", type: "unit" }).format([
+      "organisation",
+      "3",
     ])
   );
 });
 
-it('clamps node-meta to the row width so text-overflow:ellipsis actually triggers when an ancestor sizes the row intrinsically', async () => {
-  const longType = 'x'.repeat(300);
+it("clamps node-meta to the row width so text-overflow:ellipsis actually triggers when an ancestor sizes the row intrinsically", async () => {
+  const longType = "x".repeat(300);
   // A definite-width ancestor (e.g. a plain sized <div>) already lets node-meta shrink to fit
   // via the flexbox automatic-minimum-size rule (overflow != visible zeroes it) even without an
   // explicit min-inline-size -- so this reproduces the failure mode the file's row layout is
@@ -95,23 +95,23 @@ it('clamps node-meta to the row width so text-overflow:ellipsis actually trigger
       <lr-neighbor-list
         .rows=${[
           {
-            relation: 'r',
-            direction: 'out' as const,
-            node: { id: 'n1', label: 'N', type: longType },
+            relation: "r",
+            direction: "out" as const,
+            node: { id: "n1", label: "N", type: longType },
           },
         ]}
       ></lr-neighbor-list>
     </div>
   `);
-  const el = wrapper.querySelector('lr-neighbor-list') as LyraNeighborList;
+  const el = wrapper.querySelector("lr-neighbor-list") as LyraNeighborList;
   await el.updateComplete;
   const meta = el.shadowRoot!.querySelector(
     '[part="node-meta"]'
   ) as HTMLElement;
-  expect(getComputedStyle(meta).minInlineSize).to.equal('0px');
+  expect(getComputedStyle(meta).minInlineSize).to.equal("0px");
 });
 
-it('applies the min-inline-size: 0 clamp through lr-virtual-list::part(node-meta) too (virtualized path)', async () => {
+it("applies the min-inline-size: 0 clamp through lr-virtual-list::part(node-meta) too (virtualized path)", async () => {
   // Both the row's own file-header comment and the migrate-wa "both selectors" convention make
   // this load-bearing: dropping either one silently unstyles one of the two render paths, so this
   // proves the declaration actually reaches node-meta through the ::part() selector, not just the
@@ -120,14 +120,14 @@ it('applies the min-inline-size: 0 clamp through lr-virtual-list::part(node-meta
     virtualize-at="0"
     .rows=${[
       {
-        relation: 'r',
-        direction: 'out' as const,
-        node: { id: 'n1', label: 'N', type: 'org' },
+        relation: "r",
+        direction: "out" as const,
+        node: { id: "n1", label: "N", type: "org" },
       },
     ]}
   ></lr-neighbor-list>`)) as LyraNeighborList;
   await el.updateComplete;
-  const virtual = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  const virtual = el.shadowRoot!.querySelector("lr-virtual-list")!;
   await (virtual as unknown as { updateComplete: Promise<unknown> })
     .updateComplete;
   await new Promise<void>((r) =>
@@ -136,10 +136,10 @@ it('applies the min-inline-size: 0 clamp through lr-virtual-list::part(node-meta
   const meta = virtual.shadowRoot!.querySelector(
     '[part="node-meta"]'
   ) as HTMLElement;
-  expect(getComputedStyle(meta).minInlineSize).to.equal('0px');
+  expect(getComputedStyle(meta).minInlineSize).to.equal("0px");
 });
 
-it('renders one row per entry, each with the node label and relation text', async () => {
+it("renders one row per entry, each with the node label and relation text", async () => {
   const el = (await fixture(
     html`<lr-neighbor-list></lr-neighbor-list>`
   )) as LyraNeighborList;
@@ -147,11 +147,11 @@ it('renders one row per entry, each with the node label and relation text', asyn
   await el.updateComplete;
   const rendered = el.shadowRoot!.querySelectorAll('[part="row"]');
   expect(rendered.length).to.equal(3);
-  expect(rendered[0]!.textContent).to.include('Acme Corp');
-  expect(rendered[0]!.textContent).to.include('works_for');
+  expect(rendered[0]!.textContent).to.include("Acme Corp");
+  expect(rendered[0]!.textContent).to.include("works_for");
 });
 
-it('emits lr-entity-activate with the node id when a row is activated', async () => {
+it("emits lr-entity-activate with the node id when a row is activated", async () => {
   const el = (await fixture(
     html`<lr-neighbor-list></lr-neighbor-list>`
   )) as LyraNeighborList;
@@ -160,13 +160,13 @@ it('emits lr-entity-activate with the node id when a row is activated', async ()
   const button = el.shadowRoot!.querySelector(
     '[part="node-label"]'
   ) as HTMLButtonElement;
-  const listener = oneEvent(el, 'lr-entity-activate');
+  const listener = oneEvent(el, "lr-entity-activate");
   button.click();
   const event = await listener;
-  expect(event.detail).to.deep.equal({ entityId: 'org1' });
+  expect(event.detail).to.deep.equal({ id: "org1" });
 });
 
-it('shows a per-row expand button emitting lr-node-expand only when expandable', async () => {
+it("shows a per-row expand button emitting lr-node-expand only when expandable", async () => {
   const el = (await fixture(
     html`<lr-neighbor-list></lr-neighbor-list>`
   )) as LyraNeighborList;
@@ -180,22 +180,22 @@ it('shows a per-row expand button emitting lr-node-expand only when expandable',
   await el.updateComplete;
   const buttons = el.shadowRoot!.querySelectorAll('[part="expand-button"]');
   expect(buttons.length).to.equal(3);
-  const listener = oneEvent(el, 'lr-node-expand');
+  const listener = oneEvent(el, "lr-node-expand");
   (buttons[0] as HTMLButtonElement).click();
   const event = await listener;
-  expect(event.detail).to.deep.equal({ nodeId: 'org1' });
+  expect(event.detail).to.deep.equal({ id: "org1" });
 });
 
-it('groups rows by relation with a labeled, counted header when groupByRelation is set', async () => {
+it("groups rows by relation with a labeled, counted header when groupByRelation is set", async () => {
   const el = (await fixture(
     html`<lr-neighbor-list></lr-neighbor-list>`
   )) as LyraNeighborList;
   el.rows = [
     ...rows,
     {
-      relation: 'works_for',
-      direction: 'out',
-      node: { id: 'org2', label: 'Sorbonne' },
+      relation: "works_for",
+      direction: "out",
+      node: { id: "org2", label: "Sorbonne" },
     },
   ];
   el.groupByRelation = true;
@@ -203,24 +203,24 @@ it('groups rows by relation with a labeled, counted header when groupByRelation 
   const headers = el.shadowRoot!.querySelectorAll('[part="group-header"]');
   expect(headers.length).to.equal(3);
   const worksFor = Array.from(headers).find((h) =>
-    h.textContent?.includes('works_for')
+    h.textContent?.includes("works_for")
   )!;
-  expect(worksFor.textContent).to.include('2');
+  expect(worksFor.textContent).to.include("2");
 });
 
-it('renders group headers at the exact row position for a realistic multi-group dataset', async () => {
+it("renders group headers at the exact row position for a realistic multi-group dataset", async () => {
   // Five relations with differing, non-uniform row counts (15 rows total) -- large enough that a
   // linear groups.find() rescan per row would be doing real O(rows x groups) work, and varied
   // enough that a header landing one row off (or at the wrong relation boundary) shows up as a
   // mismatch below.
-  const relations = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'];
+  const relations = ["alpha", "beta", "gamma", "delta", "epsilon"];
   const counts = [3, 1, 4, 2, 5];
   const manyRows: LyraNeighborRow[] = [];
   relations.forEach((relation, ri) => {
     for (let i = 0; i < counts[ri]!; i++) {
       manyRows.push({
         relation,
-        direction: 'out',
+        direction: "out",
         node: { id: `${relation}-${i}`, label: `${relation} ${i}` },
       });
     }
@@ -247,13 +247,13 @@ it('renders group headers at the exact row position for a realistic multi-group 
   for (const relation of sortedRelations) {
     const count = counts[relations.indexOf(relation)]!;
     const header = children[idx]!;
-    expect(header.getAttribute('part')).to.equal('group-header');
+    expect(header.getAttribute("part")).to.equal("group-header");
     expect(header.textContent).to.include(relation);
     expect(header.textContent).to.include(`(${count})`);
     idx += 1;
     for (let i = 0; i < count; i++) {
       const rowEl = children[idx]!;
-      expect(rowEl.getAttribute('part')).to.equal('row');
+      expect(rowEl.getAttribute("part")).to.equal("row");
       expect(rowEl.textContent).to.include(relation);
       idx += 1;
     }
@@ -261,10 +261,10 @@ it('renders group headers at the exact row position for a realistic multi-group 
   expect(idx).to.equal(children.length);
 });
 
-it('renders through the internal virtual-list once rows exceeds virtualizeAt', async () => {
+it("renders through the internal virtual-list once rows exceeds virtualizeAt", async () => {
   const many: LyraNeighborRow[] = Array.from({ length: 5 }, (_, i) => ({
-    relation: 'related_to',
-    direction: 'out' as const,
+    relation: "related_to",
+    direction: "out" as const,
     node: { id: `n${i}`, label: `Node ${i}` },
   }));
   const el = (await fixture(
@@ -272,10 +272,10 @@ it('renders through the internal virtual-list once rows exceeds virtualizeAt', a
   )) as LyraNeighborList;
   el.rows = many;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.exist;
+  expect(el.shadowRoot!.querySelector("lr-virtual-list")).to.exist;
 });
 
-it('normalizes a NaN virtualizeAt to the default (100) instead of silently disabling virtualization', async () => {
+it("normalizes a NaN virtualizeAt to the default (100) instead of silently disabling virtualization", async () => {
   // A small row count (3, well below the real default of 100) -- proves the NaN falls back to a
   // real, non-negative default rather than an always-false comparison letting virtualization run
   // at any size: with the guard in place, 3 rows stay in the plain (non-virtualized) list.
@@ -285,13 +285,13 @@ it('normalizes a NaN virtualizeAt to the default (100) instead of silently disab
   expect(Number.isNaN(el.virtualizeAt)).to.be.true;
   el.rows = rows;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-virtual-list') == null).to.be.true;
+  expect(el.shadowRoot!.querySelector("lr-virtual-list") == null).to.be.true;
   expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(
     rows.length
   );
 });
 
-it('gives the per-row expand button the shared minimum hit area', async () => {
+it("gives the per-row expand button the shared minimum hit area", async () => {
   const el = (await fixture(
     html`<lr-neighbor-list></lr-neighbor-list>`
   )) as LyraNeighborList;
@@ -301,37 +301,37 @@ it('gives the per-row expand button the shared minimum hit area', async () => {
   const expandButton = el.shadowRoot!.querySelector(
     '[part="expand-button"]'
   ) as HTMLElement;
-  expect(getComputedStyle(expandButton).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(expandButton).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(expandButton).minInlineSize).to.equal("40px");
+  expect(getComputedStyle(expandButton).minBlockSize).to.equal("40px");
 });
 
-it('renders the direction as an aria-hidden glyph plus localized text folded into the row name', async () => {
+it("renders the direction as an aria-hidden glyph plus localized text folded into the row name", async () => {
   const el = (await fixture(
     html`<lr-neighbor-list></lr-neighbor-list>`
   )) as LyraNeighborList;
   el.rows = rows;
   await el.updateComplete;
   const glyph = el.shadowRoot!.querySelector('[part="direction"]')!;
-  expect(glyph.getAttribute('aria-hidden')).to.equal('true');
+  expect(glyph.getAttribute("aria-hidden")).to.equal("true");
   const button = el.shadowRoot!.querySelector(
     '[part="node-label"]'
   ) as HTMLElement;
-  expect(button.getAttribute('aria-label')).to.equal(
-    'Acme Corp, works_for, Outgoing'
+  expect(button.getAttribute("aria-label")).to.equal(
+    "Acme Corp, works_for, Outgoing"
   );
 });
 
-it('shows neighborListEmpty when rows is empty', async () => {
+it("shows neighborListEmpty when rows is empty", async () => {
   const el = (await fixture(
     html`<lr-neighbor-list></lr-neighbor-list>`
   )) as LyraNeighborList;
   await el.updateComplete;
   expect(
     el.shadowRoot!.querySelector('[part="empty"]')!.textContent
-  ).to.include('No relationships');
+  ).to.include("No relationships");
 });
 
-it('names the inner group from label or the localized default without duplicating a host name', async () => {
+it("names the inner group from label or the localized default without duplicating a host name", async () => {
   const withDefault = (await fixture(
     html`<lr-neighbor-list .rows=${rows}></lr-neighbor-list>`
   )) as LyraNeighborList;
@@ -339,8 +339,8 @@ it('names the inner group from label or the localized default without duplicatin
   expect(
     withDefault
       .shadowRoot!.querySelector('[part="base"]')!
-      .getAttribute('aria-label')
-  ).to.equal('Relationships');
+      .getAttribute("aria-label")
+  ).to.equal("Relationships");
 
   const withLabel = (await fixture(
     html`<lr-neighbor-list
@@ -352,8 +352,8 @@ it('names the inner group from label or the localized default without duplicatin
   expect(
     withLabel
       .shadowRoot!.querySelector('[part="base"]')!
-      .getAttribute('aria-label')
-  ).to.equal('Family tree');
+      .getAttribute("aria-label")
+  ).to.equal("Family tree");
 
   const withAria = (await fixture(
     html`<lr-neighbor-list
@@ -366,12 +366,12 @@ it('names the inner group from label or the localized default without duplicatin
   expect(
     withAria
       .shadowRoot!.querySelector('[part="base"]')!
-      .getAttribute('aria-label')
+      .getAttribute("aria-label")
   ).to.equal(null);
-  expect(withAria.getAttribute('aria-label')).to.equal('Custom');
+  expect(withAria.getAttribute("aria-label")).to.equal("Custom");
 });
 
-it('keeps exactly one stable owner across explicit-empty and dynamic host naming', async () => {
+it("keeps exactly one stable owner across explicit-empty and dynamic host naming", async () => {
   const el = (await fixture(
     html`<lr-neighbor-list
       label="Family tree"
@@ -382,46 +382,46 @@ it('keeps exactly one stable owner across explicit-empty and dynamic host naming
   const list = () =>
     el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
 
-  expect(list().getAttribute('role')).to.equal('group');
-  expect(el.hasAttribute('aria-label')).to.equal(true);
-  expect(el.getAttribute('aria-label')).to.equal('');
-  expect(list().getAttribute('aria-label')).to.equal('');
+  expect(list().getAttribute("role")).to.equal("group");
+  expect(el.hasAttribute("aria-label")).to.equal(true);
+  expect(el.getAttribute("aria-label")).to.equal("");
+  expect(list().getAttribute("aria-label")).to.equal("");
 
   el.rows = [];
   await el.updateComplete;
-  expect(list().getAttribute('role')).to.equal('group');
-  expect(list().getAttribute('aria-label')).to.equal('');
+  expect(list().getAttribute("role")).to.equal("group");
+  expect(list().getAttribute("aria-label")).to.equal("");
 
-  el.setAttribute('aria-label', 'Author relationships');
+  el.setAttribute("aria-label", "Author relationships");
   await el.updateComplete;
-  expect(el.getAttribute('aria-label')).to.equal('Author relationships');
-  expect(list().getAttribute('aria-label')).to.equal(null);
-  expect(list().getAttribute('role')).to.equal(null);
+  expect(el.getAttribute("aria-label")).to.equal("Author relationships");
+  expect(list().getAttribute("aria-label")).to.equal(null);
+  expect(list().getAttribute("role")).to.equal(null);
 
-  el.removeAttribute('aria-label');
+  el.removeAttribute("aria-label");
   await el.updateComplete;
-  expect(el.getAttribute('aria-label')).to.equal(null);
-  expect(list().getAttribute('aria-label')).to.equal('Family tree');
-  expect(list().getAttribute('role')).to.equal('group');
+  expect(el.getAttribute("aria-label")).to.equal(null);
+  expect(list().getAttribute("aria-label")).to.equal("Family tree");
+  expect(list().getAttribute("role")).to.equal("group");
 });
 
-describe('localization', () => {
-  it('localizes the empty state and a row accessible name via .strings', async () => {
+describe("localization", () => {
+  it("localizes the empty state and a row accessible name via .strings", async () => {
     const empty = (await fixture(
       html`<lr-neighbor-list
-        .strings=${{ neighborListEmpty: 'Aucune relation' }}
+        .strings=${{ neighborListEmpty: "Aucune relation" }}
       ></lr-neighbor-list>`
     )) as LyraNeighborList;
     await empty.updateComplete;
     expect(
       empty.shadowRoot!.querySelector('[part="empty"]')!.textContent
-    ).to.include('Aucune relation');
+    ).to.include("Aucune relation");
 
     const populated = (await fixture(
       html`<lr-neighbor-list
         .strings=${{
-          neighborDirectionOut: 'Sortant',
-          neighborRowLabel: '{label} · {relation} · {direction}',
+          neighborDirectionOut: "Sortant",
+          neighborRowLabel: "{label} · {relation} · {direction}",
         }}
         .rows=${rows}
       ></lr-neighbor-list>`
@@ -430,13 +430,13 @@ describe('localization', () => {
     const button = populated.shadowRoot!.querySelector(
       '[part="node-label"]'
     ) as HTMLElement;
-    expect(button.getAttribute('aria-label')).to.equal(
-      'Acme Corp · works_for · Sortant'
+    expect(button.getAttribute("aria-label")).to.equal(
+      "Acme Corp · works_for · Sortant"
     );
   });
 });
 
-it('is accessible with grouped, expandable rows', async () => {
+it("is accessible with grouped, expandable rows", async () => {
   const el = (await fixture(
     html`<lr-neighbor-list></lr-neighbor-list>`
   )) as LyraNeighborList;
@@ -447,25 +447,25 @@ it('is accessible with grouped, expandable rows', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('gives node-label a hover state', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
+it("gives node-label a hover state", () => {
+  const css = styles.cssText.replace(/\s+/g, " ");
   expect(css).to.match(/\[part='node-label'\]:hover/);
 });
 
-describe('row part styling reaches both rendering paths', () => {
+describe("row part styling reaches both rendering paths", () => {
   const grouped: LyraNeighborRow[] = [
     ...rows,
     {
-      relation: 'works_for',
-      direction: 'out',
-      node: { id: 'org2', label: 'Sorbonne', type: 'org' },
+      relation: "works_for",
+      direction: "out",
+      node: { id: "org2", label: "Sorbonne", type: "org" },
     },
   ];
 
   /** The shadow tree the rows actually live in: this component's own at/below `virtualize-at`,
    *  the internal `<lr-virtual-list>`'s above it. */
   function rowRoot(el: LyraNeighborList): ShadowRoot {
-    const list = el.shadowRoot!.querySelector('lr-virtual-list');
+    const list = el.shadowRoot!.querySelector("lr-virtual-list");
     return list ? list.shadowRoot! : el.shadowRoot!;
   }
 
@@ -478,7 +478,7 @@ describe('row part styling reaches both rendering paths', () => {
       .rows=${grouped}
     ></lr-neighbor-list>`)) as LyraNeighborList;
     await el.updateComplete;
-    const virtual = el.shadowRoot!.querySelector('lr-virtual-list');
+    const virtual = el.shadowRoot!.querySelector("lr-virtual-list");
     if (virtual)
       await (virtual as unknown as { updateComplete: Promise<unknown> })
         .updateComplete;
@@ -490,21 +490,21 @@ describe('row part styling reaches both rendering paths', () => {
 
   // 1 => every fixture above virtualizes; 99 => every fixture stays on the plain path.
   for (const [label, virtualizeAt] of [
-    ['virtualized', 1],
-    ['plain', 99],
+    ["virtualized", 1],
+    ["plain", 99],
   ] as const) {
     it(`lays out [part="row"] and its node-label in the ${label} path`, async () => {
       const el = await list(virtualizeAt);
-      expect(el.shadowRoot!.querySelector('lr-virtual-list') !== null).to.equal(
-        label === 'virtualized'
+      expect(el.shadowRoot!.querySelector("lr-virtual-list") !== null).to.equal(
+        label === "virtualized"
       );
       const rendered = [
         ...rowRoot(el).querySelectorAll('[part~="row"]'),
       ] as HTMLElement[];
       expect(rendered.length).to.equal(grouped.length);
-      expect(getComputedStyle(rendered[0]!).display).to.equal('flex');
+      expect(getComputedStyle(rendered[0]!).display).to.equal("flex");
       expect(getComputedStyle(rendered[0]!).borderBlockEndStyle).to.equal(
-        'solid'
+        "solid"
       );
       // Exactly one bordered row box per row -- a nested second part="row" would be matched by
       // ::part(row) too and draw the divider twice.
@@ -513,24 +513,24 @@ describe('row part styling reaches both rendering paths', () => {
       const button = rendered[0]!.querySelector(
         '[part="node-label"]'
       ) as HTMLElement;
-      expect(getComputedStyle(button).flexGrow).to.equal('1');
-      expect(getComputedStyle(button).cursor).to.equal('pointer');
-      expect(getComputedStyle(button).color).to.equal('rgb(7, 8, 9)');
+      expect(getComputedStyle(button).flexGrow).to.equal("1");
+      expect(getComputedStyle(button).cursor).to.equal("pointer");
+      expect(getComputedStyle(button).color).to.equal("rgb(7, 8, 9)");
     });
 
     it(`styles the relation, direction and node-meta text in the ${label} path`, async () => {
       const el = await list(virtualizeAt);
       const root = rowRoot(el);
       const relation = root.querySelector('[part="relation"]') as HTMLElement;
-      expect(getComputedStyle(relation).fontSize).to.equal('12px');
-      expect(getComputedStyle(relation).color).to.equal('rgb(4, 5, 6)');
+      expect(getComputedStyle(relation).fontSize).to.equal("12px");
+      expect(getComputedStyle(relation).color).to.equal("rgb(4, 5, 6)");
       expect(
         getComputedStyle(
           root.querySelector('[part="direction"]') as HTMLElement
         ).color
-      ).to.equal('rgb(4, 5, 6)');
+      ).to.equal("rgb(4, 5, 6)");
       const meta = root.querySelector('[part="node-meta"]') as HTMLElement;
-      expect(getComputedStyle(meta).textOverflow).to.equal('ellipsis');
+      expect(getComputedStyle(meta).textOverflow).to.equal("ellipsis");
     });
 
     it(`gives the expand button the shared minimum hit area in the ${label} path`, async () => {
@@ -538,8 +538,8 @@ describe('row part styling reaches both rendering paths', () => {
       const expand = rowRoot(el).querySelector(
         '[part="expand-button"]'
       ) as HTMLElement;
-      expect(getComputedStyle(expand).minInlineSize).to.equal('40px');
-      expect(getComputedStyle(expand).minBlockSize).to.equal('40px');
+      expect(getComputedStyle(expand).minInlineSize).to.equal("40px");
+      expect(getComputedStyle(expand).minBlockSize).to.equal("40px");
     });
 
     it(`presents the group header identically in the ${label} path`, async () => {
@@ -548,12 +548,12 @@ describe('row part styling reaches both rendering paths', () => {
       // component's `group-header` element. Both must render the same typographic treatment.
       const root = rowRoot(el);
       const header = root.querySelector(
-        label === 'virtualized' ? '[part="group"]' : '[part="group-header"]'
+        label === "virtualized" ? '[part="group"]' : '[part="group-header"]'
       ) as HTMLElement;
       expect(header.textContent!.trim().length).to.be.greaterThan(0);
-      expect(getComputedStyle(header).textTransform).to.equal('uppercase');
-      expect(getComputedStyle(header).fontSize).to.equal('12px');
-      expect(getComputedStyle(header).color).to.equal('rgb(4, 5, 6)');
+      expect(getComputedStyle(header).textTransform).to.equal("uppercase");
+      expect(getComputedStyle(header).fontSize).to.equal("12px");
+      expect(getComputedStyle(header).color).to.equal("rgb(4, 5, 6)");
     });
 
     it(`is accessible in the ${label} path`, async () => {
@@ -565,7 +565,7 @@ describe('row part styling reaches both rendering paths', () => {
     });
   }
 
-  it('exports the virtualized row and group parts so a consumer stylesheet can reach them', async () => {
+  it("exports the virtualized row and group parts so a consumer stylesheet can reach them", async () => {
     const wrapper = await fixture(html`
       <div>
         <style>
@@ -583,17 +583,17 @@ describe('row part styling reaches both rendering paths', () => {
         ></lr-neighbor-list>
       </div>
     `);
-    const el = wrapper.querySelector('lr-neighbor-list') as LyraNeighborList;
+    const el = wrapper.querySelector("lr-neighbor-list") as LyraNeighborList;
     await el.updateComplete;
-    const virtual = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const virtual = el.shadowRoot!.querySelector("lr-virtual-list")!;
     await (virtual as unknown as { updateComplete: Promise<unknown> })
       .updateComplete;
     await new Promise<void>((r) =>
       requestAnimationFrame(() => requestAnimationFrame(() => r()))
     );
-    expect(virtual.getAttribute('exportparts')).to.contain('row:row');
-    expect(virtual.getAttribute('exportparts')).to.contain(
-      'group:group-header'
+    expect(virtual.getAttribute("exportparts")).to.contain("row:row");
+    expect(virtual.getAttribute("exportparts")).to.contain(
+      "group:group-header"
     );
     const button = virtual.shadowRoot!.querySelector(
       '[part="node-label"]'
@@ -601,7 +601,7 @@ describe('row part styling reaches both rendering paths', () => {
     const header = virtual.shadowRoot!.querySelector(
       '[part="group"]'
     ) as HTMLElement;
-    expect(getComputedStyle(button).color).to.equal('rgb(12, 34, 56)');
-    expect(getComputedStyle(header).outlineColor).to.equal('rgb(21, 43, 65)');
+    expect(getComputedStyle(button).color).to.equal("rgb(12, 34, 56)");
+    expect(getComputedStyle(header).outlineColor).to.equal("rgb(21, 43, 65)");
   });
 });
