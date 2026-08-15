@@ -87,10 +87,10 @@ const FACE_CASES: FaceCase[] = [
   { name: 'combobox' },
   { name: 'date-input' },
   { name: 'emoji-picker' },
-  // icon-button is deliberately excluded here: since 9.0 (cd4f2d22) it is intentionally not
-  // form-associated (see its class JSDoc -- "an action/link, not a form submitter") and
-  // LyraElement only installs an ExternalLabelController for a `formAssociated` constructor, so
-  // the external-label-name/activation contract this array feeds no longer applies to it.
+  // icon-button is deliberately excluded here: it is intentionally not form-associated (see its
+  // class JSDoc -- "an action/link, not a form submitter") and LyraElement only installs an
+  // ExternalLabelController for a `formAssociated` constructor, so the external-label-name/
+  // activation contract this array feeds does not apply to it.
   { name: 'input' },
   { name: 'native-time-input' },
   { name: 'number-input' },

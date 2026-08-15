@@ -10,7 +10,7 @@ touching component internals.
 pnpm install
 ```
 
-Node ≥ 20, `pnpm@11.18.0` (pinned via `packageManager` in `package.json` — check that file if this
+Node ≥ 20, `pnpm@11.22.0` (pinned via `packageManager` in `package.json` — check that file if this
 drifts again).
 
 ## Running things locally

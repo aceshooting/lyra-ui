@@ -40,11 +40,11 @@ interface FormOwnerControl extends HTMLElement {
   getForm(): HTMLFormElement | null;
 }
 
-// icon-button is deliberately absent: commit cd4f2d22 (2026-08-14) redesigned it into an
-// action/link-only primitive with no `formAssociated`, `attachInternals()`, `form`, or `getForm()`
-// -- see its own class doc comment ("This icon-only primitive is intentionally an action/link, not
-// a form submitter. Use <lr-button circle type="submit|reset"> ... that component owns the
-// complete native submitter contract."). It never belonged in this owner-contract list post-redesign.
+// icon-button is deliberately absent: it is an action/link-only primitive with no
+// `formAssociated`, `attachInternals()`, `form`, or `getForm()` -- see its own class doc comment
+// ("This icon-only primitive is intentionally an action/link, not a form submitter. Use
+// <lr-button circle type="submit|reset"> ... that component owns the complete native submitter
+// contract."). It does not belong in this owner-contract list.
 const FORM_CONTROL_NAMES = [
   'tool-param-form',
   'chat-composer',
