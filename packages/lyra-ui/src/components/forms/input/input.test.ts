@@ -916,13 +916,17 @@ describe('lr-input', () => {
     // button's own icon+padding content (not the floor being widened here) still exceeds a 2xs/xs
     // field's bare control height, so this is a smaller, tier-scaled jump rather than none at all --
     // m and up are untouched because their own control height already covers the 40px target.
+    // 2xs/xs land on this content-driven height rather than a round --lr-form-control-height
+    // token, so it's subject to ordinary cross-engine font-metric rounding (observed up to ~1.5px
+    // under Firefox); closeTo matches this file's other rect-measurement assertions (see e.g.
+    // scroll-lock.test.ts, positioner.test.ts).
     const expected: Record<string, number> = { '2xs': 29, xs: 29, s: 32, m: 42, l: 48, xl: 56 };
     for (const [size, height] of Object.entries(expected)) {
       const el = (await fixture(html`
         <lr-input size=${size} clearable value="content" aria-label="Name"></lr-input>
       `)) as LyraInput;
       const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!;
-      expect(row.getBoundingClientRect().height, `size=${size}`).to.equal(height);
+      expect(row.getBoundingClientRect().height, `size=${size}`).to.be.closeTo(height, 2);
     }
   });
 
