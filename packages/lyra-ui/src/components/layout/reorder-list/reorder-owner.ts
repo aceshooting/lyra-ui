@@ -9,7 +9,7 @@ export interface ReorderOwnerState {
 }
 
 /** @internal Private owner-to-item state bridge. */
-export const reorderOwnerUpdate = Symbol("lyra-reorder-owner-update");
+export const reorderOwnerUpdate = Symbol('lyra-reorder-owner-update');
 
 /** @internal */
 export interface ReorderOwnedItem {

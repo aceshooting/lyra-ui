@@ -1,34 +1,34 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
-import { property, state } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { srOnly } from "../../../internal/a11y.js";
-import { isRtl } from "../../../internal/rtl.js";
-import { prefersReducedMotion } from "../../../internal/motion.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import type { LyraEntity } from "../entity-card/entity-card.class.js";
-import "../../layout/scroller/scroller.class.js";
-import { styles } from "./path-strip.styles.js";
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
+import { isRtl } from '../../../internal/rtl.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import type { LyraEntity } from '../entity-card/entity-card.class.js';
+import '../../layout/scroller/scroller.class.js';
+import { styles } from './path-strip.styles.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
-} from "../retrieval-semantic-owner.js";
-import { activeElementIn } from "../../../internal/active-element.js";
+} from '../retrieval-semantic-owner.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
-} from "../../../internal/announcer.js";
+} from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_noData, LYRA_DEFAULT_pathNodeStatus, LYRA_DEFAULT_pathRelationStatus, LYRA_DEFAULT_pathStripLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraPathElement =
-  | { kind: "node"; node: LyraEntity }
-  | { kind: "edge"; relation: string; directed?: boolean; reverse?: boolean };
+  | { kind: 'node'; node: LyraEntity }
+  | { kind: 'edge'; relation: string; directed?: boolean; reverse?: boolean };
 
 export interface LyraPathStripEventMap {
-  "lr-entity-activate": CustomEvent<{ id: string }>;
-  "lr-relation-activate": CustomEvent<{
+  'lr-entity-activate': CustomEvent<{ id: string }>;
+  'lr-relation-activate': CustomEvent<{
     relation: string;
     sourceId?: string;
     targetId?: string;
@@ -57,7 +57,7 @@ export interface LyraPathStripEventMap {
  * @since 4.0.0
  */
 export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["path"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['path']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -76,16 +76,16 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   @property({ attribute: false }) path: readonly LyraPathElement[] = [];
   /** Accessible name for the stable group when the host has no `aria-label`; falls back to
    *  localized `pathStripLabel`. An explicitly empty host label stays empty. */
-  @property() label = "";
+  @property() label = '';
 
   @state() private activeIndex = 0;
-  @state() private liveText = "";
+  @state() private liveText = '';
   private restoreFocusAfterPathChange = false;
   private announcementSink?: AnnouncementSink;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.announcementSink ??= acquireAnnouncementSink("polite", {
+    this.announcementSink ??= acquireAnnouncementSink('polite', {
       document: this.ownerDocument,
       source: this,
     });
@@ -99,7 +99,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (!changed.has("path")) return;
+    if (!changed.has('path')) return;
     this.restoreFocusAfterPathChange =
       activeElementIn(this.shadowRoot)?.matches(
         '[part="node"], [part="relation"]'
@@ -112,7 +112,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    if (!changed.has("path") || !this.restoreFocusAfterPathChange) return;
+    if (!changed.has('path') || !this.restoreFocusAfterPathChange) return;
     this.restoreFocusAfterPathChange = false;
     // Focusing dispatches the control's focus handler, which updates the live-region text.
     // Run it after this update completes so that reactive announcement does not schedule another
@@ -126,22 +126,22 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
         '[part="node"], [part="relation"]'
       );
       controls?.[this.activeIndex]?.focus();
-    }, "restore-path-focus");
+    }, 'restore-path-focus');
   }
 
   private activate(index: number): void {
     const el = this.path[index];
     if (!el) return;
-    if (el.kind === "node") {
-      this.emit("lr-entity-activate", { id: el.node.id });
+    if (el.kind === 'node') {
+      this.emit('lr-entity-activate', { id: el.node.id });
       return;
     }
     const source = this.path[index - 1];
     const target = this.path[index + 1];
-    this.emit("lr-relation-activate", {
+    this.emit('lr-relation-activate', {
       relation: el.relation,
-      sourceId: source?.kind === "node" ? source.node.id : undefined,
-      targetId: target?.kind === "node" ? target.node.id : undefined,
+      sourceId: source?.kind === 'node' ? source.node.id : undefined,
+      targetId: target?.kind === 'node' ? target.node.id : undefined,
     });
   }
 
@@ -151,17 +151,17 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     const total = this.path.length;
     const numberFormat = getNumberFormat(this.effectiveLocale);
     this.liveText =
-      el?.kind === "node"
-        ? this.localize("pathNodeStatus", undefined, {
+      el?.kind === 'node'
+        ? this.localize('pathNodeStatus', undefined, {
             label: el.node.label || el.node.id,
             position: numberFormat.format(index + 1),
             total: numberFormat.format(total),
           })
         : el
-        ? this.localize("pathRelationStatus", undefined, {
+        ? this.localize('pathRelationStatus', undefined, {
             relation: el.relation,
           })
-        : "";
+        : '';
     this.announcementSink?.announce(this.liveText);
   }
 
@@ -177,9 +177,9 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
         const ownerWindow = el.ownerDocument.defaultView;
         const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
         el.scrollIntoView({
-          behavior: reducedMotion ? "auto" : "smooth",
-          inline: "nearest",
-          block: "nearest",
+          behavior: reducedMotion ? 'auto' : 'smooth',
+          inline: 'nearest',
+          block: 'nearest',
         });
       }
     });
@@ -188,19 +188,19 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   private onKeyDown = (e: KeyboardEvent): void => {
     const count = this.path.length;
     if (count === 0) return;
-    if (e.key === "Enter" || e.key === " ") {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       this.activate(this.activeIndex);
       return;
     }
     const rtl = isRtl(this);
-    const forwardKey = rtl ? "ArrowLeft" : "ArrowRight";
-    const backwardKey = rtl ? "ArrowRight" : "ArrowLeft";
+    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     let next = this.activeIndex;
     if (e.key === forwardKey) next = Math.min(count - 1, this.activeIndex + 1);
     else if (e.key === backwardKey) next = Math.max(0, this.activeIndex - 1);
-    else if (e.key === "Home") next = 0;
-    else if (e.key === "End") next = count - 1;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = count - 1;
     else return;
     e.preventDefault();
     this.focusIndex(next);
@@ -210,7 +210,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     return html`<button
       part="node"
       type="button"
-      tabindex=${this.activeIndex === index ? "0" : "-1"}
+      tabindex=${this.activeIndex === index ? '0' : '-1'}
       @click=${() => {
         this.activeIndex = index;
         this.activate(index);
@@ -222,19 +222,19 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   }
 
   private renderEdge(
-    el: Extract<LyraPathElement, { kind: "edge" }>,
+    el: Extract<LyraPathElement, { kind: 'edge' }>,
     index: number
   ): TemplateResult {
     const rtl = isRtl(this);
     const glyph = el.directed
       ? el.reverse
         ? rtl
-          ? "→"
-          : "←"
+          ? '→'
+          : '←'
         : rtl
-        ? "←"
-        : "→"
-      : "";
+        ? '←'
+        : '→'
+      : '';
     return html`<span class="element-group">
       ${glyph
         ? html`<span part="arrow" aria-hidden="true">${glyph}</span>`
@@ -242,7 +242,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
       <button
         part="relation"
         type="button"
-        tabindex=${this.activeIndex === index ? "0" : "-1"}
+        tabindex=${this.activeIndex === index ? '0' : '-1'}
         @click=${() => {
           this.activeIndex = index;
           this.activate(index);
@@ -257,9 +257,9 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   override render(): TemplateResult {
     const label = retrievalSemanticLabel(
       this,
-      this.label || this.localize("pathStripLabel")
+      this.label || this.localize('pathStripLabel')
     );
-    const role = retrievalSemanticRole(this, "group");
+    const role = retrievalSemanticRole(this, 'group');
     if (this.path.length === 0) {
       return html`<div
         part="base"
@@ -267,7 +267,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
         aria-label=${label ?? nothing}
         tabindex="-1"
       >
-        <div part="empty">${this.localize("noData")}</div>
+        <div part="empty">${this.localize('noData')}</div>
       </div>`;
     }
     return html`
@@ -279,7 +279,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
       >
         <lr-scroller orientation="horizontal" controls>
           ${this.path.map((el, i) =>
-            el.kind === "node"
+            el.kind === 'node'
               ? this.renderNode(el.node, i)
               : this.renderEdge(el, i)
           )}
@@ -292,6 +292,6 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-path-strip": LyraPathStrip;
+    'lr-path-strip': LyraPathStrip;
   }
 }

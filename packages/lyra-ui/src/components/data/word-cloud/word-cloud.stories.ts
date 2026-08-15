@@ -7,6 +7,14 @@ const meta: Meta = {
   title: 'WordCloud',
   component: 'lr-word-cloud',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Words, palette colors, and explicit legend entries are copied into frozen bounded snapshots (10,000, 64, and 100 outer entries respectively, plus text budgets). Reassign a collection after changing it.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

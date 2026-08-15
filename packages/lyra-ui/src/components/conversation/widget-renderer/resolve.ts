@@ -7,14 +7,14 @@ import {
   isWidgetTypeRegistry,
   type LyraWidgetTypeDefinition,
   type LyraWidgetTypeRegistry,
-} from "./registry.js";
+} from './registry.js';
 import {
   readWidgetPointer,
   WIDGET_MAX_DEPTH,
   WIDGET_MAX_NODES,
   WIDGET_MAX_PROPS_PER_NODE,
   WIDGET_MAX_WARNINGS,
-} from "../../../internal/widget-resolver.js";
+} from '../../../internal/widget-resolver.js';
 
 export interface LyraWidgetNode {
   readonly type: string;
@@ -33,12 +33,12 @@ export interface LyraWidgetBinding {
 
 /** Version-two document. Controlled binding state is supplied separately through `bindingState`. */
 export interface LyraWidgetDocument {
-  readonly version: "2";
+  readonly version: '2';
   readonly root: LyraWidgetNode;
 }
 
-const DOCUMENT_INVALID = Symbol("invalid-widget-document");
-const DOCUMENT_MISSING = Symbol("missing-widget-document-field");
+const DOCUMENT_INVALID = Symbol('invalid-widget-document');
+const DOCUMENT_MISSING = Symbol('missing-widget-document-field');
 
 interface DocumentSnapshotContext {
   readonly ancestors: Set<object>;
@@ -85,18 +85,18 @@ function snapshotDocumentNode(
 ): LyraWidgetNode | typeof DOCUMENT_INVALID | null {
   if (depth > WIDGET_MAX_DEPTH || context.remaining <= 0) return null;
   context.remaining -= 1;
-  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+  if (input === null || typeof input !== 'object' || Array.isArray(input)) {
     return DOCUMENT_INVALID;
   }
   if (context.ancestors.has(input)) return DOCUMENT_INVALID;
 
-  const type = readDocumentField(input, "type");
-  if (typeof type !== "string") return DOCUMENT_INVALID;
-  const id = readDocumentField(input, "id");
-  const slot = readDocumentField(input, "slot");
-  const actionId = readDocumentField(input, "actionId");
-  const propsInput = readDocumentField(input, "props");
-  const childrenInput = readDocumentField(input, "children");
+  const type = readDocumentField(input, 'type');
+  if (typeof type !== 'string') return DOCUMENT_INVALID;
+  const id = readDocumentField(input, 'id');
+  const slot = readDocumentField(input, 'slot');
+  const actionId = readDocumentField(input, 'actionId');
+  const propsInput = readDocumentField(input, 'props');
+  const childrenInput = readDocumentField(input, 'children');
   if (
     [id, slot, actionId, propsInput, childrenInput].includes(DOCUMENT_INVALID)
   ) {
@@ -104,23 +104,23 @@ function snapshotDocumentNode(
   }
   if (
     id !== DOCUMENT_MISSING &&
-    (typeof id !== "string" || id.length === 0 || id !== id.trim())
+    (typeof id !== 'string' || id.length === 0 || id !== id.trim())
   ) {
     return DOCUMENT_INVALID;
   }
-  if (typeof id === "string") {
+  if (typeof id === 'string') {
     if (context.ids.has(id)) return DOCUMENT_INVALID;
     context.ids.add(id);
   }
   if (
     slot !== DOCUMENT_MISSING &&
-    (typeof slot !== "string" || slot.length === 0 || slot !== slot.trim())
+    (typeof slot !== 'string' || slot.length === 0 || slot !== slot.trim())
   ) {
     return DOCUMENT_INVALID;
   }
   if (
     actionId !== DOCUMENT_MISSING &&
-    (typeof actionId !== "string" ||
+    (typeof actionId !== 'string' ||
       actionId.length === 0 ||
       actionId !== actionId.trim())
   ) {
@@ -129,7 +129,7 @@ function snapshotDocumentNode(
   if (
     propsInput !== DOCUMENT_MISSING &&
     (propsInput === null ||
-      typeof propsInput !== "object" ||
+      typeof propsInput !== 'object' ||
       Array.isArray(propsInput))
   ) {
     return DOCUMENT_INVALID;
@@ -148,15 +148,15 @@ function snapshotDocumentNode(
   if (props === DOCUMENT_INVALID) return DOCUMENT_INVALID;
   let payload: unknown | typeof DOCUMENT_MISSING = DOCUMENT_MISSING;
   if (actionId !== DOCUMENT_MISSING) {
-    payload = readDocumentField(input, "payload");
+    payload = readDocumentField(input, 'payload');
     if (payload === DOCUMENT_INVALID) return DOCUMENT_INVALID;
   }
 
   const children: Array<LyraWidgetNode | string> = [];
   if (childrenInput !== DOCUMENT_MISSING && depth < WIDGET_MAX_DEPTH) {
-    const length = readDocumentField(childrenInput, "length");
+    const length = readDocumentField(childrenInput, 'length');
     if (
-      typeof length !== "number" ||
+      typeof length !== 'number' ||
       !Number.isSafeInteger(length) ||
       length < 0
     ) {
@@ -169,7 +169,7 @@ function snapshotDocumentNode(
         if (child === DOCUMENT_INVALID || child === DOCUMENT_MISSING) {
           return DOCUMENT_INVALID;
         }
-        if (typeof child === "string") {
+        if (typeof child === 'string') {
           context.remaining -= 1;
           children.push(child);
           continue;
@@ -185,9 +185,9 @@ function snapshotDocumentNode(
 
   return Object.freeze({
     type,
-    ...(typeof id === "string" ? { id } : {}),
-    ...(typeof slot === "string" ? { slot } : {}),
-    ...(typeof actionId === "string"
+    ...(typeof id === 'string' ? { id } : {}),
+    ...(typeof slot === 'string' ? { slot } : {}),
+    ...(typeof actionId === 'string'
       ? {
           actionId,
           payload: payload === DOCUMENT_MISSING ? undefined : payload,
@@ -210,16 +210,16 @@ export function createWidgetDocument(root: LyraWidgetNode): LyraWidgetDocument {
     remaining: WIDGET_MAX_NODES,
   });
   if (snapshot === DOCUMENT_INVALID || snapshot === null) {
-    throw new TypeError("A widget document root must be a valid bounded widget node.");
+    throw new TypeError('A widget document root must be a valid bounded widget node.');
   }
-  return Object.freeze({ version: "2", root: snapshot });
+  return Object.freeze({ version: '2', root: snapshot });
 }
 
 export interface ResolvedText {
   /** Collision-free deterministic reconciliation key. */
   nodeKey: string;
   nodePath: string;
-  kind: "text";
+  kind: 'text';
   text: string;
   slot?: string;
 }
@@ -231,7 +231,7 @@ export interface ResolvedElement {
   nodeKey: string;
   /** Deterministic occurrence path within this document. */
   nodePath: string;
-  kind: "builtin-row" | "builtin-col" | "builtin-text" | "mapped";
+  kind: 'builtin-row' | 'builtin-col' | 'builtin-text' | 'mapped';
   tag?: string;
   /** Semantic control classification, independent of actions and bindings. */
   interactive: boolean;
@@ -254,13 +254,13 @@ export interface ResolveContext {
   warn?: (message: string) => void;
 }
 
-const WARNING_SUPPRESSION_KEY = "__warning-cap__";
-const INVALID = Symbol("invalid-widget-input");
+const WARNING_SUPPRESSION_KEY = '__warning-cap__';
+const INVALID = Symbol('invalid-widget-input');
 
 const ROW_COL_PROP_ENUMS: Record<string, readonly string[]> = {
-  gap: ["s", "m", "l"],
-  align: ["start", "center", "end", "stretch"],
-  justify: ["start", "center", "end", "between"],
+  gap: ['s', 'm', 'l'],
+  align: ['start', 'center', 'end', 'stretch'],
+  justify: ['start', 'center', 'end', 'between'],
 };
 
 function warnOnce(ctx: ResolveContext, key: string, message: string): void {
@@ -280,9 +280,9 @@ function warnOnce(ctx: ResolveContext, key: string, message: string): void {
 function isBinding(value: unknown): value is LyraWidgetBinding {
   return Boolean(
     value &&
-      typeof value === "object" &&
+      typeof value === 'object' &&
       !Array.isArray(value) &&
-      typeof (value as LyraWidgetBinding).$bind === "string"
+      typeof (value as LyraWidgetBinding).$bind === 'string'
   );
 }
 
@@ -312,7 +312,7 @@ function consumeNodeBudget(snapshot: SnapshotContext): boolean {
   if (snapshot.remaining <= 0) {
     warnOnce(
       snapshot.resolve,
-      "__node-cap__",
+      '__node-cap__',
       `stopped resolving after the ${WIDGET_MAX_NODES}-node cap was reached`
     );
     return false;
@@ -359,57 +359,57 @@ function snapshotNode(
   if (depth > WIDGET_MAX_DEPTH) {
     warnOnce(
       snapshot.resolve,
-      "__depth-cap__",
+      '__depth-cap__',
       `stopped resolving after the ${WIDGET_MAX_DEPTH}-level depth cap was reached`
     );
     return null;
   }
   if (!consumeNodeBudget(snapshot)) return null;
-  if (input === null || typeof input !== "object" || Array.isArray(input))
+  if (input === null || typeof input !== 'object' || Array.isArray(input))
     return INVALID;
   if (snapshot.ancestors.has(input)) return INVALID;
 
   const candidate = input as Record<string, unknown>;
-  const type = candidate["type"];
-  if (typeof type !== "string") return INVALID;
-  const builtin = type === "row" || type === "col" || type === "text";
+  const type = candidate['type'];
+  if (typeof type !== 'string') return INVALID;
+  const builtin = type === 'row' || type === 'col' || type === 'text';
   if (!builtin && !definitionFor(type, snapshot.resolve.registry)) {
     return { type };
   }
 
-  const id = candidate["id"];
+  const id = candidate['id'];
   if (
     id !== undefined &&
-    (typeof id !== "string" || id.length === 0 || id !== id.trim())
+    (typeof id !== 'string' || id.length === 0 || id !== id.trim())
   ) {
     return INVALID;
   }
-  const slot = candidate["slot"];
+  const slot = candidate['slot'];
   if (
     slot !== undefined &&
-    (typeof slot !== "string" || slot.length === 0 || slot !== slot.trim())
+    (typeof slot !== 'string' || slot.length === 0 || slot !== slot.trim())
   ) {
     return INVALID;
   }
-  const actionId = candidate["actionId"];
+  const actionId = candidate['actionId'];
   if (
     actionId !== undefined &&
-    (typeof actionId !== "string" ||
+    (typeof actionId !== 'string' ||
       actionId.length === 0 ||
       actionId !== actionId.trim())
   ) {
     return INVALID;
   }
-  const propsInput = candidate["props"];
+  const propsInput = candidate['props'];
   if (
     propsInput !== undefined &&
     (propsInput === null ||
-      typeof propsInput !== "object" ||
+      typeof propsInput !== 'object' ||
       Array.isArray(propsInput))
   ) {
     return INVALID;
   }
-  const childrenInput = candidate["children"];
+  const childrenInput = candidate['children'];
   if (childrenInput !== undefined && !Array.isArray(childrenInput))
     return INVALID;
 
@@ -418,7 +418,7 @@ function snapshotNode(
     ...(id !== undefined ? { id } : {}),
     ...(slot !== undefined ? { slot } : {}),
     ...(actionId !== undefined
-      ? { actionId, payload: candidate["payload"] }
+      ? { actionId, payload: candidate['payload'] }
       : {}),
     ...(propsInput !== undefined
       ? { props: snapshotProps(propsInput, type, snapshot.resolve) }
@@ -428,7 +428,7 @@ function snapshotNode(
     if (childrenInput && childrenInput.length > 0) {
       warnOnce(
         snapshot.resolve,
-        "__depth-cap__",
+        '__depth-cap__',
         `stopped resolving after the ${WIDGET_MAX_DEPTH}-level depth cap was reached`
       );
     }
@@ -445,7 +445,7 @@ function snapshotNode(
         break;
       }
       const child = childrenInput[index];
-      if (typeof child === "string") {
+      if (typeof child === 'string') {
         if (!consumeNodeBudget(snapshot)) break;
         children.push(child);
         continue;
@@ -467,7 +467,7 @@ function filterRowColProps(
   if (!props) return out;
   for (const [key, allowed] of Object.entries(ROW_COL_PROP_ENUMS)) {
     const value = props[key];
-    if (typeof value === "string" && allowed.includes(value)) out[key] = value;
+    if (typeof value === 'string' && allowed.includes(value)) out[key] = value;
   }
   return out;
 }
@@ -505,7 +505,7 @@ function filterMappedProps(
 }
 
 function containsInteractive(node: ResolvedNode): boolean {
-  if (node.kind === "text") return false;
+  if (node.kind === 'text') return false;
   return node.interactive || node.children.some(containsInteractive);
 }
 
@@ -514,11 +514,11 @@ function resolveChild(
   ctx: ResolveContext,
   path: string
 ): ResolvedNode | null {
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     return {
       nodeKey: `path:${path}`,
       nodePath: path,
-      kind: "text",
+      kind: 'text',
       text: value,
     };
   }
@@ -533,7 +533,7 @@ function resolveNode(
   const authoredId = node.id;
   const nodeKey = authoredId ? `id:${authoredId}` : `path:${path}`;
 
-  let kind: ResolvedElement["kind"];
+  let kind: ResolvedElement['kind'];
   let tag: string | undefined;
   let interactive = false;
   let props: Record<string, unknown>;
@@ -541,14 +541,14 @@ function resolveNode(
   let bindings: Array<{ prop: string; path: string; event?: string }> = [];
   let slots: readonly string[] = [];
 
-  if (node.type === "row" || node.type === "col") {
-    kind = node.type === "row" ? "builtin-row" : "builtin-col";
+  if (node.type === 'row' || node.type === 'col') {
+    kind = node.type === 'row' ? 'builtin-row' : 'builtin-col';
     props = filterRowColProps(node.props);
-  } else if (node.type === "text") {
-    kind = "builtin-text";
-    const resolved = resolveValue(node.props?.["value"], ctx);
+  } else if (node.type === 'text') {
+    kind = 'builtin-text';
+    const resolved = resolveValue(node.props?.['value'], ctx);
     props =
-      typeof resolved.value === "string" || typeof resolved.value === "number"
+      typeof resolved.value === 'string' || typeof resolved.value === 'number'
         ? { value: String(resolved.value) }
         : {};
     if (resolved.path) {
@@ -556,11 +556,11 @@ function resolveNode(
         warnOnce(
           ctx,
           `__required-id__:${path}`,
-          "rejected bound text without a stable id"
+          'rejected bound text without a stable id'
         );
-        throw new TypeError("A bound widget node requires a stable id.");
+        throw new TypeError('A bound widget node requires a stable id.');
       }
-      bindings = [{ prop: "value", path: resolved.path }];
+      bindings = [{ prop: 'value', path: resolved.path }];
     }
   } else {
     const def = definitionFor(node.type, ctx.registry);
@@ -572,9 +572,9 @@ function resolveNode(
       );
       return null;
     }
-    kind = "mapped";
+    kind = 'mapped';
     tag = def.tag;
-    interactive = def.interaction === "control";
+    interactive = def.interaction === 'control';
     const filtered = filterMappedProps(node.props, def, ctx, node.type);
     props = filtered.props;
     bindings = filtered.bindings;
@@ -588,7 +588,7 @@ function resolveNode(
         `rejected stateful or actionable type "${node.type}" without a stable id`
       );
       throw new TypeError(
-        "A stateful or actionable widget node requires a stable id."
+        'A stateful or actionable widget node requires a stable id.'
       );
     }
   }
@@ -645,7 +645,7 @@ function hasDuplicateAuthoredIds(
     const node = pending.pop()!;
     if (node.id) counts.set(node.id, (counts.get(node.id) ?? 0) + 1);
     for (const child of node.children ?? []) {
-      if (typeof child !== "string") pending.push(child);
+      if (typeof child !== 'string') pending.push(child);
     }
   }
   let duplicate = false;
@@ -670,7 +670,7 @@ export function resolveTree(
   if (root == null) return null;
   if (!isWidgetTypeRegistry(ctx.registry)) {
     throw new TypeError(
-      "A widget renderer registry must be created with createWidgetTypeRegistry()."
+      'A widget renderer registry must be created with createWidgetTypeRegistry().'
     );
   }
   const snapshot = snapshotNode(root, 0, {
@@ -680,5 +680,5 @@ export function resolveTree(
   });
   if (snapshot === INVALID || snapshot === null) return null;
   if (hasDuplicateAuthoredIds(snapshot, ctx)) return null;
-  return resolveNode(snapshot, ctx, "0");
+  return resolveNode(snapshot, ctx, '0');
 }

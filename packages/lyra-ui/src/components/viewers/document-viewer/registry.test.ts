@@ -278,16 +278,47 @@ describe('LyraDocumentRendererPayload adapters', () => {
       tracks: [],
     });
 
-    const adapted = adaptDocumentRenderer(definition, PDF_FILE, supplied);
+    const file = {
+      ...PDF_FILE,
+      highlights: [
+        { id: '', anchor: { kind: 'page' as const, page: 1 } },
+        { id: ' finding ', label: 'First', anchor: { kind: 'page' as const, page: 2 } },
+        { id: 'finding', label: 'Later', anchor: { kind: 'page' as const, page: 3 } },
+      ],
+    };
+    const adapted = adaptDocumentRenderer(definition, file, supplied);
     expect(adapted.render()).to.equal('report.pdf');
-    expect(received).to.equal(PDF_FILE);
+    expect(received).not.to.equal(file);
+    expect(received?.highlights?.map((highlight) => highlight.id)).to.deep.equal(['finding']);
+    expect(received?.highlights?.[0]?.label).to.equal('First');
     expect(adapted.capabilities).to.equal(undefined);
   });
 
+  it('normalizes payload-file highlight identities before adaptation', () => {
+    const payload = snapshotLyraDocumentRendererPayload({
+      kind: 'document',
+      file: {
+        ...PDF_FILE,
+        highlights: [
+          { id: '', anchor: { kind: 'page', page: 1 } },
+          { id: ' finding ', label: 'First', anchor: { kind: 'page', page: 2 } },
+          { id: 'finding', label: 'Later', anchor: { kind: 'page', page: 3 } },
+        ],
+      },
+    });
+
+    expect(payload.file.highlights?.map((highlight) => highlight.id)).to.deep.equal(['finding']);
+    expect(payload.file.highlights?.[0]?.label).to.equal('First');
+  });
+
   it('snapshots adapter callbacks and freezes the factory-created adapter', () => {
+    let receivedFile: DocumentFile | undefined;
     const authoring = {
       kind: 'document' as const,
-      adapt: (file: DocumentFile) => ({ kind: 'document' as const, file }),
+      adapt: (file: DocumentFile) => {
+        receivedFile = file;
+        return { kind: 'document' as const, file };
+      },
       capabilities: () => ({ search: false }),
       render: (payload: import('./registry.js').LyraGenericDocumentRendererPayload) => payload.file.name,
     };
@@ -295,7 +326,16 @@ describe('LyraDocumentRendererPayload adapters', () => {
     authoring.render = () => 'mutated callback';
 
     expect(Object.isFrozen(adapter)).to.equal(true);
-    expect(adaptDocumentRenderer({ adapter }, PDF_FILE).render()).to.equal('report.pdf');
+    const rawFile: DocumentFile = {
+      ...PDF_FILE,
+      highlights: [
+        { id: ' finding ', anchor: { kind: 'page', page: 2 } },
+        { id: 'finding', anchor: { kind: 'page', page: 3 } },
+      ],
+    };
+    expect(adaptDocumentRenderer({ adapter }, rawFile).render()).to.equal('report.pdf');
+    expect(receivedFile).not.to.equal(rawFile);
+    expect(receivedFile?.highlights?.map((highlight) => highlight.id)).to.deep.equal(['finding']);
   });
 
   it('derives AV capabilities only from the retained adapter payload', () => {

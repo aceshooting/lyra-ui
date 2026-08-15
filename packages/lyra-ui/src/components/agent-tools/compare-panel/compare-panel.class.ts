@@ -53,7 +53,7 @@ export interface LyraComparePanelEventMap {
  * @since 4.0.0
  */
 export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["allowedVotes"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['allowedVotes']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

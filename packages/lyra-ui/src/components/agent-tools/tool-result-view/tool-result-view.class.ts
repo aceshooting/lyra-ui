@@ -83,10 +83,10 @@ export interface LyraToolResultViewEventMap {
  */
 export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze([
-    "registry",
+    'registry',
   ]);
   protected static override readonly identityCollectionProperties =
-    Object.freeze(["registry"]);
+    Object.freeze(['registry']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

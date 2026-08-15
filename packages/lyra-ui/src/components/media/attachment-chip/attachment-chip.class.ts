@@ -248,6 +248,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   }
 
   /** Stable domain identity carried by attachment action events. */
+  /** Stable action identity. Empty or whitespace-only values use the documented fallback. */
   @property({ attribute: 'attachment-id' }) attachmentId = '';
 
   /** MIME type, used only while `file` is unset. */
@@ -364,7 +365,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   }
 
   private get resolvedId(): string {
-    if (this.attachmentId) return this.attachmentId;
+    if (this.attachmentId.trim().length > 0) return this.attachmentId;
     if (this.file)
       return `${this.file.name}:${this.file.size}:${this.file.lastModified}`;
     return this.fallbackId;
@@ -572,7 +573,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
           part="meta"
           ?hidden=${this.compact &&
           this.thumbnailOnly &&
-          this.effectiveMimeType.startsWith("image/")}
+          this.effectiveMimeType.startsWith('image/')}
         >
           <span part="name" title=${name || untitledLabel}>${displayName}</span>
           <span part="size" ?hidden=${!sizeText}>${sizeText || nothing}</span>
@@ -597,7 +598,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
               `
             : html`<span part="spinner" aria-hidden="true"></span>`
           : nothing}
-        ${status === "error"
+        ${status === 'error'
           ? html`<button
               part="retry-button"
               type="button"
@@ -612,10 +613,10 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
               part="preview-button"
               type="button"
               aria-label=${name
-                ? this.localize("attachmentPreviewName", undefined, {
+                ? this.localize('attachmentPreviewName', undefined, {
                     name: displayName,
                   })
-                : this.localize("attachmentPreviewFile")}
+                : this.localize('attachmentPreviewFile')}
               @click=${this.onPreviewClick}
             >
               ${expandIcon()}

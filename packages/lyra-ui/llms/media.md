@@ -970,7 +970,8 @@ or overlay, so the host composes the desired preview surface.
 - `bytes?: number` — file size in bytes, used only while `file` is unset. `0` is a known empty file
   and renders `0 B`; omission means unknown. Negative/non-finite writes normalize to omission.
 - `attachmentId: string = ''` (attribute `attachment-id`) — stable domain identity carried by
-  attachment action events. The platform `id` remains available for DOM identity/idrefs only.
+  attachment action events. Empty or whitespace-only values use the fallback identity below. The
+  platform `id` remains available for DOM identity/idrefs only.
 - `mimeType: string = ''` (attribute `mime-type`) — used only while `file` is unset
 - `thumbnailSrc: string = ''` (attribute `thumbnail-src`) — thumbnail image URL, used only while
   `file` is unset; rendered whenever present regardless of `mimeType` (no `file`-derived equivalent
@@ -1011,8 +1012,8 @@ discovers at runtime. A leftover `size="245000"` is an unknown attribute now: `b
 and the `size` part renders nothing.
 
 The component identifies _which_ attachment an action event is about through `attachmentId`. Set
-`attachment-id="..."` when you have a stable server-side identity; when unset and `file` is set, a
-stable attachment id is
+`attachment-id="..."` when you have a stable server-side identity; when unset or whitespace-only
+and `file` is set, a stable attachment id is
 derived from `` `${file.name}:${file.size}:${file.lastModified}` ``; when neither is available, a
 generated internal id is used as a last resort.
 

@@ -649,10 +649,10 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     if (!this._parts.day || !this._parts.month || !this._parts.year) return '';
     const iso = `${this._parts.year.padStart(
       4,
-      "0"
-    )}-${this._parts.month.padStart(2, "0")}-${this._parts.day.padStart(
+      '0'
+    )}-${this._parts.month.padStart(2, '0')}-${this._parts.day.padStart(
       2,
-      "0"
+      '0'
     )}`;
     return parseISO(iso) ? iso : '';
   }
@@ -1069,9 +1069,9 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
           maxlength=${maxLength}
           autocomplete=${this.autocompleteFor(field) || nothing}
           aria-describedby=${describedBy || nothing}
-          aria-invalid=${invalid ? "true" : "false"}
-          aria-required=${this.required ? "true" : "false"}
-          aria-readonly=${this.readonly ? "true" : "false"}
+          aria-invalid=${invalid ? 'true' : 'false'}
+          aria-required=${this.required ? 'true' : 'false'}
+          aria-readonly=${this.readonly ? 'true' : 'false'}
           .value=${this.textFor(field)}
           ?required=${this.required}
           ?disabled=${this.effectiveDisabled}

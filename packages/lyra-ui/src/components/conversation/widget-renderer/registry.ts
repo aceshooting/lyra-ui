@@ -1,8 +1,8 @@
 /** A primitive property type accepted from an authored widget document. */
-export type LyraWidgetPropType = "string" | "number" | "boolean";
+export type LyraWidgetPropType = 'string' | 'number' | 'boolean';
 
 /** Semantic interaction classification, independent of event and binding plumbing. */
-export type LyraWidgetInteraction = "none" | "control";
+export type LyraWidgetInteraction = 'none' | 'control';
 
 /** One allowlisted mapped widget type. Structural `text`/`row`/`col` nodes are not registered. */
 export interface LyraWidgetTypeDefinition {
@@ -23,7 +23,7 @@ export interface LyraWidgetTypeDefinition {
 }
 
 const WIDGET_TYPE_REGISTRY_BRAND: unique symbol = Symbol(
-  "LyraWidgetTypeRegistry"
+  'LyraWidgetTypeRegistry'
 );
 
 /** Immutable type-keyed registry snapshot accepted by each `<lr-widget-renderer>` instance. */
@@ -34,33 +34,33 @@ export interface LyraWidgetTypeRegistry
 
 const CUSTOM_ELEMENT_NAME = /^[a-z][.0-9_a-z]*-[\-.0-9_a-z]*$/;
 const RESERVED_CUSTOM_ELEMENT_NAMES = new Set([
-  "annotation-xml",
-  "color-profile",
-  "font-face",
-  "font-face-format",
-  "font-face-name",
-  "font-face-src",
-  "font-face-uri",
-  "missing-glyph",
+  'annotation-xml',
+  'color-profile',
+  'font-face',
+  'font-face-format',
+  'font-face-name',
+  'font-face-src',
+  'font-face-uri',
+  'missing-glyph',
 ]);
 const SAFE_PROPERTY_NAME = /^[A-Za-z_$][\w$]*$/;
 const FORBIDDEN_PROPERTIES = new Set([
-  "__proto__",
-  "constructor",
-  "innerHTML",
-  "outerHTML",
-  "prototype",
+  '__proto__',
+  'constructor',
+  'innerHTML',
+  'outerHTML',
+  'prototype',
 ]);
-const STRUCTURAL_WIDGET_TYPES = new Set(["col", "row", "text"]);
+const STRUCTURAL_WIDGET_TYPES = new Set(['col', 'row', 'text']);
 
 function registryTypeKey(value: unknown): string {
   if (
-    typeof value !== "string" ||
+    typeof value !== 'string' ||
     value.length === 0 ||
     value !== value.trim()
   ) {
     throw new TypeError(
-      "A widget type key must be a nonempty string without surrounding whitespace."
+      'A widget type key must be a nonempty string without surrounding whitespace.'
     );
   }
   if (STRUCTURAL_WIDGET_TYPES.has(value)) {
@@ -73,7 +73,7 @@ function registryTypeKey(value: unknown): string {
 
 function eventName(value: unknown, label: string): string {
   if (
-    typeof value !== "string" ||
+    typeof value !== 'string' ||
     value.length === 0 ||
     value !== value.trim()
   ) {
@@ -86,7 +86,7 @@ function propertyName(value: string): string {
   if (
     !SAFE_PROPERTY_NAME.test(value) ||
     FORBIDDEN_PROPERTIES.has(value) ||
-    value.toLowerCase().startsWith("on")
+    value.toLowerCase().startsWith('on')
   ) {
     throw new TypeError(
       `Widget property "${value}" is not a safe assignable property name.`
@@ -99,13 +99,13 @@ function freezeProps(
   value: unknown
 ): Readonly<Record<string, LyraWidgetPropType>> | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new TypeError("A widget props allowlist must be an object.");
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('A widget props allowlist must be an object.');
   }
   const out: Record<string, LyraWidgetPropType> = {};
   for (const [key, type] of Object.entries(value)) {
     propertyName(key);
-    if (type !== "string" && type !== "number" && type !== "boolean") {
+    if (type !== 'string' && type !== 'number' && type !== 'boolean') {
       throw new TypeError(
         `Widget property "${key}" has an invalid primitive type.`
       );
@@ -119,8 +119,8 @@ function freezeForcedProps(
   value: unknown
 ): Readonly<Record<string, unknown>> | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new TypeError("Widget forcedProps must be an object.");
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('Widget forcedProps must be an object.');
   }
   const out: Record<string, unknown> = {};
   for (const [key, forced] of Object.entries(value)) {
@@ -135,8 +135,8 @@ function freezeBindings(
   props: Readonly<Record<string, LyraWidgetPropType>> | undefined
 ): Readonly<Record<string, Readonly<{ event: string }>>> | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new TypeError("Widget bindings must be an object.");
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('Widget bindings must be an object.');
   }
   const out: Record<string, Readonly<{ event: string }>> = {};
   for (const [key, binding] of Object.entries(value)) {
@@ -147,7 +147,7 @@ function freezeBindings(
       );
     }
     if (
-      typeof binding !== "object" ||
+      typeof binding !== 'object' ||
       binding === null ||
       Array.isArray(binding)
     ) {
@@ -167,32 +167,32 @@ function freezeBindings(
 function validateWidgetTypeDefinition(
   value: unknown
 ): Readonly<LyraWidgetTypeDefinition> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new TypeError("A widget type definition must be an object.");
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('A widget type definition must be an object.');
   }
   const candidate = value as Partial<LyraWidgetTypeDefinition>;
   if (
-    typeof candidate.tag !== "string" ||
+    typeof candidate.tag !== 'string' ||
     !CUSTOM_ELEMENT_NAME.test(candidate.tag) ||
     RESERVED_CUSTOM_ELEMENT_NAMES.has(candidate.tag)
   ) {
     throw new TypeError(
-      "A widget type definition requires a valid custom-element tag."
+      'A widget type definition requires a valid custom-element tag.'
     );
   }
   const props = freezeProps(candidate.props);
   const forcedProps = freezeForcedProps(candidate.forcedProps);
   const interaction = candidate.interaction;
-  if (interaction !== "none" && interaction !== "control") {
+  if (interaction !== 'none' && interaction !== 'control') {
     throw new TypeError(
       "Widget interaction must be either 'none' or 'control'."
     );
   }
   const action = candidate.action
-    ? Object.freeze({ event: eventName(candidate.action.event, "action") })
+    ? Object.freeze({ event: eventName(candidate.action.event, 'action') })
     : undefined;
   const bindings = freezeBindings(candidate.bindings, props);
-  if ((action || bindings) && interaction !== "control") {
+  if ((action || bindings) && interaction !== 'control') {
     throw new TypeError(
       "A widget definition with actions or bindings must declare interaction: 'control'."
     );
@@ -200,13 +200,13 @@ function validateWidgetTypeDefinition(
   let slots: readonly string[] | undefined;
   if (candidate.slots !== undefined) {
     if (!Array.isArray(candidate.slots)) {
-      throw new TypeError("Widget slots must be an array.");
+      throw new TypeError('Widget slots must be an array.');
     }
     const unique = new Set<string>();
     for (const slot of candidate.slots) {
-      if (typeof slot !== "string" || !slot || slot !== slot.trim()) {
+      if (typeof slot !== 'string' || !slot || slot !== slot.trim()) {
         throw new TypeError(
-          "Widget slot names must be nonempty strings without surrounding whitespace."
+          'Widget slot names must be nonempty strings without surrounding whitespace.'
         );
       }
       if (unique.has(slot)) {
@@ -289,7 +289,7 @@ export function isWidgetTypeRegistry(
 ): value is LyraWidgetTypeRegistry {
   return Boolean(
     value &&
-      typeof value === "object" &&
+      typeof value === 'object' &&
       (value as Partial<LyraWidgetTypeRegistry>)[WIDGET_TYPE_REGISTRY_BRAND] ===
         true
   );

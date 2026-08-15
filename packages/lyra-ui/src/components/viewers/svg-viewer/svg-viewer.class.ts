@@ -83,8 +83,9 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * or structural equality of its `rect` (and optional `page`) -- `scrollToAnchor()`/a declarative
  * `anchor` assignment scrolls the matching `[part="region-highlight"]` into view and fires
  * `lr-anchor-result`. No other anchor kind resolves here -- a sanitized SVG document has neither
- * pages nor extractable text to quote. At most 100 valid region highlights are painted after
- * inspecting 1,000 candidates; `activeHighlightId` is inspected first and retained inside the cap.
+ * pages nor extractable text to quote. At most 100 valid region highlights are painted from a
+ * 1,000-entry candidate window; `activeHighlightId` is retained from anywhere in the bounded host
+ * snapshot and placed first inside both paint ceilings.
  *
  * @customElement lr-svg-viewer
  * @event lr-render-error - Fired when fetching or sanitizing the document fails.

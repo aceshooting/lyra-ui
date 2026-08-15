@@ -1,4 +1,4 @@
-import { css } from "lit";
+import { css } from 'lit';
 
 // Deliberately minimal -- most visual weight comes from whatever the
 // registered renderer's own template contributes; this wrapper only needs to

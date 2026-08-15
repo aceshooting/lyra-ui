@@ -77,8 +77,9 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  * @event lr-render-error - Fired for terminal fetch/open/render failures. Recoverable post-load
  *   slide/node/search failures use `lr-viewer-diagnostic` without also posing as terminal errors.
  * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change - Fired whenever search state
- *   changes. At most 10,000 valid matches are retained; when more exist, `matchCount` is 10,000
- *   and `matchCountExact` is false. Bubbling, composed, and non-cancelable.
+ *   changes. Search accepts at most 4,096 query code units, validates at most 4,000,000 result code
+ *   units, and retains at most 10,000 valid matches; `matchCountExact=false` identifies a
+ *   ceiling-truncated lower bound. Bubbling, composed, and non-cancelable.
  * @event {CustomEvent<AnchorResultDetail>} lr-anchor-result - Fired after an `anchor` assignment or
  *   `scrollToAnchor()` call is applied. `detail: { found: boolean }`. Bubbling, composed, and
  *   non-cancelable.
@@ -145,8 +146,9 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   @property({ attribute: 'max-height' }) maxHeight = '';
   /**
    * Searches the renderer's complete presentation model, including slides that windowed rendering
-   * has not mounted. Returns at most 10,000 retained results and navigation uses renderer-owned node
-   * overlays; `lr-search-change.detail.matchCountExact=false` identifies the return as a lower bound.
+   * has not mounted. Queries are capped at 4,096 code units, peer output validation at 4,000,000
+   * code units, and retained results at 10,000. Navigation uses renderer-owned node overlays;
+   * `lr-search-change.detail.matchCountExact=false` identifies a ceiling-truncated lower bound.
    */
   override async search(query: string): Promise<number> {
     const generation = ++this.pptxSearchGeneration;

@@ -182,6 +182,9 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-stage-chunk-action',
+  ]);
 
   /** The pipeline's stages, in any order -- the internal timeline sorts them by `startMs`. */
   @property({ attribute: false }) stages: readonly RetrievalStage[] = [];
@@ -283,13 +286,13 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
               event: CustomEvent<{
                 id: string;
                 sourceId: string;
-                anchor?: NonNullable<LyraChunk["anchor"]>;
+                anchor?: NonNullable<LyraChunk['anchor']>;
               }>
             ) => {
               event.stopPropagation();
-              this.emit("lr-stage-chunk-action", {
+              this.emit('lr-stage-chunk-action', {
                 stageId: stage.id,
-                action: "open",
+                action: 'open',
                 ...event.detail,
               });
             }}
@@ -297,9 +300,9 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
               event: CustomEvent<{ id: string; expanded: boolean }>
             ) => {
               event.stopPropagation();
-              this.emit("lr-stage-chunk-action", {
+              this.emit('lr-stage-chunk-action', {
                 stageId: stage.id,
-                action: "expand",
+                action: 'expand',
                 ...event.detail,
               });
             }}
@@ -357,7 +360,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
         <button
           part="evidence-toggle"
           type="button"
-          aria-expanded=${expanded ? "true" : "false"}
+          aria-expanded=${expanded ? 'true' : 'false'}
           aria-controls=${bodyId}
           @click=${() => this.toggleEvidence(stage.id)}
         >
@@ -365,7 +368,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
             >${chevronIcon()}</span
           >
           <span
-            >${this.localize("retrievalTraceEvidenceToggle", undefined, {
+            >${this.localize('retrievalTraceEvidenceToggle', undefined, {
               label,
             })}</span
           >

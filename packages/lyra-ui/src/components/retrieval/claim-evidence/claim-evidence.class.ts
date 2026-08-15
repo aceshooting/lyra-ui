@@ -1,40 +1,40 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
-import { html, nothing, type TemplateResult } from "lit";
-import { property } from "lit/decorators.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { html, nothing, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
 import type {
   Citation,
   CitationSelectEventDetail,
   GroundedClaim,
   GroundedClaimStatus,
-} from "../../../ai/types.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { finiteRange } from "../../../internal/numbers.js";
-import type { LyraFrame } from "../../../internal/variants.js";
-import type { BadgeVariant } from "../../overlays/badge/badge.class.js";
-import "../../overlays/badge/badge.class.js";
-import "../../overlays/empty/empty.class.js";
-import "../citation-badge/citation-badge.class.js";
-import { styles } from "./claim-evidence.styles.js";
+} from '../../../ai/types.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteRange } from '../../../internal/numbers.js';
+import type { LyraFrame } from '../../../internal/variants.js';
+import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
+import '../../overlays/badge/badge.class.js';
+import '../../overlays/empty/empty.class.js';
+import '../citation-badge/citation-badge.class.js';
+import { styles } from './claim-evidence.styles.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
-} from "../retrieval-semantic-owner.js";
+} from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraClaimEvidenceEventMap {
-  "lr-claim-select": CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
-  "lr-citation-select": CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
+  'lr-claim-select': CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
+  'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
 }
 
 const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
-  supported: "success",
-  "partially-supported": "warning",
-  unsupported: "danger",
-  contradicted: "danger",
+  supported: 'success',
+  'partially-supported': 'warning',
+  unsupported: 'danger',
+  contradicted: 'danger',
 };
 
 /**
@@ -67,7 +67,7 @@ const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
  * @since 7.0.0
  */
 export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["claims", "citations"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['claims', 'citations']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -92,16 +92,20 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-claim-select',
+    'lr-citation-select',
+  ]);
 
   /** Grounded claims rendered as the selectable evidence index. */
   @property({ attribute: false }) claims: readonly GroundedClaim[] = [];
   /** Citation records resolved by each claim's citation indexes. */
   @property({ attribute: false }) citations: readonly Citation[] = [];
   /** Controlled id of the claim whose evidence is expanded. */
-  @property({ attribute: "selected-claim-id" }) selectedClaimId = "";
+  @property({ attribute: 'selected-claim-id' }) selectedClaimId = '';
   /** Fallback name for the claim-and-evidence region. A non-empty host `aria-label` makes the host
    *  the sole overall owner; an explicitly empty host label stays empty on the region. */
-  @property() label = "";
+  @property() label = '';
   /** Tighter claim-trigger padding and column gap, for dense evidence lists -- same convention as
    *  `lr-source-card`'s/`lr-entity-card`'s `compact`. Defaults to `false`, i.e. the full
    *  claim-trigger padding. Purely a density knob: each claim's border and background stay, so use
@@ -112,26 +116,26 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
    *  every `[part~="claim"]` row, so claims nested inside an already-bordered container (e.g. a
    *  wider audit panel) don't double the frame. `plain` wins over `compact` when both are set
    *  (nothing left to tighten). */
-  @property({ reflect: true }) frame: LyraFrame = "card";
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   private statusLabel(status: GroundedClaimStatus): string {
     switch (status) {
-      case "supported":
-        return this.localize("claimEvidenceSupported");
-      case "partially-supported":
-        return this.localize("claimEvidencePartiallySupported");
-      case "unsupported":
-        return this.localize("claimEvidenceUnsupported");
-      case "contradicted":
-        return this.localize("claimEvidenceContradicted");
+      case 'supported':
+        return this.localize('claimEvidenceSupported');
+      case 'partially-supported':
+        return this.localize('claimEvidencePartiallySupported');
+      case 'unsupported':
+        return this.localize('claimEvidenceUnsupported');
+      case 'contradicted':
+        return this.localize('claimEvidenceContradicted');
     }
   }
 
   private confidenceLabel(value: number): string {
     const percent = getNumberFormat(this.effectiveLocale, {
-      style: "percent",
+      style: 'percent',
     }).format(finiteRange(value, 0, 0, 1));
-    return this.localize("claimEvidenceConfidence", undefined, { percent });
+    return this.localize('claimEvidenceConfidence', undefined, { percent });
   }
 
   private resolvedCitations(claim: GroundedClaim): Citation[] {
@@ -142,20 +146,20 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   private renderClaim = (claim: GroundedClaim): TemplateResult => {
     const selected = claim.id === this.selectedClaimId;
     const citations = this.resolvedCitations(claim);
-    const claimPart = selected ? "claim claim-selected" : "claim";
+    const claimPart = selected ? 'claim claim-selected' : 'claim';
     return html`
-      <li part=${claimPart} aria-current=${selected ? "true" : "false"}>
+      <li part=${claimPart} aria-current=${selected ? 'true' : 'false'}>
         <button
           part="claim-trigger"
           type="button"
-          aria-pressed=${selected ? "true" : "false"}
-          @click=${() => this.emit("lr-claim-select", { claim })}
+          aria-pressed=${selected ? 'true' : 'false'}
+          @click=${() => this.emit('lr-claim-select', { claim })}
         >
           <lr-badge part="status" variant=${STATUS_VARIANT[claim.status]}>
             ${this.statusLabel(claim.status)}
           </lr-badge>
           <span part="claim-text">${claim.text}</span>
-          ${typeof claim.confidence === "number"
+          ${typeof claim.confidence === 'number'
             ? html`<span part="confidence"
                 >${this.confidenceLabel(claim.confidence)}</span
               >`
@@ -171,11 +175,11 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
                   (citation) => html`
                     <lr-citation-badge
                       .index=${this.citations.indexOf(citation) + 1}
-                      .sourceId=${citation.sourceId ?? ""}
-                      .label=${citation.label ?? ""}
+                      .sourceId=${citation.sourceId ?? ''}
+                      .label=${citation.label ?? ''}
                       @lr-citation-activate=${(event: Event) => {
                         event.stopPropagation();
-                        this.emit("lr-citation-select", { citation });
+                        this.emit('lr-citation-select', { citation });
                       }}
                     ></lr-citation-badge>
                     ${citation.quote ? html`<q>${citation.quote}</q>` : nothing}
@@ -191,9 +195,9 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   override render(): TemplateResult {
     const label = retrievalSemanticLabel(
       this,
-      this.label || this.localize("claimEvidenceLabel")
+      this.label || this.localize('claimEvidenceLabel')
     );
-    const role = retrievalSemanticRole(this, "region");
+    const role = retrievalSemanticRole(this, 'region');
     return html`
       <section
         part="base"
@@ -206,7 +210,7 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
             </ol>`
           : html`<lr-empty
               part="empty"
-              heading=${this.localize("claimEvidenceEmpty")}
+              heading=${this.localize('claimEvidenceEmpty')}
             ></lr-empty>`}
       </section>
     `;
@@ -215,6 +219,6 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-claim-evidence": LyraClaimEvidence;
+    'lr-claim-evidence': LyraClaimEvidence;
   }
 }

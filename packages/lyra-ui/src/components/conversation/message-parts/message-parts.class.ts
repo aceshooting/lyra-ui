@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -95,7 +95,7 @@ export interface LyraMessagePartsEventMap
  * @since 7.0.0
  */
 export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["parts"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['parts']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -110,6 +110,10 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-citation-select',
+    'lr-part-retry',
+  ]);
 
   /** Ordered message content. */
   @property({ attribute: false }) parts: readonly MessagePart[] = [];

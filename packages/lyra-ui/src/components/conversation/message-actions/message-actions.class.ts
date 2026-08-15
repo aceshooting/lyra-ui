@@ -151,6 +151,9 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-feedback-submit',
+  ]);
 
   /** Which built-ins render, in display order. Duplicate names normalize first-wins. */
   @property({ attribute: false }) controls: readonly MessageActionControl[] = [];
@@ -615,7 +618,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
         return html`<button
           part="regenerate-button"
           type="button"
-          aria-label=${this.localize("regenerateResponse")}
+          aria-label=${this.localize('regenerateResponse')}
           @click=${this.onRegenerateClick}
         >
           ${regenerateIcon()}
@@ -624,7 +627,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
         return html`<button
           part="edit-button"
           type="button"
-          aria-label=${this.localize("editMessage")}
+          aria-label=${this.localize('editMessage')}
           @click=${this.onEditClick}
         >
           ${editIcon()}

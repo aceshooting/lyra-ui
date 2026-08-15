@@ -175,13 +175,13 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       noAccessor: true,
     },
     appearance: { reflect: true,
-      converter: declaredDefaultConverter<RadioAppearance>("default"),
+      converter: declaredDefaultConverter<RadioAppearance>('default'),
     },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
     pill: { type: Boolean, reflect: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
-    size: { reflect: true, converter: declaredDefaultConverter<LyraSize>("m") },
+    size: { reflect: true, converter: declaredDefaultConverter<LyraSize>('m') },
     value: { reflect: true, noAccessor: true },
   };
 

@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -232,6 +232,9 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-annotation-create',
+  ]);
 
   /** Image URL; validated with `safeMediaSrc` before it ever reaches the `<img>`. */
   @property() src = '';

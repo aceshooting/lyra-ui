@@ -1109,7 +1109,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
       return html`<span
         part="day-placeholder"
         role="gridcell"
-        aria-hidden=${rowHasVisibleDay ? "true" : nothing}
+        aria-hidden=${rowHasVisibleDay ? 'true' : nothing}
       ></span>`;
     }
     const { from, to } = selection;
@@ -1178,12 +1178,12 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const iso = formatISO(date);
 
     return html`<button
-      part=${parts.join(" ")}
+      part=${parts.join(' ')}
       role="gridcell"
       data-date=${iso}
-      aria-selected=${selected ? "true" : "false"}
+      aria-selected=${selected ? 'true' : 'false'}
       aria-label=${dayLabelFmt.format(date)}
-      tabindex=${focused ? "0" : "-1"}
+      tabindex=${focused ? '0' : '-1'}
       ?disabled=${disabled}
       @click=${() => this.selectDate(date)}
       @focus=${() => this.onDayFocus(date)}
@@ -1236,8 +1236,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
                   part="previous"
                   type="button"
                   aria-label=${this.localize(
-                    "previousMonth",
-                    this.previousLabel === "Previous month"
+                    'previousMonth',
+                    this.previousLabel === 'Previous month'
                       ? undefined
                       : this.previousLabel
                   )}
@@ -1265,8 +1265,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
                   part="next"
                   type="button"
                   aria-label=${this.localize(
-                    "nextMonth",
-                    this.nextLabel === "Next month" ? undefined : this.nextLabel
+                    'nextMonth',
+                    this.nextLabel === 'Next month' ? undefined : this.nextLabel
                   )}
                   ?disabled=${this.disabled || this.readonly}
                   @click=${() => this.nav(1)}
@@ -1389,13 +1389,13 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     return html`<div
       part="view-cell"
       role="gridcell"
-      aria-selected=${isSelected ? "true" : "false"}
+      aria-selected=${isSelected ? 'true' : 'false'}
     >
       <button
-        part=${parts.join(" ")}
+        part=${parts.join(' ')}
         type="button"
         data-view-start=${formatISO(start)}
-        tabindex=${focused && !disabled ? "0" : "-1"}
+        tabindex=${focused && !disabled ? '0' : '-1'}
         ?disabled=${disabled}
         @click=${() => this.pickViewItem(start)}
         @focus=${() => this.onViewItemFocus(start)}
@@ -1492,8 +1492,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
               part="previous"
               type="button"
               aria-label=${this.localize(
-                "previousMonth",
-                this.previousLabel === "Previous month"
+                'previousMonth',
+                this.previousLabel === 'Previous month'
                   ? undefined
                   : this.previousLabel
               )}
@@ -1509,7 +1509,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
               type="button"
               ?disabled=${this.disabled ||
               this.readonly ||
-              this.effectiveView === "decades"}
+              this.effectiveView === 'decades'}
               @click=${this.advanceView}
             >
               <span part="month-label">${title}</span>
@@ -1518,8 +1518,8 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
               part="next"
               type="button"
               aria-label=${this.localize(
-                "nextMonth",
-                this.nextLabel === "Next month" ? undefined : this.nextLabel
+                'nextMonth',
+                this.nextLabel === 'Next month' ? undefined : this.nextLabel
               )}
               ?disabled=${this.disabled || this.readonly}
               @click=${() => this.navView(1)}
@@ -1603,7 +1603,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     }
     return html`<div part="base date-picker">
       <div>
-        ${this.effectiveView === "days"
+        ${this.effectiveView === 'days'
           ? html`<div part="months">${monthEls}</div>`
           : this.renderView(today)}
         <div part="footer"><slot name="footer"></slot></div>

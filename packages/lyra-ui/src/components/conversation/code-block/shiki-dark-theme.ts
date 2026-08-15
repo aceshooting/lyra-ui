@@ -1,4 +1,4 @@
-import { getScratchCtx } from "../../../internal/canvas.js";
+import { getScratchCtx } from '../../../internal/canvas.js';
 
 function parseRgbTriplet(value: string): [number, number, number] | null {
   const match = value.match(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/);
@@ -12,9 +12,9 @@ function parseHexTriplet(value: string): [number, number, number] | null {
   const full =
     hex.length === 3
       ? hex
-          .split("")
+          .split('')
           .map((c) => c + c)
-          .join("")
+          .join('')
       : hex;
   const num = Number.parseInt(full, 16);
   return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
@@ -45,10 +45,10 @@ function toRgb(
   // serialization happens to equal either sentinel. Reading an actual pixel then lets the browser
   // convert modern color spaces (oklch/lab/color(display-p3 ...)) to the canvas' sRGB backing store
   // instead of assuming the fillStyle getter will serialize them as rgb().
-  ctx.fillStyle = "rgb(1, 2, 3)";
+  ctx.fillStyle = 'rgb(1, 2, 3)';
   ctx.fillStyle = trimmed;
   const first = ctx.fillStyle;
-  ctx.fillStyle = "rgb(4, 5, 6)";
+  ctx.fillStyle = 'rgb(4, 5, 6)';
   ctx.fillStyle = trimmed;
   if (ctx.fillStyle !== first) return null;
   ctx.clearRect(0, 0, 1, 1);
@@ -72,23 +72,23 @@ function relativeLuminance([r, g, b]: [number, number, number]): number {
  *  `--lr-color-text`/`--lr-color-surface` custom properties every other themed surface reads. */
 export function resolveIsDarkTheme(host: Element): boolean {
   const view = host.ownerDocument.defaultView;
-  if (!view || typeof view.getComputedStyle !== "function") return false;
-  const probe = host.ownerDocument.createElement("span");
-  probe.setAttribute("aria-hidden", "true");
+  if (!view || typeof view.getComputedStyle !== 'function') return false;
+  const probe = host.ownerDocument.createElement('span');
+  probe.setAttribute('aria-hidden', 'true');
   // Set the detached probe's declaration as markup rather than mutating CSSStyleDeclaration.
   // ThemeWatcher instruments live CSSOM setters as invalidation signals; using one from inside
   // the resolver would recursively invalidate the very watcher that called us.
   probe.setAttribute(
-    "style",
+    'style',
     [
-      "position:fixed",
-      "inline-size:0",
-      "block-size:0",
-      "overflow:hidden",
-      "pointer-events:none",
-      "color:var(--lr-color-text)",
-      "background-color:var(--lr-color-surface)",
-    ].join(";")
+      'position:fixed',
+      'inline-size:0',
+      'block-size:0',
+      'overflow:hidden',
+      'pointer-events:none',
+      'color:var(--lr-color-text)',
+      'background-color:var(--lr-color-surface)',
+    ].join(';')
   );
   try {
     const root = host.shadowRoot ?? host;
@@ -126,15 +126,15 @@ export function watchDarkTheme(
   };
   let colorSchemeQuery: MediaQueryList | undefined;
   try {
-    colorSchemeQuery = view.matchMedia?.("(prefers-color-scheme: dark)");
-    colorSchemeQuery?.addEventListener("change", update);
+    colorSchemeQuery = view.matchMedia?.('(prefers-color-scheme: dark)');
+    colorSchemeQuery?.addEventListener('change', update);
   } catch {
     colorSchemeQuery = undefined;
   }
 
   let observer: MutationObserver | undefined;
   const Observer = view.MutationObserver;
-  if (typeof Observer === "function") {
+  if (typeof Observer === 'function') {
     const targets: Element[] = [host];
     let parent = host.parentElement;
     while (parent) {
@@ -147,10 +147,10 @@ export function watchDarkTheme(
         observer.observe(target, {
           attributes: true,
           attributeFilter: [
-            "class",
-            "style",
-            "data-theme",
-            "data-color-scheme",
+            'class',
+            'style',
+            'data-theme',
+            'data-color-scheme',
           ],
         });
       }
@@ -163,7 +163,7 @@ export function watchDarkTheme(
   return () => {
     if (!active) return;
     active = false;
-    colorSchemeQuery?.removeEventListener("change", update);
+    colorSchemeQuery?.removeEventListener('change', update);
     observer?.disconnect();
   };
 }

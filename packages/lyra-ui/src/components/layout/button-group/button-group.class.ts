@@ -1,7 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
-import { declaredDefaultConverter } from "../../../internal/converters.js";
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './button-group.styles.js';
 
@@ -24,7 +24,7 @@ export class LyraButtonGroup extends LyraElement {
   static override styles = [LyraElement.styles, styles];
 
   @property({ reflect: true,
-    converter: declaredDefaultConverter<ButtonGroupOrientation>("horizontal"),
+    converter: declaredDefaultConverter<ButtonGroupOrientation>('horizontal'),
   }) orientation: ButtonGroupOrientation = 'horizontal';
   /** Accessible group-name fallback when the host `aria-label` is absent. */
   @property() label = '';

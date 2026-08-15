@@ -1,4 +1,11 @@
-import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import {
+  aTimeout,
+  expect,
+  fixture,
+  html,
+  oneEvent,
+  waitUntil,
+} from '@open-wc/testing';
 import './dataset-viewer.js';
 import type { LyraDatasetViewer } from './dataset-viewer.js';
 import { findDocumentRenderer } from '../document-viewer/registry.js';
@@ -6,19 +13,36 @@ import { styles } from './dataset-viewer.styles.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 
 const TAB_DATA = 'name\tage\tcity\nAda\t30\tLondon\nGrace\t85\tArlington';
-const GRID_DATASET = 'name,role\nAda,Mathematician\nGrace,Scientist\nAda,Programmer';
-function response(body: string): Response { return { ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve(body) } as Response; }
-function fetchText(value: string): () => void { const original = window.fetch; window.fetch = (() => Promise.resolve(response(value))) as typeof window.fetch; return () => { window.fetch = original; }; }
+const GRID_DATASET =
+  'name,role\nAda,Mathematician\nGrace,Scientist\nAda,Programmer';
+function response(body: string): Response {
+  return {
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    text: () => Promise.resolve(body),
+  } as Response;
+}
+function fetchText(value: string): () => void {
+  const original = window.fetch;
+  window.fetch = (() =>
+    Promise.resolve(response(value))) as typeof window.fetch;
+  return () => {
+    window.fetch = original;
+  };
+}
 /** Shrinks `DocumentAnchorTarget`'s retry loop so a permanently-unresolvable `scrollToAnchor()` call
  *  resolves in milliseconds instead of waiting out the real 5s default timeout. */
 function shrinkAnchorRetry(el: LyraDatasetViewer): void {
   (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
-  (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+  (
+    el as unknown as { anchorRetryIntervalMs: number }
+  ).anchorRetryIntervalMs = 5;
 }
 
 async function assertScrollFrameFollowsAdoption(
   el: HTMLElement & { updateComplete: Promise<unknown> },
-  scrollColumnIntoView: () => Promise<void>,
+  scrollColumnIntoView: () => Promise<void>
 ): Promise<void> {
   const frame = document.createElement('iframe');
   document.body.append(frame);
@@ -46,14 +70,20 @@ async function assertScrollFrameFollowsAdoption(
   let topMotionQueries = 0;
   let frameMotionQueries = 0;
 
-  const target = { scrollIntoView: (options: ScrollIntoViewOptions) => {
-    if (options.behavior) scrollBehaviors.push(options.behavior);
-  } };
+  const target = {
+    scrollIntoView: (options: ScrollIntoViewOptions) => {
+      if (options.behavior) scrollBehaviors.push(options.behavior);
+    },
+  };
   const row = { querySelectorAll: () => [target, target] };
-  const list = { updateComplete: Promise.resolve(), shadowRoot: { querySelector: () => row } };
-  renderRoot.querySelector = ((selector: string) => (
-    selector.startsWith('lr-virtual-list') ? list : originalQuerySelector(selector)
-  )) as typeof renderRoot.querySelector;
+  const list = {
+    updateComplete: Promise.resolve(),
+    shadowRoot: { querySelector: () => row },
+  };
+  renderRoot.querySelector = ((selector: string) =>
+    selector.startsWith('lr-virtual-list')
+      ? list
+      : originalQuerySelector(selector)) as typeof renderRoot.querySelector;
   window.matchMedia = (() => {
     topMotionQueries++;
     return { matches: false } as MediaQueryList;
@@ -73,13 +103,16 @@ async function assertScrollFrameFollowsAdoption(
     cancelled.push(handle);
     queued.delete(handle);
   }) as typeof window.cancelAnimationFrame;
-  frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback): number => {
+  frameWindow.requestAnimationFrame = ((
+    callback: FrameRequestCallback
+  ): number => {
     frameRequests++;
     const handle = ++nextHandle;
     queueMicrotask(() => callback(0));
     return handle;
   }) as typeof frameWindow.requestAnimationFrame;
-  frameWindow.cancelAnimationFrame = (() => {}) as typeof frameWindow.cancelAnimationFrame;
+  frameWindow.cancelAnimationFrame =
+    (() => {}) as typeof frameWindow.cancelAnimationFrame;
 
   try {
     const staleScroll = scrollColumnIntoView();
@@ -114,35 +147,66 @@ async function assertScrollFrameFollowsAdoption(
     frameWindow.cancelAnimationFrame = originalFrameCancel;
     window.matchMedia = originalMatchMedia;
     frameWindow.matchMedia = originalFrameMatchMedia;
-    renderRoot.querySelector = originalQuerySelector as typeof renderRoot.querySelector;
+    renderRoot.querySelector =
+      originalQuerySelector as typeof renderRoot.querySelector;
     frame.remove();
   }
 }
 
 describe('lr-dataset-viewer', () => {
   it('renders an empty localized state by default', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
-    expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No dataset to display.');
+    const el = (await fixture(
+      html`<lr-dataset-viewer></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
+    expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal(
+      'No dataset to display.'
+    );
   });
   it('auto-detects tab-separated data and renders an accessible table', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer name="Data"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(
+      html`<lr-dataset-viewer name="Data"></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);
     try {
       el.src = 'https://example.test/a.tsv';
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="table"]') !== null
+      );
       await el.updateComplete;
-      expect(Array.from(el.shadowRoot!.querySelectorAll('[part="header-cell"]')).map((th) => th.textContent)).to.deep.equal(['name', 'age', 'city']);
-      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('Data: 2 rows');
-      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-rowcount')).to.equal('3');
-    } finally { restore(); }
+      expect(
+        Array.from(el.shadowRoot!.querySelectorAll('[part="header-cell"]')).map(
+          (th) => th.textContent
+        )
+      ).to.deep.equal(['name', 'age', 'city']);
+      expect(
+        el
+          .shadowRoot!.querySelector('[part="table"]')!
+          .getAttribute('aria-label')
+      ).to.equal('Data: 2 rows');
+      expect(
+        el
+          .shadowRoot!.querySelector('[part="table"]')!
+          .getAttribute('aria-rowcount')
+      ).to.equal('3');
+    } finally {
+      restore();
+    }
   });
   it('preserves pipe delimiters and quoted newlines through the bounded record parser', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
-    const restore = fetchText('name|notes\nAda|"first | clause\nsecond clause"\nGrace|plain');
+    const el = (await fixture(
+      html`<lr-dataset-viewer></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
+    const restore = fetchText(
+      'name|notes\nAda|"first | clause\nsecond clause"\nGrace|plain'
+    );
     try {
       el.src = 'https://example.test/a.psv';
-      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
-      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
+      );
+      const list = el.shadowRoot!.querySelector(
+        'lr-virtual-list'
+      ) as HTMLElement & {
         items: Record<string, string>[];
       };
       expect(list.items).to.deep.equal([
@@ -154,33 +218,58 @@ describe('lr-dataset-viewer', () => {
     }
   });
   it('falls back to the count-only caption when name is unset', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(
+      html`<lr-dataset-viewer></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);
     try {
       el.src = 'https://example.test/a.tsv';
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('2 rows');
-    } finally { restore(); }
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="table"]') !== null
+      );
+      expect(
+        el
+          .shadowRoot!.querySelector('[part="table"]')!
+          .getAttribute('aria-label')
+      ).to.equal('2 rows');
+    } finally {
+      restore();
+    }
   });
   it('renders a neutral empty-note, not assertively-announced error chrome, for a well-formed file with no rows', async () => {
     // Regression test: a delimited-text file that parses fine but has zero data rows (or zero
     // columns) used to throw the same LyraUserFacingError funneled through the generic catch
     // block into `case 'error'` -- assertive announcement and error-styled chrome for a state that isn't
     // actually a failure (matching <lr-calendar-viewer>'s identical zero-events handling).
-    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(
+      html`<lr-dataset-viewer></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
     let renderErrors = 0;
-    el.addEventListener('lr-render-error', () => { renderErrors++; });
+    el.addEventListener('lr-render-error', () => {
+      renderErrors++;
+    });
     const restore = fetchText('name\tage\tcity');
     try {
       el.src = 'https://example.test/empty.tsv';
-      await waitUntil(() => el.shadowRoot!.querySelector('.empty-note')?.textContent === 'This dataset has no rows.');
-      expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('This dataset has no rows.');
-      expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.be.true;
+      await waitUntil(
+        () =>
+          el.shadowRoot!.querySelector('.empty-note')?.textContent ===
+          'This dataset has no rows.'
+      );
+      expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal(
+        'This dataset has no rows.'
+      );
+      expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.be
+        .true;
       expect(renderErrors).to.equal(0);
-    } finally { restore(); }
+    } finally {
+      restore();
+    }
   });
   it('emits parser diagnostics while retaining the recoverable partial table', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(
+      html`<lr-dataset-viewer></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
     const diagnostics: unknown[] = [];
     el.addEventListener('lr-render-error', (event) => {
       diagnostics.push((event as CustomEvent<{ error: unknown }>).detail.error);
@@ -189,16 +278,28 @@ describe('lr-dataset-viewer', () => {
     try {
       el.src = 'https://example.test/malformed.tsv';
       await waitUntil(() => diagnostics.length === 1);
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="table"]') !== null
+      );
 
-      const codes = (diagnostics[0] as Array<{ code?: string }>).map((error) => error.code);
+      const codes = (diagnostics[0] as Array<{ code?: string }>).map(
+        (error) => error.code
+      );
       expect(codes).to.include('TooManyFields');
-      expect(el.shadowRoot!.querySelectorAll('[part="table"]').length).to.equal(1);
-      expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
-    } finally { restore(); }
+      expect(el.shadowRoot!.querySelectorAll('[part="table"]').length).to.equal(
+        1
+      );
+      expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(
+        0
+      );
+    } finally {
+      restore();
+    }
   });
   it('emits malformed header diagnostics consumed by PapaParse header mode', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(
+      html`<lr-dataset-viewer></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
     const diagnostics: unknown[] = [];
     el.addEventListener('lr-render-error', (event) => {
       diagnostics.push((event as CustomEvent<{ error: unknown }>).detail.error);
@@ -207,50 +308,91 @@ describe('lr-dataset-viewer', () => {
     try {
       el.src = 'https://example.test/malformed-header.csv';
       await waitUntil(() => diagnostics.length === 1);
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="table"]') !== null
+      );
 
-      const codes = (diagnostics[0] as Array<{ code?: string }>).map((error) => error.code);
+      const codes = (diagnostics[0] as Array<{ code?: string }>).map(
+        (error) => error.code
+      );
       expect(codes).to.include('InvalidQuotes');
-      expect(el.shadowRoot!.querySelectorAll('[part="table"]')).to.have.lengthOf(1);
-      expect(el.shadowRoot!.querySelectorAll('[part="error"]')).to.have.lengthOf(0);
-    } finally { restore(); }
+      expect(
+        el.shadowRoot!.querySelectorAll('[part="table"]')
+      ).to.have.lengthOf(1);
+      expect(
+        el.shadowRoot!.querySelectorAll('[part="error"]')
+      ).to.have.lengthOf(0);
+    } finally {
+      restore();
+    }
   });
   it('leaves a host aria-label on the host while retaining a purpose-specific table caption', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer aria-label="Team roster"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(
+      html`<lr-dataset-viewer aria-label="Team roster"></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);
     try {
       el.src = 'https://example.test/a.tsv';
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="table"]') !== null
+      );
       const base = el.shadowRoot!.querySelector('[part="base"]')!;
       expect(base.getAttribute('role')).to.be.null;
       expect(base.getAttribute('aria-label')).to.be.null;
-      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('2 rows');
-    } finally { restore(); }
+      expect(
+        el
+          .shadowRoot!.querySelector('[part="table"]')!
+          .getAttribute('aria-label')
+      ).to.equal('2 rows');
+    } finally {
+      restore();
+    }
   });
   it('does not reuse an explicit host aria-label as the named table caption', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer name="Data" aria-label="Team roster"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(
+      html`<lr-dataset-viewer
+        name="Data"
+        aria-label="Team roster"
+      ></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);
     try {
       el.src = 'https://example.test/a.tsv';
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('Data: 2 rows');
-    } finally { restore(); }
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="table"]') !== null
+      );
+      expect(
+        el
+          .shadowRoot!.querySelector('[part="table"]')!
+          .getAttribute('aria-label')
+      ).to.equal('Data: 2 rows');
+    } finally {
+      restore();
+    }
   });
   it('preserves an explicitly empty host aria-label ahead of the name-derived caption', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer name="Data" aria-label=""></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(
+      html`<lr-dataset-viewer name="Data" aria-label=""></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);
     try {
       el.src = 'https://example.test/a.tsv';
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="table"]') !== null
+      );
       const base = el.shadowRoot!.querySelector('[part="base"]')!;
       const table = el.shadowRoot!.querySelector('[part="table"]')!;
       expect(base.hasAttribute('aria-label')).to.be.true;
       expect(base.getAttribute('aria-label')).to.equal('');
       expect(table.getAttribute('aria-label')).to.equal('Data: 2 rows');
-    } finally { restore(); }
+    } finally {
+      restore();
+    }
   });
   it('names a persistent region landmark on [part="base"] in every fetch state, not only once loaded', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer name="Quarterly sales"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(
+      html`<lr-dataset-viewer name="Quarterly sales"></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
     const base = () => el.shadowRoot!.querySelector('[part="base"]')!;
 
     // idle -- before any src is set. A screen-reader user navigating by landmark previously found
@@ -265,98 +407,184 @@ describe('lr-dataset-viewer', () => {
       // loading
       expect(base().getAttribute('role')).to.equal('region');
       expect(base().getAttribute('aria-label')).to.equal('Quarterly sales');
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="table"]') !== null
+      );
       // loaded -- the outer region keeps the plain display name while the inner table keeps its
       // richer row-count caption; the two are not mutually exclusive.
       expect(base().getAttribute('role')).to.equal('region');
       expect(base().getAttribute('aria-label')).to.equal('Quarterly sales');
-      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.contain('2');
-    } finally { restore(); }
+      expect(
+        el
+          .shadowRoot!.querySelector('[part="table"]')!
+          .getAttribute('aria-label')
+      ).to.contain('2');
+    } finally {
+      restore();
+    }
   });
 
   it('keeps a non-empty host name on the host across fetch states', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer name="Data" aria-label="Team roster"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(
+      html`<lr-dataset-viewer
+        name="Data"
+        aria-label="Team roster"
+      ></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
     const base = () => el.shadowRoot!.querySelector('[part="base"]')!;
     expect(base().getAttribute('aria-label')).to.be.null;
     expect(base().getAttribute('role')).to.be.null;
 
     const restore = fetchText('not,a\nvalid');
     try {
-      window.fetch = (() => Promise.reject(new Error('boom'))) as typeof window.fetch;
+      window.fetch = (() =>
+        Promise.reject(new Error('boom'))) as typeof window.fetch;
       el.src = 'https://example.test/a.tsv';
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="error"]') !== null
+      );
       // error state
       expect(base().getAttribute('role')).to.be.null;
       expect(base().getAttribute('aria-label')).to.be.null;
-    } finally { restore(); }
+    } finally {
+      restore();
+    }
   });
 
   it('adds no unnamed region when neither name nor a host aria-label is set', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(
+      html`<lr-dataset-viewer></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
     expect(base.hasAttribute('role')).to.equal(false);
     expect(base.hasAttribute('aria-label')).to.equal(false);
   });
 
   it('localizes the interpolated row count', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer lang="ar"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(
+      html`<lr-dataset-viewer lang="ar"></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);
     try {
       el.src = 'https://example.test/a.tsv';
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.contain(new Intl.NumberFormat('ar').format(2));
-    } finally { restore(); }
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="table"]') !== null
+      );
+      expect(
+        el
+          .shadowRoot!.querySelector('[part="table"]')!
+          .getAttribute('aria-label')
+      ).to.contain(new Intl.NumberFormat('ar').format(2));
+    } finally {
+      restore();
+    }
   });
   it('supports a .strings override for the empty-state message', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer .strings=${{ documentPreviewEmpty: 'Aucun {type} à afficher.', documentPreviewTypeDataset: 'jeu de données' }}></lr-dataset-viewer>`)) as LyraDatasetViewer;
-    expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('Aucun jeu de données à afficher.');
+    const el = (await fixture(
+      html`<lr-dataset-viewer
+        .strings=${{
+          documentPreviewEmpty: 'Aucun {type} à afficher.',
+          documentPreviewTypeDataset: 'jeu de données',
+        }}
+      ></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
+    expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal(
+      'Aucun jeu de données à afficher.'
+    );
   });
   it('rejects unsafe URLs and emits exactly one render error', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(
+      html`<lr-dataset-viewer></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
     let count = 0;
-    el.addEventListener('lr-render-error', () => { count++; });
+    el.addEventListener('lr-render-error', () => {
+      count++;
+    });
     const event = oneEvent(el, 'lr-render-error');
     el.src = 'javascript:alert(1)';
     await event;
     await aTimeout(0);
-    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document URL is not allowed.');
-    expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length).to.equal(0);
+    expect(
+      el.shadowRoot!.querySelector('[part="error"]')!.textContent
+    ).to.equal('Document URL is not allowed.');
+    expect(
+      el.shadowRoot!.querySelectorAll(
+        '[role="alert"], [role="status"], [aria-live]'
+      ).length
+    ).to.equal(0);
     expect(count).to.equal(1);
   });
   it('registers tsv/psv/dat but not csv or unrelated files', () => {
-    expect(findDocumentRenderer({ name: 'a.tsv', mimeType: 'application/octet-stream', src: 'x' })).to.exist;
-    expect(findDocumentRenderer({ name: 'a.csv', mimeType: 'text/csv', src: 'x' })).to.not.exist;
+    expect(
+      findDocumentRenderer({
+        name: 'a.tsv',
+        mimeType: 'application/octet-stream',
+        src: 'x',
+      })
+    ).to.exist;
+    expect(
+      findDocumentRenderer({ name: 'a.csv', mimeType: 'text/csv', src: 'x' })
+    ).to.not.exist;
   });
   it('reloads an already-loaded source after reconnecting', async () => {
     const original = window.fetch;
     let calls = 0;
-    window.fetch = (() => { calls++; return Promise.resolve(response(TAB_DATA)); }) as typeof window.fetch;
+    window.fetch = (() => {
+      calls++;
+      return Promise.resolve(response(TAB_DATA));
+    }) as typeof window.fetch;
     try {
-      const el = (await fixture(html`<lr-dataset-viewer src="https://example.test/a.tsv"></lr-dataset-viewer>`)) as LyraDatasetViewer;
-      await waitUntil(() => calls === 1 && el.shadowRoot!.querySelector('[part="table"]') !== null);
+      const el = (await fixture(
+        html`<lr-dataset-viewer
+          src="https://example.test/a.tsv"
+        ></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
+      await waitUntil(
+        () =>
+          calls === 1 && el.shadowRoot!.querySelector('[part="table"]') !== null
+      );
       const parent = el.parentElement!;
       el.remove();
       parent.append(el);
       await waitUntil(() => calls === 2);
-    } finally { window.fetch = original; }
+    } finally {
+      window.fetch = original;
+    }
   });
-  it('is accessible', async () => { const el = await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`); await expect(el).to.be.accessible(); });
+  it('is accessible', async () => {
+    const el = await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`);
+    await expect(el).to.be.accessible();
+  });
 
   describe('virtualized table structure', () => {
     it('maps to role=table / role=row / role=rowgroup with correct rowcount/rowindex', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
         const table = el.shadowRoot!.querySelector('[part="table"]')!;
         expect(table.getAttribute('role')).to.equal('table');
         expect(table.getAttribute('aria-rowcount')).to.equal('4'); // 3 data rows + header
         expect(table.getAttribute('aria-colcount')).to.equal('2');
-        expect(el.shadowRoot!.querySelector('[part="header-row"]')!.getAttribute('role')).to.equal('row');
-        expect(el.shadowRoot!.querySelector('[part="header-row"]')!.getAttribute('aria-rowindex')).to.equal('1');
+        expect(
+          el
+            .shadowRoot!.querySelector('[part="header-row"]')!
+            .getAttribute('role')
+        ).to.equal('row');
+        expect(
+          el
+            .shadowRoot!.querySelector('[part="header-row"]')!
+            .getAttribute('aria-rowindex')
+        ).to.equal('1');
         const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-        expect(list.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('rowgroup');
+        expect(
+          list.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')
+        ).to.equal('rowgroup');
         await aTimeout(0);
         const firstRow = list.shadowRoot!.querySelector('[part="row"]')!;
         expect(firstRow.getAttribute('role')).to.equal('row');
@@ -367,11 +595,15 @@ describe('lr-dataset-viewer', () => {
     });
 
     it('is accessible on the mapped table/rowgroup/row tree', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
         await expect(el).to.be.accessible();
       } finally {
         restore();
@@ -383,17 +615,29 @@ describe('lr-dataset-viewer', () => {
       // `cell-highlight-action` buttons only render once `highlights` resolve against a loaded
       // grid — no highlight-free axe run can see them. Assert the highlight actually rendered
       // (inside the nested virtual-list shadow root, which axe also traverses) before running axe.
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.highlights = [
-          { id: 'h1', anchor: { kind: 'cell-range', range: 'A2:B2' }, label: 'First data row' },
+          {
+            id: 'h1',
+            anchor: { kind: 'cell-range', range: 'A2:B2' },
+            label: 'First data row',
+          },
         ];
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
         const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-        await waitUntil(() => list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null);
-        expect(list.shadowRoot!.querySelector('[part="cell-highlight-action"]')).to.exist;
+        await waitUntil(
+          () =>
+            list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null
+        );
+        expect(list.shadowRoot!.querySelector('[part="cell-highlight-action"]'))
+          .to.exist;
         await expect(el).to.be.accessible();
       } finally {
         restore();
@@ -412,18 +656,39 @@ describe('lr-dataset-viewer', () => {
         lr-dataset-viewer::part(cell-highlight-action) { padding-block-start: 7px; }
       `;
       document.head.append(style);
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
-        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' }, label: 'First data row' }];
+        el.highlights = [
+          {
+            id: 'h1',
+            anchor: { kind: 'cell-range', range: 'A2' },
+            label: 'First data row',
+          },
+        ];
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
         const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-        await waitUntil(() => list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null);
-        const dataRow = list.shadowRoot!.querySelector('[part="data-row"]') as HTMLElement;
-        const plain = list.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
-        const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement;
-        const action = list.shadowRoot!.querySelector('[part="cell-highlight-action"]') as HTMLElement;
+        await waitUntil(
+          () =>
+            list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null
+        );
+        const dataRow = list.shadowRoot!.querySelector(
+          '[part="data-row"]'
+        ) as HTMLElement;
+        const plain = list.shadowRoot!.querySelector(
+          '[part="cell"]'
+        ) as HTMLElement;
+        const highlighted = list.shadowRoot!.querySelector(
+          '[part~="cell-highlight"]'
+        ) as HTMLElement;
+        const action = list.shadowRoot!.querySelector(
+          '[part="cell-highlight-action"]'
+        ) as HTMLElement;
         expect(getComputedStyle(dataRow).opacity).to.equal('0.75');
         expect(getComputedStyle(plain).paddingBlockStart).to.equal('3px');
         expect(getComputedStyle(highlighted).paddingBlockStart).to.equal('5px');
@@ -435,31 +700,54 @@ describe('lr-dataset-viewer', () => {
     });
 
     it('renders files above the old 1,000-row cap up to the shared 10k default', async () => {
-      const bigRows = Array.from({ length: 5000 }, (_unused, i) => `row${i},value${i}`).join('\n');
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const bigRows = Array.from(
+        { length: 5000 },
+        (_unused, i) => `row${i},value${i}`
+      ).join('\n');
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(`name,val\n${bigRows}`);
       try {
         el.src = 'https://example.test/big.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-        expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
-        expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-rowcount')).to.equal('5001');
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
+        expect(el.shadowRoot!.querySelector('[part="error"]') == null).to.be
+          .true;
+        expect(
+          el
+            .shadowRoot!.querySelector('[part="table"]')!
+            .getAttribute('aria-rowcount')
+        ).to.equal('5001');
       } finally {
         restore();
       }
     });
 
     it('still errors above 10,000 rows', async () => {
-      const bigRows = Array.from({ length: 10001 }, (_unused, i) => `row${i},value${i}`).join('\n');
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const bigRows = Array.from(
+        { length: 10001 },
+        (_unused, i) => `row${i},value${i}`
+      ).join('\n');
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(`name,val\n${bigRows}`);
       try {
         const errorEvent = oneEvent(el, 'lr-render-error');
         el.src = 'https://example.test/toobig.tsv';
-        const event = await errorEvent as CustomEvent<{ error: unknown }>;
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+        const event = (await errorEvent) as CustomEvent<{ error: unknown }>;
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="error"]') !== null
+        );
         expect(event.detail.error instanceof LyraResourceLimitError).to.be.true;
-        expect(el.shadowRoot!.querySelectorAll('[part="error"]')).to.have.lengthOf(1);
-        expect(el.shadowRoot!.querySelectorAll('[part="table"]')).to.have.lengthOf(0);
+        expect(
+          el.shadowRoot!.querySelectorAll('[part="error"]')
+        ).to.have.lengthOf(1);
+        expect(
+          el.shadowRoot!.querySelectorAll('[part="table"]')
+        ).to.have.lengthOf(0);
       } finally {
         restore();
       }
@@ -468,37 +756,55 @@ describe('lr-dataset-viewer', () => {
 
   describe('cell-range anchor-target and search', () => {
     it('resolves a cell-range anchor addressing the raw grid (header included)', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'A2' })).to.be.true;
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'A2' })).to
+          .be.true;
       } finally {
         restore();
       }
     });
 
     it('scrolls a header-row anchor with the same reduced-motion-gated behavior as every other row', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       const originalMatchMedia = window.matchMedia;
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null);
-        const cell = el.shadowRoot!.querySelector('[part="header-row"]')!
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="header-row"]') !== null
+        );
+        const cell = el
+          .shadowRoot!.querySelector('[part="header-row"]')!
           .querySelectorAll('[part~="header-cell"]')[1] as HTMLElement;
         const behaviors: (ScrollBehavior | undefined)[] = [];
-        cell.scrollIntoView = ((options?: ScrollIntoViewOptions) => { behaviors.push(options?.behavior); }) as HTMLElement['scrollIntoView'];
+        cell.scrollIntoView = ((options?: ScrollIntoViewOptions) => {
+          behaviors.push(options?.behavior);
+        }) as HTMLElement['scrollIntoView'];
 
-        window.matchMedia = (() => ({ matches: false }) as MediaQueryList) as typeof window.matchMedia;
-        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B1' })).to.equal(true);
+        window.matchMedia = (() =>
+          ({ matches: false } as MediaQueryList)) as typeof window.matchMedia;
+        expect(
+          await el.scrollToAnchor({ kind: 'cell-range', range: 'B1' })
+        ).to.equal(true);
         // <lr-csv-viewer>'s structurally identical header branch already does this, as does this
         // component's own scrollColumnIntoView() for every non-header row.
         expect(behaviors).to.deep.equal(['smooth']);
 
-        window.matchMedia = (() => ({ matches: true }) as MediaQueryList) as typeof window.matchMedia;
-        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B1' })).to.equal(true);
+        window.matchMedia = (() =>
+          ({ matches: true } as MediaQueryList)) as typeof window.matchMedia;
+        expect(
+          await el.scrollToAnchor({ kind: 'cell-range', range: 'B1' })
+        ).to.equal(true);
         expect(behaviors).to.deep.equal(['smooth', 'auto']);
       } finally {
         window.matchMedia = originalMatchMedia;
@@ -507,15 +813,21 @@ describe('lr-dataset-viewer', () => {
     });
 
     it('reports a failed jump when a concurrent src reassignment lands during the scroll wait', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
+        );
         // One attempt only: the mixin's retry loop would otherwise re-resolve against the newly
         // loaded document, which is correct behavior but hides this call's own result.
         (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 0;
-        (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 0;
+        (
+          el as unknown as { anchorRetryIntervalMs: number }
+        ).anchorRetryIntervalMs = 0;
 
         // Reassign `src` through the real public setter from inside the await that jumpToCell is
         // already suspended on -- exactly the citation/file-tab click that lands mid-jump.
@@ -535,73 +847,131 @@ describe('lr-dataset-viewer', () => {
           },
         });
 
-        const found = await el.scrollToAnchor({ kind: 'cell-range', range: 'A2' });
-        expect(swapped, 'the reassignment really landed inside the jump').to.equal(true);
-        expect(found, 'a jump whose document was replaced mid-flight is not a success').to.equal(false);
-      } finally { restore(); }
+        const found = await el.scrollToAnchor({
+          kind: 'cell-range',
+          range: 'A2',
+        });
+        expect(
+          swapped,
+          'the reassignment really landed inside the jump'
+        ).to.equal(true);
+        expect(
+          found,
+          'a jump whose document was replaced mid-flight is not a success'
+        ).to.equal(false);
+      } finally {
+        restore();
+      }
     });
 
     it('resolves an anchor and highlight in the header row, deduplicating repeated public ids', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B1' })).to.be.true;
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B1' })).to
+          .be.true;
         el.highlights = [
-          { id: 'duplicate', anchor: { kind: 'cell-range', range: 'A1' }, label: 'First' },
-          { id: 'duplicate', anchor: { kind: 'cell-range', range: 'B1' }, label: 'Ignored duplicate' },
+          {
+            id: 'duplicate',
+            anchor: { kind: 'cell-range', range: 'A1' },
+            label: 'First',
+          },
+          {
+            id: 'duplicate',
+            anchor: { kind: 'cell-range', range: 'B1' },
+            label: 'Ignored duplicate',
+          },
         ];
         await el.updateComplete;
         const header = el.shadowRoot!.querySelector('[part="header-row"]')!;
-        expect(header.querySelectorAll('[part~="cell-highlight"]')).to.have.lengthOf(1);
+        expect(
+          header.querySelectorAll('[part~="cell-highlight"]')
+        ).to.have.lengthOf(1);
         const highlighted = header.querySelector('[part~="cell-highlight"]')!;
         expect(highlighted.getAttribute('role')).to.equal('columnheader');
-        const action = highlighted.querySelector('[part="cell-highlight-action"]') as HTMLElement;
+        const action = highlighted.querySelector(
+          '[part="cell-highlight-action"]'
+        ) as HTMLElement;
         expect(action !== null).to.be.true;
         expect(getComputedStyle(highlighted).outlineStyle).to.equal('solid');
         expect(getComputedStyle(action).minBlockSize).to.equal('40px');
-      } finally { restore(); }
+      } finally {
+        restore();
+      }
     });
 
     it('resolves false for an anchor with a sheet set', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       shrinkAnchorRetry(el);
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-        expect(await el.scrollToAnchor({ kind: 'cell-range', sheet: 'Sheet1', range: 'A1' })).to.be.false;
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
+        expect(
+          await el.scrollToAnchor({
+            kind: 'cell-range',
+            sheet: 'Sheet1',
+            range: 'A1',
+          })
+        ).to.be.false;
       } finally {
         restore();
       }
     });
 
     it('truthfully rejects rows and columns outside the parsed grid', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       shrinkAnchorRetry(el);
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'A999' })).to.be.false;
-        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'K2' })).to.be.false;
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'A999' }))
+          .to.be.false;
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'K2' })).to
+          .be.false;
       } finally {
         restore();
       }
     });
 
     it('scrolls the addressed body column horizontally into view', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part="data-row"]') != null);
+        await waitUntil(
+          () =>
+            el
+              .shadowRoot!.querySelector('lr-virtual-list')
+              ?.shadowRoot?.querySelector('[part="data-row"]') != null
+        );
         const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-        const target = list.shadowRoot!.querySelector('[part="data-row"]')!.querySelectorAll('[part~="cell"]')[1] as HTMLElement;
+        const target = list
+          .shadowRoot!.querySelector('[part="data-row"]')!
+          .querySelectorAll('[part~="cell"]')[1] as HTMLElement;
         let scrolled = false;
-        target.scrollIntoView = () => { scrolled = true; };
-        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B2' })).to.be.true;
+        target.scrollIntoView = () => {
+          scrolled = true;
+        };
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B2' })).to
+          .be.true;
         expect(scrolled).to.be.true;
       } finally {
         restore();
@@ -609,20 +979,29 @@ describe('lr-dataset-viewer', () => {
     });
 
     it('cancels a stale scroll frame in its source realm and uses the current realm after iframe adoption', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
-      const scrollColumnIntoView = (): Promise<void> => (
-        el as unknown as { scrollColumnIntoView: (col: number) => Promise<void> }
-      ).scrollColumnIntoView(1);
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
+      const scrollColumnIntoView = (): Promise<void> =>
+        (
+          el as unknown as {
+            scrollColumnIntoView: (col: number) => Promise<void>;
+          }
+        ).scrollColumnIntoView(1);
 
       await assertScrollFrameFollowsAdoption(el, scrollColumnIntoView);
     });
 
     it('finds search matches ordered row -> column', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
         expect(await el.search('ada')).to.equal(2);
       } finally {
         restore();
@@ -630,7 +1009,9 @@ describe('lr-dataset-viewer', () => {
     });
 
     it('caps retained search matches before allocating an unbounded result list', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       (el as unknown as { fetchState: unknown }).fetchState = {
         kind: 'loaded',
         table: {
@@ -639,53 +1020,89 @@ describe('lr-dataset-viewer', () => {
         },
       };
       await el.updateComplete;
-      let cappedDetail: { matchCount: number; matchCountExact: boolean } | undefined;
-      el.addEventListener('lr-search-change', (event) => { cappedDetail = event.detail; });
+      let cappedDetail:
+        | { matchCount: number; matchCountExact: boolean }
+        | undefined;
+      el.addEventListener('lr-search-change', (event) => {
+        cappedDetail = event.detail;
+      });
       expect(await el.search('hit')).to.equal(1_000);
-      expect((el as unknown as { searchMatches: unknown[] }).searchMatches).to.have.lengthOf(1_000);
-      expect(cappedDetail).to.deep.include({ matchCount: 1_000, matchCountExact: false });
+      expect(
+        (el as unknown as { searchMatches: unknown[] }).searchMatches
+      ).to.have.lengthOf(1_000);
+      expect(cappedDetail).to.deep.include({
+        matchCount: 1_000,
+        matchCountExact: false,
+      });
 
       (el as unknown as { fetchState: unknown }).fetchState = {
         kind: 'loaded',
-        table: { fields: ['value'], rows: Array.from({ length: 1_000 }, () => ({ value: 'hit' })) },
+        table: {
+          fields: ['value'],
+          rows: Array.from({ length: 1_000 }, () => ({ value: 'hit' })),
+        },
       };
       expect(await el.search('hit')).to.equal(1_000);
-      expect(cappedDetail).to.deep.include({ matchCount: 1_000, matchCountExact: true });
+      expect(cappedDetail).to.deep.include({
+        matchCount: 1_000,
+        matchCountExact: true,
+      });
     });
 
     it('searches header fields and case-folds with the effective locale', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer lang="tr"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer lang="tr"></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText('İSTANBUL,role\nAnkara,capital');
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
         expect(await el.search('istanbul')).to.equal(1);
-      } finally { restore(); }
+      } finally {
+        restore();
+      }
     });
 
     it('recomputes an active search when the host language changes', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer lang="en"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer lang="en"></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText('City\nİSTANBUL\nistanbul');
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
         expect(await el.search('istanbul')).to.equal(1);
         el.lang = 'tr';
         await el.updateComplete;
         await aTimeout(0);
-        expect((el as unknown as { searchMatches: unknown[] }).searchMatches).to.have.lengthOf(2);
-      } finally { restore(); }
+        expect(
+          (el as unknown as { searchMatches: unknown[] }).searchMatches
+        ).to.have.lengthOf(2);
+      } finally {
+        restore();
+      }
     });
 
     it('searchNext/searchPrevious wrap, and clearSearch resets to 0/-1', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
         await el.search('ada');
         let detail: { matchCount: number; activeIndex: number } | undefined;
-        el.addEventListener('lr-search-change', (e) => (detail = (e as CustomEvent).detail));
+        el.addEventListener(
+          'lr-search-change',
+          (e) => (detail = (e as CustomEvent).detail)
+        );
         expect(await el.searchNext()).to.be.true;
         expect(detail!.activeIndex).to.equal(1);
         expect(await el.searchNext()).to.be.true;
@@ -694,19 +1111,33 @@ describe('lr-dataset-viewer', () => {
         expect(detail!.activeIndex).to.equal(1); // wraps backward
         const listener = oneEvent(el, 'lr-search-change');
         el.clearSearch();
-        const event = (await listener) as CustomEvent<{ query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }>;
-        expect(event.detail).to.deep.equal({ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
+        const event = (await listener) as CustomEvent<{
+          query: string;
+          matchCount: number;
+          matchCountExact: boolean;
+          activeIndex: number;
+        }>;
+        expect(event.detail).to.deep.equal({
+          query: '',
+          matchCount: 0,
+          matchCountExact: true,
+          activeIndex: -1,
+        });
       } finally {
         restore();
       }
     });
 
     it('an empty query behaves like clearSearch and resolves 0', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
         await el.search('ada');
         expect(await el.search('   ')).to.equal(0);
       } finally {
@@ -715,22 +1146,32 @@ describe('lr-dataset-viewer', () => {
     });
 
     it('renders a focusable cell-highlight and emits lr-highlight-activate', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' } }];
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
+        el.highlights = [
+          { id: 'h1', anchor: { kind: 'cell-range', range: 'A2' } },
+        ];
         await el.updateComplete;
         const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-        const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement | null;
-        expect((highlighted) != null).to.equal(true);
+        const highlighted = list.shadowRoot!.querySelector(
+          '[part~="cell-highlight"]'
+        ) as HTMLElement | null;
+        expect(highlighted != null).to.equal(true);
         // The cell itself stays structural (role="cell", not focusable); the activation
         // affordance is the nested native button.
         expect(highlighted!.getAttribute('role')).to.equal('cell');
         expect(highlighted!.hasAttribute('tabindex')).to.be.false;
-        const action = highlighted!.querySelector('[part="cell-highlight-action"]') as HTMLElement | null;
-        expect((action) != null).to.equal(true);
+        const action = highlighted!.querySelector(
+          '[part="cell-highlight-action"]'
+        ) as HTMLElement | null;
+        expect(action != null).to.equal(true);
         expect(action!.tagName).to.equal('BUTTON');
         // A real action button (not a plain grid cell) -- gets the shared minimum hit area.
         expect(getComputedStyle(action!).minInlineSize).to.equal('40px');
@@ -744,23 +1185,81 @@ describe('lr-dataset-viewer', () => {
       }
     });
 
+    it('keeps inherited and direct highlight-color inputs authoritative for the active cell', async () => {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div style="--lr-dataset-viewer-highlight-color: rgb(7, 8, 9)">
+          <lr-dataset-viewer></lr-dataset-viewer>
+        </div>
+      `);
+      const el = wrapper.querySelector(
+        'lr-dataset-viewer'
+      ) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.highlights = [
+          { id: 'h1', anchor: { kind: 'cell-range', range: 'A2' } },
+        ];
+        el.activeHighlightId = 'h1';
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
+        );
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+        await waitUntil(
+          () =>
+            list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null
+        );
+        const highlighted = list.shadowRoot!.querySelector(
+          '[part~="cell-highlight"]'
+        ) as HTMLElement;
+        expect(getComputedStyle(highlighted).outlineColor).to.equal(
+          'rgb(7, 8, 9)'
+        );
+        el.style.setProperty(
+          '--lr-dataset-viewer-highlight-color',
+          'rgb(10, 11, 12)'
+        );
+        expect(getComputedStyle(highlighted).outlineColor).to.equal(
+          'rgb(10, 11, 12)'
+        );
+      } finally {
+        restore();
+      }
+    });
+
     it('exposes an activation button only inside a highlighted cell, never a plain cell', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' }, label: 'First result' }];
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
+        el.highlights = [
+          {
+            id: 'h1',
+            anchor: { kind: 'cell-range', range: 'A2' },
+            label: 'First result',
+          },
+        ];
         await el.updateComplete;
         const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-        const plain = list.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+        const plain = list.shadowRoot!.querySelector(
+          '[part="cell"]'
+        ) as HTMLElement;
         expect(plain.hasAttribute('tabindex')).to.be.false;
-        expect((plain.querySelector('button')) === (null)).to.equal(true);
+        expect(plain.querySelector('button') === null).to.equal(true);
         // A native <button> provides Enter/Space activation as built-in behavior, so proving the
         // control is a button with the highlight's accessible name covers the keyboard contract.
-        const action = list.shadowRoot!.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
+        const action = list.shadowRoot!.querySelector(
+          '[part="cell-highlight-action"]'
+        ) as HTMLButtonElement;
         expect(action.tagName).to.equal('BUTTON');
-        expect(action.getAttribute('aria-label')).to.equal('Highlight: Ada — First result');
+        expect(action.getAttribute('aria-label')).to.equal(
+          'Highlight: Ada — First result'
+        );
         const listener = oneEvent(el, 'lr-highlight-activate');
         action.click();
         const event = (await listener) as CustomEvent<{ highlightId: string }>;
@@ -771,19 +1270,33 @@ describe('lr-dataset-viewer', () => {
     });
 
     it('localizes the complete highlighted-cell name with independently ordered value and label placeholders', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       el.strings = {
         cellHighlightWithLabel: '{label} ⇐ {value}',
       };
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' }, label: 'First result' }];
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
+        el.highlights = [
+          {
+            id: 'h1',
+            anchor: { kind: 'cell-range', range: 'A2' },
+            label: 'First result',
+          },
+        ];
         await el.updateComplete;
         const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-        const action = list.shadowRoot!.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
-        expect(action.getAttribute('aria-label')).to.equal('First result ⇐ Ada');
+        const action = list.shadowRoot!.querySelector(
+          '[part="cell-highlight-action"]'
+        ) as HTMLButtonElement;
+        expect(action.getAttribute('aria-label')).to.equal(
+          'First result ⇐ Ada'
+        );
       } finally {
         restore();
       }
@@ -791,30 +1304,50 @@ describe('lr-dataset-viewer', () => {
   });
 
   it('does not leak internal virtual-list events through the viewer host', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const el = (await fixture(
+      html`<lr-dataset-viewer></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
     const restore = fetchText(GRID_DATASET);
     try {
       el.src = 'https://example.test/data.tsv';
-      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
+      );
       let leaked = 0;
-      for (const name of ['lr-load-more', 'lr-visible-range-changed', 'lr-virtual-scroll']) {
-        el.addEventListener(name as never, () => { leaked++; });
-        el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
+      for (const name of [
+        'lr-load-more',
+        'lr-visible-range-changed',
+        'lr-virtual-scroll',
+      ]) {
+        el.addEventListener(name as never, () => {
+          leaked++;
+        });
+        el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(
+          new CustomEvent(name, { bubbles: true, composed: true })
+        );
       }
       expect(leaked).to.equal(0);
-    } finally { restore(); }
+    } finally {
+      restore();
+    }
   });
 
   describe('back-compat', () => {
     it('::part(table) still matches, and no cell-highlight renders unset', async () => {
-      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
       const restore = fetchText(GRID_DATASET);
       try {
         el.src = 'https://example.test/data.tsv';
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="table"]') !== null
+        );
         expect(el.shadowRoot!.querySelector('[part~="table"]')).to.exist;
         const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-        expect(list.shadowRoot!.querySelectorAll('[part~="cell-highlight"]').length).to.equal(0);
+        expect(
+          list.shadowRoot!.querySelectorAll('[part~="cell-highlight"]').length
+        ).to.equal(0);
       } finally {
         restore();
       }
@@ -823,38 +1356,88 @@ describe('lr-dataset-viewer', () => {
 });
 
 it('validates maxHeight before assigning the base custom property', async () => {
-  const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer></lr-dataset-viewer>`);
+  const el = await fixture<LyraDatasetViewer>(
+    html`<lr-dataset-viewer></lr-dataset-viewer>`
+  );
   el.maxHeight = '10rem;position:fixed';
   await el.updateComplete;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.style.position).to.equal('');
-  expect(base.style.getPropertyValue('--lr-dataset-viewer-max-height')).to.equal('');
+  expect(
+    base.style.getPropertyValue('--lr-dataset-viewer-max-height')
+  ).to.equal('');
   el.maxHeight = 'calc(10rem + 2px)';
   await el.updateComplete;
-  expect(base.style.getPropertyValue('--lr-dataset-viewer-max-height')).to.equal('calc(10rem + 2px)');
+  expect(
+    base.style.getPropertyValue('--lr-dataset-viewer-max-height')
+  ).to.equal('calc(10rem + 2px)');
 });
 
 describe('styling', () => {
   it('gives the cell-highlight-action a hover state', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/lr-virtual-list::part\(cell-highlight-action\):hover/);
+    expect(css).to.match(
+      /lr-virtual-list::part\(cell-highlight-action\):hover/
+    );
   });
 });
 
 // -- Document-renderer registry entry ---------------------------------------
 
 it('registers a lyra:dataset renderer whose matches() and render() behave as declared', async () => {
-  const { getDefaultDocumentRendererRegistry } = await import('../document-viewer/registry.js');
+  const { getDefaultDocumentRendererRegistry } = await import(
+    '../document-viewer/registry.js'
+  );
   const def = getDefaultDocumentRendererRegistry().get('lyra:dataset');
   expect(def, 'importing the module registers the renderer').to.exist;
-  expect(def!.matches!({ name: 'data.TSV', mimeType: 'text/tab-separated-values', src: 'https://example.test/f' }), 'data.TSV').to.be.true;
-  expect(def!.matches!({ name: 'data.psv', mimeType: 'text/plain', src: 'https://example.test/f' }), 'data.psv').to.be.true;
-  expect(def!.matches!({ name: 'data.dat', mimeType: 'text/plain', src: 'https://example.test/f' }), 'data.dat').to.be.true;
-  expect(def!.matches!({ name: 'data.csv', mimeType: 'text/csv', src: 'https://example.test/f' }), 'data.csv').to.be.false;
-  expect(def!.capabilities, 'capabilities are declared for host feature-detection').to.exist;
+  expect(
+    def!.matches!({
+      name: 'data.TSV',
+      mimeType: 'text/tab-separated-values',
+      src: 'https://example.test/f',
+    }),
+    'data.TSV'
+  ).to.be.true;
+  expect(
+    def!.matches!({
+      name: 'data.psv',
+      mimeType: 'text/plain',
+      src: 'https://example.test/f',
+    }),
+    'data.psv'
+  ).to.be.true;
+  expect(
+    def!.matches!({
+      name: 'data.dat',
+      mimeType: 'text/plain',
+      src: 'https://example.test/f',
+    }),
+    'data.dat'
+  ).to.be.true;
+  expect(
+    def!.matches!({
+      name: 'data.csv',
+      mimeType: 'text/csv',
+      src: 'https://example.test/f',
+    }),
+    'data.csv'
+  ).to.be.false;
+  expect(
+    def!.capabilities,
+    'capabilities are declared for host feature-detection'
+  ).to.exist;
 
-  const host = (await fixture(html`<div>${def!.render!({
-    name: 'data.TSV', mimeType: 'text/tab-separated-values', src: 'https://example.test/f',
-  })}</div>`)) as HTMLElement;
-  expect(host.querySelector('lr-dataset-viewer'), 'render() produces the viewer element').to.exist;
+  const host = (await fixture(
+    html`<div>
+      ${def!.render!({
+        name: 'data.TSV',
+        mimeType: 'text/tab-separated-values',
+        src: 'https://example.test/f',
+      })}
+    </div>`
+  )) as HTMLElement;
+  expect(
+    host.querySelector('lr-dataset-viewer'),
+    'render() produces the viewer element'
+  ).to.exist;
 });

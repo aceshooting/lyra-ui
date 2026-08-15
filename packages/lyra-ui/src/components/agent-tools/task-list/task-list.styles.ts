@@ -1,5 +1,5 @@
-import { css } from "lit";
-import { srOnly } from "../../../internal/a11y.js";
+import { css } from 'lit';
+import { srOnly } from '../../../internal/a11y.js';
 
 export const styles = [
   srOnly,

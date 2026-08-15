@@ -21,6 +21,7 @@ import './components/agent-tools/stack-trace/stack-trace.js';
 import './components/agent-tools/subagent-panel/subagent-panel.js';
 import './components/agent-tools/task-list/task-list.js';
 import './components/agent-tools/test-results/test-results.js';
+import './components/agent-tools/tool-param-form/tool-param-form.js';
 import './components/agent-tools/tool-select-dialog/tool-select-dialog.js';
 import './components/agent-tools/tool-timeline/tool-timeline.js';
 import './components/charts/chart/box-plot.js';
@@ -40,6 +41,7 @@ import './components/conversation/thread-list/thread-list.js';
 import './components/conversation/transcript-feed/transcript-feed.js';
 import './components/conversation/voice-picker/voice-picker.js';
 import './components/data/calendar/calendar.js';
+import './components/data/condition-builder/condition-builder.js';
 import './components/data/context-meter/context-meter.js';
 import './components/data/document-library/document-library.js';
 import './components/data/env-list/env-list.js';
@@ -55,6 +57,7 @@ import './components/data/table/table.js';
 import './components/data/word-cloud/word-cloud.js';
 import './components/layout/command-palette/command-palette.js';
 import './components/layout/drilldown-panel/drilldown-panel.js';
+import './components/layout/filter-bar/filter-bar.js';
 import './components/layout/multi-split/multi-split.js';
 import './components/layout/segmented/segmented.js';
 import './components/layout/stepper/stepper.js';
@@ -63,6 +66,7 @@ import './components/layout/virtual-list/virtual-list.js';
 import type { LyraMessageFeedback } from './components/conversation/message-feedback/message-feedback.js';
 import type { LyraVoicePicker } from './components/conversation/voice-picker/voice-picker.js';
 import type { LyraSchemaViewer } from './components/agent-tools/schema-viewer/schema-viewer.js';
+import type { LyraToolParamForm } from './components/agent-tools/tool-param-form/tool-param-form.js';
 import type {
   LyraVirtualList,
   VirtualListIndexedSource,
@@ -78,6 +82,7 @@ export interface CollectionPropertyCase {
 export interface BespokeCollectionPropertyCase extends CollectionPropertyCase {
   readonly limit: number;
   makeEntry(index: number): unknown;
+  prepare?(element: DynamicElement): void;
 }
 
 /**
@@ -181,19 +186,42 @@ export const APP_BESPOKE_ARRAY_PROPERTY_CASES: readonly BespokeCollectionPropert
   Object.freeze([
     { tag: 'lr-stat', property: 'rows', limit: 10_000, makeEntry: (index) => ({ label: String(index), value: String(index) }) },
     { tag: 'lr-file-tree', property: 'nodes', limit: 10_000, makeEntry: (index) => ({ path: `/file-${index}` }) },
+    { tag: 'lr-condition-builder', property: 'fields', limit: 200, makeEntry: (index) => ({ name: String(index), type: 'string' }) },
     { tag: 'lr-table', property: 'columns', limit: 10_000, makeEntry: (index) => ({ key: String(index), label: String(index), cell: () => '' }) },
     { tag: 'lr-table', property: 'rows', limit: 10_000, makeEntry: (index) => ({ id: index }) },
     { tag: 'lr-document-library', property: 'documents', limit: 10_000, makeEntry: (index) => ({ id: String(index), name: String(index) }) },
-    { tag: 'lr-document-library', property: 'selectedIds', limit: 10_000, makeEntry: (index) => String(index) },
+    { tag: 'lr-document-library', property: 'selectedDocumentIds', limit: 10_000, makeEntry: (index) => String(index) },
     { tag: 'lr-document-library', property: 'tagFilter', limit: 10_000, makeEntry: (index) => String(index) },
     { tag: 'lr-drilldown-panel', property: 'path', limit: 256, makeEntry: (index) => ({ nodeId: String(index), label: String(index) }) },
     { tag: 'lr-drilldown-panel', property: 'types', limit: 256, makeEntry: (index) => ({ id: String(index), label: String(index) }) },
+    { tag: 'lr-filter-bar', property: 'filters', limit: 10_000, makeEntry: (index) => ({ filterId: String(index), label: String(index), type: 'text' }) },
     { tag: 'lr-env-list', property: 'entries', limit: 10_000, makeEntry: (index) => ({ name: String(index), value: String(index) }) },
     { tag: 'lr-segmented', property: 'items', limit: 256, makeEntry: (index) => ({ value: String(index), label: String(index) }) },
     { tag: 'lr-flow-canvas', property: 'nodes', limit: 10_000, makeEntry: (index) => ({ id: String(index) }) },
     { tag: 'lr-flow-canvas', property: 'edges', limit: 10_000, makeEntry: (index) => ({ id: String(index), source: 'a', target: 'b' }) },
-    { tag: 'lr-flow-canvas', property: 'selectedNodeIds', limit: 10_000, makeEntry: (index) => String(index) },
-    { tag: 'lr-flow-canvas', property: 'selectedEdgeIds', limit: 10_000, makeEntry: (index) => String(index) },
+    {
+      tag: 'lr-flow-canvas',
+      property: 'selectedNodeIds',
+      limit: 10_000,
+      makeEntry: (index) => String(index),
+      prepare: (element) => {
+        element['nodes'] = Array.from({ length: COLLECTION_LIMIT }, (_, index) => ({ id: String(index) }));
+      },
+    },
+    {
+      tag: 'lr-flow-canvas',
+      property: 'selectedEdgeIds',
+      limit: 10_000,
+      makeEntry: (index) => String(index),
+      prepare: (element) => {
+        element['nodes'] = [{ id: 'a' }, { id: 'b' }];
+        element['edges'] = Array.from({ length: COLLECTION_LIMIT }, (_, index) => ({
+          id: String(index),
+          source: 'a',
+          target: 'b',
+        }));
+      },
+    },
     { tag: 'lr-flow-node', property: 'inputs', limit: 10_000, makeEntry: (index) => ({ id: String(index) }) },
     { tag: 'lr-flow-node', property: 'outputs', limit: 10_000, makeEntry: (index) => ({ id: String(index) }) },
     { tag: 'lr-graph-query-builder', property: 'relationshipTypeOptions', limit: 500, makeEntry: (index) => ({ value: String(index) }) },
@@ -297,9 +325,10 @@ describe('original component collection ownership contracts', () => {
     });
   }
 
-  for (const { tag, property, limit, makeEntry } of APP_BESPOKE_ARRAY_PROPERTY_CASES) {
+  for (const { tag, property, limit, makeEntry, prepare } of APP_BESPOKE_ARRAY_PROPERTY_CASES) {
     it(`${tag}.${property} owns a frozen sequence within its domain cap`, () => {
       const element = createDynamicElement(tag);
+      prepare?.(element);
       const source = [makeEntry(0)];
 
       element[property] = source;
@@ -356,6 +385,120 @@ describe('original component collection ownership contracts', () => {
       expect(Object.keys(element['decorations'] as object).length).to.equal(COLLECTION_LIMIT);
     });
   }
+
+  it('bounds and freezes condition-builder and graph-query nested value arrays', () => {
+    const conditionBuilder = createDynamicElement('lr-condition-builder');
+    const conditionValues = Array.from({ length: 505 }, (_, index) => String(index));
+    const conditions = Array.from({ length: 205 }, (_, index) => ({
+      id: String(index),
+      field: '',
+      operator: 'in',
+      value: index === 0 ? conditionValues : [],
+    }));
+    conditionBuilder['value'] = { combinator: 'and', conditions };
+    conditionValues.push('later');
+    conditions.push({ id: 'later', field: '', operator: 'in', value: [] });
+
+    const conditionSnapshot = conditionBuilder['value'] as {
+      readonly conditions: readonly { readonly value?: readonly string[] }[];
+    };
+    expect(conditionSnapshot.conditions.length).to.equal(200);
+    expect(conditionSnapshot.conditions[0]!.value!.length).to.equal(500);
+    expect(Object.isFrozen(conditionSnapshot)).to.equal(true);
+    expect(Object.isFrozen(conditionSnapshot.conditions)).to.equal(true);
+    expect(Object.isFrozen(conditionSnapshot.conditions[0])).to.equal(true);
+    expect(Object.isFrozen(conditionSnapshot.conditions[0]!.value)).to.equal(true);
+
+    const graphQuery = createDynamicElement('lr-graph-query-builder');
+    const relationshipTypes = Array.from({ length: 505 }, (_, index) => `r${index}`);
+    const nodeTypes = Array.from({ length: 505 }, (_, index) => `n${index}`);
+    graphQuery['value'] = {
+      startId: 'start',
+      endId: '',
+      relationshipTypes,
+      nodeTypes,
+      direction: 'both',
+      minHops: 1,
+      maxHops: 2,
+    };
+    relationshipTypes.push('later');
+    nodeTypes.push('later');
+
+    const querySnapshot = graphQuery['value'] as {
+      readonly relationshipTypes: readonly string[];
+      readonly nodeTypes: readonly string[];
+    };
+    expect(querySnapshot.relationshipTypes.length).to.equal(500);
+    expect(querySnapshot.nodeTypes.length).to.equal(500);
+    expect(Object.isFrozen(querySnapshot)).to.equal(true);
+    expect(Object.isFrozen(querySnapshot.relationshipTypes)).to.equal(true);
+    expect(Object.isFrozen(querySnapshot.nodeTypes)).to.equal(true);
+  });
+
+  it('owns and bounds filter-bar definitions and nested value arrays', () => {
+    const element = createDynamicElement('lr-filter-bar');
+    const options = [{ value: 'first', label: 'First' }];
+    const filters = [{ filterId: 'tags', label: 'Tags', type: 'combobox', multiple: true, options }];
+    element['filters'] = filters;
+    options[0]!.label = 'Changed';
+    filters.push({ filterId: 'later', label: 'Later', type: 'combobox', multiple: true, options: [] });
+
+    const filterSnapshot = element['filters'] as readonly {
+      readonly options: readonly { readonly label: string }[];
+    }[];
+    expect(filterSnapshot.length).to.equal(1);
+    expect(filterSnapshot[0]!.options[0]!.label).to.equal('First');
+    expect(Object.isFrozen(filterSnapshot)).to.equal(true);
+    expect(Object.isFrozen(filterSnapshot[0])).to.equal(true);
+    expect(Object.isFrozen(filterSnapshot[0]!.options)).to.equal(true);
+    expect(Object.isFrozen(filterSnapshot[0]!.options[0])).to.equal(true);
+
+    const values = Array.from({ length: COLLECTION_LIMIT + 5 }, (_, index) => String(index));
+    element['value'] = { tags: values };
+    values.push('later');
+    const valueSnapshot = element['value'] as Readonly<Record<string, readonly string[]>>;
+    expect(valueSnapshot['tags']!.length).to.equal(COLLECTION_LIMIT);
+    expect(Object.isFrozen(valueSnapshot)).to.equal(true);
+    expect(Object.isFrozen(valueSnapshot['tags'])).to.equal(true);
+  });
+
+  it('owns and bounds tool-param schema and value collection paths', () => {
+    const element = createDynamicElement('lr-tool-param-form') as unknown as LyraToolParamForm;
+    const choices = Array.from({ length: 505 }, (_, index) => String(index));
+    const properties = Object.fromEntries(
+      Array.from({ length: 105 }, (_, index) => [
+        `field-${index}`,
+        { type: 'string', ...(index === 0 ? { enum: choices } : {}) },
+      ]),
+    );
+    const required = Array.from({ length: 105 }, (_, index) => `field-${index}`);
+    element.schema = { type: 'object', properties, required };
+    choices.push('later');
+    required.push('later');
+    properties['field-0']!.type = 'number';
+
+    expect(Object.keys(element.schema.properties).length).to.equal(100);
+    expect(element.schema.properties['field-0']!.type).to.equal('string');
+    expect(element.schema.properties['field-0']!.enum!.length).to.equal(500);
+    expect(element.schema.required!.length).to.equal(100);
+    expect(Object.isFrozen(element.schema)).to.equal(true);
+    expect(Object.isFrozen(element.schema.properties)).to.equal(true);
+    expect(Object.isFrozen(element.schema.properties['field-0'])).to.equal(true);
+    expect(Object.isFrozen(element.schema.properties['field-0']!.enum)).to.equal(true);
+    expect(Object.isFrozen(element.schema.required)).to.equal(true);
+
+    const nestedValues = Array.from({ length: COLLECTION_LIMIT + 5 }, (_, index) => index);
+    const value = { nested: { values: nestedValues } };
+    element.value = value;
+    nestedValues.push(COLLECTION_LIMIT + 6);
+    const valueSnapshot = element.value as {
+      readonly nested: { readonly values: readonly number[] };
+    };
+    expect(valueSnapshot.nested.values.length).to.equal(COLLECTION_LIMIT);
+    expect(Object.isFrozen(valueSnapshot)).to.equal(true);
+    expect(Object.isFrozen(valueSnapshot.nested)).to.equal(true);
+    expect(Object.isFrozen(valueSnapshot.nested.values)).to.equal(true);
+  });
 
   it('passes a virtual-list indexed source through by identity', () => {
     const element = createDynamicElement('lr-virtual-list') as unknown as LyraVirtualList;

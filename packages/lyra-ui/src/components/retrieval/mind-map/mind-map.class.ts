@@ -304,7 +304,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     super.willUpdate(changed);
     const hubLabel = this.label || this.localize('mindMapLabel');
     const context = `${hubLabel}\u0000${
-      isRtl(this) ? "rtl" : "ltr"
+      isRtl(this) ? 'rtl' : 'ltr'
     }\u0000${this.ringGapPx()}`;
     const structuralChange =
       changed.has('topics') ||
@@ -485,8 +485,8 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
         aria-level=${node.depth + 1}
         aria-expanded=${node.hasChildren
           ? node.expanded
-            ? "true"
-            : "false"
+            ? 'true'
+            : 'false'
           : nothing}
       >
         <span>${node.label}</span>
@@ -505,7 +505,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     const layout = this.cachedLayout;
     if (layout.placed.length === 0) {
       return html`<div part="base">
-        <div part="empty">${this.localize("noData")}</div>
+        <div part="empty">${this.localize('noData')}</div>
       </div>`;
     }
     // A host aria-label names the complete component. The interactive SVG keeps

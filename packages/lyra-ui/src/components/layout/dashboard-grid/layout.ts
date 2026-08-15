@@ -8,18 +8,18 @@ import {
   projectDashboardLayout,
   resolveDashboardPlacement,
   snapshotDashboardLayout,
-} from "./layout-internal.js";
+} from './layout-internal.js';
 import type {
   LyraDashboardCell,
   LyraDashboardCollisionPolicy,
   LyraDashboardPlacementResult,
-} from "./layout-types.js";
+} from './layout-types.js';
 
 export type {
   LyraDashboardCell,
   LyraDashboardCollisionPolicy,
   LyraDashboardPlacementResult,
-} from "./layout-types.js";
+} from './layout-types.js';
 
 /**
  * Resolves one requested placement against an immutable, schema-normalized dashboard snapshot.

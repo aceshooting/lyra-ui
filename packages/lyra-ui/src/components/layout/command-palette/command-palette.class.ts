@@ -1,4 +1,3 @@
-import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -85,7 +84,7 @@ export interface LyraCommand {
   onSelect?: () => void;
 }
 export interface LyraCommandPaletteEventMap {
-  'lr-select': CustomEvent<LyraEventDetailSnapshot<{ command: LyraCommand }>>;
+  'lr-select': CustomEvent<Readonly<{ command: LyraCommand }>>;
   'lr-open': CustomEvent<null>;
   'lr-close': CustomEvent<null>;
 }
@@ -142,6 +141,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   /** Command objects are returned to `onSelect`; their identity is an explicit API contract. */
   protected static override readonly identityCollectionProperties =
     Object.freeze(['commands']);
+  protected static override readonly identityEventDetailProperties =
+    Object.freeze({ 'lr-select': Object.freeze(['command']) });
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -156,6 +157,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-select',
+  ]);
   private _open = false;
   /** Whether the palette is open. Post-mount IDL and attribute writes use the same synchronous,
    * cancelable lifecycle as `openPalette()` and `close()`; initial markup stays silent. */
@@ -752,9 +756,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       part="command"
       role="option"
       style=${`transform:translateY(${row.top}px)`}
-      data-active=${active ? "true" : "false"}
-      aria-selected=${active ? "true" : "false"}
-      aria-disabled=${command.disabled ? "true" : "false"}
+      data-active=${active ? 'true' : 'false'}
+      aria-selected=${active ? 'true' : 'false'}
+      aria-disabled=${command.disabled ? 'true' : 'false'}
       aria-setsize=${total}
       aria-posinset=${row.index + 1}
       tabindex="-1"
@@ -769,7 +773,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
             >${command.icon as TemplateResult}</span
           >`
         : nothing}<span part="label">${command.label}</span
-      ><span part="description">${command.description ?? ""}</span
+      ><span part="description">${command.description ?? ''}</span
       >${command.shortcut
         ? html`<span part="shortcut">${command.shortcut}</span>`
         : nothing}
@@ -795,7 +799,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         role="dialog"
         aria-modal="true"
         aria-label=${this.accessibleLabel ||
-        this.localize("commandPaletteLabel")}
+        this.localize('commandPaletteLabel')}
         tabindex="-1"
         @keydown=${this.onKeyDown}
       >
@@ -805,7 +809,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
             part="input"
             type="search"
             .value=${this.queryText}
-            placeholder=${this.localize("commandPalettePlaceholder")}
+            placeholder=${this.localize('commandPalettePlaceholder')}
             aria-controls=${this.listId}
             aria-activedescendant=${activeId}
             @input=${this.onInput}
@@ -815,7 +819,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
           part="list"
           id=${this.listId}
           role="listbox"
-          aria-label=${this.localize("commandPaletteResults")}
+          aria-label=${this.localize('commandPaletteResults')}
           @scroll=${this.onListScroll}
         >
           ${rows.length
@@ -828,7 +832,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
                   const headingId = `${this.listId}-group-${group.index}`;
                   return html`<div
                     part="command-group"
-                    role=${group.label ? "group" : "presentation"}
+                    role=${group.label ? 'group' : 'presentation'}
                     aria-labelledby=${group.label ? headingId : nothing}
                   >
                     ${group.label
@@ -849,7 +853,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
                 })}
               </div>`
             : html`<div part="empty">
-                ${this.localize("commandPaletteEmpty")}
+                ${this.localize('commandPaletteEmpty')}
               </div>`}
         </div>
       </section>

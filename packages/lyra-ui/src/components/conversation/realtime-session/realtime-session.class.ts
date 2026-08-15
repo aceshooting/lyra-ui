@@ -79,7 +79,7 @@ const STATE_VARIANT: Record<RealtimeConnectionState, BadgeVariant> = {
  * @since 7.0.0
  */
 export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["entries"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

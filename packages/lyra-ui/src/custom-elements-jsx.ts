@@ -3330,7 +3330,7 @@ export type LyraDocumentLibraryReactProps = LyraReactElementProps<
   | 'loading'
   | 'locale'
   | 'searchTerm'
-  | 'selectedIds'
+  | 'selectedDocumentIds'
   | 'sortDir'
   | 'sortKey'
   | 'strings'
@@ -4755,7 +4755,7 @@ export type LyraHeatmapReactProps = LyraReactElementProps<
 
 export type LyraHighlightLayerReactProps = LyraReactElementProps<
   LyraHighlightLayer,
-  | 'activeId'
+  | 'activeHighlightId'
   | 'interactive'
   | 'items'
   | 'locale'
@@ -4775,7 +4775,7 @@ export type LyraHighlightLayerReactProps = LyraReactElementProps<
   | '--lr-highlight-layer-warning-background'
   | '--lr-highlight-layer-warning-outline',
   {
-    'active-id'?: LyraHighlightLayer['activeId'];
+    'active-highlight-id'?: LyraHighlightLayer['activeHighlightId'];
   }
 >;
 
@@ -9630,7 +9630,7 @@ export type LyraThinkingPanelReactProps = LyraReactElementProps<
 
 export type LyraThreadListReactProps = LyraReactElementProps<
   LyraThreadList,
-  | 'activeId'
+  | 'activeConversationId'
   | 'collapsedGroupIds'
   | 'compact'
   | 'filter'
@@ -9672,7 +9672,7 @@ export type LyraThreadListReactProps = LyraReactElementProps<
   | '--lr-thread-list-excerpt-highlight-padding'
   | '--lr-thread-list-excerpt-highlight-radius',
   {
-    'active-id'?: LyraThreadList['activeId'];
+    'active-conversation-id'?: LyraThreadList['activeConversationId'];
     'show-archived'?: LyraThreadList['showArchived'];
     'sticky-groups'?: LyraThreadList['stickyGroups'];
   }

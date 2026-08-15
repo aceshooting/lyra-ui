@@ -114,7 +114,7 @@ export interface LyraBrowserFrameEventMap {
  * @since 4.0.0
  */
 export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["pings"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['pings']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

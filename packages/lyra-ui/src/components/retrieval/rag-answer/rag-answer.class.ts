@@ -1,40 +1,40 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
-import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
-import { property } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 import type {
   Citation,
   CitationSelectEventDetail,
   DocumentRef,
   GroundedClaim,
   GroundingAssessment,
-} from "../../../ai/types.js";
-import { styles } from "./rag-answer.styles.js";
+} from '../../../ai/types.js';
+import { styles } from './rag-answer.styles.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
-} from "../retrieval-semantic-owner.js";
-import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
+} from '../retrieval-semantic-owner.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
-} from "../../../internal/announcer.js";
+} from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_ragAnswerCitations, LYRA_DEFAULT_ragAnswerLabel, LYRA_DEFAULT_ragAnswerRetry, LYRA_DEFAULT_ragAnswerSources } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export type RagAnswerState = "idle" | "loading" | "answer" | "error";
+export type RagAnswerState = 'idle' | 'loading' | 'answer' | 'error';
 
 export interface LyraRagCitationSelectDetail extends CitationSelectEventDetail {
   /** The one presentation owner that produced the action. */
-  section: "answer" | "grounding";
+  section: 'answer' | 'grounding';
 }
 
 export interface LyraRagAnswerEventMap {
-  "lr-citation-select": CustomEvent<LyraEventDetailSnapshot<LyraRagCitationSelectDetail>>;
-  "lr-claim-select": CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
-  "lr-retry": CustomEvent<null>;
+  'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<LyraRagCitationSelectDetail>>;
+  'lr-claim-select': CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
+  'lr-retry': CustomEvent<null>;
 }
 
 /**
@@ -70,9 +70,9 @@ export interface LyraRagAnswerEventMap {
  */
 export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze([
-    "citations",
-    "sources",
-    "assessment",
+    'citations',
+    'sources',
+    'assessment',
   ]);
 
   // GENERATED DEFAULT-STRING SLICE: START
@@ -87,8 +87,12 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-citation-select',
+    'lr-claim-select',
+  ]);
   /** Markdown answer content rendered when the `answer` slot is empty. */
-  @property() answer = "";
+  @property() answer = '';
   /** Citations referenced by the answer and grounding assessment. */
   @property({ attribute: false }) citations: readonly Citation[] = [];
   /** Source records rendered when the `sources` slot is empty. */
@@ -102,11 +106,11 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   /** Caller-supplied error text. The visible message is deliberately not a shadow live region;
    *  new non-empty values are announced through a shared assertive light-DOM region. Content
    *  present on the initial render or reconnect is not replayed. */
-  @property({ attribute: "error-text" }) errorText = "";
+  @property({ attribute: 'error-text' }) errorText = '';
   /** Whether the source section is rendered when source data or slotted content exists. */
   @property({
     type: Boolean,
-    attribute: "show-sources",
+    attribute: 'show-sources',
     reflect: true,
     converter: trueDefaultBooleanConverter,
   })
@@ -114,17 +118,17 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   /** Whether claim-level details are forwarded to the grounding summary. */
   @property({
     type: Boolean,
-    attribute: "show-claims",
+    attribute: 'show-claims',
     reflect: true,
     converter: trueDefaultBooleanConverter,
   })
   showClaims = true;
   /** Visible answer label and fallback article name. */
-  @property() label = "";
+  @property() label = '';
   /** JS-only accessible-name override for the article while the host attribute is absent. A
    *  non-empty markup `aria-label` makes the host the sole overall owner; an explicitly empty host
    *  label stays empty on the article. */
-  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private isMounting = true;
   private errorAnnouncementSink?: AnnouncementSink;
@@ -132,7 +136,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.errorAnnouncementSink ??= acquireAnnouncementSink("assertive", {
+    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
       document: this.ownerDocument,
       source: this,
     });
@@ -146,7 +150,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
       if (
         this.isConnected &&
         records.some((record) =>
-          record.type === "childList"
+          record.type === 'childList'
             ? record.target === this
             : record.target.parentNode === this
         )
@@ -158,7 +162,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["slot"],
+      attributeFilter: ['slot'],
     });
   }
 
@@ -177,8 +181,8 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     this.isMounting = false;
     if (
       !wasMounting &&
-      changed.has("errorText") &&
-      this.errorText !== "" &&
+      changed.has('errorText') &&
+      this.errorText !== '' &&
       this.isConnected
     ) {
       this.errorAnnouncementSink?.announce(this.errorText);
@@ -187,7 +191,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
 
   private hasSlot(name: string): boolean {
     return Array.from(this.children).some(
-      (element) => element.getAttribute("slot") === name
+      (element) => element.getAttribute('slot') === name
     );
   }
   private onCitationActivate = (
@@ -196,20 +200,20 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     event.stopPropagation();
     const citation = this.citations[event.detail.index - 1];
     if (citation)
-      this.emit("lr-citation-select", { citation, section: "answer" });
+      this.emit('lr-citation-select', { citation, section: 'answer' });
   };
   private onGroundingCitationSelect = (
     event: CustomEvent<CitationSelectEventDetail>
   ): void => {
     event.stopPropagation();
-    this.emit("lr-citation-select", { ...event.detail, section: "grounding" });
+    this.emit('lr-citation-select', { ...event.detail, section: 'grounding' });
   };
 
   private presentationState(): RagAnswerState {
-    if (this.errorText) return "error";
-    if (this.loading) return "loading";
-    if (this.answer || this.hasSlot("answer")) return "answer";
-    return "idle";
+    if (this.errorText) return 'error';
+    if (this.loading) return 'loading';
+    if (this.answer || this.hasSlot('answer')) return 'answer';
+    return 'idle';
   }
   private renderSource(source: DocumentRef): TemplateResult {
     return html`<lr-source-card
@@ -217,7 +221,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
       compact
       .sourceId=${source.id}
       .title=${source.name}
-      .href=${source.uri ?? ""}
+      .href=${source.uri ?? ''}
     >
       ${source.mimeType
         ? html`<span slot="excerpt">${source.mimeType}</span>`
@@ -225,7 +229,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     </lr-source-card>`;
   }
   private renderSourceItems(): TemplateResult | TemplateResult[] {
-    if (this.hasSlot("sources")) return html`<slot name="sources"></slot>`;
+    if (this.hasSlot('sources')) return html`<slot name="sources"></slot>`;
     // Keep generated cards as direct light-DOM children. Putting them in the fallback of a nested
     // forwarding slot makes the child list first see one slot and later see N flattened cards,
     // forcing a redundant post-update reconciliation when N differs from one.
@@ -234,15 +238,15 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   override render(): TemplateResult {
     const label = retrievalSemanticLabel(
       this,
-      this.accessibleLabel ?? (this.label || this.localize("ragAnswerLabel"))
+      this.accessibleLabel ?? (this.label || this.localize('ragAnswerLabel'))
     );
-    const articleRole = retrievalSemanticRole(this, "article");
+    const articleRole = retrievalSemanticRole(this, 'article');
     const state = this.presentationState();
-    const busy = state === "loading";
+    const busy = state === 'loading';
     const groundingOwnsCitations = this.assessment !== null;
     return html`<article
       part="base"
-      role=${articleRole ?? "presentation"}
+      role=${articleRole ?? 'presentation'}
       aria-label=${label ?? nothing}
       aria-busy=${String(busy)}
       data-state=${state}
@@ -255,11 +259,11 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
             <lr-button
               part="retry"
               variant="neutral"
-              @click=${() => this.emit("lr-retry")}
-              >${this.localize("ragAnswerRetry")}</lr-button
+              @click=${() => this.emit('lr-retry')}
+              >${this.localize('ragAnswerRetry')}</lr-button
             >`
         : nothing}
-      ${this.answer || this.hasSlot("answer")
+      ${this.answer || this.hasSlot('answer')
         ? html`<div part="answer">
             <slot name="answer"
               ><lr-markdown .content=${this.answer}></lr-markdown
@@ -278,33 +282,33 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
       ${this.citations.length && !groundingOwnsCitations
         ? html`<section
             part="citations"
-            aria-label=${this.localize("ragAnswerCitations")}
+            aria-label=${this.localize('ragAnswerCitations')}
           >
             <h3 part="section-heading">
-              ${this.localize("ragAnswerCitations")}
+              ${this.localize('ragAnswerCitations')}
             </h3>
             <div part="citation-list">
               ${this.citations.map(
                 (citation, index) =>
                   html`<lr-citation-badge
                     .index=${index + 1}
-                    .sourceId=${citation.sourceId ?? ""}
-                    .label=${citation.label ?? ""}
+                    .sourceId=${citation.sourceId ?? ''}
+                    .label=${citation.label ?? ''}
                     @lr-citation-activate=${this.onCitationActivate}
                   ></lr-citation-badge>`
               )}
             </div>
           </section>`
         : nothing}
-      ${this.showSources && (this.sources.length > 0 || this.hasSlot("sources"))
+      ${this.showSources && (this.sources.length > 0 || this.hasSlot('sources'))
         ? html`<section
             part="sources"
-            aria-label=${this.localize("ragAnswerSources")}
+            aria-label=${this.localize('ragAnswerSources')}
           >
-            <h3 part="section-heading">${this.localize("ragAnswerSources")}</h3>
+            <h3 part="section-heading">${this.localize('ragAnswerSources')}</h3>
             <lr-source-list
               part="source-list"
-              .label=${this.localize("ragAnswerSources")}
+              .label=${this.localize('ragAnswerSources')}
               expanded
               >${this.renderSourceItems()}</lr-source-list
             >
@@ -315,6 +319,6 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
 }
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-rag-answer": LyraRagAnswer;
+    'lr-rag-answer': LyraRagAnswer;
   }
 }

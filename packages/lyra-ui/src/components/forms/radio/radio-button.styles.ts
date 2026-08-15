@@ -1,4 +1,4 @@
-import { css } from "lit";
+import { css } from 'lit';
 
 export const buttonChromeStyles = css`
   :host([data-lr-group-size]) {

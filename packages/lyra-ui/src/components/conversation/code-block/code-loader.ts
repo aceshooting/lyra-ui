@@ -1,11 +1,11 @@
-import { GREYCAT_LANGUAGE } from "./greycat-language.js";
+import { GREYCAT_LANGUAGE } from './greycat-language.js';
 import {
   SHIKI_DARK_THEME,
   SHIKI_LIGHT_THEME,
   normalizeShikiLanguage,
   type ShikiHighlighter,
   type ShikiLanguageInput,
-} from "./shiki-types.js";
+} from './shiki-types.js';
 
 // Preserve the established full-loader module surface. Lean components import the peer-neutral
 // and fine-grained leaves directly so this module's `import('shiki')` cannot enter their graph.
@@ -17,8 +17,8 @@ export {
   type ShikiHighlighter,
   type ShikiHighlighterCore,
   type ShikiLanguageInput,
-} from "./shiki-types.js";
-export { loadShikiHighlighterCore } from "./shiki-types.js";
+} from './shiki-types.js';
+export { loadShikiHighlighterCore } from './shiki-types.js';
 
 let highlighter: Promise<ShikiHighlighter | null> | undefined;
 
@@ -51,7 +51,7 @@ const CUSTOM_LANGUAGES: Record<string, ShikiLanguageInput> = {
  */
 export function loadShikiHighlighter(): Promise<ShikiHighlighter | null> {
   if (!highlighter) {
-    highlighter = import("shiki")
+    highlighter = import('shiki')
       .then(
         (mod) =>
           mod.createHighlighter({
@@ -61,8 +61,8 @@ export function loadShikiHighlighter(): Promise<ShikiHighlighter | null> {
       )
       .catch((err) => {
         console.warn(
-          "<lr-code-block> needs the optional peer dependency `shiki` for syntax highlighting — install it " +
-            "with `pnpm add shiki`. Code still renders, just unhighlighted, without it:",
+          '<lr-code-block> needs the optional peer dependency `shiki` for syntax highlighting — install it ' +
+            'with `pnpm add shiki`. Code still renders, just unhighlighted, without it:',
           err
         );
         return null;

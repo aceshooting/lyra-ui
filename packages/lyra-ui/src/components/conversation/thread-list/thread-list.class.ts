@@ -5,24 +5,24 @@ import {
   type PropertyValues,
   type SVGTemplateResult,
   type TemplateResult,
-} from "lit";
-import { property, query, state } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import type { LyraConversationItem } from "../conversation-item/conversation-item.class.js";
+} from 'lit';
+import { property, query, state } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
 import type {
   LyraVirtualList,
   VirtualListGroup,
-} from "../../layout/virtual-list/virtual-list.class.js";
-import type { LyraLiveRegion } from "../../utility/live-region/live-region.class.js";
-import { styles } from "./thread-list.styles.js";
+} from '../../layout/virtual-list/virtual-list.class.js';
+import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
+import { styles } from './thread-list.styles.js';
 import {
   getDateTimeFormat,
   getNumberFormat,
   resolveIntlLocale,
-} from "../../../internal/intl-cache.js";
-import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from "../../../internal/converters.js";
-import { activeElementIn } from "../../../internal/active-element.js";
-import { normalizeLyraTimestamp, type LyraTimestamp } from "../timestamp.js";
+} from '../../../internal/intl-cache.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { activeElementIn } from '../../../internal/active-element.js';
+import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings.generated.js';
@@ -37,34 +37,34 @@ export interface LyraChatThread {
   archived?: boolean;
 }
 
-export type ThreadRowAction = "pin" | "archive" | "delete";
+export type ThreadRowAction = 'pin' | 'archive' | 'delete';
 
-export type ThreadListGrouping = "date" | "custom" | "none";
+export type ThreadListGrouping = 'date' | 'custom' | 'none';
 
 export interface LyraThreadListEventMap {
-  "lr-select": CustomEvent<{ conversationId: string }>;
-  "lr-thread-pin": CustomEvent<{ conversationId: string; pinned: boolean }>;
-  "lr-thread-archive": CustomEvent<{
+  'lr-select': CustomEvent<{ conversationId: string }>;
+  'lr-thread-pin': CustomEvent<{ conversationId: string; pinned: boolean }>;
+  'lr-thread-archive': CustomEvent<{
     conversationId: string;
     archived: boolean;
   }>;
-  "lr-thread-delete": CustomEvent<{ conversationId: string }>;
-  "lr-thread-rename": CustomEvent<{ conversationId: string; label: string }>;
-  "lr-filter-change": CustomEvent<{ text: string; matchCount: number }>;
-  "lr-query-change": CustomEvent<{ text: string }>;
-  "lr-group-toggle": CustomEvent<{ id: string; collapsed: boolean }>;
+  'lr-thread-delete': CustomEvent<{ conversationId: string }>;
+  'lr-thread-rename': CustomEvent<{ conversationId: string; label: string }>;
+  'lr-filter-change': CustomEvent<{ text: string; matchCount: number }>;
+  'lr-query-change': CustomEvent<{ text: string }>;
+  'lr-group-toggle': CustomEvent<{ groupId: string; collapsed: boolean }>;
   blur: CustomEvent<null>;
   focus: CustomEvent<null>;
 }
 
 export type ThreadBucketKey =
-  | "pinned"
-  | "today"
-  | "yesterday"
-  | "previous7"
-  | "previous30"
+  | 'pinned'
+  | 'today'
+  | 'yesterday'
+  | 'previous7'
+  | 'previous30'
   | `month:${string}`
-  | "archived";
+  | 'archived';
 
 export interface ThreadGroupContext {
   id: string;
@@ -75,16 +75,16 @@ export interface ThreadGroupContext {
 
 type ThreadListItem =
   | {
-      kind: "group";
+      kind: 'group';
       id: string;
       label: string;
       adornment?: TemplateResult;
       collapsed: boolean;
     }
-  | { kind: "thread"; thread: LyraChatThread };
+  | { kind: 'thread'; thread: LyraChatThread };
 
-const ICON_VIEW_BOX = "0 0 24 24";
-const ICON_STROKE_WIDTH = "1.75";
+const ICON_VIEW_BOX = '0 0 24 24';
+const ICON_STROKE_WIDTH = '1.75';
 
 // Mirrors the shared icon set's viewBox/stroke conventions (internal/icons.ts's
 // chevronIcon()/closeIcon()/etc.) without adding pin/archive/trash glyphs to that module -- so
@@ -130,7 +130,7 @@ function defaultFilter(
   const intlLocale = resolveIntlLocale(locale);
   return (
     thread.title.toLocaleLowerCase(intlLocale).includes(query) ||
-    (thread.excerpt ?? "").toLocaleLowerCase(intlLocale).includes(query)
+    (thread.excerpt ?? '').toLocaleLowerCase(intlLocale).includes(query)
   );
 }
 
@@ -181,7 +181,7 @@ function defaultFilter(
  *   correlated `lr-rename` request (data mode only).
  * @event lr-filter-change - `detail: { text, matchCount }` -- data-mode query plus owned results.
  * @event lr-query-change - `detail: { text }` -- slotted-mode query request; the host owns results.
- * @event lr-group-toggle - `detail: { id, collapsed }` -- requests a controlled custom/date group
+ * @event lr-group-toggle - `detail: { groupId, collapsed }` -- requests a controlled custom/date group
  *   collapse-state change; the host updates `collapsedGroupIds`.
  * @event blur - `searchable`: re-dispatched from the internal search `<input>`'s own `blur` --
  *   bubbling and composed (unlike the native event, which is neither), so a listener above the
@@ -246,7 +246,7 @@ function defaultFilter(
  * @since 4.0.0
  */
 export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["threads", "groupOrder", "collapsedGroupIds", "rowActions"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['threads', 'groupOrder', 'collapsedGroupIds', 'rowActions']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -286,7 +286,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    * Internal group and thread keys are separately namespaced, so ids such as `group:today` remain
    * ordinary thread ids rather than colliding with a group header.
    */
-  @property({ attribute: "active-id" }) activeId = "";
+  @property({ attribute: 'active-conversation-id' }) activeConversationId = '';
 
   /** Shows the built-in search field. */
   @property({ type: Boolean, reflect: true }) searchable = false;
@@ -299,7 +299,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   /** Data mode: bucket rows under localized date headers, use `groupBy` with `'custom'`, or use
    *  `'none'` for a flat list in host order. */
-  @property() grouping: ThreadListGrouping = "date";
+  @property() grouping: ThreadListGrouping = 'date';
 
   /** `grouping="custom"`: derives an arbitrary controlled group id for every visible thread. */
   @property({ attribute: false }) groupBy?: (thread: LyraChatThread) => string;
@@ -380,7 +380,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   @property({ attribute: false }) formatDate?: (date: Date) => string;
 
   /** Data mode: include `archived` threads (in their own trailing group under `grouping="date"`). */
-  @property({ type: Boolean, attribute: "show-archived", reflect: true })
+  @property({ type: Boolean, attribute: 'show-archived', reflect: true })
   showArchived = false;
 
   /** Forwarded to each data-mode row's inline rename. */
@@ -404,11 +404,11 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  `role="heading"` semantics and the tab order, and the copy stays clickable so the pinned
    *  toggle still requests a collapse. Default `false` leaves rendering exactly as it is without
    *  this feature; `grouping="none"` has no headers to pin, so it is a no-op there. */
-  @property({ type: Boolean, attribute: "sticky-groups", reflect: true })
+  @property({ type: Boolean, attribute: 'sticky-groups', reflect: true })
   stickyGroups = false;
 
   /** Accessible name for the list region. Defaults to the localized `threadListLabel`. */
-  @property() label = "";
+  @property() label = '';
 
   /** Data mode only: wraps each row's built-in `<lr-conversation-item>` with host-supplied
    *  content that has no home in the item's own `label`/`excerpt`/`meta`/`actions` surface — e.g. a
@@ -432,15 +432,15 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  can render the same header the anchor points at. */
   private readonly stickyGroupItems = new Map<
     string,
-    Extract<ThreadListItem, { kind: "group" }>
+    Extract<ThreadListItem, { kind: 'group' }>
   >();
 
-  @state() private searchText = "";
+  @state() private searchText = '';
   @state() private hasEmptySlot = false;
   @state() private hasDefaultSlotContent = false;
 
-  @query("lr-virtual-list") private virtualListEl?: LyraVirtualList;
-  @query("lr-live-region") private liveRegion?: LyraLiveRegion;
+  @query('lr-virtual-list') private virtualListEl?: LyraVirtualList;
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   private focusTaskGeneration = 0;
   private readonly injectedListItemRoles = new Set<Element>();
 
@@ -463,14 +463,14 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (
-      changed.has("threads") ||
-      changed.has("searchText") ||
-      changed.has("filter") ||
-      changed.has("grouping") ||
-      changed.has("groupBy") ||
-      changed.has("groupOrder") ||
-      changed.has("collapsedGroupIds") ||
-      changed.has("showArchived")
+      changed.has('threads') ||
+      changed.has('searchText') ||
+      changed.has('filter') ||
+      changed.has('grouping') ||
+      changed.has('groupBy') ||
+      changed.has('groupOrder') ||
+      changed.has('collapsedGroupIds') ||
+      changed.has('showArchived')
     ) {
       this.focusTaskGeneration++;
     }
@@ -481,7 +481,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       if (hasDataThreads && defaultSlotted.length > 0) {
         this.restoreInjectedListItemRoles();
         console.warn(
-          "[lr-thread-list] both `threads` and slotted content were supplied -- `threads` (data mode) wins and the default slot is ignored."
+          '[lr-thread-list] both `threads` and slotted content were supplied -- `threads` (data mode) wins and the default slot is ignored.'
         );
       } else if (!hasDataThreads) {
         this.markAsListItems(defaultSlotted);
@@ -495,17 +495,17 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       // single live read there is enough to contradict the markup being hydrated.
       this.seedFirstRenderState(() => {
         this.hasEmptySlot = Array.from(this.children).some(
-          (el) => el.getAttribute("slot") === "empty"
+          (el) => el.getAttribute('slot') === 'empty'
         );
         syncSlottedContent();
       });
-    } else if (changed.has("threads")) {
+    } else if (changed.has('threads')) {
       syncSlottedContent();
     }
   }
 
   private defaultSlottedElements(): Element[] {
-    return Array.from(this.children).filter((el) => !el.hasAttribute("slot"));
+    return Array.from(this.children).filter((el) => !el.hasAttribute('slot'));
   }
 
   // Slotted mode's `[part="list"]` carries `role="list"`, which ARIA requires to directly own only
@@ -517,8 +517,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   // Never overrides a role a consumer set explicitly.
   private markAsListItems(elements: Element[]): void {
     for (const el of elements) {
-      if (!el.hasAttribute("role")) {
-        el.setAttribute("role", "listitem");
+      if (!el.hasAttribute('role')) {
+        el.setAttribute('role', 'listitem');
         this.injectedListItemRoles.add(el);
       }
     }
@@ -527,8 +527,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private restoreInjectedListItemRoles(keep = new Set<Element>()): void {
     for (const element of this.injectedListItemRoles) {
       if (keep.has(element)) continue;
-      if (element.getAttribute("role") === "listitem")
-        element.removeAttribute("role");
+      if (element.getAttribute('role') === 'listitem')
+        element.removeAttribute('role');
       this.injectedListItemRoles.delete(element);
     }
   }
@@ -542,7 +542,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private get normalizedThreads(): LyraChatThread[] {
     const seen = new Set<string>();
     return this.threads.filter((thread) => {
-      if (typeof thread.id !== "string" || thread.id.trim().length === 0 || seen.has(thread.id)) return false;
+      if (typeof thread.id !== 'string' || thread.id.trim().length === 0 || seen.has(thread.id)) return false;
       seen.add(thread.id);
       return true;
     });
@@ -553,7 +553,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const withArchiveFilter = this.normalizedThreads.filter(
       (thread) => this.showArchived || !thread.archived
     );
-    if (q === "") return withArchiveFilter;
+    if (q === '') return withArchiveFilter;
     return withArchiveFilter.filter((t) =>
       this.filter
         ? this.filter(t, q)
@@ -562,24 +562,24 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   private bucketFor(thread: LyraChatThread, now: Date): ThreadBucketKey {
-    if (thread.archived) return "archived";
-    if (thread.pinned) return "pinned";
+    if (thread.archived) return 'archived';
+    if (thread.pinned) return 'pinned';
     const ts =
       thread.timestamp == null
         ? undefined
         : normalizeLyraTimestamp(thread.timestamp);
-    if (!ts) return "previous30";
+    if (!ts) return 'previous30';
     const dayMs = 86_400_000;
     const startOfDay = (d: Date) =>
       new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     const diffDays = Math.round((startOfDay(now) - startOfDay(ts)) / dayMs);
-    if (diffDays === 0) return "today";
-    if (diffDays === 1) return "yesterday";
-    if (diffDays <= 7) return "previous7";
-    if (diffDays <= 30) return "previous30";
+    if (diffDays === 0) return 'today';
+    if (diffDays === 1) return 'yesterday';
+    if (diffDays <= 7) return 'previous7';
+    if (diffDays <= 30) return 'previous30';
     return `month:${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(
       2,
-      "0"
+      '0'
     )}`;
   }
 
@@ -587,7 +587,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     key: ThreadBucketKey,
     threads: readonly LyraChatThread[]
   ): string {
-    const groupDate = key.startsWith("month:")
+    const groupDate = key.startsWith('month:')
       ? this.dateForBucket(key)
       : undefined;
     const context: ThreadGroupContext = {
@@ -598,24 +598,24 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     };
     if (this.getGroupLabel) return this.getGroupLabel(context);
     switch (key) {
-      case "pinned":
-        return this.localize("threadGroupPinned");
-      case "today":
-        return this.localize("threadGroupToday");
-      case "yesterday":
-        return this.localize("threadGroupYesterday");
-      case "previous7":
-        return this.localize("threadGroupPrevious7Days");
-      case "previous30":
-        return this.localize("threadGroupPrevious30Days");
-      case "archived":
-        return this.localize("threadGroupArchived");
+      case 'pinned':
+        return this.localize('threadGroupPinned');
+      case 'today':
+        return this.localize('threadGroupToday');
+      case 'yesterday':
+        return this.localize('threadGroupYesterday');
+      case 'previous7':
+        return this.localize('threadGroupPrevious7Days');
+      case 'previous30':
+        return this.localize('threadGroupPrevious30Days');
+      case 'archived':
+        return this.localize('threadGroupArchived');
       default: {
         return (
           this.formatDate?.(groupDate!) ??
           getDateTimeFormat(this.effectiveLocale, {
-            month: "long",
-            year: "numeric",
+            month: 'long',
+            year: 'numeric',
           }).format(groupDate!)
         );
       }
@@ -623,15 +623,15 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   private dateForBucket(key: ThreadBucketKey): Date | undefined {
-    if (!key.startsWith("month:")) return undefined;
-    const [, ym] = key.split(":");
-    const [year, month] = ym!.split("-").map(Number);
+    if (!key.startsWith('month:')) return undefined;
+    const [, ym] = key.split(':');
+    const [year, month] = ym!.split('-').map(Number);
     return new Date(year!, month! - 1, 1);
   }
 
   private orderedCustomGroupIds(grouped: Map<string, LyraChatThread[]>): string[] {
     const firstSeen = [...grouped.keys()];
-    if (typeof this.groupOrder === "function")
+    if (typeof this.groupOrder === 'function')
       return firstSeen.sort(this.groupOrder);
     if (!this.groupOrder) return firstSeen;
     const ordered = [...new Set(this.groupOrder)].filter((id) =>
@@ -655,7 +655,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       const context = contextFor(id, groupedThreads);
       const label = this.getGroupLabel?.(context) ?? defaultLabel(context);
       items.push({
-        kind: "group",
+        kind: 'group',
         id,
         label,
         adornment: this.renderGroupAdornment?.(context),
@@ -664,7 +664,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       if (!collapsedIds.has(id)) {
         items.push(
           ...groupedThreads.map(
-            (thread): ThreadListItem => ({ kind: "thread", thread })
+            (thread): ThreadListItem => ({ kind: 'thread', thread })
           )
         );
       }
@@ -673,13 +673,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   private buildItems(visible: LyraChatThread[]): ThreadListItem[] {
-    if (this.grouping === "none") {
-      return visible.map((thread) => ({ kind: "thread", thread }));
+    if (this.grouping === 'none') {
+      return visible.map((thread) => ({ kind: 'thread', thread }));
     }
 
-    if (this.grouping === "custom") {
+    if (this.grouping === 'custom') {
       if (!this.groupBy)
-        return visible.map((thread) => ({ kind: "thread", thread }));
+        return visible.map((thread) => ({ kind: 'thread', thread }));
       const grouped = new Map<string, LyraChatThread[]>();
       for (const thread of visible) {
         const id = this.groupBy(thread);
@@ -703,16 +703,16 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       const existing = grouped.get(id);
       if (existing) existing.push(thread);
       else grouped.set(id, [thread]);
-      if (id.startsWith("month:")) monthKeys.add(id);
+      if (id.startsWith('month:')) monthKeys.add(id);
     }
     const order: ThreadBucketKey[] = [
-      "pinned",
-      "today",
-      "yesterday",
-      "previous7",
-      "previous30",
+      'pinned',
+      'today',
+      'yesterday',
+      'previous7',
+      'previous30',
       ...([...monthKeys].sort().reverse() as ThreadBucketKey[]),
-      "archived",
+      'archived',
     ];
     return this.groupedItems(
       grouped,
@@ -723,7 +723,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           id,
           threads: groupedThreads,
           bucket,
-          date: bucket.startsWith("month:")
+          date: bucket.startsWith('month:')
             ? this.dateForBucket(bucket)
             : undefined,
         };
@@ -737,11 +737,11 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     this.focusTaskGeneration++;
     this.searchText = (e.target as HTMLInputElement).value;
     if (!this.dataMode) {
-      this.emit("lr-query-change", { text: this.searchText });
+      this.emit('lr-query-change', { text: this.searchText });
       return;
     }
     const count = this.visibleThreads.length;
-    this.emit("lr-filter-change", {
+    this.emit('lr-filter-change', {
       text: this.searchText,
       matchCount: count,
     });
@@ -749,9 +749,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   };
 
   private announceMatchCount(count: number): void {
-    if (this.searchText.trim() === "") return;
+    if (this.searchText.trim() === '') return;
     this.liveRegion?.announce(
-      this.localize("threadListMatchAnnounce", undefined, {
+      this.localize('threadListMatchAnnounce', undefined, {
         count: getNumberFormat(this.effectiveLocale).format(count),
         pluralCount: count,
       })
@@ -759,7 +759,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   private onSearchKeyDown = (e: KeyboardEvent): void => {
-    if (e.key !== "ArrowDown") return;
+    if (e.key !== 'ArrowDown') return;
     this.focusTaskGeneration++;
     const rows = this.navigableRows();
     if (rows.length === 0) return;
@@ -772,11 +772,11 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   // without this bridge -- same convention as `<lr-textarea>`'s/`<lr-chat-composer>`'s own
   // onFocus/onBlur.
   private onSearchFocus = (): void => {
-    this.emit("focus", null);
+    this.emit('focus', null);
   };
 
   private onSearchBlur = (): void => {
-    this.emit("blur", null);
+    this.emit('blur', null);
   };
 
   // Data mode's rows are rendered into `lr-virtual-list`'s own shadow root (this component only
@@ -786,10 +786,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private rowElements(): LyraConversationItem[] {
     if (!this.dataMode)
       return [
-        ...this.querySelectorAll<LyraConversationItem>("lr-conversation-item"),
+        ...this.querySelectorAll<LyraConversationItem>('lr-conversation-item'),
       ];
     return (this.virtualListEl?.renderedRows ?? []).flatMap((row) => [
-      ...row.querySelectorAll<LyraConversationItem>("lr-conversation-item"),
+      ...row.querySelectorAll<LyraConversationItem>('lr-conversation-item'),
     ]);
   }
 
@@ -807,17 +807,17 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const option = this.selectButtonEl(row);
     return Boolean(
       option &&
-        option.getAttribute("role") === "button" &&
+        option.getAttribute('role') === 'button' &&
         row.hidden === false &&
-        row.getAttribute("aria-hidden") !== "true" &&
-        row.getAttribute("aria-disabled") !== "true" &&
+        row.getAttribute('aria-hidden') !== 'true' &&
+        row.getAttribute('aria-disabled') !== 'true' &&
         !row.inert &&
-        row.closest("[inert]") === null &&
+        row.closest('[inert]') === null &&
         option.hidden === false &&
-        option.getAttribute("aria-hidden") !== "true" &&
-        option.getAttribute("aria-disabled") !== "true" &&
+        option.getAttribute('aria-hidden') !== 'true' &&
+        option.getAttribute('aria-disabled') !== 'true' &&
         !option.inert &&
-        option.closest("[inert]") === null
+        option.closest('[inert]') === null
     );
   }
 
@@ -844,14 +844,14 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     void (async () => {
       let targetItemIndex = initialItemIndex;
       while (targetItemIndex >= 0 && targetItemIndex < items.length) {
-        while (items[targetItemIndex]?.kind === "group")
+        while (items[targetItemIndex]?.kind === 'group')
           targetItemIndex += direction;
         const targetItem = items[targetItemIndex];
-        if (!targetItem || targetItem.kind !== "thread") return;
+        if (!targetItem || targetItem.kind !== 'thread') return;
         const targetId = targetItem.thread.id;
         list.scrollToIndex(targetItemIndex, {
-          align: "auto",
-          behavior: "auto",
+          align: 'auto',
+          behavior: 'auto',
         });
 
         // A focus-induced scroll for the old row and the virtual list's coalesced render may both
@@ -895,10 +895,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private onListKeyDown = (e: KeyboardEvent): void => {
     if (
-      e.key !== "ArrowDown" &&
-      e.key !== "ArrowUp" &&
-      e.key !== "Home" &&
-      e.key !== "End"
+      e.key !== 'ArrowDown' &&
+      e.key !== 'ArrowUp' &&
+      e.key !== 'Home' &&
+      e.key !== 'End'
     )
       return;
     const origin = e.composedPath()[0];
@@ -911,7 +911,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const list = this.virtualListEl;
     if (
       this.dataMode &&
-      (e.key === "Home" || e.key === "End") &&
+      (e.key === 'Home' || e.key === 'End') &&
       list?.scrollContainer
     ) {
       const items = list.items as ThreadListItem[];
@@ -919,8 +919,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       this.focusVirtualThreadFromItemIndex(
         list,
         items,
-        e.key === "Home" ? 0 : items.length - 1,
-        e.key === "Home" ? 1 : -1,
+        e.key === 'Home' ? 0 : items.length - 1,
+        e.key === 'Home' ? 1 : -1,
         focusGeneration
       );
       return;
@@ -929,9 +929,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     if (rows.length === 0) return;
     const currentIndex = this.focusedRowIndex(rows);
     let targetIndex: number;
-    if (e.key === "Home") targetIndex = 0;
-    else if (e.key === "End") targetIndex = rows.length - 1;
-    else if (e.key === "ArrowDown")
+    if (e.key === 'Home') targetIndex = 0;
+    else if (e.key === 'End') targetIndex = rows.length - 1;
+    else if (e.key === 'ArrowDown')
       targetIndex = currentIndex < 0 ? 0 : currentIndex + 1;
     else targetIndex = currentIndex < 0 ? rows.length - 1 : currentIndex - 1;
 
@@ -951,10 +951,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const items = list.items as ThreadListItem[];
     const currentItemIndex = items.findIndex(
       (item) =>
-        item.kind === "thread" && item.thread.id === currentRow.conversationId
+        item.kind === 'thread' && item.thread.id === currentRow.conversationId
     );
     if (currentItemIndex < 0) return;
-    const direction = e.key === "ArrowDown" ? 1 : -1;
+    const direction = e.key === 'ArrowDown' ? 1 : -1;
     this.focusVirtualThreadFromItemIndex(
       list,
       items,
@@ -967,15 +967,15 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private renderRowActions(thread: LyraChatThread): TemplateResult {
     return html`
       <span slot="actions" part="row-actions">
-        ${this.rowActions.includes("pin")
+        ${this.rowActions.includes('pin')
           ? html`<button
               type="button"
               part="row-action"
               aria-label=${this.localize(
-                thread.pinned ? "unpinConversation" : "pinConversation"
+                thread.pinned ? 'unpinConversation' : 'pinConversation'
               )}
               @click=${() =>
-                this.emit("lr-thread-pin", {
+                this.emit('lr-thread-pin', {
                   conversationId: thread.id,
                   pinned: !thread.pinned,
                 })}
@@ -983,17 +983,17 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
               ${pinIcon()}
             </button>`
           : nothing}
-        ${this.rowActions.includes("archive")
+        ${this.rowActions.includes('archive')
           ? html`<button
               type="button"
               part="row-action"
               aria-label=${this.localize(
                 thread.archived
-                  ? "unarchiveConversation"
-                  : "archiveConversation"
+                  ? 'unarchiveConversation'
+                  : 'archiveConversation'
               )}
               @click=${() =>
-                this.emit("lr-thread-archive", {
+                this.emit('lr-thread-archive', {
                   conversationId: thread.id,
                   archived: !thread.archived,
                 })}
@@ -1001,13 +1001,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
               ${archiveIcon()}
             </button>`
           : nothing}
-        ${this.rowActions.includes("delete")
+        ${this.rowActions.includes('delete')
           ? html`<button
               type="button"
               part="row-action"
-              aria-label=${this.localize("deleteConversation")}
+              aria-label=${this.localize('deleteConversation')}
               @click=${() =>
-                this.emit("lr-thread-delete", { conversationId: thread.id })}
+                this.emit('lr-thread-delete', { conversationId: thread.id })}
             >
               ${trashIcon()}
             </button>`
@@ -1022,7 +1022,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  real row below stays the single exposed heading for the group -- a `role="heading"` here would
    *  be a second one the moment both are in the DOM at once. */
   private renderGroupHeader(
-    item: Extract<ThreadListItem, { kind: "group" }>,
+    item: Extract<ThreadListItem, { kind: 'group' }>,
     options: { sticky?: boolean } = {}
   ): TemplateResult {
     const nextCollapsed = !item.collapsed;
@@ -1030,29 +1030,29 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       <div
         part="group-header"
         data-group-id=${item.id}
-        role=${options.sticky ? nothing : "heading"}
-        aria-level=${options.sticky ? nothing : "2"}
+        role=${options.sticky ? nothing : 'heading'}
+        aria-level=${options.sticky ? nothing : '2'}
       >
         <button
           type="button"
           part="group-toggle"
-          tabindex=${options.sticky ? "-1" : nothing}
-          aria-expanded=${item.collapsed ? "false" : "true"}
+          tabindex=${options.sticky ? '-1' : nothing}
+          aria-expanded=${item.collapsed ? 'false' : 'true'}
           aria-label=${this.localize(
-            item.collapsed ? "threadGroupExpand" : "threadGroupCollapse",
+            item.collapsed ? 'threadGroupExpand' : 'threadGroupCollapse',
             undefined,
             {
               label: item.label,
             }
           )}
           @click=${() =>
-            this.emit("lr-group-toggle", {
-              id: item.id,
+            this.emit('lr-group-toggle', {
+              groupId: item.id,
               collapsed: nextCollapsed,
             })}
         >
           <span part="group-icon" aria-hidden="true"
-            >${item.collapsed ? "+" : "−"}</span
+            >${item.collapsed ? '+' : '−'}</span
           >
           <span part="group-label">${item.label}</span>
         </button>
@@ -1070,9 +1070,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         exportparts="base:row-item-base, active-indicator:row-item-active-indicator, select-button:row-item-select-button, start:row-item-start, content:row-item-content, label:row-item-label, label-input:row-item-label-input, rename-button:row-item-rename-button, excerpt:row-item-excerpt, meta:row-item-meta, timestamp:row-item-timestamp, actions:row-item-actions"
         conversation-id=${thread.id}
         label=${thread.title}
-        excerpt=${thread.excerpt ?? ""}
+        excerpt=${thread.excerpt ?? ''}
         .timestamp=${thread.timestamp}
-        ?active=${thread.id === this.activeId}
+        ?active=${thread.id === this.activeConversationId}
         ?compact=${this.compact}
         .renamable=${this.renamable}
         @lr-select=${(e: Event) => {
@@ -1080,13 +1080,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           // defaults) -- without stopping it here it would keep bubbling straight through this
           // component under the same name, right behind the correctly-shaped re-emit below.
           e.stopPropagation();
-          this.emit("lr-select", { conversationId: thread.id });
+          this.emit('lr-select', { conversationId: thread.id });
         }}
         @lr-rename=${(
           e: CustomEvent<{ conversationId: string; label: string }>
         ) => {
           e.stopPropagation();
-          this.emit("lr-thread-rename", {
+          this.emit('lr-thread-rename', {
             conversationId: thread.id,
             label: e.detail.label,
           });
@@ -1135,7 +1135,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private renderItem = (item: unknown): unknown => {
     const listItem = item as ThreadListItem;
-    return listItem.kind === "group"
+    return listItem.kind === 'group'
       ? this.renderGroupHeader(listItem)
       : this.renderRow(listItem.thread);
   };
@@ -1147,9 +1147,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const anchors: VirtualListGroup[] = [];
     this.stickyGroupItems.clear();
     items.forEach((item, index) => {
-      if (item.kind !== "group") return;
+      if (item.kind !== 'group') return;
       this.stickyGroupItems.set(item.id, item);
-      anchors.push({ key: item.id, label: "", startIndex: index });
+      anchors.push({ key: item.id, label: '', startIndex: index });
     });
     return anchors;
   }
@@ -1162,7 +1162,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private itemKey = (item: unknown): string => {
     const listItem = item as ThreadListItem;
-    return listItem.kind === "group"
+    return listItem.kind === 'group'
       ? this.groupItemKey(listItem.id)
       : this.threadItemKey(listItem.thread.id);
   };
@@ -1205,8 +1205,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           part="search-input"
           type="search"
           .value=${this.searchText}
-          aria-label=${this.localize("searchThreads")}
-          placeholder=${this.localize("searchThreads")}
+          aria-label=${this.localize('searchThreads')}
+          placeholder=${this.localize('searchThreads')}
           @input=${this.onSearchInput}
           @keydown=${this.onSearchKeyDown}
           @focus=${this.onSearchFocus}
@@ -1218,15 +1218,15 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   override render(): TemplateResult {
     const label =
-      this.getAttribute("aria-label") ??
-      (this.label || this.localize("threadListLabel"));
+      this.getAttribute('aria-label') ??
+      (this.label || this.localize('threadListLabel'));
     // Both modes share one outer template so the mode switch replaces only the list inside it.
     // Slotted rows are invisible to a server renderer, which therefore always emits data mode; a
     // hydrating list has to reuse that markup rather than discard it on its corrective update.
     return html`
       <div
         part="base"
-        role=${this.dataMode ? "region" : nothing}
+        role=${this.dataMode ? 'region' : nothing}
         aria-label=${this.dataMode ? label : nothing}
       >
         ${this.searchable ? this.renderSearch() : nothing}
@@ -1253,8 +1253,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         ${showEmpty
           ? html`<div part="empty">
               ${this.searchText.trim()
-                ? this.localize("noMatches")
-                : this.localize("threadListEmpty")}
+                ? this.localize('noMatches')
+                : this.localize('threadListEmpty')}
             </div>`
           : html`<lr-virtual-list
               exportparts="base:viewport, sticky-group:group-sticky, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-adornment:group-adornment, group-icon:group-icon, row-start:row-start, row-excerpt:row-excerpt, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph, row-item-base:row-item-base, row-item-active-indicator:row-item-active-indicator, row-item-select-button:row-item-select-button, row-item-start:row-item-start, row-item-content:row-item-content, row-item-label:row-item-label, row-item-label-input:row-item-label-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
@@ -1268,9 +1268,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 : undefined}
               .renderItem=${this.renderItem}
               .keyFunction=${this.itemKey}
-              .activeId=${this.activeId
-                ? this.threadItemKey(this.activeId)
-                : ""}
+              .activeId=${this.activeConversationId
+                ? this.threadItemKey(this.activeConversationId)
+                : ''}
             ></lr-virtual-list>`}
         <slot
           name="empty"
@@ -1285,6 +1285,6 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-thread-list": LyraThreadList;
+    'lr-thread-list': LyraThreadList;
   }
 }

@@ -1,39 +1,39 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
-import { html, nothing, type TemplateResult } from "lit";
-import { property } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { html, nothing, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   finiteCount,
   finiteInteger,
   finiteRange,
-} from "../../../internal/numbers.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import type { LyraVariant } from "../../../internal/variants.js";
-import "../../data/stat/stat.class.js";
-import "../citation-badge/citation-badge.class.js";
-import "../../overlays/empty/empty.class.js";
+} from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import type { LyraVariant } from '../../../internal/variants.js';
+import '../../data/stat/stat.class.js';
+import '../citation-badge/citation-badge.class.js';
+import '../../overlays/empty/empty.class.js';
 import type {
   Citation,
   CitationSelectEventDetail,
   GroundedClaim,
   GroundingAssessment,
-} from "../../../ai/types.js";
-import { styles } from "./grounding-summary.styles.js";
-import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
-import "../claim-evidence/claim-evidence.class.js";
-import type { LyraScoreThresholds } from "../graph/graph.class.js";
+} from '../../../ai/types.js';
+import { styles } from './grounding-summary.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import '../claim-evidence/claim-evidence.class.js';
+import type { LyraScoreThresholds } from '../graph/graph.class.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
-} from "../retrieval-semantic-owner.js";
+} from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraGroundingSummaryEventMap {
-  "lr-citation-select": CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
-  "lr-claim-select": CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
+  'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
+  'lr-claim-select': CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
 }
 
 /** Document-outline level used by the warnings and evidence section headings. */
@@ -86,8 +86,8 @@ export type GroundingSummaryHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
  */
 export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze([
-    "assessment",
-    "citations",
+    'assessment',
+    'citations',
   ]);
 
   // GENERATED DEFAULT-STRING SLICE: START
@@ -115,6 +115,10 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-citation-select',
+    'lr-claim-select',
+  ]);
 
   /** The assessment to summarize. `null` (the default) renders the empty state. */
   @property({ attribute: false }) assessment: Readonly<GroundingAssessment> | null = null;
@@ -135,19 +139,19 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
 
   /** Accessible name used by the stable group when the host has no `aria-label`; falls back to the
    *  localized `groundingSummaryLabel` default. An explicitly empty host label stays empty. */
-  @property() label = "";
+  @property() label = '';
 
   /** Renders `assessment.claims` through `<lr-claim-evidence>` when available. */
   @property({
     type: Boolean,
-    attribute: "show-claims",
+    attribute: 'show-claims',
     reflect: true,
     converter: trueDefaultBooleanConverter,
   })
   showClaims = true;
 
   /** Heading level for the warnings and evidence sections. Clamped to the HTML outline range. */
-  @property({ type: Number, attribute: "heading-level" })
+  @property({ type: Number, attribute: 'heading-level' })
   headingLevel: GroundingSummaryHeadingLevel = 3;
 
   private sectionHeading(part: string, text: string): TemplateResult {
@@ -169,20 +173,20 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   }
 
   private tone(value: number): LyraVariant {
-    if (value >= this.thresholds.high) return "success";
-    if (value >= this.thresholds.medium) return "warning";
-    return "danger";
+    if (value >= this.thresholds.high) return 'success';
+    if (value >= this.thresholds.medium) return 'warning';
+    return 'danger';
   }
 
   private formatPercent(value: number): string {
-    return getNumberFormat(this.effectiveLocale, { style: "percent" }).format(
+    return getNumberFormat(this.effectiveLocale, { style: 'percent' }).format(
       finiteRange(value, 0, 0, 1)
     );
   }
 
   private onCitationSelect(citation: Citation, event: Event): void {
     event.stopPropagation();
-    this.emit("lr-citation-select", { citation });
+    this.emit('lr-citation-select', { citation });
   }
 
   private renderEvidenceItem = (
@@ -195,16 +199,16 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     // localized string.
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const spanText = citation.span
-      ? this.localize("groundingSummaryEvidenceSpan", undefined, {
+      ? this.localize('groundingSummaryEvidenceSpan', undefined, {
           start: numberFormat.format(finiteCount(citation.span.start)),
           end: numberFormat.format(finiteCount(citation.span.end)),
         })
-      : "";
+      : '';
     return html`
       <li part="evidence-item">
         <lr-citation-badge
           index=${index + 1}
-          source-id=${citation.sourceId ?? ""}
+          source-id=${citation.sourceId ?? ''}
           @lr-citation-activate=${(event: Event) =>
             this.onCitationSelect(citation, event)}
         >
@@ -224,9 +228,9 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   override render(): TemplateResult {
     const groupLabel = retrievalSemanticLabel(
       this,
-      this.label || this.localize("groundingSummaryLabel")
+      this.label || this.localize('groundingSummaryLabel')
     );
-    const groupRole = retrievalSemanticRole(this, "group");
+    const groupRole = retrievalSemanticRole(this, 'group');
     const a = this.assessment;
 
     if (!a) {
@@ -237,7 +241,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
       >
         <lr-empty
           part="empty"
-          heading=${this.localize("groundingSummaryEmpty")}
+          heading=${this.localize('groundingSummaryEmpty')}
         ></lr-empty>
       </div>`;
     }
@@ -245,7 +249,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     const supportedClaims = finiteCount(a.supportedClaims);
     const unsupportedClaims = finiteCount(a.unsupportedClaims);
     const coverage = finiteRange(a.coverage, 0, 0, 1);
-    const hasConfidence = typeof a.confidence === "number";
+    const hasConfidence = typeof a.confidence === 'number';
     const warnings = a.warnings ?? [];
     const numberFormat = getNumberFormat(this.effectiveLocale);
 
@@ -257,23 +261,23 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
       >
         <div part="stats">
           <lr-stat
-            label=${this.localize("groundingSummarySupportedLabel")}
+            label=${this.localize('groundingSummarySupportedLabel')}
             value=${numberFormat.format(supportedClaims)}
-            variant=${supportedClaims > 0 ? "success" : "neutral"}
+            variant=${supportedClaims > 0 ? 'success' : 'neutral'}
           ></lr-stat>
           <lr-stat
-            label=${this.localize("groundingSummaryUnsupportedLabel")}
+            label=${this.localize('groundingSummaryUnsupportedLabel')}
             value=${numberFormat.format(unsupportedClaims)}
-            variant=${unsupportedClaims > 0 ? "danger" : "neutral"}
+            variant=${unsupportedClaims > 0 ? 'danger' : 'neutral'}
           ></lr-stat>
           <lr-stat
-            label=${this.localize("groundingSummaryCoverageLabel")}
+            label=${this.localize('groundingSummaryCoverageLabel')}
             value=${this.formatPercent(coverage)}
             variant=${this.tone(coverage)}
           ></lr-stat>
           ${hasConfidence
             ? html`<lr-stat
-                label=${this.localize("groundingSummaryConfidenceLabel")}
+                label=${this.localize('groundingSummaryConfidenceLabel')}
                 value=${this.formatPercent(a.confidence as number)}
                 variant=${this.tone(
                   finiteRange(a.confidence as number, 0, 0, 1)
@@ -285,8 +289,8 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
           ? html`
               <div part="warnings">
                 ${this.sectionHeading(
-                  "warnings-heading",
-                  this.localize("groundingSummaryWarningsHeading")
+                  'warnings-heading',
+                  this.localize('groundingSummaryWarningsHeading')
                 )}
                 <span part="warnings-count"
                   >${numberFormat.format(warnings.length)}</span
@@ -312,8 +316,8 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
           ? html`
               <div part="evidence">
                 ${this.sectionHeading(
-                  "evidence-heading",
-                  this.localize("groundingSummaryEvidenceHeading")
+                  'evidence-heading',
+                  this.localize('groundingSummaryEvidenceHeading')
                 )}
                 <span part="evidence-count"
                   >${numberFormat.format(this.citations.length)}</span
@@ -333,6 +337,6 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-grounding-summary": LyraGroundingSummary;
+    'lr-grounding-summary': LyraGroundingSummary;
   }
 }

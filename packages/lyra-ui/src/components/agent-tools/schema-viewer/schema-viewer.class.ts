@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -127,7 +127,7 @@ function isReadonlyArray<Value>(
  * @since 7.0.0
  */
 export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["schema", "issues"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['schema', 'issues']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -144,6 +144,9 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-schema-select',
+  ]);
 
   /** Clone-owned recursive schema snapshot. Reassign a new record after changing any branch. */
   @property({ attribute: false }) schema: JsonSchemaNode | null = null;

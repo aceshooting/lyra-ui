@@ -215,6 +215,9 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-pin-change',
+  ]);
 
   /** Nodes forwarded to the composed graph and search experience. */
   @property({ attribute: false }) nodes: readonly LyraGraphNode[] = [];
@@ -876,7 +879,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
             part="search"
             type="search"
             .value=${this.searchQuery}
-            placeholder=${this.localize("graphExplorerSearchPlaceholder")}
+            placeholder=${this.localize('graphExplorerSearchPlaceholder')}
             @lr-input=${this.onSearchInput}
           ></lr-input>
           <lr-graph-legend
@@ -891,11 +894,11 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
               <div
                 part="search-results"
                 role="list"
-                aria-label=${this.localize("graphExplorerSearchResultsLabel")}
+                aria-label=${this.localize('graphExplorerSearchResultsLabel')}
               >
                 ${matches.length === 0
                   ? html`<div part="search-empty" role="listitem">
-                      ${this.localize("viewerSearchNoMatches")}
+                      ${this.localize('viewerSearchNoMatches')}
                     </div>`
                   : matches.map(
                       (n) => html`
@@ -919,7 +922,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           ? html`
               <div part="pinned">
                 <span part="pinned-heading"
-                  >${this.localize("graphExplorerPinnedHeading")}</span
+                  >${this.localize('graphExplorerPinnedHeading')}</span
                 >
                 ${this.pinnedNodeIds.map(
                   (id) => html`<lr-chip
@@ -933,7 +936,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
                 )}
                 ${this.pinnedNodeIds.length === 2
                   ? html`<lr-button size="s" @click=${() => this.requestPath()}
-                      >${this.localize("graphExplorerFindPath")}</lr-button
+                      >${this.localize('graphExplorerFindPath')}</lr-button
                     >`
                   : nothing}
               </div>
@@ -995,7 +998,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
                         this.togglePin(this.selectedNodeId)}
                     >
                       ${this.localize(
-                        isPinned ? "graphExplorerUnpin" : "graphExplorerPin"
+                        isPinned ? 'graphExplorerUnpin' : 'graphExplorerPin'
                       )}
                     </lr-button>
                   </lr-entity-card>

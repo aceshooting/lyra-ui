@@ -349,7 +349,7 @@ describe("data mode", () => {
         <lr-thread-list
           searchable
           show-archived
-          active-id="rtl-active"
+          active-conversation-id="rtl-active"
           .threads=${[
             {
               id: "rtl-active",
@@ -559,7 +559,7 @@ describe("data mode", () => {
     const togglePromise = oneEvent(el, "lr-group-toggle");
     alphaToggle.click();
     expect((await togglePromise).detail).to.deep.equal({
-      id: "alpha",
+      groupId: "alpha",
       collapsed: false,
     });
     expect(alphaToggle.getAttribute("aria-expanded")).to.equal("false");
@@ -586,12 +586,12 @@ describe("data mode", () => {
     await expect(el).to.be.accessible();
   });
 
-  it("marks the row matching activeId as active", async () => {
+  it("marks the row matching activeConversationId as active", async () => {
     const el = (await fixture(
       html`<lr-thread-list
         style="block-size:400px"
         .threads=${threads}
-        active-id="t1"
+        active-conversation-id="t1"
       ></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
@@ -621,7 +621,7 @@ describe("data mode", () => {
     await nextFrame();
     await nextFrame();
 
-    el.activeId = "group:today";
+    el.activeConversationId = "group:today";
     await el.updateComplete;
     await nextFrame();
     await nextFrame();
@@ -2764,7 +2764,7 @@ describe("sticky group headers", () => {
     const event = oneEvent(el, "lr-group-toggle");
     pinnedToggle.click();
     const detail = (await event).detail;
-    expect(detail.id).to.equal("today");
+    expect(detail.groupId).to.equal("today");
     expect(detail.collapsed).to.be.true;
   });
 

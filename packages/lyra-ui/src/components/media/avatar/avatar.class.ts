@@ -264,7 +264,7 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
     return html`
       <span
         part="base"
-        role=${hasAccessibleFallback ? "img" : nothing}
+        role=${hasAccessibleFallback ? 'img' : nothing}
         aria-label=${hasAccessibleFallback ? accessibleName : nothing}
       >
         <span part="icon" aria-hidden="true" inert ?hidden=${!showGlyph}
@@ -282,7 +282,7 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
         ${showInitials
           ? html`<span
               part="initials"
-              aria-hidden=${suppressFallbackSemantics ? "true" : nothing}
+              aria-hidden=${suppressFallbackSemantics ? 'true' : nothing}
               >${this.initials}</span
             >`
           : nothing}

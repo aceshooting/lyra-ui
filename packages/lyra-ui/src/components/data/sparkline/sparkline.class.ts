@@ -1,10 +1,10 @@
-import { html, nothing, svg, type TemplateResult } from "lit";
-import { property } from "lit/decorators.js";
-import { nextId } from "../../../internal/a11y.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import { finiteNumber, finiteRatio } from "../../../internal/numbers.js";
-import { styles } from "./sparkline.styles.js";
+import { html, nothing, svg, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
+import { nextId } from '../../../internal/a11y.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
+import { styles } from './sparkline.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_noData, LYRA_DEFAULT_trendOf } from '../../../internal/default-strings.generated.js';
@@ -14,11 +14,11 @@ import { LYRA_DEFAULT_noData, LYRA_DEFAULT_trendOf } from '../../../internal/def
 const VIEW = 100;
 const MAX_POINTS = 500;
 
-export type LyraSparklineAppearance = "gradient" | "line" | "solid";
-export type LyraSparklineCurve = "linear" | "natural" | "step";
-export type LyraSparklineTrend = "positive" | "negative" | "neutral";
+export type LyraSparklineAppearance = 'gradient' | 'line' | 'solid';
+export type LyraSparklineCurve = 'linear' | 'natural' | 'step';
+export type LyraSparklineTrend = 'positive' | 'negative' | 'neutral';
 /** Geometry used to plot each sample. */
-export type LyraSparklineMark = "line" | "bar";
+export type LyraSparklineMark = 'line' | 'bar';
 
 function decimate<T>(arr: ReadonlyArray<T>, max: number): T[] {
   if (arr.length <= max) return [...arr];
@@ -36,15 +36,15 @@ function finiteData(value: string): number[] {
 }
 
 function normalizeAppearance(value: unknown): LyraSparklineAppearance {
-  return value === "gradient" || value === "line" || value === "solid"
+  return value === 'gradient' || value === 'line' || value === 'solid'
     ? value
-    : "solid";
+    : 'solid';
 }
 
 function normalizeCurve(value: unknown): LyraSparklineCurve {
-  return value === "natural" || value === "step" || value === "linear"
+  return value === 'natural' || value === 'step' || value === 'linear'
     ? value
-    : "linear";
+    : 'linear';
 }
 
 /**
@@ -82,40 +82,40 @@ export class LyraSparkline extends LyraElement {
   static override styles = [LyraElement.styles, styles];
 
   /** Fill treatment under the trend line. */
-  @property({ reflect: true }) appearance: LyraSparklineAppearance = "solid";
+  @property({ reflect: true }) appearance: LyraSparklineAppearance = 'solid';
 
   /** Interpolation used to connect adjacent samples. */
-  @property({ reflect: true }) curve: LyraSparklineCurve = "linear";
+  @property({ reflect: true }) curve: LyraSparklineCurve = 'linear';
 
   /** Space-separated finite numeric samples. At least two are required. */
-  @property() data = "";
+  @property() data = '';
 
   /** Accessible label applied verbatim to the SVG. */
-  @property() label = "";
+  @property() label = '';
 
   /** Semantic default color; public color custom properties take precedence. */
   @property({ reflect: true }) trend?: LyraSparklineTrend;
 
   /** Compatibility accessible-name override. `label` takes precedence. */
-  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** Additive programmatic data source used when `data` is empty. Property-only. */
   @property({ attribute: false }) values: readonly number[] = [];
 
-  private _mark: LyraSparklineMark = "line";
+  private _mark: LyraSparklineMark = 'line';
 
   /** Geometry used to plot samples. Foreign tokens normalize to `line`. */
   @property({ reflect: true })
   get mark(): LyraSparklineMark { return this._mark; }
   set mark(value: LyraSparklineMark) {
-    const normalized: LyraSparklineMark = value === "bar" ? "bar" : "line";
+    const normalized: LyraSparklineMark = value === 'bar' ? 'bar' : 'line';
     const previous = this._mark;
     if (previous === normalized) {
-      if (value !== normalized) this.requestUpdate("mark", previous);
+      if (value !== normalized) this.requestUpdate('mark', previous);
       return;
     }
     this._mark = normalized;
-    this.requestUpdate("mark", previous);
+    this.requestUpdate('mark', previous);
   }
 
   /** Lower bound of the value scale (defaults to the data minimum). */
@@ -124,7 +124,7 @@ export class LyraSparkline extends LyraElement {
   /** Upper bound of the value scale (defaults to the data maximum). */
   @property({ type: Number }) max?: number;
 
-  private readonly gradientId = nextId("sparkline-gradient");
+  private readonly gradientId = nextId('sparkline-gradient');
 
   private plotValues(): number[] {
     if (this.data.trim()) {
@@ -154,7 +154,7 @@ export class LyraSparkline extends LyraElement {
     return samples.map((value, index) => {
       const forwardX =
         samples.length > 1 ? (index / (samples.length - 1)) * VIEW : VIEW / 2;
-      const x = this.effectiveDirection === "rtl" ? VIEW - forwardX : forwardX;
+      const x = this.effectiveDirection === 'rtl' ? VIEW - forwardX : forwardX;
       const y = lo === hi ? VIEW / 2 : VIEW - finiteRatio(value, lo, hi) * VIEW;
       return [x, y] as const;
     });
@@ -162,12 +162,12 @@ export class LyraSparkline extends LyraElement {
 
   private linePath(points: ReadonlyArray<readonly [number, number]>): string {
     const first = points[0];
-    if (!first) return "";
+    if (!first) return '';
     if (points.length === 1)
       return `M${first[0]},${first[1]} L${first[0]},${first[1]}`;
 
     const curve = normalizeCurve(this.curve);
-    if (curve === "step") {
+    if (curve === 'step') {
       return points
         .slice(1)
         .reduce(
@@ -175,7 +175,7 @@ export class LyraSparkline extends LyraElement {
           `M${first[0]},${first[1]}`
         );
     }
-    if (curve === "natural") {
+    if (curve === 'natural') {
       let path = `M${first[0]},${first[1]}`;
       for (let index = 0; index < points.length - 1; index++) {
         const before = points[Math.max(0, index - 1)]!;
@@ -191,18 +191,18 @@ export class LyraSparkline extends LyraElement {
       return path;
     }
     return points
-      .map(([x, y], index) => `${index ? "L" : "M"}${x},${y}`)
-      .join(" ");
+      .map(([x, y], index) => `${index ? 'L' : 'M'}${x},${y}`)
+      .join(' ');
   }
 
   private accessibleName(values: readonly number[]): string {
     if (this.label) return this.label;
     if (this.accessibleLabel) return this.accessibleLabel;
-    if (this.data.trim()) return "";
+    if (this.data.trim()) return '';
 
     const last = values.at(-1);
-    if (last === undefined) return this.localize("noData");
-    return this.localize("trendOf", undefined, {
+    if (last === undefined) return this.localize('noData');
+    return this.localize('trendOf', undefined, {
       count: getNumberFormat(this.effectiveLocale).format(values.length),
       value: getNumberFormat(this.effectiveLocale, {
         maximumFractionDigits: 2,
@@ -234,20 +234,20 @@ export class LyraSparkline extends LyraElement {
     const path = this.linePath(points);
     const appearance = normalizeAppearance(this.appearance);
     const showFill =
-      this.mark !== "bar" && appearance !== "line" && points.length > 0;
+      this.mark !== 'bar' && appearance !== 'line' && points.length > 0;
     const first = points[0];
     const last = points.at(-1);
     const fillPath =
-      first && last ? `${path} L${last[0]},${VIEW} L${first[0]},${VIEW} Z` : "";
+      first && last ? `${path} L${last[0]},${VIEW} L${first[0]},${VIEW} Z` : '';
 
     return html`<svg
       part="sparkline base"
       viewBox="0 0 ${VIEW} ${VIEW}"
       preserveAspectRatio="none"
-      role=${name ? "img" : nothing}
+      role=${name ? 'img' : nothing}
       aria-label=${name || nothing}
     >
-      ${showFill && appearance === "gradient"
+      ${showFill && appearance === 'gradient'
         ? svg`<defs>
             <linearGradient id=${this.gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop class="gradient-start" offset="0%"></stop>
@@ -255,7 +255,7 @@ export class LyraSparkline extends LyraElement {
             </linearGradient>
           </defs>`
         : nothing}
-      ${this.mark === "bar"
+      ${this.mark === 'bar'
         ? this.renderBars(points)
         : html`
             ${showFill
@@ -263,7 +263,7 @@ export class LyraSparkline extends LyraElement {
                   part="fill area"
                   d=${fillPath}
                   style=${
-                    appearance === "gradient"
+                    appearance === 'gradient'
                       ? `fill: url(#${this.gradientId})`
                       : nothing
                   }
@@ -277,6 +277,6 @@ export class LyraSparkline extends LyraElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-sparkline": LyraSparkline;
+    'lr-sparkline': LyraSparkline;
   }
 }

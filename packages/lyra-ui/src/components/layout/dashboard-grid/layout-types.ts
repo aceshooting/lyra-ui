@@ -1,4 +1,4 @@
-import type { LyraWidgetNode } from "../../conversation/widget-renderer/resolve.js";
+import type { LyraWidgetNode } from '../../conversation/widget-renderer/resolve.js';
 
 /** One widget's immutable position, size, and content within `<lr-dashboard-grid>`'s `layout`.
  * Coordinates are integer grid units (`x`/`y` 0-based, `w`/`h` a span count), never pixels. */
@@ -29,7 +29,7 @@ export interface LyraDashboardCell {
 }
 
 /** How a requested move or resize handles overlap with another cell. */
-export type LyraDashboardCollisionPolicy = "reject" | "push" | "overlap";
+export type LyraDashboardCollisionPolicy = 'reject' | 'push' | 'overlap';
 
 /** Immutable result returned by `resolveLyraDashboardPlacement`. */
 export interface LyraDashboardPlacementResult {

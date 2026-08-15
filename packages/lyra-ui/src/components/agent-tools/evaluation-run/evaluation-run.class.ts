@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -201,7 +201,7 @@ type CountKind = (typeof RUNNING_ERROR_KINDS)[number];
  * @since 4.1.0
  */
 export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["examples"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['examples']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -237,6 +237,10 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-example-citation-select',
+    'lr-example-claim-select',
+  ]);
 
   /** The batch's examples so far. Controlled -- never mutated by this component; pass a new array
    *  to update it (e.g. as each example finishes, or as the whole batch streams in). Empty/blank ids

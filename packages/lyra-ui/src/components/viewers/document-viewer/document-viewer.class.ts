@@ -25,6 +25,7 @@ import type {
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import { styles } from './document-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_documentPreviewGenericError, LYRA_DEFAULT_documentViewerLabel, LYRA_DEFAULT_download, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
@@ -73,11 +74,11 @@ export interface LyraDocumentViewerEventMap {
  */
 export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze([
-    "highlights",
-    "registry",
+    'highlights',
+    'registry',
   ]);
   protected static override readonly identityCollectionProperties =
-    Object.freeze(["registry"]);
+    Object.freeze(['registry']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -139,8 +140,15 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
    *  identical property. */
   @property({ attribute: false, hasChanged: () => true }) anchor: LyraAnchor | string | null = null;
 
-  /** Highlights forwarded to the resolved renderer. */
-  @property({ attribute: false }) highlights: readonly LyraHighlight[] = [];
+  private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
+  /** Highlights forwarded to the resolved renderer. IDs are trimmed, nonempty, and first-wins. */
+  @property({ attribute: false })
+  get highlights(): readonly LyraHighlight[] { return this._highlights; }
+  set highlights(value: readonly LyraHighlight[]) {
+    const previous = this._highlights;
+    this._highlights = snapshotLyraHighlights(value);
+    this.requestUpdate('highlights', previous);
+  }
 
   /** Media alt text forwarded to the resolved renderer, for image-like renderers. Unset lets the
    *  renderer derive a fallback name; an explicit empty string marks decorative media. */

@@ -2,7 +2,10 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { AgentStatusKind } from '../../../ai/types.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  LyraElement,
+  type LyraEventDetailSnapshot,
+} from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
@@ -18,22 +21,22 @@ import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollec
 
 
 export interface SubagentRun {
-  id: string;
-  parentId?: string;
-  label: string;
-  status: AgentStatusKind;
-  task?: string;
-  model?: string;
+  readonly id: string;
+  readonly parentId?: string;
+  readonly label: string;
+  readonly status: AgentStatusKind;
+  readonly task?: string;
+  readonly model?: string;
   /** Completion ratio in the inclusive 0..1 range. */
-  progressRatio?: number;
-  startedAt?: number;
-  endedAt?: number;
-  metadata?: Record<string, unknown>;
+  readonly progressRatio?: number;
+  readonly startedAt?: number;
+  readonly endedAt?: number;
+  readonly metadata?: Readonly<Record<string, unknown>>;
 }
 export interface LyraSubagentPanelEventMap {
-  'lr-run-activate': CustomEvent<AgentRunActivateDetail<SubagentRun>>;
-  'lr-cancel': CustomEvent<{ runId: string }>;
-  'lr-run-retry': CustomEvent<{ runId: string }>;
+  'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<SubagentRun>>>;
+  'lr-cancel': CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>;
+  'lr-run-retry': CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>;
 }
 
 const STATUS_VARIANT: Partial<Record<AgentStatusKind, BadgeVariant>> = {
@@ -92,7 +95,7 @@ interface OrderedRuns {
  * @since 7.0.0
  */
 export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["runs"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['runs']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -117,6 +120,11 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-run-activate',
+    'lr-cancel',
+    'lr-run-retry',
+  ]);
 
   @property({ attribute: false }) runs: readonly SubagentRun[] = [];
   @property({ attribute: 'selected-run-id' }) selectedRunId: string | null = null;

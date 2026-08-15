@@ -1,31 +1,31 @@
-import { html, type PropertyValues, type TemplateResult } from "lit";
-import { property } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { nextId } from "../../../internal/a11y.js";
-import { composedAccessibilityTextResult } from "../../../internal/accessibility-visibility.js";
-import { chevronIcon } from "../../../internal/icons.js";
-import { setCustomState } from "../../../internal/custom-states.js";
-import { styles } from "./reorder-item.styles.js";
-import { reorderOwnerUpdate, type ReorderOwnerState } from "./reorder-owner.js";
+import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { nextId } from '../../../internal/a11y.js';
+import { composedAccessibilityTextResult } from '../../../internal/accessibility-visibility.js';
+import { chevronIcon } from '../../../internal/icons.js';
+import { setCustomState } from '../../../internal/custom-states.js';
+import { styles } from './reorder-item.styles.js';
+import { reorderOwnerUpdate, type ReorderOwnerState } from './reorder-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraReorderItemEventMap {
-  "lr-move-request": CustomEvent<{ direction: "up" | "down" }>;
+  'lr-move-request': CustomEvent<{ direction: 'up' | 'down' }>;
 }
 
 function isReorderOwnerState(value: unknown): value is ReorderOwnerState {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== 'object' || value === null) return false;
   const candidate = value as Partial<Record<keyof ReorderOwnerState, unknown>>;
   return (
-    typeof candidate.atStart === "boolean" &&
-    typeof candidate.atEnd === "boolean" &&
-    typeof candidate.listDisabled === "boolean" &&
-    typeof candidate.pending === "boolean" &&
-    typeof candidate.busy === "boolean" &&
-    typeof candidate.validIdentity === "boolean"
+    typeof candidate.atStart === 'boolean' &&
+    typeof candidate.atEnd === 'boolean' &&
+    typeof candidate.listDisabled === 'boolean' &&
+    typeof candidate.pending === 'boolean' &&
+    typeof candidate.busy === 'boolean' &&
+    typeof candidate.validIdentity === 'boolean'
   );
 }
 
@@ -77,9 +77,9 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   private readonly reorderInternals = this.attachInternals();
-  private readonly moveUpLabelId = nextId("reorder-move-up");
-  private readonly moveDownLabelId = nextId("reorder-move-down");
-  private readonly itemLabelId = nextId("reorder-item-label");
+  private readonly moveUpLabelId = nextId('reorder-move-up');
+  private readonly moveDownLabelId = nextId('reorder-move-down');
+  private readonly itemLabelId = nextId('reorder-item-label');
   private owner: object | null = null;
   private ownerState: ReorderOwnerState = {
     atStart: false,
@@ -94,11 +94,11 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
   /** Required unique, nonempty stable identifier included in the parent list's emitted
    * `lr-reorder` order array. An owning list excludes an item with a missing, whitespace-only, or
    * duplicate value from movement until its identity becomes valid. */
-  @property() value = "";
+  @property() value = '';
 
   /** Explicit item identity used to correlate this row's repeated move actions. When absent, a
    * bounded accessible-text projection of the row content is used. */
-  @property({ attribute: "accessible-label" }) accessibleLabel?: string;
+  @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
 
   /** Disables this row's own move-up/move-down buttons without removing it or its slotted content
    *  from the DOM. Does not gate the default slot's own content. */
@@ -158,14 +158,14 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
     )
       return;
     this.ownerState = state;
-    setCustomState(this.reorderInternals, "at-start", state.atStart);
-    setCustomState(this.reorderInternals, "at-end", state.atEnd);
-    setCustomState(this.reorderInternals, "list-disabled", state.listDisabled);
-    setCustomState(this.reorderInternals, "pending", state.pending);
-    setCustomState(this.reorderInternals, "busy", state.busy);
+    setCustomState(this.reorderInternals, 'at-start', state.atStart);
+    setCustomState(this.reorderInternals, 'at-end', state.atEnd);
+    setCustomState(this.reorderInternals, 'list-disabled', state.listDisabled);
+    setCustomState(this.reorderInternals, 'pending', state.pending);
+    setCustomState(this.reorderInternals, 'busy', state.busy);
     setCustomState(
       this.reorderInternals,
-      "invalid-identity",
+      'invalid-identity',
       !state.validIdentity
     );
     this.requestUpdate();
@@ -222,12 +222,12 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
       characterData: true,
       subtree: true,
       attributeFilter: [
-        "alt",
-        "aria-label",
-        "aria-labelledby",
-        "hidden",
-        "inert",
-        "title",
+        'alt',
+        'aria-label',
+        'aria-labelledby',
+        'hidden',
+        'inert',
+        'title',
       ],
     });
   }
@@ -245,26 +245,26 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
 
   private onMoveUpClick = (): void => {
     if (this.moveUpDisabled) return;
-    this.emit("lr-move-request", { direction: "up" });
+    this.emit('lr-move-request', { direction: 'up' });
   };
 
   private onMoveDownClick = (): void => {
     if (this.moveDownDisabled) return;
-    this.emit("lr-move-request", { direction: "down" });
+    this.emit('lr-move-request', { direction: 'down' });
   };
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    this.setAttribute("role", "listitem");
+    this.setAttribute('role', 'listitem');
   }
 
   override render(): TemplateResult {
     const itemLabel = this.resolvedItemLabel;
     return html`
       <div part="base">
-        <span id=${this.moveUpLabelId} hidden>${this.localize("moveUp")}</span>
+        <span id=${this.moveUpLabelId} hidden>${this.localize('moveUp')}</span>
         <span id=${this.moveDownLabelId} hidden
-          >${this.localize("moveDown")}</span
+          >${this.localize('moveDown')}</span
         >
         <span id=${this.itemLabelId} hidden>${itemLabel}</span>
         <button
@@ -295,6 +295,6 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-reorder-item": LyraReorderItem;
+    'lr-reorder-item': LyraReorderItem;
   }
 }

@@ -305,35 +305,50 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
    * rolls back every active gesture before retiring its global listeners. */
   @property({ type: Boolean, reflect: true }) locked = false;
   private _selectedNodeIds: readonly string[] = Object.freeze([]);
-  /** Frozen snapshot of at most the first 10,000 selected node ids. Reassign to update. */
+  /** Frozen, unique snapshot of at most the first 10,000 valid nonblank node ids. */
   @property({ attribute: false })
   get selectedNodeIds(): readonly string[] {
     return this._selectedNodeIds;
   }
   set selectedNodeIds(value: readonly string[]) {
     const previous = this._selectedNodeIds;
-    this._selectedNodeIds = Object.freeze(
-      Array.isArray(value)
-        ? value.slice(0, MAX_FLOW_COLLECTION_ENTRIES).filter((id): id is string => typeof id === 'string')
-        : [],
+    this._selectedNodeIds = this.snapshotSelectedIds(
+      value,
+      new Set(this.nodes.map((node) => node.id)),
     );
     this.requestUpdate('selectedNodeIds', previous);
   }
 
   private _selectedEdgeIds: readonly string[] = Object.freeze([]);
-  /** Frozen snapshot of at most the first 10,000 selected edge ids. Reassign to update. */
+  /** Frozen, unique snapshot of at most the first 10,000 valid nonblank edge ids. */
   @property({ attribute: false })
   get selectedEdgeIds(): readonly string[] {
     return this._selectedEdgeIds;
   }
   set selectedEdgeIds(value: readonly string[]) {
     const previous = this._selectedEdgeIds;
-    this._selectedEdgeIds = Object.freeze(
-      Array.isArray(value)
-        ? value.slice(0, MAX_FLOW_COLLECTION_ENTRIES).filter((id): id is string => typeof id === 'string')
-        : [],
+    this._selectedEdgeIds = this.snapshotSelectedIds(
+      value,
+      new Set(this.edges.map((edge) => edge.id)),
     );
     this.requestUpdate('selectedEdgeIds', previous);
+  }
+
+  private snapshotSelectedIds(value: unknown, validIds: ReadonlySet<string>): readonly string[] {
+    if (!Array.isArray(value)) return Object.freeze([]);
+    const selected: string[] = [];
+    const seen = new Set<string>();
+    for (const candidate of value.slice(0, MAX_FLOW_COLLECTION_ENTRIES)) {
+      if (
+        typeof candidate !== 'string' ||
+        candidate.trim().length === 0 ||
+        !validIds.has(candidate) ||
+        seen.has(candidate)
+      ) continue;
+      seen.add(candidate);
+      selected.push(candidate);
+    }
+    return Object.freeze(selected);
   }
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.25;
   @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 2;
@@ -598,16 +613,12 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.pruneNodeCaches();
       this.syncAuthoredCards();
       const nodeIds = new Set(this.nodes.map((node) => node.id));
-      this._selectedNodeIds = Object.freeze(
-        this.selectedNodeIds.filter((id) => nodeIds.has(id)),
-      );
+      this._selectedNodeIds = this.snapshotSelectedIds(this.selectedNodeIds, nodeIds);
     }
     if (changed.has('edges')) {
       this.cancelModelBoundGestures();
       const edgeIds = new Set(this.edges.map((edge) => edge.id));
-      this._selectedEdgeIds = Object.freeze(
-        this.selectedEdgeIds.filter((id) => edgeIds.has(id)),
-      );
+      this._selectedEdgeIds = this.snapshotSelectedIds(this.selectedEdgeIds, edgeIds);
     }
     if (
       (changed.has('locked') && this.locked) ||

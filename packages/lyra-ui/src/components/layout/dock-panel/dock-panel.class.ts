@@ -1,25 +1,25 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
-import { property } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { isRtl } from "../../../internal/rtl.js";
-import { nextId } from "../../../internal/a11y.js";
-import { chevronIcon } from "../../../internal/icons.js";
-import { styles } from "./dock-panel.styles.js";
-import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
-import { resolveCssLength } from "../../../internal/css-length.js";
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { property } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { isRtl } from '../../../internal/rtl.js';
+import { nextId } from '../../../internal/a11y.js';
+import { chevronIcon } from '../../../internal/icons.js';
+import { styles } from './dock-panel.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from "../../../internal/localization.js";
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import {
   LYRA_DEFAULT_dockPanelCollapse,
   LYRA_DEFAULT_dockPanelExpand,
   LYRA_DEFAULT_dockPanelResize,
-} from "../../../internal/default-strings.generated.js";
+} from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Which edge of the panel's own container it's docked to. `'start'`/`'end'`
  *  are logical-inline (mirror left/right depending on writing direction);
  *  `'top'`/`'bottom'` are block-direction and unaffected by RTL. */
-export type LyraDockPanelEdge = "start" | "end" | "top" | "bottom";
+export type LyraDockPanelEdge = 'start' | 'end' | 'top' | 'bottom';
 
 export interface LyraDockPanelResizeDetail {
   /** The panel's new extent along its resize axis, always as a `px` CSS length string. */
@@ -30,10 +30,10 @@ export interface LyraDockPanelCollapseChangeDetail {
 }
 
 export interface LyraDockPanelEventMap {
-  "lr-resize-input": CustomEvent<LyraDockPanelResizeDetail>;
-  "lr-resize-change": CustomEvent<LyraDockPanelResizeDetail>;
-  "lr-collapse-request": CustomEvent<LyraDockPanelCollapseChangeDetail>;
-  "lr-collapse-change": CustomEvent<LyraDockPanelCollapseChangeDetail>;
+  'lr-resize-input': CustomEvent<LyraDockPanelResizeDetail>;
+  'lr-resize-change': CustomEvent<LyraDockPanelResizeDetail>;
+  'lr-collapse-request': CustomEvent<LyraDockPanelCollapseChangeDetail>;
+  'lr-collapse-change': CustomEvent<LyraDockPanelCollapseChangeDetail>;
 }
 
 /** Arrow-key step, in px, per keydown on the resize handle. */
@@ -43,7 +43,7 @@ interface DragState {
   readonly pointerId: number;
   readonly startPos: number;
   readonly startSizePx: number;
-  readonly axis: "inline" | "block";
+  readonly axis: 'inline' | 'block';
   readonly growSign: 1 | -1;
   readonly edge: LyraDockPanelEdge;
   readonly minExtent: string;
@@ -144,20 +144,20 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  @property({ reflect: true }) edge: LyraDockPanelEdge = "end";
+  @property({ reflect: true }) edge: LyraDockPanelEdge = 'end';
   /** The current docked extent along the resize axis, as a CSS length (e.g. `"320px"`).
    *
    *  Spelled `extent`, not `size`: everywhere else in the library `size` names a tier on the
    *  shared six-step ladder (`internal/variants.ts`'s `LyraSize`), and this is an arbitrary CSS
    *  length instead. A clean rename with no alias -- `size`/`min-size`/`max-size` on
    *  `<lr-dock-panel>` are simply unknown attributes now. */
-  @property() extent = "280px";
+  @property() extent = '280px';
   /** Minimum resize bound, as a CSS length. */
-  @property({ attribute: "min-extent" }) minExtent = "160px";
+  @property({ attribute: 'min-extent' }) minExtent = '160px';
   /** Maximum resize bound, as a CSS length. Empty means "no explicit cap" -- the live extent of
    *  the containing element is used instead, so the panel still can't be dragged wider/taller than
    *  its container. */
-  @property({ attribute: "max-extent" }) maxExtent = "";
+  @property({ attribute: 'max-extent' }) maxExtent = '';
   @property({ type: Boolean, reflect: true }) collapsible = false;
   @property({ type: Boolean, reflect: true }) collapsed = false;
   /** When `false`, no drag handle renders at all and the panel is a fixed size. */
@@ -170,7 +170,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   private drag: DragState | null = null;
   private dragOwnerWindow?: Window;
-  private readonly contentId = nextId("dock-panel-content");
+  private readonly contentId = nextId('dock-panel-content');
   // Keeps aria-valuemax/aria-valuenow (and the %/max-extent fallback they're
   // derived from) live against a *passive* container resize -- window
   // resize, a sibling collapsing, a media query -- none of which touch any
@@ -224,18 +224,18 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (
-      changed.has("extent") ||
-      changed.has("minExtent") ||
-      changed.has("maxExtent") ||
-      changed.has("collapsed") ||
-      changed.has("edge")
+      changed.has('extent') ||
+      changed.has('minExtent') ||
+      changed.has('maxExtent') ||
+      changed.has('collapsed') ||
+      changed.has('edge')
     ) {
       if (this.drag && !this.dragSnapshotIsCurrent(this.drag)) this.endDrag();
       this.reconcileLiveExtent();
     } else if (
       this.drag &&
-      ((changed.has("resizable") && !this.resizable) ||
-        (changed.has("collapsed") && this.collapsed))
+      ((changed.has('resizable') && !this.resizable) ||
+        (changed.has('collapsed') && this.collapsed))
     ) {
       this.endDrag();
     }
@@ -243,8 +243,8 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   /** `'inline'` for the `start`/`end` edges (resizing changes `inline-size`), `'block'` for
    *  `top`/`bottom` (resizing changes `block-size`). */
-  private get axis(): "inline" | "block" {
-    return this.edge === "start" || this.edge === "end" ? "inline" : "block";
+  private get axis(): 'inline' | 'block' {
+    return this.edge === 'start' || this.edge === 'end' ? 'inline' : 'block';
   }
 
   /** +1 or -1: which physical pointer-movement/keyboard direction *grows* the panel, folding in
@@ -252,31 +252,31 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
    *  only, the current RTL-ness -- mirrors lr-multi-split's own horizontal+RTL delta inversion, just
    *  generalized to four possible pinned edges instead of split's always-LTR-authored pair order. */
   private get growSign(): 1 | -1 {
-    if (this.edge === "top") return 1;
-    if (this.edge === "bottom") return -1;
+    if (this.edge === 'top') return 1;
+    if (this.edge === 'bottom') return -1;
     const rtl = isRtl(this);
-    if (this.edge === "start") return rtl ? -1 : 1;
+    if (this.edge === 'start') return rtl ? -1 : 1;
     return rtl ? 1 : -1; // edge === 'end'
   }
 
   private applyHostSize(bounds = this.resolveBoundsPx()): void {
     const value = this.collapsed
-      ? "var(--lr-dock-panel-collapsed-size, var(--_lr-dock-panel-collapsed-size))"
+      ? 'var(--lr-dock-panel-collapsed-size, var(--_lr-dock-panel-collapsed-size))'
       : this.extent;
-    if (this.axis === "inline") {
+    if (this.axis === 'inline') {
       this.style.inlineSize = value;
-      this.style.blockSize = "";
-      this.style.minBlockSize = "";
-      this.style.maxBlockSize = "";
-      this.style.minInlineSize = this.collapsed ? "" : `${bounds.minPx}px`;
-      this.style.maxInlineSize = this.collapsed ? "" : `${bounds.maxPx}px`;
+      this.style.blockSize = '';
+      this.style.minBlockSize = '';
+      this.style.maxBlockSize = '';
+      this.style.minInlineSize = this.collapsed ? '' : `${bounds.minPx}px`;
+      this.style.maxInlineSize = this.collapsed ? '' : `${bounds.maxPx}px`;
     } else {
       this.style.blockSize = value;
-      this.style.inlineSize = "";
-      this.style.minInlineSize = "";
-      this.style.maxInlineSize = "";
-      this.style.minBlockSize = this.collapsed ? "" : `${bounds.minPx}px`;
-      this.style.maxBlockSize = this.collapsed ? "" : `${bounds.maxPx}px`;
+      this.style.inlineSize = '';
+      this.style.minInlineSize = '';
+      this.style.maxInlineSize = '';
+      this.style.minBlockSize = this.collapsed ? '' : `${bounds.minPx}px`;
+      this.style.maxBlockSize = this.collapsed ? '' : `${bounds.maxPx}px`;
     }
   }
 
@@ -287,7 +287,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const parent = this.parentElement;
     const rect = parent?.getBoundingClientRect();
     const ownerWindow = this.ownerDocument.defaultView;
-    if (this.axis === "inline")
+    if (this.axis === 'inline')
       return rect?.width ?? ownerWindow?.innerWidth ?? 0;
     return rect?.height ?? ownerWindow?.innerHeight ?? 0;
   }
@@ -318,7 +318,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
    *  "current" value. */
   private currentSizePx(): number {
     const rect = this.getBoundingClientRect();
-    return this.axis === "inline" ? rect.width : rect.height;
+    return this.axis === 'inline' ? rect.width : rect.height;
   }
 
   private reconcileLiveExtent(): void {
@@ -363,7 +363,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   }
 
   private emitResize(
-    type: "lr-resize-input" | "lr-resize-change",
+    type: 'lr-resize-input' | 'lr-resize-change',
     extent: string
   ): void {
     this.emit(type, Object.freeze({ extent }));
@@ -400,7 +400,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const growSign = this.growSign;
     this.drag = {
       pointerId: e.pointerId,
-      startPos: axis === "inline" ? e.clientX : e.clientY,
+      startPos: axis === 'inline' ? e.clientX : e.clientY,
       startSizePx: this.currentSizePx(),
       axis,
       growSign,
@@ -414,14 +414,14 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     };
     this.dragOwnerWindow = ownerWindow;
     handle.setPointerCapture(e.pointerId);
-    ownerWindow.addEventListener("pointermove", this.onPointerMove);
-    ownerWindow.addEventListener("pointerup", this.onPointerUp);
+    ownerWindow.addEventListener('pointermove', this.onPointerMove);
+    ownerWindow.addEventListener('pointerup', this.onPointerUp);
     // A drag can end without a pointerup: a system gesture / palm rejection
     // can fire pointercancel, and losing capture (e.g. element removed) fires
     // lostpointercapture -- both need the same teardown as pointerup or the
     // handle keeps "resizing" in response to unrelated movement.
-    ownerWindow.addEventListener("pointercancel", this.onPointerCancel);
-    ownerWindow.addEventListener("lostpointercapture", this.onPointerCancel);
+    ownerWindow.addEventListener('pointercancel', this.onPointerCancel);
+    ownerWindow.addEventListener('lostpointercapture', this.onPointerCancel);
   };
 
   private onPointerMove = (e: PointerEvent): void => {
@@ -431,14 +431,14 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       this.endDrag();
       return;
     }
-    const pos = drag.axis === "inline" ? e.clientX : e.clientY;
+    const pos = drag.axis === 'inline' ? e.clientX : e.clientY;
     const delta = drag.growSign * (pos - drag.startPos);
     const extent = this.commitSize(drag.startSizePx + delta);
     if (extent === undefined) return;
     drag.expectedExtent = extent;
     drag.finalExtent = extent;
     drag.acceptedResize = true;
-    this.emitResize("lr-resize-input", extent);
+    this.emitResize('lr-resize-input', extent);
   };
 
   private onPointerUp = (e: PointerEvent): void => {
@@ -448,7 +448,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       drag.acceptedResize && this.dragSnapshotIsCurrent(drag);
     const finalExtent = drag.finalExtent;
     this.endDrag();
-    if (shouldCommit) this.emitResize("lr-resize-change", finalExtent);
+    if (shouldCommit) this.emitResize('lr-resize-change', finalExtent);
   };
 
   private onPointerCancel = (e: PointerEvent): void => {
@@ -460,11 +460,11 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const ownerWindow = this.dragOwnerWindow;
     this.drag = null;
     this.dragOwnerWindow = undefined;
-    ownerWindow?.removeEventListener("pointermove", this.onPointerMove);
-    ownerWindow?.removeEventListener("pointerup", this.onPointerUp);
-    ownerWindow?.removeEventListener("pointercancel", this.onPointerCancel);
+    ownerWindow?.removeEventListener('pointermove', this.onPointerMove);
+    ownerWindow?.removeEventListener('pointerup', this.onPointerUp);
+    ownerWindow?.removeEventListener('pointercancel', this.onPointerCancel);
     ownerWindow?.removeEventListener(
-      "lostpointercapture",
+      'lostpointercapture',
       this.onPointerCancel
     );
   }
@@ -475,8 +475,8 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     // already encodes whether that direction grows or shrinks the panel for
     // the current edge + RTL-ness, exactly mirroring how onPointerMove folds
     // it into the drag delta above.
-    const forwardKey = this.axis === "inline" ? "ArrowRight" : "ArrowDown";
-    const backwardKey = this.axis === "inline" ? "ArrowLeft" : "ArrowUp";
+    const forwardKey = this.axis === 'inline' ? 'ArrowRight' : 'ArrowDown';
+    const backwardKey = this.axis === 'inline' ? 'ArrowLeft' : 'ArrowUp';
     let extent: string | undefined;
     if (e.key === forwardKey) {
       e.preventDefault();
@@ -490,20 +490,20 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       );
     }
     if (extent === undefined) return;
-    this.emitResize("lr-resize-input", extent);
-    this.emitResize("lr-resize-change", extent);
+    this.emitResize('lr-resize-input', extent);
+    this.emitResize('lr-resize-change', extent);
   };
 
   private toggleCollapsed = (): void => {
     const next = !this.collapsed;
     const request = this.emit(
-      "lr-collapse-request",
+      'lr-collapse-request',
       Object.freeze({ collapsed: next }),
       { cancelable: true }
     );
     if (request.defaultPrevented) return;
     this.collapsed = next;
-    this.emit("lr-collapse-change", Object.freeze({ collapsed: next }));
+    this.emit('lr-collapse-change', Object.freeze({ collapsed: next }));
   };
 
   /** Rotation (deg) for the collapse-toggle's chevron: it points toward the
@@ -513,9 +513,9 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
    *  rotate-the-wrapping-part technique, generalized across four possible
    *  pinned edges and, for `start`/`end`, RTL. */
   private get toggleChevronDeg(): number {
-    if (this.edge === "top") return this.collapsed ? 90 : -90;
-    if (this.edge === "bottom") return this.collapsed ? -90 : 90;
-    const pinnedPhysicalEnd = this.edge === "end" ? !isRtl(this) : isRtl(this);
+    if (this.edge === 'top') return this.collapsed ? 90 : -90;
+    if (this.edge === 'bottom') return this.collapsed ? -90 : 90;
+    const pinnedPhysicalEnd = this.edge === 'end' ? !isRtl(this) : isRtl(this);
     return this.collapsed !== pinnedPhysicalEnd ? 0 : 180;
   }
 
@@ -531,8 +531,8 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     return html`<div
       part="handle"
       role="separator"
-      aria-label=${this.localize("dockPanelResize")}
-      aria-orientation=${this.axis === "inline" ? "vertical" : "horizontal"}
+      aria-label=${this.localize('dockPanelResize')}
+      aria-orientation=${this.axis === 'inline' ? 'vertical' : 'horizontal'}
       aria-valuenow=${Math.round(nowPx)}
       aria-valuemin=${Math.round(minPx)}
       aria-valuemax=${Math.round(maxPx)}
@@ -547,11 +547,11 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     return html`<button
       part="collapse-toggle"
       type="button"
-      aria-expanded=${this.collapsed ? "false" : "true"}
+      aria-expanded=${this.collapsed ? 'false' : 'true'}
       aria-controls=${this.contentId}
       aria-label=${this.collapsed
-        ? this.localize("dockPanelExpand")
-        : this.localize("dockPanelCollapse")}
+        ? this.localize('dockPanelExpand')
+        : this.localize('dockPanelCollapse')}
       @click=${this.toggleCollapsed}
     >
       <span
@@ -575,6 +575,6 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-dock-panel": LyraDockPanel;
+    'lr-dock-panel': LyraDockPanel;
   }
 }

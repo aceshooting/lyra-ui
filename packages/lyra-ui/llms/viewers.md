@@ -7,15 +7,20 @@ without CSS), its decorative ring stops under reduced motion, and `[part="base"]
 
 Viewer search events use `detail: { query, matchCount, matchCountExact, activeIndex }`.
 `matchCountExact: false` means the retained `matchCount` is a known lower bound, never an exact
-total. Viewers built on the shared DOM-text target index at most 1,000,000 UTF-16 code units /
-20,000 text nodes, accept query and text-quote fields up to 4,096 code units, retain 10,000 matches,
-and bound one search/paint pass to 4,000,000 scanned code units; they paint at most 200 search ranges
-and 100 host highlights after inspecting 1,000 highlight entries, while always reserving the active
-host highlight. DOCX quote painting uses the same corpus/query/work ceilings and the same
-1,000-candidate/100-painted limits. CSV, dataset, spreadsheet, and DOCX search retain 1,000
-matches; PDF, PPTX, ebook, and XML retain 10,000. Counts at the exact boundary remain exact after an
-extra-match check. SVG/XML paint at most 100 resolved host highlights after inspecting 1,000
-candidates, with `activeHighlightId` inspected first.
+total. All model-backed viewer searches accept at most 4,096 query code units and scan/validate at
+most 4,000,000 code units per pass. CSV, dataset, spreadsheet, and DOCX retain 1,000 matches; PDF,
+PPTX, ebook, and XML retain 10,000. PDF additionally inspects at most 1,000 pages and 1,000,000
+corpus code units, while ebook inspects at most 1,000 spine items. Any ceiling that prevents a
+complete scan makes `matchCountExact` false.
+
+Viewers built on the shared DOM-text target index at most 1,000,000 UTF-16 code units / 20,000 text
+nodes per content generation, accept text-quote fields up to 4,096 code units, retain 10,000
+matches, paint at most 200 live search ranges, and reuse the occurrence index across navigation and
+host-highlight painting. Shared highlight admission retains at most 10,000 unique nonempty records
+after inspecting at most 10,001 input records. Capped renderers select at most 1,000 candidates from
+that immutable snapshot and paint at most 100 host highlights; an `activeHighlightId` anywhere in
+the snapshot is placed first and preserved inside both rendering ceilings. DOCX, Markdown, PDF,
+ebook, SVG, and XML use these candidate/paint semantics.
 
 ## `lr-document-preview`
 
@@ -249,7 +254,7 @@ value, without suppressing the visible `name` heading.
   `hasChanged: () => true`, so re-assigning the same value (e.g. re-clicking the same citation
   badge) still re-fires.
 - `highlights: readonly LyraHighlight[] = []` (attribute: false) — highlights forwarded to the resolved
-  renderer.
+  renderer after the shared trimmed, nonempty, first-wins identity normalization.
 
 **Events:**
 
@@ -279,8 +284,10 @@ size of `[part="body"]` before the dialog body scrolls internally.
 
 **Renderer registry exports:**
 
-- `DocumentFile` — the compatible mutable file object passed unchanged to legacy `render(file)` and
-  `matches(file)` callbacks: `{ name, mimeType, src, anchor?, highlights?, alt? }`.
+- `DocumentFile` — the compatible mutable lookup input passed to `matches(file)` callbacks:
+  `{ name, mimeType, src, anchor?, highlights?, alt? }`. Adapter and legacy-render boundaries
+  receive an immutable file snapshot whose highlights use the shared trimmed, nonempty,
+  first-wins identity projection.
 - `LyraDocumentFile` — the readonly file snapshot wrapped by every discriminated payload.
 - `LyraDocumentRendererPayload` — readonly `kind: 'document' | 'av'` discriminated input wrapping an
   immutable `file`. The AV branch adds readonly `cues` and `tracks`; snapshots retain at most 10,000
@@ -304,8 +311,9 @@ size of `[part="body"]` before the dialog body scrolls internally.
 - `createDocumentRendererAdapter(definition)` — preserves discriminator-specific callback types
   while producing the validated adapter accepted by a registry definition.
 - `adaptDocumentRenderer(definition, file, payload?)` — binds one resolved definition to an
-  immutable payload and derives its frozen capabilities. A legacy definition still receives the
-  original `DocumentFile` object by identity.
+  immutable payload and derives its frozen capabilities. It snapshots the file once and passes
+  that canonical object to either the adapter or legacy renderer; caller object identity is not
+  retained across this boundary.
 - `snapshotLyraDocumentRendererPayload(payload)` — returns the same validated, bounded, frozen
   assignment snapshot used by `<lr-document-viewer>`.
 - `createDocumentRendererRegistry(overrides?)` — returns a truly immutable built-in snapshot plus
@@ -350,7 +358,14 @@ const payload = {
   kind: "av",
   file: { name: "episode.mp4", mimeType: "video/mp4", src: "/episode.mp4" },
   cues: [{ cueId: "intro", start: 0, text: "Welcome", speaker: "Host" }],
-  tracks: [{ src: "/episode-en.vtt", kind: "captions", srclang: "en", label: "English" }],
+  tracks: [
+    {
+      src: "/episode-en.vtt",
+      kind: "captions",
+      srclang: "en",
+      label: "English",
+    },
+  ],
 } satisfies LyraDocumentRendererPayload;
 
 html`<lr-document-viewer open .payload=${payload}></lr-document-viewer>`;
@@ -394,7 +409,9 @@ label, level }`), cached on every successful load. `search(query)` resolves the 
 case-insensitive substring search over the rendered content's text (empty/whitespace query behaves
 like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches
 (wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
-painted marks.
+painted marks. It indexes at most 1,000,000 code units/20,000 text nodes per content generation,
+accepts at most 4,096 query code units, scans at most 4,000,000 code units, retains 1,000 matches,
+and paints a 200-range search window.
 
 **Events:** `lr-render-error` with `detail.error` only when fetching, conversion, or sanitization
 fails terminally. Non-fatal Mammoth conversion messages emit `lr-viewer-diagnostic` instead;
@@ -572,7 +589,8 @@ contract: `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['tex
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, and `clearSearch()` provide
 case-insensitive text search over every loaded entry path; next/previous wrap and scroll the active
-virtualized row into view. `scrollToAnchor()` resolves text-quote and fragment anchors and emits
+virtualized row into view. Queries are capped at 4,096 code units and each pass at 4,000,000 path
+code units; `matchCountExact: false` reports a ceiling-truncated lower bound. `scrollToAnchor()` resolves text-quote and fragment anchors and emits
 `lr-anchor-result`. A fragment id is the exact ZIP entry path. A text quote resolves within one
 complete entry path; both forms first mount the absolute virtualized row and only then perform the
 shared DOM-level anchor resolution. A jump whose archive is replaced by a concurrent `src`
@@ -648,7 +666,8 @@ when a navigation entry has none), `[]` before a book has loaded. `search(query)
 match count across every spine section, in document order, via epub.js's own `item.load()`/
 `item.find()`/`item.unload()` (empty/whitespace query behaves like `clearSearch()`; a newer
 `search()` call or a `src` change aborts an in-flight scan; peer output is capped at 10,000
-matches); `searchNext()`/`searchPrevious()`
+matches after at most 1,000 spine items and 4,000,000 result code units; queries are capped at 4,096
+code units); `searchNext()`/`searchPrevious()`
 advance/step back through matches (wrapping, resolving `false` when there are none); `clearSearch()`
 clears the query, matches, and painted search annotation.
 
@@ -658,6 +677,7 @@ clears the query, matches, and painted search annotation.
 `searchPrevious()`/`clearSearch()`; `lr-anchor-result` (`detail: { found }`) after an anchor is
 applied; `lr-highlight-activate` (`detail: { highlightId }`) when a painted CFI highlight is clicked; and
 `lr-text-select` (`detail: { text, anchor, rects }`) after selection inside a chapter iframe.
+Selection text is capped at 4,096 code units and selection rectangles at 1,000.
 
 **CSS parts:** `base` (explicit `aria-busy="true"|"false"`; visible loading text is ordinary
 non-live shadow content and later loading transitions use the shared document-level polite sink),
@@ -719,7 +739,8 @@ one-based, width-bounded DOM/SVG slide preview and resolves to a caller-owned di
 settle.
 `search(query)` searches the renderer's complete presentation model, not its windowed DOM, retains
 at most 10,000 validated results, navigates the matching slide, and paints a renderer-owned node
-overlay. `searchNext()`, `searchPrevious()`, and `clearSearch()` navigate/dispose those model
+overlay. Queries are capped at 4,096 code units and one result-validation pass at 4,000,000 code
+units; a truncated pass reports `matchCountExact: false`. `searchNext()`, `searchPrevious()`, and `clearSearch()` navigate/dispose those model
 results. `scrollToAnchor()` remains available for renderer output that exposes DOM text.
 
 **Events:**
@@ -969,10 +990,10 @@ stylesheet.
 **Themeable custom properties:** `--lr-dataset-viewer-max-height` (default `none`) — maximum block
 size of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
 `--lr-dataset-viewer-highlight-color` (default `var(--lr-color-brand)`) — the outline color of a
-`cell-highlight` cell. The component writes it inline (as
-`var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching `activeHighlightId`, since a
-`[data-active]` selector can't be chained onto the `::part(cell-highlight)` the cell reaches this
-component's stylesheet through; a custom property inherits across that boundary instead.
+`cell-highlight` cell. The cell matching `activeHighlightId` receives a private warning-color
+default because a `[data-active]` selector can't be chained onto the `::part(cell-highlight)` the
+cell reaches this component's stylesheet through. An inherited or direct public value remains
+authoritative across that boundary.
 
 **Optional peer dependency:** `papaparse`.
 
@@ -1093,7 +1114,9 @@ of range. `goToPage(page)` scrolls the virtualized list to `page`, resolving `tr
 table of contents as `PdfOutlineItem[]` (`{ title, page?, children? }`), `[]` when there is none;
 peer output is capped at 10,000 unique items and 100 levels, with cycles ignored.
 `search(query)` resolves the match count across all pages (empty/whitespace query behaves like
-`clearSearch()`); `searchNext()` and `searchPrevious()` advance/step back through matches (wrapping,
+`clearSearch()`), accepting at most 4,096 query code units and scanning at most 1,000 pages,
+1,000,000 corpus code units, and 4,000,000 search code units while retaining 10,000 matches;
+`searchNext()` and `searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and painted marks.
 
 **CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `toolbar`,
@@ -1188,11 +1211,11 @@ The spinner always includes visible localized loading text alongside its decorat
 remains understandable without CSS or animation and the ring stops under reduced motion.
 
 **Themeable custom properties:** `--lr-spreadsheet-viewer-highlight-color` (default
-`var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The component writes it
-inline (as `var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching
-`activeHighlightId`, since a `[data-active]` selector can't be chained onto the
-`::part(cell-highlight)` the cell reaches this component's stylesheet through; a custom property
-inherits across that boundary instead. `--lr-spreadsheet-viewer-highlight-outline-offset` (default
+`var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The cell matching
+`activeHighlightId` receives a private warning-color default because a `[data-active]` selector
+can't be chained onto the `::part(cell-highlight)` the cell reaches this component's stylesheet
+through. An inherited or direct public value remains authoritative across that boundary.
+`--lr-spreadsheet-viewer-highlight-outline-offset` (default
 `calc(-1 * var(--lr-border-width-medium))`) — the outline offset of a highlighted cell.
 `--lr-spreadsheet-viewer-max-height` (default `none`) — maximum block size of `[part="body"]`
 before it scrolls internally; also settable via the `maxHeight` property, which writes this token
@@ -1252,11 +1275,10 @@ highlighted cell; emits `lr-highlight-activate`; its complete accessible name us
 **Themeable custom properties:** `--lr-csv-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]` before it scrolls internally; also settable via the `maxHeight` property, which
 writes this token inline on `[part="base"]`. `--lr-csv-viewer-highlight-color` (default
-`var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The component writes it
-inline (as `var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching
-`activeHighlightId`, since a `[data-active]` selector can't be chained onto the
-`::part(cell-highlight)` the cell reaches this component's stylesheet through; a custom property
-inherits across that boundary instead.
+`var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The cell matching
+`activeHighlightId` receives a private warning-color default because a `[data-active]` selector
+can't be chained onto the `::part(cell-highlight)` the cell reaches this component's stylesheet
+through. An inherited or direct public value remains authoritative across that boundary.
 
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.
@@ -1380,8 +1402,8 @@ order is the caller's own reading order; the layer does not re-sort geometricall
 positioned ancestor.
 
 **Properties:** `items: HighlightLayerItem[] = []` (attribute: false), with IDs trimmed and required
-to be nonempty and the first item retained when IDs repeat; `activeId: string | null = null`
-(attribute `active-id`), and `interactive: boolean = true` (reflected) — gates click/keyboard
+to be nonempty and the first item retained when IDs repeat; `activeHighlightId: string | null = null`
+(attribute `active-highlight-id`), and `interactive: boolean = true` (reflected) — gates click/keyboard
 activation. A rectangle is eligible only when `x`/`y`/`width`/`height` are finite numbers and both
 dimensions are nonnegative; invalid rectangles are omitted from paint, focus, and activation. When
 `interactive=false`, the base is `aria-hidden` pure paint with no group role, accessible name, or
@@ -1509,6 +1531,8 @@ available for structural anchor-target compatibility, but this viewer does not p
 
 **Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
 matching cell counts as one match (empty/whitespace query behaves like `clearSearch()`);
+queries are capped at 4,096 code units and one pass at 4,000,000 source/output code units, with
+`matchCountExact: false` reporting a truncated lower bound;
 `searchNext()`/`searchPrevious()` advance/step back through matches, scrolling to and marking the
 target cell with the persistent active-cell paint, and each resolves `true` once the active match
 moved or `false` when there are none — the same `Promise<boolean>` every other searchable viewer
@@ -1595,7 +1619,8 @@ attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are 
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
 every element's tag name, attribute names/values, and own text (empty/whitespace query behaves like
-`clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping);
+`clearSearch()`), accepting at most 4,096 query code units and scanning at most 4,000,000 code
+units while retaining 10,000 matches; `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping);
 `clearSearch()` clears the query and matches. All three resolve only after the newly active match's
 row has been scrolled into view (`block: 'center'`, `behavior: 'auto'` under
 `prefers-reduced-motion`) — before 9.0.0 they moved `data-active-match` without ever scrolling, so
@@ -1611,6 +1636,8 @@ is the entry's own `label` when supplied, otherwise a localized "Highlight n of 
 adds `data-active-highlight` to the matching row. Entries are deduplicated by `id`; an entry whose
 anchor kind or path this document cannot resolve is dropped whole rather than painted at some
 coarser granularity, and an entry inside a collapsed subtree paints once that subtree is expanded.
+Painting retains at most 100 resolved entries from a 1,000-entry candidate window; an active entry
+anywhere in the bounded 10,000-record host snapshot is placed first inside both ceilings.
 
 **Events:** `lr-copy` — emitted only after the owning realm's clipboard write fulfills, with
 `detail: { ok: true, text }`. Clipboard absence, synchronous throws, and rejected writes instead
@@ -1720,8 +1747,9 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
 **Exported types:** `DocumentCompareVersion`; `LyraDocumentCompareView = 'diff' |
 'side-by-side'`; `DocumentComparePaneSide = 'old' | 'new'`.
 
-**Synchronized anchors:** activating a region highlight whose id exists in the opposite version
-scrolls that pane to its corresponding highlight, while the original `lr-highlight-activate`
+**Synchronized anchors:** activating a region highlight whose normalized id exists in the opposite
+preview's trimmed, nonempty, first-wins highlight projection scrolls that pane to its corresponding
+highlight, while the original `lr-highlight-activate`
 continues bubbling unchanged. The shared `anchor` property drives both panes. In diff mode, split
 columns already share one scroll container.
 
@@ -1816,129 +1844,129 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-viewers-archive-viewer-archive-viewer-contracts`** — Supporting data types and helpers for this component family.
   `ArchiveEntry {
-    name: unknown;
-    dir: unknown;
-    size: unknown;
-  }`
+  name: unknown;
+  dir: unknown;
+  size: unknown;
+}`
 
 - **`components-viewers-calendar-viewer-calendar-loader-contracts`** — Supporting data types and helpers for this component family.
   `clearIcalCache(): unknown`
   `IcalApi {
-    parse: unknown;
-    source: unknown;
-    Component: unknown;
-    Event: unknown;
-  }`
+  parse: unknown;
+  source: unknown;
+  Component: unknown;
+  Event: unknown;
+}`
   `IcalComponentApi {
-    getAllSubcomponents: unknown;
-    name: unknown;
-  }`
+  getAllSubcomponents: unknown;
+  name: unknown;
+}`
   `IcalEventApi {
-    uid: unknown;
-    summary: unknown;
-    startDate: unknown;
-    endDate: unknown;
-    location: unknown;
-    description: unknown;
-  }`
+  uid: unknown;
+  summary: unknown;
+  startDate: unknown;
+  endDate: unknown;
+  location: unknown;
+  description: unknown;
+}`
   `IcalTimeApi {
-    toJSDate: unknown;
-    isDate: unknown;
-    year: unknown;
-    month: unknown;
-    day: unknown;
-  }`
+  toJSDate: unknown;
+  isDate: unknown;
+  year: unknown;
+  month: unknown;
+  day: unknown;
+}`
   `loadIcalDeps(/* public names: importIcal */): unknown`
   `loadIcal(): unknown`
 
 - **`components-viewers-calendar-viewer-calendar-viewer-contracts`** — Supporting data types and helpers for this component family.
   `ParsedCalendarEvent {
-    uid: unknown;
-    summary: unknown;
-    start: unknown;
-    end: unknown;
-    startKind: unknown;
-    endKind: unknown;
-    location: unknown;
-    description: unknown;
-  }`
+  uid: unknown;
+  summary: unknown;
+  start: unknown;
+  end: unknown;
+  startKind: unknown;
+  endKind: unknown;
+  location: unknown;
+  description: unknown;
+}`
 
 - **`components-viewers-contact-viewer-vcard-contracts`** — Supporting data types and helpers for this component family.
   `parseVCards(/* public names: text, options */): unknown`
   `ParseVCardsOptions {
-    maxContacts: unknown;
-  }`
+  maxContacts: unknown;
+}`
   `VCardAddress {
-    poBox: unknown;
-    extendedAddress: unknown;
-    streetAddress: unknown;
-    locality: unknown;
-    region: unknown;
-    postalCode: unknown;
-    country: unknown;
-    types: unknown;
-  }`
+  poBox: unknown;
+  extendedAddress: unknown;
+  streetAddress: unknown;
+  locality: unknown;
+  region: unknown;
+  postalCode: unknown;
+  country: unknown;
+  types: unknown;
+}`
   `VCardContact {
-    fn: unknown;
-    n: unknown;
-    org: unknown;
-    tel: unknown;
-    email: unknown;
-    adr: unknown;
-  }`
+  fn: unknown;
+  n: unknown;
+  org: unknown;
+  tel: unknown;
+  email: unknown;
+  adr: unknown;
+}`
   `VCardName {
-    familyNames: unknown;
-    givenNames: unknown;
-    additionalNames: unknown;
-    honorificPrefixes: unknown;
-    honorificSuffixes: unknown;
-  }`
+  familyNames: unknown;
+  givenNames: unknown;
+  additionalNames: unknown;
+  honorificPrefixes: unknown;
+  honorificSuffixes: unknown;
+}`
   `VCardTypedValue {
-    value: unknown;
-    types: unknown;
-  }`
+  value: unknown;
+  types: unknown;
+}`
 
 - **`components-viewers-dataset-viewer-dataset-viewer-contracts`** — Supporting data types and helpers for this component family.
   `DatasetTable {
-    fields: unknown;
-    rows: unknown;
-  }`
+  fields: unknown;
+  rows: unknown;
+}`
 
 - **`components-viewers-document-compare-document-compare-contracts`** — Supporting data types and helpers for this component family.
   `DocumentCompareVersion {
-    text: unknown;
-    highlights: unknown;
-    id: unknown;
-    name: unknown;
-    mimeType: unknown;
-    uri: unknown;
-    version: unknown;
-  }`
+  text: unknown;
+  highlights: unknown;
+  id: unknown;
+  name: unknown;
+  mimeType: unknown;
+  uri: unknown;
+  version: unknown;
+}`
 
 - **`components-viewers-document-viewer-anchors-contracts`** — Supporting data types and helpers for this component family.
   `AnchorResultDetail {
-    found: unknown;
-  }`
+  found: unknown;
+}`
   `AnchorTargetCapabilities {
-    anchors: unknown;
-    search: unknown;
-    textSelect: unknown;
-  }`
+  anchors: unknown;
+  search: unknown;
+  textSelect: unknown;
+}`
   `HighlightActivateDetail {
-    highlightId: unknown;
-  }`
+  highlightId: unknown;
+}`
   `LyraHighlight {
-    id: unknown;
-    anchor: unknown;
-    label: unknown;
-    note: unknown;
-    tone: unknown;
-  }`
+  id: unknown;
+  anchor: unknown;
+  label: unknown;
+  note: unknown;
+  tone: unknown;
+}`
   `TextSelectDetail {
-    text: unknown;
-    anchor: unknown;
-    rects: unknown;
-  }`
+  text: unknown;
+  anchor: unknown;
+  rects: unknown;
+}`
 
 - **`components-viewers-document-viewer-registry-contracts`** — Supporting data types and helpers for this component family.
   `adaptDocumentRenderer(/* public names: candidate, file, supplied */): unknown`
@@ -1946,244 +1974,244 @@ These named interfaces and helper signatures are available to typed integrations
   `createDocumentRendererAdapter(/* public names: definition */): unknown`
   `createDocumentRendererRegistry(/* public names: overrides */): unknown`
   `DirectDocumentRendererDefinition {
-    render: unknown;
-    file: unknown;
-    capabilities: unknown;
-    adapter: unknown;
-    load: unknown;
-    matches: unknown;
-  }`
+  render: unknown;
+  file: unknown;
+  capabilities: unknown;
+  adapter: unknown;
+  load: unknown;
+  matches: unknown;
+}`
   `DocumentFile {
-    name: unknown;
-    mimeType: unknown;
-    src: unknown;
-    anchor: unknown;
-    highlights: unknown;
-    alt: unknown;
-  }`
+  name: unknown;
+  mimeType: unknown;
+  src: unknown;
+  anchor: unknown;
+  highlights: unknown;
+  alt: unknown;
+}`
   `findDocumentRenderer(/* public names: file, registry */): unknown`
   `getDefaultDocumentRendererRegistry(): unknown`
   `LazyDocumentRendererDefinition {
-    render: unknown;
-    adapter: unknown;
-    capabilities: unknown;
-    load: unknown;
-    default: unknown;
-    matches: unknown;
-    file: unknown;
-  }`
+  render: unknown;
+  adapter: unknown;
+  capabilities: unknown;
+  load: unknown;
+  default: unknown;
+  matches: unknown;
+  file: unknown;
+}`
   `loadDocumentRenderer(/* public names: candidate */): unknown`
   `LyraAdaptedDocumentRendererDefinition {
-    adapter: unknown;
-    render: unknown;
-    capabilities: unknown;
-    load: unknown;
-    matches: unknown;
-    file: unknown;
-  }`
+  adapter: unknown;
+  render: unknown;
+  capabilities: unknown;
+  load: unknown;
+  matches: unknown;
+  file: unknown;
+}`
   `LyraAdaptedDocumentRenderer {
-    payload: unknown;
-    capabilities: unknown;
-    render: unknown;
-  }`
+  payload: unknown;
+  capabilities: unknown;
+  render: unknown;
+}`
   `LyraAvDocumentRendererPayload {
-    kind: unknown;
-    file: unknown;
-    cues: unknown;
-    tracks: unknown;
-  }`
+  kind: unknown;
+  file: unknown;
+  cues: unknown;
+  tracks: unknown;
+}`
   `LyraDocumentFile {
-    name: unknown;
-    mimeType: unknown;
-    src: unknown;
-    anchor: unknown;
-    highlights: unknown;
-    alt: unknown;
-  }`
+  name: unknown;
+  mimeType: unknown;
+  src: unknown;
+  anchor: unknown;
+  highlights: unknown;
+  alt: unknown;
+}`
   `LyraDocumentRendererAdapterDefinition {
-    kind: unknown;
-    adapt: unknown;
-    file: unknown;
-    supplied: unknown;
-    capabilities: unknown;
-    payload: unknown;
-    render: unknown;
-  }`
+  kind: unknown;
+  adapt: unknown;
+  file: unknown;
+  supplied: unknown;
+  capabilities: unknown;
+  payload: unknown;
+  render: unknown;
+}`
   `LyraDocumentRendererAdapter {
-    kind: unknown;
-    adapt: unknown;
-    file: unknown;
-    supplied: unknown;
-    capabilities: unknown;
-    payload: unknown;
-    render: unknown;
-  }`
+  kind: unknown;
+  adapt: unknown;
+  file: unknown;
+  supplied: unknown;
+  capabilities: unknown;
+  payload: unknown;
+  render: unknown;
+}`
   `LyraGenericDocumentRendererPayload {
-    kind: unknown;
-    file: unknown;
-  }`
+  kind: unknown;
+  file: unknown;
+}`
   `registerDocumentRenderer(/* public names: key, definition */): unknown`
   `snapshotLyraDocumentRendererPayload(/* public names: value */): unknown`
 
 - **`components-viewers-docx-viewer-docx-loader-contracts`** — Supporting data types and helpers for this component family.
   `clearDocxDepsCache(): unknown`
   `DocxDeps {
-    mammoth: unknown;
-    DOMPurify: unknown;
-  }`
+  mammoth: unknown;
+  DOMPurify: unknown;
+}`
   `getDocxDepsIfLoaded(): unknown`
   `loadDocxDeps(): unknown`
   `loadMammothAndSanitizer(/* public names: importMammoth, importDompurify */): unknown`
   `MammothApi {
-    convertToHtml: unknown;
-    input: unknown;
-    arrayBuffer: unknown;
-    value: unknown;
-    messages: unknown;
-  }`
+  convertToHtml: unknown;
+  input: unknown;
+  arrayBuffer: unknown;
+  value: unknown;
+  messages: unknown;
+}`
 
 - **`components-viewers-docx-viewer-docx-viewer-contracts`** — Supporting data types and helpers for this component family.
   `DocxHeadingItem {
-    id: unknown;
-    label: unknown;
-    level: unknown;
-  }`
+  id: unknown;
+  label: unknown;
+  level: unknown;
+}`
 
 - **`components-viewers-ebook-viewer-ebook-viewer-contracts`** — Supporting data types and helpers for this component family.
   `EbookTocItem {
-    id: unknown;
-    label: unknown;
-    href: unknown;
-    level: unknown;
-  }`
+  id: unknown;
+  label: unknown;
+  href: unknown;
+  level: unknown;
+}`
 
 - **`components-viewers-email-viewer-email-loader-contracts`** — Supporting data types and helpers for this component family.
   `clearEmailDepsCache(): unknown`
   `EmailDeps {
-    PostalMime: unknown;
-    DOMPurify: unknown;
-  }`
+  PostalMime: unknown;
+  DOMPurify: unknown;
+}`
   `getEmailDepsIfLoaded(): unknown`
   `loadEmailAndSanitizer(/* public names: importPostalMime, importDompurify */): unknown`
   `loadEmailDeps(): unknown`
   `PostalAddressApi {
-    name: unknown;
-    address: unknown;
-    group: unknown;
-  }`
+  name: unknown;
+  address: unknown;
+  group: unknown;
+}`
   `PostalAttachmentApi {
-    filename: unknown;
-    mimeType: unknown;
-    content: unknown;
-  }`
+  filename: unknown;
+  mimeType: unknown;
+  content: unknown;
+}`
   `PostalMessageApi {
-    html: unknown;
-    text: unknown;
-    from: unknown;
-    to: unknown;
-    subject: unknown;
-    date: unknown;
-    attachments: unknown;
-  }`
+  html: unknown;
+  text: unknown;
+  from: unknown;
+  to: unknown;
+  subject: unknown;
+  date: unknown;
+  attachments: unknown;
+}`
   `PostalMimeApi {
-    parse: unknown;
-    input: unknown;
-  }`
+  parse: unknown;
+  input: unknown;
+}`
 
 - **`components-viewers-email-viewer-email-viewer-contracts`** — Supporting data types and helpers for this component family.
   `ParsedEmailAttachment {
-    filename: unknown;
-    mimeType: unknown;
-    size: unknown;
-    content: unknown;
-  }`
+  filename: unknown;
+  mimeType: unknown;
+  size: unknown;
+  content: unknown;
+}`
   `ParsedEmail {
-    from: unknown;
-    to: unknown;
-    subject: unknown;
-    date: unknown;
-    bodyHtml: unknown;
-    bodyText: unknown;
-    attachments: unknown;
-  }`
+  from: unknown;
+  to: unknown;
+  subject: unknown;
+  date: unknown;
+  bodyHtml: unknown;
+  bodyText: unknown;
+  attachments: unknown;
+}`
 
 - **`components-viewers-highlight-layer-highlight-layer-contracts`** — Supporting data types and helpers for this component family.
   `HighlightLayerItem {
-    id: unknown;
-    rects: unknown;
-    x: unknown;
-    y: unknown;
-    width: unknown;
-    height: unknown;
-    label: unknown;
-    tone: unknown;
-  }`
+  id: unknown;
+  rects: unknown;
+  x: unknown;
+  y: unknown;
+  width: unknown;
+  height: unknown;
+  label: unknown;
+  tone: unknown;
+}`
 
 - **`components-viewers-include-include-contracts`** — Supporting data types and helpers for this component family.
   `LyraIncludeErrorDetail {
-    status: unknown;
-    reason: unknown;
-    error: unknown;
-  }`
+  status: unknown;
+  reason: unknown;
+  error: unknown;
+}`
 
 - **`components-viewers-page-rail-page-rail-contracts`** — Supporting data types and helpers for this component family.
   `LyraPageViewerSnapshot {
-    identity: unknown;
-    status: unknown;
-    page: unknown;
-    pageCount: unknown;
-  }`
+  identity: unknown;
+  status: unknown;
+  page: unknown;
+  pageCount: unknown;
+}`
   `LyraPageViewerStateChangeDetail {
-    snapshot: unknown;
-  }`
+  snapshot: unknown;
+}`
   `PageThumbnailRenderHandle {
-    dispose: unknown;
-  }`
+  dispose: unknown;
+}`
   `PageThumbnailSource {
-    page: unknown;
-    pageViewerSnapshot: unknown;
-    renderPageThumbnail: unknown;
-    canvas: unknown;
-    options: unknown;
-    width: unknown;
-    renderPageThumbnailToContainer: unknown;
-    container: unknown;
-  }`
+  page: unknown;
+  pageViewerSnapshot: unknown;
+  renderPageThumbnail: unknown;
+  canvas: unknown;
+  options: unknown;
+  width: unknown;
+  renderPageThumbnailToContainer: unknown;
+  container: unknown;
+}`
 
 - **`components-viewers-pdf-viewer-pdf-viewer-contracts`** — Supporting data types and helpers for this component family.
   `PdfOutlineItem {
-    title: unknown;
-    page: unknown;
-    children: unknown;
-  }`
+  title: unknown;
+  page: unknown;
+  children: unknown;
+}`
 
 - **`components-viewers-spreadsheet-viewer-spreadsheet-loader-contracts`** — Supporting data types and helpers for this component family.
   `clearSheetJsCache(): unknown`
   `loadSheetJsCached(): unknown`
   `loadSheetJs(/* public names: importXlsx */): unknown`
   `SheetJsApi {
-    read: unknown;
-    input: unknown;
-    options: unknown;
-    utils: unknown;
-    sheet_to_json: unknown;
-    sheet: unknown;
-  }`
+  read: unknown;
+  input: unknown;
+  options: unknown;
+  utils: unknown;
+  sheet_to_json: unknown;
+  sheet: unknown;
+}`
   `SheetJsWorkbook {
-    SheetNames: unknown;
-    Sheets: unknown;
-  }`
+  SheetNames: unknown;
+  Sheets: unknown;
+}`
 
 - **`components-viewers-viewer-diagnostics-contracts`** — Supporting data types and helpers for this component family.
   `LyraViewerDiagnosticEventDetail {
-    diagnostic: unknown;
-  }`
+  diagnostic: unknown;
+}`
   `LyraViewerDiagnostic {
-    code: unknown;
-    severity: unknown;
-    fatal: unknown;
-    source: unknown;
-    cause: unknown;
-    page: unknown;
-    nodeId: unknown;
-  }`
+  code: unknown;
+  severity: unknown;
+  fatal: unknown;
+  source: unknown;
+  cause: unknown;
+  page: unknown;
+  nodeId: unknown;
+}`

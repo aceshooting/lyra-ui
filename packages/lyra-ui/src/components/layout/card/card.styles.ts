@@ -1,4 +1,4 @@
-import { css } from "lit";
+import { css } from 'lit';
 
 // Inline-size containment removes content-based intrinsic sizing, so the fallback keeps a
 // standalone card visible while definite allocations (grid tracks, percentages, explicit

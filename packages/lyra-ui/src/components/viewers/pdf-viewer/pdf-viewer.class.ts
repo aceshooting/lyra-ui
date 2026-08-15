@@ -238,8 +238,10 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  *   `detail: { found }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
- *   matchCount, matchCountExact, activeIndex }`. At most 10,000 matches are retained; a false
- *   `matchCountExact` makes `matchCount` a lower bound (including when a page could not be read).
+ *   matchCount, matchCountExact, activeIndex }`. Search accepts at most 4,096 query code units,
+ *   scans at most 1,000 pages/1,000,000 corpus code units/4,000,000 search code units, and retains
+ *   at most 10,000 matches; a false `matchCountExact` makes `matchCount` a lower bound (including
+ *   when a page could not be read or any ceiling is reached).
  * @event lr-page-viewer-state-change - Correlated page lifecycle state. `detail.snapshot` is the
  *   same readonly value exposed by `pageViewerSnapshot`; its `identity` changes for every load.
  * @csspart base - The named root viewer container with explicit `aria-busy`.
@@ -431,7 +433,9 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       for (const pageNumber of this.pageCanvases.keys()) void this.resolvePageHighlights(pageNumber);
     }
     if (changed.has('activeHighlightId')) {
-      for (const layer of this.pageHighlightLayerElements.values()) layer.activeId = this.activeHighlightId;
+      for (const layer of this.pageHighlightLayerElements.values()) {
+        layer.activeHighlightId = this.activeHighlightId;
+      }
     }
   }
 
@@ -1295,7 +1299,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
    *  the shared bounded text-quote index's normalized coordinate space, never touching
    *  `highlights` -- painting is a self-contained overlay
    *  scoped to search only (see `paintSearchMatches()`). An empty/whitespace-only query behaves like
-   *  `clearSearch()` and resolves `0`. Returns at most 10,000 retained matches;
+   *  `clearSearch()` and resolves `0`. Queries are capped at 4,096 code units, a pass at 1,000
+   *  pages/1,000,000 corpus code units/4,000,000 search code units, and retained matches at 10,000;
    *  `lr-search-change.detail.matchCountExact=false` identifies that return as a lower bound. */
   async search(query: string): Promise<number> {
     const generation = ++this.searchGeneration;
@@ -1603,7 +1608,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         const layer = element as LyraHighlightLayer;
         this.pageHighlightLayerElements.set(pageNumber, layer);
         layer.items = this.pageHighlightItems.get(pageNumber) ?? [];
-        layer.activeId = this.activeHighlightId;
+        layer.activeHighlightId = this.activeHighlightId;
         const canvas = this.pageCanvases.get(pageNumber);
         if (canvas?.style.width) {
           layer.style.width = canvas.style.width;

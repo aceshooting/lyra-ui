@@ -4,19 +4,19 @@ import {
   peekLyraLocale,
   resolveLyraDirection,
   resolveLyraLocale,
-} from "./localization-runtime.js";
+} from './localization-runtime.js';
 
 const INHERITED_CONTEXT_ATTRIBUTES = [
-  "locale",
-  "lang",
-  "dir",
-  "class",
-  "style",
-  "slot",
-  "name",
+  'locale',
+  'lang',
+  'dir',
+  'class',
+  'style',
+  'slot',
+  'name',
 ] as const;
 
-type InheritedContextKind = "locale" | "direction";
+type InheritedContextKind = 'locale' | 'direction';
 
 interface InheritedContextHost extends Element {
   readonly isConnected: boolean;
@@ -27,7 +27,7 @@ interface InheritedContextState {
   localeSensitive: boolean;
   directionSensitive: boolean;
   lastLocale?: string;
-  lastDirection?: "ltr" | "rtl";
+  lastDirection?: 'ltr' | 'rtl';
   localeMutationSequence: number;
   directionMutationSequence: number;
   lastLocaleReadSequence: number;
@@ -35,7 +35,7 @@ interface InheritedContextState {
   updateActive: boolean;
   activeUpdateRendered: boolean;
   activeLocale?: string;
-  activeDirection?: "ltr" | "rtl";
+  activeDirection?: 'ltr' | 'rtl';
   activeLocaleReadSequence?: number;
   activeDirectionReadSequence?: number;
 }
@@ -96,8 +96,8 @@ function shadowHost(root: Node): Element | null {
   const candidate = (root as { nodeType?: number; host?: unknown }).host;
   return root.nodeType === 11 &&
     candidate !== null &&
-    typeof candidate === "object" &&
-    typeof (candidate as Element).getAttribute === "function"
+    typeof candidate === 'object' &&
+    typeof (candidate as Element).getAttribute === 'function'
     ? (candidate as Element)
     : null;
 }
@@ -105,8 +105,8 @@ function shadowHost(root: Node): Element | null {
 function assignedSlot(element: Element): Element | null {
   const candidate = (element as { assignedSlot?: unknown }).assignedSlot;
   return candidate !== null &&
-    typeof candidate === "object" &&
-    typeof (candidate as Element).getAttribute === "function"
+    typeof candidate === 'object' &&
+    typeof (candidate as Element).getAttribute === 'function'
     ? (candidate as Element)
     : null;
 }
@@ -199,21 +199,21 @@ function createRootObservation(
   try {
     observer = new Observer((records) => {
       for (const record of records) {
-        if (record.type === "childList") {
+        if (record.type === 'childList') {
           for (const subscription of [...directionSubscriptions]) {
             queueSubscription(subscription, false, true, true);
           }
           continue;
         }
         if (
-          record.type !== "attributes" ||
+          record.type !== 'attributes' ||
           (record.target as { nodeType?: number }).nodeType !== 1 ||
-          typeof (record.target as Element).getAttribute !== "function"
+          typeof (record.target as Element).getAttribute !== 'function'
         )
           continue;
         const mutationTarget = record.target as Element;
         const attribute = record.attributeName;
-        if (attribute === "locale" || attribute === "lang") {
+        if (attribute === 'locale' || attribute === 'lang') {
           for (const subscription of subscribersFor(
             localeSubscribers,
             mutationTarget
@@ -222,13 +222,13 @@ function createRootObservation(
           }
         }
         const directionRelevant =
-          attribute === "dir" ||
-          attribute === "class" ||
-          attribute === "style" ||
-          attribute === "locale" ||
-          attribute === "lang";
+          attribute === 'dir' ||
+          attribute === 'class' ||
+          attribute === 'style' ||
+          attribute === 'locale' ||
+          attribute === 'lang';
         const flattenedTreeChanged =
-          attribute === "slot" || attribute === "name";
+          attribute === 'slot' || attribute === 'name';
         if (directionRelevant || flattenedTreeChanged) {
           for (const subscription of subscribersFor(
             directionSubscribers,
@@ -251,7 +251,7 @@ function createRootObservation(
           queueSubscription(subscription, false, true, true);
         }
       };
-      root.addEventListener("slotchange", slotchange);
+      root.addEventListener('slotchange', slotchange);
     }
   } catch {
     try {
@@ -261,12 +261,12 @@ function createRootObservation(
     }
     if (slotchange) {
       try {
-        root.removeEventListener("slotchange", slotchange);
+        root.removeEventListener('slotchange', slotchange);
       } catch {
         // A hostile root must not prevent transaction rollback.
       }
     }
-    throw new Error("Unable to observe inherited context in the owner realm.");
+    throw new Error('Unable to observe inherited context in the owner realm.');
   }
   const observation: RootObservation = {
     root,
@@ -285,7 +285,7 @@ function openShadowRoot(element: Element | null): Node | null {
   if (!element) return null;
   const candidate = (element as { shadowRoot?: unknown }).shadowRoot;
   return candidate !== null &&
-    typeof candidate === "object" &&
+    typeof candidate === 'object' &&
     (candidate as { nodeType?: number }).nodeType === 11
     ? (candidate as Node)
     : null;
@@ -311,7 +311,7 @@ function groupedAncestors(
       ancestor = parent(ancestor);
     }
   };
-  if (kind === "locale") {
+  if (kind === 'locale') {
     addChain(localeParentElement(host), localeParentElement);
   } else {
     addChain(directionParentElement(host), directionParentElement);
@@ -324,7 +324,7 @@ function groupedAncestors(
   // An unassigned light child cannot yet expose its eventual slot in the flattened-parent walk.
   // When the parent has an open root, share one root-level slotchange listener so later slot
   // insertion/name changes can rebind it. Closed roots deliberately expose no equivalent handle.
-  if (kind === "direction" && !assignedSlot(host)) {
+  if (kind === 'direction' && !assignedSlot(host)) {
     const prospectiveSlotRoot = openShadowRoot(host.parentElement);
     if (prospectiveSlotRoot && !byRoot.has(prospectiveSlotRoot))
       byRoot.set(prospectiveSlotRoot, []);
@@ -343,7 +343,7 @@ function releaseObservationReference(observation: RootObservation): void {
   if (observation.slotchange) {
     try {
       observation.root.removeEventListener(
-        "slotchange",
+        'slotchange',
         observation.slotchange
       );
     } catch {
@@ -367,7 +367,7 @@ function releaseOwnerLifecycle(
   lifecycle.subscriptions.delete(subscription);
   if (lifecycle.subscriptions.size !== 0) return;
   try {
-    lifecycle.view.removeEventListener("pagehide", lifecycle.pagehide);
+    lifecycle.view.removeEventListener('pagehide', lifecycle.pagehide);
   } catch {
     // A discarded/hostile owner window must not strand the weak registry entry.
   }
@@ -393,7 +393,7 @@ function ensureOwnerLifecycle(
     };
     lifecycle = { document: ownerDocument, view, subscriptions, pagehide };
     try {
-      view.addEventListener("pagehide", pagehide);
+      view.addEventListener('pagehide', pagehide);
     } catch {
       return;
     }
@@ -461,11 +461,11 @@ function attachBindings(
 ): void {
   for (const { observation, ancestors } of bindings) {
     const map =
-      kind === "locale"
+      kind === 'locale'
         ? observation.localeSubscribers
         : observation.directionSubscribers;
     for (const ancestor of ancestors) addToMap(map, ancestor, subscription);
-    if (kind === "direction")
+    if (kind === 'direction')
       observation.directionSubscriptions.add(subscription);
   }
 }
@@ -477,12 +477,12 @@ function detachBindings(
 ): void {
   for (const { observation, ancestors } of bindings) {
     const map =
-      kind === "locale"
+      kind === 'locale'
         ? observation.localeSubscribers
         : observation.directionSubscribers;
     for (const ancestor of ancestors)
       removeFromMap(map, ancestor, subscription);
-    if (kind === "direction")
+    if (kind === 'direction')
       observation.directionSubscriptions.delete(subscription);
   }
 }
@@ -491,7 +491,7 @@ function currentBindings(
   subscription: InheritedContextSubscription,
   kind: InheritedContextKind
 ): readonly RootBinding[] {
-  return kind === "locale"
+  return kind === 'locale'
     ? subscription.localeBindings
     : subscription.directionBindings;
 }
@@ -501,7 +501,7 @@ function setCurrentBindings(
   kind: InheritedContextKind,
   bindings: readonly RootBinding[]
 ): void {
-  if (kind === "locale") {
+  if (kind === 'locale') {
     subscription.localeBindings = bindings;
     subscription.localeBound = true;
   } else {
@@ -541,7 +541,7 @@ function activate(
   subscription: InheritedContextSubscription,
   kind: InheritedContextKind
 ): void {
-  if (kind === "locale") {
+  if (kind === 'locale') {
     subscription.state.localeSensitive = true;
     if (!subscription.localeBound) bind(subscription, kind);
   } else {
@@ -571,8 +571,8 @@ function flushInheritedContextChanges(): void {
     subscription.pendingDirectionMutationSequence = undefined;
     if (!subscription.active || !subscription.host.isConnected) continue;
 
-    if (rebindLocale) rebind(subscription, "locale");
-    if (rebindDirection) rebind(subscription, "direction");
+    if (rebindLocale) rebind(subscription, 'locale');
+    if (rebindDirection) rebind(subscription, 'direction');
     invalidateLyraLocaleCache(subscription.host);
     let changed = false;
     const localeAlreadyRendered =
@@ -654,11 +654,11 @@ export function observeInheritedContext(
   };
   hostSubscriptions.set(host, subscription);
   if (state.localeSensitive) {
-    activate(subscription, "locale");
+    activate(subscription, 'locale');
     queueSubscription(subscription, true, false);
   }
   if (state.directionSensitive) {
-    activate(subscription, "direction");
+    activate(subscription, 'direction');
     queueSubscription(subscription, false, true);
   }
   return () => stopInheritedContextObservation(subscription);
@@ -670,9 +670,9 @@ function stopInheritedContextObservation(
   if (!subscription.active) return;
   subscription.active = false;
   pendingSubscriptions.delete(subscription);
-  detachBindings(subscription, "locale", subscription.localeBindings);
+  detachBindings(subscription, 'locale', subscription.localeBindings);
   releaseUnattachedBindings(subscription.localeBindings);
-  detachBindings(subscription, "direction", subscription.directionBindings);
+  detachBindings(subscription, 'direction', subscription.directionBindings);
   releaseUnattachedBindings(subscription.directionBindings);
   subscription.localeBindings = [];
   subscription.directionBindings = [];
@@ -690,7 +690,7 @@ export function recordInheritedLocaleRead(
 ): void {
   const subscription = hostSubscriptions.get(host);
   if (!subscription?.active || locale === undefined) return;
-  activate(subscription, "locale");
+  activate(subscription, 'locale');
   if (
     subscription.state.updateActive &&
     !subscription.state.activeUpdateRendered
@@ -706,11 +706,11 @@ export function recordInheritedLocaleRead(
 /** Records that a connected host's rendered output consumed inherited CSS direction. */
 export function recordInheritedDirectionRead(
   host: Element,
-  direction: "ltr" | "rtl"
+  direction: 'ltr' | 'rtl'
 ): void {
   const subscription = hostSubscriptions.get(host);
   if (!subscription?.active) return;
-  activate(subscription, "direction");
+  activate(subscription, 'direction');
   if (
     subscription.state.updateActive &&
     !subscription.state.activeUpdateRendered

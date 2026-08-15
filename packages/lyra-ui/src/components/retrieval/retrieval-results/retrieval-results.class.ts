@@ -1,28 +1,28 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
-import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
-import { property } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   finiteCount,
   finiteNumber,
   finiteRange,
-} from "../../../internal/numbers.js";
-import type { DocumentLocator, RetrievalChunk } from "../../../ai/types.js";
-import type { LyraChunk } from "../chunk-inspector/chunk-inspector.class.js";
-import type { VirtualListGroup } from "../../layout/virtual-list/virtual-list.class.js";
-import { styles } from "./retrieval-results.styles.js";
+} from '../../../internal/numbers.js';
+import type { DocumentLocator, RetrievalChunk } from '../../../ai/types.js';
+import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
+import type { VirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
+import { styles } from './retrieval-results.styles.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
-} from "../retrieval-semantic-owner.js";
-import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from "../../../internal/converters.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import { deepActiveElementIn } from "../../../internal/active-element.js";
+} from '../retrieval-semantic-owner.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
-} from "../../../internal/announcer.js";
-import type { LyraScoreThresholds } from "../graph/graph.class.js";
+} from '../../../internal/announcer.js';
+import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_retrievalResultsSelectRow, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
@@ -37,17 +37,17 @@ export interface RetrievalResultsSelectDetail {
 }
 
 export interface LyraRetrievalResultsEventMap {
-  "lr-select": CustomEvent<LyraEventDetailSnapshot<RetrievalResultsSelectDetail>>;
-  "lr-load-more": CustomEvent<null>;
-  "lr-chunk-open": CustomEvent<LyraEventDetailSnapshot<{
+  'lr-select': CustomEvent<LyraEventDetailSnapshot<RetrievalResultsSelectDetail>>;
+  'lr-load-more': CustomEvent<null>;
+  'lr-chunk-open': CustomEvent<LyraEventDetailSnapshot<{
     id: string;
     sourceId: string;
     anchor?: DocumentLocator;
   }>>;
 }
 
-export type RetrievalResultsGrouping = "source" | "custom" | "none";
-export type RetrievalResultsPresentation = "compact" | "expanded";
+export type RetrievalResultsGrouping = 'source' | 'custom' | 'none';
+export type RetrievalResultsPresentation = 'compact' | 'expanded';
 
 /** `RetrievalChunk` -> `lr-chunk-inspector`'s own `LyraChunk` display-row shape, per the mapping
  *  `RetrievalChunk`'s own doc comment (`src/ai/types.ts`) already specifies: `source.id -> sourceId`,
@@ -61,7 +61,7 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
     sourceId: chunk.source.id,
     title: chunk.source.name,
     anchor: chunk.locator,
-    page: chunk.locator?.kind === "page" ? chunk.locator.page : undefined,
+    page: chunk.locator?.kind === 'page' ? chunk.locator.page : undefined,
   };
 }
 
@@ -171,7 +171,7 @@ function safeScore(score: number): number {
  * @since 4.1.0
  */
 export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["chunks", "selectedIds", "groupOrder"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['chunks', 'selectedIds', 'groupOrder']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -186,6 +186,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-select',
+    'lr-chunk-open',
+  ]);
 
   /** The raw (not deduplicated/sorted/grouped) result set. Host-owned. */
   @property({ attribute: false }) chunks: readonly RetrievalChunk[] = [];
@@ -213,12 +217,12 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   /** `'score'` (default) sorts the deduplicated list descending by `score`; `'none'` preserves
    *  `chunks`' own given order. */
-  @property() sort: "score" | "none" = "score";
+  @property() sort: 'score' | 'none' = 'score';
 
   /** `'source'` buckets rows under a header per `source.id` (always rendered through the internal
    *  `<lr-virtual-list>`, regardless of `virtualize-at`); `'custom'` buckets them under whatever key
    *  `groupBy` returns; `'none'` (default) is a flat ranked list. */
-  @property() grouping: RetrievalResultsGrouping = "none";
+  @property() grouping: RetrievalResultsGrouping = 'none';
 
   /** `grouping="custom"`: derives an arbitrary group id for every visible chunk (a date bucket, a
    *  relevance tier, a domain-specific bucket). Left unset, `'custom'` degrades to a flat list
@@ -242,7 +246,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   /** `'expanded'` (default) shows each chunk's full `<lr-chunk-inspector>` row (score bar, text
    *  preview with its own expand toggle) plus any `metadata`; `'compact'` shows title + score bar
    *  only, on both. */
-  @property() presentation: RetrievalResultsPresentation = "expanded";
+  @property() presentation: RetrievalResultsPresentation = 'expanded';
 
   /** Forwarded verbatim to every per-row `<lr-chunk-inspector>`'s own `thresholds`. */
   @property({ attribute: false }) thresholds: LyraScoreThresholds = {
@@ -252,18 +256,18 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   /** Above this many rows (after dedup, before grouping), rendering switches from a plain list to
    *  the internal `<lr-virtual-list>`. Grouped mode always virtualizes regardless of this value. */
-  @property({ type: Number, attribute: "virtualize-at" }) virtualizeAt = 50;
+  @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 50;
 
   /** Marks the chunk currently open in a viewer -- forwarded to each per-row `<lr-chunk-inspector>`
    *  and to the internal `<lr-virtual-list>` (which scrolls the matching row into view). */
-  @property({ attribute: "active-id" }) activeId = "";
+  @property({ attribute: 'active-id' }) activeId = '';
 
   /** Marks retrieval as pending, selecting the initial spinner or load-more progress state. */
   @property({ type: Boolean, reflect: true }) loading = false;
 
   /** While virtualized, forwarded to the internal `<lr-virtual-list>` so scrolling near the bottom
    *  fires `lr-load-more`; otherwise shows the built-in `[part="load-more"]` footer. */
-  @property({ type: Boolean, attribute: "has-more", reflect: true }) hasMore =
+  @property({ type: Boolean, attribute: 'has-more', reflect: true }) hasMore =
     false;
 
   /** Non-empty replaces the entire result view with a neutral, visible error message -- caller-
@@ -271,14 +275,14 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
    *  `error-text` takes for the same reason: this is app/network data, not library copy). New
    *  non-empty values are announced through a shared assertive light-DOM region; initial and
    *  reconnect content is not replayed. */
-  @property({ attribute: "error-text" }) errorText = "";
+  @property({ attribute: 'error-text' }) errorText = '';
 
   /** Fallback name for the results region. Defaults to the localized `chunkInspectorLabel`
    *  ("Retrieved chunks") -- reused rather than a new key, since it already says exactly what this
    *  region is. A non-empty host `aria-label` makes the host the sole overall owner; an explicitly
    *  empty host label stays empty on the region. */
-  @property() label = "";
-  private pendingFocusTarget: string | "base" | undefined;
+  @property() label = '';
+  private pendingFocusTarget: string | 'base' | undefined;
   private previousProcessedChunkIds: string[] = [];
   private focusRestoreGeneration = 0;
   private isMounting = true;
@@ -294,7 +298,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.errorAnnouncementSink ??= acquireAnnouncementSink("assertive", {
+    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
       document: this.ownerDocument,
       source: this,
     });
@@ -314,14 +318,14 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private chunkAnchor(start: Element | null): Element | null {
     let current = start;
     while (current && current !== this) {
-      if (current.hasAttribute("data-chunk-id")) return current;
+      if (current.hasAttribute('data-chunk-id')) return current;
       if (current.parentElement) {
         current = current.parentElement;
         continue;
       }
       const root = current.getRootNode();
       current =
-        root.nodeType === 11 && "host" in root
+        root.nodeType === 11 && 'host' in root
           ? (root as ShadowRoot).host
           : null;
     }
@@ -330,11 +334,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   private renderedChunkIds(): string[] {
     const roots: ParentNode[] = [this.renderRoot];
-    const virtualList = this.renderRoot.querySelector("lr-virtual-list");
+    const virtualList = this.renderRoot.querySelector('lr-virtual-list');
     if (virtualList?.shadowRoot) roots.push(virtualList.shadowRoot);
     return roots.flatMap((root) =>
-      [...root.querySelectorAll("lr-chunk-inspector[data-chunk-id]")]
-        .map((element) => element.getAttribute("data-chunk-id"))
+      [...root.querySelectorAll('lr-chunk-inspector[data-chunk-id]')]
+        .map((element) => element.getAttribute('data-chunk-id'))
         .filter((id): id is string => id !== null)
     );
   }
@@ -345,34 +349,34 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     // an unrelated update (e.g. `selectedIds`, `presentation`) leaves the cache as-is.
     if (
       this.processedChunksCache === undefined ||
-      changed.has("chunks") ||
-      changed.has("dedupe") ||
-      changed.has("sort") ||
-      changed.has("grouping") ||
-      changed.has("groupBy") ||
-      changed.has("groupLabel") ||
-      changed.has("groupOrder")
+      changed.has('chunks') ||
+      changed.has('dedupe') ||
+      changed.has('sort') ||
+      changed.has('grouping') ||
+      changed.has('groupBy') ||
+      changed.has('groupLabel') ||
+      changed.has('groupOrder')
     ) {
       this.processedChunksCache = this.computeProcessedChunks();
     }
     if (
-      !changed.has("chunks") &&
-      !changed.has("dedupe") &&
-      !changed.has("sort") &&
-      !changed.has("grouping") &&
-      !changed.has("groupBy") &&
-      !changed.has("groupLabel") &&
-      !changed.has("groupOrder") &&
-      !changed.has("presentation") &&
-      !changed.has("selectable") &&
-      !changed.has("virtualizeAt") &&
-      !changed.has("loading") &&
-      !changed.has("errorText")
+      !changed.has('chunks') &&
+      !changed.has('dedupe') &&
+      !changed.has('sort') &&
+      !changed.has('grouping') &&
+      !changed.has('groupBy') &&
+      !changed.has('groupLabel') &&
+      !changed.has('groupOrder') &&
+      !changed.has('presentation') &&
+      !changed.has('selectable') &&
+      !changed.has('virtualizeAt') &&
+      !changed.has('loading') &&
+      !changed.has('errorText')
     ) {
       return;
     }
     const anchor = this.chunkAnchor(this.deepActiveElement());
-    const focusedId = anchor?.getAttribute("data-chunk-id");
+    const focusedId = anchor?.getAttribute('data-chunk-id');
     if (!focusedId) return;
     const previousIds = this.previousProcessedChunkIds.length
       ? this.previousProcessedChunkIds
@@ -380,7 +384,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     const focusedIndex = Math.max(0, previousIds.indexOf(focusedId));
     const nextChunks = this.errorText ? [] : this.processedChunks.chunks;
     if (nextChunks.length === 0) {
-      this.pendingFocusTarget = "base";
+      this.pendingFocusTarget = 'base';
       return;
     }
     const survivingIndex = nextChunks.findIndex(
@@ -399,8 +403,8 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     this.isMounting = false;
     if (
       !wasMounting &&
-      changed.has("errorText") &&
-      this.errorText !== "" &&
+      changed.has('errorText') &&
+      this.errorText !== '' &&
       this.isConnected
     ) {
       this.errorAnnouncementSink?.announce(this.errorText);
@@ -416,29 +420,29 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   }
 
   private async restoreControlledFocus(
-    target: string | "base",
+    target: string | 'base',
     generation: number
   ): Promise<void> {
     await this.updateComplete;
     if (generation !== this.focusRestoreGeneration || !this.isConnected) return;
-    if (target === "base") {
+    if (target === 'base') {
       this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.focus();
       return;
     }
     const virtualList = this.renderRoot.querySelector<
       HTMLElement & { updateComplete?: Promise<unknown> }
-    >("lr-virtual-list");
+    >('lr-virtual-list');
     await virtualList?.updateComplete;
     if (generation !== this.focusRestoreGeneration || !this.isConnected) return;
     const roots: ParentNode[] = [this.renderRoot];
     if (virtualList?.shadowRoot) roots.push(virtualList.shadowRoot);
     const candidates = roots.flatMap((root) => [
-      ...root.querySelectorAll<HTMLElement>("[data-chunk-id]"),
+      ...root.querySelectorAll<HTMLElement>('[data-chunk-id]'),
     ]);
     const checkbox = candidates.find(
       (element) =>
-        element.localName === "lr-checkbox" &&
-        element.getAttribute("data-chunk-id") === target
+        element.localName === 'lr-checkbox' &&
+        element.getAttribute('data-chunk-id') === target
     );
     if (checkbox) {
       checkbox.focus();
@@ -446,8 +450,8 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     }
     const inspector = candidates.find(
       (element) =>
-        element.localName === "lr-chunk-inspector" &&
-        element.getAttribute("data-chunk-id") === target
+        element.localName === 'lr-chunk-inspector' &&
+        element.getAttribute('data-chunk-id') === target
     ) as (HTMLElement & { updateComplete?: Promise<unknown> }) | undefined;
     await inspector?.updateComplete;
     if (generation !== this.focusRestoreGeneration || !this.isConnected) return;
@@ -493,20 +497,20 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   } {
     const deduped = this.dedupedChunks;
     const sorted =
-      this.sort === "score"
+      this.sort === 'score'
         ? [...deduped].sort((a, b) => safeScore(b.score) - safeScore(a.score))
         : deduped;
-    if (this.grouping === "source") {
+    if (this.grouping === 'source') {
       return this.bucketed(
         sorted,
         (chunk) => chunk.source.id,
         (_id, groupChunks) =>
-          groupChunks[0]!.source.name || this.localize("untitledSource")
+          groupChunks[0]!.source.name || this.localize('untitledSource')
       );
     }
     // An unset groupBy degrades to the flat list rather than collapsing every row into one invented
     // bucket, so switching grouping on before the callback is wired changes nothing visible.
-    if (this.grouping === "custom" && this.groupBy) {
+    if (this.grouping === 'custom' && this.groupBy) {
       const groupBy = this.groupBy;
       return this.bucketed(
         sorted,
@@ -522,8 +526,8 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
    *  rows). */
   private orderedGroupKeys(grouped: Map<string, RetrievalChunk[]>): string[] {
     const firstSeen = [...grouped.keys()];
-    if (this.grouping !== "custom" || !this.groupOrder) return firstSeen;
-    if (typeof this.groupOrder === "function")
+    if (this.grouping !== 'custom' || !this.groupOrder) return firstSeen;
+    if (typeof this.groupOrder === 'function')
       return firstSeen.sort(this.groupOrder);
     const ordered = [...new Set(this.groupOrder)].filter((id) =>
       grouped.has(id)
@@ -566,14 +570,14 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     const ids = [...next];
     this.selectedIds = ids;
     const selectedChunks = this.canonicalChunks().filter((c) => next.has(c.id));
-    this.emit("lr-select", { ids, chunks: selectedChunks });
+    this.emit('lr-select', { ids, chunks: selectedChunks });
   }
 
   private formatMetadataValue(value: unknown): string {
-    if (value == null) return "";
-    if (typeof value === "string" || typeof value === "boolean")
+    if (value == null) return '';
+    if (typeof value === 'string' || typeof value === 'boolean')
       return String(value);
-    if (typeof value === "number") {
+    if (typeof value === 'number') {
       return getNumberFormat(this.effectiveLocale).format(
         finiteNumber(value, 0)
       );
@@ -612,14 +616,14 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private renderRow = (item: unknown): TemplateResult => {
     const chunk = item as RetrievalChunk;
     const selected = this.selectedIds.includes(chunk.id);
-    const rowLabel = chunk.source.name || this.localize("untitledSource");
+    const rowLabel = chunk.source.name || this.localize('untitledSource');
     return html`
       ${this.selectable
         ? html`<lr-checkbox
             part="select"
             data-chunk-id=${chunk.id}
             .checked=${selected}
-            aria-label=${this.localize("retrievalResultsSelectRow", undefined, {
+            aria-label=${this.localize('retrievalResultsSelectRow', undefined, {
               label: rowLabel,
             })}
             @lr-change=${(event: Event) => {
@@ -629,7 +633,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
           ></lr-checkbox>`
         : nothing}
       <div
-        part=${selected ? "row-body row-body-selected" : "row-body"}
+        part=${selected ? 'row-body row-body-selected' : 'row-body'}
         ?data-selected=${selected}
       >
         <lr-chunk-inspector
@@ -637,7 +641,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
           exportparts="chunk:chunk, chunk-current:chunk-current, score:chunk-score, score-current:chunk-score-current, score-bar:chunk-score-bar, score-fill:chunk-score-fill, score-fill-success:chunk-score-fill-success, score-fill-warning:chunk-score-fill-warning, score-fill-danger:chunk-score-fill-danger, open-button:chunk-open-button, title:chunk-title, text:chunk-text, text-clamped:chunk-text-clamped, toggle:chunk-toggle"
           .chunks=${[toLyraChunk(chunk)]}
           .thresholds=${this.thresholds}
-          ?compact=${this.presentation === "compact"}
+          ?compact=${this.presentation === 'compact'}
           active-id=${this.activeId}
           label=${rowLabel}
           @lr-chunk-open=${(
@@ -651,10 +655,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
             // defaults) -- without stopping it here it would keep bubbling straight through this
             // component under the same name, right behind the correctly-shaped re-emit below.
             e.stopPropagation();
-            this.emit("lr-chunk-open", e.detail);
+            this.emit('lr-chunk-open', e.detail);
           }}
         ></lr-chunk-inspector>
-        ${this.presentation === "expanded"
+        ${this.presentation === 'expanded'
           ? this.renderMetadata(chunk.metadata)
           : nothing}
       </div>
@@ -670,9 +674,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
           : html`<button
               type="button"
               part="load-more"
-              @click=${() => this.emit("lr-load-more")}
+              @click=${() => this.emit('lr-load-more')}
             >
-              ${this.localize("loadMore")}
+              ${this.localize('loadMore')}
             </button>`}
       </div>
     `;
@@ -681,9 +685,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   override render(): TemplateResult {
     const label = retrievalSemanticLabel(
       this,
-      this.label || this.localize("chunkInspectorLabel")
+      this.label || this.localize('chunkInspectorLabel')
     );
-    const groupRole = retrievalSemanticRole(this, "group");
+    const groupRole = retrievalSemanticRole(this, 'group');
 
     if (this.errorText) {
       return html`<div part="base" tabindex="-1">
@@ -705,7 +709,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       return html`<div part="base" tabindex="-1">
         <lr-empty part="empty"
           ><span slot="heading"
-            >${this.localize("chunkInspectorEmpty")}</span
+            >${this.localize('chunkInspectorEmpty')}</span
           ></lr-empty
         >
       </div>`;
@@ -731,7 +735,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
               .renderItem=${this.renderRow}
               .keyFunction=${(item: unknown) => (item as RetrievalChunk).id}
               .groups=${processed.groups}
-              .activeId=${this.activeId || ""}
+              .activeId=${this.activeId || ''}
               ?loading=${this.loading}
               ?has-more=${this.hasMore}
               @lr-load-more=${(e: Event) => {
@@ -739,7 +743,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
                 // defaults) -- without stopping it here it would keep bubbling straight through
                 // this component under the same name, right behind the re-emit below.
                 e.stopPropagation();
-                this.emit("lr-load-more");
+                this.emit('lr-load-more');
               }}
             ></lr-virtual-list>`
           : html`<div role="list">
@@ -758,6 +762,6 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-retrieval-results": LyraRetrievalResults;
+    'lr-retrieval-results': LyraRetrievalResults;
   }
 }

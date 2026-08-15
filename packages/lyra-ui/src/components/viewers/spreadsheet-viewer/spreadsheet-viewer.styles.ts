@@ -1,4 +1,4 @@
-import { css } from "lit";
+import { css } from 'lit';
 
 export const styles = css`
   :host {
@@ -6,14 +6,14 @@ export const styles = css`
     min-inline-size: 0;
     --_lr-spreadsheet-viewer-max-height: none;
   }
-  [part="base"],
-  [part="body"],
-  [part="sheet"] {
+  [part='base'],
+  [part='body'],
+  [part='sheet'] {
     display: flex;
     flex-direction: column;
     min-inline-size: 0;
   }
-  [part="body"] {
+  [part='body'] {
     box-sizing: border-box;
     overflow-y: auto;
     overflow-x: hidden;
@@ -27,11 +27,11 @@ export const styles = css`
      there (per the CSS overflow spec, pinning only overflow-x forces overflow-y's used value to
      'auto' too, risking a phantom/empty scrollbar from sub-pixel rounding on a grid that never
      actually overflows vertically -- matching lr-csv-viewer's identical two-layer fix shape). */
-  [part="sheet"] {
+  [part='sheet'] {
     overflow-x: auto;
     overflow-y: hidden;
   }
-  [part="header-row"] {
+  [part='header-row'] {
     display: grid;
     min-inline-size: max-content;
     align-items: center;
@@ -43,7 +43,7 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     border-block-end: var(--lr-border-width-medium) solid var(--lr-color-border);
   }
-  [part="cell"] {
+  [part='cell'] {
     padding: var(--lr-space-2xs) var(--lr-space-xs);
     border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     overflow: hidden;
@@ -73,18 +73,22 @@ export const styles = css`
   }
   /* Body cell highlights live in lr-virtual-list's shadow root, so both the structural cell and
      its nested native action are styled through exported parts. Header highlights use the matching
-     local part selectors. The per-cell color custom property inherits across the shadow boundary. */
-  [part~="cell-highlight"],
+     local part selectors. A private per-cell active default crosses the shadow boundary without
+     shadowing the inherited or direct public highlight-color input. */
+  [part~='cell-highlight'],
   lr-virtual-list::part(cell-highlight) {
     outline: var(--lr-border-width-medium) solid
-      var(--lr-spreadsheet-viewer-highlight-color, var(--lr-color-brand));
+      var(
+        --lr-spreadsheet-viewer-highlight-color,
+        var(--_lr-spreadsheet-viewer-highlight-color, var(--lr-color-brand))
+      );
     outline-offset: var(
       --lr-spreadsheet-viewer-highlight-outline-offset,
       calc(-1 * var(--lr-border-width-medium))
     );
     padding: 0;
   }
-  [part="cell-highlight-action"],
+  [part='cell-highlight-action'],
   lr-virtual-list::part(cell-highlight-action) {
     all: unset;
     box-sizing: border-box;
@@ -98,11 +102,11 @@ export const styles = css`
     white-space: nowrap;
     cursor: pointer;
   }
-  [part="cell-highlight-action"]:hover,
+  [part='cell-highlight-action']:hover,
   lr-virtual-list::part(cell-highlight-action):hover {
     background: var(--lr-color-brand-quiet);
   }
-  [part="cell-highlight-action"]:active,
+  [part='cell-highlight-action']:active,
   lr-virtual-list::part(cell-highlight-action):active {
     background: color-mix(
       in oklab,
@@ -110,27 +114,27 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part="cell-highlight-action"]:focus-visible,
+  [part='cell-highlight-action']:focus-visible,
   lr-virtual-list::part(cell-highlight-action):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }
-  [part="rows"] {
+  [part='rows'] {
     --lr-virtual-list-height: var(--lr-size-20rem);
     min-inline-size: max-content;
   }
   .empty-note,
-  [part="error"] {
+  [part='error'] {
     margin: 0;
     padding: var(--lr-space-m);
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
   }
-  [part="error"] {
+  [part='error'] {
     color: var(--lr-color-danger);
     text-align: center;
   }
-  [part="spinner"] {
+  [part='spinner'] {
     display: flex;
     justify-content: center;
     padding: var(--lr-space-l);

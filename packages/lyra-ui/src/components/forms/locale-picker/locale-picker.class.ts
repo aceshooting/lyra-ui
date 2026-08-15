@@ -298,7 +298,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
    *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
    *  tag rename with no attribute rewrite. */
   @property({ reflect: true,
-    converter: declaredDefaultConverter<LyraSize>("m"),
+    converter: declaredDefaultConverter<LyraSize>('m'),
   }) size: LyraSize = 'm';
 
   @state() private activeIndex = -1;

@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -115,7 +115,7 @@ type PromptStudioMessageMovePart = 'move-message-up' | 'move-message-down';
  * @since 7.0.0
  */
 export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["messages", "variables", "versions"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['messages', 'variables', 'versions']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -144,6 +144,13 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-change',
+    'lr-message-reorder',
+    'lr-run',
+    'lr-save',
+    'lr-version-select',
+  ]);
 
   @property({ attribute: false }) messages: readonly PromptStudioMessage[] = [];
   @property({ attribute: false }) variables: readonly PromptStudioVariable[] = [];

@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -169,7 +169,7 @@ export interface LyraTestResultsEventMap {
  * @since 4.0.0
  */
 export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["suites", "statusFilter"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['suites', 'statusFilter']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -204,6 +204,9 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-filter-change',
+  ]);
 
   /** The suites to render, grouped in order. Controlled and never mutated by this component --
    *  pass a new array (e.g. as a run streams in) to update it. Duplicate suite ids and per-suite

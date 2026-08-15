@@ -1,13 +1,13 @@
-import { html, svg, type PropertyValues, type TemplateResult } from "lit";
-import { property, state } from "lit/decorators.js";
-import { hostAriaLabel } from "../../../internal/a11y.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { finiteRange } from "../../../internal/numbers.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import { sanitizeCssLength } from "../../../internal/safe-css.js";
-import { specialistTokens } from "../../../internal/specialist-tokens.styles.js";
-import { styles } from "./embedding-explorer.styles.js";
-import { activeElementIn } from "../../../internal/active-element.js";
+import { html, svg, type PropertyValues, type TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteRange } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
+import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
+import { styles } from './embedding-explorer.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_embeddingExplorerEmpty, LYRA_DEFAULT_embeddingExplorerLabel, LYRA_DEFAULT_embeddingExplorerPoint } from '../../../internal/default-strings.generated.js';
@@ -17,14 +17,14 @@ const WIDTH = 640;
 const HEIGHT = 360;
 const PAD = 24;
 const PALETTE = [
-  "var(--lr-color-chart-1)",
-  "var(--lr-color-chart-2)",
-  "var(--lr-color-chart-3)",
-  "var(--lr-color-chart-4)",
-  "var(--lr-color-chart-5)",
-  "var(--lr-color-chart-6)",
-  "var(--lr-color-chart-7)",
-  "var(--lr-color-chart-8)",
+  'var(--lr-color-chart-1)',
+  'var(--lr-color-chart-2)',
+  'var(--lr-color-chart-3)',
+  'var(--lr-color-chart-4)',
+  'var(--lr-color-chart-5)',
+  'var(--lr-color-chart-6)',
+  'var(--lr-color-chart-7)',
+  'var(--lr-color-chart-8)',
 ];
 
 /** A projected embedding point. Coordinates must already be projected by the host. */
@@ -38,7 +38,7 @@ export interface EmbeddingPoint {
 }
 
 export interface LyraEmbeddingExplorerEventMap {
-  "lr-point-select": CustomEvent<{ point: EmbeddingPoint }>;
+  'lr-point-select': CustomEvent<{ point: EmbeddingPoint }>;
 }
 
 /**
@@ -75,7 +75,7 @@ export interface LyraEmbeddingExplorerEventMap {
  * @since 6.2.0
  */
 export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["points"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['points']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -92,17 +92,17 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   /** Projected points in host order. Non-finite coordinates are omitted. */
   @property({ attribute: false }) points: readonly EmbeddingPoint[] = [];
   /** The selected point id. Controlled by the host. */
-  @property({ attribute: "selected-id" }) selectedId = "";
+  @property({ attribute: 'selected-id' }) selectedId = '';
   /**
    * The plot's block size, as any CSS length the browser accepts for `block-size` — including
    * `auto`, which restores the aspect-ratio-preserved size derived from the `viewBox`. It is
    * applied through `--lr-embedding-explorer-height`; an unparseable value leaves that property
    * unset, so the plot falls back to `auto` rather than collapsing.
    */
-  @property() height = "360px";
+  @property() height = '360px';
   /** JS-only accessible name for the plot while no host `aria-label` is authored. A host label
    *  independently names the explorer and is not cloned onto the plot. */
-  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @state() private activeIndex = 0;
   private refocusAfterUpdate = false;
 
@@ -114,9 +114,9 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (!changed.has("points")) return;
+    if (!changed.has('points')) return;
     const active = activeElementIn(this.shadowRoot) ?? null;
-    const focusedId = active?.getAttribute("data-id");
+    const focusedId = active?.getAttribute('data-id');
     const points = this.validPoints;
     const matchingIndex = focusedId
       ? points.findIndex((point) => point.id === focusedId)
@@ -125,12 +125,12 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       matchingIndex >= 0
         ? matchingIndex
         : Math.min(this.activeIndex, Math.max(0, points.length - 1));
-    this.refocusAfterUpdate = active?.getAttribute("part") === "point";
+    this.refocusAfterUpdate = active?.getAttribute('part') === 'point';
   }
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    if (changed.has("height")) this.applyHeight();
+    if (changed.has('height')) this.applyHeight();
     if (!this.refocusAfterUpdate) return;
     this.refocusAfterUpdate = false;
     this.renderRoot
@@ -145,10 +145,10 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
    * inline `block-size` also keeps the value visible to a consumer retheming the property.
    */
   private applyHeight(): void {
-    const height = sanitizeCssLength(this.height, "height");
+    const height = sanitizeCssLength(this.height, 'height');
     if (height)
-      this.style.setProperty("--lr-embedding-explorer-height", height);
-    else this.style.removeProperty("--lr-embedding-explorer-height");
+      this.style.setProperty('--lr-embedding-explorer-height', height);
+    else this.style.removeProperty('--lr-embedding-explorer-height');
   }
 
   private position(
@@ -169,14 +169,14 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   }
 
   private announceLabel(point: EmbeddingPoint, index: number): string {
-    return this.localize("embeddingExplorerPoint", undefined, {
+    return this.localize('embeddingExplorerPoint', undefined, {
       label: point.label || point.id,
       index: getNumberFormat(this.effectiveLocale).format(index + 1),
     });
   }
 
   private select(point: EmbeddingPoint): void {
-    this.emit("lr-point-select", { point });
+    this.emit('lr-point-select', { point });
   }
 
   private activatePoint(point: EmbeddingPoint, index: number): void {
@@ -190,21 +190,21 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     index: number
   ): void {
     const points = this.validPoints;
-    if (event.key === "Enter" || event.key === " ") {
+    if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       this.select(point);
       return;
     }
-    const rtl = this.effectiveDirection === "rtl";
-    const forward = rtl ? "ArrowLeft" : "ArrowRight";
-    const backward = rtl ? "ArrowRight" : "ArrowLeft";
+    const rtl = this.effectiveDirection === 'rtl';
+    const forward = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backward = rtl ? 'ArrowRight' : 'ArrowLeft';
     let next = index;
-    if (event.key === forward || event.key === "ArrowDown")
+    if (event.key === forward || event.key === 'ArrowDown')
       next = Math.min(points.length - 1, index + 1);
-    else if (event.key === backward || event.key === "ArrowUp")
+    else if (event.key === backward || event.key === 'ArrowUp')
       next = Math.max(0, index - 1);
-    else if (event.key === "Home") next = 0;
-    else if (event.key === "End") next = points.length - 1;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = points.length - 1;
     else return;
     event.preventDefault();
     this.activeIndex = next;
@@ -228,11 +228,11 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       part="point"
       data-index=${index}
       data-id=${point.id}
-      data-selected=${selected ? "true" : "false"}
+      data-selected=${selected ? 'true' : 'false'}
       transform="translate(${x} ${y})"
-      tabindex=${index === this.activeIndex ? "0" : "-1"}
+      tabindex=${index === this.activeIndex ? '0' : '-1'}
       role="option"
-      aria-selected=${selected ? "true" : "false"}
+      aria-selected=${selected ? 'true' : 'false'}
       aria-label=${label}
       @click=${() => this.activatePoint(point, index)}
       @focus=${() => {
@@ -253,7 +253,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       ></line>
       <circle class="point-marker" r="6" fill=${
         PALETTE[
-          (clusterIndices.get(String(point.cluster ?? "")) ?? 0) %
+          (clusterIndices.get(String(point.cluster ?? '')) ?? 0) %
             PALETTE.length
         ]
       }></circle>
@@ -266,11 +266,11 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     const hostLabel = hostAriaLabel(this);
     const label =
       hostLabel === null
-        ? this.accessibleLabel ?? this.localize("embeddingExplorerLabel")
-        : this.localize("embeddingExplorerLabel");
+        ? this.accessibleLabel ?? this.localize('embeddingExplorerLabel')
+        : this.localize('embeddingExplorerLabel');
     if (points.length === 0)
       return html`<div part="base" role="region" aria-label=${label}>
-        <p part="empty">${this.localize("embeddingExplorerEmpty")}</p>
+        <p part="empty">${this.localize('embeddingExplorerEmpty')}</p>
       </div>`;
     const bounds = points.reduce(
       (result, point) => ({
@@ -282,7 +282,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
     );
     const clusters = [
-      ...new Set(points.map((point) => String(point.cluster ?? ""))),
+      ...new Set(points.map((point) => String(point.cluster ?? ''))),
     ].sort();
     const clusterIndices = new Map(
       clusters.map((cluster, index) => [cluster, index])
@@ -304,6 +304,6 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-embedding-explorer": LyraEmbeddingExplorer;
+    'lr-embedding-explorer': LyraEmbeddingExplorer;
   }
 }

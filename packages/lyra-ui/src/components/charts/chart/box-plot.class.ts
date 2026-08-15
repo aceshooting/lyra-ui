@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -287,9 +287,9 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  */
 export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze([
-    "labels",
-    "datasets",
-    "hiddenDatasets",
+    'labels',
+    'datasets',
+    'hiddenDatasets',
   ]);
 
   // GENERATED DEFAULT-STRING SLICE: START
@@ -323,6 +323,10 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-before-legend-visibility-change',
+    'lr-legend-visibility-change',
+  ]);
 
   constructor() {
     super();

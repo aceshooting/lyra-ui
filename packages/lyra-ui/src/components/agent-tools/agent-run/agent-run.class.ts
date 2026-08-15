@@ -227,10 +227,10 @@ export interface LyraAgentRunEventMap {
  */
 export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze([
-    "run",
-    "statusLabels",
-    "statusVariants",
-    "metrics",
+    'run',
+    'statusLabels',
+    'statusVariants',
+    'metrics',
   ]);
 
   // GENERATED DEFAULT-STRING SLICE: START

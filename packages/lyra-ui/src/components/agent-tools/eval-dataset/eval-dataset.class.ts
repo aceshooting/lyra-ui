@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -115,7 +115,7 @@ export interface LyraEvalDatasetEventMap {
  * @since 4.1.0
  */
 export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["examples", "exportFormats"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['examples', 'exportFormats']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -136,6 +136,9 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-import-request',
+  ]);
 
   /** Controlled dataset: every example currently known to the host. This component never
    *  mutates its own copy of it -- add/remove/import/export are all *requests*; the host performs

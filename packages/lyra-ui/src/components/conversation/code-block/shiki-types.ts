@@ -48,18 +48,18 @@ export interface ShikiTransformer {
 // Peer-neutral values shared by the full and fine-grained loaders. This module must never import
 // Shiki's main entry: lean component entry points depend on it and promise not to reach the full
 // language table.
-export const SHIKI_LIGHT_THEME: string = "github-light";
-export const SHIKI_DARK_THEME: string = "github-dark";
+export const SHIKI_LIGHT_THEME: string = 'github-light';
+export const SHIKI_DARK_THEME: string = 'github-dark';
 
 /** Passed directly as `codeToHtml()`'s dual-theme option. */
-export const SHIKI_THEMES: Record<"light" | "dark", string> = {
+export const SHIKI_THEMES: Record<'light' | 'dark', string> = {
   light: SHIKI_LIGHT_THEME,
   dark: SHIKI_DARK_THEME,
 };
 
 /** Normalizes ids supplied by filename-oriented integrations and templates. */
 export function normalizeShikiLanguage(lang: string): string {
-  return lang.trim().toLowerCase().replace(/^\./, "");
+  return lang.trim().toLowerCase().replace(/^\./, '');
 }
 
 /** One cached fine-grained highlighter promise per distinct `languages` object identity. */
@@ -93,23 +93,23 @@ export function loadShikiHighlighterCore(
   let cached = highlighterCores.get(languages);
   if (!cached) {
     cached = Promise.all([
-      import("shiki/core"),
-      import("shiki/engine/oniguruma"),
-      import("shiki/themes/github-light.mjs"),
-      import("shiki/themes/github-dark.mjs"),
+      import('shiki/core'),
+      import('shiki/engine/oniguruma'),
+      import('shiki/themes/github-light.mjs'),
+      import('shiki/themes/github-dark.mjs'),
     ])
       .then(
         ([{ createHighlighterCore }, { createOnigurumaEngine }, light, dark]) =>
           createHighlighterCore({
             themes: [light.default, dark.default],
             langs: Object.values(languages) as never,
-            engine: createOnigurumaEngine(import("shiki/wasm")),
+            engine: createOnigurumaEngine(import('shiki/wasm')),
           }) as unknown as ShikiHighlighterCore
       )
       .catch((err) => {
         console.warn(
           "<lr-code-block>'s `languages` property failed to build a fine-grained shiki highlighter — " +
-            "falling back to plain unhighlighted text for the languages it covers:",
+            'falling back to plain unhighlighted text for the languages it covers:',
           err
         );
         return null;

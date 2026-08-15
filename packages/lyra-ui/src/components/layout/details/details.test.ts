@@ -29,9 +29,13 @@ it("renders a disclosure panel and reports its state", async () => {
 
 it("forwards a host aria-label to the native summary by presence and restores content naming when removed", async () => {
   const el = (await fixture(
-    html`<lr-details summary="Fallback details" aria-label="">Content</lr-details>`,
+    html`<lr-details summary="Fallback details" aria-label=""
+      >Content</lr-details
+    >`
   )) as LyraDetails;
-  const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+  const summary = el.shadowRoot!.querySelector(
+    '[part="summary"]'
+  ) as HTMLElement;
 
   expect(summary.hasAttribute("aria-label")).to.equal(true);
   expect(summary.getAttribute("aria-label")).to.equal("");
@@ -47,7 +51,9 @@ it("forwards a host aria-label to the native summary by presence and restores co
 });
 
 it("does not toggle for an interactive summary child created in another realm", async () => {
-  const el = (await fixture(html`<lr-details>Content</lr-details>`)) as LyraDetails;
+  const el = (await fixture(
+    html`<lr-details>Content</lr-details>`
+  )) as LyraDetails;
   const iframe = document.createElement("iframe");
   document.body.append(iframe);
   try {
@@ -59,7 +65,10 @@ it("does not toggle for an interactive summary child created in another realm", 
     el.append(link);
     await el.updateComplete;
 
-    expect(link instanceof Element, "fixture really crosses constructor realms").to.equal(false);
+    expect(
+      link instanceof Element,
+      "fixture really crosses constructor realms"
+    ).to.equal(false);
     link.click();
     await el.updateComplete;
     expect(el.open).to.be.false;
@@ -73,7 +82,9 @@ it("closes sibling items in single-collapsible mode", async () => {
     <lr-accordion-item expanded label="One">A</lr-accordion-item>
     <lr-accordion-item label="Two">B</lr-accordion-item>
   </lr-accordion>`);
-  const panels = [...el.querySelectorAll("lr-accordion-item")] as LyraAccordionItem[];
+  const panels = [
+    ...el.querySelectorAll("lr-accordion-item"),
+  ] as LyraAccordionItem[];
   await panels[1].expand();
   await Promise.all(panels.map((panel) => panel.updateComplete));
   expect(panels[0].expanded).to.be.false;
@@ -84,7 +95,9 @@ it("reconciles multiple initially-expanded items in a single mode", async () => 
     <lr-accordion-item expanded label="One">A</lr-accordion-item>
     <lr-accordion-item expanded label="Two">B</lr-accordion-item>
   </lr-accordion>`);
-  const panels = [...el.querySelectorAll("lr-accordion-item")] as LyraAccordionItem[];
+  const panels = [
+    ...el.querySelectorAll("lr-accordion-item"),
+  ] as LyraAccordionItem[];
   await Promise.all(panels.map((panel) => panel.updateComplete));
 
   expect(panels.map((panel) => panel.expanded)).to.deep.equal([true, false]);
@@ -97,7 +110,9 @@ it("reconciles expanded items when mode changes from multiple to single", async 
   </lr-accordion>`)) as LyraAccordion;
   el.mode = "single-collapsible";
   await el.updateComplete;
-  const panels = [...el.querySelectorAll("lr-accordion-item")] as LyraAccordionItem[];
+  const panels = [
+    ...el.querySelectorAll("lr-accordion-item"),
+  ] as LyraAccordionItem[];
   await Promise.all(panels.map((panel) => panel.updateComplete));
 
   expect(panels.map((panel) => panel.expanded)).to.deep.equal([true, false]);
@@ -110,8 +125,12 @@ it("reconciles accordion listener ownership when panels are appended, removed, o
   const second = await fixture(html`<lr-accordion mode="single-collapsible">
     <lr-accordion-item expanded label="Other">Other</lr-accordion-item>
   </lr-accordion>`);
-  const original = first.querySelector("lr-accordion-item") as LyraAccordionItem;
-  const appended = document.createElement("lr-accordion-item") as LyraAccordionItem;
+  const original = first.querySelector(
+    "lr-accordion-item"
+  ) as LyraAccordionItem;
+  const appended = document.createElement(
+    "lr-accordion-item"
+  ) as LyraAccordionItem;
   appended.label = "Two";
   first.append(appended);
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -200,35 +219,44 @@ it("blocks both pointer and synthesized keyboard activation while disabled", asy
   expect(base.open).to.be.false;
 });
 
-it('keeps disabled summary paint unchanged on hover and press', async () => {
+it("keeps disabled summary paint unchanged on hover and press", async () => {
   const el = (await fixture(html`
     <lr-details
       summary="More"
       disabled
       style="--lr-details-summary-hover-bg:rgb(1,2,3);--lr-details-summary-active-bg:rgb(4,5,6)"
-    >Content</lr-details>
+      >Content</lr-details
+    >
   `)) as LyraDetails;
-  const summary = el.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!;
+  const summary =
+    el.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!;
   const rest = getComputedStyle(summary).backgroundColor;
   const rect = summary.getBoundingClientRect();
   try {
     await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      type: "move",
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
     });
     expect(getComputedStyle(summary).backgroundColor).to.equal(rest);
-    await sendMouse({ type: 'down' });
+    await sendMouse({ type: "down" });
     expect(getComputedStyle(summary).backgroundColor).to.equal(rest);
   } finally {
-    await sendMouse({ type: 'up' });
+    await sendMouse({ type: "up" });
     await resetMouse();
   }
 });
 
 it("keeps the disclosure marker vertical under RTL in both states", () => {
   const css = detailsStyles.cssText.replace(/\s+/g, " ");
-  expect(css).to.include(".icon-fallback { display: inline-flex; transform: rotate(90deg)");
-  expect(css).to.include(":host([open]) .icon-fallback { transform: rotate(-90deg)");
+  expect(css).to.include(
+    ".icon-fallback { display: inline-flex; transform: rotate(90deg)"
+  );
+  expect(css).to.include(
+    ":host([open]) .icon-fallback { transform: rotate(-90deg)"
+  );
 });
 
 it('actually rotates the rendered chevron under a real dir="rtl" fixture instead of pointing sideways (getComputedStyle, not just source text)', async () => {
@@ -241,7 +269,7 @@ it('actually rotates the rendered chevron under a real dir="rtl" fixture instead
   );
   const closedIcon = (
     closedWrapper.querySelector("lr-details") as LyraDetails
-  ).shadowRoot!.querySelector('.icon-fallback') as HTMLElement;
+  ).shadowRoot!.querySelector(".icon-fallback") as HTMLElement;
   expect(chevronAngleDeg(closedIcon)).to.be.closeTo(90, 0.01);
 
   const openWrapper = await fixture(
@@ -251,7 +279,7 @@ it('actually rotates the rendered chevron under a real dir="rtl" fixture instead
   );
   const openIcon = (
     openWrapper.querySelector("lr-details") as LyraDetails
-  ).shadowRoot!.querySelector('.icon-fallback') as HTMLElement;
+  ).shadowRoot!.querySelector(".icon-fallback") as HTMLElement;
   expect(chevronAngleDeg(openIcon)).to.be.closeTo(-90, 0.01);
 });
 
@@ -259,7 +287,9 @@ it("contains an expanded long summary, content, and action in an exact 320px RTL
   const wrapper = await fixture<HTMLElement>(html`
     <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
       <lr-details open>
-        <span slot="summary">عنوانتفاصيلمحليطويلجداًبدونأيفرصةللفصلالتلقائي</span>
+        <span slot="summary"
+          >عنوانتفاصيلمحليطويلجداًبدونأيفرصةللفصلالتلقائي</span
+        >
         <p>محتوىتفصيليمحليطويلجداًبدونأيفرصةللفصلالتلقائي</p>
         <button type="button">إجراءمحليطويلجداًبدونأيفرصةللفصلالتلقائي</button>
       </lr-details>
@@ -268,8 +298,10 @@ it("contains an expanded long summary, content, and action in an exact 320px RTL
   const el = wrapper.querySelector("lr-details") as LyraDetails;
   await el.updateComplete;
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
-  const summary = el.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!;
-  const content = el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+  const summary =
+    el.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!;
+  const content =
+    el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
 
   expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
   expect(el.scrollWidth).to.be.at.most(el.clientWidth);
@@ -329,14 +361,15 @@ it("chains willUpdate() to super.willUpdate() so a mixin layered under LyraEleme
 });
 
 it("gives the summary (the real focusable/clickable surface) hover and focus-visible treatment", () => {
-  const css = detailsStyles.cssText.replace(/\s+/g, " ");
+  const css = detailsStyles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
   expect(css).to.match(/\[part='summary'\]:hover\s*\{[^}]*background:/);
   expect(css).to.match(/\[part='summary'\]:focus-visible\s*\{[^}]*outline:/);
 });
 
 it("inherits independent appearance and pointer-state paint without retinting shared tokens", async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div style="
+    <div
+      style="
       --lr-details-outlined-bg: rgb(1, 2, 3);
       --lr-details-outlined-border-color: rgb(4, 5, 6);
       --lr-details-filled-bg: rgb(7, 8, 9);
@@ -345,34 +378,53 @@ it("inherits independent appearance and pointer-state paint without retinting sh
       --lr-details-filled-outlined-border-color: rgb(16, 17, 18);
       --lr-details-summary-hover-bg: rgb(19, 20, 21);
       --lr-details-summary-active-bg: rgb(22, 23, 24);
-    ">
+    "
+    >
       <lr-details appearance="outlined" summary="Outlined">Content</lr-details>
       <lr-details appearance="filled" summary="Filled">Content</lr-details>
-      <lr-details appearance="filled-outlined" summary="Filled outlined">Content</lr-details>
+      <lr-details appearance="filled-outlined" summary="Filled outlined"
+        >Content</lr-details
+      >
     </div>
   `);
   const items = [...wrapper.querySelectorAll("lr-details")] as LyraDetails[];
   await Promise.all(items.map((item) => item.updateComplete));
-  const bases = items.map((item) => item.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!);
+  const bases = items.map(
+    (item) => item.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!
+  );
 
   expect(getComputedStyle(bases[0]!).backgroundColor).to.equal("rgb(1, 2, 3)");
   expect(getComputedStyle(bases[0]!).borderTopColor).to.equal("rgb(4, 5, 6)");
   expect(getComputedStyle(bases[1]!).backgroundColor).to.equal("rgb(7, 8, 9)");
-  expect(getComputedStyle(bases[1]!).borderTopColor).to.equal("rgb(10, 11, 12)");
-  expect(getComputedStyle(bases[2]!).backgroundColor).to.equal("rgb(13, 14, 15)");
-  expect(getComputedStyle(bases[2]!).borderTopColor).to.equal("rgb(16, 17, 18)");
+  expect(getComputedStyle(bases[1]!).borderTopColor).to.equal(
+    "rgb(10, 11, 12)"
+  );
+  expect(getComputedStyle(bases[2]!).backgroundColor).to.equal(
+    "rgb(13, 14, 15)"
+  );
+  expect(getComputedStyle(bases[2]!).borderTopColor).to.equal(
+    "rgb(16, 17, 18)"
+  );
 
-  const summary = items[0]!.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!;
+  const summary =
+    items[0]!.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!;
   summary.scrollIntoView();
   const rect = summary.getBoundingClientRect();
   try {
     await sendMouse({
       type: "move",
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
     });
-    expect(getComputedStyle(summary).backgroundColor).to.equal("rgb(19, 20, 21)");
+    expect(getComputedStyle(summary).backgroundColor).to.equal(
+      "rgb(19, 20, 21)"
+    );
     await sendMouse({ type: "down" });
-    expect(getComputedStyle(summary).backgroundColor).to.equal("rgb(22, 23, 24)");
+    expect(getComputedStyle(summary).backgroundColor).to.equal(
+      "rgb(22, 23, 24)"
+    );
   } finally {
     await resetMouse();
   }
@@ -390,7 +442,8 @@ it("inherits independent gap and radius hooks across the extreme size tiers", as
 
   for (const item of items) {
     const base = item.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
-    const header = item.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+    const header =
+      item.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
     expect(getComputedStyle(base).borderTopLeftRadius).to.equal("19px");
     expect(getComputedStyle(header).columnGap).to.equal("27px");
   }
@@ -449,16 +502,30 @@ describe("unified show/hide lifecycle", () => {
   });
 
   it("reports whether an accepted toggle came from a user, API call, or named peer", async () => {
-    const el = (await fixture(html`<lr-details summary="More">Content</lr-details>`)) as LyraDetails;
-    const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+    const el = (await fixture(
+      html`<lr-details summary="More">Content</lr-details>`
+    )) as LyraDetails;
+    const summary = el.shadowRoot!.querySelector(
+      '[part="summary"]'
+    ) as HTMLElement;
 
-    const userToggle = oneEvent(el, 'lr-toggle') as Promise<CustomEvent<{ open: boolean; source: string }>>;
+    const userToggle = oneEvent(el, "lr-toggle") as Promise<
+      CustomEvent<{ open: boolean; source: string }>
+    >;
     summary.click();
-    expect((await userToggle).detail).to.deep.equal({ open: true, source: 'user' });
+    expect((await userToggle).detail).to.deep.equal({
+      open: true,
+      source: "user",
+    });
 
-    const apiToggle = oneEvent(el, 'lr-toggle') as Promise<CustomEvent<{ open: boolean; source: string }>>;
+    const apiToggle = oneEvent(el, "lr-toggle") as Promise<
+      CustomEvent<{ open: boolean; source: string }>
+    >;
     await el.hide();
-    expect((await apiToggle).detail).to.deep.equal({ open: false, source: 'programmatic' });
+    expect((await apiToggle).detail).to.deep.equal({
+      open: false,
+      source: "programmatic",
+    });
 
     const pair = await fixture<HTMLElement>(html`
       <div>
@@ -466,11 +533,18 @@ describe("unified show/hide lifecycle", () => {
         <lr-details name="answers" summary="Second">Second panel</lr-details>
       </div>
     `);
-    const [first, second] = [...pair.querySelectorAll('lr-details')] as LyraDetails[];
+    const [first, second] = [
+      ...pair.querySelectorAll("lr-details"),
+    ] as LyraDetails[];
     await Promise.all([first.updateComplete, second.updateComplete]);
-    const peerToggle = oneEvent(first, 'lr-toggle') as Promise<CustomEvent<{ open: boolean; source: string }>>;
+    const peerToggle = oneEvent(first, "lr-toggle") as Promise<
+      CustomEvent<{ open: boolean; source: string }>
+    >;
     await second.show();
-    expect((await peerToggle).detail).to.deep.equal({ open: false, source: 'peer' });
+    expect((await peerToggle).detail).to.deep.equal({
+      open: false,
+      source: "peer",
+    });
   });
 
   it("honours a vetoed lr-show from the summary click, leaving the native details closed", async () => {
@@ -485,14 +559,16 @@ describe("unified show/hide lifecycle", () => {
     ) as HTMLElement;
     let toggles = 0;
     el.addEventListener("lr-toggle", () => toggles++);
-    el.addEventListener("lr-show", (event) => (event as Event).preventDefault());
+    el.addEventListener("lr-show", (event) =>
+      (event as Event).preventDefault()
+    );
 
     summary.click();
     await el.updateComplete;
 
     expect(el.open).to.be.false;
-    expect(base.open, "a vetoed open must not leave the native panel expanded").to
-      .be.false;
+    expect(base.open, "a vetoed open must not leave the native panel expanded")
+      .to.be.false;
     expect(el.hasAttribute("open")).to.be.false;
     expect(toggles).to.equal(0);
   });
@@ -508,7 +584,9 @@ describe("unified show/hide lifecycle", () => {
     const summary = el.shadowRoot!.querySelector(
       '[part="summary"]'
     ) as HTMLElement;
-    el.addEventListener("lr-hide", (event) => (event as Event).preventDefault());
+    el.addEventListener("lr-hide", (event) =>
+      (event as Event).preventDefault()
+    );
 
     summary.click();
     await el.updateComplete;
@@ -548,7 +626,13 @@ describe("unified show/hide lifecycle", () => {
     const initiallyOpen = (await fixture(
       html`<lr-details summary="More" open>Content</lr-details>`
     )) as LyraDetails;
-    for (const name of ["lr-show", "lr-after-show", "lr-hide", "lr-after-hide", "lr-toggle"]) {
+    for (const name of [
+      "lr-show",
+      "lr-after-show",
+      "lr-hide",
+      "lr-after-hide",
+      "lr-toggle",
+    ]) {
       initiallyOpen.addEventListener(name, () => fired++);
     }
     await initiallyOpen.updateComplete;
@@ -597,9 +681,13 @@ describe("unified show/hide lifecycle", () => {
 
 describe("size", () => {
   const summaryOf = (el: LyraDetails): CSSStyleDeclaration =>
-    getComputedStyle(el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement);
+    getComputedStyle(
+      el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement
+    );
   const contentOf = (el: LyraDetails): CSSStyleDeclaration =>
-    getComputedStyle(el.shadowRoot!.querySelector('[part="content"]') as HTMLElement);
+    getComputedStyle(
+      el.shadowRoot!.querySelector('[part="content"]') as HTMLElement
+    );
 
   const render = async (size?: string): Promise<LyraDetails> =>
     (await fixture(
@@ -608,12 +696,14 @@ describe("size", () => {
         : html`<lr-details summary="More" size=${size}>Content</lr-details>`
     )) as LyraDetails;
 
-  it("defaults to \"m\", and the unset default renders identically to the explicit tier", async () => {
+  it('defaults to "m", and the unset default renders identically to the explicit tier', async () => {
     const unset = await render();
     const explicit = await render("m");
     expect(unset.size).to.equal("m");
     expect(unset.getAttribute("size")).to.equal("m");
-    expect(summaryOf(unset).paddingBlockStart).to.equal(summaryOf(explicit).paddingBlockStart);
+    expect(summaryOf(unset).paddingBlockStart).to.equal(
+      summaryOf(explicit).paddingBlockStart
+    );
     expect(summaryOf(unset).fontSize).to.equal(summaryOf(explicit).fontSize);
   });
 
@@ -628,19 +718,35 @@ describe("size", () => {
       });
     }
     for (let i = 1; i < measured.length; i++) {
-      expect(measured[i]!.padding, `summary padding tier ${i}`).to.be.at.least(measured[i - 1]!.padding);
-      expect(measured[i]!.font, `summary font tier ${i}`).to.be.at.least(measured[i - 1]!.font);
-      expect(measured[i]!.content, `content padding tier ${i}`).to.be.at.least(measured[i - 1]!.content);
+      expect(measured[i]!.padding, `summary padding tier ${i}`).to.be.at.least(
+        measured[i - 1]!.padding
+      );
+      expect(measured[i]!.font, `summary font tier ${i}`).to.be.at.least(
+        measured[i - 1]!.font
+      );
+      expect(measured[i]!.content, `content padding tier ${i}`).to.be.at.least(
+        measured[i - 1]!.content
+      );
     }
-    expect(measured.at(-1)!.padding, "xl padding beats 2xs").to.be.greaterThan(measured[0]!.padding);
-    expect(measured.at(-1)!.font, "xl font beats 2xs").to.be.greaterThan(measured[0]!.font);
+    expect(measured.at(-1)!.padding, "xl padding beats 2xs").to.be.greaterThan(
+      measured[0]!.padding
+    );
+    expect(measured.at(-1)!.font, "xl font beats 2xs").to.be.greaterThan(
+      measured[0]!.font
+    );
   });
 
   it("accepts the Web Awesome size spellings as exact synonyms of the step names", async () => {
-    for (const [step, alias] of [["s", "small"], ["m", "medium"], ["l", "large"]] as const) {
+    for (const [step, alias] of [
+      ["s", "small"],
+      ["m", "medium"],
+      ["l", "large"],
+    ] as const) {
       const stepped = summaryOf(await render(step));
       const aliased = summaryOf(await render(alias));
-      expect(aliased.paddingBlockStart, `${alias} padding`).to.equal(stepped.paddingBlockStart);
+      expect(aliased.paddingBlockStart, `${alias} padding`).to.equal(
+        stepped.paddingBlockStart
+      );
       expect(aliased.fontSize, `${alias} font`).to.equal(stepped.fontSize);
     }
   });
@@ -648,7 +754,9 @@ describe("size", () => {
   it("stays accessible and keyboard-operable at the smallest tier", async () => {
     const el = await render("2xs");
     await expect(el).to.be.accessible();
-    const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+    const summary = el.shadowRoot!.querySelector(
+      '[part="summary"]'
+    ) as HTMLElement;
     summary.click();
     await el.updateComplete;
     expect(el.open).to.be.true;
@@ -673,7 +781,9 @@ describe("Web Awesome disclosure surface", () => {
       <lr-details name="faq" summary="Two">Two</lr-details>
       <lr-details name="other" summary="Other" open>Other</lr-details>
     </div>`);
-    const [one, two, other] = [...wrapper.querySelectorAll("lr-details")] as LyraDetails[];
+    const [one, two, other] = [
+      ...wrapper.querySelectorAll("lr-details"),
+    ] as LyraDetails[];
 
     await two.show();
 
@@ -681,26 +791,41 @@ describe("Web Awesome disclosure surface", () => {
     expect(two.open).to.be.true;
     expect(other.open).to.be.true;
     expect(
-      (two.shadowRoot!.querySelector('[part~="base"]') as HTMLDetailsElement).name
+      (two.shadowRoot!.querySelector('[part~="base"]') as HTMLDetailsElement)
+        .name
     ).to.equal("faq");
   });
 
   it("reconciles a live name change with changed-disclosure-wins semantics", async () => {
     const wrapper = await fixture(html`<div>
-      <lr-details id="rename-first" name="faq" summary="One" open style="--hide-duration: 1ms">One</lr-details>
-      <lr-details id="rename-winner" name="other" summary="Two" open>Two</lr-details>
+      <lr-details
+        id="rename-first"
+        name="faq"
+        summary="One"
+        open
+        style="--hide-duration: 1ms"
+        >One</lr-details
+      >
+      <lr-details id="rename-winner" name="other" summary="Two" open
+        >Two</lr-details
+      >
     </div>`);
-    const first = wrapper.querySelector<LyraDetails>('#rename-first')!;
-    const winner = wrapper.querySelector<LyraDetails>('#rename-winner')!;
-    const peerToggle = oneEvent(first, 'lr-toggle') as Promise<CustomEvent<{ open: boolean; source: string }>>;
+    const first = wrapper.querySelector<LyraDetails>("#rename-first")!;
+    const winner = wrapper.querySelector<LyraDetails>("#rename-winner")!;
+    const peerToggle = oneEvent(first, "lr-toggle") as Promise<
+      CustomEvent<{ open: boolean; source: string }>
+    >;
 
-    winner.name = 'faq';
+    winner.name = "faq";
     await winner.updateComplete;
 
     expect(first.open).to.be.false;
     expect(winner.open).to.be.true;
-    expect(winner.name).to.equal('faq');
-    expect((await peerToggle).detail).to.deep.equal({ open: false, source: 'peer' });
+    expect(winner.name).to.equal("faq");
+    expect((await peerToggle).detail).to.deep.equal({
+      open: false,
+      source: "peer",
+    });
   });
 
   it("rejects a live name change when a conflicting peer vetoes its close", async () => {
@@ -708,33 +833,37 @@ describe("Web Awesome disclosure surface", () => {
       <lr-details name="locked" summary="Locked" open>Locked</lr-details>
       <lr-details name="other" summary="Candidate" open>Candidate</lr-details>
     </div>`);
-    const [locked, candidate] = [...wrapper.querySelectorAll('lr-details')] as LyraDetails[];
-    locked.addEventListener('lr-hide', (event) => event.preventDefault());
+    const [locked, candidate] = [
+      ...wrapper.querySelectorAll("lr-details"),
+    ] as LyraDetails[];
+    locked.addEventListener("lr-hide", (event) => event.preventDefault());
 
-    candidate.name = 'locked';
+    candidate.name = "locked";
     await candidate.updateComplete;
 
     expect(locked.open).to.be.true;
     expect(candidate.open).to.be.true;
-    expect(candidate.name).to.equal('other');
-    expect(candidate.getAttribute('name')).to.equal('other');
+    expect(candidate.name).to.equal("other");
+    expect(candidate.getAttribute("name")).to.equal("other");
   });
 
   it("reconciles open named disclosures after moving into another shadow root", async () => {
     const wrapper = await fixture<HTMLElement>(html`<div>
       <div id="details-root"></div>
-      <lr-details id="details-moving" name="faq" summary="Moving" open>Moving</lr-details>
+      <lr-details id="details-moving" name="faq" summary="Moving" open
+        >Moving</lr-details
+      >
     </div>`);
-    const host = wrapper.querySelector<HTMLElement>('#details-root')!;
-    const shadow = host.attachShadow({ mode: 'open' });
-    const incumbent = document.createElement('lr-details') as LyraDetails;
-    incumbent.name = 'faq';
-    incumbent.summary = 'Incumbent';
+    const host = wrapper.querySelector<HTMLElement>("#details-root")!;
+    const shadow = host.attachShadow({ mode: "open" });
+    const incumbent = document.createElement("lr-details") as LyraDetails;
+    incumbent.name = "faq";
+    incumbent.summary = "Incumbent";
     incumbent.open = true;
-    incumbent.style.setProperty('--hide-duration', '1ms');
+    incumbent.style.setProperty("--hide-duration", "1ms");
     shadow.append(incumbent);
     await incumbent.updateComplete;
-    const moving = wrapper.querySelector<LyraDetails>('#details-moving')!;
+    const moving = wrapper.querySelector<LyraDetails>("#details-moving")!;
 
     shadow.append(moving);
     await new Promise<void>((resolve) => queueMicrotask(resolve));
@@ -749,7 +878,9 @@ describe("Web Awesome disclosure surface", () => {
       <lr-details name="faq" summary="One" open>One</lr-details>
       <lr-details name="faq" summary="Two">Two</lr-details>
     </div>`);
-    const [one, two] = [...wrapper.querySelectorAll("lr-details")] as LyraDetails[];
+    const [one, two] = [
+      ...wrapper.querySelectorAll("lr-details"),
+    ] as LyraDetails[];
     one.addEventListener("lr-hide", (event) => event.preventDefault());
 
     await two.show();
@@ -785,7 +916,7 @@ describe("Web Awesome disclosure surface", () => {
     </lr-details>`)) as LyraDetails;
     expect(el.shadowRoot!.querySelector('[part="header"]')).to.exist;
     const icon = el.shadowRoot!.querySelector('[part~="icon"]') as HTMLElement;
-    expect((icon) != null).to.equal(true);
+    expect(icon != null).to.equal(true);
     expect(icon.part.contains("summary-icon")).to.be.true;
     expect(el.shadowRoot!.querySelector('slot[name="expand-icon"]')).to.exist;
 
@@ -797,7 +928,8 @@ describe("Web Awesome disclosure surface", () => {
     const el = (await fixture(html`<lr-details
       summary="Animation state"
       style="--show-duration: 40ms"
-    >Content</lr-details>`)) as LyraDetails;
+      >Content</lr-details
+    >`)) as LyraDetails;
 
     const showing = el.show();
     await el.updateComplete;
@@ -811,11 +943,19 @@ describe("Web Awesome disclosure surface", () => {
       summary="More"
       icon-placement="start"
       style="--spacing: 13px"
-    >Content</lr-details>`)) as LyraDetails;
-    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+      >Content</lr-details
+    >`)) as LyraDetails;
+    const header = el.shadowRoot!.querySelector(
+      '[part="header"]'
+    ) as HTMLElement;
     const icon = el.shadowRoot!.querySelector('[part~="icon"]') as HTMLElement;
-    const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
-    expect((header.firstElementChild) === (el.shadowRoot!.querySelector(".summary-content"))).to.equal(true);
+    const summary = el.shadowRoot!.querySelector(
+      '[part="summary"]'
+    ) as HTMLElement;
+    expect(
+      header.firstElementChild ===
+        el.shadowRoot!.querySelector(".summary-content")
+    ).to.equal(true);
     expect(getComputedStyle(icon).order).to.equal("-1");
     expect(getComputedStyle(summary).paddingInlineStart).to.equal("13px");
   });

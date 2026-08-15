@@ -5,35 +5,35 @@ import {
   type PropertyValues,
   type TemplateResult,
   type SVGTemplateResult,
-} from "lit";
-import { property, state } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { srOnly } from "../../../internal/a11y.js";
+} from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
-} from "../../../internal/announcer.js";
-import { finiteCount } from "../../../internal/numbers.js";
+} from '../../../internal/announcer.js';
+import { finiteCount } from '../../../internal/numbers.js';
 import {
   getListFormat,
   getNumberFormat,
-} from "../../../internal/intl-cache.js";
-import { closeIcon } from "../../../internal/icons.js";
+} from '../../../internal/intl-cache.js';
+import { closeIcon } from '../../../internal/icons.js';
 import type {
   CancelEventDetail,
   DocumentRef,
   RetryEventDetail,
-} from "../../../ai/types.js";
-import type { BadgeVariant } from "../../overlays/badge/badge.class.js";
+} from '../../../ai/types.js';
+import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 // The registering barrels (not the bare *.class.js modules) -- this side effect is what actually
 // defines <lr-badge>/<lr-progress-bar>/<lr-empty>/<lr-virtual-list> as custom elements by the
 // time this component's render() references them.
-import { styles } from "./ingestion-queue.styles.js";
+import { styles } from './ingestion-queue.styles.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
-} from "../retrieval-semantic-owner.js";
+} from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_ingestionAttemptCount, LYRA_DEFAULT_ingestionCancelWithContext, LYRA_DEFAULT_ingestionChunkCount, LYRA_DEFAULT_ingestionEmbeddedOfTotal, LYRA_DEFAULT_ingestionItemProgressLabel, LYRA_DEFAULT_ingestionQueueEmpty, LYRA_DEFAULT_ingestionQueueLabel, LYRA_DEFAULT_ingestionRetryWithContext, LYRA_DEFAULT_ingestionStageCancelled, LYRA_DEFAULT_ingestionStageChunking, LYRA_DEFAULT_ingestionStageDone, LYRA_DEFAULT_ingestionStageEmbedding, LYRA_DEFAULT_ingestionStageExtracting, LYRA_DEFAULT_ingestionStageFailed, LYRA_DEFAULT_ingestionStageIndexing, LYRA_DEFAULT_ingestionStageQueued, LYRA_DEFAULT_ingestionStageUploading, LYRA_DEFAULT_retry } from '../../../internal/default-strings.generated.js';
@@ -44,43 +44,43 @@ import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_ingestionAttemptCount, LYRA_DEFAULT_i
  * in-flight stages (in pipeline order); `'done'`, `'failed'`, and `'cancelled'` are terminal.
  */
 export type IngestionStage =
-  | "queued"
-  | "uploading"
-  | "extracting"
-  | "chunking"
-  | "embedding"
-  | "indexing"
-  | "done"
-  | "failed"
-  | "cancelled";
+  | 'queued'
+  | 'uploading'
+  | 'extracting'
+  | 'chunking'
+  | 'embedding'
+  | 'indexing'
+  | 'done'
+  | 'failed'
+  | 'cancelled';
 
 /** In-flight stages that render a progress indicator and remain cancelable. `'queued'` is also
  *  cancelable (see `CANCELABLE_STAGES`) but has nothing yet to show progress *of*. */
 const ACTIVE_STAGES: readonly IngestionStage[] = [
-  "uploading",
-  "extracting",
-  "chunking",
-  "embedding",
-  "indexing",
+  'uploading',
+  'extracting',
+  'chunking',
+  'embedding',
+  'indexing',
 ];
 
 /** Every non-terminal stage -- the set a `lr-cancel` request is offered for. */
 const CANCELABLE_STAGES: readonly IngestionStage[] = [
-  "queued",
+  'queued',
   ...ACTIVE_STAGES,
 ];
 
 function badgeVariantForStage(stage: IngestionStage): BadgeVariant {
   switch (stage) {
-    case "done":
-      return "success";
-    case "failed":
-      return "danger";
-    case "queued":
-    case "cancelled":
-      return "neutral";
+    case 'done':
+      return 'success';
+    case 'failed':
+      return 'danger';
+    case 'queued':
+    case 'cancelled':
+      return 'neutral';
     default:
-      return "brand";
+      return 'brand';
   }
 }
 
@@ -124,12 +124,12 @@ export interface IngestionCancelEventDetail extends CancelEventDetail {
 }
 
 export interface LyraIngestionQueueEventMap {
-  "lr-retry": CustomEvent<IngestionRetryEventDetail>;
-  "lr-cancel": CustomEvent<IngestionCancelEventDetail>;
+  'lr-retry': CustomEvent<IngestionRetryEventDetail>;
+  'lr-cancel': CustomEvent<IngestionCancelEventDetail>;
 }
 
-const ICON_VIEW_BOX = "0 0 24 24";
-const ICON_STROKE_WIDTH = "1.75";
+const ICON_VIEW_BOX = '0 0 24 24';
+const ICON_STROKE_WIDTH = '1.75';
 
 // Same shape as `<lr-attachment-chip>`'s local `retryIcon()` -- duplicated rather than imported
 // (independently consumable components) but kept visually identical so a retry affordance reads
@@ -213,7 +213,7 @@ const DEFAULT_VIRTUALIZE_AT = 100;
  * @since 4.1.0
  */
 export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["items"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -249,15 +249,15 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
 
   /** Accessible name for the stable region when the host has no `aria-label`; defaults to
    *  localized `ingestionQueueLabel`. An explicitly empty host label stays empty. */
-  @property() label = "";
+  @property() label = '';
 
   /** Above this item count, the list renders through an internal `<lr-virtual-list>`. Exclusive,
    *  like every other `virtualize-at` in this family: exactly this many items still render as a
    *  plain list. */
-  @property({ type: Number, attribute: "virtualize-at" }) virtualizeAt =
+  @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt =
     DEFAULT_VIRTUALIZE_AT;
 
-  @state() private failureLiveText = "";
+  @state() private failureLiveText = '';
   private isMounting = true;
   /** Handle on the shared light-DOM assertive region failures actually announce through -- a
    *  region rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores
@@ -280,7 +280,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     super.connectedCallback();
     // Acquired on connect, not on the first failure: assistive tech has to have been observing a
     // live region *before* text arrives for the change to be announced at all.
-    this.sink ??= acquireAnnouncementSink("assertive", {
+    this.sink ??= acquireAnnouncementSink('assertive', {
       document: this.ownerDocument,
       source: this,
     });
@@ -288,7 +288,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.failureLiveText = "";
+    this.failureLiveText = '';
     this.isMounting = true;
     this.sink?.release();
     this.sink = undefined;
@@ -298,57 +298,57 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     super.willUpdate(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
-    if (wasMounting || !changed.has("items")) return;
+    if (wasMounting || !changed.has('items')) return;
 
     const previousItems =
-      (changed.get("items") as IngestionQueueItem[] | undefined) ?? [];
+      (changed.get('items') as IngestionQueueItem[] | undefined) ?? [];
     const previousById = new Map(previousItems.map((item) => [item.id, item]));
     const freshErrors = this.items.flatMap((item) => {
-      if (item.stage !== "failed" || !item.error) return [];
+      if (item.stage !== 'failed' || !item.error) return [];
       const previous = previousById.get(item.id);
       return !previous ||
-        previous.stage !== "failed" ||
+        previous.stage !== 'failed' ||
         previous.error !== item.error
         ? [item.error]
         : [];
     });
     this.failureLiveText = freshErrors.length
-      ? getListFormat(this.effectiveLocale, { type: "conjunction" }).format(
+      ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(
           freshErrors
         )
-      : "";
+      : '';
     // Announced from the computation, not from a rendered text change: the shared region appends
     // each announcement as its own node, so an identical repeat (the same row failing the same way
     // twice) is read again instead of being a silent no-op.
-    if (this.failureLiveText !== "") this.sink?.announce(this.failureLiveText);
+    if (this.failureLiveText !== '') this.sink?.announce(this.failureLiveText);
   }
 
   private stageLabel(stage: IngestionStage): string {
     switch (stage) {
-      case "queued":
-        return this.localize("ingestionStageQueued");
-      case "uploading":
-        return this.localize("ingestionStageUploading");
-      case "extracting":
-        return this.localize("ingestionStageExtracting");
-      case "chunking":
-        return this.localize("ingestionStageChunking");
-      case "embedding":
-        return this.localize("ingestionStageEmbedding");
-      case "indexing":
-        return this.localize("ingestionStageIndexing");
-      case "done":
-        return this.localize("ingestionStageDone");
-      case "failed":
-        return this.localize("ingestionStageFailed");
-      case "cancelled":
-        return this.localize("ingestionStageCancelled");
+      case 'queued':
+        return this.localize('ingestionStageQueued');
+      case 'uploading':
+        return this.localize('ingestionStageUploading');
+      case 'extracting':
+        return this.localize('ingestionStageExtracting');
+      case 'chunking':
+        return this.localize('ingestionStageChunking');
+      case 'embedding':
+        return this.localize('ingestionStageEmbedding');
+      case 'indexing':
+        return this.localize('ingestionStageIndexing');
+      case 'done':
+        return this.localize('ingestionStageDone');
+      case 'failed':
+        return this.localize('ingestionStageFailed');
+      case 'cancelled':
+        return this.localize('ingestionStageCancelled');
     }
   }
 
   private chunkCountText(count: number): string {
     const safeCount = finiteCount(count);
-    return this.localize("ingestionChunkCount", undefined, {
+    return this.localize('ingestionChunkCount', undefined, {
       count: getNumberFormat(this.effectiveLocale).format(safeCount),
       pluralCount: safeCount,
     });
@@ -359,14 +359,14 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   }
 
   private onRetryClick(item: IngestionQueueItem): void {
-    this.emit("lr-retry", {
+    this.emit('lr-retry', {
       itemId: item.id,
       attempt: this.normalizedAttempts(item) + 1,
     });
   }
 
   private onCancelClick(item: IngestionQueueItem): void {
-    this.emit("lr-cancel", { itemId: item.id });
+    this.emit('lr-cancel', { itemId: item.id });
   }
 
   private itemTemplate = (
@@ -375,7 +375,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   ): TemplateResult => {
     const stageLabel = this.stageLabel(item.stage);
     const showProgress = ACTIVE_STAGES.includes(item.stage);
-    const canRetry = item.stage === "failed";
+    const canRetry = item.stage === 'failed';
     const canCancel = CANCELABLE_STAGES.includes(item.stage);
     const attempts = this.normalizedAttempts(item);
     const hasMeta =
@@ -388,7 +388,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     return html`
       <div
         part="item"
-        role=${ownRole ? "listitem" : nothing}
+        role=${ownRole ? 'listitem' : nothing}
         data-stage=${item.stage}
       >
         <div part="item-header">
@@ -407,7 +407,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
               .value=${item.progress ?? 0}
               ?indeterminate=${indeterminate}
               accessible-label=${this.localize(
-                "ingestionItemProgressLabel",
+                'ingestionItemProgressLabel',
                 undefined,
                 {
                   name: item.document.name,
@@ -426,7 +426,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
               ${item.chunkCount !== undefined &&
               item.embeddedChunkCount !== undefined
                 ? html`<span part="item-embedding-status"
-                    >${this.localize("ingestionEmbeddedOfTotal", undefined, {
+                    >${this.localize('ingestionEmbeddedOfTotal', undefined, {
                       embedded: getNumberFormat(this.effectiveLocale).format(
                         finiteCount(item.embeddedChunkCount)
                       ),
@@ -438,7 +438,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                 : nothing}
               ${attempts > 0
                 ? html`<span part="item-attempts"
-                    >${this.localize("ingestionAttemptCount", undefined, {
+                    >${this.localize('ingestionAttemptCount', undefined, {
                       count: getNumberFormat(this.effectiveLocale).format(
                         attempts
                       ),
@@ -447,7 +447,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                 : nothing}
             </div>`
           : nothing}
-        ${item.stage === "failed" && item.error
+        ${item.stage === 'failed' && item.error
           ? html`<p part="item-error">${item.error}</p>`
           : nothing}
         ${canRetry || canCancel
@@ -457,7 +457,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                     part="retry-button"
                     type="button"
                     aria-label=${this.localize(
-                      "ingestionRetryWithContext",
+                      'ingestionRetryWithContext',
                       undefined,
                       {
                         label: item.document.name,
@@ -465,7 +465,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                     )}
                     @click=${() => this.onRetryClick(item)}
                   >
-                    ${retryIcon()}<span>${this.localize("retry")}</span>
+                    ${retryIcon()}<span>${this.localize('retry')}</span>
                   </button>`
                 : nothing}
               ${canCancel
@@ -473,7 +473,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                     part="cancel-button"
                     type="button"
                     aria-label=${this.localize(
-                      "ingestionCancelWithContext",
+                      'ingestionCancelWithContext',
                       undefined,
                       {
                         label: item.document.name,
@@ -481,7 +481,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                     )}
                     @click=${() => this.onCancelClick(item)}
                   >
-                    ${closeIcon()}<span>${this.localize("cancel")}</span>
+                    ${closeIcon()}<span>${this.localize('cancel')}</span>
                   </button>`
                 : nothing}
             </div>`
@@ -493,9 +493,9 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   override render(): TemplateResult {
     const ariaLabel = retrievalSemanticLabel(
       this,
-      this.label || this.localize("ingestionQueueLabel")
+      this.label || this.localize('ingestionQueueLabel')
     );
-    const regionRole = retrievalSemanticRole(this, "region");
+    const regionRole = retrievalSemanticRole(this, 'region');
 
     if (this.items.length === 0) {
       return html`<div
@@ -509,7 +509,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
         <div part="list">
           <lr-empty
             part="empty"
-            heading=${this.localize("ingestionQueueEmpty")}
+            heading=${this.localize('ingestionQueueEmpty')}
           ></lr-empty>
         </div>
       </div>`;
@@ -548,6 +548,6 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-ingestion-queue": LyraIngestionQueue;
+    'lr-ingestion-queue': LyraIngestionQueue;
   }
 }

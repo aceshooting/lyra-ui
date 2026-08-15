@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -217,7 +217,7 @@ export interface LyraAttachmentTriggerEventMap {
  */
 export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze([
-    "capabilities",
+    'capabilities',
   ]);
 
   // GENERATED DEFAULT-STRING SLICE: START
@@ -245,6 +245,9 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-files',
+  ]);
 
   /** Which attachment capabilities to offer, in display order. A single
    *  entry renders a plain button; more than one renders a menu. */

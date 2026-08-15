@@ -1,4 +1,4 @@
-import { css } from "lit";
+import { css } from 'lit';
 
 // This component has no CSS `animation:`/`transition:` declaration of its
 // own to disable under `@media (prefers-reduced-motion: reduce)` -- the

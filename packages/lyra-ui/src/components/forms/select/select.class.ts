@@ -1905,21 +1905,21 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           role="option"
           data-index=${i}
           data-value=${o.value}
-          aria-selected=${selected ? "true" : "false"}
-          aria-disabled=${this.isOptionAvailable(o) ? "false" : "true"}
+          aria-selected=${selected ? 'true' : 'false'}
+          aria-disabled=${this.isOptionAvailable(o) ? 'false' : 'true'}
           ?data-active=${id === activeId}
         >
           ${o.dotColor
             ? html`<span
                 part="option-dot"
                 style=${styleMap({
-                  background: sanitizeCssColor(o.dotColor) ?? "transparent",
+                  background: sanitizeCssColor(o.dotColor) ?? 'transparent',
                 })}
               ></span>`
-            : ""}
+            : ''}
           <span part="option-label">
             <span>${o.label}</span>
-            ${o.sub ? html`<span part="option-sub">${o.sub}</span>` : ""}
+            ${o.sub ? html`<span part="option-sub">${o.sub}</span>` : ''}
           </span>
         </div>`
       );
@@ -1947,7 +1947,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
         part="tag__remove-button tag__remove-button__base"
         type="button"
         ?disabled=${this.effectiveDisabled}
-        aria-label=${this.localize("removeWithContext", undefined, { label })}
+        aria-label=${this.localize('removeWithContext', undefined, { label })}
         @click=${(event: Event) => this.removeTag(value, index, event)}
       >
         ${closeIcon()}
@@ -2023,22 +2023,22 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
             part="trigger"
             type="button"
             title=${this.title || nothing}
-            role=${isSingleOption ? "button" : "combobox"}
-            aria-haspopup=${isSingleOption ? nothing : "listbox"}
+            role=${isSingleOption ? 'button' : 'combobox'}
+            aria-haspopup=${isSingleOption ? nothing : 'listbox'}
             aria-expanded=${isSingleOption
               ? nothing
               : this.open
-              ? "true"
-              : "false"}
+              ? 'true'
+              : 'false'}
             aria-controls=${isSingleOption ? nothing : this.listId}
             aria-activedescendant=${isSingleOption ? nothing : activeId}
-            aria-label=${this.getAttribute("aria-label") ??
-            (hasLabel ? nothing : this.placeholder || this.localize("select"))}
+            aria-label=${this.getAttribute('aria-label') ??
+            (hasLabel ? nothing : this.placeholder || this.localize('select'))}
             aria-describedby=${describedBy || nothing}
-            aria-required=${this.required ? "true" : "false"}
+            aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${this.touched && !this.internals.validity.valid
-              ? "true"
-              : "false"}
+              ? 'true'
+              : 'false'}
             ?disabled=${this.effectiveDisabled}
             ?autofocus=${this.autofocus}
             @click=${this.onTriggerClick}
@@ -2050,8 +2050,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
               part="start"
               aria-hidden="true"
               inert
-              ?hidden=${!this.slotPresence.has("start") &&
-              !this.slotPresence.has("prefix")}
+              ?hidden=${!this.slotPresence.has('start') &&
+              !this.slotPresence.has('prefix')}
             >
               <slot name="start"></slot>
               <slot part="prefix" name="prefix"></slot>
@@ -2059,8 +2059,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
             <span
               id=${this.valueTextId}
               class=${this.multiple && hasValue
-                ? "trigger-label sr-only"
-                : "trigger-label"}
+                ? 'trigger-label sr-only'
+                : 'trigger-label'}
               part="display-input"
               ?data-placeholder=${!hasValue}
               ?data-multiple-value=${this.multiple && hasValue}
@@ -2074,8 +2074,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
               part="end"
               aria-hidden="true"
               inert
-              ?hidden=${!this.slotPresence.has("end") &&
-              !this.slotPresence.has("suffix")}
+              ?hidden=${!this.slotPresence.has('end') &&
+              !this.slotPresence.has('suffix')}
             >
               <slot name="end"></slot>
               <slot part="suffix" name="suffix"></slot>
@@ -2095,14 +2095,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
                       part="tag tag-overflow tag__base"
                       aria-hidden="true"
                       ><span part="tag__content" aria-hidden="true"
-                        >${this.localize("selectSelectedOverflow", undefined, {
+                        >${this.localize('selectSelectedOverflow', undefined, {
                           n: getNumberFormat(this.effectiveLocale).format(
                             overflow
                           ),
                         })}</span
                       ></span
                     >`
-                  : ""}</span
+                  : ''}</span
               >`
             : nothing}
           ${showClear
@@ -2110,7 +2110,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
                 part="clear-button"
                 type="button"
                 ?disabled=${this.effectiveDisabled}
-                aria-label=${this.localize("clear")}
+                aria-label=${this.localize('clear')}
                 @click=${(e: Event) => {
                   e.stopPropagation();
                   this.clear();
@@ -2120,13 +2120,13 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
                   ><slot name="clear-icon">${closeIcon()}</slot></span
                 >
               </button>`
-            : ""}
+            : ''}
         </div>
         <div
           part="listbox"
           id=${this.listId}
           role="listbox"
-          aria-multiselectable=${this.multiple ? "true" : "false"}
+          aria-multiselectable=${this.multiple ? 'true' : 'false'}
           @mousedown=${this.onListboxMouseDown}
           @click=${this.onListboxClick}
         >

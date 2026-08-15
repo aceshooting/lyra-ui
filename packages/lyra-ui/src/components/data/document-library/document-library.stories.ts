@@ -73,7 +73,7 @@ export const WithSelection: Story = {
   render: () =>
     html`<lr-document-library
       .documents=${documents}
-      .selectedIds=${["d1", "d4"]}
+      .selectedDocumentIds=${["d1", "d4"]}
     ></lr-document-library>`,
 };
 

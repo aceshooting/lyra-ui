@@ -1,21 +1,21 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
-import { property, state } from "lit/decorators.js";
-import { activeElementIn } from "../../../internal/active-element.js";
-import { hostAriaLabel } from "../../../internal/a11y.js";
-import { declaredDefaultConverter } from "../../../internal/converters.js";
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { activeElementIn } from '../../../internal/active-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 import {
   bindAccessibleTextObserver,
   composedAccessibilityText,
-} from "../../../internal/accessibility-visibility.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { safeLinkHref } from "../../../internal/safe-url.js";
-import type { LyraAppearance } from "../../../internal/variants.js";
-import { styles } from "./card.styles.js";
+} from '../../../internal/accessibility-visibility.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { safeLinkHref } from '../../../internal/safe-url.js';
+import type { LyraAppearance } from '../../../internal/variants.js';
+import { styles } from './card.styles.js';
 
-export type CardOrientation = "horizontal" | "vertical";
+export type CardOrientation = 'horizontal' | 'vertical';
 
 export interface LyraCardEventMap {
-  "lr-card-activate": CustomEvent<null>;
+  'lr-card-activate': CustomEvent<null>;
 }
 
 /**
@@ -26,15 +26,15 @@ export interface LyraCardEventMap {
  * `role="button"`), it can only distinguish the two cases at event time.
  */
 const NESTED_CONTROL_SELECTOR = [
-  "a[href]",
-  "button",
-  "input",
-  "select",
-  "textarea",
-  "summary",
-  "audio[controls]",
-  "video[controls]",
-  "label",
+  'a[href]',
+  'button',
+  'input',
+  'select',
+  'textarea',
+  'summary',
+  'audio[controls]',
+  'video[controls]',
+  'label',
   '[contenteditable]:not([contenteditable="false"])',
   '[tabindex]:not([tabindex="-1"])',
   '[role="button"]',
@@ -48,14 +48,14 @@ const NESTED_CONTROL_SELECTOR = [
   '[role="textbox"]',
   '[role="slider"]',
   '[role="spinbutton"]',
-].join(",");
+].join(',');
 
 function isElementNode(value: EventTarget | undefined): value is Element {
   return (
-    typeof value === "object" &&
+    typeof value === 'object' &&
     value !== null &&
     (value as { nodeType?: unknown }).nodeType === 1 &&
-    typeof (value as { matches?: unknown }).matches === "function"
+    typeof (value as { matches?: unknown }).matches === 'function'
   );
 }
 
@@ -116,24 +116,24 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   /** Visual treatment, mirroring `wa-card`'s `appearance` vocabulary. `'outlined'` (the default)
    *  is a bordered surface -- the common "small bordered surface with padding" idiom. */
   @property({ reflect: true,
-    converter: declaredDefaultConverter<LyraAppearance>("outlined"),
-  }) appearance: LyraAppearance = "outlined";
+    converter: declaredDefaultConverter<LyraAppearance>('outlined'),
+  }) appearance: LyraAppearance = 'outlined';
 
   /** Section flow. Horizontal cards arrange media, body, and `actions` side by side. */
   @property({ reflect: true,
-    converter: declaredDefaultConverter<CardOrientation>("vertical"),
-  }) orientation: CardOrientation = "vertical";
+    converter: declaredDefaultConverter<CardOrientation>('vertical'),
+  }) orientation: CardOrientation = 'vertical';
 
   /** SSR presence hints. Hydrated cards also detect populated slots automatically. */
-  @property({ type: Boolean, attribute: "with-header", reflect: true })
+  @property({ type: Boolean, attribute: 'with-header', reflect: true })
   withHeader = false;
-  @property({ type: Boolean, attribute: "with-header-actions", reflect: true })
+  @property({ type: Boolean, attribute: 'with-header-actions', reflect: true })
   withHeaderActions = false;
-  @property({ type: Boolean, attribute: "with-media", reflect: true })
+  @property({ type: Boolean, attribute: 'with-media', reflect: true })
   withMedia = false;
-  @property({ type: Boolean, attribute: "with-footer", reflect: true })
+  @property({ type: Boolean, attribute: 'with-footer', reflect: true })
   withFooter = false;
-  @property({ type: Boolean, attribute: "with-footer-actions", reflect: true })
+  @property({ type: Boolean, attribute: 'with-footer-actions', reflect: true })
   withFooterActions = false;
 
   /** Opt-in no-link whole-card action behavior: the hover/focus-visible treatment (border-color shift,
@@ -147,7 +147,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   /** Accessible name forwarded to the native activation owner. The `aria-label` attribute/property
    *  applies by presence to the interactive button or linked anchor, including an explicitly empty
    *  value. */
-  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** When set, a real stretched `<a href=...>` renders behind the card's consumer slots for a
    *  whole-card link (e.g. a wide CTA tile). Slotted controls remain independent actions; clicks
@@ -182,7 +182,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   @state() private hasActionsSlot = false;
   @state() private hasHeaderActionsSlot = false;
   @state() private hasFooterActionsSlot = false;
-  @state() private accessibleContentText = "";
+  @state() private accessibleContentText = '';
   private contentObserver?: MutationObserver;
   private contentObserverDocument?: Document;
   private contentObserverGeneration = 0;
@@ -200,13 +200,13 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has("href") || changed.has("actionable")) {
+    if (changed.has('href') || changed.has('actionable')) {
       const previous = this.semanticOwner();
       const nextKind = safeLinkHref(this.href)
-        ? "a"
+        ? 'a'
         : this.actionable
-          ? "button"
-          : "div";
+          ? 'button'
+          : 'div';
       this.semanticFocusOrigin =
         previous !== null &&
         previous.localName !== nextKind &&
@@ -216,25 +216,25 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     }
     if (!this.hasUpdated) {
       this.hasHeaderSlot = Array.from(this.children).some(
-        (el) => el.getAttribute("slot") === "header"
+        (el) => el.getAttribute('slot') === 'header'
       );
       this.hasMediaSlot = Array.from(this.children).some(
-        (el) => el.getAttribute("slot") === "media"
+        (el) => el.getAttribute('slot') === 'media'
       );
       this.hasImageSlot = Array.from(this.children).some(
-        (el) => el.getAttribute("slot") === "image"
+        (el) => el.getAttribute('slot') === 'image'
       );
       this.hasFooterSlot = Array.from(this.children).some(
-        (el) => el.getAttribute("slot") === "footer"
+        (el) => el.getAttribute('slot') === 'footer'
       );
       this.hasActionsSlot = Array.from(this.children).some(
-        (el) => el.getAttribute("slot") === "actions"
+        (el) => el.getAttribute('slot') === 'actions'
       );
       this.hasHeaderActionsSlot = Array.from(this.children).some(
-        (el) => el.getAttribute("slot") === "header-actions"
+        (el) => el.getAttribute('slot') === 'header-actions'
       );
       this.hasFooterActionsSlot = Array.from(this.children).some(
-        (el) => el.getAttribute("slot") === "footer-actions"
+        (el) => el.getAttribute('slot') === 'footer-actions'
       );
       this.recomputeAccessibleContentText();
     }
@@ -322,13 +322,13 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     const origin = e.composedPath()[0];
     if (
       isElementNode(origin) &&
-      origin.getAttribute("part") === "activation-button"
+      origin.getAttribute('part') === 'activation-button'
     ) {
-      this.emit("lr-card-activate", null);
+      this.emit('lr-card-activate', null);
       return;
     }
     if (this.originatesInNestedControl(e, e.currentTarget)) return;
-    this.emit("lr-card-activate", null);
+    this.emit('lr-card-activate', null);
   };
 
   private onLinkedContentClick = (e: Event): void => {
@@ -350,7 +350,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
   private recomputeAccessibleContentText(): void {
     this.accessibleContentText = composedAccessibilityText(this.childNodes, { requireRendered: false })
-      .replace(/\s+/g, " ")
+      .replace(/\s+/g, ' ')
       .trim();
   }
 
@@ -376,7 +376,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     });
     this.contentObserver = observer;
     this.contentObserverDocument = ownerDocument;
-    bindAccessibleTextObserver(observer, this, ["alt", "aria-labelledby", "slot"]);
+    bindAccessibleTextObserver(observer, this, ['alt', 'aria-labelledby', 'slot']);
   }
 
   override disconnectedCallback(): void {
@@ -464,7 +464,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
             rel=${this.resolvedRel ?? nothing}
             data-actionable="true"
             aria-label=${accessibleLabel ?? nothing}
-            aria-labelledby=${accessibleLabel === null ? "linked-content" : nothing}
+            aria-labelledby=${accessibleLabel === null ? 'linked-content' : nothing}
           ></a>
           <div id="linked-content" class="linked-content" @click=${this.onLinkedContentClick}>
             ${body}
@@ -472,8 +472,8 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
         </div>`
       : html`<div
           part="base"
-          data-actionable=${activatable ? "true" : nothing}
-          tabindex=${!activatable && this.semanticFocusOrigin ? "-1" : nothing}
+          data-actionable=${activatable ? 'true' : nothing}
+          tabindex=${!activatable && this.semanticFocusOrigin ? '-1' : nothing}
           @click=${activatable ? this.onBaseClick : nothing}
         >
           ${body}
@@ -483,6 +483,6 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-card": LyraCard;
+    'lr-card': LyraCard;
   }
 }

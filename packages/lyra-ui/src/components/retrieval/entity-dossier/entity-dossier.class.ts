@@ -214,7 +214,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   override render(): TemplateResult {
     if (!this.entity) {
       return html`<div part="base">
-        <lr-empty part="empty" heading=${this.localize("noData")}></lr-empty>
+        <lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>
       </div>`;
     }
     const entity = this.entity;
@@ -237,10 +237,10 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
                 part="confidence"
                 .label=${c.label}
                 .value=${c.value}
-                .unit=${c.unit ?? ""}
-                .variant=${c.variant ?? "neutral"}
-                .exactValue=${c.exactValue ?? ""}
-                .caption=${c.caption ?? ""}
+                .unit=${c.unit ?? ''}
+                .variant=${c.variant ?? 'neutral'}
+                .exactValue=${c.exactValue ?? ''}
+                .caption=${c.caption ?? ''}
                 .rows=${c.rows ?? []}
               ></lr-stat>`
             : nothing}
@@ -252,13 +252,13 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
           @lr-tab-show=${this.onTabsChange}
         >
           <lr-tab panel="relationships"
-            >${this.localize("neighborListLabel")}</lr-tab
+            >${this.localize('neighborListLabel')}</lr-tab
           >
           <lr-tab panel="chunks"
-            >${this.localize("chunkInspectorLabel")}</lr-tab
+            >${this.localize('chunkInspectorLabel')}</lr-tab
           >
           <lr-tab panel="provenance"
-            >${this.localize("provenancePanelLabel")}</lr-tab
+            >${this.localize('provenancePanelLabel')}</lr-tab
           >
           <lr-tab-panel name="relationships">
             <lr-neighbor-list

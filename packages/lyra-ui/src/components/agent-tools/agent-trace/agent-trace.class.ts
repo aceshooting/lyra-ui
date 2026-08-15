@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -98,7 +98,7 @@ export interface LyraAgentTraceEventMap {
  * @since 4.1.0
  */
 export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["spans", "hiddenKinds"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['spans', 'hiddenKinds']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -125,6 +125,9 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-span-visibility-change',
+  ]);
 
   /** The full, unfiltered span array -- identical contract to `<lr-trace-tree>.spans`. Controlled
    *  and never mutated by this component; `activeSpanId` and its ancestor path reserve positions

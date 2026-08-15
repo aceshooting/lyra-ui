@@ -428,8 +428,8 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
             const color = sanitizeCssColor(option.color);
             const icon =
               option.icon ??
-              (this.mode === "gemstone" && option.gemstone
-                ? gemstoneGlyph(color ?? "currentColor")
+              (this.mode === 'gemstone' && option.gemstone
+                ? gemstoneGlyph(color ?? 'currentColor')
                 : null);
             return html`<button
               type="button"
@@ -437,16 +437,16 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
               data-index=${index}
               data-value=${option.value}
               role="radio"
-              aria-checked=${index === selectedIndex ? "true" : "false"}
+              aria-checked=${index === selectedIndex ? 'true' : 'false'}
               aria-label=${option.label}
               title=${option.label}
               ?disabled=${this.disabled}
-              tabindex=${index === tabbableIndex ? "0" : "-1"}
-              style=${styleMap(color ? { "--lr-swatch-color": color } : {})}
+              tabindex=${index === tabbableIndex ? '0' : '-1'}
+              style=${styleMap(color ? { '--lr-swatch-color': color } : {})}
               @click=${() => this.select(option, index)}
             >
               ${icon
-                ? renderInertPresentation(icon, { part: "swatch-icon" })
+                ? renderInertPresentation(icon, { part: 'swatch-icon' })
                 : html`<span part="swatch-fill" aria-hidden="true"></span>`}
             </button>`;
           }

@@ -1,22 +1,22 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
-import { html, nothing, svg, type TemplateResult } from "lit";
-import { property, state } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { specialistTokens } from "../../../internal/specialist-tokens.styles.js";
-import { srOnly } from "../../../internal/a11y.js";
-import { styles } from "./graph-legend.styles.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { html, nothing, svg, type TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
+import { srOnly } from '../../../internal/a11y.js';
+import { styles } from './graph-legend.styles.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
-} from "../retrieval-semantic-owner.js";
-import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import { sanitizeCssColor } from "../../../internal/safe-css.js";
+} from '../retrieval-semantic-owner.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
-} from "../../../internal/announcer.js";
-import type { LyraNodeTypeStyle } from "../../../internal/node-type-style.js";
+} from '../../../internal/announcer.js';
+import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphLegendLabel, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown } from '../../../internal/default-strings.generated.js';
@@ -27,7 +27,7 @@ export interface LyraGraphLegendVisibilityDetail {
 }
 
 export interface LyraGraphLegendEventMap {
-  "lr-visibility-change": CustomEvent<LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail>>;
+  'lr-visibility-change': CustomEvent<LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail>>;
 }
 
 const PALETTE_SIZE = 8;
@@ -36,14 +36,14 @@ const PALETTE_SIZE = 8;
  *  `lr-word-cloud`'s own `--lr-word-cloud-color-1`..`-8` palette already uses, so this legend
  *  renders sensible colors even when no theme defines those variables. */
 const FALLBACK_PALETTE = [
-  "#0969da",
-  "#1a7f37",
-  "#9a6700",
-  "#cf222e",
-  "#8250df",
-  "#bf3989",
-  "#0a7d91",
-  "#57606a",
+  '#0969da',
+  '#1a7f37',
+  '#9a6700',
+  '#cf222e',
+  '#8250df',
+  '#bf3989',
+  '#0a7d91',
+  '#57606a',
 ];
 
 /**
@@ -74,7 +74,7 @@ const FALLBACK_PALETTE = [
  * @since 4.0.0
  */
 export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["types", "hiddenTypes", "counts"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['types', 'hiddenTypes', 'counts']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -92,6 +92,9 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     styles,
     srOnly,
   ];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-visibility-change',
+  ]);
 
   /** The `lr-graph.nodeTypes` array, passed through verbatim. */
   @property({ attribute: false }) types: readonly LyraNodeTypeStyle[] = [];
@@ -110,16 +113,16 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   /** Fallback name for the group; defaults to localized `graphLegendLabel`. A non-empty host
    *  `aria-label` makes the host the sole overall owner; an explicitly empty host label stays
    *  empty on the group. */
-  @property() label = "";
+  @property() label = '';
 
-  @state() private liveText = "";
+  @state() private liveText = '';
   /** The documented part remains a shadow-DOM text mirror only; announcements use this shared
    * light-DOM sink because shadow live regions are not reliable across AT/browser pairs. */
   private announcementSink?: AnnouncementSink;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.announcementSink ??= acquireAnnouncementSink("polite", {
+    this.announcementSink ??= acquireAnnouncementSink('polite', {
       document: this.ownerDocument,
       source: this,
     });
@@ -155,23 +158,23 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
       : this.hiddenTypes.filter((id) => id !== type.id);
     this.hiddenTypes = next;
     this.liveText = this.localize(
-      wasVisible ? "legendTypeHidden" : "legendTypeShown",
+      wasVisible ? 'legendTypeHidden' : 'legendTypeShown',
       undefined,
       {
         label: type.label,
       }
     );
     this.announcementSink?.announce(this.liveText);
-    this.emit("lr-visibility-change", { hiddenTypes: next });
+    this.emit('lr-visibility-change', { hiddenTypes: next });
   }
 
   private renderSwatchShape(
-    shape: LyraNodeTypeStyle["shape"],
+    shape: LyraNodeTypeStyle['shape'],
     color: string
   ): TemplateResult {
-    if (shape === "square")
+    if (shape === 'square')
       return svg`<rect x="1" y="1" width="10" height="10" fill=${color}></rect>`;
-    if (shape === "diamond")
+    if (shape === 'diamond')
       return svg`<polygon points="6,0 12,6 6,12 0,6" fill=${color}></polygon>`;
     return svg`<circle cx="6" cy="6" r="5" fill=${color}></circle>`;
   }
@@ -179,9 +182,9 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   override render(): TemplateResult {
     const groupLabel = retrievalSemanticLabel(
       this,
-      this.label || this.localize("graphLegendLabel")
+      this.label || this.localize('graphLegendLabel')
     );
-    const groupRole = retrievalSemanticRole(this, "group");
+    const groupRole = retrievalSemanticRole(this, 'group');
     return html`
       <div
         part="base"
@@ -216,7 +219,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
             ? html`<button
                 part="item"
                 type="button"
-                aria-pressed=${visible ? "true" : "false"}
+                aria-pressed=${visible ? 'true' : 'false'}
                 ?data-hidden=${!visible}
                 @click=${() => this.toggle(type)}
               >
@@ -232,6 +235,6 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-graph-legend": LyraGraphLegend;
+    'lr-graph-legend': LyraGraphLegend;
   }
 }

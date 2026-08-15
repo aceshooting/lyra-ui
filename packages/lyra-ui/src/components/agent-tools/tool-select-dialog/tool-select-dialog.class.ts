@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -166,7 +166,7 @@ interface ToolProjection {
  * @since 4.0.0
  */
 export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["tools", "selected"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['tools', 'selected']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -188,6 +188,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-change',
+  ]);
 
   /** Whether the dialog is open. Set this directly or use `show()`/`hide()`/`close()`. */
   @property({ type: Boolean, reflect: true }) open = false;

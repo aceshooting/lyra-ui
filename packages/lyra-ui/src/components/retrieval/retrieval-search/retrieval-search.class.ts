@@ -1,26 +1,26 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
-import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
-import { property } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import type { LyraSegmentedItem } from "../../layout/segmented/segmented.class.js";
-import "../../forms/input/input.class.js";
-import "../../layout/segmented/segmented.class.js";
-import "../../overlays/chip/chip.class.js";
-import "../../overlays/chip/chip-group.class.js";
-import "../../overlays/spinner/spinner.class.js";
-import "../../overlays/empty/empty.class.js";
-import type { RetrievalQuery, CancelEventDetail } from "../../../ai/types.js";
-import { styles } from "./retrieval-search.styles.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraSegmentedItem } from '../../layout/segmented/segmented.class.js';
+import '../../forms/input/input.class.js';
+import '../../layout/segmented/segmented.class.js';
+import '../../overlays/chip/chip.class.js';
+import '../../overlays/chip/chip-group.class.js';
+import '../../overlays/spinner/spinner.class.js';
+import '../../overlays/empty/empty.class.js';
+import type { RetrievalQuery, CancelEventDetail } from '../../../ai/types.js';
+import { styles } from './retrieval-search.styles.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
-} from "../retrieval-semantic-owner.js";
-import { formatBoundedRetrievalValue } from "../retrieval-value-format.js";
+} from '../retrieval-semantic-owner.js';
+import { formatBoundedRetrievalValue } from '../retrieval-value-format.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
-} from "../../../internal/announcer.js";
-import { literalSetConverter } from "../../../internal/converters.js";
+} from '../../../internal/announcer.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_retrievalFilterChipLabel, LYRA_DEFAULT_retrievalFiltersLabel, LYRA_DEFAULT_retrievalModeHybrid, LYRA_DEFAULT_retrievalModeKeyword, LYRA_DEFAULT_retrievalModeLabel, LYRA_DEFAULT_retrievalModeVector, LYRA_DEFAULT_retrievalSearchEmptyDescription, LYRA_DEFAULT_retrievalSearchLabel, LYRA_DEFAULT_search, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
@@ -28,11 +28,11 @@ import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches
 
 /** The three retrieval modes `RetrievalQuery.mode` supports, reused verbatim rather than
  *  redefining the union -- see `src/ai/types.ts`'s own header for why. */
-export type LyraRetrievalMode = RetrievalQuery["mode"];
+export type LyraRetrievalMode = RetrievalQuery['mode'];
 
 const RETRIEVAL_MODE = literalSetConverter<LyraRetrievalMode>(
-  ["vector", "keyword", "hybrid"],
-  "hybrid"
+  ['vector', 'keyword', 'hybrid'],
+  'hybrid'
 );
 
 /** `detail` for `lr-filters-change` -- the complete, already-updated `filters`/`scope` state
@@ -44,9 +44,9 @@ export interface RetrievalFiltersChangeDetail {
 }
 
 export interface LyraRetrievalSearchEventMap {
-  "lr-search": CustomEvent<LyraEventDetailSnapshot<RetrievalQuery>>;
-  "lr-cancel": CustomEvent<CancelEventDetail>;
-  "lr-filters-change": CustomEvent<LyraEventDetailSnapshot<RetrievalFiltersChangeDetail>>;
+  'lr-search': CustomEvent<LyraEventDetailSnapshot<RetrievalQuery>>;
+  'lr-cancel': CustomEvent<CancelEventDetail>;
+  'lr-filters-change': CustomEvent<LyraEventDetailSnapshot<RetrievalFiltersChangeDetail>>;
 }
 
 /**
@@ -105,7 +105,7 @@ export interface LyraRetrievalSearchEventMap {
  * @since 4.1.0
  */
 export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["filters", "scope"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['filters', 'scope']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -128,13 +128,17 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-search',
+    'lr-filters-change',
+  ]);
 
   /** The current query text. Controlled -- the internal `lr-input` updates this optimistically as
    *  the user types (mirroring every other Lyra input's controlled-value convention), and a host
    *  reassignment always wins. */
-  @property() query = "";
+  @property() query = '';
 
-  private _mode: LyraRetrievalMode = "hybrid";
+  private _mode: LyraRetrievalMode = 'hybrid';
 
   /** Retrieval mode. Defaults to `'hybrid'`, the common default for a search bar combining both
    *  vector and keyword retrieval. */
@@ -147,7 +151,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     const old = this._mode;
     if (old === normalized) return;
     this._mode = normalized;
-    this.requestUpdate("mode", old);
+    this.requestUpdate('mode', old);
   }
 
   /** Arbitrary metadata filters, rendered as removable `"{key}: {value}"` chips. Controlled --
@@ -167,7 +171,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
    *  not localized) in a neutral visible region. New non-empty values are announced through a
    *  shared assertive light-DOM region; initial and reconnect content is not replayed. Empty
    *  string (the default) shows nothing. */
-  @property({ attribute: "error-text" }) errorText = "";
+  @property({ attribute: 'error-text' }) errorText = '';
 
   /** Host-driven flag: the last completed search returned zero results. Renders a compact
    *  `<lr-empty>` beneath the search row. Never inferred by this component itself -- see the
@@ -177,15 +181,15 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   /** Placeholder for the query field. Empty string (the default) falls back to the localized
    *  generic "Search" placeholder, which also becomes that field's accessible name (mirroring
    *  `<lr-input>`'s own placeholder-as-label fallback). */
-  @property() placeholder = "";
+  @property() placeholder = '';
 
   /** Accessible name for the inner search landmark when the host has no `aria-label`; falls back
    *  to the localized default. */
-  @property() label = "";
+  @property() label = '';
 
   /** JS-only accessible-name override for the inner search landmark. A non-empty markup
    *  `aria-label` names the host as the sole overall owner instead. */
-  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private isMounting = true;
   private errorAnnouncementSink?: AnnouncementSink;
@@ -193,7 +197,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.errorAnnouncementSink ??= acquireAnnouncementSink("assertive", {
+    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
       document: this.ownerDocument,
       source: this,
     });
@@ -212,8 +216,8 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     this.isMounting = false;
     if (
       !wasMounting &&
-      changed.has("errorText") &&
-      this.errorText !== "" &&
+      changed.has('errorText') &&
+      this.errorText !== '' &&
       this.isConnected
     ) {
       this.errorAnnouncementSink?.announce(this.errorText);
@@ -222,14 +226,14 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
   private modeItems(): LyraSegmentedItem[] {
     return [
-      { value: "vector", label: this.localize("retrievalModeVector") },
-      { value: "keyword", label: this.localize("retrievalModeKeyword") },
-      { value: "hybrid", label: this.localize("retrievalModeHybrid") },
+      { value: 'vector', label: this.localize('retrievalModeVector') },
+      { value: 'keyword', label: this.localize('retrievalModeKeyword') },
+      { value: 'hybrid', label: this.localize('retrievalModeHybrid') },
     ];
   }
 
   private formatFilterValue(value: unknown): string {
-    const sentinel = this.localize("valueInvalid");
+    const sentinel = this.localize('valueInvalid');
     return formatBoundedRetrievalValue(value, {
       locale: this.effectiveLocale,
       invalid: sentinel,
@@ -247,16 +251,16 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   }
 
   private submit(): void {
-    if (this.loading) this.emit("lr-cancel", { reason: "superseded" });
-    this.emit("lr-search", this.buildQuery());
+    if (this.loading) this.emit('lr-cancel', { reason: 'superseded' });
+    this.emit('lr-search', this.buildQuery());
   }
 
   private cancel(): void {
-    this.emit("lr-cancel", {});
+    this.emit('lr-cancel', {});
   }
 
   private emitFiltersChange(): void {
-    this.emit("lr-filters-change", {
+    this.emit('lr-filters-change', {
       filters: { ...this.filters },
       scope: [...this.scope],
     });
@@ -304,7 +308,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   };
 
   private onQueryKeyDown = (e: KeyboardEvent): void => {
-    if (e.key !== "Enter") return;
+    if (e.key !== 'Enter') return;
     // An IME composition step (e.g. confirming a Japanese/Chinese/Korean candidate) must never be
     // treated as "the user pressed Enter to search" -- keyCode 229 is a defense-in-depth fallback
     // for browsers that report isComposing inconsistently on the compositionend-adjacent keydown.
@@ -331,9 +335,9 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     const label = retrievalSemanticLabel(
       this,
       this.accessibleLabel ??
-        (this.label || this.localize("retrievalSearchLabel"))
+        (this.label || this.localize('retrievalSearchLabel'))
     );
-    const searchRole = retrievalSemanticRole(this, "search");
+    const searchRole = retrievalSemanticRole(this, 'search');
     const hasFilters =
       Object.keys(this.filters).length > 0 || this.scope.length > 0;
 
@@ -347,7 +351,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
           <lr-input
             part="query"
             type="search"
-            placeholder=${this.placeholder || this.localize("search")}
+            placeholder=${this.placeholder || this.localize('search')}
             .value=${this.query}
             @lr-input=${this.onQueryInput}
             @keydown=${this.onQueryKeyDown}
@@ -359,18 +363,18 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
             part="mode"
             .items=${this.modeItems()}
             .value=${this.mode}
-            label=${this.localize("retrievalModeLabel")}
+            label=${this.localize('retrievalModeLabel')}
             @lr-change=${this.onModeChange}
           ></lr-segmented>
           <button part="submit" type="button" @click=${this.onSubmitClick}>
-            ${this.loading ? this.localize("cancel") : this.localize("search")}
+            ${this.loading ? this.localize('cancel') : this.localize('search')}
           </button>
         </div>
         ${hasFilters
           ? html`<lr-chip-group
               part="filters"
               role="group"
-              aria-label=${this.localize("retrievalFiltersLabel")}
+              aria-label=${this.localize('retrievalFiltersLabel')}
             >
               ${this.scope.map(
                 (s) => html`<lr-chip
@@ -400,7 +404,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
                       chip.shadowRoot?.activeElement !== null
                     );
                   }}
-                  >${this.localize("retrievalFilterChipLabel", undefined, {
+                  >${this.localize('retrievalFilterChipLabel', undefined, {
                     key: k,
                     value: this.formatFilterValue(v),
                   })}</lr-chip
@@ -416,9 +420,9 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
           ? html`<lr-empty
               part="empty"
               compact
-              heading=${this.localize("noMatches")}
+              heading=${this.localize('noMatches')}
               description=${this.localize(
-                "retrievalSearchEmptyDescription",
+                'retrievalSearchEmptyDescription',
                 undefined
               )}
             ></lr-empty>`
@@ -430,6 +434,6 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-retrieval-search": LyraRetrievalSearch;
+    'lr-retrieval-search': LyraRetrievalSearch;
   }
 }

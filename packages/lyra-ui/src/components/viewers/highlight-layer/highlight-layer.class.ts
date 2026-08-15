@@ -115,7 +115,8 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     this._items = snapshotItems(value);
     this.requestUpdate('items', previous);
   }
-  @property({ attribute: 'active-id' }) activeId: string | null = null;
+  /** Domain identity of the currently active highlight. */
+  @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
   /** `false` = pure paint: `pointer-events: none`, no tab stop, no role. Default-true, matching
    *  markdown's `sanitize` stance. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) interactive = true;
@@ -240,9 +241,9 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
       const focusedIndex = this.items.indexOf(this.focusedItem);
       if (renderedIndexes.includes(focusedIndex)) return focusedIndex;
     }
-    if (this.activeId) {
+    if (this.activeHighlightId) {
       const activeIndex = this.items.findIndex(
-        (item) => item.id === this.activeId && this.safeRects(item).length > 0,
+        (item) => item.id === this.activeHighlightId && this.safeRects(item).length > 0,
       );
       if (activeIndex >= 0) return activeIndex;
     }
@@ -314,9 +315,9 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     const renderedIndexes = this.itemIndexesWithRects();
     if (renderedIndexes.length === 0) return nothing;
     const tabStop = this.tabStopIndex();
-    const activeIndex = this.activeId
+    const activeIndex = this.activeHighlightId
       ? this.items.findIndex(
-          (item) => item.id === this.activeId && this.safeRects(item).length > 0,
+          (item) => item.id === this.activeHighlightId && this.safeRects(item).length > 0,
         )
       : -1;
     const renderedPosition = new Map(renderedIndexes.map((itemIndex, position) => [itemIndex, position]));

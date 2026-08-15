@@ -369,22 +369,22 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
       <summary
         part="summary"
         aria-label=${hostAriaLabel(this) ?? nothing}
-        aria-expanded=${this.open ? "true" : "false"}
-        aria-disabled=${this.disabled ? "true" : "false"}
+        aria-expanded=${this.open ? 'true' : 'false'}
+        aria-disabled=${this.disabled ? 'true' : 'false'}
         @click=${this.onClick}
       >
         <span part="header">
           <span class="summary-content"
             >${this.hasSummarySlot || this.summary
-              ? ""
-              : this.localize("details")}<slot
+              ? ''
+              : this.localize('details')}<slot
               name="summary"
               @slotchange=${this.onSummarySlotChange}
               >${this.summary}</slot
             ></span
           >
           <span part="icon summary-icon" aria-hidden="true" inert>
-            <slot name=${this.open ? "collapse-icon" : "expand-icon"}
+            <slot name=${this.open ? 'collapse-icon' : 'expand-icon'}
               ><span class="icon-fallback">${chevronIcon()}</span></slot
             >
           </span>

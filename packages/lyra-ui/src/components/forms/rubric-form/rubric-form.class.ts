@@ -587,7 +587,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private publicValidityErrors(): Readonly<Record<string, string>> {
     const errors: Record<string, string> = { ...this._errors };
     if (this.willValidate && this.validityController.customValidityMessage)
-      errors["base"] = this.validationMessage;
+      errors['base'] = this.validationMessage;
     return Object.freeze(errors);
   }
 
@@ -598,7 +598,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     const key = JSON.stringify({ valid, errors });
     if (key === this.lastValidityKey) return;
     this.lastValidityKey = key;
-    this.emit("lr-validity-change", Object.freeze({ valid, errors }));
+    this.emit('lr-validity-change', Object.freeze({ valid, errors }));
   }
 
   private fieldElement(key: string): HTMLElement | null {

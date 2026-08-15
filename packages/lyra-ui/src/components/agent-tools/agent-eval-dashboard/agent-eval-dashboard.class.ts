@@ -57,7 +57,7 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = { idle: 'neutral', queued: 
  * @since 6.2.0
  */
 export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["metrics", "runs"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['metrics', 'runs']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

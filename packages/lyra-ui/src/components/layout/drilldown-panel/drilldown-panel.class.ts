@@ -1,40 +1,40 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
-import { property, state } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
-} from "../../../internal/announcer.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import type { LyraEntity } from "../../retrieval/entity-card/entity-card.class.js";
-import type { LyraNodeTypeStyle } from "../../../internal/node-type-style.js";
-import { styles } from "./drilldown-panel.styles.js";
-import "../breadcrumb/breadcrumb.class.js";
-import "../breadcrumb/breadcrumb-item.class.js";
+} from '../../../internal/announcer.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import type { LyraEntity } from '../../retrieval/entity-card/entity-card.class.js';
+import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
+import { styles } from './drilldown-panel.styles.js';
+import '../breadcrumb/breadcrumb.class.js';
+import '../breadcrumb/breadcrumb-item.class.js';
 import type {
   LyraTabGroup,
   LyraTabGroupEventMap,
-} from "../tab-group/tab-group.class.js";
-import "../tab-group/tab-group.class.js";
-import "../tab-group/tab.class.js";
-import "../tab-group/tab-panel.class.js";
-import "../../viewers/document-preview/document-preview.class.js";
-import "../../retrieval/entity-card/entity-card.class.js";
-import "../../retrieval/source-card/source-card.class.js";
-import "../../forms/button/button.class.js";
-import "../../overlays/empty/empty.class.js";
-import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
+} from '../tab-group/tab-group.class.js';
+import '../tab-group/tab-group.class.js';
+import '../tab-group/tab.class.js';
+import '../tab-group/tab-panel.class.js';
+import '../../viewers/document-preview/document-preview.class.js';
+import '../../retrieval/entity-card/entity-card.class.js';
+import '../../retrieval/source-card/source-card.class.js';
+import '../../forms/button/button.class.js';
+import '../../overlays/empty/empty.class.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_drilldownDocuments, LYRA_DEFAULT_drilldownEmpty, LYRA_DEFAULT_drilldownRuns, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_items, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_previous, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_sourceListDefaultLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraDrilldownCategory =
-  | "evidence"
-  | "documents"
-  | "entities"
-  | "runs";
+  | 'evidence'
+  | 'documents'
+  | 'entities'
+  | 'runs';
 
 /** One immutable citation/source excerpt in a drilldown node. */
 export interface LyraDrilldownEvidenceItem {
@@ -127,14 +127,14 @@ export interface LyraDrilldownEntityActivateDetail {
 }
 
 export interface LyraDrilldownPanelEventMap {
-  "lr-drilldown-navigate": CustomEvent<LyraDrilldownNavigateDetail>;
-  "lr-drilldown-category-change": CustomEvent<LyraDrilldownCategoryChangeDetail>;
-  "lr-drilldown-evidence-expand": CustomEvent<LyraDrilldownEvidenceExpandDetail>;
-  "lr-drilldown-evidence-open": CustomEvent<LyraDrilldownEvidenceOpenDetail>;
-  "lr-drilldown-document-download": CustomEvent<LyraDrilldownDocumentDownloadDetail>;
-  "lr-drilldown-document-render-error": CustomEvent<LyraDrilldownDocumentRenderErrorDetail>;
-  "lr-drilldown-document-highlight-activate": CustomEvent<LyraDrilldownDocumentHighlightActivateDetail>;
-  "lr-drilldown-entity-activate": CustomEvent<LyraDrilldownEntityActivateDetail>;
+  'lr-drilldown-navigate': CustomEvent<LyraDrilldownNavigateDetail>;
+  'lr-drilldown-category-change': CustomEvent<LyraDrilldownCategoryChangeDetail>;
+  'lr-drilldown-evidence-expand': CustomEvent<LyraDrilldownEvidenceExpandDetail>;
+  'lr-drilldown-evidence-open': CustomEvent<LyraDrilldownEvidenceOpenDetail>;
+  'lr-drilldown-document-download': CustomEvent<LyraDrilldownDocumentDownloadDetail>;
+  'lr-drilldown-document-render-error': CustomEvent<LyraDrilldownDocumentRenderErrorDetail>;
+  'lr-drilldown-document-highlight-activate': CustomEvent<LyraDrilldownDocumentHighlightActivateDetail>;
+  'lr-drilldown-entity-activate': CustomEvent<LyraDrilldownEntityActivateDetail>;
 }
 
 interface DrilldownCategoryDefinition {
@@ -150,7 +150,7 @@ interface NormalizedCollection<T> {
 interface NormalizedNode {
   readonly node: LyraDrilldownNode;
   readonly sourceCounts: Readonly<
-    Record<"evidence" | "documents" | "entities", number>
+    Record<'evidence' | 'documents' | 'entities', number>
   >;
 }
 
@@ -159,7 +159,7 @@ interface NormalizedPath {
   readonly sourceCount: number;
   readonly categorySourceCounts: ReadonlyMap<
     string,
-    Readonly<Record<"evidence" | "documents" | "entities", number>>
+    Readonly<Record<'evidence' | 'documents' | 'entities', number>>
   >;
 }
 
@@ -177,7 +177,7 @@ const EMPTY_PATH: readonly LyraDrilldownNode[] = Object.freeze([]);
 const EMPTY_TYPES: readonly LyraNodeTypeStyle[] = Object.freeze([]);
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return false;
   }
   try {
@@ -191,7 +191,7 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 function ownDataValue(record: Record<string, unknown>, key: string): unknown {
   try {
     const descriptor = Object.getOwnPropertyDescriptor(record, key);
-    return descriptor && "value" in descriptor ? descriptor.value : undefined;
+    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
   } catch {
     return undefined;
   }
@@ -200,9 +200,9 @@ function ownDataValue(record: Record<string, unknown>, key: string): unknown {
 function safeArrayLength(value: unknown): number {
   if (!Array.isArray(value)) return 0;
   try {
-    const descriptor = Object.getOwnPropertyDescriptor(value, "length");
-    const length = descriptor && "value" in descriptor ? descriptor.value : 0;
-    return typeof length === "number" && Number.isFinite(length)
+    const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
+    const length = descriptor && 'value' in descriptor ? descriptor.value : 0;
+    return typeof length === 'number' && Number.isFinite(length)
       ? Math.max(0, Math.floor(length))
       : 0;
   } catch {
@@ -213,14 +213,14 @@ function safeArrayLength(value: unknown): number {
 function arrayItem(value: readonly unknown[], index: number): unknown {
   try {
     const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
-    return descriptor && "value" in descriptor ? descriptor.value : undefined;
+    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
   } catch {
     return undefined;
   }
 }
 
 function boundedString(value: unknown, maxLength: number): string | undefined {
-  return typeof value === "string" && value.length <= maxLength
+  return typeof value === 'string' && value.length <= maxLength
     ? value
     : undefined;
 }
@@ -265,30 +265,30 @@ function normalizeEvidence(
   candidate: unknown
 ): readonly [string, LyraDrilldownEvidenceItem] | undefined {
   if (!isPlainRecord(candidate)) return undefined;
-  const evidenceId = domainId(ownDataValue(candidate, "evidenceId"));
+  const evidenceId = domainId(ownDataValue(candidate, 'evidenceId'));
   const title = boundedString(
-    ownDataValue(candidate, "title"),
+    ownDataValue(candidate, 'title'),
     MAX_LABEL_LENGTH
   );
   if (!evidenceId || title === undefined) return undefined;
 
-  const rawPage = ownDataValue(candidate, "page");
+  const rawPage = ownDataValue(candidate, 'page');
   const page =
-    typeof rawPage === "number" && Number.isFinite(rawPage)
+    typeof rawPage === 'number' && Number.isFinite(rawPage)
       ? rawPage
       : boundedString(rawPage, MAX_LABEL_LENGTH);
   const item = Object.freeze({
     evidenceId,
     title,
     ...(page !== undefined ? { page } : {}),
-    ...(optionalString(candidate, "href", MAX_URL_LENGTH) !== undefined
-      ? { href: optionalString(candidate, "href", MAX_URL_LENGTH) }
+    ...(optionalString(candidate, 'href', MAX_URL_LENGTH) !== undefined
+      ? { href: optionalString(candidate, 'href', MAX_URL_LENGTH) }
       : {}),
-    ...(optionalString(candidate, "excerpt") !== undefined
-      ? { excerpt: optionalString(candidate, "excerpt") }
+    ...(optionalString(candidate, 'excerpt') !== undefined
+      ? { excerpt: optionalString(candidate, 'excerpt') }
       : {}),
-    ...(optionalString(candidate, "full") !== undefined
-      ? { full: optionalString(candidate, "full") }
+    ...(optionalString(candidate, 'full') !== undefined
+      ? { full: optionalString(candidate, 'full') }
       : {}),
   });
   return [evidenceId, item];
@@ -298,20 +298,20 @@ function normalizeDocument(
   candidate: unknown
 ): readonly [string, LyraDrilldownDocument] | undefined {
   if (!isPlainRecord(candidate)) return undefined;
-  const documentId = domainId(ownDataValue(candidate, "documentId"));
-  const name = boundedString(ownDataValue(candidate, "name"), MAX_LABEL_LENGTH);
+  const documentId = domainId(ownDataValue(candidate, 'documentId'));
+  const name = boundedString(ownDataValue(candidate, 'name'), MAX_LABEL_LENGTH);
   if (!documentId || name === undefined) return undefined;
   const document = Object.freeze({
     documentId,
     name,
-    ...(optionalString(candidate, "mimeType", MAX_LABEL_LENGTH) !== undefined
-      ? { mimeType: optionalString(candidate, "mimeType", MAX_LABEL_LENGTH) }
+    ...(optionalString(candidate, 'mimeType', MAX_LABEL_LENGTH) !== undefined
+      ? { mimeType: optionalString(candidate, 'mimeType', MAX_LABEL_LENGTH) }
       : {}),
-    ...(optionalString(candidate, "uri", MAX_URL_LENGTH) !== undefined
-      ? { uri: optionalString(candidate, "uri", MAX_URL_LENGTH) }
+    ...(optionalString(candidate, 'uri', MAX_URL_LENGTH) !== undefined
+      ? { uri: optionalString(candidate, 'uri', MAX_URL_LENGTH) }
       : {}),
-    ...(optionalString(candidate, "version", MAX_LABEL_LENGTH) !== undefined
-      ? { version: optionalString(candidate, "version", MAX_LABEL_LENGTH) }
+    ...(optionalString(candidate, 'version', MAX_LABEL_LENGTH) !== undefined
+      ? { version: optionalString(candidate, 'version', MAX_LABEL_LENGTH) }
       : {}),
   });
   return [documentId, document];
@@ -336,11 +336,11 @@ function normalizeProperties(
     } catch {
       continue;
     }
-    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+    if (!descriptor || !descriptor.enumerable || !('value' in descriptor)) {
       continue;
     }
     const entry = descriptor.value;
-    if (typeof entry === "number" && Number.isFinite(entry)) {
+    if (typeof entry === 'number' && Number.isFinite(entry)) {
       properties[key] = entry;
     } else {
       const text = boundedString(entry, MAX_TEXT_LENGTH);
@@ -356,31 +356,31 @@ function normalizeEntity(
   candidate: unknown
 ): readonly [string, LyraDrilldownEntity] | undefined {
   if (!isPlainRecord(candidate)) return undefined;
-  const entityId = domainId(ownDataValue(candidate, "entityId"));
+  const entityId = domainId(ownDataValue(candidate, 'entityId'));
   const label = boundedString(
-    ownDataValue(candidate, "label"),
+    ownDataValue(candidate, 'label'),
     MAX_LABEL_LENGTH
   );
   if (!entityId || label === undefined) return undefined;
-  const rawDegree = ownDataValue(candidate, "degree");
+  const rawDegree = ownDataValue(candidate, 'degree');
   const degree =
-    typeof rawDegree === "number" && Number.isFinite(rawDegree)
+    typeof rawDegree === 'number' && Number.isFinite(rawDegree)
       ? Math.max(0, Math.floor(rawDegree))
       : undefined;
-  const properties = normalizeProperties(ownDataValue(candidate, "properties"));
+  const properties = normalizeProperties(ownDataValue(candidate, 'properties'));
   const entity = Object.freeze({
     entityId,
     label,
-    ...(optionalString(candidate, "type", MAX_ID_LENGTH) !== undefined
-      ? { type: optionalString(candidate, "type", MAX_ID_LENGTH) }
+    ...(optionalString(candidate, 'type', MAX_ID_LENGTH) !== undefined
+      ? { type: optionalString(candidate, 'type', MAX_ID_LENGTH) }
       : {}),
-    ...(optionalString(candidate, "description") !== undefined
-      ? { description: optionalString(candidate, "description") }
+    ...(optionalString(candidate, 'description') !== undefined
+      ? { description: optionalString(candidate, 'description') }
       : {}),
     ...(properties ? { properties } : {}),
     ...(degree !== undefined ? { degree } : {}),
-    ...(optionalString(candidate, "communityId", MAX_ID_LENGTH) !== undefined
-      ? { communityId: optionalString(candidate, "communityId", MAX_ID_LENGTH) }
+    ...(optionalString(candidate, 'communityId', MAX_ID_LENGTH) !== undefined
+      ? { communityId: optionalString(candidate, 'communityId', MAX_ID_LENGTH) }
       : {}),
   });
   return [entityId, entity];
@@ -388,25 +388,25 @@ function normalizeEntity(
 
 function normalizeNode(candidate: unknown): NormalizedNode | undefined {
   if (!isPlainRecord(candidate)) return undefined;
-  const nodeId = domainId(ownDataValue(candidate, "nodeId"));
+  const nodeId = domainId(ownDataValue(candidate, 'nodeId'));
   const label = boundedString(
-    ownDataValue(candidate, "label"),
+    ownDataValue(candidate, 'label'),
     MAX_LABEL_LENGTH
   );
   if (!nodeId || label === undefined) return undefined;
 
   const evidence = normalizeUniqueCollection(
-    ownDataValue(candidate, "evidence"),
+    ownDataValue(candidate, 'evidence'),
     MAX_CATEGORY_ITEMS,
     normalizeEvidence
   );
   const documents = normalizeUniqueCollection(
-    ownDataValue(candidate, "documents"),
+    ownDataValue(candidate, 'documents'),
     MAX_CATEGORY_ITEMS,
     normalizeDocument
   );
   const entities = normalizeUniqueCollection(
-    ownDataValue(candidate, "entities"),
+    ownDataValue(candidate, 'entities'),
     MAX_CATEGORY_ITEMS,
     normalizeEntity
   );
@@ -441,7 +441,7 @@ function normalizePath(value: unknown): NormalizedPath {
   const seen = new Set<string>();
   const categorySourceCounts = new Map<
     string,
-    Readonly<Record<"evidence" | "documents" | "entities", number>>
+    Readonly<Record<'evidence' | 'documents' | 'entities', number>>
   >();
   for (let index = startIndex; index < sourceCount; index += 1) {
     const normalized = normalizeNode(arrayItem(value, index));
@@ -461,18 +461,18 @@ function normalizeNodeType(
   candidate: unknown
 ): readonly [string, LyraNodeTypeStyle] | undefined {
   if (!isPlainRecord(candidate)) return undefined;
-  const id = domainId(ownDataValue(candidate, "id"));
+  const id = domainId(ownDataValue(candidate, 'id'));
   const label = boundedString(
-    ownDataValue(candidate, "label"),
+    ownDataValue(candidate, 'label'),
     MAX_LABEL_LENGTH
   );
   if (!id || label === undefined) return undefined;
-  const rawShape = ownDataValue(candidate, "shape");
+  const rawShape = ownDataValue(candidate, 'shape');
   const shape =
-    rawShape === "circle" || rawShape === "square" || rawShape === "diamond"
+    rawShape === 'circle' || rawShape === 'square' || rawShape === 'diamond'
       ? rawShape
       : undefined;
-  const color = optionalString(candidate, "color", MAX_LABEL_LENGTH);
+  const color = optionalString(candidate, 'color', MAX_LABEL_LENGTH);
   return [
     id,
     Object.freeze({
@@ -489,13 +489,13 @@ function normalizeTypes(value: unknown): readonly LyraNodeTypeStyle[] {
     .items;
 }
 
-function normalizeCategory(value: unknown): LyraDrilldownCategory | "" {
-  return value === "evidence" ||
-    value === "documents" ||
-    value === "entities" ||
-    value === "runs"
+function normalizeCategory(value: unknown): LyraDrilldownCategory | '' {
+  return value === 'evidence' ||
+    value === 'documents' ||
+    value === 'entities' ||
+    value === 'runs'
     ? value
-    : "";
+    : '';
 }
 
 /**
@@ -577,7 +577,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   private pathRevision = 0;
   private categorySourceCounts: ReadonlyMap<
     string,
-    Readonly<Record<"evidence" | "documents" | "entities", number>>
+    Readonly<Record<'evidence' | 'documents' | 'entities', number>>
   > = new Map();
 
   /** Full host-owned breadcrumb trail. Assigning snapshots valid records into bounded immutable
@@ -593,7 +593,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     this.pathSourceCount = normalized.sourceCount;
     this.categorySourceCounts = normalized.categorySourceCounts;
     this.pathRevision += 1;
-    this.requestUpdate("path", previous);
+    this.requestUpdate('path', previous);
   }
 
   private effectiveTypes: readonly LyraNodeTypeStyle[] = EMPTY_TYPES;
@@ -607,42 +607,42 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   set types(value: readonly LyraNodeTypeStyle[]) {
     const previous = this.effectiveTypes;
     this.effectiveTypes = normalizeTypes(value);
-    this.requestUpdate("types", previous);
+    this.requestUpdate('types', previous);
   }
 
-  private activeCategoryValue: LyraDrilldownCategory | "" = "";
+  private activeCategoryValue: LyraDrilldownCategory | '' = '';
 
   /** Host-owned active category. Empty or unavailable values resolve to the first populated
    * category without changing the authored value. User interaction emits a request only. */
-  @property({ attribute: "active-category", reflect: true })
-  get activeCategory(): LyraDrilldownCategory | "" {
+  @property({ attribute: 'active-category', reflect: true })
+  get activeCategory(): LyraDrilldownCategory | '' {
     return this.activeCategoryValue;
   }
-  set activeCategory(value: LyraDrilldownCategory | "") {
+  set activeCategory(value: LyraDrilldownCategory | '') {
     const previous = this.activeCategoryValue;
     this.activeCategoryValue = normalizeCategory(value);
-    this.requestUpdate("activeCategory", previous);
+    this.requestUpdate('activeCategory', previous);
   }
 
   /** Forwarded to every nested entity card. */
-  @property({ attribute: "community-label" }) communityLabel = "";
+  @property({ attribute: 'community-label' }) communityLabel = '';
 
   /** Forwarded to every nested entity card. */
   @property({
     type: Boolean,
-    attribute: "show-focus-button",
+    attribute: 'show-focus-button',
     converter: trueDefaultBooleanConverter,
   })
   showFocusButton = true;
 
   /** Accessible name forwarded to the current category owner. `null` leaves a tab strip unnamed
    * and uses the category label for a sole region; an explicit empty string is preserved. */
-  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @state() private hasRunsSlot = false;
   @state() private categoryPage = 0;
 
-  private pageContext = "";
+  private pageContext = '';
   private mutationObserver?: MutationObserver;
   private mutationObserverDocument?: Document;
   private mutationObserverGeneration = 0;
@@ -687,7 +687,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     observer.observe(this, {
       childList: true,
       attributes: true,
-      attributeFilter: ["slot"],
+      attributeFilter: ['slot'],
       subtree: true,
     });
   }
@@ -716,7 +716,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
       return;
     }
     this.releaseAnnouncementSink();
-    this.announcementSink = acquireAnnouncementSink("polite", {
+    this.announcementSink = acquireAnnouncementSink('polite', {
       document: this.ownerDocument,
       source: this,
     });
@@ -736,7 +736,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
 
   private syncRunsSlot = (): void => {
     this.hasRunsSlot = Array.from(this.children).some(
-      (element) => element.getAttribute("slot") === "runs"
+      (element) => element.getAttribute('slot') === 'runs'
     );
   };
 
@@ -750,26 +750,26 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     const categories: DrilldownCategoryDefinition[] = [];
     if ((node.evidence?.length ?? 0) > 0) {
       categories.push({
-        key: "evidence",
-        label: this.localize("sourceListDefaultLabel"),
+        key: 'evidence',
+        label: this.localize('sourceListDefaultLabel'),
       });
     }
     if ((node.documents?.length ?? 0) > 0) {
       categories.push({
-        key: "documents",
-        label: this.localize("drilldownDocuments"),
+        key: 'documents',
+        label: this.localize('drilldownDocuments'),
       });
     }
     if ((node.entities?.length ?? 0) > 0) {
       categories.push({
-        key: "entities",
-        label: this.localize("provenanceEntities"),
+        key: 'entities',
+        label: this.localize('provenanceEntities'),
       });
     }
     if (this.hasRunsSlot) {
       categories.push({
-        key: "runs",
-        label: this.localize("drilldownRuns"),
+        key: 'runs',
+        label: this.localize('drilldownRuns'),
       });
     }
     return categories;
@@ -788,8 +788,8 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     super.willUpdate(changed);
     const node = this.currentNode;
     const categories = node ? this.categoriesFor(node) : [];
-    const active = this.resolvedCategory(categories) ?? "";
-    const context = `${this.pathRevision}:${node?.nodeId ?? ""}:${active}`;
+    const active = this.resolvedCategory(categories) ?? '';
+    const context = `${this.pathRevision}:${node?.nodeId ?? ''}:${active}`;
     if (context !== this.pageContext) {
       this.pageContext = context;
       this.categoryPage = 0;
@@ -812,7 +812,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
 
   private navigateTo(node: LyraDrilldownNode, index: number): void {
     this.emit(
-      "lr-drilldown-navigate",
+      'lr-drilldown-navigate',
       Object.freeze({ nodeId: node.nodeId, index })
     );
   }
@@ -822,7 +822,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   };
 
   private onCategoryShow = (
-    event: LyraTabGroupEventMap["lr-tab-show"]
+    event: LyraTabGroupEventMap['lr-tab-show']
   ): void => {
     event.stopPropagation();
     const node = this.currentNode;
@@ -836,12 +836,12 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
       !category ||
       !categories.some((candidate) => candidate.key === category)
     ) {
-      tabGroup.active = previousCategory ?? "";
+      tabGroup.active = previousCategory ?? '';
       return;
     }
     if (category !== previousCategory) {
       this.emit(
-        "lr-drilldown-category-change",
+        'lr-drilldown-category-change',
         Object.freeze({
           nodeId: node.nodeId,
           category,
@@ -849,7 +849,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
         })
       );
     }
-    tabGroup.active = this.resolvedCategory(categories) ?? "";
+    tabGroup.active = this.resolvedCategory(categories) ?? '';
   };
 
   private onEvidenceExpand(
@@ -859,7 +859,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   ): void {
     event.stopPropagation();
     this.emit(
-      "lr-drilldown-evidence-expand",
+      'lr-drilldown-evidence-expand',
       Object.freeze({ nodeId, evidenceId, expanded: event.detail.expanded })
     );
   }
@@ -871,7 +871,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   ): void {
     event.stopPropagation();
     this.emit(
-      "lr-drilldown-evidence-open",
+      'lr-drilldown-evidence-open',
       Object.freeze({
         nodeId,
         evidenceId: item.evidenceId,
@@ -887,7 +887,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   ): void {
     event.stopPropagation();
     this.emit(
-      "lr-drilldown-document-download",
+      'lr-drilldown-document-download',
       Object.freeze({
         nodeId,
         documentId: document.documentId,
@@ -904,7 +904,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   ): void {
     event.stopPropagation();
     this.emit(
-      "lr-drilldown-document-render-error",
+      'lr-drilldown-document-render-error',
       Object.freeze({ nodeId, documentId, error: event.detail.error })
     );
   }
@@ -916,7 +916,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   ): void {
     event.stopPropagation();
     this.emit(
-      "lr-drilldown-document-highlight-activate",
+      'lr-drilldown-document-highlight-activate',
       Object.freeze({ nodeId, documentId, highlightId: event.detail.highlightId })
     );
   }
@@ -928,7 +928,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   ): void {
     event.stopPropagation();
     this.emit(
-      "lr-drilldown-entity-activate",
+      'lr-drilldown-entity-activate',
       Object.freeze({ nodeId, entityId })
     );
   }
@@ -970,8 +970,8 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
       (document) => html`
         <lr-document-preview
           part="document-item"
-          src=${document.uri ?? ""}
-          mime-type=${document.mimeType ?? ""}
+          src=${document.uri ?? ''}
+          mime-type=${document.mimeType ?? ''}
           filename=${document.name}
           @lr-download=${(
             event: CustomEvent<{ src: string; filename: string }>
@@ -1038,7 +1038,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     total: number,
     itemLabel: string
   ): string {
-    return this.localize("paginationSummary", undefined, {
+    return this.localize('paginationSummary', undefined, {
       start: this.formatCount(start),
       end: this.formatCount(end),
       total: this.formatCount(total),
@@ -1059,7 +1059,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   > {
     const announcements: Array<readonly [string, string]> = [];
     if (this.pathSourceCount > MAX_PATH_NODES) {
-      announcements.push(["path", this.pathLimitSummary()]);
+      announcements.push(['path', this.pathLimitSummary()]);
     }
 
     const node = this.currentNode;
@@ -1068,7 +1068,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     const category = categories.find(
       (candidate) => candidate.key === this.resolvedCategory(categories)
     );
-    if (!category || category.key === "runs") return announcements;
+    if (!category || category.key === 'runs') return announcements;
     const items = node[category.key] ?? [];
     const sourceCount =
       this.categorySourceCounts.get(node.nodeId)?.[category.key] ??
@@ -1087,13 +1087,13 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
       this.pathSourceCount - MAX_PATH_NODES + 1,
       this.pathSourceCount,
       this.pathSourceCount,
-      this.localize("items")
+      this.localize('items')
     );
   }
 
   private renderPage<T>(
     node: LyraDrilldownNode,
-    category: Exclude<LyraDrilldownCategory, "runs">,
+    category: Exclude<LyraDrilldownCategory, 'runs'>,
     label: string,
     items: readonly T[],
     renderItems: (page: readonly T[]) => TemplateResult
@@ -1114,7 +1114,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
       ${hasPages
         ? html`<nav
             part="pagination"
-            aria-label=${this.localize("paginationLabel")}
+            aria-label=${this.localize('paginationLabel')}
           >
             <span part="pagination-summary"
               >${this.rangeSummary(
@@ -1129,14 +1129,14 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
               size="s"
               ?disabled=${page === 0}
               @click=${() => this.changePage(-1, items.length)}
-              >${this.localize("previous")}</lr-button
+              >${this.localize('previous')}</lr-button
             >
             <lr-button
               part="next-button"
               size="s"
               ?disabled=${page === lastPage}
               @click=${() => this.changePage(1, items.length)}
-              >${this.localize("next")}</lr-button
+              >${this.localize('next')}</lr-button
             >
           </nav>`
         : nothing}
@@ -1153,7 +1153,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     category: DrilldownCategoryDefinition
   ): TemplateResult {
     switch (category.key) {
-      case "evidence":
+      case 'evidence':
         return this.renderPage(
           node,
           category.key,
@@ -1161,7 +1161,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
           node.evidence ?? [],
           (items) => this.renderEvidence(node.nodeId, items)
         );
-      case "documents":
+      case 'documents':
         return this.renderPage(
           node,
           category.key,
@@ -1169,7 +1169,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
           node.documents ?? [],
           (documents) => this.renderDocuments(node.nodeId, documents)
         );
-      case "entities":
+      case 'entities':
         return this.renderPage(
           node,
           category.key,
@@ -1177,7 +1177,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
           node.entities ?? [],
           (entities) => this.renderEntities(node.nodeId, entities)
         );
-      case "runs":
+      case 'runs':
         return html`<slot name="runs"></slot>`;
     }
   }
@@ -1216,7 +1216,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     if (!node) {
       return html`<lr-empty
         part="empty"
-        heading=${this.localize("drilldownEmpty")}
+        heading=${this.localize('drilldownEmpty')}
       ></lr-empty>`;
     }
     const categories = this.categoriesFor(node);
@@ -1224,7 +1224,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     if (!active) {
       return html`<lr-empty
         part="empty"
-        heading=${this.localize("noData")}
+        heading=${this.localize('noData')}
       ></lr-empty>`;
     }
     const accessibleLabel = this.accessibleLabel;
@@ -1283,6 +1283,6 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-drilldown-panel": LyraDrilldownPanel;
+    'lr-drilldown-panel': LyraDrilldownPanel;
   }
 }

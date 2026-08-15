@@ -1,19 +1,19 @@
 /** DOM-free normalization, indexing, and collision implementation for `<lr-dashboard-grid>`. */
-import { finiteInteger } from "../../../internal/numbers.js";
+import { finiteInteger } from '../../../internal/numbers.js';
 import {
   createWidgetDocument,
   type LyraWidgetNode,
-} from "../../conversation/widget-renderer/resolve.js";
+} from '../../conversation/widget-renderer/resolve.js';
 import type {
   LyraDashboardCell,
   LyraDashboardCollisionPolicy,
   LyraDashboardPlacementResult,
-} from "./layout-types.js";
+} from './layout-types.js';
 
 export const DASHBOARD_MAX_CELLS = 1_000;
 const DASHBOARD_MAX_COLUMNS = 48;
-const INVALID = Symbol("invalid-dashboard-value");
-const MISSING = Symbol("missing-dashboard-value");
+const INVALID = Symbol('invalid-dashboard-value');
+const MISSING = Symbol('missing-dashboard-value');
 
 export type DashboardAuthoredCellSnapshot = Readonly<LyraDashboardCell>;
 
@@ -56,7 +56,7 @@ function asFiniteInteger(
   max: number
 ): number {
   return finiteInteger(
-    typeof value === "number" ? value : Number.NaN,
+    typeof value === 'number' ? value : Number.NaN,
     fallback,
     min,
     max
@@ -68,7 +68,7 @@ function optionalFiniteInteger(
   min: number,
   max: number
 ): number | undefined {
-  return typeof value === "number" && Number.isFinite(value)
+  return typeof value === 'number' && Number.isFinite(value)
     ? finiteInteger(value, min, min, max)
     : undefined;
 }
@@ -100,8 +100,8 @@ export function snapshotDashboardLayout(
   if (!isArray(input)) return Object.freeze([]);
   const output: LyraDashboardCell[] = [];
   const ids = new Set<string>();
-  const length = safeRead(input, "length");
-  if (typeof length !== "number" || !Number.isFinite(length)) {
+  const length = safeRead(input, 'length');
+  if (typeof length !== 'number' || !Number.isFinite(length)) {
     return Object.freeze([]);
   }
   const count = Math.min(
@@ -114,21 +114,21 @@ export function snapshotDashboardLayout(
       value === INVALID ||
       value === MISSING ||
       value === null ||
-      typeof value !== "object"
+      typeof value !== 'object'
     )
       continue;
-    const cellId = safeRead(value, "cellId");
-    const x = safeRead(value, "x");
-    const y = safeRead(value, "y");
-    const w = safeRead(value, "w");
-    const h = safeRead(value, "h");
-    const minWValue = safeRead(value, "minW");
-    const maxWValue = safeRead(value, "maxW");
-    const minHValue = safeRead(value, "minH");
-    const maxHValue = safeRead(value, "maxH");
-    const label = safeRead(value, "label");
-    const widget = safeRead(value, "widget");
-    const locked = safeRead(value, "locked");
+    const cellId = safeRead(value, 'cellId');
+    const x = safeRead(value, 'x');
+    const y = safeRead(value, 'y');
+    const w = safeRead(value, 'w');
+    const h = safeRead(value, 'h');
+    const minWValue = safeRead(value, 'minW');
+    const maxWValue = safeRead(value, 'maxW');
+    const minHValue = safeRead(value, 'minH');
+    const maxHValue = safeRead(value, 'maxH');
+    const label = safeRead(value, 'label');
+    const widget = safeRead(value, 'widget');
+    const locked = safeRead(value, 'locked');
     if (
       [
         cellId,
@@ -144,7 +144,7 @@ export function snapshotDashboardLayout(
         widget,
         locked,
       ].includes(INVALID) ||
-      typeof cellId !== "string" ||
+      typeof cellId !== 'string' ||
       cellId.length === 0 ||
       cellId !== cellId.trim() ||
       ids.has(cellId) ||
@@ -172,7 +172,7 @@ export function snapshotDashboardLayout(
       ...(minH === undefined ? {} : { minH }),
       ...(maxH === undefined ? {} : { maxH }),
       ...(locked === true ? { locked: true } : {}),
-      ...(typeof label === "string" ? { label } : {}),
+      ...(typeof label === 'string' ? { label } : {}),
       ...(widgetSnapshot === undefined ? {} : { widget: widgetSnapshot }),
     };
     ids.add(cellId);
@@ -182,7 +182,7 @@ export function snapshotDashboardLayout(
 }
 
 export function clampDashboardCandidate(
-  cell: Pick<LyraDashboardCell, "minW" | "minH" | "maxW" | "maxH">,
+  cell: Pick<LyraDashboardCell, 'minW' | 'minH' | 'maxW' | 'maxH'>,
   requested: Readonly<{ x: number; y: number; w: number; h: number }>,
   columnsInput: number
 ): Readonly<{ x: number; y: number; w: number; h: number }> {
@@ -201,7 +201,7 @@ export function clampDashboardCandidate(
 }
 
 function normalizeDashboardBounds(
-  cell: Pick<LyraDashboardCell, "minW" | "minH" | "maxW" | "maxH">,
+  cell: Pick<LyraDashboardCell, 'minW' | 'minH' | 'maxW' | 'maxH'>,
   columns: number
 ): Readonly<{ minW: number; maxW: number; minH: number; maxH: number }> {
   const minW = finiteInteger(cell.minW ?? 1, 1, 1, columns);
@@ -242,7 +242,7 @@ export function projectDashboardLayout(
 export function normalizeLyraDashboardCollisionPolicy(
   value: unknown
 ): LyraDashboardCollisionPolicy {
-  return value === "push" || value === "overlap" ? value : "reject";
+  return value === 'push' || value === 'overlap' ? value : 'reject';
 }
 
 export function overlapsDashboardCells(
@@ -442,18 +442,18 @@ export function resolveDashboardPlacement(
     candidate,
     metrics
   );
-  if (policy === "reject" && collidedCellIds.length > 0) {
+  if (policy === 'reject' && collidedCellIds.length > 0) {
     return Object.freeze({ accepted: false, layout, collidedCellIds });
   }
   if (
-    policy === "push" &&
+    policy === 'push' &&
     collidedCellIds.some((cellId) => spatialIndex.byId.get(cellId)?.locked)
   ) {
     return Object.freeze({ accepted: false, layout, collidedCellIds });
   }
 
   const nextLayout =
-    policy === "push" && collidedCellIds.length > 0
+    policy === 'push' && collidedCellIds.length > 0
       ? pushResolve(layout, candidate, columns, metrics)
       : Object.freeze(
           layout.map((cell) => (cell.cellId === candidate.cellId ? candidate : cell))

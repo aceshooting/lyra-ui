@@ -74,7 +74,7 @@ export interface LyraTranscriptFeedEventMap {
  * @since 4.0.0
  */
 export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["entries"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

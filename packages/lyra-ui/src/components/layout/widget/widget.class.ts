@@ -583,31 +583,31 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         ? html`<div
             part="backdrop"
             style=${backdropInset
-              ? styleMap({ "--lr-widget-backdrop-inset": backdropInset })
+              ? styleMap({ '--lr-widget-backdrop-inset': backdropInset })
               : nothing}
             @click=${this.onBackdropClick}
           ></div>`
         : nothing}
       <div
         part="base"
-        role=${this.fullscreen ? "dialog" : nothing}
-        aria-modal=${this.fullscreen ? "true" : nothing}
+        role=${this.fullscreen ? 'dialog' : nothing}
+        aria-modal=${this.fullscreen ? 'true' : nothing}
         aria-label=${this.fullscreen
           ? this.accessibleLabel ??
             (this.label ||
               this.labelSlotText ||
-              this.localize("widgetFullscreenPanel"))
+              this.localize('widgetFullscreenPanel'))
           : nothing}
-        tabindex=${this.fullscreen ? "-1" : nothing}
+        tabindex=${this.fullscreen ? '-1' : nothing}
         style=${fullscreenInset
-          ? styleMap({ "--lr-widget-fullscreen-inset": fullscreenInset })
+          ? styleMap({ '--lr-widget-fullscreen-inset': fullscreenInset })
           : nothing}
       >
         <div part="header">
           <div part="title">
             ${renderInertPresentation(
               html`<slot name="icon" @slotchange=${this.onIconSlotChange}></slot>`,
-              { part: "icon", hidden: !this.hasIconSlot },
+              { part: 'icon', hidden: !this.hasIconSlot },
             )}
             <div part="label-group">
               <span part="label" ?hidden=${!hasLabel && !this.hasLabelSlot}
@@ -631,7 +631,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
             ? html`<div
                 part="view-toggles"
                 role="group"
-                aria-label=${this.localize("widgetViewGroup")}
+                aria-label=${this.localize('widgetViewGroup')}
               >
                 ${repeat(views, (view) => view.viewId, (view) => {
                   // `label` supplies the accessible name via its own visible text, same as
@@ -643,12 +643,12 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                     part="view-toggle"
                     type="button"
                     data-view-id=${view.viewId}
-                    aria-pressed=${view.viewId === this.activeViewId ? "true" : "false"}
+                    aria-pressed=${view.viewId === this.activeViewId ? 'true' : 'false'}
                     aria-label=${hasLabel ? nothing : view.ariaLabel || view.viewId}
                     @click=${() => this.setActiveView(view.viewId)}
                   >
                     ${view.icon
-                      ? renderInertPresentation(view.icon, { part: "view-icon" })
+                      ? renderInertPresentation(view.icon, { part: 'view-icon' })
                       : nothing}${view.label
                       ? html`<span part="view-label">${view.label}</span>`
                       : nothing}
@@ -660,10 +660,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
             ? html`<button
                 part="collapse-button"
                 type="button"
-                aria-expanded=${this.collapsed ? "false" : "true"}
+                aria-expanded=${this.collapsed ? 'false' : 'true'}
                 aria-label=${this.collapsed
-                  ? this.localize("widgetExpand")
-                  : this.localize("widgetCollapse")}
+                  ? this.localize('widgetExpand')
+                  : this.localize('widgetCollapse')}
                 aria-controls=${this.bodyId}
                 @click=${this.toggleCollapsed}
               >
@@ -676,10 +676,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
             ? html`<button
                 part="fullscreen-button"
                 type="button"
-                aria-pressed=${this.fullscreen ? "true" : "false"}
+                aria-pressed=${this.fullscreen ? 'true' : 'false'}
                 aria-label=${this.fullscreen
-                  ? this.localize("widgetExitFullscreen")
-                  : this.localize("widgetExpandToFullscreen")}
+                  ? this.localize('widgetExitFullscreen')
+                  : this.localize('widgetExpandToFullscreen')}
                 @click=${this.toggleFullscreen}
               >
                 ${renderInertPresentation(html`

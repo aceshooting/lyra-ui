@@ -1,18 +1,18 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
-import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
-import { property, state } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { hostAriaLabel, nextId, srOnly } from "../../../internal/a11y.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import {
   Announcer,
   acquireAnnouncementSink,
   type AnnouncementSink,
-} from "../../../internal/announcer.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import { FLOW_PALETTE_MIME_TYPE } from "../../data/flow-canvas/flow-canvas.class.js";
-import { styles } from "./node-palette.styles.js";
-import { activeElementIn } from "../../../internal/active-element.js";
-import { relayNativeEvent } from "../../../internal/native-event-relay.js";
+} from '../../../internal/announcer.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.class.js';
+import { styles } from './node-palette.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_nodePaletteDragHint, LYRA_DEFAULT_nodePaletteEmpty, LYRA_DEFAULT_nodePaletteLabel, LYRA_DEFAULT_nodePalettePlaceholder, LYRA_DEFAULT_nodePaletteResultCount, LYRA_DEFAULT_reorderItemMoved, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
@@ -33,13 +33,13 @@ export interface PaletteItem {
 }
 
 export interface LyraNodePaletteEventMap {
-  "lr-palette-place": CustomEvent<{ type: string }>;
-  "lr-select": CustomEvent<LyraEventDetailSnapshot<{ item: PaletteItem }>>;
+  'lr-palette-place': CustomEvent<{ type: string }>;
+  'lr-select': CustomEvent<LyraEventDetailSnapshot<{ item: PaletteItem }>>;
   /** A keyboard reorder *request*, only while `reorderable`. `fromIndex`/`toIndex` index into the
    *  host's own `items` array, so applying it is a plain splice; `category` names the group the
    *  move stayed inside (`null` for the ungrouped bucket). This component never reorders `items`
    *  itself, so nothing consults `defaultPrevented` and the event is deliberately not cancelable. */
-  "lr-reorder": CustomEvent<{
+  'lr-reorder': CustomEvent<{
     type: string;
     category: string | null;
     fromIndex: number;
@@ -97,7 +97,7 @@ export interface LyraNodePaletteEventMap {
  * @since 4.0.0
  */
 export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["items"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -114,11 +114,14 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-select',
+  ]);
 
   /** Node templates available for filtering, activation, dragging, and optional reordering. */
   @property({ attribute: false }) items: readonly PaletteItem[] = [];
   /** Accessible name for the palette; empty uses the localized default. */
-  @property() label = "";
+  @property() label = '';
   /**
    * Opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard reordering (see the class doc). Defaults to
    * `false`: unset, no `lr-reorder` is ever emitted and Ctrl/Cmd+Arrow keeps behaving exactly like
@@ -127,14 +130,14 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   @property({ type: Boolean, reflect: true }) reorderable = false;
   /** JS-only accessible-name override for the listbox. A markup `aria-label` names the component
    *  as a whole, so it is not cloned onto the inner listbox. */
-  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  @state() private queryText = "";
+  @state() private queryText = '';
   @state() private activeIndex = 0;
-  @state() private liveText = "";
+  @state() private liveText = '';
 
-  private readonly listId = nextId("node-palette-list");
-  private readonly hintId = nextId("node-palette-hint");
+  private readonly listId = nextId('node-palette-list');
+  private readonly hintId = nextId('node-palette-hint');
   private announcementSink?: AnnouncementSink;
   private readonly announcer = new Announcer({
     onFlush: (text) => {
@@ -184,8 +187,8 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     const result = !q
       ? this.items
       : this.items.filter((item) =>
-          [item.label, item.category ?? "", ...(item.keywords ?? [])]
-            .join(" ")
+          [item.label, item.category ?? '', ...(item.keywords ?? [])]
+            .join(' ')
             .toLocaleLowerCase(locale)
             .includes(q)
         );
@@ -261,7 +264,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     super.connectedCallback();
     const ownerWindow = this.ownerDocument.defaultView;
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
-    this.announcementSink ??= acquireAnnouncementSink("polite", {
+    this.announcementSink ??= acquireAnnouncementSink('polite', {
       document: this.ownerDocument,
       source: this,
     });
@@ -269,7 +272,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   override disconnectedCallback(): void {
     this.announcer.cancel();
-    this.liveText = "";
+    this.liveText = '';
     this.isMounting = true;
     this.announcementSink?.release();
     this.announcementSink = undefined;
@@ -305,7 +308,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
     let nextIndex = 0;
     const previousItem = previous[referenceIndex];
-    if (!changed.has("queryText") && previousItem) {
+    if (!changed.has('queryText') && previousItem) {
       const occurrence = this.occurrenceAt(previous, referenceIndex);
       const preservedIndex = this.indexOfOccurrence(
         next,
@@ -321,7 +324,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     if (focusedIndex >= 0) {
       if (next.length === 0) {
         (
-          this.renderRoot.querySelector("input") as HTMLInputElement | null
+          this.renderRoot.querySelector('input') as HTMLInputElement | null
         )?.focus();
       } else {
         const nextItem = next[nextIndex]!;
@@ -335,7 +338,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
         if (survivingOldElement) survivingOldElement.focus();
         else
           (
-            this.renderRoot.querySelector("input") as HTMLInputElement | null
+            this.renderRoot.querySelector('input') as HTMLInputElement | null
           )?.focus();
         this.pendingFocusIndex = nextIndex;
       }
@@ -353,14 +356,14 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
         Math.min(pendingFocusIndex, this.lastRenderedRovingList.length - 1)
       ]?.focus();
     }
-    if (changed.has("items")) this.confirmPendingReorder();
+    if (changed.has('items')) this.confirmPendingReorder();
     const wasMounting = this.isMounting;
     this.isMounting = false;
-    if (!wasMounting && (changed.has("queryText") || changed.has("items"))) {
+    if (!wasMounting && (changed.has('queryText') || changed.has('items'))) {
       const count = this.filtered.length;
       const countText = getNumberFormat(this.effectiveLocale).format(count);
       this.announcer.announce(
-        this.localize("nodePaletteResultCount", undefined, {
+        this.localize('nodePaletteResultCount', undefined, {
           count: countText,
           pluralCount: count,
         })
@@ -385,7 +388,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   };
 
   private onFieldKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === "ArrowDown") {
+    if (e.key === 'ArrowDown') {
       e.preventDefault();
       // Reads the roving list as last rendered rather than recomputing it -- see the cache note
       // above `filteredCache`. `lastRenderedRovingList` is refreshed in updated() on every cycle,
@@ -416,35 +419,35 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     if (
       this.reorderable &&
       (e.ctrlKey || e.metaKey) &&
-      (e.key === "ArrowUp" || e.key === "ArrowDown")
+      (e.key === 'ArrowUp' || e.key === 'ArrowDown')
     ) {
       e.preventDefault();
-      this.requestReorder(item, e.key === "ArrowDown" ? 1 : -1);
+      this.requestReorder(item, e.key === 'ArrowDown' ? 1 : -1);
       return;
     }
-    if (e.key === "ArrowDown") {
+    if (e.key === 'ArrowDown') {
       e.preventDefault();
       this.activeIndex = Math.min(list.length - 1, rovingIndex + 1);
       this.focusItem(this.activeIndex);
-    } else if (e.key === "ArrowUp") {
+    } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (rovingIndex === 0) {
         (
-          this.renderRoot.querySelector("input") as HTMLInputElement | null
+          this.renderRoot.querySelector('input') as HTMLInputElement | null
         )?.focus();
         return;
       }
       this.activeIndex = Math.max(0, rovingIndex - 1);
       this.focusItem(this.activeIndex);
-    } else if (e.key === "Home") {
+    } else if (e.key === 'Home') {
       e.preventDefault();
       this.activeIndex = 0;
       this.focusItem(0);
-    } else if (e.key === "End") {
+    } else if (e.key === 'End') {
       e.preventDefault();
       this.activeIndex = list.length - 1;
       this.focusItem(this.activeIndex);
-    } else if (e.key === "Enter" || e.key === " ") {
+    } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       this.place(item);
     }
@@ -478,7 +481,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     const toIndex = this.items.indexOf(neighbor);
     if (fromIndex < 0 || toIndex < 0) return;
     this.pendingReorder = { item, category, neighbor, wasBefore: delta === 1 };
-    this.emit("lr-reorder", { type: item.type, category, fromIndex, toIndex });
+    this.emit('lr-reorder', { type: item.type, category, fromIndex, toIndex });
   }
 
   /** Announce a move only once the re-rendered group proves the host accepted the request -- the
@@ -500,7 +503,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     if (position < neighborPosition === pending.wasBefore) return;
     this.pendingReorder = undefined;
     const numberFormat = getNumberFormat(this.effectiveLocale);
-    const text = this.localize("reorderItemMoved", undefined, {
+    const text = this.localize('reorderItemMoved', undefined, {
       index: numberFormat.format(position + 1),
       total: numberFormat.format(group.length),
     });
@@ -514,8 +517,8 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   private place(item: PaletteItem): void {
     if (item.disabled) return;
-    this.emit("lr-palette-place", { type: item.type });
-    this.emit("lr-select", { item });
+    this.emit('lr-palette-place', { type: item.type });
+    this.emit('lr-select', { item });
   }
 
   private onItemDragStart(e: DragEvent, item: PaletteItem): void {
@@ -524,8 +527,8 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
       FLOW_PALETTE_MIME_TYPE,
       JSON.stringify({ type: item.type })
     );
-    e.dataTransfer.setData("text/plain", item.label);
-    e.dataTransfer.effectAllowed = "copy";
+    e.dataTransfer.setData('text/plain', item.label);
+    e.dataTransfer.effectAllowed = 'copy';
   }
 
   private itemTemplate(item: PaletteItem, rovingIndex: number): TemplateResult {
@@ -533,12 +536,12 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
       part="item"
       role="option"
       aria-selected="false"
-      aria-disabled=${item.disabled ? "true" : "false"}
+      aria-disabled=${item.disabled ? 'true' : 'false'}
       aria-describedby=${item.disabled ? nothing : this.hintId}
       tabindex=${rovingIndex === this.activeIndex && !item.disabled
-        ? "0"
-        : "-1"}
-      draggable=${item.disabled ? "false" : "true"}
+        ? '0'
+        : '-1'}
+      draggable=${item.disabled ? 'false' : 'true'}
       @click=${() => this.place(item)}
       @focus=${() => {
         if (rovingIndex >= 0) this.activeIndex = rovingIndex;
@@ -566,18 +569,18 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     const listLabel =
       hostLabel === null
         ? this.accessibleLabel ??
-          (this.label || this.localize("nodePaletteLabel"))
+          (this.label || this.localize('nodePaletteLabel'))
         : this.label && this.label !== hostLabel
           ? this.label
-          : this.localize("nodePaletteLabel");
+          : this.localize('nodePaletteLabel');
     return html`<div part="base">
       <slot name="header"></slot>
       <input
         part="search"
         type="search"
-        aria-label=${this.localize("search")}
+        aria-label=${this.localize('search')}
         aria-controls=${this.listId}
-        placeholder=${this.localize("nodePalettePlaceholder")}
+        placeholder=${this.localize('nodePalettePlaceholder')}
         .value=${this.queryText}
         @input=${this.onSearchInput}
         @keydown=${this.onFieldKeyDown}
@@ -591,7 +594,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
         aria-label=${listLabel}
       >
         ${groups.length === 0
-          ? html`<div part="empty">${this.localize("nodePaletteEmpty")}</div>`
+          ? html`<div part="empty">${this.localize('nodePaletteEmpty')}</div>`
           : groups.map((group, groupIndex) => {
               const headingId = `${this.listId}-group-${groupIndex}`;
               const content = group.items.map((item) => {
@@ -616,7 +619,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
         ${this.liveText}
       </div>
       <span id=${this.hintId} class="sr-only"
-        >${this.localize("nodePaletteDragHint")}</span
+        >${this.localize('nodePaletteDragHint')}</span
       >
       <slot name="footer"></slot>
     </div>`;
@@ -625,6 +628,6 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-node-palette": LyraNodePalette;
+    'lr-node-palette': LyraNodePalette;
   }
 }

@@ -1,4 +1,4 @@
-import { getPluralRules } from "./intl-cache.js";
+import { getPluralRules } from './intl-cache.js';
 import type {
   LyraLocaleDirection,
   LyraLocaleMeta,
@@ -6,7 +6,7 @@ import type {
   LyraMessage,
   LyraPluralCategory,
   LyraPluralMessage,
-} from "./localization-types.js";
+} from './localization-types.js';
 
 type LocaleCatalog = Readonly<LyraLocaleStrings>;
 
@@ -56,7 +56,7 @@ const hostLocaleFinalizer = new FinalizationRegistry<HostLocaleSubscription>(
 );
 const ownerDocumentsWithBrowsingContext = new WeakSet<Document>();
 const registryListeners = new Set<() => void>();
-let activeLocale = "";
+let activeLocale = '';
 let catalogRevision = 0;
 
 const localeIdentityCache = new Map<string, LocaleIdentity>();
@@ -88,11 +88,11 @@ function subtagCountWithinBounds(tag: string): boolean {
  */
 function localeIdentity(locale: string): LocaleIdentity {
   const normalized =
-    typeof locale === "string" ? locale.trim().replace(/_/g, "-") : "";
+    typeof locale === 'string' ? locale.trim().replace(/_/g, '-') : '';
   if (!normalized) {
     return {
-      publicTag: "",
-      lookupKey: "",
+      publicTag: '',
+      lookupKey: '',
       wellFormed: false,
       candidateBounded: true,
       storable: false,
@@ -135,16 +135,16 @@ function storedLocaleIdentity(
   locale: string,
   required: boolean
 ): LocaleIdentity {
-  if (typeof locale !== "string")
-    throw new TypeError("A locale must be a string.");
+  if (typeof locale !== 'string')
+    throw new TypeError('A locale must be a string.');
   const identity = localeIdentity(locale);
   if (!identity.publicTag) {
     if (!required) return identity;
-    throw new TypeError("A locale is required.");
+    throw new TypeError('A locale is required.');
   }
   if (!identity.storable) {
     throw new TypeError(
-      "The locale must be BCP-47 or a bounded alphanumeric custom tag."
+      'The locale must be BCP-47 or a bounded alphanumeric custom tag.'
     );
   }
   return identity;
@@ -159,7 +159,7 @@ function storedLocaleIdentity(
  */
 export function canonicalizeLyraLocale(locale: string): string {
   const identity = localeIdentity(locale);
-  return identity.storable ? identity.publicTag : "en";
+  return identity.storable ? identity.publicTag : 'en';
 }
 
 /**
@@ -184,13 +184,13 @@ function regionalFallbacks(
   wellFormed: boolean
 ): string[] {
   if (limit <= 0 || !wellFormed) return [];
-  const separator = requestedKey.indexOf("-");
+  const separator = requestedKey.indexOf('-');
   const language =
     separator === -1 ? requestedKey : requestedKey.slice(0, separator);
   if (!language) return [];
-  const requested = new Set(requestedKey.split("-"));
+  const requested = new Set(requestedKey.split('-'));
   const score = (key: string): number =>
-    key.split("-").filter((subtag) => requested.has(subtag)).length;
+    key.split('-').filter((subtag) => requested.has(subtag)).length;
   return [...locales.keys()]
     .filter(
       (key) =>
@@ -224,7 +224,7 @@ function isPrefixOf(key: string, requestedKey: string): boolean {
 function localeCandidates(locale: string): string[] {
   const identity = localeIdentity(locale);
   const normalized = identity.lookupKey;
-  if (!normalized) return ["en"];
+  if (!normalized) return ['en'];
   const cached =
     normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH
       ? localeCandidateCache.get(normalized)
@@ -251,12 +251,12 @@ function localeCandidates(locale: string): string[] {
   } else if (identity.wellFormed) {
     // Valid tags are never rejected for exceeding the defensive malformed-input ceiling. Retain
     // their exact identity and base-language fallback without materializing an unbounded ladder.
-    const separator = normalized.indexOf("-");
+    const separator = normalized.indexOf('-');
     if (separator > 0) candidates.push(normalized.slice(0, separator));
   }
-  if (!candidates.includes("en")) candidates.push("en");
+  if (!candidates.includes('en')) candidates.push('en');
   if (candidates.length > MAX_LOCALE_CANDIDATES) {
-    candidates.splice(MAX_LOCALE_CANDIDATES - 1, candidates.length, "en");
+    candidates.splice(MAX_LOCALE_CANDIDATES - 1, candidates.length, 'en');
   }
   const frozen = Object.freeze([...candidates]);
   if (normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH) {
@@ -275,14 +275,14 @@ function localeCandidates(locale: string): string[] {
 export function lyraLocaleCatalogVersion(locale: string): string {
   return localeCandidates(locale)
     .map((candidate) => localeCatalogRevisions.get(candidate) ?? 0)
-    .join(",");
+    .join(',');
 }
 
 /** Every locale with registered strings, plus 'en' (always available via DEFAULT_STRINGS even
  *  with no explicit registerLyraLocale('en', ...) call), in canonical public BCP-47 spelling,
  *  sorted and deduped by case-insensitive lookup identity. */
 export function getRegisteredLyraLocales(): readonly string[] {
-  const keys = new Set(["en", ...localePublicTags.values()]);
+  const keys = new Set(['en', ...localePublicTags.values()]);
   return Object.freeze([...keys].sort());
 }
 
@@ -305,17 +305,17 @@ export function subscribeLyraLocaleRegistry(listener: () => void): () => void {
 const MAX_CATALOG_MESSAGES = 4_096;
 const MAX_MESSAGE_KEY_LENGTH = 256;
 const PLURAL_CATEGORIES = new Set<string>([
-  "zero",
-  "one",
-  "two",
-  "few",
-  "many",
-  "other",
+  'zero',
+  'one',
+  'two',
+  'few',
+  'many',
+  'other',
 ]);
 const trustedMessageRecords = new WeakSet<object>();
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value))
+  if (value === null || typeof value !== 'object' || Array.isArray(value))
     return false;
   try {
     const prototype = Object.getPrototypeOf(value);
@@ -331,7 +331,7 @@ function ownDataValue(
 ): { found: boolean; value?: unknown } {
   try {
     const descriptor = Object.getOwnPropertyDescriptor(record, key);
-    if (!descriptor || !("value" in descriptor)) return { found: false };
+    if (!descriptor || !('value' in descriptor)) return { found: false };
     return { found: true, value: descriptor.value };
   } catch {
     return { found: false };
@@ -348,20 +348,20 @@ function snapshotPluralMessage(value: unknown): LyraPluralMessage | undefined {
         return undefined;
       if (!Object.prototype.hasOwnProperty.call(value, key)) return undefined;
       const entry = ownDataValue(value, key);
-      if (!entry.found || typeof entry.value !== "string") return undefined;
+      if (!entry.found || typeof entry.value !== 'string') return undefined;
       snapshot[key] = entry.value;
     }
   } catch {
     return undefined;
   }
-  if (typeof snapshot["other"] !== "string") return undefined;
+  if (typeof snapshot['other'] !== 'string') return undefined;
   const frozen = Object.freeze(snapshot) as LyraPluralMessage;
   trustedMessageRecords.add(frozen);
   return frozen;
 }
 
 function snapshotMessage(value: unknown): LyraMessage | undefined {
-  return typeof value === "string" ? value : snapshotPluralMessage(value);
+  return typeof value === 'string' ? value : snapshotPluralMessage(value);
 }
 
 function snapshotCatalog(strings: unknown): LocaleCatalog {
@@ -412,11 +412,11 @@ function snapshotLocaleMeta(
   if (meta === undefined) return undefined;
   if (!isPlainRecord(meta)) return Object.freeze({});
   const snapshot: LyraLocaleMeta = {};
-  const dir = ownDataValue(meta, "dir");
-  if (dir.found && (dir.value === "ltr" || dir.value === "rtl"))
+  const dir = ownDataValue(meta, 'dir');
+  if (dir.found && (dir.value === 'ltr' || dir.value === 'rtl'))
     snapshot.dir = dir.value;
-  const name = ownDataValue(meta, "name");
-  if (name.found && typeof name.value === "string") snapshot.name = name.value;
+  const name = ownDataValue(meta, 'name');
+  if (name.found && typeof name.value === 'string') snapshot.name = name.value;
   return Object.freeze(snapshot);
 }
 
@@ -459,7 +459,7 @@ function deliverLocaleListeners(
     throw new AggregateError(
       errors,
       `${operation} committed, but ${errors.length} locale subscriber${
-        errors.length === 1 ? "" : "s"
+        errors.length === 1 ? '' : 's'
       } failed.`
     );
   }
@@ -626,7 +626,7 @@ export function registerLyraExactLocale(
  */
 export function getLyraLocaleDirection(locale: string): LyraLocaleDirection {
   const identity = localeIdentity(locale);
-  if (!identity.publicTag) return "ltr";
+  if (!identity.publicTag) return 'ltr';
   for (const candidate of localeCandidates(identity.publicTag)) {
     const declared = localeMeta.get(candidate)?.dir;
     if (declared) return declared;
@@ -635,9 +635,9 @@ export function getLyraLocaleDirection(locale: string): LyraLocaleDirection {
     const resolved = new Intl.Locale(identity.publicTag) as LocaleWithTextInfo;
     const direction =
       resolved.textInfo?.direction ?? resolved.getTextInfo?.().direction;
-    return direction === "rtl" ? "rtl" : "ltr";
+    return direction === 'rtl' ? 'rtl' : 'ltr';
   } catch {
-    return "ltr";
+    return 'ltr';
   }
 }
 
@@ -731,8 +731,8 @@ function composedParentElement(element: Element): Element | null {
   const candidate = (root as { nodeType?: number; host?: unknown }).host;
   return root.nodeType === 11 &&
     candidate !== null &&
-    typeof candidate === "object" &&
-    typeof (candidate as Element).getAttribute === "function"
+    typeof candidate === 'object' &&
+    typeof (candidate as Element).getAttribute === 'function'
     ? (candidate as Element)
     : null;
 }
@@ -741,8 +741,8 @@ function flattenedParentElement(element: Element): Element | null {
   const slot = (element as { assignedSlot?: unknown }).assignedSlot;
   if (
     slot !== null &&
-    typeof slot === "object" &&
-    typeof (slot as Element).getAttribute === "function"
+    typeof slot === 'object' &&
+    typeof (slot as Element).getAttribute === 'function'
   )
     return slot as Element;
   return composedParentElement(element);
@@ -766,21 +766,21 @@ function flattenedParentElement(element: Element): Element | null {
  * same attribute one step earlier.
  */
 function inheritedLocale(host: Element): string {
-  const explicit = host.getAttribute("locale") || host.getAttribute("lang");
+  const explicit = host.getAttribute('locale') || host.getAttribute('lang');
   if (explicit) return canonicalizeLyraLocale(explicit);
   const documentElement = host.ownerDocument?.documentElement;
   let parent = composedParentElement(host);
   while (parent) {
     const locale =
       parent === documentElement
-        ? parent.getAttribute("locale")
-        : parent.getAttribute("locale") || parent.getAttribute("lang");
+        ? parent.getAttribute('locale')
+        : parent.getAttribute('locale') || parent.getAttribute('lang');
     if (locale) return canonicalizeLyraLocale(locale);
     parent = composedParentElement(parent);
   }
   if (activeLocale) return activeLocale;
-  const documentLocale = documentElement?.getAttribute("lang");
-  return documentLocale ? canonicalizeLyraLocale(documentLocale) : "en";
+  const documentLocale = documentElement?.getAttribute('lang');
+  return documentLocale ? canonicalizeLyraLocale(documentLocale) : 'en';
 }
 
 /**
@@ -793,7 +793,7 @@ function inheritedLocale(host: Element): string {
  */
 const cacheableLocaleHosts = new WeakSet<Element>();
 const resolvedLocaleCache = new WeakMap<Element, string>();
-const resolvedDirectionCache = new WeakMap<Element, "ltr" | "rtl">();
+const resolvedDirectionCache = new WeakMap<Element, 'ltr' | 'rtl'>();
 
 /**
  * Opts a host into memoized locale/direction resolution. The host must call
@@ -824,16 +824,16 @@ export function resolveLyraLocale(host: Element): string {
   return locale;
 }
 
-function inheritedDirection(host: Element): "ltr" | "rtl" {
-  const explicit = host.getAttribute("dir")?.toLowerCase();
-  if (explicit === "rtl" || explicit === "ltr") return explicit;
+function inheritedDirection(host: Element): 'ltr' | 'rtl' {
+  const explicit = host.getAttribute('dir')?.toLowerCase();
+  if (explicit === 'rtl' || explicit === 'ltr') return explicit;
   const view = ownerView(host);
   if (view) {
     try {
       const getComputedStyle = view.getComputedStyle;
-      if (typeof getComputedStyle === "function") {
+      if (typeof getComputedStyle === 'function') {
         const computed = getComputedStyle.call(view, host).direction;
-        if (computed === "rtl" || computed === "ltr") return computed;
+        if (computed === 'rtl' || computed === 'ltr') return computed;
       }
     } catch {
       // An incomplete/hostile owner realm still gets the explicit-attribute fallback below.
@@ -841,15 +841,15 @@ function inheritedDirection(host: Element): "ltr" | "rtl" {
   }
   let parent = flattenedParentElement(host);
   while (parent) {
-    const inherited = parent.getAttribute("dir")?.toLowerCase();
-    if (inherited === "rtl" || inherited === "ltr") return inherited;
+    const inherited = parent.getAttribute('dir')?.toLowerCase();
+    if (inherited === 'rtl' || inherited === 'ltr') return inherited;
     parent = flattenedParentElement(parent);
   }
-  return "ltr";
+  return 'ltr';
 }
 
 /** Resolve the direction inherited by a component host. */
-export function resolveLyraDirection(host: Element): "ltr" | "rtl" {
+export function resolveLyraDirection(host: Element): 'ltr' | 'rtl' {
   if (!cacheableLocaleHosts.has(host)) return inheritedDirection(host);
   let direction = resolvedDirectionCache.get(host);
   if (direction === undefined) {
@@ -874,7 +874,7 @@ export function peekLyraLocale(host: Element): string | undefined {
 }
 
 /** @see peekLyraLocale */
-export function peekLyraDirection(host: Element): "ltr" | "rtl" | undefined {
+export function peekLyraDirection(host: Element): 'ltr' | 'rtl' | undefined {
   return resolvedDirectionCache.get(host);
 }
 
@@ -893,12 +893,12 @@ const PLURAL_CATEGORY_FALLBACKS: Record<
   LyraPluralCategory,
   readonly LyraPluralCategory[]
 > = {
-  zero: ["zero", "other"],
-  one: ["one", "other"],
-  two: ["two", "few", "many", "other"],
-  few: ["few", "many", "other"],
-  many: ["many", "few", "other"],
-  other: ["other"],
+  zero: ['zero', 'other'],
+  one: ['one', 'other'],
+  two: ['two', 'few', 'many', 'other'],
+  few: ['few', 'many', 'other'],
+  many: ['many', 'few', 'other'],
+  other: ['other'],
 };
 
 /**
@@ -913,11 +913,11 @@ function pluralSelector(
 ): number | undefined {
   let raw: unknown;
   try {
-    raw = values["pluralCount"] ?? values["count"];
+    raw = values['pluralCount'] ?? values['count'];
   } catch {
     return undefined;
   }
-  return typeof raw === "number" && Number.isFinite(raw) ? raw : undefined;
+  return typeof raw === 'number' && Number.isFinite(raw) ? raw : undefined;
 }
 
 /**
@@ -998,7 +998,7 @@ export function resolveLyraString(
   defaults?: Readonly<LyraLocaleStrings>
 ): string {
   let message = safeMessageAt(overrides, key);
-  if (message === undefined && typeof fallback === "string") message = fallback;
+  if (message === undefined && typeof fallback === 'string') message = fallback;
   let locale: string | undefined;
   if (message === undefined) {
     locale = resolveLyraLocale(host);
@@ -1012,7 +1012,7 @@ export function resolveLyraString(
   }
   message ??= safeMessageAt(defaults, key) ?? key;
   let text: string;
-  if (typeof message !== "string") {
+  if (typeof message !== 'string') {
     locale ??= resolveLyraLocale(host);
     text = selectPluralMessage(
       message,
@@ -1026,7 +1026,7 @@ export function resolveLyraString(
   return text.replace(/\{(\w+)\}/g, (match, name: string) => {
     try {
       const value = values[name];
-      return typeof value === "string" || typeof value === "number"
+      return typeof value === 'string' || typeof value === 'number'
         ? String(value)
         : match;
     } catch {
@@ -1052,7 +1052,7 @@ export function resolveLocalizedParts(
     const code = template.charCodeAt(index);
     if (code >= 0xe000 && code <= 0xf8ff) privateUse.add(code);
   }
-  let marker = "";
+  let marker = '';
   for (let code = 0xe000; code <= 0xf8ff; code += 1) {
     if (!privateUse.has(code)) {
       marker = String.fromCharCode(code);

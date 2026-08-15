@@ -62,7 +62,7 @@ export const Highlights: Story = {
     docs: {
       description: {
         story:
-          'Resolved `node-path` entries tint their rows and add focusable `highlight-action` buttons. Painting retains at most 100 entries after inspecting 1,000 candidates; `activeHighlightId` is inspected first and remains painted inside that cap. Retune tones through `--lr-xml-viewer-highlight-<tone>-background`, and the active outline through `--lr-xml-viewer-highlight-active-outline`.',
+          'Resolved `node-path` entries tint their rows and add focusable `highlight-action` buttons. Painting retains at most 100 entries from a 1,000-entry candidate window; `activeHighlightId` is retained from anywhere in the bounded host snapshot and painted first. Retune tones through `--lr-xml-viewer-highlight-<tone>-background`, and the active outline through `--lr-xml-viewer-highlight-active-outline`.',
       },
     },
   },

@@ -1,25 +1,25 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
-import { property, state } from "lit/decorators.js";
-import { hostAriaLabel } from "../../../internal/a11y.js";
-import { attachInternalsSafely } from "../../../internal/form-associated.js";
-import { renderInertPresentation } from "../../../internal/inert-presentation.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { sizes } from "../../../internal/sizes.styles.js";
-import { styles } from "./accordion-item.styles.js";
-import { DisclosureMotionController } from "./disclosure-motion.js";
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
+import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import { renderInertPresentation } from '../../../internal/inert-presentation.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import { styles } from './accordion-item.styles.js';
+import { DisclosureMotionController } from './disclosure-motion.js';
 import {
   accordionItemOwnerContext,
   notifyAccordionItemStateChanged,
   notifyAccordionItemTransitionSettled,
   registerAccordionItemStateController,
   requestAccordionItemTransition,
-} from "./accordion-owner.js";
+} from './accordion-owner.js';
 import type {
   AccordionItemTransitionSource,
   LyraAccordionAppearance,
   LyraAccordionHeadingLevel,
   LyraAccordionIconPlacement,
-} from "./accordion-types.js";
+} from './accordion-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
@@ -29,7 +29,7 @@ export type {
   LyraAccordionAppearance,
   LyraAccordionHeadingLevel,
   LyraAccordionIconPlacement,
-} from "./accordion-types.js";
+} from './accordion-types.js';
 
 /**
  * `<lr-accordion-item>` — an accessible expandable section for `<lr-accordion>`.
@@ -106,12 +106,12 @@ export class LyraAccordionItem extends LyraElement {
   constructor() {
     super();
     registerAccordionItemStateController(this, (expanded, announce) =>
-      this.transitionTo(expanded, "programmatic", true, announce)
+      this.transitionTo(expanded, 'programmatic', true, announce)
     );
   }
 
   /** Text shown in the trigger. Rich content belongs in the `label` slot. */
-  @property() label = "";
+  @property() label = '';
 
   /**
    * Whether the panel is expanded. Assigning it uses the owning accordion's cancelable lifecycle.
@@ -128,23 +128,23 @@ export class LyraAccordionItem extends LyraElement {
       this.applyExpandedState(normalized);
       return;
     }
-    void this.transitionTo(normalized, "programmatic");
+    void this.transitionTo(normalized, 'programmatic');
   }
 
   /** Disables the item so it cannot be toggled. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** Heading level from 1–6, or `none`; every other value uses h3. */
-  @property({ attribute: "heading-level", reflect: true })
-  headingLevel: LyraAccordionHeadingLevel = "3";
+  @property({ attribute: 'heading-level', reflect: true })
+  headingLevel: LyraAccordionHeadingLevel = '3';
 
   /** Whether the icon appears before or after the label. */
-  @property({ attribute: "icon-placement", reflect: true })
-  iconPlacement: LyraAccordionIconPlacement = "end";
+  @property({ attribute: 'icon-placement', reflect: true })
+  iconPlacement: LyraAccordionIconPlacement = 'end';
 
   /** Visual treatment inherited non-destructively from the owning accordion. */
   @property({ reflect: true })
-  appearance: LyraAccordionAppearance = "outlined";
+  appearance: LyraAccordionAppearance = 'outlined';
 
   /** @internal Roving-tabindex state controlled by the owning accordion. */
   @property({ attribute: false }) isTabbable = true;
@@ -158,24 +158,24 @@ export class LyraAccordionItem extends LyraElement {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasLabel = Array.from(this.children).some(
-        (child) => child.getAttribute("slot") === "label"
+        (child) => child.getAttribute('slot') === 'label'
       );
     }
   }
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    if (changed.has("disabled")) notifyAccordionItemStateChanged(this);
+    if (changed.has('disabled')) notifyAccordionItemStateChanged(this);
   }
 
   private applyExpandedState(next: boolean): void {
     const old = this._expanded;
     this._expanded = next;
-    this.requestUpdate("expanded", old);
+    this.requestUpdate('expanded', old);
   }
 
   private syncExpandedAttribute(): void {
-    this.toggleAttribute("expanded", this._expanded);
+    this.toggleAttribute('expanded', this._expanded);
   }
 
   private async transitionTo(
@@ -204,17 +204,17 @@ export class LyraAccordionItem extends LyraElement {
 
   /** Expands the accordion item with animation. Disabled or expanded items are unchanged. */
   expand(): Promise<void> {
-    return this.transitionTo(true, "programmatic");
+    return this.transitionTo(true, 'programmatic');
   }
 
   /** Collapses the accordion item with animation. Disabled or collapsed items are unchanged. */
   collapse(): Promise<void> {
-    return this.transitionTo(false, "programmatic");
+    return this.transitionTo(false, 'programmatic');
   }
 
   /** Toggles the accordion item's expanded state. */
   toggle(): Promise<void> {
-    return this.transitionTo(!this.expanded, "programmatic");
+    return this.transitionTo(!this.expanded, 'programmatic');
   }
 
   /** Focus the internal trigger. */
@@ -235,7 +235,7 @@ export class LyraAccordionItem extends LyraElement {
 
   private onTrigger = (): void => {
     if (this.disabled) return;
-    void this.transitionTo(!this.expanded, "user");
+    void this.transitionTo(!this.expanded, 'user');
   };
 
   private onLabel = (event: Event): void => {
@@ -246,15 +246,15 @@ export class LyraAccordionItem extends LyraElement {
 
   private heading(button: TemplateResult): TemplateResult {
     switch (this.effectiveHeadingLevel) {
-      case "1":
+      case '1':
         return html`<h1 part="heading">${button}</h1>`;
-      case "2":
+      case '2':
         return html`<h2 part="heading">${button}</h2>`;
-      case "4":
+      case '4':
         return html`<h4 part="heading">${button}</h4>`;
-      case "5":
+      case '5':
         return html`<h5 part="heading">${button}</h5>`;
-      case "6":
+      case '6':
         return html`<h6 part="heading">${button}</h6>`;
       default:
         return html`<h3 part="heading">${button}</h3>`;
@@ -274,18 +274,18 @@ export class LyraAccordionItem extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const fallbackLabel = this.label || this.localize("details");
+    const fallbackLabel = this.label || this.localize('details');
     const hostLabel = hostAriaLabel(this);
     const button = html`<button
       id="trigger"
       part="button"
       type="button"
       aria-label=${hostLabel ?? nothing}
-      aria-labelledby=${hostLabel === null && this.hasLabel ? "label" : nothing}
-      aria-expanded=${this.expanded ? "true" : "false"}
+      aria-labelledby=${hostLabel === null && this.hasLabel ? 'label' : nothing}
+      aria-expanded=${this.expanded ? 'true' : 'false'}
       aria-controls="panel"
-      aria-disabled=${this.disabled ? "true" : "false"}
-      tabindex=${this.disabled || !this.isTabbable ? "-1" : "0"}
+      aria-disabled=${this.disabled ? 'true' : 'false'}
+      tabindex=${this.disabled || !this.isTabbable ? '-1' : '0'}
       ?disabled=${this.disabled}
       @click=${this.onTrigger}
     >
@@ -293,11 +293,11 @@ export class LyraAccordionItem extends LyraElement {
         <span id="label" aria-hidden="true" inert ?hidden=${!this.hasLabel}>
           <slot name="label" @slotchange=${this.onLabel}></slot>
         </span>
-        ${this.hasLabel ? "" : fallbackLabel}
+        ${this.hasLabel ? '' : fallbackLabel}
       </span>
       ${renderInertPresentation(
         html`<slot name="icon"><span class="default-icon"></span></slot>`,
-        { part: "icon" }
+        { part: 'icon' }
       )}
     </button>`;
 
@@ -306,13 +306,13 @@ export class LyraAccordionItem extends LyraElement {
       data-appearance=${this.effectiveAppearance}
       data-icon-placement=${this.effectiveIconPlacement}
     >
-      ${this.effectiveHeadingLevel === "none" ? button : this.heading(button)}
+      ${this.effectiveHeadingLevel === 'none' ? button : this.heading(button)}
       <div
         id="panel"
         part="panel"
         role="region"
         aria-labelledby="trigger"
-        aria-hidden=${this.expanded ? "false" : "true"}
+        aria-hidden=${this.expanded ? 'false' : 'true'}
         ?inert=${!this.expanded}
       >
         <div class="panel-clip"><slot part="content"></slot></div>
@@ -322,6 +322,6 @@ export class LyraAccordionItem extends LyraElement {
 }
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-accordion-item": LyraAccordionItem;
+    'lr-accordion-item': LyraAccordionItem;
   }
 }

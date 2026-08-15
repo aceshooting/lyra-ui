@@ -1,25 +1,25 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
-import { html, nothing, type TemplateResult } from "lit";
-import { property, state } from "lit/decorators.js";
-import { styleMap } from "lit/directives/style-map.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { html, nothing, type TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   finiteCount,
   finiteNumber,
   finiteRange,
-} from "../../../internal/numbers.js";
+} from '../../../internal/numbers.js';
 import {
   getListFormat,
   getNumberFormat,
-} from "../../../internal/intl-cache.js";
-import "../../layout/virtual-list/virtual-list.class.js";
-import "../../overlays/empty/empty.class.js";
-import { styles } from "./chunk-inspector.styles.js";
+} from '../../../internal/intl-cache.js';
+import '../../layout/virtual-list/virtual-list.class.js';
+import '../../overlays/empty/empty.class.js';
+import { styles } from './chunk-inspector.styles.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
-} from "../retrieval-semantic-owner.js";
-import type { LyraScoreThresholds } from "../graph/graph.class.js";
+} from '../retrieval-semantic-owner.js';
+import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_chunkScore, LYRA_DEFAULT_scoreTierHigh, LYRA_DEFAULT_scoreTierLow, LYRA_DEFAULT_scoreTierMedium, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
@@ -30,25 +30,25 @@ import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYR
  *  viewer stack. Structurally identical to the real thing, so `chunk.anchor` interops with a
  *  `document-viewer.anchor` assignment with no mapping needed. */
 type LyraChunkAnchor =
-  | { kind: "page"; page: number }
+  | { kind: 'page'; page: number }
   | {
-      kind: "text-quote";
+      kind: 'text-quote';
       quote: string;
       prefix?: string;
       suffix?: string;
       page?: number;
     }
-  | { kind: "fragment"; id: string }
-  | { kind: "line-range"; start: number; end?: number }
-  | { kind: "cell-range"; sheet?: string; range: string }
-  | { kind: "cfi"; cfi: string }
-  | { kind: "time-range"; start: number; end?: number }
+  | { kind: 'fragment'; id: string }
+  | { kind: 'line-range'; start: number; end?: number }
+  | { kind: 'cell-range'; sheet?: string; range: string }
+  | { kind: 'cfi'; cfi: string }
+  | { kind: 'time-range'; start: number; end?: number }
   | {
-      kind: "region";
+      kind: 'region';
       page?: number;
       rect: { x: number; y: number; width: number; height: number };
     }
-  | { kind: "node-path"; path: (string | number)[] };
+  | { kind: 'node-path'; path: (string | number)[] };
 
 export interface LyraChunk {
   id: string;
@@ -65,18 +65,18 @@ export interface LyraChunk {
 }
 
 export interface LyraChunkInspectorEventMap {
-  "lr-chunk-open": CustomEvent<LyraEventDetailSnapshot<{
+  'lr-chunk-open': CustomEvent<LyraEventDetailSnapshot<{
     id: string;
     sourceId: string;
     anchor?: LyraChunkAnchor;
   }>>;
-  "lr-expand": CustomEvent<{ id: string; expanded: boolean }>;
+  'lr-expand': CustomEvent<{ id: string; expanded: boolean }>;
 }
 
-type Tier = "high" | "medium" | "low";
+type Tier = 'high' | 'medium' | 'low';
 
 /** How `<lr-chunk-inspector>` orders the chunks it was given. */
-export type ChunkInspectorSort = "score" | "none";
+export type ChunkInspectorSort = 'score' | 'none';
 
 /**
  * `<lr-chunk-inspector>` — a ranked retrieved-chunks list: relevance score bars with tier tones,
@@ -133,7 +133,7 @@ export type ChunkInspectorSort = "score" | "none";
  * @since 4.0.0
  */
 export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["chunks"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['chunks']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -153,6 +153,9 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-chunk-open',
+  ]);
 
   /** Retrieved chunks to inspect. The input order is preserved when `sort="none"`. */
   @property({ attribute: false }) chunks: readonly LyraChunk[] = [];
@@ -162,16 +165,16 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     medium: 0.5,
   };
   /** Ordering applied before rendering the supplied chunks. */
-  @property() sort: ChunkInspectorSort = "score";
+  @property() sort: ChunkInspectorSort = 'score';
   /** Marks the chunk currently open in the viewer. */
-  @property({ attribute: "active-id" }) activeId = "";
+  @property({ attribute: 'active-id' }) activeId = '';
   /** Row count at which rendering switches to the internal virtual list. */
-  @property({ type: Number, attribute: "virtualize-at" }) virtualizeAt = 50;
+  @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 50;
   /** Compact rows render title + score bar + open button only. */
   @property({ type: Boolean, reflect: true }) compact = false;
   /** Fallback name for the populated chunk group. A non-empty host `aria-label` makes the host the
    *  sole overall owner; an explicitly empty host label stays empty on the group. */
-  @property() label = "";
+  @property() label = '';
 
   @state() private expandedIds = new Set<string>();
 
@@ -198,7 +201,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     if (cached && cached.source === this.chunks && cached.sort === this.sort)
       return cached.result;
     const result =
-      this.sort === "score"
+      this.sort === 'score'
         ? [...this.chunks].sort(
             (a, b) => this.safeScore(b.score) - this.safeScore(a.score)
           )
@@ -218,26 +221,26 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
 
   private tier(score: number): Tier {
     const safeScore = this.safeScore(score);
-    if (safeScore >= this.thresholds.high) return "high";
-    if (safeScore >= this.thresholds.medium) return "medium";
-    return "low";
+    if (safeScore >= this.thresholds.high) return 'high';
+    if (safeScore >= this.thresholds.medium) return 'medium';
+    return 'low';
   }
 
-  private tierTone(tier: Tier): "success" | "warning" | "danger" {
-    return tier === "high"
-      ? "success"
-      : tier === "medium"
-      ? "warning"
-      : "danger";
+  private tierTone(tier: Tier): 'success' | 'warning' | 'danger' {
+    return tier === 'high'
+      ? 'success'
+      : tier === 'medium'
+      ? 'warning'
+      : 'danger';
   }
 
   private tierLabel(tier: Tier): string {
     return this.localize(
-      tier === "high"
-        ? "scoreTierHigh"
-        : tier === "medium"
-        ? "scoreTierMedium"
-        : "scoreTierLow"
+      tier === 'high'
+        ? 'scoreTierHigh'
+        : tier === 'medium'
+        ? 'scoreTierMedium'
+        : 'scoreTierLow'
     );
   }
 
@@ -247,7 +250,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     if (expanded) next.add(id);
     else next.delete(id);
     this.expandedIds = next;
-    this.emit("lr-expand", { id, expanded });
+    this.emit('lr-expand', { id, expanded });
   }
 
   // Row state is mirrored into a second part-name token (`chunk-current`, `score-fill-<tone>`,
@@ -267,17 +270,17 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     const formattedPercent = getNumberFormat(this.effectiveLocale).format(
       percent
     );
-    const titleText = chunk.title || this.localize("untitledSource");
+    const titleText = chunk.title || this.localize('untitledSource');
     const formattedPage =
-      typeof chunk.page === "number" && Number.isFinite(chunk.page)
+      typeof chunk.page === 'number' && Number.isFinite(chunk.page)
         ? getNumberFormat(this.effectiveLocale).format(
             finiteNumber(chunk.page, 0)
           )
         : chunk.page;
     const titleWithPage =
-      formattedPage == null || formattedPage === ""
+      formattedPage == null || formattedPage === ''
         ? titleText
-        : this.localize("sourcePageSuffix", undefined, {
+        : this.localize('sourcePageSuffix', undefined, {
             base: titleText,
             page: formattedPage,
           });
@@ -285,13 +288,13 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     const current = this.activeId === chunk.id;
     return html`
       <div
-        part=${current ? "chunk chunk-current" : "chunk"}
-        role=${virtualized ? nothing : "listitem"}
-        aria-current=${current ? "true" : "false"}
+        part=${current ? 'chunk chunk-current' : 'chunk'}
+        role=${virtualized ? nothing : 'listitem'}
+        aria-current=${current ? 'true' : 'false'}
       >
-        <div part=${current ? "score score-current" : "score"}>
+        <div part=${current ? 'score score-current' : 'score'}>
           <span
-            >${this.localize("chunkScore", undefined, {
+            >${this.localize('chunkScore', undefined, {
               percent: formattedPercent,
             })}</span
           >
@@ -307,11 +310,11 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
           part="open-button"
           type="button"
           aria-label=${getListFormat(this.effectiveLocale, {
-            style: "short",
-            type: "conjunction",
+            style: 'short',
+            type: 'conjunction',
           }).format([titleWithPage, this.tierLabel(tier)])}
           @click=${() =>
-            this.emit("lr-chunk-open", {
+            this.emit('lr-chunk-open', {
               id: chunk.id,
               sourceId: chunk.sourceId,
               ...(chunk.anchor ? { anchor: chunk.anchor } : {}),
@@ -321,7 +324,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
         </button>
         ${!this.compact
           ? html`<p
-                part=${expanded ? "text" : "text text-clamped"}
+                part=${expanded ? 'text' : 'text text-clamped'}
                 ?data-clamped=${!expanded}
               >
                 ${chunk.text}
@@ -329,10 +332,10 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
               <button
                 part="toggle"
                 type="button"
-                aria-expanded=${expanded ? "true" : "false"}
+                aria-expanded=${expanded ? 'true' : 'false'}
                 @click=${() => this.toggleExpand(chunk.id)}
               >
-                ${this.localize(expanded ? "showLess" : "showMore")}
+                ${this.localize(expanded ? 'showLess' : 'showMore')}
               </button>`
           : nothing}
       </div>
@@ -361,9 +364,9 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     const sorted = this.sortedChunks();
     const label = retrievalSemanticLabel(
       this,
-      this.label || this.localize("chunkInspectorLabel")
+      this.label || this.localize('chunkInspectorLabel')
     );
-    const groupRole = retrievalSemanticRole(this, "group");
+    const groupRole = retrievalSemanticRole(this, 'group');
     if (sorted.length === 0) {
       // `heading` is passed as slotted light-DOM content (rather than the `heading` attribute
       // most other components use) so `[part="empty"]`'s `.textContent` -- a plain DOM accessor,
@@ -372,7 +375,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
       return html`<div part="base">
         <lr-empty part="empty"
           ><span slot="heading"
-            >${this.localize("chunkInspectorEmpty")}</span
+            >${this.localize('chunkInspectorEmpty')}</span
           ></lr-empty
         >
       </div>`;
@@ -389,7 +392,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
               .items=${sorted}
               .renderItem=${this.virtualRenderItem()}
               .keyFunction=${this.chunkKey}
-              .activeId=${this.activeId || ""}
+              .activeId=${this.activeId || ''}
             ></lr-virtual-list>`
           : html`<div role="list">
               ${sorted.map((c) => this.renderChunk(c))}
@@ -401,6 +404,6 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-chunk-inspector": LyraChunkInspector;
+    'lr-chunk-inspector': LyraChunkInspector;
   }
 }

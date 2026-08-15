@@ -10,7 +10,7 @@ const meta: Meta = {
   parameters: {
     docs: {
       description: {
-        component: 'Paints highlight rectangles over positioned content; item IDs are trimmed, nonempty, and first-wins, activation emits `{ highlightId }`, and noninteractive mode is an aria-hidden pure-paint overlay.',
+        component: 'Paints highlight rectangles over positioned content; item IDs are trimmed, nonempty, and first-wins, `activeHighlightId` controls the active item, activation emits `{ highlightId }`, and noninteractive mode is an aria-hidden pure-paint overlay.',
       },
     },
   },
@@ -27,7 +27,7 @@ export const OverImage: Story = {
   render: () => html`
     <figure style="position:relative; width:320px; margin:0;">
       <div style="width:320px; height:200px; background:var(--lr-color-surface-raised);"></div>
-      <lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>
+      <lr-highlight-layer .items=${ITEMS} active-highlight-id="zone-b"></lr-highlight-layer>
     </figure>
   `,
 };

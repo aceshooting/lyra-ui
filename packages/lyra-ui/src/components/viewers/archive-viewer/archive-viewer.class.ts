@@ -85,7 +85,8 @@ function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range
  * @customElement lr-archive-viewer
  * @event lr-render-error - Fired when fetching or parsing the archive fails.
  * @event lr-search-change - Fired when archive-path search state or its active match changes.
- *   `detail.matchCountExact` is true because every accepted archive entry is scanned.
+ *   Search accepts at most 4,096 query code units and scans at most 4,000,000 path code units;
+ *   `detail.matchCountExact=false` identifies a ceiling-truncated lower bound.
  * @event lr-text-select - Fired after a selection within one entry path. `detail: { text, anchor,
  *   rects }`; `anchor` is an entry-scoped text quote, or `null` when it cannot be anchored.
  * @event lr-anchor-result - Fired after an `anchor` assignment or `scrollToAnchor()` call is
@@ -152,8 +153,8 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   @property() name = '';
 
   /** Case-insensitive search over loaded entry paths, with next/previous navigation that scrolls
-   * the active virtualized row into view. Every accepted entry is scanned, so the resolved count
-   * and emitted `matchCount` are exact. */
+   * the active virtualized row into view. Queries are capped at 4,096 code units and one pass scans
+   * at most 4,000,000 path code units; `matchCountExact=false` identifies a truncated lower bound. */
   override async search(query: string): Promise<number> {
     this.archiveSearchQuery = query;
     this.recomputeArchiveSearch();

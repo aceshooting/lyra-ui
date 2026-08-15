@@ -1,11 +1,11 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
-import { property } from "lit/decorators.js";
-import { activeElementIn } from "../../../internal/active-element.js";
-import { hostAriaLabel } from "../../../internal/a11y.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { safeLinkHref } from "../../../internal/safe-url.js";
-import { SlotPresenceController } from "../../../internal/slot-presence-controller.js";
-import { styles } from "./breadcrumb-item.styles.js";
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
+import { activeElementIn } from '../../../internal/active-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { safeLinkHref } from '../../../internal/safe-url.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { styles } from './breadcrumb-item.styles.js';
 
 export type BreadcrumbItemTarget = '_blank' | '_parent' | '_self' | '_top';
 
@@ -83,7 +83,7 @@ export class LyraBreadcrumbItem extends LyraElement {
   private semanticFocusOrigin?: Element;
   override connectedCallback(): void {
     super.connectedCallback();
-    this.setAttribute("role", "listitem");
+    this.setAttribute('role', 'listitem');
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -158,6 +158,6 @@ export class LyraBreadcrumbItem extends LyraElement {
 }
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-breadcrumb-item": LyraBreadcrumbItem;
+    'lr-breadcrumb-item': LyraBreadcrumbItem;
   }
 }

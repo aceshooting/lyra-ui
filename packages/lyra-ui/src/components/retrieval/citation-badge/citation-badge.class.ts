@@ -1,13 +1,13 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
-import { property, state, query } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { place } from "../../../internal/positioner.js";
-import { nextId } from "../../../internal/a11y.js";
-import { finiteInteger } from "../../../internal/numbers.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import { styles } from "./citation-badge.styles.js";
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { property, state, query } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { place } from '../../../internal/positioner.js';
+import { nextId } from '../../../internal/a11y.js';
+import { finiteInteger } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { styles } from './citation-badge.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from "../../../internal/localization.js";
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import {
   LYRA_DEFAULT_citation,
   LYRA_DEFAULT_citationHighConfidence,
@@ -25,16 +25,16 @@ import {
   LYRA_DEFAULT_progress,
   LYRA_DEFAULT_search,
   LYRA_DEFAULT_select,
-} from "../../../internal/default-strings.generated.js";
+} from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type CitationBadgeStatus =
-  | "default"
-  | "high"
-  | "medium"
-  | "low"
-  | "verified"
-  | "unverified";
+  | 'default'
+  | 'high'
+  | 'medium'
+  | 'low'
+  | 'verified'
+  | 'unverified';
 
 export interface CitationActivateDetail {
   sourceId: string;
@@ -48,8 +48,8 @@ export interface CitationOpenDetail {
 }
 
 export interface LyraCitationBadgeEventMap {
-  "lr-citation-activate": CustomEvent<CitationActivateDetail>;
-  "lr-citation-open": CustomEvent<CitationOpenDetail>;
+  'lr-citation-activate': CustomEvent<CitationActivateDetail>;
+  'lr-citation-open': CustomEvent<CitationOpenDetail>;
 }
 
 /** Localization key for the visible (not just color-coded) status word,
@@ -58,11 +58,11 @@ export interface LyraCitationBadgeEventMap {
  *  "Citation 3, Default". */
 const STATUS_MESSAGE_KEY: Record<CitationBadgeStatus, string | null> = {
   default: null,
-  high: "citationHighConfidence",
-  medium: "citationMediumConfidence",
-  low: "citationLowConfidence",
-  verified: "citationVerified",
-  unverified: "citationUnverified",
+  high: 'citationHighConfidence',
+  medium: 'citationMediumConfidence',
+  low: 'citationLowConfidence',
+  verified: 'citationVerified',
+  unverified: 'citationUnverified',
 };
 
 // A short grace period before the popover actually hides on pointer-leave/
@@ -81,8 +81,8 @@ const HIDE_DELAY_MS = 200;
 // slot, or non-whitespace text.
 function isRealPreviewNode(n: Node): boolean {
   return n.nodeType === Node.ELEMENT_NODE
-    ? !(n as Element).hasAttribute("slot")
-    : (n.textContent ?? "").trim().length > 0;
+    ? !(n as Element).hasAttribute('slot')
+    : (n.textContent ?? '').trim().length > 0;
 }
 
 /**
@@ -190,24 +190,24 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   set index(value: number) {
     const old = this._index;
     this._index = finiteInteger(value, 1, 1);
-    this.requestUpdate("index", old);
+    this.requestUpdate('index', old);
   }
 
   /** Confidence/verification state — drives the badge's color and (unless
    *  `label` is set) part of its accessible name. */
-  @property({ reflect: true }) status: CitationBadgeStatus = "default";
+  @property({ reflect: true }) status: CitationBadgeStatus = 'default';
 
   /** Id of a corresponding `<lr-source-card>` elsewhere on the page —
    *  echoed back verbatim in both events, never read or validated here. */
-  @property({ attribute: "source-id" }) sourceId = "";
+  @property({ attribute: 'source-id' }) sourceId = '';
 
   /** Optional direct link target for the citation's source. Carried into
    *  `lr-citation-open`'s detail as-is; this component never navigates. */
-  @property() href = "";
+  @property() href = '';
 
   /** Adds source context to the accessible name while retaining the visible citation index
    *  (`"Citation {index}, {label}"`). */
-  @property() label = "";
+  @property() label = '';
 
   // A `[part]` always contains a literal `<slot>` child regardless of
   // assigned content, so `:empty` never matches — real emptiness is tracked
@@ -219,7 +219,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   @query('[part="base"]') private buttonEl?: HTMLButtonElement;
   @query('[part="popover"]') private popoverEl?: HTMLElement;
 
-  private readonly popoverId = nextId("citation-badge-popover");
+  private readonly popoverId = nextId('citation-badge-popover');
   private cleanupPositioner?: () => void;
   private hideTimer?: ReturnType<typeof setTimeout>;
   // Hover and focus are tracked as independent "keep it open" reasons —
@@ -238,12 +238,12 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has("popoverOpen")) {
+    if (changed.has('popoverOpen')) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;
       if (this.popoverOpen && this.buttonEl && this.popoverEl) {
         this.cleanupPositioner = place(this.buttonEl, this.popoverEl, {
-          placement: "top-start",
+          placement: 'top-start',
         });
       }
     }
@@ -270,16 +270,16 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   private get accessibleLabel(): string {
     const index = getNumberFormat(this.effectiveLocale).format(this.index);
     if (this.label) {
-      return this.localize("citationWithCustomLabel", undefined, {
+      return this.localize('citationWithCustomLabel', undefined, {
         index,
         label: this.label,
       });
     }
     const key = STATUS_MESSAGE_KEY[this.status];
-    const statusText = key ? this.localize(key) : "";
-    const citationLabel = this.localize("citation", undefined, { index });
+    const statusText = key ? this.localize(key) : '';
+    const citationLabel = this.localize('citation', undefined, { index });
     return statusText
-      ? this.localize("citationWithStatus", undefined, {
+      ? this.localize('citationWithStatus', undefined, {
           index,
           status: statusText,
         })
@@ -365,7 +365,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   // "while the popover has focus-within" per the component's contract,
   // without needing to track focus targets explicitly here.
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === "Escape" && this.popoverOpen) {
+    if (e.key === 'Escape' && this.popoverOpen) {
       // Swallow it here rather than letting it bubble to e.g. a containing
       // lr-dialog's own Escape-to-close handler — dismissing this
       // lightweight preview shouldn't also close a surrounding modal.
@@ -379,14 +379,14 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
     // here (preventDefault on keydown suppresses it) rather than left to
     // fire alongside this. Enter deliberately gets no such handling: its
     // native immediate click already reaches onClick below.
-    if (e.key === " " && !e.repeat && e.target === this.buttonEl) {
+    if (e.key === ' ' && !e.repeat && e.target === this.buttonEl) {
       e.preventDefault();
       this.emitOpen();
     }
   };
 
   private onClick = (): void => {
-    this.emit("lr-citation-activate", {
+    this.emit('lr-citation-activate', {
       sourceId: this.sourceId,
       index: this.index,
     });
@@ -397,7 +397,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   };
 
   private emitOpen(): void {
-    this.emit("lr-citation-open", {
+    this.emit('lr-citation-open', {
       sourceId: this.sourceId,
       index: this.index,
       href: this.href || undefined,
@@ -445,6 +445,6 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-citation-badge": LyraCitationBadge;
+    'lr-citation-badge': LyraCitationBadge;
   }
 }

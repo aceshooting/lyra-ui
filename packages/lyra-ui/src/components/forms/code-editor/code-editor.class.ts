@@ -671,7 +671,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
           .value=${this.value}
           aria-label=${label}
           aria-describedby=${describedBy || nothing}
-          aria-invalid=${invalid ? "true" : "false"}
+          aria-invalid=${invalid ? 'true' : 'false'}
           placeholder=${this.placeholder}
           ?required=${this.required}
           ?readonly=${this.readonly}
@@ -684,7 +684,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
           maxlength=${this.maxlength ?? nothing}
           spellcheck=${this.spellcheck}
           autocapitalize=${this.autocapitalize}
-          autocorrect=${this.autocorrect ? "on" : "off"}
+          autocorrect=${this.autocorrect ? 'on' : 'off'}
           autocomplete=${this.autocomplete || nothing}
           inputmode=${this.inputMode || nothing}
           enterkeyhint=${this.enterKeyHint || nothing}

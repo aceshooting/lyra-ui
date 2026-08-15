@@ -5,16 +5,16 @@ export const WIDGET_MAX_PROPS_PER_NODE = 100;
 export const WIDGET_MAX_WARNINGS = 100;
 
 function decodePointerSegment(raw: string): string | undefined {
-  let decoded = "";
+  let decoded = '';
   for (let index = 0; index < raw.length; index++) {
     const character = raw[index]!;
-    if (character !== "~") {
+    if (character !== '~') {
       decoded += character;
       continue;
     }
     const escaped = raw[++index];
-    if (escaped === "0") decoded += "~";
-    else if (escaped === "1") decoded += "/";
+    if (escaped === '0') decoded += '~';
+    else if (escaped === '1') decoded += '/';
     else return undefined;
   }
   return decoded;
@@ -28,16 +28,16 @@ function canonicalArrayIndex(segment: string): number | undefined {
 
 /** Resolves an RFC 6901 pointer without accepting noncanonical array-index spellings. */
 export function readWidgetPointer(root: unknown, path: string): unknown {
-  if (path === "") return root;
-  if (!path.startsWith("/")) return undefined;
+  if (path === '') return root;
+  if (!path.startsWith('/')) return undefined;
   let current = root;
-  for (const raw of path.slice(1).split("/")) {
+  for (const raw of path.slice(1).split('/')) {
     const segment = decodePointerSegment(raw);
     if (segment === undefined) return undefined;
     if (
-      segment === "__proto__" ||
-      segment === "prototype" ||
-      segment === "constructor"
+      segment === '__proto__' ||
+      segment === 'prototype' ||
+      segment === 'constructor'
     ) {
       return undefined;
     }
@@ -47,7 +47,7 @@ export function readWidgetPointer(root: unknown, path: string): unknown {
       current = current[index];
     } else if (
       current &&
-      typeof current === "object" &&
+      typeof current === 'object' &&
       Object.hasOwn(current, segment)
     ) {
       current = (current as Record<string, unknown>)[segment];

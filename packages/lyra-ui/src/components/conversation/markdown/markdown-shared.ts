@@ -419,7 +419,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
               output: 'mathml',
               throwOnError: false,
             });
-            return `<span part="math" data-display="${token.display ? 'block' : 'inline'}">${mathml}</span>`;
+            return `<span part="math' data-display='${token.display ? 'block' : 'inline'}">${mathml}</span>`;
           } catch {
             // throwOnError: false already handles a malformed-TeX render internally (KaTeX's own
             // inline error form); this catch only guards against an unexpected non-KaTeX failure,
@@ -449,10 +449,10 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
         const slug = slugger.slug(label);
         headingTreeOut.push({ id: slug, label, level: depth });
         const idAttr = headingAnchorsOption && slug ? ` id="${escapeHtml(slug)}"` : '';
-        return `<h${depth} part="heading"${idAttr}>${this.parser.parseInline(token.tokens)}</h${depth}>\n`;
+        return `<h${depth} part="heading'${idAttr}>${this.parser.parseInline(token.tokens)}</h${depth}>\n`;
       },
       paragraph(token) {
-        return `<p part="paragraph">${this.parser.parseInline(token.tokens)}</p>\n`;
+        return `<p part='paragraph">${this.parser.parseInline(token.tokens)}</p>\n`;
       },
       list(token) {
         const ordered = token.ordered;
@@ -481,19 +481,19 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
           }
         }
         const cls = lang ? ` class="language-${escapeHtml(lang)}"` : '';
-        return `<pre part="code-block" tabindex="0"><code${cls}>${text}</code></pre>\n`;
+        return `<pre part="code-block' tabindex='0"><code${cls}>${text}</code></pre>\n`;
       },
       codespan(token) {
         // Mirrors marked's own default codespan() renderer's escaping exactly (it does not
-        // pre-escape token.text itself) -- only the added part="inline-code" differs.
-        return `<code part="inline-code">${escapeHtml(token.text)}</code>`;
+        // pre-escape token.text itself) -- only the added part="inline-code' differs.
+        return `<code part='inline-code'>${escapeHtml(token.text)}</code>`;
       },
       blockquote(token) {
-        return `<blockquote part="blockquote">\n${this.parser.parse(token.tokens)}</blockquote>\n`;
+        return `<blockquote part='blockquote'>\n${this.parser.parse(token.tokens)}</blockquote>\n`;
       },
       table(token) {
         // Built directly here (rather than delegating to the inherited
-        // tablecell()) so a scope="col" can be added -- marked's own
+        // tablecell()) so a scope='col" can be added -- marked's own
         // default tablecell() never emits it, and without it a screen
         // reader can't reliably associate a data cell with its column
         // header beyond the simplest table.
@@ -513,27 +513,27 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
           text: headerRow,
         })}</thead>\n`;
         const tbody = bodyRows ? `<tbody>${bodyRows}</tbody>\n` : '';
-        return `<table part="table">\n${thead}${tbody}</table>\n`;
+        return `<table part="table'>\n${thead}${tbody}</table>\n`;
       },
       link(token) {
         const text = this.parser.parseInline(token.tokens);
         const href = cleanHref(token.href);
         if (href === null) return text;
-        const titleAttr = token.title ? ` title="${escapeHtml(token.title)}"` : '';
-        const targetAttr = linkTarget ? ` target="${escapeHtml(linkTarget)}" rel="noopener noreferrer"` : '';
-        return `<a part="link" href="${escapeHtml(href)}"${titleAttr}${targetAttr}>${text}</a>`;
+        const titleAttr = token.title ? ` title='${escapeHtml(token.title)}"` : '';
+        const targetAttr = linkTarget ? ` target="${escapeHtml(linkTarget)}' rel='noopener noreferrer"` : '';
+        return `<a part="link' href='${escapeHtml(href)}"${titleAttr}${targetAttr}>${text}</a>`;
       },
       image(token) {
         // Mirrors marked's own default image() renderer (alt text
         // re-rendered through the plain textRenderer so nested emphasis/
         // strong/etc. inside the alt collapses to plain text, href run
         // through the same cleanHref() the link() override above uses)
-        // with a part="img" added.
+        // with a part="img' added.
         const altText = this.parser.parseInline(token.tokens, this.parser.textRenderer);
         const href = cleanHref(token.href);
         if (href === null) return escapeHtml(altText);
-        const titleAttr = token.title ? ` title="${escapeHtml(token.title)}"` : '';
-        return `<img part="img" src="${escapeHtml(href)}" alt="${escapeHtml(altText)}"${titleAttr}>`;
+        const titleAttr = token.title ? ` title='${escapeHtml(token.title)}"` : '';
+        return `<img part="img' src='${escapeHtml(href)}' alt='${escapeHtml(altText)}"${titleAttr}>`;
       },
       html(token) {
         return escapeHtmlOption ? escapeHtml(token.text) : token.text;
@@ -599,7 +599,7 @@ function readKatexOverride(): { present: boolean; value: KatexApi | null } {
 
 export function createMarkdownKatexState(): MarkdownKatexState {
   // `undefined` means no load has been kicked off yet, `null` that one finished but the peer isn't
-  // installed -- kept distinguishable from `loadStarted` so "in flight" and "confirmed missing"
+  // installed -- kept distinguishable from `loadStarted` so "in flight' and 'confirmed missing"
   // never collapse into the same falsy value.
   let resolved: KatexApi | null | undefined;
   let loadStarted = false;
@@ -636,7 +636,7 @@ export function createMarkdownKatexState(): MarkdownKatexState {
  * matching the plain-render output shape exactly, so existing consumer CSS targeting either keeps
  * working whether or not a given block ended up highlighted. A separate, purpose-built function
  * from `code-block-shared.ts`'s own `codeBlockLineTransformer` -- that one targets
- * `<lr-code-block>`'s `part="pre"`/`part="code"`/line-numbers contract, which doesn't apply here.
+ * `<lr-code-block>`'s `part="pre'`/`part='code"`/line-numbers contract, which doesn't apply here.
  */
 export function markdownCodeTransformer(lang: string): ShikiTransformer {
   return {

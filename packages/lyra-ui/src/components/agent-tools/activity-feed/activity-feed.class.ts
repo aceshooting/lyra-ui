@@ -149,7 +149,7 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @since 4.0.0
  */
 export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["entries"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

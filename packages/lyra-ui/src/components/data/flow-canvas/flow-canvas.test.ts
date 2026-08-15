@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './flow-canvas.js';
 import '../../overlays/empty/empty.js';
 import '../flow-controls/flow-controls.js';
@@ -1061,6 +1061,25 @@ describe('pan & zoom', () => {
 });
 
 describe('selection & roving focus', () => {
+  it('normalizes controlled selections against canonical node and edge identities', async () => {
+    const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    el.edges = edges;
+    await el.updateComplete;
+
+    el.selectedNodeIds = ['', '   ', 'a', 'a', 'missing'];
+    el.selectedEdgeIds = ['', '   ', 'a-b', 'a-b', 'missing'];
+    await el.updateComplete;
+    expect(el.selectedNodeIds).to.deep.equal(['a']);
+    expect(el.selectedEdgeIds).to.deep.equal(['a-b']);
+
+    const pending = oneEvent(el, 'lr-selection-delete');
+    nodeControl(el, 'a').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }),
+    );
+    expect((await pending).detail).to.deep.equal({ nodeIds: ['a'], edgeIds: ['a-b'] });
+  });
+
   it('uses a separate pressed node control so slotted controls keep their own semantics', async () => {
     const el = (await fixture(html`
       <lr-flow-canvas .nodes=${nodes}>

@@ -100,6 +100,13 @@ uses for its own `[part="body"]`.
 - `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment', 'text-quote']` — the anchor kinds this
   component resolves for the shared anchor-target contract.
 
+Text-quote resolution indexes at most 1,000,000 code units/20,000 text nodes per content
+generation, accepts quote fields up to 4,096 code units, and scans at most 4,000,000 code units per
+pass. It reuses that index across navigation and painting. Host-highlight admission retains at most
+10,000 unique nonempty records after inspecting at most 10,001 inputs; rendering selects at most
+1,000 candidates and paints at most 100, with an active entry anywhere in the admitted snapshot
+placed first and preserved inside both ceilings.
+
 **Methods:**
 
 - `renderMarkdown(): void` — immediately reruns the current content through the parse, selected
@@ -265,6 +272,10 @@ unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading
 `highlights: readonly LyraHighlight[] = []` (attribute: false), `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`), `anchor: LyraAnchor | string | null = null` (attribute: false),
 and `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment', 'text-quote']`.
+The same 1,000,000-code-unit/20,000-node corpus ceiling, 4,096-code-unit quote-field ceiling,
+4,000,000-code-unit work ceiling, 10,000-record admission ceiling, 1,000-candidate window, and
+100-painted-highlight limit documented for `<lr-markdown>` apply here too, including active-first
+retention from anywhere in the admitted snapshot.
 
 **Methods:** `renderMarkdown(): void` — immediately reruns the current content through the parse,
 sanitize, highlight, and fallback pipeline after changing this instance's `marked` configuration;
@@ -2350,8 +2361,8 @@ Data-mode thread ids must be nonempty, nonblank, and unique; invalid rows and la
 omitted with the first valid occurrence winning before the mode is selected, so focus, actions,
 slot ownership, and emitted `conversationId` values remain unambiguous.
 
-**Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeId: string = ''`
-(attribute `active-id`) — data mode:
+**Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeConversationId: string = ''`
+(attribute `active-conversation-id`) — data mode:
 marks the matching row `active`/`aria-current` and scrolls it into view. `searchable: boolean =
 false` (reflected) — shows the built-in search field. `filter?: (thread, query) => boolean`
 (attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
@@ -2367,7 +2378,7 @@ array follow in first-seen order. `collapsedGroupIds: string[] = []` (attribute:
 controlled collapsed state for both date and custom groups. A collapsed group's header remains in
 the virtual list while its conversation rows are removed from the virtual-list item/measurement
 set; `lr-group-toggle` requests the matching state change. Group headers and threads use separate
-internal key namespaces, so every public `activeId` remains a raw thread id — even a value such as
+internal key namespaces, so every public `activeConversationId` remains a raw thread id — even a value such as
 `group:today` cannot collide with the `today` group header. `rowActions: ThreadRowAction[] = []`
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
 data mode only: built-in icon buttons rendered into each row's `actions` slot. `showArchived: boolean
@@ -2424,7 +2435,7 @@ With `wrapRow` unset, no wrapper element or `row-wrapper` part is rendered.
 built-in confirmation), `lr-thread-rename` (`detail: { conversationId, label }`, correlated and
 re-emitted from the owned row), `lr-filter-change` (`detail: { text, matchCount }`). Slotted mode
 instead emits `lr-query-change` (`detail: { text }`) and never claims a match count it cannot own.
-`lr-group-toggle` (`detail: { id, collapsed }` —
+`lr-group-toggle` (`detail: { groupId, collapsed }` —
 controlled intent; native group buttons provide Enter/Space activation and explicit
 `aria-expanded="true"|"false"`). `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
@@ -2502,14 +2513,14 @@ style the pinned band with `lr-thread-list::part(group-sticky)`.
   searchable
   sticky-groups
   .threads=${threads}
-  active-id=${activeThreadId}
+  active-conversation-id=${activeThreadId}
   .rowActions=${['pin', 'archive', 'delete']}
   @lr-select=${(e) => openThread(e.detail.conversationId)}
 ></lr-thread-list>
 ```
 
 Composed with `lr-multi-split` (or `lr-app-rail` + `lr-responsive-panel`): thread-list in the start
-pane driving `activeId`, `lr-chat-viewport` + `lr-chat-composer` in the main pane.
+pane driving `activeConversationId`, `lr-chat-viewport` + `lr-chat-composer` in the main pane.
 
 ## `lr-checkpoint`
 

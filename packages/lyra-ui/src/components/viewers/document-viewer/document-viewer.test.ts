@@ -641,6 +641,29 @@ describe("anchor/highlights/alt widening", () => {
     expect(capturedFile?.alt).to.equal("Annual report");
   });
 
+  it("normalizes highlight identities before forwarding them to a renderer", async () => {
+    let capturedFile: DocumentFile | undefined;
+    registerDocumentRenderer("application/pdf", {
+      render: (file) => {
+        capturedFile = file;
+        return html`<div>stub</div>`;
+      },
+    });
+    const el = (await fixture(html`
+      <lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="report.pdf"></lr-document-viewer>
+    `)) as LyraDocumentViewer;
+    el.highlights = [
+      { id: "", anchor: { kind: "page", page: 1 } },
+      { id: " finding ", label: "First", anchor: { kind: "page", page: 2 } },
+      { id: "finding", label: "Later", anchor: { kind: "page", page: 3 } },
+    ];
+    await el.updateComplete;
+
+    expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal(["finding"]);
+    expect(capturedFile?.highlights?.map((highlight) => highlight.id)).to.deep.equal(["finding"]);
+    expect(capturedFile?.highlights?.[0]?.label).to.equal("First");
+  });
+
   it("forwards alt and highlights to the built-in fallback preview", async () => {
     const highlight = {
       id: "cite-1",

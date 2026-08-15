@@ -1,4 +1,4 @@
-import { css } from "lit";
+import { css } from 'lit';
 
 export const styles = css`
   /* No :host position/inset is imposed here -- unlike an overlay component,

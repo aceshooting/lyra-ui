@@ -121,11 +121,11 @@ export class LyraRadioButton extends LyraRadio {
         part=${parts}
         data-run=${this.buttonRunPosition}
         role="radio"
-        tabindex=${disabled || !this.groupTabbable ? "-1" : "0"}
-        aria-checked=${this.checked ? "true" : "false"}
-        aria-disabled=${disabled ? "true" : "false"}
-        aria-required=${this.effectiveRequired ? "true" : "false"}
-        aria-label=${this.getAttribute("aria-label") ?? nothing}
+        tabindex=${disabled || !this.groupTabbable ? '-1' : '0'}
+        aria-checked=${this.checked ? 'true' : 'false'}
+        aria-disabled=${disabled ? 'true' : 'false'}
+        aria-required=${this.effectiveRequired ? 'true' : 'false'}
+        aria-label=${this.getAttribute('aria-label') ?? nothing}
         @click=${this.onClick}
         @keydown=${this.onKeyDown}
         @focus=${this.onFocus}

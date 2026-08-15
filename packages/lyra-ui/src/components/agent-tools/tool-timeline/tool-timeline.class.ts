@@ -304,7 +304,7 @@ interface RedactionCacheEntry extends RedactedEntry {
  * @since 4.1.0
  */
 export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["entries"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

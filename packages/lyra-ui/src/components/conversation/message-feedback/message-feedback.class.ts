@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -144,6 +144,9 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-feedback-submit',
+  ]);
 
   /** Current provisional or persisted rating. Host-writable for controlled restoration. */
   @property({ reflect: true }) rating: MessageFeedbackValue = null;

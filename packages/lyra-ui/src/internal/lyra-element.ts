@@ -3,15 +3,15 @@ import {
   type CSSResultGroup,
   type PropertyDeclaration,
   type PropertyValues,
-} from "lit";
-import { property } from "lit/decorators.js";
+} from 'lit';
+import { property } from 'lit/decorators.js';
 import {
   captureFormInternals,
   ExternalLabelController,
-} from "./form-control-labels.js";
-import { tokens } from "./tokens.styles.js";
-import { palette } from "./tokens/palette.styles.js";
-import { resolveIntlLocale } from "./intl-cache.js";
+} from './form-control-labels.js';
+import { tokens } from './tokens.styles.js';
+import { palette } from './tokens/palette.styles.js';
+import { resolveIntlLocale } from './intl-cache.js';
 import {
   observeInheritedContext,
   beginInheritedContextUpdate,
@@ -20,7 +20,7 @@ import {
   queueInheritedDirectionChange,
   recordInheritedDirectionRead,
   recordInheritedLocaleRead,
-} from "./inherited-context-observer.js";
+} from './inherited-context-observer.js';
 import {
   canonicalizeLyraLocale,
   enableLyraLocaleCache,
@@ -33,8 +33,8 @@ import {
   resolveLyraLocale,
   snapshotLyraLocaleStrings,
   subscribeLyraLocaleForHost,
-} from "./localization-runtime.js";
-import type { LyraLocaleStrings } from "./localization.js";
+} from './localization-runtime.js';
+import type { LyraLocaleStrings } from './localization.js';
 
 export interface LyraEmitOptions {
   /** Set only for events whose listener may veto an operation before it runs. */
@@ -52,6 +52,19 @@ export type LyraEventDetailSnapshot<Value> = Value extends (
   ...args: never[]
 ) => unknown
   ? Value
+  : Value extends ArrayBufferView
+  ? readonly number[]
+  : Value extends DOMRectReadOnly
+  ? Readonly<{
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+    }>
   : Value extends ReadonlyMap<infer Key, infer Entry>
   ? ReadonlyMap<
       LyraEventDetailSnapshot<Key>,
@@ -102,11 +115,30 @@ const PUBLIC_COLLECTION_ENTRY_LIMIT = 10_000;
 const PUBLIC_COLLECTION_NODE_LIMIT = 50_000;
 /** Maximum nesting depth traversed while detaching plain records and nested arrays. */
 const PUBLIC_COLLECTION_DEPTH_LIMIT = 16;
-const OMIT_COLLECTION_VALUE = Symbol("omit-public-collection-value");
+const OMIT_COLLECTION_VALUE = Symbol('omit-public-collection-value');
 
 interface CollectionSnapshotBudget {
   remaining: number;
   readonly seen: WeakMap<object, unknown>;
+  readonly additions: object[];
+  readonly realm: SnapshotRealm;
+}
+
+interface SnapshotRealm {
+  readonly Array: ArrayConstructor;
+  readonly Map: MapConstructor;
+  readonly Object: ObjectConstructor;
+  readonly Set: SetConstructor;
+}
+
+function snapshotRealm(view?: Window | null): SnapshotRealm {
+  const candidate = view as unknown as Partial<SnapshotRealm> | undefined;
+  return {
+    Array: candidate?.Array ?? Array,
+    Map: candidate?.Map ?? Map,
+    Object: candidate?.Object ?? Object,
+    Set: candidate?.Set ?? Set,
+  };
 }
 
 function isRealmNeutralPlainRecord(value: object): boolean {
@@ -126,6 +158,54 @@ function isArrayValue(value: unknown): value is unknown[] {
   }
 }
 
+function isNativeArrayBufferView(value: object): value is ArrayBufferView {
+  try {
+    return ArrayBuffer.isView(value);
+  } catch {
+    return false;
+  }
+}
+
+function isImmutableBlob(value: object): boolean {
+  if (typeof Blob === 'undefined') return false;
+  const sizeGetter = Object.getOwnPropertyDescriptor(Blob.prototype, 'size')?.get;
+  if (!sizeGetter) return false;
+  try {
+    sizeGetter.call(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function rememberSnapshot(
+  budget: CollectionSnapshotBudget,
+  source: object,
+  snapshot: unknown
+): void {
+  budget.seen.set(source, snapshot);
+  budget.additions.push(source);
+}
+
+function snapshotTransaction<T>(
+  budget: CollectionSnapshotBudget,
+  create: () => T | typeof OMIT_COLLECTION_VALUE
+): T | typeof OMIT_COLLECTION_VALUE {
+  const remaining = budget.remaining;
+  const additions = budget.additions.length;
+  const result = create();
+  if (result !== OMIT_COLLECTION_VALUE) return result;
+  budget.remaining = remaining;
+  for (let index = budget.additions.length - 1; index >= additions; index -= 1)
+    budget.seen.delete(budget.additions[index]!);
+  budget.additions.length = additions;
+  return OMIT_COLLECTION_VALUE;
+}
+
+function emptyRealmArray(realm: SnapshotRealm): readonly unknown[] {
+  return Object.freeze(new realm.Array());
+}
+
 /**
  * Detaches the data-bearing portion of a public collection without invoking accessors or an
  * arbitrary iterable. Platform objects and functions remain identity values; arrays and plain
@@ -134,119 +214,153 @@ function isArrayValue(value: unknown): value is unknown[] {
 function snapshotCollectionValue(
   value: unknown,
   budget: CollectionSnapshotBudget,
-  depth: number
+  depth: number,
+  preserveRecordKeys?: ReadonlySet<PropertyKey>
 ): unknown | typeof OMIT_COLLECTION_VALUE {
   if (
     value === null ||
-    (typeof value !== "object" && typeof value !== "function")
+    (typeof value !== 'object' && typeof value !== 'function')
   ) {
     return value;
   }
-  if (typeof value === "function") return value;
+  if (typeof value === 'function') return value;
+  if (budget.seen.has(value)) return budget.seen.get(value);
   if (depth > PUBLIC_COLLECTION_DEPTH_LIMIT || budget.remaining <= 0)
     return OMIT_COLLECTION_VALUE;
 
-  const existing = budget.seen.get(value);
-  if (existing !== undefined) return existing;
-
   if (isArrayValue(value)) {
-    const output: unknown[] = [];
-    budget.seen.set(value, output);
     let lengthDescriptor: PropertyDescriptor | undefined;
     try {
-      lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+      lengthDescriptor = Object.getOwnPropertyDescriptor(value, 'length');
     } catch {
-      return Object.freeze(output);
+      return emptyRealmArray(budget.realm);
     }
     const length =
       lengthDescriptor &&
-      "value" in lengthDescriptor &&
-      typeof lengthDescriptor.value === "number" &&
+      'value' in lengthDescriptor &&
+      typeof lengthDescriptor.value === 'number' &&
       Number.isSafeInteger(lengthDescriptor.value) &&
       lengthDescriptor.value >= 0
         ? Math.min(lengthDescriptor.value, PUBLIC_COLLECTION_ENTRY_LIMIT)
         : 0;
-    for (let index = 0; index < length && budget.remaining > 0; index += 1) {
+    const output = new budget.realm.Array(length) as unknown[];
+    rememberSnapshot(budget, value, output);
+    for (let index = 0; index < length; index += 1) {
+      if (budget.remaining <= 0) {
+        output.length = index;
+        break;
+      }
       let descriptor: PropertyDescriptor | undefined;
       try {
         descriptor = Object.getOwnPropertyDescriptor(value, String(index));
       } catch {
         continue;
       }
-      if (!descriptor || !("value" in descriptor)) continue;
-      budget.remaining -= 1;
-      const entry = snapshotCollectionValue(
-        descriptor.value,
-        budget,
-        depth + 1
-      );
-      if (entry !== OMIT_COLLECTION_VALUE) output.push(entry);
-    }
-    return Object.freeze(output);
-  }
-
-  const mapEntries = nativeMapEntries(value);
-  if (mapEntries) return snapshotDetachedMap(value, mapEntries, budget, depth);
-  const setValues = nativeSetValues(value);
-  if (setValues) return snapshotDetachedSet(value, setValues, budget, depth);
-
-  if (!isRealmNeutralPlainRecord(value)) return value;
-
-  let prototype: object | null;
-  try {
-    prototype = Object.getPrototypeOf(value);
-  } catch {
-    return OMIT_COLLECTION_VALUE;
-  }
-  const output = Object.create(
-    prototype === null ? null : Object.prototype
-  ) as Record<PropertyKey, unknown>;
-  budget.seen.set(value, output);
-  let descriptors: PropertyDescriptorMap;
-  try {
-    descriptors = Object.getOwnPropertyDescriptors(value);
-  } catch {
-    return OMIT_COLLECTION_VALUE;
-  }
-  for (const key of Reflect.ownKeys(descriptors)) {
-    if (budget.remaining <= 0) break;
-    const descriptor = descriptors[key as keyof PropertyDescriptorMap];
-    if (!descriptor?.enumerable || !("value" in descriptor)) continue;
-    budget.remaining -= 1;
-    const entry = snapshotCollectionValue(
-      descriptor.value,
-      budget,
-      depth + 1
-    );
-    if (entry !== OMIT_COLLECTION_VALUE) {
-      Object.defineProperty(output, key, {
+      if (!descriptor || !('value' in descriptor)) continue;
+      const entry = snapshotTransaction(budget, () => {
+        budget.remaining -= 1;
+        return snapshotCollectionValue(descriptor.value, budget, depth + 1);
+      });
+      if (entry === OMIT_COLLECTION_VALUE) continue;
+      Object.defineProperty(output, index, {
         value: entry,
         enumerable: true,
         configurable: false,
         writable: false,
       });
     }
+    return Object.freeze(output);
   }
-  return Object.freeze(output);
+
+  // Plain records dominate this hot path. Classify them before Map/Set brand probes so a normal
+  // 10k-row assignment does not incur two caught TypeErrors for every row.
+  if (isRealmNeutralPlainRecord(value)) {
+    let prototype: object | null;
+    try {
+      prototype = Object.getPrototypeOf(value);
+    } catch {
+      return OMIT_COLLECTION_VALUE;
+    }
+    const output = budget.realm.Object.create(
+      prototype === null ? null : budget.realm.Object.prototype
+    ) as Record<PropertyKey, unknown>;
+    rememberSnapshot(budget, value, output);
+    try {
+      // `for...in` lets ordinary huge records stop at the admission budget instead of eagerly
+      // allocating every descriptor. Inherited keys never consume the budget.
+      for (const key in value) {
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        if (!descriptor?.enumerable || !('value' in descriptor)) continue;
+        if (budget.remaining <= 0) return OMIT_COLLECTION_VALUE;
+        budget.remaining -= 1;
+        const entry = preserveRecordKeys?.has(key)
+          ? descriptor.value
+          : snapshotCollectionValue(descriptor.value, budget, depth + 1);
+        if (entry === OMIT_COLLECTION_VALUE) return OMIT_COLLECTION_VALUE;
+        Object.defineProperty(output, key, {
+          value: entry,
+          enumerable: true,
+          configurable: false,
+          writable: false,
+        });
+      }
+    } catch {
+      return OMIT_COLLECTION_VALUE;
+    }
+    return Object.freeze(output);
+  }
+
+  const entries = nativeMapEntries(value);
+  if (entries) return snapshotDetachedMap(value, entries, budget, depth);
+  const values = nativeSetValues(value);
+  if (values) return snapshotDetachedSet(value, values, budget, depth);
+  if (isNativeArrayBufferView(value))
+    return snapshotArrayBufferView(value, budget);
+  const rect = snapshotDOMRect(value, budget);
+  if (rect !== OMIT_COLLECTION_VALUE) return rect;
+  if (isImmutableBlob(value)) return value;
+  return OMIT_COLLECTION_VALUE;
 }
 
-function snapshotPublicCollection(value: unknown): unknown {
-  if (!isArrayValue(value)) {
-    if (value === null || typeof value !== "object") return value;
-    if (
-      !isRealmNeutralPlainRecord(value) &&
-      !nativeMapEntries(value) &&
-      !nativeSetValues(value)
-    ) {
-      return value;
+/** Internal snapshot seam for bespoke `noAccessor` public setters. */
+export function snapshotPublicCollection<Value>(
+  value: Value,
+  view?: Window | null
+): Value {
+  if (
+    value === null ||
+    (typeof value !== 'object' && typeof value !== 'function')
+  )
+    return value;
+  const realm = snapshotRealm(view);
+  const budget: CollectionSnapshotBudget = {
+    remaining: PUBLIC_COLLECTION_NODE_LIMIT,
+    seen: new WeakMap(),
+    additions: [],
+    realm,
+  };
+  const snapshot = snapshotTransaction(budget, () =>
+    snapshotCollectionValue(value, budget, 0)
+  );
+  if (snapshot !== OMIT_COLLECTION_VALUE) return snapshot as Value;
+  if (isArrayValue(value) || isNativeArrayBufferView(value as object))
+    return emptyRealmArray(realm) as Value;
+  if (typeof value === 'object') {
+    if (nativeMapEntries(value))
+      return readonlyMapFacade(new realm.Map(), realm) as Value;
+    if (nativeSetValues(value))
+      return readonlySetFacade(new realm.Set(), realm) as Value;
+    if (isRealmNeutralPlainRecord(value)) {
+      const prototype = Object.getPrototypeOf(value);
+      return Object.freeze(
+        realm.Object.create(
+          prototype === null ? null : realm.Object.prototype
+        ) as object
+      ) as Value;
     }
   }
-  const snapshot = snapshotCollectionValue(
-    value,
-    { remaining: PUBLIC_COLLECTION_NODE_LIMIT, seen: new WeakMap() },
-    0
-  );
-  return snapshot === OMIT_COLLECTION_VALUE ? Object.freeze([]) : snapshot;
+  // Unclassifiable roots (including revoked/proxy-wrapped collections) never cross by identity.
+  return emptyRealmArray(realm) as Value;
 }
 
 function nativeMapEntries(
@@ -269,50 +383,140 @@ function nativeSetValues(value: object): IterableIterator<unknown> | undefined {
   }
 }
 
+function snapshotArrayBufferView(
+  value: ArrayBufferView,
+  budget: CollectionSnapshotBudget
+): readonly number[] | typeof OMIT_COLLECTION_VALUE {
+  let buffer: ArrayBufferLike;
+  let byteLength: number;
+  let byteOffset: number;
+  try {
+    buffer = value.buffer;
+    byteLength = value.byteLength;
+    byteOffset = value.byteOffset;
+  } catch {
+    return OMIT_COLLECTION_VALUE;
+  }
+  const length = Math.min(byteLength, PUBLIC_COLLECTION_ENTRY_LIMIT);
+  const output = new budget.realm.Array(length) as number[];
+  try {
+    const bytes = new Uint8Array(buffer, byteOffset, length);
+    for (let index = 0; index < length; index += 1) output[index] = bytes[index]!;
+  } catch {
+    return OMIT_COLLECTION_VALUE;
+  }
+  return Object.freeze(output);
+}
+
+function snapshotDOMRect(
+  value: object,
+  budget: CollectionSnapshotBudget
+): Readonly<Record<string, number>> | typeof OMIT_COLLECTION_VALUE {
+  if (typeof DOMRectReadOnly === 'undefined') return OMIT_COLLECTION_VALUE;
+  const nativePrototype = DOMRectReadOnly.prototype;
+  const output = budget.realm.Object.create(
+    budget.realm.Object.prototype
+  ) as Record<string, number>;
+  for (const key of [
+    'x',
+    'y',
+    'width',
+    'height',
+    'top',
+    'right',
+    'bottom',
+    'left',
+  ] as const) {
+    let coordinate: unknown;
+    try {
+      const getter = Object.getOwnPropertyDescriptor(nativePrototype, key)?.get;
+      if (!getter) return OMIT_COLLECTION_VALUE;
+      coordinate = getter.call(value);
+    } catch {
+      return OMIT_COLLECTION_VALUE;
+    }
+    if (typeof coordinate !== 'number' || !Number.isFinite(coordinate))
+      return OMIT_COLLECTION_VALUE;
+    Object.defineProperty(output, key, {
+      value: coordinate,
+      enumerable: true,
+      configurable: false,
+      writable: false,
+    });
+  }
+  return Object.freeze(output);
+}
+
 function readonlyMapFacade(
-  backing: ReadonlyMap<unknown, unknown>
+  backing: ReadonlyMap<unknown, unknown>,
+  realm = snapshotRealm()
 ): ReadonlyMap<unknown, unknown> {
   let facade: ReadonlyMap<unknown, unknown>;
-  facade = {
-    get size() {
-      return backing.size;
+  facade = realm.Object.create(realm.Object.prototype) as ReadonlyMap<
+    unknown,
+    unknown
+  >;
+  Object.defineProperties(facade, {
+    size: { enumerable: true, get: () => backing.size },
+    entries: { value: () => backing.entries() },
+    get: { value: (key: unknown) => backing.get(key) },
+    has: { value: (key: unknown) => backing.has(key) },
+    keys: { value: () => backing.keys() },
+    values: { value: () => backing.values() },
+    forEach: {
+      value: (
+        callback: (
+          value: unknown,
+          key: unknown,
+          map: ReadonlyMap<unknown, unknown>
+        ) => void,
+        thisArg?: unknown
+      ) =>
+        backing.forEach((entry, key) =>
+          callback.call(thisArg, entry, key, facade)
+        ),
     },
-    entries: () => backing.entries(),
-    get: (key) => backing.get(key),
-    has: (key) => backing.has(key),
-    keys: () => backing.keys(),
-    values: () => backing.values(),
-    forEach: (callback, thisArg) => {
-      backing.forEach((entry, key) => callback.call(thisArg, entry, key, facade));
-    },
-    [Symbol.iterator]: () => backing[Symbol.iterator](),
-  };
+    [Symbol.iterator]: { value: () => backing[Symbol.iterator]() },
+  });
   return Object.freeze(facade);
 }
 
-function readonlySetFacade(backing: ReadonlySet<unknown>): ReadonlySet<unknown> {
+function readonlySetFacade(
+  backing: ReadonlySet<unknown>,
+  realm = snapshotRealm()
+): ReadonlySet<unknown> {
   let facade: ReadonlySet<unknown>;
-  facade = {
-    get size() {
-      return backing.size;
+  facade = realm.Object.create(realm.Object.prototype) as ReadonlySet<unknown>;
+  Object.defineProperties(facade, {
+    size: { enumerable: true, get: () => backing.size },
+    entries: { value: () => backing.entries() },
+    has: { value: (entry: unknown) => backing.has(entry) },
+    keys: { value: () => backing.keys() },
+    values: { value: () => backing.values() },
+    forEach: {
+      value: (
+        callback: (
+          value: unknown,
+          key: unknown,
+          set: ReadonlySet<unknown>
+        ) => void,
+        thisArg?: unknown
+      ) =>
+        backing.forEach((entry) =>
+          callback.call(thisArg, entry, entry, facade)
+        ),
     },
-    entries: () => backing.entries(),
-    has: (value) => backing.has(value),
-    keys: () => backing.keys(),
-    values: () => backing.values(),
-    forEach: (callback, thisArg) => {
-      backing.forEach((entry) => callback.call(thisArg, entry, entry, facade));
-    },
-    [Symbol.iterator]: () => backing[Symbol.iterator](),
-  };
+    [Symbol.iterator]: { value: () => backing[Symbol.iterator]() },
+  });
   return Object.freeze(facade);
 }
 
 /** Creates a frozen facade whose mutating `Map` methods and mutable backing store are unreachable. */
 function snapshotIdentityMap(
-  entries: IterableIterator<readonly [unknown, unknown]>
+  entries: IterableIterator<readonly [unknown, unknown]>,
+  realm = snapshotRealm()
 ): ReadonlyMap<unknown, unknown> {
-  const backing = new Map<unknown, unknown>();
+  const backing = new realm.Map<unknown, unknown>();
   for (
     let next = entries.next(), count = 0;
     !next.done && count < PUBLIC_COLLECTION_ENTRY_LIMIT;
@@ -320,14 +524,15 @@ function snapshotIdentityMap(
   ) {
     backing.set(next.value[0], next.value[1]);
   }
-  return readonlyMapFacade(backing);
+  return readonlyMapFacade(backing, realm);
 }
 
 /** Creates a frozen facade whose mutating `Set` methods and mutable backing store are unreachable. */
 function snapshotIdentitySet(
-  values: IterableIterator<unknown>
+  values: IterableIterator<unknown>,
+  realm = snapshotRealm()
 ): ReadonlySet<unknown> {
-  const backing = new Set<unknown>();
+  const backing = new realm.Set<unknown>();
   for (
     let next = values.next(), count = 0;
     !next.done && count < PUBLIC_COLLECTION_ENTRY_LIMIT;
@@ -335,7 +540,7 @@ function snapshotIdentitySet(
   ) {
     backing.add(next.value);
   }
-  return readonlySetFacade(backing);
+  return readonlySetFacade(backing, realm);
 }
 
 function snapshotDetachedMap(
@@ -344,22 +549,27 @@ function snapshotDetachedMap(
   budget: CollectionSnapshotBudget,
   depth: number
 ): ReadonlyMap<unknown, unknown> {
-  const backing = new Map<unknown, unknown>();
-  const facade = readonlyMapFacade(backing);
-  budget.seen.set(source, facade);
-  for (
-    let next = entries.next(), count = 0;
-    !next.done &&
-    count < PUBLIC_COLLECTION_ENTRY_LIMIT &&
-    budget.remaining > 0;
-    next = entries.next(), count += 1
-  ) {
-    budget.remaining -= 1;
-    const key = snapshotCollectionValue(next.value[0], budget, depth + 1);
-    const entry = snapshotCollectionValue(next.value[1], budget, depth + 1);
-    if (key !== OMIT_COLLECTION_VALUE && entry !== OMIT_COLLECTION_VALUE) {
-      backing.set(key, entry);
+  const backing = new budget.realm.Map<unknown, unknown>();
+  const facade = readonlyMapFacade(backing, budget.realm);
+  rememberSnapshot(budget, source, facade);
+  for (let count = 0; count < PUBLIC_COLLECTION_ENTRY_LIMIT; count += 1) {
+    let next: IteratorResult<readonly [unknown, unknown]>;
+    try {
+      next = entries.next();
+    } catch {
+      break;
     }
+    if (next.done || budget.remaining <= 0) break;
+    const pair = snapshotTransaction(budget, () => {
+      budget.remaining -= 1;
+      const key = snapshotCollectionValue(next.value[0], budget, depth + 1);
+      if (key === OMIT_COLLECTION_VALUE) return OMIT_COLLECTION_VALUE;
+      const entry = snapshotCollectionValue(next.value[1], budget, depth + 1);
+      return entry === OMIT_COLLECTION_VALUE
+        ? OMIT_COLLECTION_VALUE
+        : ([key, entry] as const);
+    });
+    if (pair !== OMIT_COLLECTION_VALUE) backing.set(pair[0], pair[1]);
   }
   return facade;
 }
@@ -370,40 +580,44 @@ function snapshotDetachedSet(
   budget: CollectionSnapshotBudget,
   depth: number
 ): ReadonlySet<unknown> {
-  const backing = new Set<unknown>();
-  const facade = readonlySetFacade(backing);
-  budget.seen.set(source, facade);
-  for (
-    let next = values.next(), count = 0;
-    !next.done &&
-    count < PUBLIC_COLLECTION_ENTRY_LIMIT &&
-    budget.remaining > 0;
-    next = values.next(), count += 1
-  ) {
-    budget.remaining -= 1;
-    const entry = snapshotCollectionValue(next.value, budget, depth + 1);
+  const backing = new budget.realm.Set<unknown>();
+  const facade = readonlySetFacade(backing, budget.realm);
+  rememberSnapshot(budget, source, facade);
+  for (let count = 0; count < PUBLIC_COLLECTION_ENTRY_LIMIT; count += 1) {
+    let next: IteratorResult<unknown>;
+    try {
+      next = values.next();
+    } catch {
+      break;
+    }
+    if (next.done || budget.remaining <= 0) break;
+    const entry = snapshotTransaction(budget, () => {
+      budget.remaining -= 1;
+      return snapshotCollectionValue(next.value, budget, depth + 1);
+    });
     if (entry !== OMIT_COLLECTION_VALUE) backing.add(entry);
   }
   return facade;
 }
 
-function snapshotIdentityCollection(value: unknown): unknown {
+function snapshotIdentityCollection(value: unknown, view?: Window | null): unknown {
+  const realm = snapshotRealm(view);
   if (isArrayValue(value)) {
-    const output: unknown[] = [];
     let lengthDescriptor: PropertyDescriptor | undefined;
     try {
-      lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+      lengthDescriptor = Object.getOwnPropertyDescriptor(value, 'length');
     } catch {
-      return Object.freeze(output);
+      return emptyRealmArray(realm);
     }
     const length =
       lengthDescriptor &&
-      "value" in lengthDescriptor &&
-      typeof lengthDescriptor.value === "number" &&
+      'value' in lengthDescriptor &&
+      typeof lengthDescriptor.value === 'number' &&
       Number.isSafeInteger(lengthDescriptor.value) &&
       lengthDescriptor.value >= 0
         ? Math.min(lengthDescriptor.value, PUBLIC_COLLECTION_ENTRY_LIMIT)
         : 0;
+    const output = new realm.Array(length) as unknown[];
     for (let index = 0; index < length; index += 1) {
       let descriptor: PropertyDescriptor | undefined;
       try {
@@ -411,24 +625,38 @@ function snapshotIdentityCollection(value: unknown): unknown {
       } catch {
         continue;
       }
-      if (descriptor && "value" in descriptor) output.push(descriptor.value);
+      if (!descriptor || !('value' in descriptor)) continue;
+      Object.defineProperty(output, index, {
+        value: descriptor.value,
+        enumerable: true,
+        configurable: false,
+        writable: false,
+      });
     }
     return Object.freeze(output);
   }
-  if (value === null || typeof value !== "object") return value;
+  if (value === null || typeof value !== 'object') return value;
   const mapEntries = nativeMapEntries(value);
-  if (mapEntries) return snapshotIdentityMap(mapEntries);
+  if (mapEntries) return snapshotIdentityMap(mapEntries, realm);
   const setValues = nativeSetValues(value);
-  if (setValues) return snapshotIdentitySet(setValues);
+  if (setValues) return snapshotIdentitySet(setValues, realm);
   return value;
 }
 
-function snapshotEventDetail(value: unknown): unknown {
+function snapshotEventDetail(
+  value: unknown,
+  view: Window | null | undefined,
+  preserveRootKeys: ReadonlySet<PropertyKey>
+): unknown {
   if (value === undefined || value === null) return value;
-  const snapshot = snapshotCollectionValue(
-    value,
-    { remaining: PUBLIC_COLLECTION_NODE_LIMIT, seen: new WeakMap() },
-    0
+  const budget: CollectionSnapshotBudget = {
+    remaining: PUBLIC_COLLECTION_NODE_LIMIT,
+    seen: new WeakMap(),
+    additions: [],
+    realm: snapshotRealm(view),
+  };
+  const snapshot = snapshotTransaction(budget, () =>
+    snapshotCollectionValue(value, budget, 0, preserveRootKeys)
   );
   return snapshot === OMIT_COLLECTION_VALUE ? null : snapshot;
 }
@@ -438,17 +666,86 @@ function snapshotEventDetail(value: unknown): unknown {
  * first render. A symbol keeps the hook out of the component API while allowing shared reactive
  * controllers to use the same hydration decision as their host.
  */
-export const SEED_FIRST_RENDER_STATE = Symbol("lr-seed-first-render-state");
+export const SEED_FIRST_RENDER_STATE = Symbol('lr-seed-first-render-state');
 /** Internal query used by slot-presence controllers while SSR light DOM is unknowable. */
-export const SLOT_PRESENCE_UNRESOLVED = Symbol("lr-slot-presence-unresolved");
+export const SLOT_PRESENCE_UNRESOLVED = Symbol('lr-slot-presence-unresolved');
 
 const REACTIVE_HOST_ATTRIBUTES = [
-  "aria-label",
-  "aria-describedby",
-  "lang",
-  "dir",
+  'aria-label',
+  'aria-describedby',
+  'lang',
+  'dir',
 ] as const;
-const DIRECTION_HOST_ATTRIBUTES = ["class", "style", "slot"] as const;
+const DIRECTION_HOST_ATTRIBUTES = ['class', 'style', 'slot'] as const;
+
+function trustedLyraConstructorChain(
+  instance: object
+): readonly (typeof LyraElement)[] {
+  const constructors: (typeof LyraElement)[] = [];
+  let prototype: object | null = Object.getPrototypeOf(instance);
+  while (prototype && prototype !== LitElement.prototype) {
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
+    if (typeof descriptor?.value === 'function')
+      constructors.push(descriptor.value as typeof LyraElement);
+    prototype = Object.getPrototypeOf(prototype);
+  }
+  return constructors;
+}
+
+interface CollectionPropertyPolicy {
+  readonly owns: boolean;
+  readonly preservesItemIdentity: boolean;
+}
+
+const collectionPolicyByPrototype = new WeakMap<
+  object,
+  Map<PropertyKey, CollectionPropertyPolicy>
+>();
+
+function collectionPropertyPolicy(
+  instance: object,
+  name: PropertyKey
+): CollectionPropertyPolicy {
+  const prototype = Object.getPrototypeOf(instance) as object;
+  let policies = collectionPolicyByPrototype.get(prototype);
+  if (!policies) {
+    policies = new Map();
+    collectionPolicyByPrototype.set(prototype, policies);
+  }
+  const cached = policies.get(name);
+  if (cached) return cached;
+  let owns = false;
+  let preservesItemIdentity = false;
+  for (const constructor of trustedLyraConstructorChain(instance)) {
+    // Both fields are `protected static` -- hidden from external consumers of the class, but this
+    // bookkeeping helper is part of LyraElement's own internal machinery, just expressed as a
+    // module-level function rather than a method. The `hasOwnProperty` guard above already limits
+    // the cast to a constructor that actually declares its own override of the field.
+    const declared = constructor as unknown as {
+      ownedCollectionProperties: readonly PropertyKey[];
+      identityCollectionProperties: readonly PropertyKey[];
+    };
+    if (
+      Object.prototype.hasOwnProperty.call(
+        constructor,
+        'ownedCollectionProperties'
+      ) &&
+      declared.ownedCollectionProperties.includes(name)
+    )
+      owns = true;
+    if (
+      Object.prototype.hasOwnProperty.call(
+        constructor,
+        'identityCollectionProperties'
+      ) &&
+      declared.identityCollectionProperties.includes(name)
+    )
+      preservesItemIdentity = true;
+  }
+  const policy = Object.freeze({ owns, preservesItemIdentity });
+  policies.set(name, policy);
+  return policy;
+}
 
 /**
  * Shared base for every Lyra component. Supplies the design-token layer
@@ -477,6 +774,15 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   protected static readonly identityCollectionProperties: readonly PropertyKey[] =
     Object.freeze([]);
 
+  /** Events whose collection-bearing detail is detached and recursively frozen before dispatch. */
+  protected static readonly immutableEventDetails: readonly string[] =
+    Object.freeze([]);
+
+  /** Explicit root detail fields whose object identity is part of an enrolled event contract. */
+  protected static readonly identityEventDetailProperties: Readonly<
+    Record<string, readonly PropertyKey[]>
+  > = Object.freeze({});
+
   static override getPropertyDescriptor(
     name: PropertyKey,
     key: string | symbol,
@@ -488,40 +794,18 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     return {
       ...descriptor,
       set(this: LyraElement, value: unknown) {
-        let constructor: typeof LyraElement | null = this
-          .constructor as typeof LyraElement;
-        let ownsCollection = false;
-        let preservesItemIdentity = false;
-        while (constructor && constructor !== LitElement) {
-          if (
-            Object.prototype.hasOwnProperty.call(
-              constructor,
-              "ownedCollectionProperties"
-            ) &&
-            constructor.ownedCollectionProperties.includes(name)
-          ) {
-            ownsCollection = true;
-          }
-          if (
-            Object.prototype.hasOwnProperty.call(
-              constructor,
-              "identityCollectionProperties"
-            ) &&
-            constructor.identityCollectionProperties.includes(name)
-          ) {
-            preservesItemIdentity = true;
-          }
-          constructor = Object.getPrototypeOf(
-            constructor
-          ) as typeof LyraElement | null;
+        const policy = collectionPropertyPolicy(this, name);
+        if (!policy.owns) {
+          originalSet.call(this, value);
+          return;
         }
+        const ownerView = (this as unknown as { ownerDocument?: Document })
+          .ownerDocument?.defaultView;
         originalSet.call(
           this,
-          ownsCollection
-            ? preservesItemIdentity
-              ? snapshotIdentityCollection(value)
-              : snapshotPublicCollection(value)
-            : value
+          policy.preservesItemIdentity
+            ? snapshotIdentityCollection(value, ownerView)
+            : snapshotPublicCollection(value, ownerView)
         );
       },
     };
@@ -547,7 +831,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   }
 
   /** Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used. */
-  @property({ reflect: true }) locale = "";
+  @property({ reflect: true }) locale = '';
 
   private stringsValue: LyraLocaleStrings = snapshotLyraLocaleStrings({});
 
@@ -563,7 +847,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   set strings(value: LyraLocaleStrings) {
     const previous = this.stringsValue;
     this.stringsValue = snapshotLyraLocaleStrings(value);
-    this.requestUpdate("strings", previous);
+    this.requestUpdate('strings', previous);
   }
 
   private stopLocaleSubscription?: () => void;
@@ -716,7 +1000,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
         name as (typeof DIRECTION_HOST_ATTRIBUTES)[number]
       );
     if (directionHostAttribute)
-      queueInheritedDirectionChange(this, name === "slot");
+      queueInheritedDirectionChange(this, name === 'slot');
     super.attributeChangedCallback(name, oldValue, value);
     if (
       oldValue !== value &&
@@ -808,7 +1092,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
 
   /** @internal */
   [SLOT_PRESENCE_UNRESOLVED](): boolean {
-    return typeof Node === "undefined" || this.hydratingServerShadow === true;
+    return typeof Node === 'undefined' || this.hydratingServerShadow === true;
   }
 
   /** Starts a component-owned cancellable load and aborts the previous one. */
@@ -834,7 +1118,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    * Lit still runs the update cycle while detached, so callbacks that come due then are held and
    * replayed on reconnect rather than dropped.
    */
-  protected scheduleAfterUpdate(callback: () => void, key = "load"): void {
+  protected scheduleAfterUpdate(callback: () => void, key = 'load'): void {
     const pending = (this.afterUpdateCallbacks ??= new Map());
     if (pending.has(key)) return;
     pending.set(key, callback);
@@ -897,7 +1181,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   }
 
   /** The effective text direction, including inherited CSS direction. */
-  protected get effectiveDirection(): "ltr" | "rtl" {
+  protected get effectiveDirection(): 'ltr' | 'rtl' {
     const direction = resolveLyraDirection(this);
     recordInheritedDirectionRead(this, direction);
     return direction;
@@ -982,8 +1266,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     let CustomEventCtor = ownerDocument?.defaultView?.CustomEvent;
     if (!CustomEventCtor && ownerDocument) {
       try {
-        const candidate = ownerDocument.createEvent("CustomEvent").constructor;
-        if (typeof candidate === "function") {
+        const candidate = ownerDocument.createEvent('CustomEvent').constructor;
+        if (typeof candidate === 'function') {
           CustomEventCtor = candidate as typeof CustomEvent;
         }
       } catch {
@@ -991,8 +1275,37 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       }
     }
     CustomEventCtor ??= globalThis.CustomEvent;
+    let snapshotsDetail = false;
+    const identityDetailKeys = new Set<PropertyKey>();
+    for (const constructor of trustedLyraConstructorChain(this)) {
+      if (
+        Object.prototype.hasOwnProperty.call(
+          constructor,
+          'immutableEventDetails'
+        ) &&
+        constructor.immutableEventDetails.includes(name)
+      )
+        snapshotsDetail = true;
+      if (
+        Object.prototype.hasOwnProperty.call(
+          constructor,
+          'identityEventDetailProperties'
+        )
+      )
+        for (const key of constructor.identityEventDetailProperties[name] ?? [])
+          identityDetailKeys.add(key);
+    }
     const event = new CustomEventCtor(name, {
-      detail: detail === undefined ? null : snapshotEventDetail(detail),
+      detail:
+        detail === undefined
+          ? null
+          : snapshotsDetail
+          ? snapshotEventDetail(
+              detail,
+              ownerDocument?.defaultView,
+              identityDetailKeys
+            )
+          : detail,
       bubbles: true,
       composed: true,
       cancelable: options?.cancelable ?? false,

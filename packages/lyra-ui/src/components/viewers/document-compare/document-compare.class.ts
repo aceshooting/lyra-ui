@@ -110,8 +110,9 @@ function versionSourceIdentity(version: DocumentCompareVersion | undefined): str
  *   same pixel offset -- the two versions can have very different lengths. A re-entrancy guard
  *   stops the mirrored write from bouncing back.
  * - **Highlight-anchor sync**: activating a region highlight in one pane (`lr-highlight-activate`)
- *   that shares its `id` with a highlight in the *other* version's `highlights` scrolls that pane
- *   to its own matching highlight via `<lr-document-preview>`'s own `scrollToAnchor()`. The
+ *   that shares its normalized `id` with a highlight in the *other* preview scrolls that pane to
+ *   its own matching highlight via `<lr-document-preview>`'s own `scrollToAnchor()`. Both lookup
+ *   and activation use the preview's trimmed, nonempty, first-wins highlight projection. The
  *   `lr-highlight-activate` event itself still bubbles through unchanged (`detail: {
  *   highlightId }`, no
  *   side discriminator) so an existing listener contract stays exactly what

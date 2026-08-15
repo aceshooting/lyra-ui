@@ -38,7 +38,7 @@ export interface CanvasNode {
   x: number;
   y: number;
   r: number;
-  shape: "circle" | "square" | "diamond";
+  shape: 'circle' | 'square' | 'diamond';
   fill: string;
   selected?: boolean;
   dimmed?: boolean;
@@ -132,10 +132,10 @@ function pathForShape(
   x: number,
   y: number,
   r: number,
-  shape: CanvasNode["shape"]
+  shape: CanvasNode['shape']
 ): Path2D {
   const path = new Path2D();
-  if (shape === "circle") {
+  if (shape === 'circle') {
     path.arc(x, y, r, 0, Math.PI * 2);
     return path;
   }
@@ -143,7 +143,7 @@ function pathForShape(
   // shapeHalfSide()/squarePath()/diamondPath() math, reimplemented locally so this module stays
   // independent of graph.class.ts.
   const s = (r * Math.sqrt(Math.PI)) / 2;
-  if (shape === "square") {
+  if (shape === 'square') {
     path.rect(x - s, y - s, s * 2, s * 2);
     return path;
   }
@@ -233,8 +233,8 @@ export function drawGraphScene(
     ctx.fillStyle = hull.fill;
     ctx.strokeStyle = hull.fill;
     ctx.lineWidth = HULL_STROKE_WIDTH;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
     ctx.fill(path);
     ctx.stroke(path);
     ctx.globalAlpha = 1;
@@ -257,8 +257,8 @@ export function drawGraphScene(
 
   if (scene.edgeLabels.length) {
     ctx.font = scene.font;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     ctx.lineWidth = LABEL_HALO_WIDTH;
     for (const label of scene.edgeLabels) {
       ctx.strokeStyle = scene.labelHaloColor;
@@ -286,8 +286,8 @@ export function drawGraphScene(
     // Label coordinates are physical canvas positions immediately after each node. `start`
     // mirrors under an inherited RTL direction and paints back across the node; `left` keeps the
     // anchor physical while the canvas bidi algorithm still shapes the label text itself.
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
     ctx.fillStyle = scene.labelColor;
     for (const label of scene.nodeLabels)
       ctx.fillText(label.text, label.x, label.y);
@@ -301,9 +301,9 @@ export function drawGraphScene(
       const by = indicator.y - indicator.r * EXPAND_BADGE_OFFSET;
       const path = new Path2D();
       path.arc(bx, by, EXPAND_BADGE_R, 0, Math.PI * 2);
-      ctx.fillStyle = scene.expandBadgeFill ?? "";
+      ctx.fillStyle = scene.expandBadgeFill ?? '';
       ctx.fill(path);
-      ctx.strokeStyle = scene.expandBadgeStroke ?? "";
+      ctx.strokeStyle = scene.expandBadgeStroke ?? '';
       ctx.stroke(path);
       ctx.strokeStyle = scene.labelColor;
       ctx.beginPath();
@@ -346,7 +346,7 @@ export interface PickableNode {
   x: number;
   y: number;
   r: number;
-  shape: CanvasNode["shape"];
+  shape: CanvasNode['shape'];
 }
 
 /**
@@ -381,15 +381,15 @@ export function drawPickingScene(
     ctx.fillStyle = color;
     ctx.strokeStyle = color;
     ctx.lineWidth = Math.max(HULL_STROKE_WIDTH, minimumWorldStroke);
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
     ctx.fill(path);
     ctx.stroke(path);
   }
   for (const link of scene.links) {
     ctx.strokeStyle = indexToPickColor(idx++);
     ctx.lineWidth = Math.max(link.width + 6, 8, minimumWorldStroke);
-    ctx.lineCap = "round";
+    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(link.x1, link.y1);
     ctx.lineTo(link.x2, link.y2);

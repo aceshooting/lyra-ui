@@ -15,12 +15,20 @@ import type {
 import type { LyraFilterBarFilterDefinition } from '../src/components/layout/filter-bar/filter-bar.class.js';
 import type { LyraAvCue } from '../src/components/media/av-player/av-metadata.js';
 import type { HighlightActivateDetail } from '../src/components/viewers/document-viewer/anchors.js';
+import type { LyraHighlightLayer } from '../src/components/viewers/highlight-layer/highlight-layer.class.js';
 import type { LyraApprovalQueue } from '../src/components/agent-tools/approval-queue/approval-queue.class.js';
 import type { LyraTraceTreeEventMap } from '../src/components/agent-tools/trace-tree/trace-tree.class.js';
 import type { LyraTaskListEventMap } from '../src/components/agent-tools/task-list/task-list.class.js';
 import type { LyraRealtimeSession } from '../src/components/conversation/realtime-session/realtime-session.class.js';
+import type {
+  LyraThreadList,
+  LyraThreadListEventMap,
+} from '../src/components/conversation/thread-list/thread-list.class.js';
 import type { LyraRetrievalTraceEventMap } from '../src/components/retrieval/retrieval-trace/retrieval-trace.class.js';
-import type { LyraDocumentLibraryEventMap } from '../src/components/data/document-library/document-library.class.js';
+import type {
+  LyraDocumentLibrary,
+  LyraDocumentLibraryEventMap,
+} from '../src/components/data/document-library/document-library.class.js';
 import type { LyraFlowCanvasEventMap } from '../src/components/data/flow-canvas/flow-canvas.class.js';
 import type { LyraEnvListEventMap } from '../src/components/data/env-list/env-list.class.js';
 
@@ -80,6 +88,10 @@ const legacyCue: LyraAvCue = { id: 'intro', start: 0, text: 'Intro' };
 const highlightActivation: HighlightActivateDetail = { highlightId: 'finding' };
 // @ts-expect-error highlight activation detail uses highlightId.
 const legacyHighlightActivation: HighlightActivateDetail = { id: 'finding' };
+declare const highlightLayer: LyraHighlightLayer;
+highlightLayer.activeHighlightId = 'finding';
+// @ts-expect-error controlled highlight state uses activeHighlightId.
+highlightLayer.activeId = 'finding';
 
 declare const approvalQueue: LyraApprovalQueue;
 approvalQueue.selectedInvocationId = 'call-1';
@@ -101,6 +113,17 @@ const legacyReorder: LyraTaskListEventMap['lr-reorder']['detail'] = { id: 'item-
 declare const realtimeSession: LyraRealtimeSession;
 realtimeSession.sessionId = 'voice-session-a';
 
+declare const threadList: LyraThreadList;
+threadList.activeConversationId = 'conversation-a';
+// @ts-expect-error controlled thread state uses activeConversationId.
+threadList.activeId = 'conversation-a';
+const groupToggle: LyraThreadListEventMap['lr-group-toggle']['detail'] = {
+  groupId: 'today',
+  collapsed: true,
+};
+// @ts-expect-error group toggle identity uses groupId.
+const legacyGroupToggle: LyraThreadListEventMap['lr-group-toggle']['detail'] = { id: 'today', collapsed: true };
+
 const stageSelection: LyraRetrievalTraceEventMap['lr-stage-select']['detail'] = { stageId: 'retrieve' };
 // @ts-expect-error stage selection detail uses stageId.
 const legacyStageSelection: LyraRetrievalTraceEventMap['lr-stage-select']['detail'] = { id: 'retrieve' };
@@ -113,6 +136,10 @@ const documentSelection: LyraDocumentLibraryEventMap['lr-selection-change']['det
 };
 // @ts-expect-error document selection detail uses documentIds.
 const legacyDocumentSelection: LyraDocumentLibraryEventMap['lr-selection-change']['detail'] = { ids: ['document-a'] };
+declare const documentLibrary: LyraDocumentLibrary;
+documentLibrary.selectedDocumentIds = ['document-a'];
+// @ts-expect-error controlled selection uses selectedDocumentIds.
+documentLibrary.selectedIds = ['document-a'];
 
 const nodeActivation: LyraFlowCanvasEventMap['lr-node-activate']['detail'] = { nodeId: 'node-a' };
 // @ts-expect-error flow node activation detail uses nodeId.
@@ -150,6 +177,8 @@ void spanSelection;
 void legacySpanSelection;
 void reorder;
 void legacyReorder;
+void groupToggle;
+void legacyGroupToggle;
 void stageSelection;
 void legacyStageSelection;
 void documentOpen;

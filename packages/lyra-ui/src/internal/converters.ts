@@ -73,7 +73,7 @@ export function declaredDefaultConverter<T extends string | number>(
   return Object.freeze({
     fromAttribute: (value: string | null): T => {
       if (value === null) return declaredDefault;
-      return (typeof declaredDefault === "number" ? Number(value) : value) as T;
+      return (typeof declaredDefault === 'number' ? Number(value) : value) as T;
     },
     toAttribute: (value: T): string | number => value,
   });

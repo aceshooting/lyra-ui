@@ -1,45 +1,45 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
-import { ref } from "lit/directives/ref.js";
-import { property, state } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
-import { styleMap } from "lit/directives/style-map.js";
-import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { styles } from "./widget-renderer.styles.js";
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { ref } from 'lit/directives/ref.js';
+import { property, state } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
+import { styleMap } from 'lit/directives/style-map.js';
+import { html as staticHtml, unsafeStatic } from 'lit/static-html.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { styles } from './widget-renderer.styles.js';
 import {
   resolveTree,
   type LyraWidgetDocument,
   type ResolvedNode,
   type ResolvedElement,
   type LyraWidgetNode,
-} from "./resolve.js";
-import { type LyraWidgetTypeRegistry } from "./registry.js";
-import { DEFAULT_WIDGET_TYPE_REGISTRY } from "./default-registry.js";
+} from './resolve.js';
+import { type LyraWidgetTypeRegistry } from './registry.js';
+import { DEFAULT_WIDGET_TYPE_REGISTRY } from './default-registry.js';
 
 const GAP_TOKEN: Record<string, string> = {
-  s: "var(--lr-space-s)",
-  m: "var(--lr-space-m)",
-  l: "var(--lr-space-l)",
+  s: 'var(--lr-space-s)',
+  m: 'var(--lr-space-m)',
+  l: 'var(--lr-space-l)',
 };
 const JUSTIFY_VALUE: Record<string, string> = {
-  start: "flex-start",
-  center: "center",
-  end: "flex-end",
-  between: "space-between",
+  start: 'flex-start',
+  center: 'center',
+  end: 'flex-end',
+  between: 'space-between',
 };
 const ALIGN_VALUE: Record<string, string> = {
-  start: "flex-start",
-  "flex-start": "flex-start",
-  center: "center",
-  end: "flex-end",
-  "flex-end": "flex-end",
-  stretch: "stretch",
-  baseline: "baseline",
-  "self-start": "self-start",
-  "self-end": "self-end",
-  "first baseline": "first baseline",
-  "last baseline": "last baseline",
-  normal: "normal",
+  start: 'flex-start',
+  'flex-start': 'flex-start',
+  center: 'center',
+  end: 'flex-end',
+  'flex-end': 'flex-end',
+  stretch: 'stretch',
+  baseline: 'baseline',
+  'self-start': 'self-start',
+  'self-end': 'self-end',
+  'first baseline': 'first baseline',
+  'last baseline': 'last baseline',
+  normal: 'normal',
 };
 
 function sanitizeAlignValue(value: string): string | undefined {
@@ -58,19 +58,19 @@ interface BindingHandlerState {
 
 function normalizedRenderError(error: unknown): Error {
   if (error instanceof Error) return error;
-  return new Error("lr-widget-renderer: document resolution failed");
+  return new Error('lr-widget-renderer: document resolution failed');
 }
 
 export interface LyraWidgetRendererEventMap {
-  "lr-widget-action": CustomEvent<{
+  'lr-widget-action': CustomEvent<{
     actionId: string;
     payload: unknown;
     nodeId: string;
     nodeKey: string;
     nodePath: string;
   }>;
-  "lr-render-error": CustomEvent<{ error: Error }>;
-  "lr-widget-state-change": CustomEvent<{
+  'lr-render-error': CustomEvent<{ error: Error }>;
+  'lr-widget-state-change': CustomEvent<{
     path: string;
     value: unknown;
     nodeId: string;
@@ -118,7 +118,7 @@ export interface LyraWidgetRendererEventMap {
  */
 export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze([
-    "document",
+    'document',
   ]);
 
   static override styles = [LyraElement.styles, styles];
@@ -161,17 +161,17 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     super.willUpdate(changed);
     if (
       !this.hasUpdated ||
-      changed.has("document") ||
-      changed.has("bindingState") ||
-      changed.has("registry")
+      changed.has('document') ||
+      changed.has('bindingState') ||
+      changed.has('registry')
     ) {
       try {
         const registry = this.registry;
         const widgetDocument = this.document;
         let root: LyraWidgetNode | null = null;
         if (widgetDocument !== null) {
-          if (widgetDocument.version !== "2") {
-            throw new Error("lr-widget-renderer: unsupported document version");
+          if (widgetDocument.version !== '2') {
+            throw new Error('lr-widget-renderer: unsupported document version');
           }
           root = widgetDocument.root;
         }
@@ -189,13 +189,13 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
         });
         if (widgetDocument !== null && next === null) {
           throw new Error(
-            "lr-widget-renderer: document resolved to nothing renderable"
+            'lr-widget-renderer: document resolved to nothing renderable'
           );
         }
         this.resolved = next;
       } catch (error) {
         this.resolved = null;
-        this.emit("lr-render-error", {
+        this.emit('lr-render-error', {
           error: normalizedRenderError(error),
         });
       }
@@ -204,25 +204,25 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
 
   private builtinStyle(node: ResolvedElement): Record<string, string> {
     const gap =
-      typeof node.props["gap"] === "string"
-        ? GAP_TOKEN[node.props["gap"]]
+      typeof node.props['gap'] === 'string'
+        ? GAP_TOKEN[node.props['gap']]
         : undefined;
     const align =
-      typeof node.props["align"] === "string"
-        ? sanitizeAlignValue(node.props["align"])
+      typeof node.props['align'] === 'string'
+        ? sanitizeAlignValue(node.props['align'])
         : undefined;
     const justifyRaw =
-      typeof node.props["justify"] === "string"
-        ? node.props["justify"]
+      typeof node.props['justify'] === 'string'
+        ? node.props['justify']
         : undefined;
     const justify = justifyRaw ? JUSTIFY_VALUE[justifyRaw] : undefined;
     return {
-      display: "flex",
-      "flex-direction": node.kind === "builtin-row" ? "row" : "column",
-      "flex-wrap": node.kind === "builtin-row" ? "wrap" : "nowrap",
+      display: 'flex',
+      'flex-direction': node.kind === 'builtin-row' ? 'row' : 'column',
+      'flex-wrap': node.kind === 'builtin-row' ? 'wrap' : 'nowrap',
       ...(gap ? { gap } : {}),
-      ...(align ? { "align-items": align } : {}),
-      ...(justify ? { "justify-content": justify } : {}),
+      ...(align ? { 'align-items': align } : {}),
+      ...(justify ? { 'justify-content': justify } : {}),
     };
   }
 
@@ -236,7 +236,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
       const handler: EventListener = (e) => {
         e.stopPropagation();
         if (node.actionId !== undefined) {
-          this.emit("lr-widget-action", {
+          this.emit('lr-widget-action', {
             actionId: node.actionId,
             payload: node.payload,
             nodeId: node.nodeId!,
@@ -262,12 +262,12 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
         const detail = (event as CustomEvent<unknown>).detail;
         const hasDetailValue =
           detail !== null &&
-          typeof detail === "object" &&
-          Object.hasOwn(detail, "value");
+          typeof detail === 'object' &&
+          Object.hasOwn(detail, 'value');
         const value = hasDetailValue
           ? (detail as { value: unknown }).value
           : (el as unknown as Record<string, unknown>)[binding.prop];
-        this.emit("lr-widget-state-change", {
+        this.emit('lr-widget-state-change', {
           path: binding.path,
           value,
           nodeId: node.nodeId!,
@@ -350,26 +350,26 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
   }
 
   private renderChildValue(node: ResolvedNode): unknown {
-    if (node.kind === "text") {
+    if (node.kind === 'text') {
       return html`<span class="widget-text" slot=${node.slot ?? nothing}
         >${node.text}</span
       >`;
     }
-    if (node.kind === "mapped") {
+    if (node.kind === 'mapped') {
       return this.renderMapped(node);
     }
     const part =
-      node.kind === "builtin-row"
-        ? "row"
-        : node.kind === "builtin-col"
-        ? "col"
-        : "text";
+      node.kind === 'builtin-row'
+        ? 'row'
+        : node.kind === 'builtin-col'
+        ? 'col'
+        : 'text';
     return html`<div
       part=${part}
       style=${styleMap(this.builtinStyle(node))}
       slot=${node.slot ?? nothing}
     >
-      ${node.kind === "builtin-text" ? node.props["value"] ?? nothing : nothing}
+      ${node.kind === 'builtin-text' ? node.props['value'] ?? nothing : nothing}
       ${repeat(
         node.children,
         (child) => this.renderIdentity(child),
@@ -387,6 +387,6 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-widget-renderer": LyraWidgetRenderer;
+    'lr-widget-renderer': LyraWidgetRenderer;
   }
 }

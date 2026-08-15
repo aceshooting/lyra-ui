@@ -17,33 +17,33 @@
  * on its own module graph never reaching that call, and this module is in that graph.
  */
 
-import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
-import { unsafeHTML } from "lit/directives/unsafe-html.js";
-import { chevronIcon } from "../../../internal/icons.js";
-import { prefersReducedMotion } from "../../../internal/motion.js";
-import { styleMap } from "lit/directives/style-map.js";
-import { sanitizeCssLength } from "../../../internal/safe-css.js";
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { chevronIcon } from '../../../internal/icons.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
+import { styleMap } from 'lit/directives/style-map.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   boundedSelectionRects,
   boundedSelectionText,
-} from "../../../internal/text-quote.js";
+} from '../../../internal/text-quote.js';
 import {
   writeClipboardText,
   type LyraClipboardWriteFailure,
   type LyraClipboardWriteSuccess,
-} from "../../../internal/clipboard.js";
+} from '../../../internal/clipboard.js';
 import {
   normalizeShikiLanguage,
   SHIKI_THEMES,
   type ShikiHighlighterCore,
   type ShikiLanguageInput,
-} from "./shiki-types.js";
-import type { ShikiTransformer } from "./shiki-types.js";
+} from './shiki-types.js';
+import type { ShikiTransformer } from './shiki-types.js';
 import type {
   LyraAnchor,
   LyraHighlight,
-} from "../../viewers/document-viewer/anchors.js";
-import { resolveIsDarkTheme } from "./shiki-dark-theme.js";
+} from '../../viewers/document-viewer/anchors.js';
+import { resolveIsDarkTheme } from './shiki-dark-theme.js';
 
 /** Matches `LyraElement.localize()`'s signature so either component's bound
  *  method can be passed straight through. */
@@ -58,7 +58,7 @@ export function codeBlockToggleLabel(
   localize: LyraLocalizeFn,
   collapsed: boolean
 ): string {
-  return collapsed ? localize("expandCode") : localize("collapseCode");
+  return collapsed ? localize('expandCode') : localize('collapseCode');
 }
 
 /** The copy-to-clipboard header button's `aria-label`. */
@@ -67,8 +67,8 @@ export function codeBlockCopyLabel(
   justCopied: boolean,
   copyFailed: boolean
 ): string {
-  if (copyFailed) return localize("copyFailed");
-  return justCopied ? localize("copiedToClipboard") : localize("copyCode");
+  if (copyFailed) return localize('copyFailed');
+  return justCopied ? localize('copiedToClipboard') : localize('copyCode');
 }
 
 /** The `[part="body"]` region's `aria-label`: the filename when set, else a
@@ -81,8 +81,8 @@ export function codeBlockBodyLabel(
   return (
     filename ||
     (language
-      ? localize("codeRegionWithLanguage", undefined, { language })
-      : localize("codeRegion"))
+      ? localize('codeRegionWithLanguage', undefined, { language })
+      : localize('codeRegion'))
   );
 }
 
@@ -174,7 +174,7 @@ export function codeBlockLineHighlightSet(
 ): Set<number> {
   const merged = parseHighlightLines(highlightLines, maxLine);
   for (const highlight of highlights) {
-    if (highlight.anchor.kind !== "line-range") continue;
+    if (highlight.anchor.kind !== 'line-range') continue;
     const end = highlight.anchor.end ?? highlight.anchor.start;
     addBoundedLineRange(merged, highlight.anchor.start, end, maxLine);
   }
@@ -189,7 +189,7 @@ export function codeBlockActiveHighlightLineSet(
 ): Set<number> {
   const active = highlights.find((h) => h.id === activeHighlightId);
   const result = new Set<number>();
-  if (!active || active.anchor.kind !== "line-range") return result;
+  if (!active || active.anchor.kind !== 'line-range') return result;
   const end = active.anchor.end ?? active.anchor.start;
   addBoundedLineRange(result, active.anchor.start, end, maxLine);
   return result;
@@ -223,10 +223,10 @@ export async function scrollCodeBlockToAnchor(
   target: LyraAnchor | string
 ): Promise<boolean> {
   const anchor =
-    typeof target === "string"
+    typeof target === 'string'
       ? host.highlights.find((h) => h.id === target)?.anchor
       : target;
-  if (!anchor || anchor.kind !== "line-range") return false;
+  if (!anchor || anchor.kind !== 'line-range') return false;
   if (anchor.start < 1 || anchor.start > codeBlockLineCount(host.code))
     return false;
   await host.updateComplete;
@@ -242,7 +242,7 @@ export async function scrollCodeBlockToAnchor(
   const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
   body.scrollTo({
     top: Math.max(0, offset),
-    behavior: reducedMotion ? "auto" : "smooth",
+    behavior: reducedMotion ? 'auto' : 'smooth',
   });
   return true;
 }
@@ -252,18 +252,18 @@ export async function scrollCodeBlockToAnchor(
 export function codeBlockEventLine(e: Event): number | null {
   const target = e.composedPath()[0];
   if (
-    typeof target !== "object" ||
+    typeof target !== 'object' ||
     target === null ||
     (target as Node).nodeType !== 1 ||
-    typeof (target as Element).localName !== "string" ||
-    typeof (target as Element).closest !== "function"
+    typeof (target as Element).localName !== 'string' ||
+    typeof (target as Element).closest !== 'function'
   ) {
     return null;
   }
   const lineElement = (target as Element).closest<HTMLElement>(
     '[data-line][part~="line-button"]'
   );
-  const line = Number(lineElement?.dataset["line"]);
+  const line = Number(lineElement?.dataset['line']);
   return Number.isInteger(line) && line >= 1 ? line : null;
 }
 
@@ -271,8 +271,8 @@ export function codeBlockEventLine(e: Event): number | null {
  *  movement key that would land on the line already focused -- neither of which may
  *  `preventDefault()`, so the caller must not treat them differently. */
 export type CodeBlockLineKeyAction =
-  | { kind: "activate" }
-  | { kind: "move"; line: number }
+  | { kind: 'activate' }
+  | { kind: 'move'; line: number }
   | null;
 
 /** The roving-tabindex keyboard contract for the (`line-numbers`-gated) gutter. */
@@ -281,14 +281,14 @@ export function codeBlockLineKeyAction(
   line: number,
   total: number
 ): CodeBlockLineKeyAction {
-  if (key === "Enter" || key === " ") return { kind: "activate" };
+  if (key === 'Enter' || key === ' ') return { kind: 'activate' };
   let next: number | null = null;
-  if (key === "ArrowDown") next = Math.min(total, line + 1);
-  else if (key === "ArrowUp") next = Math.max(1, line - 1);
-  else if (key === "Home") next = 1;
-  else if (key === "End") next = total;
+  if (key === 'ArrowDown') next = Math.min(total, line + 1);
+  else if (key === 'ArrowUp') next = Math.max(1, line - 1);
+  else if (key === 'Home') next = 1;
+  else if (key === 'End') next = total;
   if (next === null || next === line) return null;
-  return { kind: "move", line: next };
+  return { kind: 'move', line: next };
 }
 
 /** An `lr-text-select` payload for a selection ending inside `[part="body"]`. */
@@ -348,8 +348,8 @@ export function codeBlockSelectionAnchor(
       node.nodeType === Node.ELEMENT_NODE
         ? (node as Element)
         : node.parentElement;
-    const lineEl = el?.closest("[data-line]");
-    const attr = lineEl?.getAttribute("data-line");
+    const lineEl = el?.closest('[data-line]');
+    const attr = lineEl?.getAttribute('data-line');
     return attr === null || attr === undefined ? null : Number(attr);
   };
   const start = lineOf(range.startContainer);
@@ -358,7 +358,7 @@ export function codeBlockSelectionAnchor(
   return {
     text,
     anchor: {
-      kind: "line-range",
+      kind: 'line-range',
       start: Math.min(start, end),
       end: Math.max(start, end),
     },
@@ -371,14 +371,14 @@ export function codeBlockNeedsHighlightResync(
   changed: PropertyValues
 ): boolean {
   return (
-    changed.has("code") ||
-    changed.has("language") ||
-    changed.has("languages") ||
-    changed.has("highlightLines") ||
-    changed.has("highlights") ||
-    changed.has("activeHighlightId") ||
-    changed.has("lineNumbers") ||
-    changed.has("activatableLines")
+    changed.has('code') ||
+    changed.has('language') ||
+    changed.has('languages') ||
+    changed.has('highlightLines') ||
+    changed.has('highlights') ||
+    changed.has('activeHighlightId') ||
+    changed.has('lineNumbers') ||
+    changed.has('activatableLines')
   );
 }
 
@@ -406,8 +406,8 @@ export function applyCodeBlockAriaBusy(
   host: Element,
   showingSkeleton: boolean
 ): void {
-  if (showingSkeleton) host.setAttribute("aria-busy", "true");
-  else host.removeAttribute("aria-busy");
+  if (showingSkeleton) host.setAttribute('aria-busy', 'true');
+  else host.removeAttribute('aria-busy');
 }
 
 export interface CodeBlockTokenizeOptions
@@ -449,7 +449,7 @@ export function parseHighlightLines(
   maxLine = Number.MAX_SAFE_INTEGER
 ): Set<number> {
   const lines = new Set<number>();
-  for (const raw of spec.split(",")) {
+  for (const raw of spec.split(',')) {
     const segment = raw.trim();
     if (!segment) continue;
     const rangeMatch = /^(\d+)\s*-\s*(\d+)$/.exec(segment);
@@ -491,25 +491,25 @@ export function codeBlockLineTransformer(
   options: CodeBlockLineTransformerOptions
 ): ShikiTransformer {
   return {
-    name: "lr-code-block-parts",
+    name: 'lr-code-block-parts',
     pre(node) {
-      node.properties.part = ["pre"];
+      node.properties.part = ['pre'];
       if (options.lineNumbers) {
-        const classValue = node.properties["class"];
+        const classValue = node.properties['class'];
         const classes = Array.isArray(classValue)
           ? classValue.map(String)
           : classValue
           ? [String(classValue)]
           : [];
-        node.properties["class"] = [...classes, "line-numbers"];
+        node.properties['class'] = [...classes, 'line-numbers'];
       }
-      delete node.properties["tabindex"];
+      delete node.properties['tabindex'];
     },
     code(node) {
-      node.properties.part = ["code"];
+      node.properties.part = ['code'];
     },
     line(node, line: number) {
-      node.properties["data-line"] = String(line);
+      node.properties['data-line'] = String(line);
       const parts: string[] = [];
       const contentNode = node as unknown as { children?: unknown[] };
       const children = contentNode.children ?? [];
@@ -517,33 +517,33 @@ export function codeBlockLineTransformer(
       let gutter: unknown;
       if (options.activatableLines && options.lineNumbers) {
         gutter = {
-          type: "element",
-          tagName: "button",
+          type: 'element',
+          tagName: 'button',
           properties: {
-            type: "button",
-            class: ["line-gutter"],
-            part: ["line-button"],
-            "data-line": String(line),
+            type: 'button',
+            class: ['line-gutter'],
+            part: ['line-button'],
+            'data-line': String(line),
             tabindex: String(options.focusedLine === line ? 0 : -1),
-            "aria-label": options.lineLabel(line),
+            'aria-label': options.lineLabel(line),
           },
-          children: [{ type: "text", value: options.lineNumberText(line) }],
+          children: [{ type: 'text', value: options.lineNumberText(line) }],
         };
       } else if (options.lineNumbers) {
         gutter = {
-          type: "element",
-          tagName: "span",
+          type: 'element',
+          tagName: 'span',
           properties: {
-            class: ["line-number"],
-            "aria-hidden": "true",
+            class: ['line-number'],
+            'aria-hidden': 'true',
           },
-          children: [{ type: "text", value: options.lineNumberText(line) }],
+          children: [{ type: 'text', value: options.lineNumberText(line) }],
         };
       }
       const source = {
-        type: "element",
-        tagName: "span",
-        properties: { class: ["line-source"] },
+        type: 'element',
+        tagName: 'span',
+        properties: { class: ['line-source'] },
         children: [...children],
       };
       children.splice(
@@ -552,11 +552,11 @@ export function codeBlockLineTransformer(
         ...(gutter ? [gutter, source] : [source])
       );
       if (options.highlightedLines.has(line)) {
-        parts.push("line-highlight");
-        node.properties["data-highlighted"] = "";
+        parts.push('line-highlight');
+        node.properties['data-highlighted'] = '';
       }
       if (parts.length > 0) node.properties.part = parts;
-      if (options.activeLines.has(line)) node.properties["data-active"] = "";
+      if (options.activeLines.has(line)) node.properties['data-active'] = '';
     },
   };
 }
@@ -597,12 +597,12 @@ export function renderCodeBlockPlainCode(
   // textContent must be exactly the concatenated line text, matching a single-text-node rendering.
   return html`<code
     part="code"
-    class=${options.lineNumbers ? "line-numbered-code" : nothing}
+    class=${options.lineNumbers ? 'line-numbered-code' : nothing}
     >${lines.map((line, index) => {
       const lineNumber = index + 1;
       const isHighlighted = options.highlightedLines.has(lineNumber);
       const isActive = options.activeLines.has(lineNumber);
-      const part = isHighlighted ? "line-highlight" : nothing;
+      const part = isHighlighted ? 'line-highlight' : nothing;
       const gutter = interactive
         ? html`<button
             type="button"
@@ -631,7 +631,7 @@ export function renderCodeBlockPlainCode(
         ?data-active=${isActive}
         >${gutter}<span class="line-source">${line}</span></span
       >`;
-      return index > 0 ? html`${"\n"}${lineTemplate}` : lineTemplate;
+      return index > 0 ? html`${'\n'}${lineTemplate}` : lineTemplate;
     })}</code
   >`;
 }
@@ -874,9 +874,9 @@ export class CodeBlockInteractionController {
     this.options.setCopyFailed(false);
   }
 
-  private setCopyStatus(status: "rest" | "success" | "error"): void {
-    this.options.setJustCopied(status === "success");
-    this.options.setCopyFailed(status === "error");
+  private setCopyStatus(status: 'rest' | 'success' | 'error'): void {
+    this.options.setJustCopied(status === 'success');
+    this.options.setCopyFailed(status === 'error');
   }
 
   /** Moves the roving tab stop to `line`, both in the component's state and on the rendered
@@ -886,7 +886,7 @@ export class CodeBlockInteractionController {
     for (const target of this.options.host.renderRoot.querySelectorAll<HTMLElement>(
       '[data-line][part~="line-button"]'
     )) {
-      target.tabIndex = Number(target.dataset["line"]) === line ? 0 : -1;
+      target.tabIndex = Number(target.dataset['line']) === line ? 0 : -1;
     }
   }
 
@@ -906,7 +906,7 @@ export class CodeBlockInteractionController {
     );
     if (action === null) return;
     e.preventDefault();
-    if (action.kind === "activate") {
+    if (action.kind === 'activate') {
       this.onLineActivate(line);
       return;
     }
@@ -924,7 +924,7 @@ export class CodeBlockInteractionController {
   onBodyClick = (e: MouseEvent): void => {
     if (
       (e.composedPath()[0] as Element | undefined)?.closest?.(
-        "button[data-inline-handler]"
+        'button[data-inline-handler]'
       )
     )
       return;
@@ -935,7 +935,7 @@ export class CodeBlockInteractionController {
   onBodyKeyDown = (e: KeyboardEvent): void => {
     if (
       (e.composedPath()[0] as Element | undefined)?.closest?.(
-        "button[data-inline-handler]"
+        'button[data-inline-handler]'
       )
     )
       return;
@@ -961,7 +961,7 @@ export class CodeBlockInteractionController {
     const text = host.code;
     const generation = ++this.copyGeneration;
     this.cancelCopyTimer();
-    this.setCopyStatus("rest");
+    this.setCopyStatus('rest');
     const outcome = await writeClipboardText(owner, text);
     if (
       !owner ||
@@ -971,12 +971,12 @@ export class CodeBlockInteractionController {
     )
       return;
     if (!outcome.ok) {
-      this.setCopyStatus("error");
+      this.setCopyStatus('error');
       this.options.emitError();
       this.options.emitCopyError(outcome);
     } else {
       this.options.emitCopy(outcome);
-      this.setCopyStatus("success");
+      this.setCopyStatus('success');
     }
     let handle = 0;
     handle = owner.setTimeout(() => {
@@ -989,7 +989,7 @@ export class CodeBlockInteractionController {
       )
         return;
       this.copyTimer = undefined;
-      this.setCopyStatus("rest");
+      this.setCopyStatus('rest');
     }, CODE_BLOCK_COPY_CONFIRM_MS);
     this.copyTimer = { owner, handle };
   };

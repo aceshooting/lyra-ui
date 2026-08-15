@@ -1,14 +1,14 @@
-import { html, nothing, type TemplateResult } from "lit";
-import { property } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import type { LyraFrame } from "../../../internal/variants.js";
-import { finiteCount } from "../../../internal/numbers.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import type { LyraEntity } from "../entity-card/entity-card.class.js";
-import "../../overlays/chip/chip.class.js";
-import "../../forms/button/button.class.js";
-import "../../overlays/empty/empty.class.js";
-import { styles } from "./community-card.styles.js";
+import { html, nothing, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraFrame } from '../../../internal/variants.js';
+import { finiteCount } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import type { LyraEntity } from '../entity-card/entity-card.class.js';
+import '../../overlays/chip/chip.class.js';
+import '../../forms/button/button.class.js';
+import '../../overlays/empty/empty.class.js';
+import { styles } from './community-card.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_communityDrillIn, LYRA_DEFAULT_communityMemberCount, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_showMoreCount, LYRA_DEFAULT_untitledCommunity } from '../../../internal/default-strings.generated.js';
@@ -29,8 +29,8 @@ export type CommunityCardAppearance = LyraFrame;
 
 export interface LyraCommunityCardEventMap {
   /** The drill button, header, or overflow chip -- all three mean "show me this whole community". */
-  "lr-drill": CustomEvent<{ id: string }>;
-  "lr-entity-activate": CustomEvent<{ id: string }>;
+  'lr-drill': CustomEvent<{ id: string }>;
+  'lr-entity-activate': CustomEvent<{ id: string }>;
 }
 
 /**
@@ -61,7 +61,7 @@ export interface LyraCommunityCardEventMap {
  * @since 4.0.0
  */
 export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["members"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['members']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -83,14 +83,14 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   /** Rendered as chips. */
   @property({ attribute: false }) members: readonly LyraEntity[] = [];
   /** Visible member chips before the "+N" overflow chip. */
-  @property({ type: Number, attribute: "max-members" }) maxMembers = 8;
+  @property({ type: Number, attribute: 'max-members' }) maxMembers = 8;
   /** Single-row layout (title + member count + drill button, no summary/chips). */
   @property({ type: Boolean, reflect: true }) compact = false;
   /** Container treatment, in the shared `LyraFrame` vocabulary — the same property this
    *  component's sibling `lr-entity-card` carries. `'card'` (the default) keeps the bordered,
    *  filled, padded box. `'plain'` removes the border, background, and padding, so a card nested
    *  inside a container that already draws a border doesn't double it. */
-  @property({ reflect: true }) frame: LyraFrame = "card";
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   /** `maxMembers` normalized to a finite, non-negative integer count -- passed straight to
    *  `Array.prototype.slice()` below, which would otherwise silently misbehave on a non-finite or
@@ -101,17 +101,17 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   }
 
   private onDrill = (): void => {
-    if (this.community) this.emit("lr-drill", { id: this.community.id });
+    if (this.community) this.emit('lr-drill', { id: this.community.id });
   };
 
   override render(): TemplateResult {
     if (!this.community) {
       return html`<div part="base">
-        <lr-empty part="empty" heading=${this.localize("noData")}></lr-empty>
+        <lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>
       </div>`;
     }
     const community = this.community;
-    const titleText = community.label || this.localize("untitledCommunity");
+    const titleText = community.label || this.localize('untitledCommunity');
     const suppliedMemberCount = community.memberCount;
     const memberCount = Math.max(
       this.members.length,
@@ -134,14 +134,14 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
             </button></span
           >
           <span part="member-count"
-            >${this.localize("communityMemberCount", undefined, {
+            >${this.localize('communityMemberCount', undefined, {
               count: numberFormat.format(memberCount),
             })}</span
           >
           <div part="actions">
             <slot name="actions"></slot>
             <lr-button part="drill-button" size="s" @click=${this.onDrill}
-              >${this.localize("communityDrillIn")}</lr-button
+              >${this.localize('communityDrillIn')}</lr-button
             >
           </div>
         </div>
@@ -154,7 +154,7 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
                 (m) => html`<button
                   part="member"
                   type="button"
-                  @click=${() => this.emit("lr-entity-activate", { id: m.id })}
+                  @click=${() => this.emit('lr-entity-activate', { id: m.id })}
                 >
                   <lr-chip>${m.label || m.id}</lr-chip>
                 </button>`
@@ -166,7 +166,7 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
                     @click=${this.onDrill}
                   >
                     <lr-chip
-                      >${this.localize("showMoreCount", undefined, {
+                      >${this.localize('showMoreCount', undefined, {
                         count: numberFormat.format(overflowCount),
                       })}</lr-chip
                     >
@@ -181,6 +181,6 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-community-card": LyraCommunityCard;
+    'lr-community-card': LyraCommunityCard;
   }
 }

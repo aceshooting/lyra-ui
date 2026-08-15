@@ -128,12 +128,15 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  *   event). `detail: { cfi, href }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
- *   matchCount, matchCountExact, activeIndex }`. At most 10,000 matches are retained; a false
- *   `matchCountExact` makes `matchCount` a lower bound (including when a spine item cannot load).
+ *   matchCount, matchCountExact, activeIndex }`. Search accepts at most 4,096 query code units,
+ *   inspects at most 1,000 spine items and 4,000,000 result code units, and retains at most 10,000
+ *   matches; a false `matchCountExact` makes `matchCount` a lower bound (including when a spine
+ *   item cannot load or any ceiling is reached).
  * @event lr-highlight-activate - A painted `cfi` highlight was clicked.
  *   `detail: { highlightId }`.
  * @event lr-text-select - Fired on selection end inside a chapter iframe (mirrors epub.js's own
- *   `selected` event). `detail: { text, anchor, rects }`; `anchor` is a `cfi` `LyraAnchor`.
+ *   `selected` event). `detail: { text, anchor, rects }`; `text` is capped at 4,096 code units,
+ *   `rects` at 1,000, and `anchor` is a `cfi` `LyraAnchor`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
  * @csspart base - The viewer container.
@@ -717,8 +720,9 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
    *  `item.load()`/`item.find()`/`item.unload()`. Navigates to and highlights the first match once
    *  the scan completes. A newer `search()` call, `clearSearch()`, or a `src` change (via
    *  `teardown()`) aborts an in-flight scan. An empty/whitespace-only query behaves like
-   *  `clearSearch()` and resolves `0`. Peer-produced results are capped at 10,000 retained matches;
-   *  `lr-search-change.detail.matchCountExact=false` identifies that return as a lower bound. */
+   *  `clearSearch()` and resolves `0`. Queries are capped at 4,096 code units; at most 1,000 spine
+   *  items and 4,000,000 result code units are inspected and 10,000 matches retained.
+   *  `lr-search-change.detail.matchCountExact=false` identifies a ceiling-truncated return. */
   async search(query: string): Promise<number> {
     const generation = ++this.searchGeneration;
     const boundedQuery = boundedViewerSearchQuery(query, this.effectiveLocale);

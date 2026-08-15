@@ -1262,6 +1262,7 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
   color across every word with the same `group` value. The component scans at most 10,000 input
   records, bounds each string to 256 characters and all retained word strings to 16,384 characters,
   marking shortened strings with an ellipsis and disclosing omitted input through `[part="limit"]`.
+  The returned sequence and records are frozen; reassign `words` after changes.
 - `minFontSize: number = 12` (attribute `min-font-size`) — px, applied to the lowest-weight word;
   layout clamps positive finite values to at most 512px and uses 1px for invalid/non-positive values
 - `maxFontSize: number = 48` (attribute `max-font-size`) — px, applied to the highest-weight word;
@@ -1273,13 +1274,15 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
 - `palette?: readonly string[]` (attribute: false) — clone-owned custom categorical colors (at
   most 64), cycled by word index (or by
   `group`); invalid CSS colors, declaration-breaking input, and `url()` entries are skipped, and an
-  all-invalid palette defaults to the `--lr-word-cloud-color-1..8` tokens
+  all-invalid palette defaults to the `--lr-word-cloud-color-1..8` tokens. The returned sequence is
+  frozen; reassign `palette` after changes
 - `legend: readonly WordCloudLegendItem[] = []` (attribute: false) — clone-owned, frozen named
   readonly `{ label, color }` entries for explaining explicit `words[].color`/group color
   overrides; when omitted, the component derives entries from grouped and explicitly colored
   words. Explicit legends retain at most 100 entries and 8,192 aggregate characters; malformed
   records are skipped, overlong strings end in an ellipsis, invalid colors render transparent, and
-  `[part="legend-limit"]` truthfully exposes the localized rendered/received count.
+  `[part="legend-limit"]` truthfully exposes the localized rendered/received count. The returned
+  sequence and records are frozen; reassign `legend` after changes.
 - `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders the supplied or
   derived legend below the cloud; the color key is an accessible list and does not change word
   activation or palette selection
@@ -2181,10 +2184,11 @@ import type {
   cancels the active preview, rolls pan/node geometry back, clears transient state, and retires the
   window pointer listeners so a later release cannot commit.
 - `selectedNodeIds: readonly string[] = []`, `selectedEdgeIds: readonly string[] = []` (attribute:
-  false) — seed or replace selection. Each assignment snapshots at most the first 10,000 ids;
-  reassign after changes. Activation and clear-selection gestures update frozen arrays before
-  emitting `lr-selection-change`; model shrinkage prunes stale ids without claiming a user
-  selection gesture occurred.
+  false) — seed or replace selection. Each assignment snapshots at most the first 10,000 ids,
+  omits blank/later duplicates first-wins, and prunes identities absent from the current canonical
+  node/edge model. Reassign after changes. Activation and clear-selection gestures update frozen
+  arrays before emitting `lr-selection-change`; model shrinkage prunes stale ids without claiming
+  a user selection gesture occurred.
 - `minZoom: number = 0.25` (attribute `min-zoom`), `maxZoom: number = 2` (attribute `max-zoom`)
 - `grid: number = 8` — snap step in content px for drags/nudges/drop positions (`0` disables
   snapping); also the dotted background's base spacing
@@ -2905,7 +2909,7 @@ by accepted `lr-sort` transaction and `{ phase, sortKey, sortDir }` vocabulary a
 and dates are snapshotted on assignment; malformed records, blank ids, and later duplicate ids are
 omitted first-wins before filters, counts, selection, rows, and events; reads are detached so `Date`
 mutators cannot reach retained state; reassign after changes), `filter`, `label`, `loading`,
-clone-owned frozen `selectedIds: readonly string[] = []` (at most 10,000 unique ids; reassign after
+clone-owned frozen `selectedDocumentIds: readonly string[] = []` (at most 10,000 unique ids; reassign after
 changes), public controlled `searchTerm: string = ''`
 (`search-term`), `sortKey: LibraryDocumentSortKey = 'name'` (`sort-key`), canonical
 `sortDir: 'asc'|'desc' = 'asc'` (`sort-dir`), and clone-owned frozen
@@ -2921,12 +2925,12 @@ with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ d
 `clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`.
 
 `selection-bar` is visible ordinary content, not a shadow live region. Initial declarative
-selection stays silent; every post-mount `selectedIds` change appends the localized selected count
+selection stays silent; every post-mount `selectedDocumentIds` change appends the localized selected count
 to the document's shared light-DOM polite sink, including zero and repeated equal counts.
 Internal search, tag-filter, and checkbox native `input`/`change` plus prefixed `lr-input`/
 `lr-change` aliases, table pagination, and the table's click-anywhere selection event stop at the
 component's translation boundary. The table is still in multiple-selection semantics so
-`selectedIds` reaches row `aria-selected`; document selection itself remains checkbox-owned, while
+`selectedDocumentIds` reaches row `aria-selected`; document selection itself remains checkbox-owned, while
 row activation opens the document. Listen for the document-library events above; one interaction
 emits one documented host contract without also leaking a composed child event.
 

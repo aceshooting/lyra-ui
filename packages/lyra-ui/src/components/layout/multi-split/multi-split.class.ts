@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -263,7 +263,7 @@ export interface LyraMultiSplitEventMap {
  * @since unreleased
  */
 export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["sizes", "defaultSizes", "panelConstraints"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['sizes', 'defaultSizes', 'panelConstraints']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -274,6 +274,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-resize-request',
+    'lr-resize',
+  ]);
 
   // `collapseState` needs a custom accessor (force/auto semantics -- see the
   // class doc) rather than the usual @property()-generated one -- registered

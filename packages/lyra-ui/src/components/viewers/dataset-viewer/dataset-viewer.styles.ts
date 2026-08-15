@@ -1,4 +1,4 @@
-import { css } from "lit";
+import { css } from 'lit';
 
 export const styles = css`
   :host {
@@ -6,7 +6,7 @@ export const styles = css`
     min-inline-size: 0;
     --_lr-dataset-viewer-max-height: none;
   }
-  [part="base"] {
+  [part='base'] {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
@@ -16,7 +16,7 @@ export const styles = css`
     background: var(--lr-color-surface);
     overflow: hidden;
   }
-  [part="body"] {
+  [part='body'] {
     box-sizing: border-box;
     overflow: auto;
     max-block-size: var(
@@ -24,13 +24,13 @@ export const styles = css`
       var(--_lr-dataset-viewer-max-height)
     );
   }
-  [part="table"] {
+  [part='table'] {
     display: flex;
     flex-direction: column;
     min-inline-size: max-content;
     font-size: var(--lr-font-size-sm);
   }
-  [part="header-row"] {
+  [part='header-row'] {
     position: sticky;
     inset-block-start: 0;
     display: grid;
@@ -42,7 +42,7 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     border-block-end: var(--lr-border-width-medium) solid var(--lr-color-border);
   }
-  [part="header-cell"] {
+  [part='header-cell'] {
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     overflow: hidden;
@@ -71,12 +71,15 @@ export const styles = css`
   /* The cell's padding moves onto the nested action button so the button's hit area covers the
      whole cell and the rendered text position is unchanged. The active/warning outline color
      can't be expressed as a [data-active] attribute selector chained onto ::part() (unsupported),
-     so renderCell() sets the --lr-dataset-viewer-highlight-color custom property inline instead
-     -- custom properties inherit through the shadow boundary the same as anywhere else. */
-  [part~="cell-highlight"],
+     so renderCell() sets a private active default inline. The public hook stays an inheritable
+     input and wins over that default. */
+  [part~='cell-highlight'],
   lr-virtual-list::part(cell-highlight) {
     outline: var(--lr-border-width-medium) solid
-      var(--lr-dataset-viewer-highlight-color, var(--lr-color-brand));
+      var(
+        --lr-dataset-viewer-highlight-color,
+        var(--_lr-dataset-viewer-highlight-color, var(--lr-color-brand))
+      );
     outline-offset: calc(-1 * var(--lr-border-width-medium));
     cursor: pointer;
     padding: 0;
@@ -86,7 +89,7 @@ export const styles = css`
      top of the "all: unset" reset above; its inline size already spans the full cell
      (inline-size: 100%) so no min-inline-size is strictly needed to reach the floor there, but it
      is set anyway so the part is self-describing independent of its container. */
-  [part="cell-highlight-action"],
+  [part='cell-highlight-action'],
   lr-virtual-list::part(cell-highlight-action) {
     all: unset;
     box-sizing: border-box;
@@ -100,11 +103,11 @@ export const styles = css`
     white-space: nowrap;
     cursor: pointer;
   }
-  [part="cell-highlight-action"]:hover,
+  [part='cell-highlight-action']:hover,
   lr-virtual-list::part(cell-highlight-action):hover {
     background: var(--lr-color-brand-quiet);
   }
-  [part="cell-highlight-action"]:active,
+  [part='cell-highlight-action']:active,
   lr-virtual-list::part(cell-highlight-action):active {
     background: color-mix(
       in oklab,
@@ -112,7 +115,7 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part="cell-highlight-action"]:focus-visible,
+  [part='cell-highlight-action']:focus-visible,
   lr-virtual-list::part(cell-highlight-action):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
@@ -122,13 +125,13 @@ export const styles = css`
     min-inline-size: max-content;
   }
   .empty-note,
-  [part="error"] {
+  [part='error'] {
     margin: 0;
     padding: var(--lr-space-m);
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
   }
-  [part="error"] {
+  [part='error'] {
     padding: var(--lr-space-l);
     color: var(--lr-color-danger);
     text-align: center;

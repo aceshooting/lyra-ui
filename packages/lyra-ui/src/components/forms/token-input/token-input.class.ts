@@ -1031,7 +1031,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     return html`<button
       part="remove"
       type="button"
-      aria-label=${this.localize("removeWithContext", undefined, {
+      aria-label=${this.localize('removeWithContext', undefined, {
         label: token,
       })}
       ?disabled=${this.effectiveDisabled}
@@ -1046,16 +1046,16 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
         ><input
           part="token-editor"
           .value=${this.editDraft}
-          aria-label=${this.localize("tokenInputEditWithContext", undefined, {
+          aria-label=${this.localize('tokenInputEditWithContext', undefined, {
             label: token,
           })}
           ?disabled=${this.effectiveDisabled}
           spellcheck=${this.spellcheck}
           autocapitalize=${this.autocapitalize || nothing}
-          autocorrect=${this.hasAttribute("autocorrect") || !this.autocorrect
+          autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
             ? this.autocorrect
-              ? "on"
-              : "off"
+              ? 'on'
+              : 'off'
             : nothing}
           @input=${this.onEditInput}
           @change=${this.stopInternalChange}
@@ -1075,7 +1075,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
           ? 0
           : -1}
         aria-disabled=${String(this.effectiveDisabled)}
-        aria-label=${this.localize("tokenInputEditWithContext", undefined, {
+        aria-label=${this.localize('tokenInputEditWithContext', undefined, {
           label: token,
         })}
         @click=${() => this.startEdit(index)}
@@ -1127,7 +1127,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
                 ><button
                   part="remove"
                   type="button"
-                  aria-label=${this.localize("removeWithContext", undefined, {
+                  aria-label=${this.localize('removeWithContext', undefined, {
                     label: token,
                   })}
                   ?disabled=${this.effectiveDisabled}
@@ -1145,20 +1145,20 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
           ?disabled=${this.effectiveDisabled}
           spellcheck=${this.spellcheck}
           autocapitalize=${this.autocapitalize || nothing}
-          autocorrect=${this.hasAttribute("autocorrect") || !this.autocorrect
+          autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
             ? this.autocorrect
-              ? "on"
-              : "off"
+              ? 'on'
+              : 'off'
             : nothing}
           aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing}
           aria-labelledby=${!hasAccessibleLabel && hasLabel
             ? this.labelId
             : nothing}
           aria-describedby=${described}
-          aria-required=${this.required ? "true" : "false"}
+          aria-required=${this.required ? 'true' : 'false'}
           aria-invalid=${this.touched && !this.internals.validity.valid
-            ? "true"
-            : "false"}
+            ? 'true'
+            : 'false'}
           @input=${this.onInput}
           @change=${this.stopInternalChange}
           @keydown=${this.onKeyDown}

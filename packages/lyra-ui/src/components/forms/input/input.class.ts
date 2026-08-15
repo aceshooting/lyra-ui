@@ -831,8 +831,8 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
         <div part=${this.inputWrapperParts}>
           <span
             part="start"
-            ?hidden=${!this.slotPresence.has("start") &&
-            !this.slotPresence.has("prefix")}
+            ?hidden=${!this.slotPresence.has('start') &&
+            !this.slotPresence.has('prefix')}
           >
             <slot name="start"></slot>
             <slot part="prefix" name="prefix"></slot>
@@ -847,20 +847,20 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
             aria-label=${this.accessibleLabel ||
             (hasLabel
               ? nothing
-              : this.placeholder || this.localize("inputLabel"))}
+              : this.placeholder || this.localize('inputLabel'))}
             aria-describedby=${describedBy || nothing}
-            aria-required=${this.required ? "true" : "false"}
+            aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${hasError ||
             (this.touched && !this.internals.validity.valid)
-              ? "true"
-              : "false"}
+              ? 'true'
+              : 'false'}
             autocomplete=${this.autocomplete || nothing}
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
-            autocorrect=${this.hasAttribute("autocorrect") || !this.autocorrect
+            autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
               ? this.autocorrect
-                ? "on"
-                : "off"
+                ? 'on'
+                : 'off'
               : nothing}
             inputmode=${this.inputMode || nothing}
             enterkeyhint=${this.enterKeyHint || nothing}
@@ -889,9 +889,9 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
                 type="button"
                 ?disabled=${this.effectiveDisabled}
                 aria-label=${this.localize(
-                  this.passwordVisible ? "hidePassword" : "showPassword"
+                  this.passwordVisible ? 'hidePassword' : 'showPassword'
                 )}
-                aria-pressed=${this.passwordVisible ? "true" : "false"}
+                aria-pressed=${this.passwordVisible ? 'true' : 'false'}
                 @click=${this.onTogglePasswordVisible}
               >
                 <span part="password-toggle-button" aria-hidden="true" inert
@@ -904,13 +904,13 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
                       >`}</span
                 >
               </button>`
-            : ""}
+            : ''}
           ${canClear
             ? html`<button
                 part="clear-button"
                 type="button"
                 ?disabled=${this.effectiveDisabled || this.readonly}
-                aria-label=${this.localize("clear")}
+                aria-label=${this.localize('clear')}
                 @click=${this.onClear}
               >
                 <span aria-hidden="true" inert
@@ -921,8 +921,8 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
           ${this.renderControls()}
           <span
             part="end"
-            ?hidden=${!this.slotPresence.has("end") &&
-            !this.slotPresence.has("suffix")}
+            ?hidden=${!this.slotPresence.has('end') &&
+            !this.slotPresence.has('suffix')}
           >
             <slot name="end"></slot>
             <slot part="suffix" name="suffix"></slot>

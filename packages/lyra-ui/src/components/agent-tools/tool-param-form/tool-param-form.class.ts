@@ -1,6 +1,9 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  LyraElement,
+  type LyraEventDetailSnapshot,
+} from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
   AnchoredValidityController,
@@ -39,24 +42,24 @@ export type ToolParamFormPrimitive = string | number | boolean;
  * the full scope limitation this type encodes.
  */
 export interface ToolParamFormProperty {
-  type: ToolParamFormPropertyType;
+  readonly type: ToolParamFormPropertyType;
   /** A closed set of string choices, rendered as a `<lr-select>`. Only meaningful when `type` is `'string'`. */
-  enum?: string[];
+  readonly enum?: readonly string[];
   /** Helper text rendered under the field. */
-  description?: string;
+  readonly description?: string;
   /** Display label. Falls back to the property key itself when omitted. */
-  title?: string;
+  readonly title?: string;
   /** Pre-filled value used whenever `value` doesn't already have this key. */
-  default?: unknown;
+  readonly default?: unknown;
   /** Exact primitive value required when the property is present. */
-  const?: ToolParamFormPrimitive;
+  readonly const?: ToolParamFormPrimitive;
   /** Native editing-assistance hints forwarded when this property renders a text input. */
-  autocomplete?: string;
-  spellcheck?: boolean;
-  autocapitalize?: string;
-  autoCorrect?: string;
-  inputMode?: string;
-  enterKeyHint?: string;
+  readonly autocomplete?: string;
+  readonly spellcheck?: boolean;
+  readonly autocapitalize?: string;
+  readonly autoCorrect?: string;
+  readonly inputMode?: string;
+  readonly enterKeyHint?: string;
 }
 
 /**
@@ -65,35 +68,268 @@ export interface ToolParamFormProperty {
  * or string enum. See the class doc for what's out of scope.
  */
 export interface FlatToolParamSchema {
-  type: 'object';
-  properties: Record<string, ToolParamFormProperty>;
-  required?: string[];
+  readonly type: 'object';
+  readonly properties: Readonly<Record<string, ToolParamFormProperty>>;
+  readonly required?: readonly string[];
 }
 
-const EMPTY_SCHEMA: FlatToolParamSchema = { type: 'object', properties: {} };
 const MAX_SCHEMA_FIELDS = 100;
 const MAX_ENUM_OPTIONS = 500;
+const MAX_VALUE_ENTRIES = 10_000;
+const MAX_VALUE_NODES = 50_000;
+const MAX_VALUE_DEPTH = 16;
+const OMIT_VALUE = Symbol('omit-tool-param-value');
+
+export type ToolParamFormValue = Readonly<Record<string, unknown>>;
+
+interface SnapshotBudget {
+  remaining: number;
+  readonly seen: WeakMap<object, unknown>;
+  invalid: boolean;
+  truncated: boolean;
+}
+
+function isPlainRecord(value: object): boolean {
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === null || Object.getPrototypeOf(prototype) === null;
+  } catch {
+    return false;
+  }
+}
+
+function snapshotValueEntry(
+  value: unknown,
+  budget: SnapshotBudget,
+  depth: number,
+): unknown | typeof OMIT_VALUE {
+  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return value;
+  if (typeof value === 'function') return value;
+  if (depth > MAX_VALUE_DEPTH || budget.remaining <= 0) {
+    budget.truncated = true;
+    return OMIT_VALUE;
+  }
+  const existing = budget.seen.get(value);
+  if (existing !== undefined) return existing;
+
+  let isArray = false;
+  try {
+    isArray = Array.isArray(value);
+  } catch {
+    budget.invalid = true;
+    return OMIT_VALUE;
+  }
+  if (isArray) {
+    const output: unknown[] = [];
+    budget.seen.set(value, output);
+    let length = 0;
+    try {
+      const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
+      if (
+        descriptor &&
+        'value' in descriptor &&
+        typeof descriptor.value === 'number' &&
+        Number.isSafeInteger(descriptor.value) &&
+        descriptor.value >= 0
+      ) {
+        if (descriptor.value > MAX_VALUE_ENTRIES) budget.truncated = true;
+        length = Math.min(descriptor.value, MAX_VALUE_ENTRIES);
+      }
+    } catch {
+      budget.invalid = true;
+    }
+    for (let index = 0; index < length && budget.remaining > 0; index += 1) {
+      let descriptor: PropertyDescriptor | undefined;
+      try {
+        descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      } catch {
+        budget.invalid = true;
+        continue;
+      }
+      if (!descriptor) continue;
+      if (!('value' in descriptor)) {
+        budget.invalid = true;
+        continue;
+      }
+      budget.remaining -= 1;
+      const entry = snapshotValueEntry(descriptor.value, budget, depth + 1);
+      if (entry !== OMIT_VALUE) output.push(entry);
+    }
+    if (budget.remaining <= 0 && length > output.length) budget.truncated = true;
+    return Object.freeze(output);
+  }
+
+  if (!isPlainRecord(value)) return value;
+  const output: Record<PropertyKey, unknown> = {};
+  budget.seen.set(value, output);
+  let descriptors: PropertyDescriptorMap;
+  try {
+    descriptors = Object.getOwnPropertyDescriptors(value);
+  } catch {
+    budget.invalid = true;
+    return OMIT_VALUE;
+  }
+  let retained = 0;
+  for (const key of Reflect.ownKeys(descriptors)) {
+    const descriptor = descriptors[key as keyof PropertyDescriptorMap];
+    if (!descriptor?.enumerable) continue;
+    if (retained >= MAX_VALUE_ENTRIES || budget.remaining <= 0) {
+      budget.truncated = true;
+      break;
+    }
+    if (!('value' in descriptor)) {
+      budget.invalid = true;
+      continue;
+    }
+    retained += 1;
+    budget.remaining -= 1;
+    const entry = snapshotValueEntry(descriptor.value, budget, depth + 1);
+    if (entry !== OMIT_VALUE) {
+      Object.defineProperty(output, key, {
+        value: entry,
+        enumerable: true,
+        configurable: false,
+        writable: false,
+      });
+    }
+  }
+  return Object.freeze(output);
+}
+
+function snapshotFormValue(value: unknown): {
+  readonly value: ToolParamFormValue;
+  readonly invalid: boolean;
+  readonly truncated: boolean;
+} {
+  if (value == null) return { value: Object.freeze({}), invalid: false, truncated: false };
+  if (typeof value !== 'object' || Array.isArray(value) || !isPlainRecord(value)) {
+    return { value: Object.freeze({}), invalid: true, truncated: false };
+  }
+  const budget: SnapshotBudget = {
+    remaining: MAX_VALUE_NODES,
+    seen: new WeakMap(),
+    invalid: false,
+    truncated: false,
+  };
+  const snapshot = snapshotValueEntry(value, budget, 0);
+  return {
+    value: snapshot === OMIT_VALUE ? Object.freeze({}) : snapshot as ToolParamFormValue,
+    invalid: budget.invalid || snapshot === OMIT_VALUE,
+    truncated: budget.truncated,
+  };
+}
+
+interface SchemaSnapshot {
+  readonly schema: FlatToolParamSchema;
+  readonly shapeError: 'object' | 'properties' | '';
+  readonly exceededLimits: boolean;
+}
+
+const EMPTY_SCHEMA: FlatToolParamSchema = Object.freeze({
+  type: 'object',
+  properties: Object.freeze({}),
+});
+
+function snapshotSchema(value: unknown): SchemaSnapshot {
+  if (value == null) return { schema: EMPTY_SCHEMA, shapeError: '', exceededLimits: false };
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    return { schema: EMPTY_SCHEMA, shapeError: 'object', exceededLimits: false };
+  }
+  const rootDescriptors = Object.getOwnPropertyDescriptors(value);
+  const typeDescriptor = rootDescriptors['type'];
+  if (!typeDescriptor || !('value' in typeDescriptor) || typeDescriptor.value !== 'object') {
+    return { schema: EMPTY_SCHEMA, shapeError: 'object', exceededLimits: false };
+  }
+  const propertiesDescriptor = rootDescriptors['properties'];
+  const propertiesValue = propertiesDescriptor && 'value' in propertiesDescriptor
+    ? propertiesDescriptor.value
+    : undefined;
+  if (
+    propertiesValue === null ||
+    typeof propertiesValue !== 'object' ||
+    Array.isArray(propertiesValue) ||
+    !isPlainRecord(propertiesValue)
+  ) {
+    return { schema: EMPTY_SCHEMA, shapeError: 'properties', exceededLimits: false };
+  }
+
+  const properties: Record<string, ToolParamFormProperty> = Object.create(null);
+  let shapeError: SchemaSnapshot['shapeError'] = '';
+  let exceededLimits = false;
+  let seenFields = 0;
+  let propertyDescriptors: PropertyDescriptorMap;
+  try {
+    propertyDescriptors = Object.getOwnPropertyDescriptors(propertiesValue);
+  } catch {
+    return { schema: EMPTY_SCHEMA, shapeError: 'properties', exceededLimits: false };
+  }
+  for (const key of Reflect.ownKeys(propertyDescriptors)) {
+    const descriptor = propertyDescriptors[key as keyof PropertyDescriptorMap];
+    if (typeof key !== 'string' || !descriptor?.enumerable) continue;
+    seenFields += 1;
+    if (seenFields > MAX_SCHEMA_FIELDS) {
+      exceededLimits = true;
+      break;
+    }
+    if (!('value' in descriptor) || descriptor.value === null || typeof descriptor.value !== 'object' || Array.isArray(descriptor.value)) {
+      shapeError = 'properties';
+      continue;
+    }
+    const propertySnapshot = snapshotFormValue(descriptor.value);
+    if (propertySnapshot.invalid || propertySnapshot.truncated) {
+      shapeError = 'properties';
+      continue;
+    }
+    const property = propertySnapshot.value as unknown as ToolParamFormProperty;
+    let choices = property.enum;
+    if (Array.isArray(choices) && choices.length > MAX_ENUM_OPTIONS) {
+      exceededLimits = true;
+      choices = Object.freeze(choices.slice(0, MAX_ENUM_OPTIONS));
+    }
+    properties[key] = Object.freeze({
+      ...property,
+      ...(choices === undefined ? {} : { enum: choices }),
+    });
+  }
+
+  const requiredDescriptor = rootDescriptors['required'];
+  let required: readonly string[] | undefined;
+  if (requiredDescriptor && 'value' in requiredDescriptor && Array.isArray(requiredDescriptor.value)) {
+    if (requiredDescriptor.value.length > MAX_SCHEMA_FIELDS) exceededLimits = true;
+    required = Object.freeze(
+      requiredDescriptor.value
+        .slice(0, MAX_SCHEMA_FIELDS)
+        .filter((entry: unknown): entry is string => typeof entry === 'string'),
+    );
+  } else if (requiredDescriptor?.enumerable) {
+    shapeError = 'properties';
+  }
+
+  return {
+    schema: Object.freeze({
+      type: 'object',
+      properties: Object.freeze(properties),
+      ...(required === undefined ? {} : { required }),
+    }),
+    shapeError,
+    exceededLimits,
+  };
+}
 
 function cloneFormValue(
-  value: Record<string, unknown>,
-  ownerWindow: Window | null,
-): Record<string, unknown> {
-  try {
-    if (ownerWindow?.structuredClone) return ownerWindow.structuredClone(value);
-  } catch {
-    // A consumer may temporarily supply a non-cloneable value (the serialization guard handles it
-    // separately). Preserve its own-property shape without invoking accessors during connection.
-  }
-  return Object.defineProperties({}, Object.getOwnPropertyDescriptors(value));
+  value: ToolParamFormValue,
+  _ownerWindow: Window | null,
+): ToolParamFormValue {
+  return snapshotFormValue(value).value;
 }
 
 export interface LyraToolParamFormEventMap {
   'lr-invalid': CustomEvent<null>;
-  'lr-validity-change': CustomEvent<{
+  'lr-validity-change': CustomEvent<LyraEventDetailSnapshot<{
     readonly valid: boolean;
     readonly errors: Readonly<Record<string, string>>;
-  }>;
-  'lr-input': CustomEvent<{ value: Record<string, unknown> }>;
+  }>>;
+  'lr-input': CustomEvent<LyraEventDetailSnapshot<{ readonly value: ToolParamFormValue }>>;
   blur: CustomEvent<null>;
   focus: CustomEvent<null>;
 }
@@ -245,6 +481,10 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-validity-change',
+    'lr-input',
+  ]);
 
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
@@ -276,10 +516,14 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   private _fieldsetDisabled = false;
   private _name = '';
   private _schema: FlatToolParamSchema = EMPTY_SCHEMA;
-  private _value: Record<string, unknown> = {};
-  private defaultValueSnapshot: Record<string, unknown> = {};
+  private schemaInputShapeError: SchemaSnapshot['shapeError'] = '';
+  private schemaInputExceededLimits = false;
+  private _value: ToolParamFormValue = Object.freeze({});
+  private valueInputInvalid = false;
+  private valueInputTruncated = false;
+  private defaultValueSnapshot: ToolParamFormValue = Object.freeze({});
   private defaultValueCaptured = false;
-  private _effectiveValue: Record<string, unknown> = {};
+  private _effectiveValue: ToolParamFormValue = Object.freeze({});
   private _validityFlags: ValidityStateFlags = {};
   private _disabled = false;
   // Guards lr-validity-change so it only fires on an actual change, not on
@@ -429,35 +673,19 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   }
 
   /** `value`, with any property missing from it filled in from `schema`'s own `default` — see the class doc. */
-  get effectiveValue(): Record<string, unknown> {
-    return { ...this._effectiveValue };
+  get effectiveValue(): ToolParamFormValue {
+    return snapshotFormValue(this._effectiveValue).value;
   }
 
-  private get schemaProperties(): Record<string, ToolParamFormProperty> {
-    const properties = (this.schema as unknown as { properties?: unknown })?.properties;
-    if (properties === null || typeof properties !== 'object' || Array.isArray(properties)) return {};
-    const normalized = Object.create(null) as Record<string, ToolParamFormProperty>;
-    let count = 0;
-    for (const [key, value] of Object.entries(properties)) {
-      if (count >= MAX_SCHEMA_FIELDS) break;
-      if (value === null || typeof value !== 'object' || Array.isArray(value)) continue;
-      const property = value as ToolParamFormProperty;
-      normalized[key] = Array.isArray(property.enum) && property.enum.length > MAX_ENUM_OPTIONS
-        ? { ...property, enum: property.enum.slice(0, MAX_ENUM_OPTIONS) }
-        : property;
-      count++;
-    }
-    return normalized;
+  private get schemaProperties(): Readonly<Record<string, ToolParamFormProperty>> {
+    return this._schema.properties;
   }
 
-  private get requiredKeys(): string[] {
-    const required = (this.schema as unknown as { required?: unknown })?.required;
-    return Array.isArray(required)
-      ? required.filter((key): key is string => typeof key === 'string').slice(0, MAX_SCHEMA_FIELDS)
-      : [];
+  private get requiredKeys(): readonly string[] {
+    return this._schema.required ?? Object.freeze([]);
   }
 
-  private resolveEffectiveValue(): Record<string, unknown> {
+  private resolveEffectiveValue(): ToolParamFormValue {
     const props = this.schemaProperties;
     const out: Record<string, unknown> = { ...this.value };
     for (const [key, prop] of Object.entries(props)) {
@@ -477,25 +705,36 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         });
       }
     }
-    return out;
+    return snapshotFormValue(out).value;
   }
 
+  /** Detached, deeply frozen schema snapshot. At most 100 fields, 100 required keys, and 500 enum
+   * choices per field are retained. Oversized assignments remain invalid until replaced; reassign
+   * the schema after changing it. */
   get schema(): FlatToolParamSchema {
     return this._schema;
   }
   set schema(next: FlatToolParamSchema) {
     const old = this._schema;
-    this._schema = next ?? EMPTY_SCHEMA;
+    const snapshot = snapshotSchema(next);
+    this._schema = snapshot.schema;
+    this.schemaInputShapeError = snapshot.shapeError;
+    this.schemaInputExceededLimits = snapshot.exceededLimits;
     this.syncFormState();
     this.requestUpdate('schema', old);
   }
 
-  get value(): Record<string, unknown> {
+  /** Detached, deeply frozen argument snapshot, bounded to 10,000 entries per array/plain record,
+   * 50,000 total nodes, and 16 nested levels. Reassign after changing it. */
+  get value(): ToolParamFormValue {
     return this._value;
   }
-  set value(next: Record<string, unknown>) {
+  set value(next: ToolParamFormValue) {
     const old = this._value;
-    this._value = next ?? {};
+    const snapshot = snapshotFormValue(next);
+    this._value = snapshot.value;
+    this.valueInputInvalid = snapshot.invalid;
+    this.valueInputTruncated = snapshot.truncated;
     this.syncFormState();
     this.requestUpdate('value', old);
   }
@@ -742,27 +981,13 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   }
 
   private schemaShapeError(): string {
-    const schema = this.schema as unknown;
-    if (schema === null || typeof schema !== 'object' || (schema as { type?: unknown }).type !== 'object') {
+    if (this.schemaInputShapeError === 'object') {
       return this.localize('schemaMustBeObject');
     }
-    const properties = (schema as { properties?: unknown }).properties;
-    if (properties === null || typeof properties !== 'object' || Array.isArray(properties)) {
+    if (this.schemaInputShapeError === 'properties') {
       return this.localize('schemaPropertiesMustBeFlat');
     }
-    const propertyValues = Object.values(properties);
-    if (propertyValues.some((value) => value === null || typeof value !== 'object' || Array.isArray(value))) {
-      return this.localize('schemaPropertiesMustBeFlat');
-    }
-    const required = (schema as { required?: unknown }).required;
-    if (
-      propertyValues.length > MAX_SCHEMA_FIELDS
-      || (Array.isArray(required) && required.length > MAX_SCHEMA_FIELDS)
-      || propertyValues.some((value) => {
-        const choices = (value as { enum?: unknown }).enum;
-        return Array.isArray(choices) && choices.length > MAX_ENUM_OPTIONS;
-      })
-    ) {
+    if (this.schemaInputExceededLimits) {
       return this.localize('toolParamSchemaLimit', undefined, {
         fields: getNumberFormat(this.effectiveLocale).format(MAX_SCHEMA_FIELDS),
         options: getNumberFormat(this.effectiveLocale).format(MAX_ENUM_OPTIONS),
@@ -771,7 +996,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     return '';
   }
 
-  private serializeEffectiveValue(effective: Record<string, unknown>): string {
+  private serializeEffectiveValue(effective: ToolParamFormValue): string {
     const serialized = JSON.stringify(effective, (_key, value: unknown) => {
       if (typeof value === 'number' && !Number.isFinite(value)) {
         throw new TypeError('Non-finite numbers are not JSON values.');
@@ -834,7 +1059,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   }
 
   private syncFormState(): void {
-    let effective: Record<string, unknown> = {};
+    let effective: ToolParamFormValue = Object.freeze({});
     let errors: Record<string, string> = {};
     let flags: ValidityStateFlags = {};
     let formError = '';
@@ -842,6 +1067,9 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
     try {
       formError = this.schemaShapeError();
+      if (this.valueInputInvalid || this.valueInputTruncated) {
+        throw new TypeError('The value could not be retained within the public snapshot boundary.');
+      }
       effective = this.resolveEffectiveValue();
       const validation = this.computeValidation(effective);
       errors = validation.errors;

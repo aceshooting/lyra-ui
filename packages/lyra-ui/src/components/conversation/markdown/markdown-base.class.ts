@@ -1,33 +1,33 @@
-import { type PropertyValues, type TemplateResult } from "lit";
-import { state } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { finiteInteger } from "../../../internal/numbers.js";
+import { type PropertyValues, type TemplateResult } from 'lit';
+import { state } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteInteger } from '../../../internal/numbers.js';
 import {
   DocumentAnchorTarget,
   type LyraAnchorTargetEventMap,
-} from "../../../internal/anchor-target.js";
+} from '../../../internal/anchor-target.js';
 import {
   buildQuoteAnchor,
   createTextQuoteIndex,
   scopeFromElement,
   type TextQuoteIndex,
-} from "../../../internal/text-quote.js";
+} from '../../../internal/text-quote.js';
 import {
   acquireHighlightHandle,
   supportsCustomHighlights,
   type HighlightHandle,
-} from "../../../internal/text-highlights.js";
-import { ThemeWatcher } from "../../../internal/theme-watcher.js";
+} from '../../../internal/text-highlights.js';
+import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type {
   LyraAnchor,
   LyraAnchorKind,
-} from "../../viewers/document-viewer/anchors.js";
-import type { ShikiLanguageInput } from "../code-block/shiki-types.js";
+} from '../../viewers/document-viewer/anchors.js';
+import type { ShikiLanguageInput } from '../code-block/shiki-types.js';
 import type {
   LyraMarkedParser,
   MarkdownDeps,
   MarkedModule,
-} from "./markdown-loader.js";
+} from './markdown-loader.js';
 import {
   addFailedHighlightKey,
   applyMarkdownAriaBusy,
@@ -58,7 +58,7 @@ import {
   type MarkdownKatexState,
   type PendingHighlight,
   type ResolvedHighlightRange,
-} from "./markdown-shared.js";
+} from './markdown-shared.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound } from '../../../internal/default-strings.generated.js';
@@ -66,8 +66,8 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 
 /** @internal */
 export interface MarkdownRuntimeEventMap extends LyraAnchorTargetEventMap {
-  "lr-render-error": CustomEvent<{ error: unknown }>;
-  "lr-link-click": CustomEvent<{ href: string }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-link-click': CustomEvent<{ href: string }>;
 }
 
 // The Lyra-prefixed owner is intentional: the default-string slice generator attributes helper
@@ -89,14 +89,14 @@ class LyraMarkdownRuntimeElement extends LyraElement<MarkdownRuntimeEventMap> {
  * connected-instance sets, and KaTeX resolution state while sharing one lifecycle implementation.
  * @internal */
 export interface MarkdownVariantContext {
-  readonly tag: "lr-markdown" | "lr-markdown-core";
+  readonly tag: 'lr-markdown' | 'lr-markdown-core';
   readonly connectedInstances: Set<MarkdownRuntimeBase>;
   readonly sharedParser: MarkdownParserController;
   readonly katexState: MarkdownKatexState;
 }
 
 export function createMarkdownVariantContext(
-  tag: MarkdownVariantContext["tag"],
+  tag: MarkdownVariantContext['tag'],
   katexState: MarkdownKatexState
 ): MarkdownVariantContext {
   return {
@@ -139,8 +139,8 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   /** Anchor kinds resolved by both concrete Markdown tags. */
   override readonly anchorKinds: readonly LyraAnchorKind[] = [
-    "fragment",
-    "text-quote",
+    'fragment',
+    'text-quote',
   ];
 
   protected abstract get markdownVariant(): MarkdownVariantContext;
@@ -232,11 +232,11 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has("math")) this.mathFailureReported = false;
+    if (changed.has('math')) this.mathFailureReported = false;
     if (!this.deps || !markdownNeedsReparse(changed)) return;
     const highlightGenerationChanged =
-      changed.has("content") ||
-      changed.has("streaming") ||
+      changed.has('content') ||
+      changed.has('streaming') ||
       markdownHighlightConfigChanged(changed);
     if (highlightGenerationChanged) this.highlightToken++;
     if (markdownHighlightConfigChanged(changed)) {
@@ -289,11 +289,11 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     applyMarkdownAriaBusy(this, !this.deps || this.streaming);
-    if (changed.has("renderedHtml")) this.textQuoteIndexCache = undefined;
+    if (changed.has('renderedHtml')) this.textQuoteIndexCache = undefined;
     if (
-      changed.has("renderedHtml") ||
-      changed.has("highlights") ||
-      changed.has("activeHighlightId")
+      changed.has('renderedHtml') ||
+      changed.has('highlights') ||
+      changed.has('activeHighlightId')
     ) {
       this.repaintHighlights();
     }
@@ -320,9 +320,9 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       isKatexConfirmedMissing: () => variant.katexState.isConfirmedMissing(),
     });
     if (outcome.headingTree) this.headingTree = outcome.headingTree;
-    if (outcome.status === "fallback") {
+    if (outcome.status === 'fallback') {
       this.renderedHtml = null;
-      this.emit("lr-render-error", { error: outcome.error });
+      this.emit('lr-render-error', { error: outcome.error });
       return;
     }
     this.renderedHtml = outcome.html;
@@ -344,7 +344,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   private reportMathFailure(): void {
     if (this.mathFailureReported) return;
     this.mathFailureReported = true;
-    this.emit("lr-render-error", {
+    this.emit('lr-render-error', {
       error: markdownMathPeerError(this.markdownVariant.tag),
     });
   }
@@ -414,7 +414,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       gfm: this.gfm,
       linkTarget: this.linkTarget,
       headingOffset: finiteInteger(this.headingOffset, 0, 0, 6),
-      escapeHtmlOption: normalizeMarkdownHtmlMode(this.htmlMode) === "escape",
+      escapeHtmlOption: normalizeMarkdownHtmlMode(this.htmlMode) === 'escape',
       highlightCodeOption: this.highlightCode && !this.streaming,
       getCachedHighlight: (key) => this.getCachedHighlight(key),
       failedHighlightKeys: this.failedHighlightKeys,
@@ -438,10 +438,10 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     const root = this.contentRoot();
     if (!root) return false;
-    if (anchor.kind === "fragment") {
+    if (anchor.kind === 'fragment') {
       return applyMarkdownFragmentAnchor(root, anchor, this.headingTree);
     }
-    if (anchor.kind === "text-quote") {
+    if (anchor.kind === 'text-quote') {
       const index = this.markdownTextIndex(root);
       const found = applyMarkdownTextQuoteAnchor(root, anchor, this.effectiveLocale, index);
       if (!supportsCustomHighlights(this.ownerDocument) && this.highlights.length > 0) {
@@ -475,7 +475,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     }
     if (cached?.mappingDirty) {
       const handle = this.ensureHighlightHandle();
-      for (const tone of ["accent", "success", "warning", "danger", "neutral"] as const) {
+      for (const tone of ['accent', 'success', 'warning', 'danger', 'neutral'] as const) {
         handle.setRanges(tone, []);
       }
       handle.setActive(null);
@@ -530,21 +530,21 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       event.clientY
     );
     if (highlightId) {
-      this.emit("lr-highlight-activate", { highlightId });
+      this.emit('lr-highlight-activate', { highlightId });
       return;
     }
     const href = internalLinkHrefFrom(event, this.internalLinkPrefix);
     if (href === null) return;
     event.preventDefault();
-    this.emit("lr-link-click", { href });
+    this.emit('lr-link-click', { href });
   };
 
   override render(): TemplateResult {
     return renderMarkdownContent({
       content: this.content,
-      sanitized: normalizeMarkdownHtmlMode(this.htmlMode) === "sanitize",
+      sanitized: normalizeMarkdownHtmlMode(this.htmlMode) === 'sanitize',
       renderedHtml: this.renderedHtml,
-      hostAriaLabel: this.getAttribute("aria-label"),
+      hostAriaLabel: this.getAttribute('aria-label'),
       isDarkTheme: this.isDarkTheme,
       onClick: this.onContentClick,
       liveRegion: this.renderAnchorLiveRegion(),

@@ -241,8 +241,9 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * @event lr-copy-error - A clipboard write failed. `detail: { ok: false, text, reason, error }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match
  *   index changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: {
- *   query, matchCount, matchCountExact, activeIndex }`. At most 10,000 matches are retained; a
- *   false `matchCountExact` makes `matchCount` a lower bound.
+ *   query, matchCount, matchCountExact, activeIndex }`. Search accepts at most 4,096 query code
+ *   units, scans at most 4,000,000 tag/attribute/text code units, and retains at most 10,000
+ *   matches; a false `matchCountExact` makes `matchCount` a lower bound after any ceiling.
  * @event lr-render-error - Fired when fetching or parsing the document fails, including a
  *   parse error or exceeding the node cap. `detail: { error }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -655,8 +656,9 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
    * some coarser granularity. `index`/`total` position each surviving entry for its localized
    * accessible name, exactly as `<lr-svg-viewer>` numbers its own region highlights; two entries
    * resolving to the SAME element still both count toward `total`, while the first retained one
-   * owns that row's paint. Painting retains at most 100 resolved entries after inspecting at most
-   * 1,000 candidates; an active entry is inspected first and retained inside that cap.
+   * owns that row's paint. Painting retains at most 100 resolved entries from a 1,000-entry
+   * candidate window; an active entry anywhere in the bounded host snapshot is placed first and
+   * retained inside both ceilings.
    */
   private resolveHighlights(): Map<string, { highlight: LyraHighlight; index: number; total: number }> {
     const byPath = new Map<string, { highlight: LyraHighlight; index: number; total: number }>();
@@ -704,9 +706,10 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   }
 
   /** Case-insensitive substring search over every element's tag name, attribute names/values,
-   *  and own text, layered over the already-parsed document -- resolves at most 10,000 retained
-   *  matches and fires `lr-search-change`; `detail.matchCountExact=false` identifies that return
-   *  as a lower bound. Matches are re-derived automatically whenever the document
+   *  and own text, layered over the already-parsed document -- accepts at most 4,096 query code
+   *  units, scans at most 4,000,000 code units, resolves at most 10,000 retained matches, and fires
+   *  `lr-search-change`; `detail.matchCountExact=false` identifies a ceiling-truncated lower
+   *  bound. Matches are re-derived automatically whenever the document
    *  reloads with the same query still set; the active index is clamped and the recomputed state
    *  fires `lr-search-change` again (see `setDoc()`). */
   async search(query: string): Promise<number> {

@@ -74,7 +74,7 @@ export const Default: Story = {
     html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
       <lr-thread-list
         searchable
-        active-id="2"
+        active-conversation-id="2"
         .threads=${threads}
         .rowActions=${['pin', 'archive', 'delete']}
       ></lr-thread-list>
@@ -93,7 +93,7 @@ export const CustomRowActions: Story = {
     html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
       <lr-thread-list
         searchable
-        active-id="2"
+        active-conversation-id="2"
         .threads=${threads}
         .renderActions=${(thread: LyraChatThread) => html`
           <lr-dropdown placement="bottom-end">
@@ -174,7 +174,7 @@ export const CollidingActiveIdentity: Story = {
           const list = (event.currentTarget as HTMLElement)
             .closest('[data-colliding-identity]')
             ?.querySelector<LyraThreadList>('lr-thread-list');
-          if (list) list.activeId = 'group:today';
+          if (list) list.activeConversationId = 'group:today';
         }}
       >
         Activate the colliding last thread
@@ -220,7 +220,7 @@ export const Narrow320px: Story = {
       <lr-thread-list
         searchable
         show-archived
-        active-id="rtl-active"
+        active-conversation-id="rtl-active"
         .threads=${narrowRtlThreads}
         .rowActions=${['pin', 'archive', 'delete']}
       ></lr-thread-list>
@@ -332,7 +332,7 @@ export const DenseRows: Story = {
     <div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
       <lr-thread-list
         class="dense-rows"
-        active-id="2"
+        active-conversation-id="2"
         .threads=${threads}
         .renderActions=${(thread: LyraChatThread) => html`
           <lr-dropdown placement="bottom-end">
@@ -368,10 +368,10 @@ export const CompactRows: Story = {
   render: () => html`
     <div style="display:flex;gap:1rem;">
       <div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
-        <lr-thread-list active-id="2" .threads=${threads}></lr-thread-list>
+        <lr-thread-list active-conversation-id="2" .threads=${threads}></lr-thread-list>
       </div>
       <div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
-        <lr-thread-list compact active-id="2" .threads=${threads}></lr-thread-list>
+        <lr-thread-list compact active-conversation-id="2" .threads=${threads}></lr-thread-list>
       </div>
     </div>
   `,

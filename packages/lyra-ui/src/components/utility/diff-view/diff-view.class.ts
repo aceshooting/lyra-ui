@@ -5,7 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import { literalSetConverter } from "../../../internal/converters.js";
+import { literalSetConverter } from '../../../internal/converters.js';
 import {
   writeClipboardText,
   type LyraClipboardWriteFailure,
@@ -55,8 +55,8 @@ export interface LyraDiffViewEventMap {
 export type LyraDiffViewLayout = 'unified' | 'split';
 
 const DIFF_VIEW_LAYOUT = literalSetConverter<LyraDiffViewLayout>(
-  ["unified", "split"],
-  "unified"
+  ['unified', 'split'],
+  'unified'
 );
 
 /**
@@ -122,7 +122,7 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   /** `'unified'` (the default) renders today's single interleaved `<pre>`; `'split'` renders two
    *  side-by-side columns derived from the same `LyraDiffOp[]` (see `pairOpsForSplit()`).
    *  Unsupported attributes and untyped writes normalize to reflected `unified`. */
-  private _layout: LyraDiffViewLayout = "unified";
+  private _layout: LyraDiffViewLayout = 'unified';
 
   @property({ reflect: true, converter: DIFF_VIEW_LAYOUT })
   get layout(): LyraDiffViewLayout {
@@ -131,13 +131,13 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   set layout(next: LyraDiffViewLayout) {
     const normalized = DIFF_VIEW_LAYOUT.normalizeReflected(
       this,
-      "layout",
+      'layout',
       next
     );
     const old = this._layout;
     if (old === normalized) return;
     this._layout = normalized;
-    this.requestUpdate("layout", old);
+    this.requestUpdate('layout', old);
   }
 
   /** A shiki-recognized language id. Highlighting activates only when this has a matching entry in

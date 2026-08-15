@@ -1,6 +1,9 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  LyraElement,
+  type LyraEventDetailSnapshot,
+} from '../../../internal/lyra-element.js';
 import { styles } from './eval-result.styles.js';
 import type { RubricKey, RubricValue } from '../../forms/rubric-form/rubric-form.class.js';
 import type { AgentRunActivateDetail } from '../run-events.js';
@@ -29,21 +32,25 @@ const EMPTY_VALUE: RubricValue = {};
  * no conversion.
  */
 export interface EvalRunResult {
-  id: string;
-  label: string;
-  model?: string;
-  promptVersion?: string;
-  output: string;
-  scores?: RubricValue;
-  review?: RubricValue;
+  readonly id: string;
+  readonly label: string;
+  readonly model?: string;
+  readonly promptVersion?: string;
+  readonly output: string;
+  readonly scores?: RubricValue;
+  readonly review?: RubricValue;
 }
 
 export interface LyraEvalResultEventMap {
-  'lr-run-activate': CustomEvent<AgentRunActivateDetail<EvalRunResult>>;
-  'lr-review-input': CustomEvent<{ runId: string; value: RubricValue }>;
-  'lr-review-validity-change': CustomEvent<{ runId: string; valid: boolean; errors: Record<string, string> }>;
-  'lr-review-submit': CustomEvent<{ runId: string; value: RubricValue }>;
-  'lr-review-skip': CustomEvent<{ runId: string }>;
+  'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<EvalRunResult>>>;
+  'lr-review-input': CustomEvent<LyraEventDetailSnapshot<{ runId: string; value: RubricValue }>>;
+  'lr-review-validity-change': CustomEvent<LyraEventDetailSnapshot<{
+    runId: string;
+    valid: boolean;
+    errors: Record<string, string>;
+  }>>;
+  'lr-review-submit': CustomEvent<LyraEventDetailSnapshot<{ runId: string; value: RubricValue }>>;
+  'lr-review-skip': CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>;
 }
 
 /**
@@ -94,7 +101,7 @@ export interface LyraEvalResultEventMap {
  * @since 4.1.0
  */
 export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["runs", "columns", "rubricKeys"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['runs', 'columns', 'rubricKeys']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -117,6 +124,13 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-run-activate',
+    'lr-review-input',
+    'lr-review-validity-change',
+    'lr-review-submit',
+    'lr-review-skip',
+  ]);
 
   /** The runs (one per model or prompt version) being compared for this evaluation example. Empty
    *  ids are omitted and duplicates normalize first-wins before selection, diff, grid, and review

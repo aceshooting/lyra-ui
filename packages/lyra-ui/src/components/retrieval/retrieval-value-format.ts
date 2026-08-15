@@ -1,5 +1,5 @@
-import { getListFormat, getNumberFormat } from "../../internal/intl-cache.js";
-import { finiteNumber } from "../../internal/numbers.js";
+import { getListFormat, getNumberFormat } from '../../internal/intl-cache.js';
+import { finiteNumber } from '../../internal/numbers.js';
 
 export interface BoundedRetrievalValueFormatOptions {
   readonly locale: string;
@@ -36,13 +36,13 @@ export function formatBoundedRetrievalValue(
 
   const format = (current: unknown, depth: number): string => {
     if (remaining-- <= 0 || depth > maxDepth) return options.truncated;
-    if (typeof current === "string") return boundedText(current);
-    if (typeof current === "number")
+    if (typeof current === 'string') return boundedText(current);
+    if (typeof current === 'number')
       return getNumberFormat(options.locale).format(finiteNumber(current, 0));
-    if (typeof current === "boolean" || typeof current === "bigint")
+    if (typeof current === 'boolean' || typeof current === 'bigint')
       return String(current);
-    if (current == null) return "";
-    if (typeof current !== "object") return options.invalid;
+    if (current == null) return '';
+    if (typeof current !== 'object') return options.invalid;
     if (seen.has(current)) return options.invalid;
     seen.add(current);
 
@@ -55,7 +55,7 @@ export function formatBoundedRetrievalValue(
         for (let index = 0; index < count; index++)
           items.push(format(current[index], depth + 1));
         if (length > count) items.push(options.truncated);
-        return getListFormat(options.locale, { type: "conjunction" }).format(
+        return getListFormat(options.locale, { type: 'conjunction' }).format(
           items
         );
       }
@@ -77,7 +77,7 @@ export function formatBoundedRetrievalValue(
         ([key, item]) => `${key}: ${format(item, depth + 1)}`
       );
       if (truncated) parts.push(options.truncated);
-      return `{${parts.join(", ")}}`;
+      return `{${parts.join(', ')}}`;
     } catch {
       return options.invalid;
     } finally {

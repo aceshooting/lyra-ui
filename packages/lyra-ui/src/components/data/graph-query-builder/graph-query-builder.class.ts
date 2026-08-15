@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -394,6 +394,15 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-input',
+    'lr-before-query-run',
+    'lr-query-run',
+    'lr-before-query-save',
+    'lr-query-save',
+    'lr-before-query-load',
+    'lr-query-load',
+  ]);
 
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },

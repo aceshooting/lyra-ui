@@ -1,35 +1,35 @@
-import { property } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { srOnly } from "../../../internal/a11y.js";
-import type { LyraAnchorTargetEventMap } from "../../../internal/anchor-target.js";
+import { property } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
+import type { LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import {
   getMarkdownDepsIfLoaded,
   type LyraMarkedParser,
-} from "./markdown-loader.js";
+} from './markdown-loader.js';
 import {
   loadShikiHighlighterCore,
   normalizeShikiLanguage,
   type ShikiLanguageInput,
-} from "../code-block/shiki-types.js";
+} from '../code-block/shiki-types.js';
 import {
   createMarkdownKatexState,
   tokenizeMarkdownHighlight,
   type PendingHighlight,
   type MarkdownHeadingItem as SharedMarkdownHeadingItem,
   type MarkdownHtmlMode,
-} from "./markdown-shared.js";
+} from './markdown-shared.js';
 import {
   createMarkdownVariantContext,
   MarkdownRuntimeBase,
   type MarkdownHighlightAttempt,
   type MarkdownVariantContext,
-} from "./markdown-base.class.js";
-import { styles } from "./markdown.styles.js";
+} from './markdown-base.class.js';
+import { styles } from './markdown.styles.js';
 // The parse-only variant, matching `<lr-markdown>`. Inert either way today (neither `gfm` nor
 // `highlightCode` reflects, so no `toAttribute` is ever called), but the pair had drifted onto
 // two different converters, and the reflecting one would start behaving differently the moment any
 // either property gained `reflect: true`.
-import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from "../../../internal/converters.js";
+import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound } from '../../../internal/default-strings.generated.js';
@@ -52,8 +52,8 @@ const katexState = createMarkdownKatexState();
  *  `fromAttribute` checks the literal string instead. Shared by `gfm` and `highlightCode`. */
 
 export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
-  "lr-render-error": CustomEvent<{ error: unknown }>;
-  "lr-link-click": CustomEvent<{ href: string }>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-link-click': CustomEvent<{ href: string }>;
 }
 
 /**
@@ -128,7 +128,11 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * every render (never by node identity), so a highlight painted before a `streaming` update
  * finishes still finds its quote once the matching text arrives. Highlight painting uses
  * `internal/text-highlights.ts`'s `acquireHighlightHandle()` -- the CSS Custom Highlight API where
- * the browser supports it (no DOM mutation at all), a `<mark>`-wrap fallback otherwise.
+ * the browser supports it (no DOM mutation at all), a `<mark>`-wrap fallback otherwise. Quote
+ * resolution indexes at most 1,000,000 code units/20,000 text nodes per content generation, bounds
+ * each quote/context field to 4,096 code units and each pass to 4,000,000 scanned code units, and
+ * paints at most 100 host highlights from a 1,000-entry candidate window while preserving the
+ * active entry from the bounded host snapshot.
  *
  * `math` renders `$...$`/`$$...$$` TeX as MathML via the optional `katex` peer's
  * `renderToString(tex, { output: 'mathml' })` -- MathML Core renders natively and accessibly in
@@ -196,7 +200,7 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   private static readonly variant = createMarkdownVariantContext(
-    "lr-markdown-core",
+    'lr-markdown-core',
     katexState
   );
 
@@ -208,7 +212,7 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
     );
     if (!parser) {
       throw new Error(
-        "LyraMarkdownCore.getMarked() requires the optional `marked` peer; await preloadMarkdown() first."
+        'LyraMarkdownCore.getMarked() requires the optional `marked` peer; await preloadMarkdown() first.'
       );
     }
     return parser;
@@ -221,17 +225,17 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   }
 
   /** The Markdown source to render. */
-  @property() override content = "";
+  @property() override content = '';
 
   /** Tab-stop width used to expand tabs in leading indentation before parsing. Finite values are
    * truncated and clamped to `[1, 32]`; non-finite values fall back to `4`. This is separate from
    * `--lr-code-block-tab-size`, which controls the visual width of tabs in rendered code. */
-  @property({ type: Number, attribute: "tab-size" }) override tabSize = 4;
+  @property({ type: Number, attribute: 'tab-size' }) override tabSize = 4;
 
   /** How authored raw HTML is handled: sanitized through DOMPurify (default), escaped as visible
    * text, or deliberately trusted. */
-  @property({ attribute: "html-mode" }) override htmlMode: MarkdownHtmlMode =
-    "sanitize";
+  @property({ attribute: 'html-mode' }) override htmlMode: MarkdownHtmlMode =
+    'sanitize';
 
   /** Enable GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists). */
   @property({ converter: trueDefaultBooleanConverter }) override gfm = true;
@@ -241,15 +245,15 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
    *  `'_blank'` (the default) preserves today's exact output. Set to `null`
    *  (or the empty string, e.g. via the `link-target=""` attribute) to omit
    *  `target`/`rel` entirely, so rendered links open in the same tab. */
-  @property({ attribute: "link-target" }) override linkTarget: string | null =
-    "_blank";
+  @property({ attribute: 'link-target' }) override linkTarget: string | null =
+    '_blank';
 
   /** When set, a rendered link whose `href` starts with this prefix is
    *  treated as internal — its click is intercepted and reported via
    *  `lr-link-click` instead of navigating. Empty (the default) means
    *  every link is treated as external. */
-  @property({ attribute: "internal-link-prefix" }) override internalLinkPrefix =
-    "";
+  @property({ attribute: 'internal-link-prefix' }) override internalLinkPrefix =
+    '';
 
   /** Added to every rendered heading's source `token.depth` before emitting
    *  `<h${depth}>` — e.g. `heading-offset="2"` renders a source `#` as
@@ -258,7 +262,7 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
    *  overflowing past the HTML heading levels; the floor at `1` is
    *  defensive, since this property is meant to be additive-only). `0`
    *  (the default) preserves today's exact `<h${token.depth}>` output. */
-  @property({ type: Number, attribute: "heading-offset" })
+  @property({ type: Number, attribute: 'heading-offset' })
   override headingOffset = 0;
 
   /** Signals that `content` is still arriving incrementally. While true, content renders as
@@ -275,7 +279,7 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
    *  byte-identical output to today). Set `false` to keep plain output even when `shiki` is
    *  installed. No effect while `streaming` is `true` -- see that property's own doc. */
   @property({
-    attribute: "highlight-code",
+    attribute: 'highlight-code',
     converter: trueDefaultBooleanConverter,
   })
   override highlightCode = true;
@@ -300,7 +304,7 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
    *  clobbering protection (`SANITIZE_DOM`) -- `getHeadingTree()` still reports that heading's slug
    *  either way, but `scrollToAnchor({ kind: 'fragment', id })` still resolves it correctly even
    *  without a DOM `id` present, via its own position-based fallback lookup. */
-  @property({ type: Boolean, attribute: "heading-anchors" })
+  @property({ type: Boolean, attribute: 'heading-anchors' })
   override headingAnchors = false;
 
   /** Renders `$...$`/`$$...$$` TeX via the optional `katex` peer, as MathML. `false` (the
@@ -333,6 +337,6 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-markdown-core": LyraMarkdownCore;
+    'lr-markdown-core': LyraMarkdownCore;
   }
 }

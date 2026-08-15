@@ -488,13 +488,13 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
               part="overflow-badge"
               type="button"
               ?data-first-visible=${badgeIsFirstVisible}
-              aria-label=${this.localize("showMoreCount", undefined, {
+              aria-label=${this.localize('showMoreCount', undefined, {
                 count: localizedHiddenCount,
               })}
               @click=${this.onOverflowClick}
             >
               <span part="overflow-badge-visual" aria-hidden="true"
-                >${this.localize("showMoreCollapsed", undefined, {
+                >${this.localize('showMoreCollapsed', undefined, {
                   count: localizedHiddenCount,
                 })}</span
               >

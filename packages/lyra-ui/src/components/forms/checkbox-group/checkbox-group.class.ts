@@ -382,8 +382,8 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.sync();
     const detail = (): Readonly<{ value: readonly string[] }> =>
       Object.freeze({ value: this.value });
-    this.emit("input", detail());
-    this.emit("change", detail());
+    this.emit('input', detail());
+    this.emit('change', detail());
     this.emit('lr-change', detail());
   };
 

@@ -600,9 +600,9 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
               data-step-id=${step.stepId}
               data-index=${index}
               data-state=${step.state}
-              aria-current=${index === currentIndex ? "step" : "false"}
-              aria-disabled=${step.disabled ? "true" : "false"}
-              tabindex=${index === rovingIndex ? "0" : "-1"}
+              aria-current=${index === currentIndex ? 'step' : 'false'}
+              aria-disabled=${step.disabled ? 'true' : 'false'}
+              tabindex=${index === rovingIndex ? '0' : '-1'}
               title=${step.title ?? nothing}
               @click=${() => this.selectStep(step, index)}
             >
@@ -611,7 +611,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
                     >${step.icon}</span
                   >`
                 : nothing}
-              ${step.state === "completed"
+              ${step.state === 'completed'
                 ? checkmarkGlyph()
                 : html`<span part="step-index"
                     >${numberFormat.format(index + 1)}</span

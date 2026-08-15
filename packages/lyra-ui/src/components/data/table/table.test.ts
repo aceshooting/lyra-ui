@@ -1672,6 +1672,24 @@ it('supports opt-in multiple row selection without changing the default presenta
   expect(row.getAttribute('aria-selected')).to.equal('true');
 });
 
+it('omits blank controlled keys while retaining valid off-page selection identities', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (row) => row.id;
+  el.selectionMode = 'multiple';
+  el.selectedKeys = new Set(['   ', 'a']);
+  el.expandedKeys = new Set(['', '   ', 'off-page']);
+  await el.updateComplete;
+
+  expect([...el.selectedKeys]).to.deep.equal(['a']);
+  expect([...el.expandedKeys]).to.deep.equal(['off-page']);
+  const pending = oneEvent(el, 'lr-selection-change');
+  el.shadowRoot!.querySelectorAll<HTMLElement>('[part=row]')[1]!.click();
+  expect((await pending).detail.keys).to.deep.equal(['a', 'b']);
+  expect([...el.selectedKeys]).to.deep.equal(['a', 'b']);
+});
+
 it('supports single row selection and emits the selected key', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;

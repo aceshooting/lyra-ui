@@ -917,7 +917,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         : nothing}
       ${this.loading
         ? html`<span part="spinner" aria-hidden="true">${spinnerIcon()}</span>`
-        : ""}
+        : ''}
     `;
 
     // `download` turns the anchor from a navigation sink into a resource sink, and the two carry
@@ -940,15 +940,15 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         href=${disabled ? nothing : href}
         target=${this.target || nothing}
         rel=${this.resolvedRel ?? nothing}
-        download=${hasDownload ? this.download ?? "" : nothing}
+        download=${hasDownload ? this.download ?? '' : nothing}
         aria-label=${this.accessibleLabel || nothing}
         aria-haspopup=${this.triggerHasPopup ?? nothing}
         aria-expanded=${this.triggerExpanded ?? nothing}
         aria-controls=${this.triggerControls || nothing}
         aria-describedby=${this.triggerDescribedBy || nothing}
-        aria-disabled=${disabled ? "true" : nothing}
-        aria-busy=${this.loading ? "true" : "false"}
-        tabindex=${disabled ? "-1" : nothing}
+        aria-disabled=${disabled ? 'true' : nothing}
+        aria-busy=${this.loading ? 'true' : 'false'}
+        tabindex=${disabled ? '-1' : nothing}
         @focus=${this.onFocus}
         @blur=${this.onBlur}
         >${content}</a
@@ -965,7 +965,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         aria-expanded=${this.triggerExpanded ?? nothing}
         aria-controls=${this.triggerControls || nothing}
         aria-describedby=${this.triggerDescribedBy || nothing}
-        aria-busy=${this.loading ? "true" : "false"}
+        aria-busy=${this.loading ? 'true' : 'false'}
         ?disabled=${this.effectiveDisabled || this.loading}
         @click=${this.onClick}
         @focus=${this.onFocus}

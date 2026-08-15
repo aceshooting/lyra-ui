@@ -5,19 +5,19 @@ import {
   type TemplateResult,
   type SVGTemplateResult,
   type PropertyValues,
-} from "lit";
-import { property, state, query } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { getDateTimeFormat } from "../../../internal/intl-cache.js";
-import { styles } from "./conversation-item.styles.js";
+} from 'lit';
+import { property, state, query } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { styles } from './conversation-item.styles.js';
 import {
   autocorrectConverter,
   normalizeAutocorrect,
   presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter,
   spellcheckConverter,
-} from "../../../internal/converters.js";
-import { activeElementIn } from "../../../internal/active-element.js";
-import { normalizeLyraTimestamp, type LyraTimestamp } from "../timestamp.js";
+} from '../../../internal/converters.js';
+import { activeElementIn } from '../../../internal/active-element.js';
+import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_rename, LYRA_DEFAULT_untitledConversation } from '../../../internal/default-strings.generated.js';
@@ -43,8 +43,8 @@ export interface ConversationItemSelectDetail {
 // of the library's inline icons. Same approach lr-checkbox's own local
 // checkmark/indeterminate glyphs and lr-chat-message's local retryIcon()
 // take for the identical reason.
-const ICON_VIEW_BOX = "0 0 24 24";
-const ICON_STROKE_WIDTH = "1.75";
+const ICON_VIEW_BOX = '0 0 24 24';
+const ICON_STROKE_WIDTH = '1.75';
 
 function pencilIcon(): SVGTemplateResult {
   return svg`
@@ -83,22 +83,22 @@ function defaultFormatTimestamp(
   const sameDay = date.toDateString() === now.toDateString();
   if (sameDay) {
     return getDateTimeFormat(locale, {
-      hour: "numeric",
-      minute: "2-digit",
+      hour: 'numeric',
+      minute: '2-digit',
     }).format(date);
   }
   const sameYear = date.getFullYear() === now.getFullYear();
   return getDateTimeFormat(
     locale,
     sameYear
-      ? { month: "short", day: "numeric" }
-      : { month: "short", day: "numeric", year: "numeric" }
+      ? { month: 'short', day: 'numeric' }
+      : { month: 'short', day: 'numeric', year: 'numeric' }
   ).format(date);
 }
 
 export interface LyraConversationItemEventMap {
-  "lr-select": CustomEvent<ConversationItemSelectDetail>;
-  "lr-rename": CustomEvent<ConversationItemRenameDetail>;
+  'lr-select': CustomEvent<ConversationItemSelectDetail>;
+  'lr-rename': CustomEvent<ConversationItemRenameDetail>;
   blur: CustomEvent<null>;
   focus: CustomEvent<null>;
 }
@@ -217,18 +217,18 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   static override styles = [LyraElement.styles, styles];
 
   /** Stable domain identity included in selection and rename request details. */
-  @property({ attribute: "conversation-id" }) conversationId = "";
+  @property({ attribute: 'conversation-id' }) conversationId = '';
 
   /** The session's visible label. The inherited native `title` remains available for host tooltip
    *  semantics and is not used as conversation content. */
-  @property() label = "";
+  @property() label = '';
 
   /** A short preview snippet of the last message. Omit for no excerpt line. Ignored entirely when the
    *  `excerpt` slot has assigned content — see that slot's own description. Only non-focusable
    *  content should be slotted there: `role="button"` on `[part="select-button"]` forbids focusable
    *  descendants (axe's `nested-interactive` rule); an interactive control belongs in the `actions`
    *  slot instead. */
-  @property() excerpt = "";
+  @property() excerpt = '';
 
   /** When the session was last active. Accepts a `Date` or anything
    *  `new Date()` can parse (e.g. an ISO 8601 string); invalid input is
@@ -271,7 +271,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
 
   /** Forwarded to the in-place rename `<input>`'s own `autocapitalize`. Empty string omits the
    *  attribute (browser default). */
-  @property() override autocapitalize = "";
+  @property() override autocapitalize = '';
 
   private autocorrectValue = true;
 
@@ -286,7 +286,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   }
 
   @state() private renaming = false;
-  @state() private draftLabel = "";
+  @state() private draftLabel = '';
   @state() private hasActionsSlot = false;
   @state() private hasStartSlot = false;
   @state() private hasContentSlot = false;
@@ -306,24 +306,24 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     // willUpdate() layered under this class must still run.
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some(
-        (el) => el.getAttribute("slot") === "actions"
+        (el) => el.getAttribute('slot') === 'actions'
       );
       this.syncStartSlot();
       this.hasContentSlot = Array.from(this.children).some(
-        (el) => el.getAttribute("slot") === "content"
+        (el) => el.getAttribute('slot') === 'content'
       );
       this.hasMetaSlot = Array.from(this.children).some(
-        (el) => el.getAttribute("slot") === "meta"
+        (el) => el.getAttribute('slot') === 'meta'
       );
       this.hasExcerptSlot = Array.from(this.children).some(
-        (el) => el.getAttribute("slot") === "excerpt"
+        (el) => el.getAttribute('slot') === 'excerpt'
       );
     }
     // `renamable` documents that flipping it false can never leave a rename
     // committable -- without this, toggling it mid-edit would strand the
     // input mounted (and still submittable via Enter/blur) since nothing
     // else observes `renamable` while `renaming` is already true.
-    if (changed.has("renamable") && !this.renamable && this.renaming) {
+    if (changed.has('renamable') && !this.renamable && this.renaming) {
       this.cancelRename();
     }
   }
@@ -331,7 +331,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
-    if (changed.has("renaming") && this.renaming) {
+    if (changed.has('renaming') && this.renaming) {
       // Runs after render, so the input already exists in the DOM.
       this.focusRenameInput();
     }
@@ -347,7 +347,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   }
 
   private select(): void {
-    this.emit("lr-select", { conversationId: this.conversationId });
+    this.emit('lr-select', { conversationId: this.conversationId });
   }
 
   /** Activates the selectable row, matching a native button host. */
@@ -385,7 +385,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     // it the same as Escape rather than firing a no-op (or blanking) rename
     // for the consumer to deal with.
     if (!next || next === this.label) return;
-    this.emit("lr-rename", {
+    this.emit('lr-rename', {
       conversationId: this.conversationId,
       label: next,
     });
@@ -406,7 +406,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
 
   private onOptionKeyDown = (e: KeyboardEvent): void => {
     if (this.renaming) return;
-    if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
       // Space would otherwise scroll the page, same as lr-checkbox/lr-switch.
       e.preventDefault();
       this.select();
@@ -433,24 +433,24 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     // onOptionKeyDown's own `if (this.renaming) return;` guard, which would
     // otherwise wrongly let the same Enter keystroke also fire lr-select.
     e.stopPropagation();
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       e.preventDefault();
       this.commitRename(true);
-    } else if (e.key === "Escape") {
+    } else if (e.key === 'Escape') {
       e.preventDefault();
       this.cancelRename(true);
     }
   };
 
   private onLabelInputFocus = (): void => {
-    this.emit("focus", null);
+    this.emit('focus', null);
   };
 
   private onLabelInputBlur = (event: FocusEvent): void => {
     // Native blur/focus neither bubble nor cross the shadow boundary -- re-dispatch so a
     // host-level listener on the custom element itself can observe them. Always fires, even on
     // the Escape-driven path below, since the native input really did blur either way.
-    this.emit("blur", null);
+    this.emit('blur', null);
     // If Escape already ended the edit synchronously (cancelRename() runs
     // before this fires), `renaming` is already false by the time the
     // now-removed input's blur event reaches here -- skip so Escape can't
@@ -479,7 +479,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
 
   private syncStartSlot = (): void => {
     this.hasStartSlot = Array.from(this.children).some(
-      (el) => el.getAttribute("slot") === "start"
+      (el) => el.getAttribute('slot') === 'start'
     );
   };
 
@@ -506,13 +506,13 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     const formatter =
       this.formatTimestamp ??
       ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
-    const displayLabel = this.label || this.localize("untitledConversation");
+    const displayLabel = this.label || this.localize('untitledConversation');
     const showRenameButton = this.renamable && !this.renaming;
     // Shared between the rename button and the input it opens: the input is
     // where focus actually lands, so it needs the same row-specific
     // accessible name (not a generic one) to disambiguate which row a
     // screen-reader user is editing.
-    const renameLabel = this.localize("rename", undefined, {
+    const renameLabel = this.localize('rename', undefined, {
       title: displayLabel,
     });
 
@@ -523,16 +523,16 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
           : nothing}
         <div
           part="select-button"
-          role=${this.renaming ? nothing : "button"}
-          tabindex=${this.renaming ? nothing : "0"}
+          role=${this.renaming ? nothing : 'button'}
+          tabindex=${this.renaming ? nothing : '0'}
           aria-current=${this.renaming
             ? nothing
             : this.active
-            ? "true"
-            : "false"}
+            ? 'true'
+            : 'false'}
           aria-label=${this.renaming
             ? nothing
-            : this.getAttribute("aria-label") ?? displayLabel}
+            : this.getAttribute('aria-label') ?? displayLabel}
           @click=${this.onOptionClick}
           @keydown=${this.onOptionKeyDown}
         >
@@ -554,11 +554,11 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
                   aria-label=${renameLabel}
                   spellcheck=${this.spellcheck}
                   autocapitalize=${this.autocapitalize || nothing}
-                  autocorrect=${this.hasAttribute("autocorrect") ||
+                  autocorrect=${this.hasAttribute('autocorrect') ||
                   !this.autocorrect
                     ? this.autocorrect
-                      ? "on"
-                      : "off"
+                      ? 'on'
+                      : 'off'
                     : nothing}
                   @input=${this.onLabelInputChange}
                   @keydown=${this.onLabelInputKeyDown}
@@ -619,6 +619,6 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-conversation-item": LyraConversationItem;
+    'lr-conversation-item': LyraConversationItem;
   }
 }

@@ -1,4 +1,4 @@
-import { css } from "lit";
+import { css } from 'lit';
 
 // Shares its collapsible-header shape (border/radius/hover/focus-ring, the
 // rotating chevron) with lr-source-list's styles almost verbatim -- the two

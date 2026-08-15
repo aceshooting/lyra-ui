@@ -1,19 +1,19 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
-import { html, nothing, type TemplateResult } from "lit";
-import { property } from "lit/decorators.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { html, nothing, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
 import type {
   RetrievalChunk,
   RetrievalScoreBreakdown,
-} from "../../../ai/types.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { finiteCount, finiteRange } from "../../../internal/numbers.js";
-import "../../overlays/empty/empty.class.js";
-import { styles } from "./retrieval-compare.styles.js";
+} from '../../../ai/types.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import '../../overlays/empty/empty.class.js';
+import { styles } from './retrieval-compare.styles.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
-} from "../retrieval-semantic-owner.js";
+} from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_retrievalCompareDenseScore, LYRA_DEFAULT_retrievalCompareEmpty, LYRA_DEFAULT_retrievalCompareFinalScore, LYRA_DEFAULT_retrievalCompareLabel, LYRA_DEFAULT_retrievalCompareOverlap, LYRA_DEFAULT_retrievalCompareRank, LYRA_DEFAULT_retrievalCompareRerankScore, LYRA_DEFAULT_retrievalCompareSparseScore } from '../../../internal/default-strings.generated.js';
@@ -28,7 +28,7 @@ export interface RetrievalComparisonSet {
 }
 
 export interface LyraRetrievalCompareEventMap {
-  "lr-chunk-select": CustomEvent<LyraEventDetailSnapshot<{ setId: string; chunk: RetrievalChunk }>>;
+  'lr-chunk-select': CustomEvent<LyraEventDetailSnapshot<{ setId: string; chunk: RetrievalChunk }>>;
 }
 
 /**
@@ -60,7 +60,7 @@ export interface LyraRetrievalCompareEventMap {
  * @since 7.0.0
  */
 export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["sets"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['sets']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -78,16 +78,19 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-chunk-select',
+  ]);
 
   /** Named retrieval result sets rendered side by side. */
   @property({ attribute: false }) sets: readonly RetrievalComparisonSet[] = [];
   /** Maximum ranked chunks shown from each set after stable score ordering. */
-  @property({ type: Number, attribute: "top-k" }) topK = 10;
+  @property({ type: Number, attribute: 'top-k' }) topK = 10;
   /** Controlled chunk id highlighted across every set that contains it. */
-  @property({ attribute: "selected-chunk-id" }) selectedChunkId = "";
+  @property({ attribute: 'selected-chunk-id' }) selectedChunkId = '';
   /** Fallback name for the comparison region. A non-empty host `aria-label` makes the host the
    *  sole overall owner; an explicitly empty host label stays empty on the region. */
-  @property() label = "";
+  @property() label = '';
 
   private readonly headingIdPrefix = `lr-retrieval-compare-${++retrievalCompareInstance}`;
 
@@ -110,7 +113,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     return Math.max(
       1,
       finiteCount(
-        typeof chunk.rank === "number" ? chunk.rank : index + 1,
+        typeof chunk.rank === 'number' ? chunk.rank : index + 1,
         index + 1
       )
     );
@@ -118,7 +121,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
 
   private formatScore(value: number): string {
     return getNumberFormat(this.effectiveLocale, {
-      style: "percent",
+      style: 'percent',
       maximumFractionDigits: 1,
     }).format(finiteRange(value, 0, 0, 1));
   }
@@ -143,7 +146,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
         const union = new Set([...left, ...right]).size;
         const percent = this.formatScore(union ? intersection / union : 0);
         summaries.push(
-          this.localize("retrievalCompareOverlap", undefined, {
+          this.localize('retrievalCompareOverlap', undefined, {
             left: leftSet.label,
             right: rightSet.label,
             percent,
@@ -159,12 +162,12 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
       final: chunk.score,
     };
     return [
-      [this.localize("retrievalCompareDenseScore"), scores.dense],
-      [this.localize("retrievalCompareSparseScore"), scores.sparse],
-      [this.localize("retrievalCompareRerankScore"), scores.rerank],
-      [this.localize("retrievalCompareFinalScore"), scores.final],
+      [this.localize('retrievalCompareDenseScore'), scores.dense],
+      [this.localize('retrievalCompareSparseScore'), scores.sparse],
+      [this.localize('retrievalCompareRerankScore'), scores.rerank],
+      [this.localize('retrievalCompareFinalScore'), scores.final],
     ].filter(
-      (entry): entry is [string, number] => typeof entry[1] === "number"
+      (entry): entry is [string, number] => typeof entry[1] === 'number'
     );
   }
 
@@ -180,18 +183,18 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
           ${this.orderedChunks(set).map((chunk, index) => {
             const selected = chunk.id === this.selectedChunkId;
             const rank = this.rank(chunk, index);
-            const chunkPart = selected ? "chunk chunk-selected" : "chunk";
+            const chunkPart = selected ? 'chunk chunk-selected' : 'chunk';
             return html`
               <li>
                 <button
                   part=${chunkPart}
                   type="button"
-                  aria-pressed=${selected ? "true" : "false"}
+                  aria-pressed=${selected ? 'true' : 'false'}
                   @click=${() =>
-                    this.emit("lr-chunk-select", { setId: set.id, chunk })}
+                    this.emit('lr-chunk-select', { setId: set.id, chunk })}
                 >
                   <span part="chunk-rank"
-                    >${this.localize("retrievalCompareRank", undefined, {
+                    >${this.localize('retrievalCompareRank', undefined, {
                       rank: getNumberFormat(this.effectiveLocale).format(rank),
                     })}</span
                   >
@@ -219,9 +222,9 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
   override render(): TemplateResult {
     const label = retrievalSemanticLabel(
       this,
-      this.label || this.localize("retrievalCompareLabel")
+      this.label || this.localize('retrievalCompareLabel')
     );
-    const role = retrievalSemanticRole(this, "region");
+    const role = retrievalSemanticRole(this, 'region');
     if (!this.sets.length) {
       return html`<section
         part="base"
@@ -230,7 +233,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
       >
         <lr-empty
           part="empty"
-          heading=${this.localize("retrievalCompareEmpty")}
+          heading=${this.localize('retrievalCompareEmpty')}
         ></lr-empty>
       </section>`;
     }
@@ -252,6 +255,6 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-retrieval-compare": LyraRetrievalCompare;
+    'lr-retrieval-compare': LyraRetrievalCompare;
   }
 }

@@ -2837,8 +2837,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                 part="search"
                 type="search"
                 .value=${this.searchTerm}
-                aria-label=${this.localize("search")}
-                placeholder=${this.localize("search")}
+                aria-label=${this.localize('search')}
+                placeholder=${this.localize('search')}
                 @input=${this.applySearchTermChange}
                 @focus=${this.relayEditorFocus}
                 @blur=${this.relayEditorBlur}
@@ -2850,18 +2850,18 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
               <div part="columns-menu">
                 <button
                   type="button"
-                  aria-expanded=${this.columnsMenuOpen ? "true" : "false"}
+                  aria-expanded=${this.columnsMenuOpen ? 'true' : 'false'}
                   @click=${() => {
                     this.columnsMenuOpen = !this.columnsMenuOpen;
                   }}
                 >
-                  ${this.localize("showAllColumns")}
+                  ${this.localize('showAllColumns')}
                 </button>
                 ${this.columnsMenuOpen
                   ? html`
                       <div
                         role="group"
-                        aria-label=${this.localize("showAllColumns")}
+                        aria-label=${this.localize('showAllColumns')}
                       >
                         ${this.orderedColumns.map(({ column, id }) => {
                           const visible =
@@ -2903,12 +2903,12 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     ).length;
     return html`
       <div role="columnheader" aria-colindex="1">
-        ${this.selectionMode === "multiple"
+        ${this.selectionMode === 'multiple'
           ? html`
               <input
                 part="select-all-checkbox"
                 type="checkbox"
-                aria-label=${this.localize("select")}
+                aria-label=${this.localize('select')}
                 .checked=${items.length > 0 && selected === items.length}
                 .indeterminate=${selected > 0 && selected < items.length}
                 ?disabled=${items.length === 0}
@@ -2944,7 +2944,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           type="button"
           aria-label=${menuLabel}
           aria-controls=${menuId}
-          aria-expanded=${open ? "true" : "false"}
+          aria-expanded=${open ? 'true' : 'false'}
           @click=${() => {
             this.activeColumnMenu = open ? null : id;
           }}
@@ -2958,7 +2958,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                 role="group"
                 aria-label=${menuLabel}
                 @keydown=${(event: KeyboardEvent) => {
-                  if (event.key !== "Escape") return;
+                  if (event.key !== 'Escape') return;
                   this.activeColumnMenu = null;
                   event.preventDefault();
                   const trigger = (
@@ -2974,25 +2974,25 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                       <button
                         type="button"
                         data-column-action="pin-start"
-                        @click=${() => this.userPinColumn(id, "left")}
+                        @click=${() => this.userPinColumn(id, 'left')}
                       >
-                        ${this.localize("dataGridPinStart", undefined, {
+                        ${this.localize('dataGridPinStart', undefined, {
                           label,
                         })}
                       </button>
                       <button
                         type="button"
                         data-column-action="pin-end"
-                        @click=${() => this.userPinColumn(id, "right")}
+                        @click=${() => this.userPinColumn(id, 'right')}
                       >
-                        ${this.localize("dataGridPinEnd", undefined, { label })}
+                        ${this.localize('dataGridPinEnd', undefined, { label })}
                       </button>
                       <button
                         type="button"
                         data-column-action="unpin"
                         @click=${() => this.userPinColumn(id, false)}
                       >
-                        ${this.localize("dataGridUnpin", undefined, { label })}
+                        ${this.localize('dataGridUnpin', undefined, { label })}
                       </button>
                     `
                   : nothing}
@@ -3027,20 +3027,20 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       <div
         part="header"
         role="row"
-        style=${styleMap({ "--data-grid-columns": this.gridTemplate })}
+        style=${styleMap({ '--data-grid-columns': this.gridTemplate })}
       >
         ${this.renderSelectAllHeader()}
         ${this.visibleColumns.length === 0 && !this.selectionEnabled
           ? html`
               <div role="columnheader" aria-colindex="1">
-                ${this.localize("noColumns")}
+                ${this.localize('noColumns')}
               </div>
             `
           : nothing}
         ${this.visibleColumns.map(({ column, id }, position) => {
           const sorting = this.sortFor(id);
           const sortable = this.columnIsSortable(column);
-          const direction = sorting.state?.desc ? "descending" : "ascending";
+          const direction = sorting.state?.desc ? 'descending' : 'ascending';
           const canResize = this.resizable || column.resizable;
           const canMove = this.reorderable || column.movable;
           const resizeBounds = this.columnBounds(column);
@@ -3052,13 +3052,13 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
               aria-colindex=${position + 1 + selectionOffset}
               aria-sort=${sorting.state ? direction : nothing}
               tabindex=${this.focusedRow < 0 && this.focusedColumn === position
-                ? "0"
-                : "-1"}
+                ? '0'
+                : '-1'}
               data-focus-cell
               data-column-id=${id}
               data-column-position=${position}
-              data-align=${column.align ?? "start"}
-              data-sortable=${sortable ? "" : nothing}
+              data-align=${column.align ?? 'start'}
+              data-sortable=${sortable ? '' : nothing}
               data-pin=${normalizePinSide(this.getColumnPin(id)) || nothing}
               style=${styleMap(this.columnStyle(column, id))}
               .draggable=${canMove}
@@ -3072,7 +3072,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
               @dragstart=${(event: DragEvent) => this.onDragStart(event, id)}
               @dragend=${() => {
                 this.columnDragSession = undefined;
-                this.dragGhost = "";
+                this.dragGhost = '';
               }}
               @dragover=${(event: DragEvent) => {
                 const session = this.columnDragSession;
@@ -3105,10 +3105,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                     <button
                       part="filter-button"
                       type="button"
-                      aria-label=${this.localize("tableFilterLabel")}
+                      aria-label=${this.localize('tableFilterLabel')}
                       aria-expanded=${this.activeFilterColumn === id
-                        ? "true"
-                        : "false"}
+                        ? 'true'
+                        : 'false'}
                       @click=${() => {
                         this.activeFilterColumn =
                           this.activeFilterColumn === id ? null : id;
@@ -3128,7 +3128,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                       part="resize-handle"
                       role="separator"
                       aria-orientation="vertical"
-                      aria-label=${this.localize("resizeColumn", undefined, {
+                      aria-label=${this.localize('resizeColumn', undefined, {
                         label: this.columnLabel(column, id),
                       })}
                       aria-valuemin=${resizeBounds.minimum}
@@ -3152,7 +3152,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                     <div part="filter-panel">
                       <input
                         type="search"
-                        aria-label=${this.localize("tableFilterLabel")}
+                        aria-label=${this.localize('tableFilterLabel')}
                         .value=${safeText(
                           this.filters.find((filter) => filter.id === id)?.value
                         )}
@@ -3187,13 +3187,13 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       <button
         part="expand-button"
         type="button"
-        style=${styleMap({ "--depth": String(item.depth) })}
-        aria-label=${this.localize(expanded ? "collapse" : "expand")}
-        aria-expanded=${expanded ? "true" : "false"}
+        style=${styleMap({ '--depth': String(item.depth) })}
+        aria-label=${this.localize(expanded ? 'collapse' : 'expand')}
+        aria-expanded=${expanded ? 'true' : 'false'}
         tabindex="-1"
         @click=${() => this.toggleRowExpanded(item, true)}
       >
-        <span data-expanded=${expanded ? "true" : "false"}
+        <span data-expanded=${expanded ? 'true' : 'false'}
           >${chevronIcon()}</span
         >
       </button>
@@ -3220,23 +3220,23 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         aria-level=${this.childRows ? item.depth + 1 : nothing}
         aria-selected=${this.selectionEnabled
           ? selection.checked
-            ? "true"
-            : "false"
+            ? 'true'
+            : 'false'
           : nothing}
         aria-expanded=${this.childRows && expandable
           ? expanded
-            ? "true"
-            : "false"
+            ? 'true'
+            : 'false'
           : nothing}
         data-visible-index=${rowPosition}
-        style=${styleMap({ "--data-grid-columns": this.gridTemplate })}
+        style=${styleMap({ '--data-grid-columns': this.gridTemplate })}
       >
         ${this.selectionEnabled
           ? html`
               <div role="gridcell" aria-colindex="1" part="cell">
                 <input
-                  type=${this.selectionMode === "single" ? "radio" : "checkbox"}
-                  aria-label=${this.localize("select")}
+                  type=${this.selectionMode === 'single' ? 'radio' : 'checkbox'}
+                  aria-label=${this.localize('select')}
                   .checked=${selection.checked}
                   .indeterminate=${selection.indeterminate}
                   ?disabled=${!this.rowIsSelectable(item.row)}
@@ -3257,13 +3257,13 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
               aria-colindex=${columnPosition + 1 + selectionOffset}
               tabindex=${this.focusedRow === rowPosition &&
               this.focusedColumn === columnPosition
-                ? "0"
-                : "-1"}
+                ? '0'
+                : '-1'}
               data-focus-cell
               data-row-position=${rowPosition}
               data-column-position=${columnPosition}
               data-column-id=${id}
-              data-align=${column.align ?? "start"}
+              data-align=${column.align ?? 'start'}
               data-pin=${normalizePinSide(this.getColumnPin(id)) || nothing}
               style=${styleMap(this.columnStyle(column, id))}
               @focus=${() => {
@@ -3333,8 +3333,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         role="row"
         aria-rowindex=${ariaRowIndex}
         aria-level=${item.depth + 1}
-        aria-expanded=${expanded ? "true" : "false"}
-        style=${styleMap({ "--data-grid-columns": this.gridTemplate })}
+        aria-expanded=${expanded ? 'true' : 'false'}
+        style=${styleMap({ '--data-grid-columns': this.gridTemplate })}
       >
         <div
           part="group-value"
@@ -3343,7 +3343,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
             1,
             this.visibleColumns.length + (this.selectionEnabled ? 1 : 0)
           )}
-          tabindex=${this.focusedRow === rowPosition ? "0" : "-1"}
+          tabindex=${this.focusedRow === rowPosition ? '0' : '-1'}
           data-focus-cell
           data-row-position=${rowPosition}
           data-column-position="0"
@@ -3354,11 +3354,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           @keydown=${(event: KeyboardEvent) =>
             this.onGridKeyDown(event, rowPosition, 0)}
         >
-          ${this.selectionMode === "multiple"
+          ${this.selectionMode === 'multiple'
             ? html`
                 <input
                   type="checkbox"
-                  aria-label=${this.localize("select")}
+                  aria-label=${this.localize('select')}
                   .checked=${eligible.length > 0 &&
                   selected === eligible.length}
                   .indeterminate=${selected > 0 && selected < eligible.length}
@@ -3373,12 +3373,12 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           <button
             part="expand-button"
             type="button"
-            style=${styleMap({ "--depth": String(item.depth) })}
-            aria-label=${this.localize(expanded ? "collapse" : "expand")}
-            aria-expanded=${expanded ? "true" : "false"}
+            style=${styleMap({ '--depth': String(item.depth) })}
+            aria-label=${this.localize(expanded ? 'collapse' : 'expand')}
+            aria-expanded=${expanded ? 'true' : 'false'}
             @click=${() => this.toggleGroupExpanded(item)}
           >
-            <span data-expanded=${expanded ? "true" : "false"}
+            <span data-expanded=${expanded ? 'true' : 'false'}
               >${chevronIcon()}</span
             >
           </button>
@@ -3411,7 +3411,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       return html`
         <div role="row" aria-rowindex="2">
           <div part="empty" role="gridcell" aria-colindex="1">
-            <slot name="empty">${this.localize("noColumns")}</slot>
+            <slot name="empty">${this.localize('noColumns')}</slot>
           </div>
         </div>
       `;
@@ -3424,7 +3424,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
             role="gridcell"
             aria-colspan=${Math.max(1, this.visibleColumns.length)}
           >
-            <slot name="empty">${this.localize("noData")}</slot>
+            <slot name="empty">${this.localize('noData')}</slot>
           </div>
         </div>
       `;
@@ -3437,7 +3437,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
             role="gridcell"
             aria-colspan=${Math.max(1, this.visibleColumns.length)}
           >
-            <slot name="no-results">${this.localize("noMatches")}</slot>
+            <slot name="no-results">${this.localize('noMatches')}</slot>
           </div>
         </div>
       `;
@@ -3466,7 +3466,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       ${repeat(
         window.items,
         (item) =>
-          item.kind === "group"
+          item.kind === 'group'
             ? item.key
             : `row:${typeof item.key}:${item.key}`,
         (item, localIndex) => {
@@ -3474,12 +3474,12 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           const currentAriaRowIndex = ariaRowIndex;
           ariaRowIndex +=
             1 +
-            (item.kind === "row" &&
+            (item.kind === 'row' &&
             Boolean(this.rowDetail) &&
             arrayHasKey(this.expandedKeys, item.key)
               ? 1
               : 0);
-          return item.kind === "group"
+          return item.kind === 'group'
             ? this.renderGroupRow(item, rowPosition, currentAriaRowIndex)
             : this.renderDataRow(item, rowPosition, currentAriaRowIndex);
         }
@@ -3508,7 +3508,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         <div
           part="footer-row"
           role="row"
-          style=${styleMap({ "--data-grid-columns": this.gridTemplate })}
+          style=${styleMap({ '--data-grid-columns': this.gridTemplate })}
         >
           ${this.selectionEnabled
             ? html`<div part="footer-cell" role="gridcell"></div>`
@@ -3516,7 +3516,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           ${this.visibleColumns.map(
             ({ column }) => html`
               <div part="footer-cell" role="gridcell">
-                ${typeof column.footer === "function"
+                ${typeof column.footer === 'function'
                   ? column.footer(rows)
                   : column.footer ?? nothing}
               </div>
@@ -3558,11 +3558,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       ? configuredPageSizes
       : [this.safePageSize, ...configuredPageSizes];
     return html`
-      <nav part="pager" aria-label=${this.localize("paginationLabel")}>
+      <nav part="pager" aria-label=${this.localize('paginationLabel')}>
         <span class="page-size-wrapper">
           <select
             part="page-size"
-            aria-label=${this.localize("dataGridRowsPerPage")}
+            aria-label=${this.localize('dataGridRowsPerPage')}
             .value=${String(this.safePageSize)}
             @change=${this.onPageSizeChange}
           >
@@ -3578,7 +3578,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         <button
           part="pager-button first-button"
           type="button"
-          aria-label=${this.localize("paginationFirstPage")}
+          aria-label=${this.localize('paginationFirstPage')}
           ?disabled=${current <= 0 || count === 0}
           @click=${() => this.applyPageChange(0)}
         >
@@ -3589,7 +3589,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         <button
           part="pager-button previous-button"
           type="button"
-          aria-label=${this.localize("previous")}
+          aria-label=${this.localize('previous')}
           ?disabled=${current <= 0 || count === 0}
           @click=${() => this.applyPageChange(current - 1)}
         >
@@ -3606,7 +3606,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                   type="button"
                   aria-current="page"
                   aria-label=${this.localize(
-                    "paginationJumpToPage",
+                    'paginationJumpToPage',
                     undefined,
                     { page: format.format(page + 1) }
                   )}
@@ -3620,7 +3620,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                   part="pager-button page"
                   type="button"
                   aria-label=${this.localize(
-                    "paginationJumpToPage",
+                    'paginationJumpToPage',
                     undefined,
                     { page: format.format(page + 1) }
                   )}
@@ -3636,7 +3636,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         <button
           part="pager-button next-button"
           type="button"
-          aria-label=${this.localize("next")}
+          aria-label=${this.localize('next')}
           ?disabled=${current >= count - 1 || count === 0}
           @click=${() => this.applyPageChange(current + 1)}
         >
@@ -3645,7 +3645,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         <button
           part="pager-button last-button"
           type="button"
-          aria-label=${this.localize("paginationLastPage")}
+          aria-label=${this.localize('paginationLastPage')}
           ?disabled=${current >= count - 1 || count === 0}
           @click=${() => this.applyPageChange(Math.max(0, count - 1))}
         >
@@ -3683,10 +3683,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           part="table"
           role=${role}
           aria-label=${accessibleName ?? nothing}
-          aria-busy=${this.loading ? "true" : "false"}
+          aria-busy=${this.loading ? 'true' : 'false'}
           aria-rowcount=${rowCount}
           aria-colcount=${columnCount}
-          data-tree-truncated=${treeProjection.truncated ? "true" : nothing}
+          data-tree-truncated=${treeProjection.truncated ? 'true' : nothing}
         >
           ${this.renderHeader()}
           <div
@@ -3701,13 +3701,13 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         </div>
         ${treeProjection.truncated
           ? html`<div part="tree-limit">
-              ${this.localize("dataGridTreeLimitReached")}
+              ${this.localize('dataGridTreeLimitReached')}
             </div>`
           : nothing}
         ${this.loading
           ? html`
               <div part="loading-overlay">
-                <slot name="loading">${this.localize("loading")}</slot>
+                <slot name="loading">${this.localize('loading')}</slot>
               </div>
             `
           : nothing}

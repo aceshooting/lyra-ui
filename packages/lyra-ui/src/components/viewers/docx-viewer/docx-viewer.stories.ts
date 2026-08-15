@@ -34,7 +34,7 @@ export const ResolvedHighlightAction: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'DOCX quote painting retains at most 100 resolved entries after inspecting 1,000 highlight candidates. `activeHighlightId` is resolved first, so the active quote remains painted inside both ceilings.',
+        story: 'DOCX quote painting retains at most 100 resolved entries from a 1,000-entry candidate window. `activeHighlightId` is retained from anywhere in the bounded host snapshot and resolved first, so the active quote remains painted inside both ceilings.',
       },
     },
   },

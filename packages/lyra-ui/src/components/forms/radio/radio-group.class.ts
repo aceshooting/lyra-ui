@@ -128,7 +128,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     orientation: { reflect: true,
-      converter: declaredDefaultConverter<RadioGroupOrientation>("vertical"),
+      converter: declaredDefaultConverter<RadioGroupOrientation>('vertical'),
     },
     form: { noAccessor: true },
   };
@@ -140,7 +140,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
    * projects the effective tier to owned options without rewriting their authored `size` state.
    */
   @property({ reflect: true,
-    converter: declaredDefaultConverter<LyraSize>("m"),
+    converter: declaredDefaultConverter<LyraSize>('m'),
   }) size: LyraSize = 'm';
   /** Arrow-key axis and option layout. Left/right are mirrored under RTL in horizontal mode. */
   orientation: RadioGroupOrientation = 'vertical';
@@ -748,19 +748,19 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   }
   private commitCustomValidity(message: string | null | undefined): void {
     const old = this.customError;
-    const normalized = message ?? "";
+    const normalized = message ?? '';
     this.validityController.setCustomValidity(normalized);
     this.reflectValidityStates();
     this.reflectingCustomError = true;
     try {
-      if (normalized) this.setAttribute("custom-error", normalized);
-      else this.removeAttribute("custom-error");
+      if (normalized) this.setAttribute('custom-error', normalized);
+      else this.removeAttribute('custom-error');
     } finally {
       this.reflectingCustomError = false;
     }
-    this.requestUpdate("customError", old);
+    this.requestUpdate('customError', old);
   }
-  setCustomValidity(message: string = ""): void {
+  setCustomValidity(message: string = ''): void {
     this.commitCustomValidity(message);
   }
   /** Clears consumer-supplied validity and restores the current required/value constraint. */

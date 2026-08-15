@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -184,7 +184,9 @@ function normalizeOptions(value: unknown): readonly ConditionBuilderFieldOption[
 
 function normalizeOperators(value: unknown): readonly ConditionBuilderOperator[] | undefined {
   if (!Array.isArray(value)) return undefined;
-  const result = [...new Set(value.filter((entry): entry is ConditionBuilderOperator => OPERATORS.has(entry as ConditionBuilderOperator)))];
+  const result = [...new Set(value
+    .slice(0, MAX_OPTIONS)
+    .filter((entry): entry is ConditionBuilderOperator => OPERATORS.has(entry as ConditionBuilderOperator)))];
   return result.length > 0 ? Object.freeze(result) : undefined;
 }
 
@@ -218,7 +220,10 @@ function normalizeConditionValue(value: unknown): ConditionBuilderCondition['val
   if (typeof value === 'string' || typeof value === 'boolean') return value;
   if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
   if (!Array.isArray(value)) return undefined;
-  return Object.freeze(value.filter((entry): entry is string => typeof entry === 'string').map((entry) => boundedString(entry)));
+  return Object.freeze(value
+    .slice(0, MAX_OPTIONS)
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => boundedString(entry)));
 }
 
 function normalizeConditionBuilderValue(value: unknown, fields: readonly ConditionBuilderField[]): ConditionBuilderValue {
@@ -350,6 +355,10 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-input',
+    'lr-add-condition',
+  ]);
 
   static override properties = {
     fields: { attribute: false, noAccessor: true },
@@ -365,7 +374,8 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
   // doesn't silently drop focus to the document body.
   private pendingFocusAdd = false;
 
-  /** The fields available to build conditions against. */
+  /** Frozen snapshot of at most 200 fields, 500 options/operators per field, and bounded strings.
+   * Reassign after changing it. */
   get fields(): readonly ConditionBuilderField[] {
     return this._fields;
   }
@@ -381,7 +391,8 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
   /** The current query: one combinator plus a flat list of conditions. Controlled — assigning
    *  this directly never emits `lr-input` (that only fires for a user-driven change); see the
    *  class doc's form-association note for why this stays a plain property, not a form value.
-   *  Non-finite values for fields declared as `number` normalize to `undefined`. */
+   *  Non-finite values for fields declared as `number` normalize to `undefined`. Assignment freezes
+   *  at most 200 conditions and 500 entries in each array-valued condition; reassign to update. */
   get value(): ConditionBuilderValue {
     return this._value;
   }

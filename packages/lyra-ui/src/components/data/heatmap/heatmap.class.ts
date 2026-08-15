@@ -1244,7 +1244,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       ) {
         this.style.setProperty(
           '--lr-heatmap-color-steps-gradient',
-          `linear-gradient(to right, ${colorSteps.join(", ")})`
+          `linear-gradient(to right, ${colorSteps.join(', ')})`
         );
       } else {
         this.style.removeProperty('--lr-heatmap-color-steps-gradient');
@@ -1861,7 +1861,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   } {
     const steps = this.cachedColorSteps;
     if (steps && steps.length >= 2) {
-      const key = `steps ${steps.join(" ")}`;
+      const key = `steps ${steps.join(' ')}`;
       if (this.cachedRamp?.key === key) return this.cachedRamp;
       const resolved = steps.map((color, index) =>
         this.resolveColorStep(
@@ -3263,7 +3263,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         aria-rowcount=${rowCount}
         aria-colcount=${colCount}
         aria-describedby=${this.projectionTruncated
-          ? "projection-limit"
+          ? 'projection-limit'
           : nothing}
       >
         ${[...renderedRows].map(
@@ -3272,7 +3272,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
               ${rowPositions.map((pos) => {
                 const rect = this.cellRect(pos);
                 const key = this.accessibleCellKey(pos);
-                const colIndex = "week" in pos ? pos.week + 1 : pos.col + 1;
+                const colIndex = 'week' in pos ? pos.week + 1 : pos.col + 1;
                 return html`
                   <button
                     part="cell"
@@ -3283,8 +3283,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
                     data-cell-key=${key}
                     data-cell-identity=${this.accessibleCellIdentity(pos)}
                     aria-label=${this.resolveCellText(pos)}
-                    aria-selected=${this.isSelectedPos(pos) ? "true" : "false"}
-                    tabindex=${this.samePos(tabStop, pos) ? "0" : "-1"}
+                    aria-selected=${this.isSelectedPos(pos) ? 'true' : 'false'}
+                    tabindex=${this.samePos(tabStop, pos) ? '0' : '-1'}
                     style=${styleMap({
                       insetInlineStart: `${rect.x}px`,
                       insetBlockStart: `${rect.y}px`,
@@ -3339,11 +3339,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // are deliberate: together they reproduce this branch's markup — whitespace included —
     // exactly as it was emitted inline before `legendStops` introduced the branch.
     return html` <span part="legend-lo"
-        >${range ? this.formatNumericValue(range[0]) : ""}</span
+        >${range ? this.formatNumericValue(range[0]) : ''}</span
       >
       <span class="bar"></span>
       <span part="legend-hi"
-        >${range ? this.formatNumericValue(range[1]) : ""}</span
+        >${range ? this.formatNumericValue(range[1]) : ''}</span
       >`;
   }
 
@@ -3355,18 +3355,18 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       <div
         part="base"
         tabindex="-1"
-        data-projection-truncated=${this.projectionTruncated ? "true" : "false"}
+        data-projection-truncated=${this.projectionTruncated ? 'true' : 'false'}
       >
         <canvas
           part="canvas"
-          tabindex=${this.accessibleCells ? "-1" : "0"}
-          aria-hidden=${this.accessibleCells ? "true" : nothing}
-          role=${this.accessibleCells ? nothing : "application"}
+          tabindex=${this.accessibleCells ? '-1' : '0'}
+          aria-hidden=${this.accessibleCells ? 'true' : nothing}
+          role=${this.accessibleCells ? nothing : 'application'}
           aria-label=${this.accessibleCells
             ? nothing
             : this.authorAriaLabel || this.generatedAriaLabel}
           aria-describedby=${!this.accessibleCells && projectionDescription
-            ? "projection-limit"
+            ? 'projection-limit'
             : nothing}
           @pointermove=${this.onPointerMove}
           @pointerleave=${this.onPointerLeave}
@@ -3389,7 +3389,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
             this.hoverCell ? this.tooltipStyle(this.hoverCell) : {}
           )}
         >
-          ${this.hoverCell ? this.resolveCellText(this.hoverCell) : ""}
+          ${this.hoverCell ? this.resolveCellText(this.hoverCell) : ''}
         </div>
         <div
           id="live-region"

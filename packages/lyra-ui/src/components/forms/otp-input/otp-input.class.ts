@@ -16,7 +16,7 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
-import { declaredDefaultConverter } from "../../../internal/converters.js";
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_otpInputIncomplete, LYRA_DEFAULT_otpInputLabel } from '../../../internal/default-strings.generated.js';
@@ -197,7 +197,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   @property({ attribute: 'error-text' }) errorText = '';
   /** Visual fill treatment for each segment, or a single joined `contained` field. */
   @property({ reflect: true,
-    converter: declaredDefaultConverter<OtpInputAppearance>("outlined"),
+    converter: declaredDefaultConverter<OtpInputAppearance>('outlined'),
   }) appearance: OtpInputAppearance = 'outlined';
   /** Automatically focus the real input after the first client render. */
   @property({ type: Boolean }) override autofocus = false;
@@ -222,11 +222,11 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   @property() format = '';
   /** Which characters are accepted; also drives the mobile keyboard through `inputmode`. */
   @property({ reflect: true,
-    converter: declaredDefaultConverter<OtpInputType>("numeric"),
+    converter: declaredDefaultConverter<OtpInputType>('numeric'),
   }) type: OtpInputType = 'numeric';
   /** Case transform applied as characters are entered. */
   @property({ reflect: true,
-    converter: declaredDefaultConverter<OtpInputCase>("preserve"),
+    converter: declaredDefaultConverter<OtpInputCase>('preserve'),
   }) case: OtpInputCase = 'preserve';
   /** Show entered characters as the mask glyph instead of their real value. Display-only. */
   @property({ type: Boolean, reflect: true }) mask = false;
@@ -240,7 +240,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   @property({ type: Boolean, reflect: true }) readonly = false;
   /** Native autofill hint. Defaults to the SMS one-time-code value. */
   @property({ reflect: true,
-    converter: declaredDefaultConverter("one-time-code"),
+    converter: declaredDefaultConverter('one-time-code'),
   }) autocomplete = 'one-time-code';
 
   @state() private focused = false;

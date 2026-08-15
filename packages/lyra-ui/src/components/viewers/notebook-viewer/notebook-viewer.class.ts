@@ -247,7 +247,9 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, matchCountExact, activeIndex }`. Notebook validation caps the corpus at 2,000
- *   cells and search retains at most one match per cell, so completed counts are exact.
+ *   cells and search retains at most one match per cell. Search accepts at most 4,096 query code
+ *   units and scans at most 4,000,000 source/output code units; a false `matchCountExact` makes the
+ *   returned count a lower bound after either ceiling is reached.
  * @event lr-render-error - Fired when fetching, parsing, or validating the notebook fails.
  *   `detail: { error }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -552,9 +554,9 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   }
 
   /** Case-insensitive substring search over every accepted cell's joined source text and
-   *  text-bearing outputs -- at most one match per cell. The accepted notebook's 2,000-cell
-   *  validation ceiling is applied before search, so the resolved count and emitted
-   *  `matchCount` are exact. */
+   *  text-bearing outputs -- at most one match per cell. Queries are capped at 4,096 code units
+   *  and one pass scans at most 4,000,000 source/output code units; `matchCountExact=false`
+   *  identifies a truncated lower bound. */
   async search(query: string): Promise<number> {
     const boundedQuery = boundedViewerSearchQuery(query, this.effectiveLocale);
     const q = boundedQuery.needle;

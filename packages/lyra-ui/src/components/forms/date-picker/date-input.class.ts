@@ -1630,7 +1630,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       const [, g1, g2, g3] = ambiguous;
       if (g1!.length === 4) {
         return parseISO(
-          `${g1}-${g2!.padStart(2, "0")}-${g3!.padStart(2, "0")}`
+          `${g1}-${g2!.padStart(2, '0')}-${g3!.padStart(2, '0')}`
         );
       }
       const order = localeDateOrder(this.effectiveLocale);
@@ -1642,10 +1642,10 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       if (fields.day != null && fields.month != null && fields.year != null) {
         const year = fields.year < 100 ? 2000 + fields.year : fields.year;
         return parseISO(
-          `${String(year).padStart(4, "0")}-${String(fields.month).padStart(
+          `${String(year).padStart(4, '0')}-${String(fields.month).padStart(
             2,
-            "0"
-          )}-${String(fields.day).padStart(2, "0")}`
+            '0'
+          )}-${String(fields.day).padStart(2, '0')}`
         );
       }
     }
@@ -1952,12 +1952,12 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                     aria-label=${this.accessibleLabel ||
                     (hasLabel
                       ? nothing
-                      : this.placeholder || this.localize("date"))}
+                      : this.placeholder || this.localize('date'))}
                     aria-describedby=${describedBy || nothing}
-                    aria-required=${this.required ? "true" : "false"}
-                    aria-invalid=${invalid ? "true" : "false"}
+                    aria-required=${this.required ? 'true' : 'false'}
+                    aria-invalid=${invalid ? 'true' : 'false'}
                     aria-haspopup="dialog"
-                    aria-expanded=${this.open ? "true" : "false"}
+                    aria-expanded=${this.open ? 'true' : 'false'}
                     aria-controls=${this.popupId}
                     spellcheck=${this.spellcheck}
                     autocapitalize=${this.autocapitalize || nothing}
@@ -1985,7 +1985,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                     type="button"
                     ?disabled=${this.effectiveDisabled || this.readonly}
                     aria-label=${this.localize(
-                      "clear",
+                      'clear',
                       this.clearLabel || undefined
                     )}
                     @click=${() => this.clear()}
@@ -2002,11 +2002,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                 part="expand-button"
                 type="button"
                 aria-label=${this.localize(
-                  "openCalendar",
+                  'openCalendar',
                   this.openLabel || undefined
                 )}
                 aria-haspopup="dialog"
-                aria-expanded=${this.open ? "true" : "false"}
+                aria-expanded=${this.open ? 'true' : 'false'}
                 aria-controls=${this.popupId}
                 ?disabled=${this.effectiveDisabled || this.readonly}
                 @click=${() => {
@@ -2022,10 +2022,10 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
               id=${this.popupId}
               part="popup"
               role="dialog"
-              aria-hidden=${this.open ? "false" : "true"}
+              aria-hidden=${this.open ? 'false' : 'true'}
               aria-label=${this.localize(
-                "chooseDate",
-                this.dialogLabel === "Choose date"
+                'chooseDate',
+                this.dialogLabel === 'Choose date'
                   ? undefined
                   : this.dialogLabel
               )}

@@ -181,8 +181,8 @@ function slidePreset(
   const negative = dir === 'ltr' ? edge === 'start' : edge === 'end';
   const offscreen = `translateX(${
     negative
-      ? "calc(-1 * var(--lr-animation-slide-distance, var(--_lr-animation-slide-distance)))"
-      : "var(--lr-animation-slide-distance, var(--_lr-animation-slide-distance))"
+      ? 'calc(-1 * var(--lr-animation-slide-distance, var(--_lr-animation-slide-distance)))'
+      : 'var(--lr-animation-slide-distance, var(--_lr-animation-slide-distance))'
   })`;
   const onscreen = 'translateX(0)';
   return mode === 'in'

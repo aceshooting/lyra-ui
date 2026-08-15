@@ -9,6 +9,11 @@ import { LyraElement } from "./lyra-element.js";
 import { tag } from "./prefix.js";
 
 class Demo extends LyraElement {
+  protected static override readonly immutableEventDetails = [
+    "lr-snapshot",
+    "lr-map-snapshot",
+  ];
+
   beginLoadForTest(): AbortSignal | undefined {
     return this.beginAbortableLoad();
   }
@@ -242,7 +247,49 @@ it("does not invoke hostile array getters and retains safe siblings", async () =
   expect(() => {
     el.items = hostile;
   }).not.to.throw();
-  expect(el.items.map((entry) => entry.label)).to.deep.equal(["safe"]);
+  expect(el.items.length).to.equal(2);
+  expect(0 in el.items).to.be.false;
+  expect(el.items[1]!.label).to.equal("safe");
+  expect(Object.isFrozen(el.items)).to.be.true;
+});
+
+it("preserves sparse positional semantics for owned and emitted arrays", async () => {
+  const el = await fixture<DemoOwnedCollection>(
+    `<lr-demo-owned-collection></lr-demo-owned-collection>`
+  );
+  const sparse = new Array<DemoCollectionEntry>(3);
+  sparse[1] = { label: "middle", nested: { values: [] } };
+  el.items = sparse;
+
+  expect(el.items.length).to.equal(3);
+  expect(Object.keys(el.items)).to.deep.equal(["1"]);
+  expect(el.items[1]!.label).to.equal("middle");
+
+  const emitter = await fixture<Demo>(`<lr-demo-base></lr-demo-base>`);
+  let detail: { readonly rows: readonly DemoCollectionEntry[] } | undefined;
+  emitter.addEventListener("lr-snapshot", (event) => {
+    detail = (event as CustomEvent).detail;
+  });
+  (emitter as unknown as { emit: (name: string, detail: unknown) => void }).emit(
+    "lr-snapshot",
+    { rows: sparse }
+  );
+  expect(detail!.rows.length).to.equal(3);
+  expect(Object.keys(detail!.rows)).to.deep.equal(["1"]);
+});
+
+it("cannot bypass owned snapshots by shadowing the public constructor property", async () => {
+  const el = await fixture<DemoOwnedCollection>(
+    `<lr-demo-owned-collection></lr-demo-owned-collection>`
+  );
+  Object.defineProperty(el, "constructor", { value: class Fake {} });
+  const source = [{ label: "first", nested: { values: [1] } }];
+  el.items = source;
+  source[0]!.label = "changed";
+  source.push({ label: "later", nested: { values: [] } });
+
+  expect(el.items.length).to.equal(1);
+  expect(el.items[0]!.label).to.equal("first");
   expect(Object.isFrozen(el.items)).to.be.true;
 });
 

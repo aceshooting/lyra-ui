@@ -547,7 +547,11 @@ it('validates every supported property type and string enum even when fields are
   expect(el.errors).to.deep.equal({});
   expect(el.checkValidity()).to.be.true;
 
-  el.value.enabled = 'no';
+  expect(Object.isFrozen(el.value)).to.equal(true);
+  expect(() => {
+    (el.value as Record<string, unknown>)['enabled'] = 'no';
+  }).to.throw(TypeError);
+  el.value = { ...el.value, enabled: 'no' };
   expect(el.checkValidity()).to.be.false;
   expect(el.errors.enabled).to.equal('Must be a boolean.');
 });

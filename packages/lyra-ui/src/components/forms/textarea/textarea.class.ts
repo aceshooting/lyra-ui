@@ -791,24 +791,24 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
             placeholder=${this.placeholder}
             title=${this.title || nothing}
             style=${styleMap({ resize: cssResize })}
-            ?data-auto-resize=${this.resize === "auto"}
+            ?data-auto-resize=${this.resize === 'auto'}
             aria-label=${this.accessibleLabel !== null
               ? this.accessibleLabel
               : hasLabel
               ? nothing
-              : this.placeholder || this.localize("textareaLabel")}
+              : this.placeholder || this.localize('textareaLabel')}
             aria-describedby=${describedBy || nothing}
-            aria-required=${this.required ? "true" : "false"}
+            aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${hasError ||
             (this.touched && !this.internals.validity.valid)
-              ? "true"
-              : "false"}
+              ? 'true'
+              : 'false'}
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
-            autocorrect=${this.hasAttribute("autocorrect") || !this.autocorrect
+            autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
               ? this.autocorrect
-                ? "on"
-                : "off"
+                ? 'on'
+                : 'off'
               : nothing}
             autocomplete=${this.autocomplete || nothing}
             inputmode=${this.inputMode || nothing}

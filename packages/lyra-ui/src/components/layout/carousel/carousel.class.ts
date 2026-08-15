@@ -1,24 +1,24 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
-import { property, query } from "lit/decorators.js";
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property, query } from 'lit/decorators.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
-} from "../../../internal/announcer.js";
+} from '../../../internal/announcer.js';
 import {
   isAccessibilitySubtreeExcluded,
   isAccessibilityVisible,
   isAccessibilityVisibilityHidden,
-} from "../../../internal/accessibility-visibility.js";
-import { activeElementIn, deepActiveElementIn } from "../../../internal/active-element.js";
-import { composedAccessibilityText } from "../../../internal/announcement-text.js";
-import { renderInertPresentation } from "../../../internal/inert-presentation.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { finiteDuration, finiteInteger } from "../../../internal/numbers.js";
-import { composedContains } from "../../../internal/overlay-manager.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import { tag } from "../../../internal/prefix.js";
-import { styles } from "./carousel.styles.js";
-import type { LyraCarouselItem } from "./carousel-item.class.js";
+} from '../../../internal/accessibility-visibility.js';
+import { activeElementIn, deepActiveElementIn } from '../../../internal/active-element.js';
+import { composedAccessibilityText } from '../../../internal/announcement-text.js';
+import { renderInertPresentation } from '../../../internal/inert-presentation.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
+import { composedContains } from '../../../internal/overlay-manager.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { tag } from '../../../internal/prefix.js';
+import { styles } from './carousel.styles.js';
+import type { LyraCarouselItem } from './carousel-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_carousel, LYRA_DEFAULT_carouselGoTo, LYRA_DEFAULT_carouselIndicators, LYRA_DEFAULT_carouselLabel, LYRA_DEFAULT_carouselSlide, LYRA_DEFAULT_carouselSlideAnnouncement, LYRA_DEFAULT_carouselSlideAnnouncementSeparator, LYRA_DEFAULT_carouselSlidePosition, LYRA_DEFAULT_next, LYRA_DEFAULT_previous } from '../../../internal/default-strings.generated.js';
@@ -26,7 +26,7 @@ import { LYRA_DEFAULT_carousel, LYRA_DEFAULT_carouselGoTo, LYRA_DEFAULT_carousel
 
 
 interface SlideSnapshot {
-  hidden: boolean | "until-found";
+  hidden: boolean | 'until-found';
   inert: boolean;
   role: string | null;
   label: string | null;
@@ -37,51 +37,51 @@ interface SlideSnapshot {
 interface RestingSlide {
   element: HTMLElement;
   index: number;
-  cloneSide?: "before" | "after";
+  cloneSide?: 'before' | 'after';
 }
 
-type CarouselChangeOrigin = "manual" | "autoplay";
+type CarouselChangeOrigin = 'manual' | 'autoplay';
 
-export type LyraCarouselOrientation = "horizontal" | "vertical";
+export type LyraCarouselOrientation = 'horizontal' | 'vertical';
 
 const LOOP_SNAPSHOT_UNSAFE_TAGS = new Set([
-  "audio",
-  "canvas",
-  "embed",
-  "form",
-  "iframe",
-  "img",
-  "input",
-  "link",
-  "object",
-  "picture",
-  "script",
-  "select",
-  "source",
-  "style",
-  "textarea",
-  "track",
-  "video",
+  'audio',
+  'canvas',
+  'embed',
+  'form',
+  'iframe',
+  'img',
+  'input',
+  'link',
+  'object',
+  'picture',
+  'script',
+  'select',
+  'source',
+  'style',
+  'textarea',
+  'track',
+  'video',
 ]);
 const CAROUSEL_MANAGED_SLIDE_ATTRIBUTES = new Set([
-  "aria-hidden",
-  "aria-label",
-  "aria-roledescription",
-  "hidden",
-  "inert",
-  "role",
+  'aria-hidden',
+  'aria-label',
+  'aria-roledescription',
+  'hidden',
+  'inert',
+  'role',
 ]);
 const SLIDE_SNAPSHOT_KEYS = [
-  "hidden",
-  "inert",
-  "role",
-  "label",
-  "roleDescription",
-  "ariaHidden",
+  'hidden',
+  'inert',
+  'role',
+  'label',
+  'roleDescription',
+  'ariaHidden',
 ] as const satisfies readonly (keyof SlideSnapshot)[];
 
 export interface LyraCarouselEventMap {
-  "lr-slide-change": CustomEvent<{ index: number; slide: HTMLElement }>;
+  'lr-slide-change': CustomEvent<{ index: number; slide: HTMLElement }>;
 }
 
 /**
@@ -176,7 +176,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   static override get observedAttributes(): string[] {
     // Web Awesome publishes the mixed-case `currentSlide` spelling. HTML normalizes that token to
     // lowercase before custom-element observation, while Lyra keeps `current-slide` canonical.
-    return [...new Set([...super.observedAttributes, "currentslide"])];
+    return [...new Set([...super.observedAttributes, 'currentslide'])];
   }
 
   private _currentSlide = 0;
@@ -185,7 +185,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   /** Zero-based start of the active slide page.
    * @default 0 */
-  @property({ type: Number, attribute: "current-slide", reflect: true })
+  @property({ type: Number, attribute: 'current-slide', reflect: true })
   get currentSlide(): number {
     return this._currentSlide;
   }
@@ -195,7 +195,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   @property({ type: Boolean, reflect: true }) loop = false;
   @property({ type: Boolean, reflect: true }) autoplay = false;
-  @property({ type: Number, attribute: "autoplay-interval", useDefault: true })
+  @property({ type: Number, attribute: 'autoplay-interval', useDefault: true })
   autoplayInterval = 3000;
   @property({ type: Boolean, reflect: true }) navigation = false;
 
@@ -209,24 +209,24 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.setPaginationState(Boolean(value));
   }
 
-  @property({ useDefault: true }) orientation: LyraCarouselOrientation = "horizontal";
-  @property({ type: Boolean, attribute: "mouse-dragging", reflect: true })
+  @property({ useDefault: true }) orientation: LyraCarouselOrientation = 'horizontal';
+  @property({ type: Boolean, attribute: 'mouse-dragging', reflect: true })
   mouseDragging = false;
-  @property({ type: Number, attribute: "slides-per-page", useDefault: true }) slidesPerPage = 1;
-  @property({ type: Number, attribute: "slides-per-move", useDefault: true }) slidesPerMove = 1;
+  @property({ type: Number, attribute: 'slides-per-page', useDefault: true }) slidesPerPage = 1;
+  @property({ type: Number, attribute: 'slides-per-move', useDefault: true }) slidesPerMove = 1;
   /** Live count of assigned slides.
    * @default 0 */
   get slides(): number {
     return this._slides;
   }
-  @property({ attribute: "accessible-label" }) accessibleLabel = "";
-  @property({ attribute: "aria-label" }) private hostAccessibleLabel:
+  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  @property({ attribute: 'aria-label' }) private hostAccessibleLabel:
     | string
     | null = null;
 
-  @query("slot:not([name])") private slideSlot?: HTMLSlotElement;
+  @query('slot:not([name])') private slideSlot?: HTMLSlotElement;
   @query('[part~="scroll-container"]') private viewport?: HTMLElement;
-  @query(".scroll-hint-probe") private scrollHintProbe?: HTMLElement;
+  @query('.scroll-hint-probe') private scrollHintProbe?: HTMLElement;
   @query('[data-clone-set="before"]') private beforeClones?: HTMLElement;
   @query('[data-clone-set="after"]') private afterClones?: HTMLElement;
 
@@ -247,7 +247,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private alignIndex?: number;
   private alignTarget?: HTMLElement;
   private requestedBehavior?: ScrollBehavior;
-  private loopSide?: "before" | "after";
+  private loopSide?: 'before' | 'after';
   private loopClonesDirty = true;
   private pointerInteracting = false;
   private focusInteracting = false;
@@ -260,7 +260,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private clickTimerWindow?: Window;
   private announcementSink?: AnnouncementSink;
   private announcementsArmed = false;
-  private changeOrigin: CarouselChangeOrigin = "manual";
+  private changeOrigin: CarouselChangeOrigin = 'manual';
   private manualPending = false;
   private observer?: MutationObserver;
   private observerDocument?: Document;
@@ -272,8 +272,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     // Accessor-backed defaults do not pass through a class-field setter. Seed their first
     // reflection explicitly so the accessor-backed reactive defaults honor the same contract
     // contract as ordinary Lit fields without duplicating their state.
-    this.requestUpdate("currentSlide", undefined);
-    this.requestUpdate("pagination", undefined);
+    this.requestUpdate('currentSlide', undefined);
+    this.requestUpdate('pagination', undefined);
   }
 
   override attributeChangedCallback(
@@ -281,7 +281,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     oldValue: string | null,
     newValue: string | null
   ): void {
-    if (name === "currentslide") {
+    if (name === 'currentslide') {
       if (oldValue !== newValue) {
         this.currentSlide = finiteInteger(Number(newValue ?? 0), 0);
       }
@@ -289,38 +289,38 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     }
     super.attributeChangedCallback(name, oldValue, newValue);
     if (
-      name === "current-slide" &&
+      name === 'current-slide' &&
       newValue === null &&
       oldValue !== newValue &&
-      this.hasAttribute("currentslide")
+      this.hasAttribute('currentslide')
     ) {
-      this.currentSlide = finiteInteger(Number(this.getAttribute("currentslide") ?? 0), 0);
+      this.currentSlide = finiteInteger(Number(this.getAttribute('currentslide') ?? 0), 0);
     }
   }
 
   override connectedCallback(): void {
     // Attribute reaction order follows author order. Make the canonical Lyra spelling win on the
     // initial dual-spelling case regardless of how the two attributes were ordered in markup.
-    if (this.hasAttribute("current-slide")) {
-      this.currentSlide = finiteInteger(Number(this.getAttribute("current-slide") ?? 0), 0);
+    if (this.hasAttribute('current-slide')) {
+      this.currentSlide = finiteInteger(Number(this.getAttribute('current-slide') ?? 0), 0);
     }
     super.connectedCallback();
     const view = this.ownerDocument.defaultView;
-    this.announcementSink ??= acquireAnnouncementSink("polite", {
+    this.announcementSink ??= acquireAnnouncementSink('polite', {
       document: this.ownerDocument,
       source: this,
     });
     this.announcementsArmed = false;
     this.manualPending = false;
     this.mediaQuery =
-      typeof view?.matchMedia === "function"
-        ? view.matchMedia("(prefers-reduced-motion: reduce)")
+      typeof view?.matchMedia === 'function'
+        ? view.matchMedia('(prefers-reduced-motion: reduce)')
         : undefined;
     this.reduceMotion = this.mediaQuery?.matches ?? false;
-    this.mediaQuery?.addEventListener("change", this.onMotionPreferenceChange);
+    this.mediaQuery?.addEventListener('change', this.onMotionPreferenceChange);
     this.visibilityDocument = this.ownerDocument;
     this.visibilityDocument.addEventListener(
-      "visibilitychange",
+      'visibilitychange',
       this.onVisibilityChange
     );
     this.armSlideContentObserver();
@@ -348,12 +348,12 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.hasAlignedOnce = false;
     this.clearAlignment();
     this.mediaQuery?.removeEventListener(
-      "change",
+      'change',
       this.onMotionPreferenceChange
     );
     this.mediaQuery = undefined;
     this.visibilityDocument?.removeEventListener(
-      "visibilitychange",
+      'visibilitychange',
       this.onVisibilityChange
     );
     this.visibilityDocument = undefined;
@@ -380,11 +380,11 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         return;
       }
       const snapshotChanged = records.some((record) => {
-        if (record.type !== "attributes") return true;
+        if (record.type !== 'attributes') return true;
         if (record.target === this) return false;
         if (
           !CAROUSEL_MANAGED_SLIDE_ATTRIBUTES.has(
-            record.attributeName ?? ""
+            record.attributeName ?? ''
           )
         ) {
           return true;
@@ -420,8 +420,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (
-      (changed.has("currentSlide") ||
-        changed.has("slidesPerPage")) &&
+      (changed.has('currentSlide') ||
+        changed.has('slidesPerPage')) &&
       this.slideSlot
     ) {
       const normalized = this.normalizedIndex();
@@ -433,30 +433,30 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     super.updated(changed);
     const shouldAnnounceActivePage =
       this.announcementsArmed &&
-      (this.manualPending || changed.has("slidesPerPage"));
+      (this.manualPending || changed.has('slidesPerPage'));
     this.syncSlides();
     if (
       this.loopClonesDirty ||
-      changed.has("loop") ||
-      changed.has("slidesPerPage") ||
-      changed.has("slidesPerMove")
+      changed.has('loop') ||
+      changed.has('slidesPerPage') ||
+      changed.has('slidesPerMove')
     ) {
       this.syncLoopClones();
       this.loopClonesDirty = false;
     }
     if (
-      changed.has("autoplay") ||
-      changed.has("autoplayInterval") ||
-      changed.has("loop") ||
-      changed.has("slidesPerPage")
+      changed.has('autoplay') ||
+      changed.has('autoplayInterval') ||
+      changed.has('loop') ||
+      changed.has('slidesPerPage')
     ) {
       this.restartAutoplay();
     }
     if (
       !this.adoptingScrolledSlide &&
-      (changed.has("currentSlide") ||
-        changed.has("slidesPerPage") ||
-        changed.has("orientation") ||
+      (changed.has('currentSlide') ||
+        changed.has('slidesPerPage') ||
+        changed.has('orientation') ||
         !this.hasAlignedOnce)
     ) {
       this.alignToActiveSlide();
@@ -472,17 +472,17 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const next = finiteInteger(value, 0);
     if (old === next) return;
     this._currentSlide = next;
-    if (this.changeOrigin === "manual") {
+    if (this.changeOrigin === 'manual') {
       this.manualPending = true;
     }
-    this.requestUpdate("currentSlide", old);
+    this.requestUpdate('currentSlide', old);
   }
 
   private setPaginationState(value: boolean): void {
     const old = this._pagination;
     if (old === value) return;
     this._pagination = value;
-    this.requestUpdate("pagination", old);
+    this.requestUpdate('pagination', old);
   }
 
   private onMotionPreferenceChange = (event: MediaQueryListEvent): void => {
@@ -502,14 +502,14 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   }
 
   private effectiveOrientation(): LyraCarouselOrientation {
-    return this.orientation === "vertical" ? "vertical" : "horizontal";
+    return this.orientation === 'vertical' ? 'vertical' : 'horizontal';
   }
 
   private slideElements(): HTMLElement[] {
     return (this.slideSlot?.assignedElements({ flatten: true }) ?? []).filter(
       (element): element is HTMLElement =>
         element.nodeType === 1 &&
-        element.namespaceURI === "http://www.w3.org/1999/xhtml"
+        element.namespaceURI === 'http://www.w3.org/1999/xhtml'
     );
   }
 
@@ -572,26 +572,26 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       const slideTextVisible = !isAccessibilityVisibilityHidden(slide);
       const authoredLabel = slideTextVisible
         ? this.snapshots.get(slide)?.label?.trim()
-        : "";
+        : '';
       if (authoredLabel) return [authoredLabel];
-      const position = this.localize("carouselSlidePosition", undefined, {
+      const position = this.localize('carouselSlidePosition', undefined, {
         index: format.format(index + 1),
         total: format.format(slides.length),
       });
       const content = Array.from(slide.childNodes)
         .map((node) => composedAccessibilityText(node, slideTextVisible))
-        .join(" ")
-        .replace(/\s+/g, " ")
+        .join(' ')
+        .replace(/\s+/g, ' ')
         .trim();
       if (!slideTextVisible && !content) return [];
       return [
         content && content !== position
-          ? this.localize("carouselSlideAnnouncement", undefined, { position, content })
+          ? this.localize('carouselSlideAnnouncement', undefined, { position, content })
           : position,
       ];
     });
     this.announcementSink?.announce(
-      messages.join(this.localize("carouselSlideAnnouncementSeparator"))
+      messages.join(this.localize('carouselSlideAnnouncementSeparator'))
     );
   }
 
@@ -608,10 +608,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     return {
       hidden: slide.hidden,
       inert: slide.inert,
-      role: slide.getAttribute("role"),
-      label: slide.getAttribute("aria-label"),
-      roleDescription: slide.getAttribute("aria-roledescription"),
-      ariaHidden: slide.getAttribute("aria-hidden"),
+      role: slide.getAttribute('role'),
+      label: slide.getAttribute('aria-label'),
+      roleDescription: slide.getAttribute('aria-roledescription'),
+      ariaHidden: slide.getAttribute('aria-hidden'),
     };
   }
 
@@ -635,14 +635,14 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private restoreSlide(slide: HTMLElement, snapshot: SlideSnapshot): void {
     slide.hidden = snapshot.hidden;
     slide.inert = snapshot.inert;
-    this.restoreAttribute(slide, "role", snapshot.role);
-    this.restoreAttribute(slide, "aria-label", snapshot.label);
+    this.restoreAttribute(slide, 'role', snapshot.role);
+    this.restoreAttribute(slide, 'aria-label', snapshot.label);
     this.restoreAttribute(
       slide,
-      "aria-roledescription",
+      'aria-roledescription',
       snapshot.roleDescription
     );
-    this.restoreAttribute(slide, "aria-hidden", snapshot.ariaHidden);
+    this.restoreAttribute(slide, 'aria-hidden', snapshot.ariaHidden);
   }
 
   private restoreSlides(): void {
@@ -676,39 +676,39 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       const snapshot = existing ?? this.snapshotSlide(slide);
       if (!existing) this.snapshots.set(slide, snapshot);
 
-      if (slide.localName === tag("carousel-item")) {
-        this.restoreAttribute(slide, "role", snapshot.role ?? "group");
+      if (slide.localName === tag('carousel-item')) {
+        this.restoreAttribute(slide, 'role', snapshot.role ?? 'group');
         this.restoreAttribute(
           slide,
-          "aria-roledescription",
-          snapshot.roleDescription ?? this.localize("carouselSlide")
+          'aria-roledescription',
+          snapshot.roleDescription ?? this.localize('carouselSlide')
         );
         this.restoreAttribute(
           slide,
-          "aria-label",
+          'aria-label',
           snapshot.label ??
-            this.localize("carouselSlidePosition", undefined, {
+            this.localize('carouselSlidePosition', undefined, {
               index: format.format(slideIndex + 1),
               total: format.format(slides.length),
             })
         );
       } else {
-        this.restoreAttribute(slide, "role", snapshot.role);
+        this.restoreAttribute(slide, 'role', snapshot.role);
         this.restoreAttribute(
           slide,
-          "aria-roledescription",
+          'aria-roledescription',
           snapshot.roleDescription
         );
-        this.restoreAttribute(slide, "aria-label", snapshot.label);
+        this.restoreAttribute(slide, 'aria-label', snapshot.label);
       }
 
       slide.hidden = snapshot.hidden;
       if (visible.has(slideIndex)) {
         slide.inert = snapshot.inert;
-        this.restoreAttribute(slide, "aria-hidden", snapshot.ariaHidden);
+        this.restoreAttribute(slide, 'aria-hidden', snapshot.ariaHidden);
       } else {
         slide.inert = true;
-        slide.setAttribute("aria-hidden", "true");
+        slide.setAttribute('aria-hidden', 'true');
       }
       this.appliedSnapshots.set(slide, this.snapshotSlide(slide));
     });
@@ -775,17 +775,17 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private prepareClone(
     original: HTMLElement,
     index: number,
-    side: "before" | "after"
+    side: 'before' | 'after'
   ): HTMLElement | undefined {
     const sourceElements = [
       original,
-      ...Array.from(original.querySelectorAll<HTMLElement>("*")),
+      ...Array.from(original.querySelectorAll<HTMLElement>('*')),
     ];
     if (
       sourceElements.some(
         (element) =>
-          element.namespaceURI !== "http://www.w3.org/1999/xhtml" ||
-          element.localName.includes("-") ||
+          element.namespaceURI !== 'http://www.w3.org/1999/xhtml' ||
+          element.localName.includes('-') ||
           LOOP_SNAPSHOT_UNSAFE_TAGS.has(element.localName)
       )
     ) {
@@ -794,22 +794,22 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const clone = original.cloneNode(true) as HTMLElement;
     const descendants = [
       clone,
-      ...Array.from(clone.querySelectorAll<HTMLElement>("*")),
+      ...Array.from(clone.querySelectorAll<HTMLElement>('*')),
     ];
     for (const descendant of descendants) {
-      descendant.removeAttribute("id");
-      descendant.removeAttribute("name");
-      descendant.removeAttribute("form");
-      descendant.removeAttribute("for");
-      descendant.removeAttribute("aria-controls");
-      descendant.removeAttribute("aria-describedby");
-      descendant.removeAttribute("aria-labelledby");
+      descendant.removeAttribute('id');
+      descendant.removeAttribute('name');
+      descendant.removeAttribute('form');
+      descendant.removeAttribute('for');
+      descendant.removeAttribute('aria-controls');
+      descendant.removeAttribute('aria-describedby');
+      descendant.removeAttribute('aria-labelledby');
     }
-    clone.removeAttribute("slot");
-    clone.dataset["carouselClone"] = side;
-    clone.dataset["carouselIndex"] = String(index);
+    clone.removeAttribute('slot');
+    clone.dataset['carouselClone'] = side;
+    clone.dataset['carouselIndex'] = String(index);
     clone.inert = true;
-    clone.setAttribute("aria-hidden", "true");
+    clone.setAttribute('aria-hidden', 'true');
     return clone;
   }
 
@@ -830,20 +830,20 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     );
     const beforeStart = slides.length - cloneCount;
     for (let index = beforeStart; index < slides.length; index += 1) {
-      const clone = this.prepareClone(slides[index]!, index, "before");
+      const clone = this.prepareClone(slides[index]!, index, 'before');
       if (clone) before.append(clone);
     }
     for (let index = 0; index < cloneCount; index += 1) {
-      const clone = this.prepareClone(slides[index]!, index, "after");
+      const clone = this.prepareClone(slides[index]!, index, 'after');
       if (clone) after.append(clone);
     }
   }
 
   private cloneFor(
-    side: "before" | "after",
+    side: 'before' | 'after',
     index: number
   ): HTMLElement | undefined {
-    const container = side === "before" ? this.beforeClones : this.afterClones;
+    const container = side === 'before' ? this.beforeClones : this.afterClones;
     return (
       container?.querySelector(`[data-carousel-index="${index}"]`) ??
       undefined
@@ -852,19 +852,19 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   private changeTo(
     index: number,
-    behavior: ScrollBehavior = "smooth",
-    origin: CarouselChangeOrigin = "manual"
+    behavior: ScrollBehavior = 'smooth',
+    origin: CarouselChangeOrigin = 'manual'
   ): void {
     const slides = this.slideElements();
     const count = slides.length;
     if (count === 0 || !Number.isFinite(index)) return;
     const requested = Math.trunc(index);
     let next: number;
-    let loopSide: "before" | "after" | undefined;
+    let loopSide: 'before' | 'after' | undefined;
     if (this.loop) {
       next = ((requested % count) + count) % count;
-      if (requested < 0) loopSide = "before";
-      else if (requested >= count) loopSide = "after";
+      if (requested < 0) loopSide = 'before';
+      else if (requested >= count) loopSide = 'after';
     } else {
       next = Math.min(this.maxStartIndex(count), Math.max(0, requested));
     }
@@ -878,21 +878,21 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     } finally {
       this.changeOrigin = previousOrigin;
     }
-    this.emit("lr-slide-change", { index: next, slide: slides[next]! });
+    this.emit('lr-slide-change', { index: next, slide: slides[next]! });
   }
 
   /** Moves forward by `slidesPerMove`. */
-  next(behavior: ScrollBehavior = "smooth"): void {
+  next(behavior: ScrollBehavior = 'smooth'): void {
     this.changeTo(this.currentSlide + this.moveSize(), behavior);
   }
 
   /** Moves backward by `slidesPerMove`. */
-  previous(behavior: ScrollBehavior = "smooth"): void {
+  previous(behavior: ScrollBehavior = 'smooth'): void {
     this.changeTo(this.currentSlide - this.moveSize(), behavior);
   }
 
   /** Moves to the requested slide. */
-  goToSlide(index: number, behavior: ScrollBehavior = "smooth"): void {
+  goToSlide(index: number, behavior: ScrollBehavior = 'smooth'): void {
     this.changeTo(index, behavior);
   }
 
@@ -900,7 +900,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   addSlide(slide: LyraCarouselItem): void {
     if (
       slide?.nodeType !== 1 ||
-      slide?.namespaceURI !== "http://www.w3.org/1999/xhtml"
+      slide?.namespaceURI !== 'http://www.w3.org/1999/xhtml'
     ) {
       return;
     }
@@ -941,7 +941,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       this.pointerInteracting ||
       this.focusInteracting ||
       this.dragPointerId !== undefined ||
-      doc.visibilityState !== "visible" ||
+      doc.visibilityState !== 'visible' ||
       count <= this.pageSize(count)
     ) {
       return;
@@ -952,8 +952,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       if (this.loop || this.currentSlide < this.maxStartIndex())
         this.changeTo(
           this.currentSlide + this.moveSize(),
-          "smooth",
-          "autoplay"
+          'smooth',
+          'autoplay'
         );
       else this.stopAutoplay();
     }, interval);
@@ -963,7 +963,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const rect = this.scrollHintProbe?.getBoundingClientRect();
     if (!rect) return 0;
     const pixels =
-      this.effectiveOrientation() === "vertical" ? rect.height : rect.width;
+      this.effectiveOrientation() === 'vertical' ? rect.height : rect.width;
     return Number.isFinite(pixels) ? pixels : 0;
   }
 
@@ -971,10 +971,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const viewportRect = viewport.getBoundingClientRect();
     const slideRect = slide.getBoundingClientRect();
     const padding = this.scrollPaddingStart();
-    if (this.effectiveOrientation() === "vertical") {
+    if (this.effectiveOrientation() === 'vertical') {
       return slideRect.top - (viewportRect.top + padding);
     }
-    return this.effectiveDirection === "rtl"
+    return this.effectiveDirection === 'rtl'
       ? slideRect.right - (viewportRect.right - padding)
       : slideRect.left - (viewportRect.left + padding);
   }
@@ -984,7 +984,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     distance: number,
     behavior: ScrollBehavior
   ): void {
-    if (this.effectiveOrientation() === "vertical") {
+    if (this.effectiveOrientation() === 'vertical') {
       viewport.scrollBy({ top: distance, behavior });
     } else {
       viewport.scrollBy({ left: distance, behavior });
@@ -1000,15 +1000,15 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       index,
     }));
     for (const clone of this.shadowRoot?.querySelectorAll<HTMLElement>(
-      "[data-carousel-clone]"
+      '[data-carousel-clone]'
     ) ?? []) {
-      const index = Number(clone.dataset["carouselIndex"]);
-      const cloneSide = clone.dataset["carouselClone"];
+      const index = Number(clone.dataset['carouselIndex']);
+      const cloneSide = clone.dataset['carouselClone'];
       if (
         Number.isInteger(index) &&
         index >= 0 &&
         index < slides.length &&
-        (cloneSide === "before" || cloneSide === "after")
+        (cloneSide === 'before' || cloneSide === 'after')
       ) {
         candidates.push({ element: clone, index, cloneSide });
       }
@@ -1045,7 +1045,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.alignIndex = targetIndex;
     this.alignTarget = target;
     const behavior = this.motionAwareScrollBehavior(
-      requestedBehavior ?? "smooth",
+      requestedBehavior ?? 'smooth',
       true
     );
     this.scrollByAxis(viewport, offset, behavior);
@@ -1056,7 +1056,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     instantBeforeFirstAlignment = false
   ): ScrollBehavior {
     return this.reduceMotion || (instantBeforeFirstAlignment && !this.hasAlignedOnce)
-      ? "instant"
+      ? 'instant'
       : requested;
   }
 
@@ -1105,15 +1105,15 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     if (this.alignTarget) {
       if (Math.abs(this.axisOffsetOf(this.alignTarget, viewport)) > 2)
         return;
-      const cloneSide = this.alignTarget.dataset["carouselClone"];
-      if (cloneSide === "before" || cloneSide === "after") {
+      const cloneSide = this.alignTarget.dataset['carouselClone'];
+      if (cloneSide === 'before' || cloneSide === 'after') {
         const realSlide = this.slideElements()[this.alignIndex ?? -1];
         if (realSlide) {
           this.alignTarget = realSlide;
           this.scrollByAxis(
             viewport,
             this.axisOffsetOf(realSlide, viewport),
-            "instant"
+            'instant'
           );
           return;
         }
@@ -1129,7 +1129,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.adoptingScrolledSlide = true;
     if (changed) {
       this.currentSlide = resting.index;
-      this.emit("lr-slide-change", {
+      this.emit('lr-slide-change', {
         index: resting.index,
         slide: this.slideElements()[resting.index]!,
       });
@@ -1141,7 +1141,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
           this.scrollByAxis(
             this.viewport,
             this.axisOffsetOf(realSlide, this.viewport),
-            "instant"
+            'instant'
           );
         }
       }
@@ -1183,7 +1183,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       ) {
         this.lastFocusedSlide = undefined;
       }
-      this.focusInteracting = this.matches(":focus-within");
+      this.focusInteracting = this.matches(':focus-within');
       this.restartAutoplay();
     });
   };
@@ -1191,7 +1191,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private onViewportPointerDown = (event: PointerEvent): void => {
     if (
       !this.mouseDragging ||
-      event.pointerType !== "mouse" ||
+      event.pointerType !== 'mouse' ||
       !event.isPrimary ||
       event.button !== 0 ||
       this.dragPointerId !== undefined ||
@@ -1204,15 +1204,15 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     if (!viewport) return;
     this.dragPointerId = event.pointerId;
     this.dragStartCoordinate =
-      this.effectiveOrientation() === "vertical"
+      this.effectiveOrientation() === 'vertical'
         ? event.clientY
         : event.clientX;
     this.dragStartScroll =
-      this.effectiveOrientation() === "vertical"
+      this.effectiveOrientation() === 'vertical'
         ? viewport.scrollTop
         : viewport.scrollLeft;
     this.dragMoved = false;
-    viewport.setAttribute("data-dragging", "");
+    viewport.setAttribute('data-dragging', '');
     try {
       viewport.setPointerCapture(event.pointerId);
     } catch {
@@ -1250,17 +1250,17 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const viewport = this.viewport;
     if (!viewport) return;
     const coordinate =
-      this.effectiveOrientation() === "vertical"
+      this.effectiveOrientation() === 'vertical'
         ? event.clientY
         : event.clientX;
     const delta = coordinate - this.dragStartCoordinate;
     if (Math.abs(delta) > 2) this.dragMoved = true;
     if (!this.dragMoved) return;
     event.preventDefault();
-    if (this.effectiveOrientation() === "vertical") {
-      viewport.scrollTo({ top: this.dragStartScroll - delta, behavior: "instant" });
+    if (this.effectiveOrientation() === 'vertical') {
+      viewport.scrollTo({ top: this.dragStartScroll - delta, behavior: 'instant' });
     } else {
-      viewport.scrollTo({ left: this.dragStartScroll - delta, behavior: "instant" });
+      viewport.scrollTo({ left: this.dragStartScroll - delta, behavior: 'instant' });
     }
   };
 
@@ -1270,7 +1270,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const moved = this.dragMoved;
     this.dragPointerId = undefined;
     this.dragMoved = false;
-    viewport?.removeAttribute("data-dragging");
+    viewport?.removeAttribute('data-dragging');
     if (viewport?.hasPointerCapture(pointerId)) {
       try {
         viewport.releasePointerCapture(pointerId);
@@ -1299,12 +1299,12 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         this.scrollByAxis(
           viewport,
           this.axisOffsetOf(active, viewport),
-          this.motionAwareScrollBehavior("smooth")
+          this.motionAwareScrollBehavior('smooth')
         );
     } else if (!canceled) {
       this.onViewportScroll();
     }
-    if (!this.matches(":hover")) this.pointerInteracting = false;
+    if (!this.matches(':hover')) this.pointerInteracting = false;
     this.restartAutoplay();
   }
 
@@ -1340,20 +1340,20 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   };
 
   private onViewportKeyDown = (event: KeyboardEvent): void => {
-    const vertical = this.effectiveOrientation() === "vertical";
-    const rtl = this.effectiveDirection === "rtl";
-    const forwardKey = vertical ? "ArrowDown" : rtl ? "ArrowLeft" : "ArrowRight";
-    const backwardKey = vertical ? "ArrowUp" : rtl ? "ArrowRight" : "ArrowLeft";
+    const vertical = this.effectiveOrientation() === 'vertical';
+    const rtl = this.effectiveDirection === 'rtl';
+    const forwardKey = vertical ? 'ArrowDown' : rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backwardKey = vertical ? 'ArrowUp' : rtl ? 'ArrowRight' : 'ArrowLeft';
     if (event.key === forwardKey) {
       event.preventDefault();
       this.next();
     } else if (event.key === backwardKey) {
       event.preventDefault();
       this.previous();
-    } else if (event.key === "Home") {
+    } else if (event.key === 'Home') {
       event.preventDefault();
       this.goToSlide(0);
-    } else if (event.key === "End") {
+    } else if (event.key === 'End') {
       event.preventDefault();
       this.goToSlide(this.loop ? this.slideElements().length - 1 : this.maxStartIndex());
     }
@@ -1361,7 +1361,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   private computedSlideBasis(perPage: number): string {
     if (perPage === 1) {
-      return "100%";
+      return '100%';
     }
     return `calc((100% - (${perPage - 1} * var(--slide-gap, var(--lr-space-m)))) / ${perPage})`;
   }
@@ -1385,7 +1385,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const hasPagination = this.pagination && pageTargets.length > 1;
     const label = this.hostAccessibleLabel !== null
       ? this.hostAccessibleLabel
-      : this.accessibleLabel || this.localize("carouselLabel");
+      : this.accessibleLabel || this.localize('carouselLabel');
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const orientation = this.effectiveOrientation();
     const perPage = this.pageSize(count);
@@ -1393,7 +1393,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     return html`<section
       part="base carousel"
       role="region"
-      aria-roledescription=${this.localize("carousel")}
+      aria-roledescription=${this.localize('carousel')}
       aria-label=${label}
       data-orientation=${orientation}
       ?data-mouse-dragging=${this.mouseDragging}
@@ -1438,26 +1438,26 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
                   <button
                     part="navigation-button navigation-button-previous navigation-button--previous"
                     type="button"
-                    aria-label=${this.localize("previous")}
+                    aria-label=${this.localize('previous')}
                     ?disabled=${!this.loop && current === 0}
                     @click=${() => this.previous()}
                   >
                     ${renderInertPresentation(
                       html`<slot name="previous-icon">‹</slot>`,
-                      { part: "previous-glyph" },
+                      { part: 'previous-glyph' },
                     )}
                   </button>
                   <button
                     part="navigation-button navigation-button-next navigation-button--next"
                     type="button"
-                    aria-label=${this.localize("next")}
+                    aria-label=${this.localize('next')}
                     ?disabled=${!this.loop &&
                     current === this.maxStartIndex(count)}
                     @click=${() => this.next()}
                   >
                     ${renderInertPresentation(
                       html`<slot name="next-icon">›</slot>`,
-                      { part: "next-glyph" },
+                      { part: 'next-glyph' },
                     )}
                   </button>
                 </div>`
@@ -1466,20 +1466,20 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
               ? html`<div
                   part="pagination"
                   role="group"
-                  aria-label=${this.localize("carouselIndicators")}
+                  aria-label=${this.localize('carouselIndicators')}
                 >
                   ${pageTargets.map(
                     (target, pageIndex) => html`<button
                       part=${pageIndex === currentPage
-                        ? "pagination-item pagination-item-active pagination-item--active"
-                        : "pagination-item"}
+                        ? 'pagination-item pagination-item-active pagination-item--active'
+                        : 'pagination-item'}
                       type="button"
-                      aria-label=${this.localize("carouselGoTo", undefined, {
+                      aria-label=${this.localize('carouselGoTo', undefined, {
                         index: numberFormat.format(target + 1),
                       })}
                       aria-current=${pageIndex === currentPage
-                        ? "true"
-                        : "false"}
+                        ? 'true'
+                        : 'false'}
                       @click=${() => this.goToSlide(target)}
                     >
                       <span part="indicator-dot" aria-hidden="true"></span>
@@ -1495,6 +1495,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-carousel": LyraCarousel;
+    'lr-carousel': LyraCarousel;
   }
 }

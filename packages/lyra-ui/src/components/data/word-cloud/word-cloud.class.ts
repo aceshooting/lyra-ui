@@ -293,8 +293,9 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   private inputTruncatedCount = 0;
   private inputWordCount = 0;
 
-  /** Normalized readonly word snapshot. Invalid records are skipped, text/work is bounded, and
-   * every accepted weight is the finite nonnegative value used by layout/events/announcements. */
+  /** Normalized frozen word snapshot. At most 10,000 source records and a bounded aggregate text
+   * budget are scanned; invalid records are skipped, and every accepted weight is the finite
+   * nonnegative value used by layout/events/announcements. Reassign to update. */
   @property({ attribute: false })
   get words(): readonly WordCloudWord[] { return this._words; }
   set words(value: readonly WordCloudWord[]) {
@@ -345,7 +346,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   /** Custom CSS-color palette, cycled by word index (or by `group`, see `words`). Invalid entries
    *  and `url()` paint servers are skipped; an all-invalid palette falls back to the
-   *  `--lr-word-cloud-color-*` tokens. */
+   *  `--lr-word-cloud-color-*` tokens. Assignment freezes at most 64 colors; reassign to update. */
   private _palette?: readonly string[];
   @property({ attribute: false })
   get palette(): readonly string[] | undefined { return this._palette; }
@@ -357,7 +358,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   /** Named color overrides shown in the optional legend. When omitted, `show-legend` derives
    *  entries from grouped words and explicitly colored words. This is useful when `words[].color`
-   *  or grouped colors carry semantic meaning that should not be discoverable only by visual inspection. */
+   *  or grouped colors carry semantic meaning that should not be discoverable only by visual
+   *  inspection. Assignment freezes at most 100 entries; reassign to update. */
   private _legend: readonly WordCloudLegendItem[] = [];
   private legendDroppedCount = 0;
   private legendTruncatedCount = 0;

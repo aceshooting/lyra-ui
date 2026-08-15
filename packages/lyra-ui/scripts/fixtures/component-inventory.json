@@ -23065,12 +23065,12 @@
           {
             "name": "anchorKinds",
             "attribute": null,
-            "type": "LyraAnchor[\"kind\"][]",
+            "type": "LyraAnchor['kind'][]",
             "readonly": true,
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "[\"line-range\"]"
+            "default": "['line-range']"
           },
           {
             "name": "code",
@@ -26293,7 +26293,7 @@
           {
             "name": "appearance",
             "property": "appearance",
-            "type": "Extract< LyraAppearance, \"filled\" | \"outlined\" | \"filled-outlined\" >",
+            "type": "'filled' | 'outlined' | 'filled-outlined'",
             "reflects": true,
             "inferred": false,
             "deprecated": null,
@@ -26638,7 +26638,7 @@
           {
             "name": "appearance",
             "attribute": "appearance",
-            "type": "Extract< LyraAppearance, \"filled\" | \"outlined\" | \"filled-outlined\" >",
+            "type": "'filled' | 'outlined' | 'filled-outlined'",
             "readonly": false,
             "reflects": true,
             "deprecated": null,
@@ -27620,7 +27620,7 @@
                   },
                   {
                     "name": "reason",
-                    "type": "\"autocomplete\" | \"restore\"",
+                    "type": "'autocomplete' | 'restore'",
                     "optional": false,
                     "hasDefault": false
                   }
@@ -27987,7 +27987,7 @@
           },
           {
             "name": "lr-select",
-            "type": "CustomEvent<LyraEventDetailSnapshot<{ command: LyraCommand }>>",
+            "type": "CustomEvent<Readonly<{ command: LyraCommand }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -39126,7 +39126,7 @@
             "default": ""
           },
           {
-            "name": "selectedIds",
+            "name": "selectedDocumentIds",
             "attribute": null,
             "type": "readonly string[]",
             "readonly": false,
@@ -39868,8 +39868,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -42067,7 +42066,7 @@
           {
             "name": "active-category",
             "property": "activeCategory",
-            "type": "LyraDrilldownCategory | \"\"",
+            "type": "LyraDrilldownCategory | ''",
             "reflects": true,
             "inferred": false,
             "deprecated": null,
@@ -42128,7 +42127,7 @@
           {
             "name": "activeCategory",
             "attribute": "active-category",
-            "type": "LyraDrilldownCategory | \"\"",
+            "type": "LyraDrilldownCategory | ''",
             "readonly": false,
             "reflects": true,
             "deprecated": null,
@@ -46973,31 +46972,31 @@
         "events": [
           {
             "name": "lr-review-input",
-            "type": "CustomEvent<{ runId: string; value: RubricValue }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ runId: string; value: RubricValue }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-review-skip",
-            "type": "CustomEvent<{ runId: string }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-review-submit",
-            "type": "CustomEvent<{ runId: string; value: RubricValue }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ runId: string; value: RubricValue }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-review-validity-change",
-            "type": "CustomEvent<{ runId: string; valid: boolean; errors: Record<string, string> }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ runId: string; valid: boolean; errors: Record<string, string>; }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-run-activate",
-            "type": "CustomEvent<AgentRunActivateDetail<EvalRunResult>>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<EvalRunResult>>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -56169,8 +56168,8 @@
       "surface": {
         "attributes": [
           {
-            "name": "active-id",
-            "property": "activeId",
+            "name": "active-highlight-id",
+            "property": "activeHighlightId",
             "type": "string | null",
             "reflects": false,
             "inferred": false,
@@ -56201,8 +56200,8 @@
         ],
         "properties": [
           {
-            "name": "activeId",
-            "attribute": "active-id",
+            "name": "activeHighlightId",
+            "attribute": "active-highlight-id",
             "type": "string | null",
             "readonly": false,
             "reflects": false,
@@ -68547,7 +68546,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "[ \"fragment\", \"text-quote\", ]"
+            "default": "[ 'fragment', 'text-quote', ]"
           },
           {
             "name": "content",
@@ -69101,7 +69100,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "[ \"fragment\", \"text-quote\", ]"
+            "default": "[ 'fragment', 'text-quote', ]"
           },
           {
             "name": "content",
@@ -97283,7 +97282,7 @@
         "events": [
           {
             "name": "lr-move-request",
-            "type": "CustomEvent<{ direction: \"up\" | \"down\" }>",
+            "type": "CustomEvent<{ direction: 'up' | 'down' }>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
@@ -98716,7 +98715,7 @@
           {
             "name": "sort",
             "property": "sort",
-            "type": "\"score\" | \"none\"",
+            "type": "'score' | 'none'",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -98885,7 +98884,7 @@
           {
             "name": "sort",
             "attribute": "sort",
-            "type": "\"score\" | \"none\"",
+            "type": "'score' | 'none'",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -103616,7 +103615,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "[ \"ask\", \"quote\", \"cite\", \"copy\", ]"
+            "default": "[ 'ask', 'quote', 'cite', 'copy', ]"
           },
           {
             "name": "anchor",
@@ -109962,19 +109961,19 @@
         "events": [
           {
             "name": "lr-cancel",
-            "type": "CustomEvent<{ runId: string }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-run-activate",
-            "type": "CustomEvent<AgentRunActivateDetail<SubagentRun>>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<SubagentRun>>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-run-retry",
-            "type": "CustomEvent<{ runId: string }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -117153,8 +117152,8 @@
       "surface": {
         "attributes": [
           {
-            "name": "active-id",
-            "property": "activeId",
+            "name": "active-conversation-id",
+            "property": "activeConversationId",
             "type": "string",
             "reflects": false,
             "inferred": false,
@@ -117245,8 +117244,8 @@
         ],
         "properties": [
           {
-            "name": "activeId",
-            "attribute": "active-id",
+            "name": "activeConversationId",
+            "attribute": "active-conversation-id",
             "type": "string",
             "readonly": false,
             "reflects": false,
@@ -117506,7 +117505,7 @@
           },
           {
             "name": "lr-group-toggle",
-            "type": "CustomEvent<{ id: string; collapsed: boolean }>",
+            "type": "CustomEvent<{ groupId: string; collapsed: boolean }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -122646,7 +122645,7 @@
           {
             "name": "effectiveValue",
             "attribute": null,
-            "type": "Record<string, unknown>",
+            "type": "ToolParamFormValue",
             "readonly": true,
             "reflects": false,
             "deprecated": null,
@@ -122738,7 +122737,7 @@
           {
             "name": "value",
             "attribute": null,
-            "type": "Record<string, unknown>",
+            "type": "ToolParamFormValue",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -122772,7 +122771,7 @@
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<{ value: Record<string, unknown> }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ readonly value: ToolParamFormValue }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -122784,7 +122783,7 @@
           },
           {
             "name": "lr-validity-change",
-            "type": "CustomEvent<{ readonly valid: boolean; readonly errors: Readonly<Record<string, string>>; }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ readonly valid: boolean; readonly errors: Readonly<Record<string, string>>; }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -128718,7 +128717,7 @@
           {
             "name": "active-id",
             "property": "activeId",
-            "type": "VirtualListKey | \"\"",
+            "type": "VirtualListKey | ''",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -128800,7 +128799,7 @@
           {
             "name": "activeId",
             "attribute": "active-id",
-            "type": "VirtualListKey | \"\"",
+            "type": "VirtualListKey | ''",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -129073,7 +129072,7 @@
                   },
                   {
                     "name": "options",
-                    "type": "{ align?: \"start\" | \"end\" | \"auto\"; behavior?: \"auto\" | \"smooth\" }",
+                    "type": "{ align?: 'start' | 'end' | 'auto'; behavior?: 'auto' | 'smooth' }",
                     "optional": true,
                     "hasDefault": false
                   }
@@ -189460,12 +189459,6 @@
             "target": "LyraSize"
           },
           {
-            "memberKind": "attribute",
-            "member": "appearance",
-            "upstream": "'filled' | 'outlined' | 'filled-outlined'",
-            "target": "Extract< LyraAppearance, \"filled\" | \"outlined\" | \"filled-outlined\" >"
-          },
-          {
             "memberKind": "property",
             "member": "filter",
             "upstream": "((option: WaOption, query: string) => boolean) | null",
@@ -189527,14 +189520,7 @@
           }
         ],
         "structuralTypeAliases": [],
-        "methodParameterTypeEquivalences": [
-          {
-            "method": "formStateRestoreCallback",
-            "parameter": "reason",
-            "upstream": "'autocomplete' | 'restore'",
-            "target": "\"autocomplete\" | \"restore\""
-          }
-        ],
+        "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
         "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],

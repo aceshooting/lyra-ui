@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Side-by-side or inline comparison of two document versions, composed from `<lr-diff-view>` (the real two-string line diff, `view="diff"`) and `<lr-document-preview>` (each version\'s own actual rendered content, `view="side-by-side"`), with proportional scroll sync and shared-highlight-anchor sync between the two side-by-side panes. A nonempty host `aria-label` is the sole named semantic owner; absence or an explicit empty value leaves the shadow group authoritative. Unsupported `view`/`diff-layout` values normalize to reflected `diff`/`unified`.',
+          'Side-by-side or inline comparison of two document versions, composed from `<lr-diff-view>` (the real two-string line diff, `view="diff"`) and `<lr-document-preview>` (each version\'s own actual rendered content, `view="side-by-side"`), with proportional scroll sync and shared-highlight-anchor sync through each preview\'s normalized highlight IDs. A nonempty host `aria-label` is the sole named semantic owner; absence or an explicit empty value leaves the shadow group authoritative. Unsupported `view`/`diff-layout` values normalize to reflected `diff`/`unified`.',
       },
     },
   },

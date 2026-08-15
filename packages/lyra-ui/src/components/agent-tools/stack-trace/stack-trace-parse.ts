@@ -62,14 +62,14 @@ const PYTHON_HEADER = /^Traceback \(most recent call last\):\s*$/;
 // File-path capture excludes `"` (its own delimiter) so the boundary is unambiguous instead of
 // backtracking across every `"` in the line; the trailing function-name is trimmed in code below
 // rather than via a lazy `(.+?)\s*$`, which was the other polynomial-time spot CodeQL flagged.
-const PYTHON_FRAME = /^\s*File "([^"]+)", line ([^,]*), in (.+)$/;
+const PYTHON_FRAME = /^\s*File '([^']+)', line ([^,]*), in (.+)$/;
 // Keep language detection strict. PYTHON_FRAME intentionally recognizes malformed coordinate
 // candidates after a traceback has already been identified, but prose resembling such a line must
 // not make a JavaScript trace skip its valid V8/Firefox frames.
 const PYTHON_CHAIN_SEPARATOR = /direct cause|During handling/;
 // Equivalent to the original `\S+(\.\S+)*:\s` -- `\S` already matches `.`, so the `(\.\S+)*`
 // group added no coverage, only exponential backtracking (CodeQL js/redos) on input like many
-// repetitions of "!.".
+// repetitions of '!.'.
 const PYTHON_EXC_TRAILER = /^\s*\S+:\s/;
 
 interface V8FrameWithFn {
@@ -105,7 +105,7 @@ function parseSafeLocation(lineToken: string, columnToken?: string): StackLocati
   return Number.isSafeInteger(column) ? { line, column } : null;
 }
 
-/** Matches a V8 "at <fn> (<file>:<line>:<col>)" frame without regex backtracking: the location's
+/** Matches a V8 'at <fn> (<file>:<line>:<col>)" frame without regex backtracking: the location's
  *  opening paren is found via `lastIndexOf` (it's always the rightmost one on a well-formed line),
  *  and the trailing `:line:col` is split off the same way, so there is no ambiguous partition for
  *  a backtracking engine to search across. */

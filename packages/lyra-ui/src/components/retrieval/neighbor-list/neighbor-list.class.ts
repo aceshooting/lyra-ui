@@ -1,23 +1,23 @@
-import { html, nothing, type TemplateResult } from "lit";
-import { property } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { isRtl } from "../../../internal/rtl.js";
-import { expandIcon } from "../../../internal/icons.js";
-import { finiteCount } from "../../../internal/numbers.js";
+import { html, nothing, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { isRtl } from '../../../internal/rtl.js';
+import { expandIcon } from '../../../internal/icons.js';
+import { finiteCount } from '../../../internal/numbers.js';
 import {
   getCollator,
   getListFormat,
   getNumberFormat,
-} from "../../../internal/intl-cache.js";
-import type { LyraEntity } from "../entity-card/entity-card.class.js";
-import type { VirtualListGroup } from "../../layout/virtual-list/virtual-list.class.js";
-import "../../layout/virtual-list/virtual-list.class.js";
-import "../../overlays/empty/empty.class.js";
-import { styles } from "./neighbor-list.styles.js";
+} from '../../../internal/intl-cache.js';
+import type { LyraEntity } from '../entity-card/entity-card.class.js';
+import type { VirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
+import '../../layout/virtual-list/virtual-list.class.js';
+import '../../overlays/empty/empty.class.js';
+import { styles } from './neighbor-list.styles.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
-} from "../retrieval-semantic-owner.js";
+} from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_neighborExpand, LYRA_DEFAULT_neighborGroupHeader, LYRA_DEFAULT_neighborListEmpty, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_neighborRowLabel } from '../../../internal/default-strings.generated.js';
@@ -26,15 +26,15 @@ import { LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, L
 export interface LyraNeighborRow {
   /** Edge label, e.g. `'works_for'`. */
   relation: string;
-  direction: "in" | "out" | "both";
+  direction: 'in' | 'out' | 'both';
   node: LyraEntity;
 }
 
 export interface LyraNeighborListEventMap {
-  "lr-entity-activate": CustomEvent<{ id: string }>;
+  'lr-entity-activate': CustomEvent<{ id: string }>;
   /** Deliberately the *same name and detail* as the `lr-graph` event, so one host handler
    *  serves both ("expand this node's neighborhood"). */
-  "lr-node-expand": CustomEvent<{ id: string }>;
+  'lr-node-expand': CustomEvent<{ id: string }>;
 }
 
 /**
@@ -67,7 +67,7 @@ export interface LyraNeighborListEventMap {
  * @since 4.0.0
  */
 export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["rows"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['rows']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -89,15 +89,15 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   /** Neighbor relationships to render, including direction, relation, and target node data. */
   @property({ attribute: false }) rows: readonly LyraNeighborRow[] = [];
   /** Stable-sorts rows by relation and renders one group header per relation with a count. */
-  @property({ type: Boolean, attribute: "group-by-relation" }) groupByRelation =
+  @property({ type: Boolean, attribute: 'group-by-relation' }) groupByRelation =
     false;
   /** Shows a per-row expand icon-button emitting `lr-node-expand`. */
   @property({ type: Boolean }) expandable = false;
   /** Above this row count the list renders through an internal `lr-virtual-list`. */
-  @property({ type: Number, attribute: "virtualize-at" }) virtualizeAt = 100;
+  @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 100;
   /** Accessible name for the stable group when the host has no `aria-label`; falls back to the
    *  localized `neighborListLabel` default. An explicitly empty host label stays empty. */
-  @property() label = "";
+  @property() label = '';
 
   /** `virtualizeAt`, normalized to a finite non-negative integer (falling back to the property's
    *  own default of `100`) -- a raw `NaN` (e.g. an invalid `virtualize-at` attribute) would
@@ -129,7 +129,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
         const count = numberFormat.format(counts.get(row.relation) ?? 0);
         groups.push({
           key: row.relation,
-          label: this.localize("neighborGroupHeader", undefined, {
+          label: this.localize('neighborGroupHeader', undefined, {
             relation: row.relation,
             count,
           }),
@@ -141,20 +141,20 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     return groups;
   }
 
-  private directionGlyph(direction: LyraNeighborRow["direction"]): string {
-    if (direction === "both") return "↔";
+  private directionGlyph(direction: LyraNeighborRow['direction']): string {
+    if (direction === 'both') return '↔';
     const rtl = isRtl(this);
-    const pointsInlineEnd = direction === "out";
-    return pointsInlineEnd ? (rtl ? "←" : "→") : rtl ? "→" : "←";
+    const pointsInlineEnd = direction === 'out';
+    return pointsInlineEnd ? (rtl ? '←' : '→') : rtl ? '→' : '←';
   }
 
-  private directionText(direction: LyraNeighborRow["direction"]): string {
+  private directionText(direction: LyraNeighborRow['direction']): string {
     return this.localize(
-      direction === "in"
-        ? "neighborDirectionIn"
-        : direction === "out"
-        ? "neighborDirectionOut"
-        : "neighborDirectionBoth"
+      direction === 'in'
+        ? 'neighborDirectionIn'
+        : direction === 'out'
+        ? 'neighborDirectionOut'
+        : 'neighborDirectionBoth'
     );
   }
 
@@ -170,7 +170,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   private renderNeighborRow(row: LyraNeighborRow): TemplateResult {
     const nodeLabel = row.node.label || row.node.id;
     const directionText = this.directionText(row.direction);
-    const accessibleName = this.localize("neighborRowLabel", undefined, {
+    const accessibleName = this.localize('neighborRowLabel', undefined, {
       label: nodeLabel,
       relation: row.relation,
       direction: directionText,
@@ -184,8 +184,8 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
         : undefined,
     ].filter((v): v is string => !!v);
     const metaText = getListFormat(this.effectiveLocale, {
-      style: "short",
-      type: "unit",
+      style: 'short',
+      type: 'unit',
     }).format(meta);
     return html`
       <button
@@ -193,7 +193,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
         type="button"
         aria-label=${accessibleName}
         aria-description=${metaText || nothing}
-        @click=${() => this.emit("lr-entity-activate", { id: row.node.id })}
+        @click=${() => this.emit('lr-entity-activate', { id: row.node.id })}
       >
         <span part="direction" aria-hidden="true"
           >${this.directionGlyph(row.direction)}</span
@@ -206,10 +206,10 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
         ? html`<button
             part="expand-button"
             type="button"
-            aria-label=${this.localize("neighborExpand", undefined, {
+            aria-label=${this.localize('neighborExpand', undefined, {
               label: nodeLabel,
             })}
-            @click=${() => this.emit("lr-node-expand", { id: row.node.id })}
+            @click=${() => this.emit('lr-node-expand', { id: row.node.id })}
           >
             ${expandIcon()}
           </button>`
@@ -221,9 +221,9 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     const sorted = this.sortedRows();
     const label = retrievalSemanticLabel(
       this,
-      this.label || this.localize("neighborListLabel")
+      this.label || this.localize('neighborListLabel')
     );
-    const role = retrievalSemanticRole(this, "group");
+    const role = retrievalSemanticRole(this, 'group');
     if (sorted.length === 0) {
       // `heading` is passed as slotted light-DOM content (rather than the `heading` attribute)
       // so `[part="empty"]`'s `.textContent` -- a plain DOM accessor, which never pierces
@@ -236,7 +236,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       >
         <lr-empty part="empty"
           ><span slot="heading"
-            >${this.localize("neighborListEmpty")}</span
+            >${this.localize('neighborListEmpty')}</span
           ></lr-empty
         >
       </div>`;
@@ -295,6 +295,6 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-neighbor-list": LyraNeighborList;
+    'lr-neighbor-list': LyraNeighborList;
   }
 }

@@ -192,8 +192,9 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * against that outline, `text-quote` anchors via `internal/text-quote.ts`'s shared scope/resolve
  * helpers; `highlights` re-resolve by quote after every render (never by node identity), so a
  * highlight painted before its quote is in the rendered markup yet simply paints once a later load
- * contains it. At most 100 quotes are painted per pass after inspecting 1,000 highlight entries;
- * `activeHighlightId` is resolved first and retained inside that cap. Keyboard-accessible
+ * contains it. At most 100 quotes are painted per pass from a 1,000-entry candidate window;
+ * `activeHighlightId` is retained from anywhere in the bounded host snapshot and resolved first.
+ * Keyboard-accessible
  * highlight actions are rendered only for quotes that resolved
  * against the currently loaded document, so an action never presents an enabled no-op. Highlight
  * painting uses `internal/text-highlights.ts`'s `acquireHighlightHandle()` --
@@ -212,8 +213,9 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  *   has code `docx-conversion-message`, severity, source, and the original peer value as `cause`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
- *   matchCount, matchCountExact, activeIndex }`. At most 1,000 matches are retained; a false
- *   `matchCountExact` makes `matchCount` a lower bound.
+ *   matchCount, matchCountExact, activeIndex }`. Search accepts at most 4,096 query code units,
+ *   scans at most 4,000,000 code units, and retains at most 1,000 matches; a false
+ *   `matchCountExact` makes `matchCount` a lower bound after any ceiling is reached.
  * @event lr-highlight-activate - A painted `text-quote` highlight was clicked or its resolved
  *   keyboard action was activated. `detail: { highlightId }`.
  * @event lr-text-select - Fired on selection end inside the rendered content. `detail: { text,
@@ -767,7 +769,9 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   /** Case-insensitive substring search over the rendered content's text (via `getTextIndex()`).
    *  An empty/whitespace-only query, or no loaded content, behaves like `clearSearch()` and resolves
-   *  `0`. Up to 1,000 matches are retained and a 200-match window is painted (see
+   *  `0`. Queries are limited to 4,096 code units, the indexed corpus to 1,000,000 code units and
+   *  20,000 text nodes, and each pass to 4,000,000 scanned code units. Up to 1,000 matches are
+   *  retained and a 200-match window is painted (see
    *  `paintSearchMatches()`), with the first one scrolled into view;
    *  `lr-search-change.detail.matchCountExact=false` identifies the resolved return as a lower
    *  bound. */

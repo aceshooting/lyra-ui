@@ -605,18 +605,18 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
             @slotchange=${this.onStartSlotChange}
           ></slot>`,
           {
-            part: "start",
+            part: 'start',
             hidden: !this.renderSlotPresence(this.hasStartSlot),
           }
         )}
         ${renderInertPresentation(
           html`<slot @slotchange=${this.onLabelSlotChange}></slot>`,
-          { part: "label", presentation: toggleMode }
+          { part: 'label', presentation: toggleMode }
         )}
         ${renderInertPresentation(
           html`<slot name="end" @slotchange=${this.onEndSlotChange}></slot>`,
           {
-            part: "end",
+            part: 'end',
             presentation: toggleMode,
             hidden: !this.renderSlotPresence(this.hasEndSlot),
           }
@@ -627,7 +627,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
               type="button"
               ?disabled=${this.disabled}
               aria-label=${this.accessibleToggleLabel}
-              aria-pressed=${pressed ? "true" : "false"}
+              aria-pressed=${pressed ? 'true' : 'false'}
               @click=${this.onToggleClick}
             ></button>`
           : nothing}

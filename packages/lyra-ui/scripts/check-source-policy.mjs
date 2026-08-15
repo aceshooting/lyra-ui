@@ -30,6 +30,10 @@
 //                           announcer suppresses hidden, inert, or stale-document messages.
 //   nul-byte                A literal NUL makes ordinary source tools treat a text file as binary;
 //                           express an intentional delimiter with an escaped source spelling.
+//   double-quoted-literal   A double-quoted string literal outside a template literal, whose
+//                           content has no single quote to escape, is off this codebase's
+//                           single-quote convention -- and if it's a public member's printed
+//                           type/default text, it desyncs check:pinned-upstream-manifests.
 //   announcer-timer-realm   A component-owned Announcer must bind its timers to the host's owner
 //                           window on connection/adoption instead of retaining the ambient realm.
 //   physical-css            *.styles.ts must use logical properties (inset-inline-*,
@@ -134,6 +138,57 @@ const lineOf = (source, index) => source.slice(0, index).split('\n').length;
 /** Literal NUL bytes are never valid source text, even when JavaScript accepts them in a string. */
 export function findNulByteLines(source) {
   return [...new Set(Array.from(source.matchAll(/\0/gu), (match) => lineOf(source, match.index)))];
+}
+
+/**
+ * Double-quoted string literals outside template literals/comments, whose content has no
+ * embedded single quote (so converting is never an escaping trade-off). This codebase's own
+ * convention is single quotes; a stray double-quoted literal is the fingerprint of a source file
+ * run through a different formatter's defaults. It is not just cosmetic: a double-quoted literal
+ * in a public member's type/default text is printed verbatim into custom-elements.json and the
+ * check:pinned-upstream-manifests comparison, so it silently reclassifies an otherwise-identical
+ * upstream mapping as a release-blocking surface drift (see docs/agents/coding-conventions.md).
+ */
+export function findDoubleQuotedStringLiterals(source) {
+  const findings = [];
+  let state = 'code';
+  const templateStack = [];
+  let start = -1;
+  for (let i = 0; i < source.length; i++) {
+    const c = source[i];
+    const pair = source.slice(i, i + 2);
+    if (state === 'code') {
+      if (pair === '//') state = 'line';
+      else if (pair === '/*') state = 'block';
+      else if (c === "'") state = 'single';
+      else if (c === '"') { state = 'double'; start = i + 1; }
+      else if (c === '`') state = 'template';
+      else if (c === '{' && templateStack.length > 0) templateStack[templateStack.length - 1]++;
+      else if (c === '}' && templateStack.length > 0) {
+        if (--templateStack[templateStack.length - 1] === 0) { templateStack.pop(); state = 'template'; }
+      }
+    } else if (state === 'line') {
+      if (c === '\n') state = 'code';
+    } else if (state === 'block') {
+      if (pair === '*/') { state = 'code'; i++; }
+    } else if (state === 'single') {
+      if (c === '\\') i++;
+      else if (c === "'") state = 'code';
+    } else if (state === 'double') {
+      if (c === '\\') { i++; continue; }
+      if (c === "'") continue;
+      if (c === '"') {
+        const content = source.slice(start, i);
+        if (!content.includes("'")) findings.push(lineOf(source, start));
+        state = 'code';
+      }
+    } else if (state === 'template') {
+      if (c === '\\') i++;
+      else if (pair === '${') { templateStack.push(1); state = 'code'; i++; }
+      else if (c === '`') state = 'code';
+    }
+  }
+  return [...new Set(findings)];
 }
 
 /** Private review identifiers are not useful to package consumers and disclose internal process. */
@@ -872,6 +927,17 @@ export function runSourcePolicy() {
       findings.push(
         `${rel(file)}:${line} [nul-byte] literal NUL makes source tooling treat this text file as ` +
           'binary; use an escaped source spelling such as \\u0000 for an intentional delimiter',
+      );
+    }
+  }
+
+  for (const file of [...componentTreeFiles, ...internalTreeFiles].filter(isSource)) {
+    const source = fs.readFileSync(file, 'utf8');
+    for (const line of findDoubleQuotedStringLiterals(source)) {
+      findings.push(
+        `${rel(file)}:${line} [double-quoted-literal] this codebase uses single-quoted string ` +
+          'literals; a public member\'s printed type/default text feeds check:pinned-upstream-manifests ' +
+          'verbatim, so a stray double quote silently desyncs an otherwise-identical upstream mapping',
       );
     }
   }

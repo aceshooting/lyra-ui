@@ -500,7 +500,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         </span>
         <span part="label">
           <span part="category" ?hidden=${!hasCategory}>${this.category}</span>
-          <span part="name">${this.name || this.localize("toolCall")}</span>
+          <span part="name">${this.name || this.localize('toolCall')}</span>
           <span part="summary" ?hidden=${!hasSummary}>${this.summary}</span>
         </span>
         <span part="meta">

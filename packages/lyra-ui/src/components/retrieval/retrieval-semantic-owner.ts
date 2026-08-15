@@ -1,4 +1,4 @@
-import { hostAriaLabel } from "../../internal/a11y.js";
+import { hostAriaLabel } from '../../internal/a11y.js';
 
 /**
  * Resolves the name for a retrieval component's overall shadow semantic shell.
@@ -14,7 +14,7 @@ export function retrievalSemanticLabel(
 ): string | null {
   const authored = hostAriaLabel(host);
   if (authored === null) return fallback;
-  return authored === "" ? "" : null;
+  return authored === '' ? '' : null;
 }
 
 /** Omits a redundant overall shadow role when a non-empty host label owns the component. */
@@ -23,5 +23,5 @@ export function retrievalSemanticRole(
   role: string
 ): string | null {
   const authored = hostAriaLabel(host);
-  return authored !== null && authored !== "" ? null : role;
+  return authored !== null && authored !== '' ? null : role;
 }

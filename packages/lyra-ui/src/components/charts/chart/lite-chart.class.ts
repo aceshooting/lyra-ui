@@ -334,9 +334,9 @@ export interface LyraLiteChartEventMap {
  */
 export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze([
-    "labels",
-    "datasets",
-    "selectedIndices",
+    'labels',
+    'datasets',
+    'selectedIndices',
   ]);
 
   // GENERATED DEFAULT-STRING SLICE: START

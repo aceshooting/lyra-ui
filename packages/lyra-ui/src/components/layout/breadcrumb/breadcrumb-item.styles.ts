@@ -1,4 +1,4 @@
-import { css } from "lit";
+import { css } from 'lit';
 
 // A pressed link uses a token-derived fill so it tints its inherited surface without assuming a
 // particular surface token. The current-page color uses an inline fallback so a consumer can set it

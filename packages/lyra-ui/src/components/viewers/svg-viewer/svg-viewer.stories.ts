@@ -47,7 +47,7 @@ export const ThemedActiveRegion: Story = {
     docs: {
       description: {
         story:
-          '`--lr-svg-viewer-active-border` recolors only the region matching `active-highlight-id`. Painting retains at most 100 valid regions after inspecting 1,000 candidates, and the active region is inspected first so it remains inside that cap. Set the token on the element or an ancestor; resting highlights keep `--lr-color-brand`.',
+          '`--lr-svg-viewer-active-border` recolors only the region matching `active-highlight-id`. Painting retains at most 100 valid regions from a 1,000-entry candidate window, and the active region is retained from anywhere in the bounded host snapshot and painted first. Set the token on the element or an ancestor; resting highlights keep `--lr-color-brand`.',
       },
     },
   },

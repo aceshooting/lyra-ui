@@ -1,17 +1,17 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
-import { property, state, query } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { place } from "../../../internal/positioner.js";
-import { nextId } from "../../../internal/a11y.js";
-import { styles } from "./entity-chip.styles.js";
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { property, state, query } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { place } from '../../../internal/positioner.js';
+import { nextId } from '../../../internal/a11y.js';
+import { styles } from './entity-chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_entityChipWithType, LYRA_DEFAULT_untitledEntity } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraEntityChipEventMap {
-  "lr-entity-activate": CustomEvent<{ id: string }>;
-  "lr-entity-open": CustomEvent<{ id: string }>;
+  'lr-entity-activate': CustomEvent<{ id: string }>;
+  'lr-entity-open': CustomEvent<{ id: string }>;
 }
 
 const HIDE_DELAY_MS = 200;
@@ -20,8 +20,8 @@ const HIDE_DELAY_MS = 200;
  *  slot, or non-whitespace text -- mirrors `lr-citation-badge`'s identical `isRealPreviewNode`. */
 function isRealPreviewNode(n: Node): boolean {
   return n.nodeType === Node.ELEMENT_NODE
-    ? !(n as Element).hasAttribute("slot")
-    : (n.textContent ?? "").trim().length > 0;
+    ? !(n as Element).hasAttribute('slot')
+    : (n.textContent ?? '').trim().length > 0;
 }
 
 /**
@@ -58,14 +58,14 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** Echoed verbatim in both events, never validated -- the citation-badge `source-id` contract. */
-  @property({ attribute: "entity-id" }) entityId = "";
+  @property({ attribute: 'entity-id' }) entityId = '';
   /** The visible chip text (unlike citation-badge, the chip renders its label, not `[n]`). */
-  @property() label = "";
+  @property() label = '';
   /** The entity's `lr-graph` `nodeTypes` id; reflected so hosts theme per type from CSS. */
-  @property({ reflect: true }) type = "";
+  @property({ reflect: true }) type = '';
   /** Resolved display label for `type`; when set, the accessible name speaks it instead of the raw
    *  type id. */
-  @property({ attribute: "type-label" }) typeLabel?: string;
+  @property({ attribute: 'type-label' }) typeLabel?: string;
 
   @state() private hasPreviewSlot = false;
   @state() private popoverOpen = false;
@@ -73,7 +73,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   @query('[part="base"]') private buttonEl?: HTMLButtonElement;
   @query('[part="popover"]') private popoverEl?: HTMLElement;
 
-  private readonly popoverId = nextId("entity-chip-popover");
+  private readonly popoverId = nextId('entity-chip-popover');
   private cleanupPositioner?: () => void;
   private hideTimer?: ReturnType<typeof setTimeout>;
   private hovering = false;
@@ -88,12 +88,12 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has("popoverOpen")) {
+    if (changed.has('popoverOpen')) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;
       if (this.popoverOpen && this.buttonEl && this.popoverEl) {
         this.cleanupPositioner = place(this.buttonEl, this.popoverEl, {
-          placement: "top-start",
+          placement: 'top-start',
         });
       }
     }
@@ -118,7 +118,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   private get accessibleLabel(): string {
     if (!this.type) return this.label;
     const typeText = this.typeLabel || this.type;
-    return this.localize("entityChipWithType", undefined, {
+    return this.localize('entityChipWithType', undefined, {
       label: this.label,
       type: typeText,
     });
@@ -173,19 +173,19 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === "Escape" && this.popoverOpen) {
+    if (e.key === 'Escape' && this.popoverOpen) {
       e.stopPropagation();
       this.hidePreviewNow();
       return;
     }
-    if (e.key === " " && !e.repeat && e.target === this.buttonEl) {
+    if (e.key === ' ' && !e.repeat && e.target === this.buttonEl) {
       e.preventDefault();
       this.emitOpen();
     }
   };
 
   private onClick = (): void => {
-    this.emit("lr-entity-activate", { id: this.entityId });
+    this.emit('lr-entity-activate', { id: this.entityId });
   };
 
   private onDblClick = (): void => {
@@ -193,7 +193,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   };
 
   private emitOpen(): void {
-    this.emit("lr-entity-open", { id: this.entityId });
+    this.emit('lr-entity-open', { id: this.entityId });
   }
 
   override render(): TemplateResult {
@@ -212,7 +212,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
           aria-label=${this.accessibleLabel ||
             /* `label` unset: never leave the button nameless — same degenerate-state
              fallback `lr-entity-card` uses for its title. */
-            this.localize("untitledEntity")}
+            this.localize('untitledEntity')}
           aria-describedby=${this.hasPreviewSlot ? this.popoverId : nothing}
           @click=${this.onClick}
           @dblclick=${this.onDblClick}
@@ -235,6 +235,6 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-entity-chip": LyraEntityChip;
+    'lr-entity-chip': LyraEntityChip;
   }
 }

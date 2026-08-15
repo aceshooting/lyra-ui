@@ -34,7 +34,7 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_histogramFreq
  * @since 4.0.0
  */
 export class LyraHistogram extends LyraChart {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["values"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['values']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

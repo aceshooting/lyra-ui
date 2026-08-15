@@ -63,7 +63,7 @@ export interface LyraApprovalQueueEventMap {
  * @since 6.2.0
  */
 export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["requests"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['requests']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

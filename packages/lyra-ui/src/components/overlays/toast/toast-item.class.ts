@@ -1145,7 +1145,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
         <span part="accent" aria-hidden="true"></span>
         ${this.withIcon
           ? html`<span part="icon"><slot name="icon"></slot></span>`
-          : ""}
+          : ''}
         <div part="content">
           <slot @slotchange=${this.onMessageSlotChange}></slot>
         </div>
@@ -1153,7 +1153,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
           part="close-button"
           type="button"
           aria-label=${this.closeLabel}
-          aria-disabled=${this.hiding ? "true" : "false"}
+          aria-disabled=${this.hiding ? 'true' : 'false'}
           @click=${() => void this.hide()}
         >
           ${this.renderCloseControl()}

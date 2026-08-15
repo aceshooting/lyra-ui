@@ -161,7 +161,7 @@ export interface LyraContextInspectorEventMap
  * @since 4.1.0
  */
 export class LyraContextInspector extends LyraElement<LyraContextInspectorEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["segments", "exportFormats"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['segments', 'exportFormats']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

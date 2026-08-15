@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -76,7 +76,7 @@ function uniqueQueueItems(source: readonly PromptQueueItem[] | undefined): Promp
  * @since 7.0.0
  */
 export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["items"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -96,6 +96,10 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-queue-change',
+    'lr-send-now',
+  ]);
 
   @property({ attribute: false }) items: readonly PromptQueueItem[] = [];
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) editable = true;

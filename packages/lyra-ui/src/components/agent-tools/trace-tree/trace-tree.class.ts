@@ -150,7 +150,7 @@ export interface LyraTraceTreeEventMap {
  * @since 4.0.0
  */
 export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["spans"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['spans']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

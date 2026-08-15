@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A compact chip representing one file queued for (or already part of) a chat message — a composer’s pre-send attachment tray, or a sent message’s `attachments` slot. Populate it either with a real `file` (auto-derives name/size/mime-type/thumbnail) or with the independent `name`/`bytes`/`mime-type`/`thumbnail-src` props when reconstructing from server-persisted metadata.',
+          'A compact chip representing one file queued for (or already part of) a chat message — a composer’s pre-send attachment tray, or a sent message’s `attachments` slot. Populate it either with a real `file` (auto-derives name/size/mime-type/thumbnail) or with the independent `name`/`bytes`/`mime-type`/`thumbnail-src` props when reconstructing from server-persisted metadata. Action events use `attachmentId`; an empty or whitespace-only value uses the file-derived or generated fallback.',
       },
     },
   },

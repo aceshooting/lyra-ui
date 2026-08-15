@@ -17,7 +17,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "A dialog-hosted, format-dispatching document viewer. Each instance owns an immutable built-in registry snapshot and may receive an explicit registry; an opt-in readonly discriminated payload carries renderer-specific metadata while the legacy scalar file properties remain the default. Other formats fall back to lr-document-preview. A host `aria-label` names the nested dialog by attribute presence, including an explicitly empty value, without suppressing the visible `name` heading.",
+          "A dialog-hosted, format-dispatching document viewer. Each instance owns an immutable built-in registry snapshot and may receive an explicit registry; an opt-in readonly discriminated payload carries renderer-specific metadata while the legacy scalar file properties remain the default. Highlight IDs are normalized trimmed, nonempty, and first-wins before renderer adaptation. Other formats fall back to lr-document-preview. A host `aria-label` names the nested dialog by attribute presence, including an explicitly empty value, without suppressing the visible `name` heading.",
       },
     },
   },

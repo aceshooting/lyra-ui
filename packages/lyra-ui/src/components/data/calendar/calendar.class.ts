@@ -66,7 +66,7 @@ export type CalendarView = 'month' | 'agenda';
  * @since 4.0.0
  */
 export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["events"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['events']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

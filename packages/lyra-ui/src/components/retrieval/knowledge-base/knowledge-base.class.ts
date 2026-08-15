@@ -179,7 +179,7 @@ function normalizeTimestamp(value: Date | string | undefined): Date | undefined 
  * @since 4.1.0
  */
 export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["sources"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['sources']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

@@ -1,4 +1,11 @@
-import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from "@open-wc/testing";
+import {
+  fixture,
+  expect,
+  html,
+  oneEvent,
+  aTimeout,
+  waitUntil,
+} from "@open-wc/testing";
 import "./virtual-list.js";
 import {
   MAX_OVERSCAN_ROWS,
@@ -107,11 +114,15 @@ it("accepts a readonly array through source while preserving items as the unset 
     ></lr-virtual-list>
   `)) as LyraVirtualList;
   await nextFrame();
-  expect(el.shadowRoot!.querySelector('[part="row"]')?.textContent).to.contain("source row");
+  expect(el.shadowRoot!.querySelector('[part="row"]')?.textContent).to.contain(
+    "source row"
+  );
 
   el.source = undefined;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="row"]')?.textContent).to.contain("items fallback");
+  expect(el.shadowRoot!.querySelector('[part="row"]')?.textContent).to.contain(
+    "items fallback"
+  );
 });
 
 it("keeps a 100,000-row indexed source sparse across ordinary state updates", async () => {
@@ -140,9 +151,16 @@ it("keeps a 100,000-row indexed source sparse across ordinary state updates", as
   await el.updateComplete;
 
   const firstReadCount = itemReads;
-  const internals = el as unknown as { offsets: number[]; rowIdentities: string[] };
-  expect(el.shadowRoot!.querySelector('[part="spacer"]')?.getAttribute("style")).to.contain("4000000px");
-  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.be.lessThan(40);
+  const internals = el as unknown as {
+    offsets: number[];
+    rowIdentities: string[];
+  };
+  expect(
+    el.shadowRoot!.querySelector('[part="spacer"]')?.getAttribute("style")
+  ).to.contain("4000000px");
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.be.lessThan(
+    40
+  );
   expect(itemReads).to.be.lessThan(40);
   expect(keyReads).to.be.lessThan(80);
   expect(internals.offsets).to.have.lengthOf(1);
@@ -212,14 +230,22 @@ it("does not scan an indexed source's declared count when active-id has no rever
 
   expect(reads).to.be.lessThan(100);
   expect(keyReads).to.be.lessThan(100);
-  expect(el.shadowRoot!.querySelector('[aria-current="true"]') === null).to.equal(true);
+  expect(
+    el.shadowRoot!.querySelector('[aria-current="true"]') === null
+  ).to.equal(true);
 });
 
 it("normalizes an invalid indexed count to an empty collection without reading it", async () => {
   let reads = 0;
   const el = (await fixture(html`
     <lr-virtual-list
-      .source=${{ count: Number.NaN, itemAt: () => { reads++; return "bad"; } }}
+      .source=${{
+        count: Number.NaN,
+        itemAt: () => {
+          reads++;
+          return "bad";
+        },
+      }}
       .renderItem=${renderText}
     ></lr-virtual-list>
   `)) as LyraVirtualList;
@@ -479,15 +505,18 @@ it("uses a row's rendered height when a ResizeObserver entry omits borderBoxSize
       configurable: true,
       value: () => new DOMRect(0, 0, 0, 96),
     });
-    const rowObserver = (el as unknown as {
-      rowResizeObserver?: ResizeObserver;
-    }).rowResizeObserver;
+    const rowObserver = (
+      el as unknown as {
+        rowResizeObserver?: ResizeObserver;
+      }
+    ).rowResizeObserver;
     const record = records.find(
       (candidate) => candidate.observer === rowObserver
     );
-    expect(record !== undefined, "row measurement observer is present").to.equal(
-      true
-    );
+    expect(
+      record !== undefined,
+      "row measurement observer is present"
+    ).to.equal(true);
 
     record!.callback(
       [{ target: row } as unknown as ResizeObserverEntry],
@@ -512,7 +541,8 @@ it("wraps ordinary long row content and measures its auto height at 320px in LTR
         dir=${direction}
         style="inline-size:320px; --lr-virtual-list-height:200px"
         .items=${[longToken]}
-        .renderItem=${(item: unknown) => html`<div style="display:flex"><span>${String(item)}</span></div>`}
+        .renderItem=${(item: unknown) =>
+          html`<div style="display:flex"><span>${String(item)}</span></div>`}
         .keyFunction=${stringKey}
       ></lr-virtual-list>`
     )) as LyraVirtualList;
@@ -523,11 +553,13 @@ it("wraps ordinary long row content and measures its auto height at 320px in LTR
 
     const base = el.scrollContainer!;
     const row = el.renderedRows[0]!;
-    const spacer = el.shadowRoot!.querySelector<HTMLElement>("[part='spacer']")!;
+    const spacer =
+      el.shadowRoot!.querySelector<HTMLElement>("[part='spacer']")!;
 
-    expect(row.scrollWidth, `${direction} row content stays contained`).to.be.at.most(
-      row.clientWidth
-    );
+    expect(
+      row.scrollWidth,
+      `${direction} row content stays contained`
+    ).to.be.at.most(row.clientWidth);
     expect(
       row.getBoundingClientRect().height,
       `${direction} row wraps onto more than one line`
@@ -536,7 +568,10 @@ it("wraps ordinary long row content and measures its auto height at 320px in LTR
       parseFloat(spacer.style.height),
       `${direction} auto-height measurement catches the wrapped row`
     ).to.be.greaterThan(48);
-    expect(base.clientWidth, `${direction} list has a real narrow allocation`).to.be.at.most(320);
+    expect(
+      base.clientWidth,
+      `${direction} list has a real narrow allocation`
+    ).to.be.at.most(320);
   }
 });
 
@@ -546,7 +581,8 @@ it("keeps an explicit consumer nowrap row horizontally scrollable", async () => 
     html`<lr-virtual-list
       style="inline-size:320px; --lr-virtual-list-height:200px"
       .items=${[longToken]}
-      .renderItem=${(item: unknown) => html`<span style="white-space:nowrap">${String(item)}</span>`}
+      .renderItem=${(item: unknown) =>
+        html`<span style="white-space:nowrap">${String(item)}</span>`}
       .keyFunction=${stringKey}
     ></lr-virtual-list>`
   )) as LyraVirtualList;
@@ -659,7 +695,7 @@ describe("aria-label forwarding", () => {
     ).to.equal("Recent activity");
   });
 
-  it('preserves an explicitly empty host aria-label and removes it from the semantic owner when cleared', async () => {
+  it("preserves an explicitly empty host aria-label and removes it from the semantic owner when cleared", async () => {
     const el = (await fixture(
       html`<lr-virtual-list
         aria-label="Recent activity"
@@ -670,15 +706,15 @@ describe("aria-label forwarding", () => {
     )) as LyraVirtualList;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
-    expect(base.getAttribute('aria-label')).to.equal('Recent activity');
+    expect(base.getAttribute("aria-label")).to.equal("Recent activity");
 
-    el.setAttribute('aria-label', '');
+    el.setAttribute("aria-label", "");
     await el.updateComplete;
-    expect(base.getAttribute('aria-label')).to.equal('');
+    expect(base.getAttribute("aria-label")).to.equal("");
 
-    el.removeAttribute('aria-label');
+    el.removeAttribute("aria-label");
     await el.updateComplete;
-    expect(base.hasAttribute('aria-label')).to.be.false;
+    expect(base.hasAttribute("aria-label")).to.be.false;
   });
 
   it("has no aria-label on the internal element when the host has none", async () => {
@@ -864,7 +900,9 @@ it("keeps an active-id target visible while tall preceding rows replace their es
         overscan="3"
         .items=${items}
         .renderItem=${(_item: unknown, index: number) => html`
-          <div style="block-size:${index >= 20 && index < 25 ? 220 : 40}px"></div>
+          <div
+            style="block-size:${index >= 20 && index < 25 ? 220 : 40}px"
+          ></div>
         `}
         .keyFunction=${numberKey}
       ></lr-virtual-list>
@@ -873,18 +911,25 @@ it("keeps an active-id target visible while tall preceding rows replace their es
     el.activeId = 25;
     await el.updateComplete;
 
-    await waitUntil(() => {
-      const row = el.shadowRoot!.querySelector<HTMLElement>(
-        '[part="row"][data-row-index="25"]'
-      );
-      if (!row) return false;
-      const rowRect = row.getBoundingClientRect();
-      const viewportRect = el.scrollContainer!.getBoundingClientRect();
-      return rowRect.top >= viewportRect.top - 0.5 && rowRect.bottom <= viewportRect.bottom + 0.5;
-    }, "active row remains inside the viewport after measurement correction", {
-      timeout: 4000,
-      interval: 20,
-    });
+    await waitUntil(
+      () => {
+        const row = el.shadowRoot!.querySelector<HTMLElement>(
+          '[part="row"][data-row-index="25"]'
+        );
+        if (!row) return false;
+        const rowRect = row.getBoundingClientRect();
+        const viewportRect = el.scrollContainer!.getBoundingClientRect();
+        return (
+          rowRect.top >= viewportRect.top - 0.5 &&
+          rowRect.bottom <= viewportRect.bottom + 0.5
+        );
+      },
+      "active row remains inside the viewport after measurement correction",
+      {
+        timeout: 4000,
+        interval: 20,
+      }
+    );
   } finally {
     window.matchMedia = originalMatchMedia;
   }
@@ -908,7 +953,9 @@ it("cancels an estimate correction on manual scroll intent and source replacemen
 
   el.scrollToIndex(25, { align: "end", behavior: "auto" });
   expect(internals.pendingScrollCorrection === undefined).to.equal(false);
-  el.scrollContainer!.dispatchEvent(new KeyboardEvent("keydown", { key: "PageDown" }));
+  el.scrollContainer!.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "PageDown" })
+  );
   expect(internals.pendingScrollCorrection === undefined).to.equal(true);
 
   el.scrollToIndex(25, { align: "end", behavior: "auto" });
@@ -949,7 +996,9 @@ it("re-emits a populated range after an empty transition restores the same windo
     const initial = await initialRange;
     const ranges: Array<{ start: number; end: number }> = [];
     el.addEventListener("lr-visible-range-changed", (event) => {
-      const { start, end } = (event as CustomEvent<{ start: number; end: number }>).detail;
+      const { start, end } = (
+        event as CustomEvent<{ start: number; end: number }>
+      ).detail;
       ranges.push({ start, end });
     });
 
@@ -1009,7 +1058,7 @@ it("cancels a pending scroll frame when disconnected before it runs", async () =
       .items=${Array.from({ length: 30 }, (_, i) => i)}
       .renderItem=${renderText}
       .keyFunction=${numberKey}
-    ></lr-virtual-list>`,
+    ></lr-virtual-list>`
   )) as LyraVirtualList;
   await el.updateComplete;
   await nextFrame();
@@ -1065,7 +1114,9 @@ it("binds observers and frames to the adopted owner and rejects retired callback
     }
     observe(): void {}
     unobserve(): void {}
-    disconnect(): void { this.record.disconnects += 1; }
+    disconnect(): void {
+      this.record.disconnects += 1;
+    }
   }
   class OwnerMutationObserver implements MutationObserver {
     private readonly record: MutationRecordState;
@@ -1074,12 +1125,18 @@ it("binds observers and frames to the adopted owner and rejects retired callback
       mutationRecords.push(this.record);
     }
     observe(): void {}
-    takeRecords(): MutationRecord[] { return []; }
-    disconnect(): void { this.record.disconnects += 1; }
+    takeRecords(): MutationRecord[] {
+      return [];
+    }
+    disconnect(): void {
+      this.record.disconnects += 1;
+    }
   }
   frameWindow.ResizeObserver = OwnerResizeObserver;
   frameWindow.MutationObserver = OwnerMutationObserver;
-  frameWindow.requestAnimationFrame = ((callback: FrameRequestCallback): number => {
+  frameWindow.requestAnimationFrame = ((
+    callback: FrameRequestCallback
+  ): number => {
     const handle = nextHandle++;
     frameCallbacks.set(handle, callback);
     retiredFrameCallbacks.push(callback);
@@ -1093,28 +1150,49 @@ it("binds observers and frames to the adopted owner and rejects retired callback
   try {
     frameDocument.body.append(frameDocument.adoptNode(el));
     await el.updateComplete;
-    expect(resizeRecords.length, "row, group, sticky, and container observers use the owner window").to.equal(4);
+    expect(
+      resizeRecords.length,
+      "row, group, sticky, and container observers use the owner window"
+    ).to.equal(4);
     expect(
       "stickyFocusObserver" in (el as unknown as Record<string, unknown>),
-      "inert sticky copies install no caller-subtree traversal observer",
+      "inert sticky copies install no caller-subtree traversal observer"
     ).to.equal(false);
 
     resizeRecords[0]!.callback([], {} as ResizeObserver);
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     base.scrollTop = 120;
     base.dispatchEvent(new frameWindow.Event("scroll"));
-    expect(frameCallbacks.size, "resize and scroll work schedule through the owner window").to.equal(2);
+    expect(
+      frameCallbacks.size,
+      "resize and scroll work schedule through the owner window"
+    ).to.equal(2);
 
     let scrollEvents = 0;
-    el.addEventListener("lr-virtual-scroll", () => { scrollEvents += 1; });
+    el.addEventListener("lr-virtual-scroll", () => {
+      scrollEvents += 1;
+    });
     document.adoptNode(el);
-    expect(cancelledFrames.length, "adoption cancels both owner-window frames").to.equal(2);
-    expect(resizeRecords.every((record) => record.disconnects > 0)).to.equal(true);
+    expect(
+      cancelledFrames.length,
+      "adoption cancels both owner-window frames"
+    ).to.equal(2);
+    expect(resizeRecords.every((record) => record.disconnects > 0)).to.equal(
+      true
+    );
 
-    resizeRecords.forEach((record) => record.callback([], {} as ResizeObserver));
+    resizeRecords.forEach((record) =>
+      record.callback([], {} as ResizeObserver)
+    );
     retiredFrameCallbacks.forEach((callback) => callback(0));
-    expect(scrollEvents, "retired observer/frame work cannot emit after adoption").to.equal(0);
-    expect(frameCallbacks.size, "retired callbacks cannot schedule new owner work").to.equal(0);
+    expect(
+      scrollEvents,
+      "retired observer/frame work cannot emit after adoption"
+    ).to.equal(0);
+    expect(
+      frameCallbacks.size,
+      "retired callbacks cannot schedule new owner work"
+    ).to.equal(0);
   } finally {
     frameWindow.ResizeObserver = originalResizeObserver;
     frameWindow.MutationObserver = originalMutationObserver;
@@ -1133,7 +1211,7 @@ it("fails closed when an adopted owner lacks observer capabilities", async () =>
       row-height="40"
       .items=${[1, 2, 3]}
       .renderItem=${renderText}
-    ></lr-virtual-list>`,
+    ></lr-virtual-list>`
   )) as LyraVirtualList;
   await el.updateComplete;
   el.remove();
@@ -1143,12 +1221,21 @@ it("fails closed when an adopted owner lacks observer capabilities", async () =>
   const frameWindow = frame.contentWindow!;
   const originalResizeObserver = frameWindow.ResizeObserver;
   const originalMutationObserver = frameWindow.MutationObserver;
-  Object.defineProperty(frameWindow, "ResizeObserver", { configurable: true, value: undefined });
-  Object.defineProperty(frameWindow, "MutationObserver", { configurable: true, value: undefined });
+  Object.defineProperty(frameWindow, "ResizeObserver", {
+    configurable: true,
+    value: undefined,
+  });
+  Object.defineProperty(frameWindow, "MutationObserver", {
+    configurable: true,
+    value: undefined,
+  });
   try {
     frameDocument.body.append(frameDocument.adoptNode(el));
     await el.updateComplete;
-    expect((el as unknown as { rowResizeObserver?: ResizeObserver }).rowResizeObserver === undefined).to.be.true;
+    expect(
+      (el as unknown as { rowResizeObserver?: ResizeObserver })
+        .rowResizeObserver === undefined
+    ).to.be.true;
   } finally {
     el.remove();
     Object.defineProperty(frameWindow, "ResizeObserver", {
@@ -1358,7 +1445,7 @@ it("positions rows via a transform instead of a padding-based spacer, so a new m
 });
 
 it('gives the always-focusable [part="base"] scroll region a :hover state, matching its own :focus-visible affordance', () => {
-  const css = styles.cssText.replace(/\s+/g, " ");
+  const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
   expect(css).to.match(/\[part='base'\]:hover\s*\{[^}]+\}/);
 });
 
@@ -1653,17 +1740,22 @@ it("measures group markers as virtual entries before their indexed rows", async 
   ]);
   const firstHeight = groups[0].getBoundingClientRect().height;
   const secondHeight = groups[1].getBoundingClientRect().height;
-  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
-  expect(parseFloat(rows[0]!.style.transform.replace(/[^\d.-]/g, ""))).to.be.closeTo(firstHeight, 1);
-  expect(parseFloat(groups[1].style.transform.replace(/[^\d.-]/g, ""))).to.be.closeTo(
-    firstHeight + 80,
+  const rows = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
+  ];
+  expect(
+    parseFloat(rows[0]!.style.transform.replace(/[^\d.-]/g, ""))
+  ).to.be.closeTo(firstHeight, 1);
+  expect(
+    parseFloat(groups[1].style.transform.replace(/[^\d.-]/g, ""))
+  ).to.be.closeTo(firstHeight + 80, 1);
+  expect(
+    parseFloat(rows[2]!.style.transform.replace(/[^\d.-]/g, ""))
+  ).to.be.closeTo(firstHeight + 80 + secondHeight, 1);
+  expect(el.offsetForIndex(3)).to.be.closeTo(
+    120 + firstHeight + secondHeight,
     1
   );
-  expect(parseFloat(rows[2]!.style.transform.replace(/[^\d.-]/g, ""))).to.be.closeTo(
-    firstHeight + 80 + secondHeight,
-    1
-  );
-  expect(el.offsetForIndex(3)).to.be.closeTo(120 + firstHeight + secondHeight, 1);
   expect(rows[2]!.getBoundingClientRect().top).to.be.gte(
     groups[1]!.getBoundingClientRect().bottom - 0.5
   );
@@ -1683,7 +1775,9 @@ it("reflows variable-height group markers without covering their first rows", as
     ></lr-virtual-list>
   `);
   await nextFrame();
-  const markers = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="group"]')];
+  const markers = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="group"]'),
+  ];
   markers[0]!.style.blockSize = "72px";
   markers[0]!.style.boxSizing = "border-box";
   markers[1]!.style.blockSize = "24px";
@@ -1693,7 +1787,7 @@ it("reflows variable-height group markers without covering their first rows", as
   await nextFrame();
 
   for (const marker of markers) {
-    const index = Number(marker.dataset['groupIndex']);
+    const index = Number(marker.dataset["groupIndex"]);
     const row = el.shadowRoot!.querySelector<HTMLElement>(
       `[part="row"][data-row-index="${index}"]`
     )!;
@@ -1714,7 +1808,9 @@ it("keeps an empty-label position anchor size-free", async () => {
     ></lr-virtual-list>
   `);
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="group"]') === null).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="group"]') === null).to.equal(
+    true
+  );
   expect(el.offsetForIndex(0)).to.equal(0);
   expect(el.offsetForIndex(2)).to.equal(80);
 });
@@ -2025,7 +2121,9 @@ describe("public offset/index queries", () => {
       Number.MAX_VALUE,
       Number.MAX_VALUE,
     ]);
-    const spacer = el.shadowRoot!.querySelector('[part="spacer"]') as HTMLElement;
+    const spacer = el.shadowRoot!.querySelector(
+      '[part="spacer"]'
+    ) as HTMLElement;
     expect(spacer.getAttribute("style")).to.not.contain("Infinity");
   });
 
@@ -2179,7 +2277,9 @@ describe("public scroll container and lr-virtual-scroll", () => {
     await nextFrame();
     await el.updateComplete;
 
-    expect(scrollEvents, "lr-virtual-scroll tracks sub-row movement").to.equal(1);
+    expect(scrollEvents, "lr-virtual-scroll tracks sub-row movement").to.equal(
+      1
+    );
     expect(
       rangeEvents,
       "lr-visible-range-changed is not a substitute"
@@ -2295,7 +2395,9 @@ describe("sticky group overlay", () => {
       aria-level="2"
       style="block-size:${STICKY_HEIGHT}px;box-sizing:border-box;background:var(--lr-color-surface)"
     >
-      <button type="button" class="sticky-button">${group.label || group.key}</button>
+      <button type="button" class="sticky-button">
+        ${group.label || group.key}
+      </button>
     </div>
   `;
 
@@ -2575,7 +2677,10 @@ describe("sticky group overlay", () => {
         class extends HTMLElement {
           constructor() {
             super();
-            const root = this.attachShadow({ mode: "open", delegatesFocus: true });
+            const root = this.attachShadow({
+              mode: "open",
+              delegatesFocus: true,
+            });
             root.innerHTML = '<button type="button">Shadow action</button>';
           }
         }
@@ -2589,7 +2694,8 @@ describe("sticky group overlay", () => {
           aria-level="2"
           style="block-size:${STICKY_HEIGHT}px"
         >
-          ${group.label}<test-sticky-shadow-control></test-sticky-shadow-control>
+          ${group.label}<test-sticky-shadow-control
+          ></test-sticky-shadow-control>
         </div>`,
     });
     await scrollTo(el, 10 * ROW);
@@ -2599,7 +2705,9 @@ describe("sticky group overlay", () => {
       customControl.shadowRoot!.querySelector<HTMLButtonElement>("button")!;
     expect(shadowButton.tabIndex).to.equal(0);
     shadowButton.focus();
-    expect(customControl.shadowRoot!.activeElement === shadowButton).to.equal(false);
+    expect(customControl.shadowRoot!.activeElement === shadowButton).to.equal(
+      false
+    );
   });
 
   it("keeps later shadow content inert without observing or mutating it", async () => {
@@ -2634,7 +2742,8 @@ describe("sticky group overlay", () => {
           aria-level="2"
           style="block-size:${STICKY_HEIGHT}px"
         >
-          ${group.label}<test-async-sticky-shadow-control></test-async-sticky-shadow-control>
+          ${group.label}<test-async-sticky-shadow-control
+          ></test-async-sticky-shadow-control>
         </div>`,
     });
     await scrollTo(el, 10 * ROW);
@@ -2651,10 +2760,12 @@ describe("sticky group overlay", () => {
     await aTimeout(0);
     const replacementButton =
       customControl.shadowRoot!.querySelector<HTMLButtonElement>("button")!;
-    expect((replacementButton) !== (firstButton)).to.equal(true);
+    expect(replacementButton !== firstButton).to.equal(true);
     expect(replacementButton.tabIndex).to.equal(0);
     replacementButton.focus();
-    expect(customControl.shadowRoot!.activeElement === replacementButton).to.equal(false);
+    expect(
+      customControl.shadowRoot!.activeElement === replacementButton
+    ).to.equal(false);
   });
 
   it("is pointer-transparent and inert even if a part rule changes its paint hit-testing", async () => {
@@ -2689,7 +2800,10 @@ describe("sticky group overlay", () => {
           Math.round(rect.top + rect.height / 2),
         ],
       });
-      expect(activations, "inert suppresses activation without mutating the button").to.equal(0);
+      expect(
+        activations,
+        "inert suppresses activation without mutating the button"
+      ).to.equal(0);
     } finally {
       style.remove();
       await resetMouse();
@@ -2962,7 +3076,9 @@ it("clamps a non-finite scrollToIndex instead of silently discarding the scroll 
   // position, while parking a pendingScrollCorrection whose identity can never resolve.
   el.scrollToIndex(Number.NaN, { align: "start", behavior: "auto" });
   await nextFrame();
-  expect(base.scrollTop, "NaN clamps to index 0, not to a NaN offset").to.equal(0);
+  expect(base.scrollTop, "NaN clamps to index 0, not to a NaN offset").to.equal(
+    0
+  );
   expect(Number.isFinite(base.scrollTop)).to.be.true;
 });
 
@@ -3012,7 +3128,7 @@ it("does not rescan the whole items array for active-id on every scroll frame", 
   ).to.be.lessThan(2000);
 });
 
-it('never trips Chromium\'s resize-observation loop guard while measuring rows and re-windowing', async () => {
+it("never trips Chromium's resize-observation loop guard while measuring rows and re-windowing", async () => {
   // Measuring a row rebuilds `offsets` and re-renders synchronously (from the microtask the row
   // ResizeObserver callback's `requestUpdate()` queues), which moves the window and therefore
   // `observe()`s the rows that just entered it. A brand-new observation is always active, and the
@@ -3023,7 +3139,10 @@ it('never trips Chromium\'s resize-observation loop guard while measuring rows a
   // this component's consumers rather than as a failure here.
   const roErrors: string[] = [];
   const captureRoError = (e: ErrorEvent): void => {
-    if (typeof e.message === "string" && e.message.includes("ResizeObserver loop")) {
+    if (
+      typeof e.message === "string" &&
+      e.message.includes("ResizeObserver loop")
+    ) {
       roErrors.push(e.message);
       // Kept from failing an unrelated concurrently-running test either way; the assertion below
       // is what actually reports it.
@@ -3078,7 +3197,10 @@ it('never trips Chromium\'s resize-observation loop guard while measuring rows a
 
 it("renders nothing per row until a renderItem callback is supplied", async () => {
   const el = (await fixture(html`
-    <lr-virtual-list style="block-size: 200px" .items=${[1, 2, 3]}></lr-virtual-list>
+    <lr-virtual-list
+      style="block-size: 200px"
+      .items=${[1, 2, 3]}
+    ></lr-virtual-list>
   `)) as LyraVirtualList;
   await el.updateComplete;
   const rows = el.shadowRoot!.querySelectorAll('[part="row"]');

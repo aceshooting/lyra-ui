@@ -5,6 +5,7 @@ import {
   type LyraAvCue,
   type LyraAvTrack,
 } from '../../media/av-player/av-metadata.js';
+import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 
 /** A file supplied to a document renderer. */
 export interface DocumentFile {
@@ -67,9 +68,9 @@ function snapshotDocumentFile(value: unknown): LyraDocumentFile {
   ) {
     throw new TypeError('A document renderer payload file must provide string name, mimeType, and src fields.');
   }
-  const highlights = Array.isArray(file['highlights'])
-    ? Object.freeze([...file['highlights']]) as readonly LyraHighlight[]
-    : undefined;
+  const highlights = file['highlights'] === undefined
+    ? undefined
+    : snapshotLyraHighlights(file['highlights']);
   return Object.freeze({
     name: file['name'],
     mimeType: file['mimeType'],
@@ -338,8 +339,9 @@ export function adaptDocumentRenderer(
   const immutableSupplied = supplied
     ? snapshotLyraDocumentRendererPayload(supplied)
     : undefined;
+  const immutableFile = snapshotDocumentFile(file);
   if ('adapter' in definition && definition.adapter) {
-    const payload = definition.adapter.adapt(file, immutableSupplied);
+    const payload = definition.adapter.adapt(immutableFile, immutableSupplied);
     const capabilities = definition.adapter.capabilities(payload);
     return Object.freeze({
       payload,
@@ -349,12 +351,12 @@ export function adaptDocumentRenderer(
   }
   const payload = immutableSupplied ?? snapshotLyraDocumentRendererPayload({
     kind: 'document',
-    file,
+    file: immutableFile,
   });
   return Object.freeze({
     payload,
     ...(definition.capabilities ? { capabilities: definition.capabilities } : {}),
-    render: () => definition.render(file),
+    render: () => definition.render(immutableFile),
   });
 }
 

@@ -562,22 +562,22 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     const headingLevel = resolveHeadingLevel(this.headingLevel);
     return html`<div
       part="base"
-      role=${label ? "group" : nothing}
+      role=${label ? 'group' : nothing}
       aria-label=${label || nothing}
     >
       <span
         part="icon"
         aria-hidden="true"
         inert
-        ?hidden=${!this.slotPresence.has("icon")}
+        ?hidden=${!this.slotPresence.has('icon')}
         ><slot name="icon"></slot
       ></span>
       <div part="content">
         <div
           part="heading"
-          role=${headingLevel ? "heading" : nothing}
+          role=${headingLevel ? 'heading' : nothing}
           aria-level=${headingLevel ?? nothing}
-          ?hidden=${!this.heading && !this.slotPresence.has("heading")}
+          ?hidden=${!this.heading && !this.slotPresence.has('heading')}
         >
           ${this.heading}<slot name="heading"></slot>
         </div>
@@ -587,7 +587,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
         type="button"
         part="close-button"
         ?hidden=${!this.closable}
-        aria-label=${this.localize("close")}
+        aria-label=${this.localize('close')}
         @click=${this.close}
       >
         <span part="close-icon" aria-hidden="true" inert>×</span>

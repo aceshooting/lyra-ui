@@ -451,7 +451,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
    *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
    *  tag rename with no attribute rewrite. */
   @property({ reflect: true,
-    converter: declaredDefaultConverter<LyraSize>("m"),
+    converter: declaredDefaultConverter<LyraSize>('m'),
   }) size: LyraSize = 'm';
   /** Rounds the field's corners to a full pill, mirroring `lr-input`'s own `pill`. The country
    *  trigger's leading corners follow, since both read `--lr-phone-input-radius`. */

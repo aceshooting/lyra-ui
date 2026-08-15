@@ -1,13 +1,13 @@
-import type { LyraAppearance } from "../../../internal/variants.js";
+import type { LyraAppearance } from '../../../internal/variants.js';
 
-export type LyraAccordionIconPlacement = "start" | "end";
+export type LyraAccordionIconPlacement = 'start' | 'end';
 
 /** A heading level string. Values other than 1–6 and `none` render the documented h3 fallback. */
 export type LyraAccordionHeadingLevel = string;
 
-export type LyraAccordionAppearance = Exclude<LyraAppearance, "accent">;
+export type LyraAccordionAppearance = Exclude<LyraAppearance, 'accent'>;
 
-export type AccordionItemTransitionSource = "user" | "programmatic";
+export type AccordionItemTransitionSource = 'user' | 'programmatic';
 
 /** Minimal structural contract used by the owner registry to avoid loading either component. */
 export interface AccordionItemOwnerHost {

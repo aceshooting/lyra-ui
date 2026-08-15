@@ -200,7 +200,7 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  * @since 4.0.0
  */
 export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["items"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

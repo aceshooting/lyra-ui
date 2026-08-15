@@ -722,6 +722,16 @@ describe('attachment identity resolution', () => {
     expect(ev.detail.attachmentId).to.equal(`a.png:10:${file.lastModified}`);
   });
 
+  it('treats a whitespace-only attachment-id as missing before action events', async () => {
+    const file = new File(['contents'], 'a.png', { type: 'image/png', lastModified: 123 });
+    const el = await fixture<LyraAttachmentChip>(html`
+      <lr-attachment-chip attachment-id="   " .file=${file}></lr-attachment-chip>
+    `);
+    const pending = oneEvent(el, 'lr-remove');
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!.click();
+    expect((await pending).detail.attachmentId).to.equal(`a.png:${file.size}:123`);
+  });
+
   it('falls back to a generated attachmentId when neither attachment-id nor file is set', async () => {
     const el = (await fixture(html`<lr-attachment-chip name="a.txt"></lr-attachment-chip>`)) as LyraAttachmentChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement;

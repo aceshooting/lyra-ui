@@ -77,7 +77,7 @@ export class LyraDrawer extends LyraDialog {
     const placement = `${this.placement
       .charAt(0)
       .toUpperCase()}${this.placement.slice(1)}`;
-    return `drawer.${showing ? "show" : "hide"}${placement}`;
+    return `drawer.${showing ? 'show' : 'hide'}${placement}`;
   }
 
   protected override overlayAnimationName(showing: boolean): string {

@@ -1,5 +1,5 @@
-import { css } from "lit";
-import { formControlRequiredMarker } from "../../../internal/form-control.styles.js";
+import { css } from 'lit';
+import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {

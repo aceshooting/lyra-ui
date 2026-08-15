@@ -1,28 +1,28 @@
-import { html, nothing, type TemplateResult } from "lit";
-import { property } from "lit/decorators.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { finiteRange } from "../../../internal/numbers.js";
-import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
-import "../../charts/chart/lite-chart.class.js";
-import "../../data/stat/stat.class.js";
-import "../../overlays/empty/empty.class.js";
-import { styles } from "./rag-eval-dashboard.styles.js";
+import { html, nothing, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteRange } from '../../../internal/numbers.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import '../../charts/chart/lite-chart.class.js';
+import '../../data/stat/stat.class.js';
+import '../../overlays/empty/empty.class.js';
+import { styles } from './rag-eval-dashboard.styles.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
-} from "../retrieval-semantic-owner.js";
+} from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_ragEvalDashboardAllSlices, LYRA_DEFAULT_ragEvalDashboardEmpty, LYRA_DEFAULT_ragEvalDashboardLabel, LYRA_DEFAULT_ragEvalDashboardRuns, LYRA_DEFAULT_ragEvalDashboardSliceUnavailable, LYRA_DEFAULT_ragEvalDashboardSlices } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type RagEvaluationMetricCategory =
-  | "retrieval"
-  | "generation"
-  | "system"
+  | 'retrieval'
+  | 'generation'
+  | 'system'
   | (string & {});
-export type RagEvaluationMetricFormat = "number" | "percent";
+export type RagEvaluationMetricFormat = 'number' | 'percent';
 export interface RagEvaluationMetric {
   id: string;
   label: string;
@@ -38,9 +38,9 @@ export interface RagEvaluationRun {
   metadata?: Record<string, unknown>;
 }
 export interface LyraRagEvalDashboardEventMap {
-  "lr-metric-change": CustomEvent<{ metricId: string }>;
-  "lr-slice-change": CustomEvent<{ slice: string }>;
-  "lr-run-select": CustomEvent<{ run: RagEvaluationRun }>;
+  'lr-metric-change': CustomEvent<{ metricId: string }>;
+  'lr-slice-change': CustomEvent<{ slice: string }>;
+  'lr-run-select': CustomEvent<{ run: RagEvaluationRun }>;
 }
 
 /**
@@ -74,7 +74,7 @@ export interface LyraRagEvalDashboardEventMap {
  * @since 7.0.0
  */
 export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["metrics", "runs"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['metrics', 'runs']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -96,23 +96,23 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   /** Evaluation runs displayed in the trend chart and run history. */
   @property({ attribute: false }) runs: readonly RagEvaluationRun[] = [];
   /** Controlled id of the active metric; empty selects the first available metric. */
-  @property({ attribute: "metric-id" }) metricId = "";
+  @property({ attribute: 'metric-id' }) metricId = '';
   /** Controlled evaluation slice. An unavailable value is preserved and renders an explicit
    * localized state until the host changes it or supplies a matching run. */
-  @property() slice = "";
+  @property() slice = '';
   /** Visible dashboard heading and fallback overall-region name. A non-empty host `aria-label`
    *  makes the host the sole overall owner; an explicitly empty host label stays empty. */
-  @property() label = "";
+  @property() label = '';
   /** Whether a trend chart is rendered when an active metric and matching runs exist. */
   @property({
     type: Boolean,
-    attribute: "show-chart",
+    attribute: 'show-chart',
     reflect: true,
     converter: trueDefaultBooleanConverter,
   })
   showChart = true;
   /** CSS block size forwarded to the composed trend chart. */
-  @property({ attribute: "chart-height" }) chartHeight = "220px";
+  @property({ attribute: 'chart-height' }) chartHeight = '220px';
 
   private get activeMetric(): RagEvaluationMetric | undefined {
     return (
@@ -142,9 +142,9 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     raw: number | undefined
   ): string {
     const value = Number.isFinite(raw) ? (raw as number) : 0;
-    if (metric.format === "percent") {
+    if (metric.format === 'percent') {
       return getNumberFormat(this.effectiveLocale, {
-        style: "percent",
+        style: 'percent',
         maximumFractionDigits: 1,
       }).format(finiteRange(value, 0, 0, 1));
     }
@@ -163,28 +163,28 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
 
   private renderSlices(): TemplateResult | typeof nothing {
     if (!this.slices.length) return nothing;
-    const allSlicesPart = this.slice ? "slice" : "slice slice-selected";
+    const allSlicesPart = this.slice ? 'slice' : 'slice slice-selected';
     return html`
-      <nav part="slices" aria-label=${this.localize("ragEvalDashboardSlices")}>
+      <nav part="slices" aria-label=${this.localize('ragEvalDashboardSlices')}>
         <button
           part=${allSlicesPart}
           type="button"
           data-slice=""
-          aria-pressed=${this.slice ? "false" : "true"}
-          @click=${() => this.emit("lr-slice-change", { slice: "" })}
+          aria-pressed=${this.slice ? 'false' : 'true'}
+          @click=${() => this.emit('lr-slice-change', { slice: '' })}
         >
-          ${this.localize("ragEvalDashboardAllSlices")}
+          ${this.localize('ragEvalDashboardAllSlices')}
         </button>
         ${this.slices.map((slice) => {
           const slicePart =
-            this.slice === slice ? "slice slice-selected" : "slice";
+            this.slice === slice ? 'slice slice-selected' : 'slice';
           return html`
             <button
               part=${slicePart}
               type="button"
               data-slice=${slice}
-              aria-pressed=${this.slice === slice ? "true" : "false"}
-              @click=${() => this.emit("lr-slice-change", { slice })}
+              aria-pressed=${this.slice === slice ? 'true' : 'false'}
+              @click=${() => this.emit('lr-slice-change', { slice })}
             >
               ${slice}
             </button>
@@ -195,9 +195,9 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   }
 
   override render(): TemplateResult {
-    const visibleLabel = this.label || this.localize("ragEvalDashboardLabel");
+    const visibleLabel = this.label || this.localize('ragEvalDashboardLabel');
     const label = retrievalSemanticLabel(this, visibleLabel);
-    const role = retrievalSemanticRole(this, "region");
+    const role = retrievalSemanticRole(this, 'region');
     if (!this.runs.length) {
       return html`<section
         part="base"
@@ -206,7 +206,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
       >
         <lr-empty
           part="empty"
-          heading=${this.localize("ragEvalDashboardEmpty")}
+          heading=${this.localize('ragEvalDashboardEmpty')}
         ></lr-empty>
       </section>`;
     }
@@ -224,7 +224,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
           <lr-empty
             part="empty"
             heading=${this.localize(
-              "ragEvalDashboardSliceUnavailable",
+              'ragEvalDashboardSliceUnavailable',
               undefined,
               {
                 slice: this.slice,
@@ -249,15 +249,15 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
         <div part="metrics">
           ${this.metrics.map((metric) => {
             const selected = metric.id === active?.id;
-            const metricPart = selected ? "metric metric-selected" : "metric";
+            const metricPart = selected ? 'metric metric-selected' : 'metric';
             return html`
               <button
                 part=${metricPart}
                 type="button"
                 data-metric-id=${metric.id}
-                aria-pressed=${selected ? "true" : "false"}
+                aria-pressed=${selected ? 'true' : 'false'}
                 @click=${() =>
-                  this.emit("lr-metric-change", { metricId: metric.id })}
+                  this.emit('lr-metric-change', { metricId: metric.id })}
               >
                 <lr-stat
                   frame="plain"
@@ -283,15 +283,15 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
           : nothing}
         <section
           part="runs"
-          aria-label=${this.localize("ragEvalDashboardRuns")}
+          aria-label=${this.localize('ragEvalDashboardRuns')}
         >
-          <h3 part="runs-heading">${this.localize("ragEvalDashboardRuns")}</h3>
+          <h3 part="runs-heading">${this.localize('ragEvalDashboardRuns')}</h3>
           ${filtered.map(
             (run) => html`
               <button
                 part="run"
                 type="button"
-                @click=${() => this.emit("lr-run-select", { run })}
+                @click=${() => this.emit('lr-run-select', { run })}
               >
                 <span>${run.label}</span>
                 ${active && Number.isFinite(run.metrics[active.id])
@@ -313,6 +313,6 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-rag-eval-dashboard": LyraRagEvalDashboard;
+    'lr-rag-eval-dashboard': LyraRagEvalDashboard;
   }
 }

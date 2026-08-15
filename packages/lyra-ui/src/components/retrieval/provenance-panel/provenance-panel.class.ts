@@ -1,32 +1,32 @@
-import { html, nothing, type TemplateResult } from "lit";
-import { property, state } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { nextId } from "../../../internal/a11y.js";
-import type { LyraMessageKey } from "../../../internal/localization.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import type { LyraEntity } from "../entity-card/entity-card.class.js";
+import { html, nothing, type TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { nextId } from '../../../internal/a11y.js';
+import type { LyraMessageKey } from '../../../internal/localization.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import type {
   LyraPathElement,
   LyraPathStripEventMap,
-} from "../path-strip/path-strip.class.js";
+} from '../path-strip/path-strip.class.js';
 import type {
   LyraCommunity,
   LyraCommunityCardEventMap,
-} from "../community-card/community-card.class.js";
-import type { LyraChunk } from "../chunk-inspector/chunk-inspector.class.js";
-import type { LyraEntityChipEventMap } from "../entity-chip/entity-chip.class.js";
-import "../entity-chip/entity-chip.class.js";
-import "../path-strip/path-strip.class.js";
-import "../community-card/community-card.class.js";
-import "../chunk-inspector/chunk-inspector.class.js";
-import "../../overlays/empty/empty.class.js";
-import { styles } from "./provenance-panel.styles.js";
+} from '../community-card/community-card.class.js';
+import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
+import type { LyraEntityChipEventMap } from '../entity-chip/entity-chip.class.js';
+import '../entity-chip/entity-chip.class.js';
+import '../path-strip/path-strip.class.js';
+import '../community-card/community-card.class.js';
+import '../chunk-inspector/chunk-inspector.class.js';
+import '../../overlays/empty/empty.class.js';
+import { styles } from './provenance-panel.styles.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
-} from "../retrieval-semantic-owner.js";
-import type { LyraNodeTypeStyle } from "../../../internal/node-type-style.js";
-import type { LyraScoreThresholds } from "../graph/graph.class.js";
+} from '../retrieval-semantic-owner.js';
+import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
+import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_provenanceChunks, LYRA_DEFAULT_provenanceCommunities, LYRA_DEFAULT_provenanceEmpty, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_provenanceRelationships, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -42,7 +42,7 @@ export interface LyraProvenance {
   readonly chunks?: readonly LyraChunk[];
 }
 
-type Section = "entities" | "relationships" | "communities" | "chunks";
+type Section = 'entities' | 'relationships' | 'communities' | 'chunks';
 
 /** The panel is a conduit, so its event map is the union of every affordance it renders: its own
  *  section toggle plus the entity chips', community cards' and path strips' events, all of which
@@ -53,7 +53,7 @@ export interface LyraProvenancePanelEventMap
   extends LyraCommunityCardEventMap,
     LyraEntityChipEventMap,
     LyraPathStripEventMap {
-  "lr-toggle": CustomEvent<{ section: Section; expanded: boolean }>;
+  'lr-toggle': CustomEvent<{ section: Section; expanded: boolean }>;
 }
 
 /**
@@ -90,8 +90,8 @@ export interface LyraProvenancePanelEventMap
  */
 export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze([
-    "provenance",
-    "types",
+    'provenance',
+    'types',
   ]);
 
   // GENERATED DEFAULT-STRING SLICE: START
@@ -130,7 +130,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
   };
   /** Fallback name for the provenance group. A non-empty host `aria-label` makes the host the sole
    *  overall owner; an explicitly empty host label stays empty on the group. */
-  @property() label = "";
+  @property() label = '';
 
   @state() private expandedSections: Record<Section, boolean> = {
     entities: true,
@@ -139,12 +139,12 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
     chunks: true,
   };
 
-  private readonly sectionIdBase = nextId("provenance-panel");
+  private readonly sectionIdBase = nextId('provenance-panel');
 
   private toggleSection(section: Section): void {
     const expanded = !this.expandedSections[section];
     this.expandedSections = { ...this.expandedSections, [section]: expanded };
-    this.emit("lr-toggle", { section, expanded });
+    this.emit('lr-toggle', { section, expanded });
   }
 
   private renderSection(
@@ -161,7 +161,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
         <button
           part="header"
           type="button"
-          aria-expanded=${expanded ? "true" : "false"}
+          aria-expanded=${expanded ? 'true' : 'false'}
           aria-controls=${bodyId}
           @click=${() => this.toggleSection(section)}
         >
@@ -188,9 +188,9 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
       chunks.length === 0;
     const groupLabel = retrievalSemanticLabel(
       this,
-      this.label || this.localize("provenancePanelLabel")
+      this.label || this.localize('provenancePanelLabel')
     );
-    const groupRole = retrievalSemanticRole(this, "group");
+    const groupRole = retrievalSemanticRole(this, 'group');
 
     if (!p || allEmpty) {
       return html`<div
@@ -200,7 +200,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
       >
         <lr-empty
           part="empty"
-          heading=${this.localize("provenanceEmpty")}
+          heading=${this.localize('provenanceEmpty')}
         ></lr-empty>
       </div>`;
     }
@@ -212,27 +212,27 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
         aria-label=${groupLabel ?? nothing}
       >
         ${this.renderSection(
-          "entities",
-          "provenanceEntities",
+          'entities',
+          'provenanceEntities',
           entities.length,
           html`<div part="entity-row" class="entity-row">
             ${entities.map((entity) => {
               const typeLabel =
                 this.types.find((t) => t.id === entity.type)?.label ??
                 entity.type ??
-                "";
+                '';
               return html`<lr-entity-chip
                 entity-id=${entity.id}
                 label=${entity.label}
-                type=${entity.type ?? ""}
+                type=${entity.type ?? ''}
                 type-label=${typeLabel}
               ></lr-entity-chip>`;
             })}
           </div>`
         )}
         ${this.renderSection(
-          "relationships",
-          "provenanceRelationships",
+          'relationships',
+          'provenanceRelationships',
           relationships.length,
           html`<div>
             ${relationships.map(
@@ -241,8 +241,8 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           </div>`
         )}
         ${this.renderSection(
-          "communities",
-          "provenanceCommunities",
+          'communities',
+          'provenanceCommunities',
           communities.length,
           html`<div>
             ${communities.map(
@@ -255,8 +255,8 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           </div>`
         )}
         ${this.renderSection(
-          "chunks",
-          "provenanceChunks",
+          'chunks',
+          'provenanceChunks',
           chunks.length,
           html`<lr-chunk-inspector
             compact
@@ -271,6 +271,6 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-provenance-panel": LyraProvenancePanel;
+    'lr-provenance-panel': LyraProvenancePanel;
   }
 }

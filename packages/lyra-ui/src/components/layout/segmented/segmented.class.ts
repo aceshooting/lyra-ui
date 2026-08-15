@@ -1,15 +1,15 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
-import { property, state } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { sizes } from "../../../internal/sizes.styles.js";
-import type { LyraSize } from "../../../internal/variants.js";
-import { isRtl } from "../../../internal/rtl.js";
-import { prefersReducedMotion } from "../../../internal/motion.js";
-import { observeScrollOverflow } from "../../../internal/scroll-overflow.js";
-import { hostAriaLabel } from "../../../internal/a11y.js";
-import { styles } from "./segmented.styles.js";
-import { activeElementIn } from "../../../internal/active-element.js";
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import type { LyraSize } from '../../../internal/variants.js';
+import { isRtl } from '../../../internal/rtl.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
+import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
+import { styles } from './segmented.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export interface LyraSegmentedItem {
   value: string;
@@ -23,7 +23,7 @@ export interface LyraSegmentedItem {
 }
 
 export interface LyraSegmentedEventMap {
-  "lr-change": CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string }>;
 }
 
 const MAX_SEGMENTED_ITEMS = 256;
@@ -50,19 +50,19 @@ function snapshotSegmentedItems(
   for (let index = 0; index < length; index += 1) {
     try {
       const candidate: unknown = value[index];
-      if (!candidate || typeof candidate !== "object") continue;
+      if (!candidate || typeof candidate !== 'object') continue;
       const record = candidate as Record<string, unknown>;
-      const itemValue = record["value"];
-      const label = record["label"];
-      const disabled = record["disabled"];
-      const icon = record["icon"];
+      const itemValue = record['value'];
+      const label = record['label'];
+      const disabled = record['disabled'];
+      const icon = record['icon'];
       if (
-        typeof itemValue !== "string" ||
+        typeof itemValue !== 'string' ||
         itemValue.length === 0 ||
         itemValue !== itemValue.trim() ||
         seenValues.has(itemValue) ||
-        typeof label !== "string" ||
-        (disabled !== undefined && typeof disabled !== "boolean")
+        typeof label !== 'string' ||
+        (disabled !== undefined && typeof disabled !== 'boolean')
       ) {
         continue;
       }
@@ -157,24 +157,24 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   set items(value: readonly LyraSegmentedItem[]) {
     const previous = this.effectiveItems;
     this.effectiveItems = snapshotSegmentedItems(value);
-    this.requestUpdate("items", previous);
+    this.requestUpdate('items', previous);
   }
 
   /** The currently selected item's `value`. */
-  @property() value = "";
+  @property() value = '';
 
   /** Accessible-name fallback for the radiogroup when the host has no `aria-label`, used when no
    *  visible label context exists around it (e.g. no wrapping `<label>` or adjacent heading). A
    *  host `aria-label` wins by attribute presence, including an explicitly empty value. The resolved
    *  name is set on the `role="radiogroup"` element. */
-  @property() label = "";
+  @property() label = '';
 
   /** Visual size, on the library's shared ladder — the same `--lr-form-control-*` scale
    *  `<lr-input>`/`<lr-select>`/`<lr-combobox>`/`<lr-button>` use, so a row of mixed controls at one
    *  `size` lines up. Accepts both spellings of every tier: `2xs`/`xs`/`s`/`m`/`l`/`xl` and Web
    *  Awesome's `small`/`medium`/`large`, so migrating either way is a tag rename. Reflects as the
    *  `size` attribute. */
-  @property({ reflect: true }) size: LyraSize = "m";
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   @state() private selectedItem?: Readonly<LyraSegmentedItem>;
 
@@ -195,7 +195,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     this.selectedItem = item;
     if (valueChanged) {
       this.value = item.value;
-      this.emit("lr-change", { value: item.value });
+      this.emit('lr-change', { value: item.value });
     }
   }
 
@@ -216,11 +216,11 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   scrollToValue(value: string): void {
     const index = this.items.findIndex((item) => item.value === value);
     this.segmentButtonAt(index)?.scrollIntoView({
-      block: "nearest",
-      inline: "nearest",
+      block: 'nearest',
+      inline: 'nearest',
       behavior: prefersReducedMotion(this.ownerDocument.defaultView)
-        ? "auto"
-        : "smooth",
+        ? 'auto'
+        : 'smooth',
     });
   }
 
@@ -236,8 +236,8 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     // never scrolls an ancestor page to the selected segment. Keyboard-driven changes already
     // reveal via focusItem()'s focus(), and re-scrolling there is harmless/idempotent.
     if (
-      changed.has("value") &&
-      changed.get("value") !== undefined &&
+      changed.has('value') &&
+      changed.get('value') !== undefined &&
       this.value
     ) {
       this.scrollToValue(this.value);
@@ -247,15 +247,15 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (
-      changed.has("items") &&
-      activeElementIn(this.renderRoot as ShadowRoot)?.getAttribute("part") ===
-        "segment"
+      changed.has('items') &&
+      activeElementIn(this.renderRoot as ShadowRoot)?.getAttribute('part') ===
+        'segment'
     ) {
       this.rehomeSegmentFocus = true;
     }
     if (
-      changed.has("value") ||
-      (changed.has("items") &&
+      changed.has('value') ||
+      (changed.has('items') &&
         (!this.selectedItem ||
           !this.items.includes(this.selectedItem) ||
           this.selectedItem.value !== this.value ||
@@ -276,17 +276,17 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
       .find(
         (candidate): candidate is HTMLElement =>
           (candidate as Partial<Node>).nodeType === 1 &&
-          (candidate as Partial<Element>).getAttribute?.("part") ===
-            "segment" &&
+          (candidate as Partial<Element>).getAttribute?.('part') ===
+            'segment' &&
           (candidate as Element).getRootNode() === this.renderRoot
       );
     const focused = activeElementIn(this.renderRoot as ShadowRoot);
     const candidate =
       fromEvent ??
-      (focused?.getAttribute("part") === "segment"
+      (focused?.getAttribute('part') === 'segment'
         ? (focused as HTMLElement)
         : undefined);
-    const index = Number(candidate?.dataset["index"]);
+    const index = Number(candidate?.dataset['index']);
     return Number.isInteger(index) && index >= 0 && index < this.items.length
       ? index
       : -1;
@@ -309,8 +309,8 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
         ? -1
         : navigable.findIndex(({ index }) => index === originIndex);
     const rtl = isRtl(this);
-    const forwardKey = rtl ? "ArrowLeft" : "ArrowRight";
-    const backwardKey = rtl ? "ArrowRight" : "ArrowLeft";
+    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
 
     let targetIndex: number;
     switch (e.key) {
@@ -324,10 +324,10 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
             ? navigable.length - 1
             : (currentIndex - 1 + navigable.length) % navigable.length;
         break;
-      case "Home":
+      case 'Home':
         targetIndex = 0;
         break;
-      case "End":
+      case 'End':
         targetIndex = navigable.length - 1;
         break;
       default:
@@ -374,9 +374,9 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
             data-value=${item.value}
             data-index=${index}
             role="radio"
-            aria-checked=${index === fallbackSelectedIndex ? "true" : "false"}
-            aria-disabled=${item.disabled ? "true" : "false"}
-            tabindex=${index === tabbableIndex ? "0" : "-1"}
+            aria-checked=${index === fallbackSelectedIndex ? 'true' : 'false'}
+            aria-disabled=${item.disabled ? 'true' : 'false'}
+            tabindex=${index === tabbableIndex ? '0' : '-1'}
             @click=${() => this.select(item)}
           >
             ${item.icon !== undefined
@@ -393,6 +393,6 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-segmented": LyraSegmented;
+    'lr-segmented': LyraSegmented;
   }
 }

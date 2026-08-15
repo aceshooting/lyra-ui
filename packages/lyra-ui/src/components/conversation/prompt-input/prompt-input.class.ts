@@ -196,6 +196,12 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-attachments-add',
+    'lr-sources-change',
+    'lr-queue-change',
+    'lr-send-now',
+  ]);
 
   @property() value = '';
   @property() status: ChatComposerStatus = 'idle';
@@ -610,9 +616,9 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       .disabled=${this.disabled}
       @lr-files=${this.onFiles}
       @lr-camera-request=${(event: CustomEvent<null>) =>
-        this.reemit(event, "lr-camera-request")}
+        this.reemit(event, 'lr-camera-request')}
       @lr-audio-request=${(event: CustomEvent<null>) =>
-        this.reemit(event, "lr-audio-request")}
+        this.reemit(event, 'lr-audio-request')}
     ></lr-attachment-trigger>`;
   }
 
@@ -639,9 +645,9 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       .file=${attachment.file}
       .name=${attachment.name}
       bytes=${ifDefined(attachment.bytes)}
-      .mimeType=${attachment.mimeType ?? ""}
-      .previewSrc=${attachment.uri ?? ""}
-      .status=${attachment.status ?? "pending"}
+      .mimeType=${attachment.mimeType ?? ''}
+      .previewSrc=${attachment.uri ?? ''}
+      .status=${attachment.status ?? 'pending'}
       .progress=${attachment.progress ?? 0}
       .removable=${!this.disabled}
       .inert=${this.disabled}
@@ -649,12 +655,12 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       @lr-remove=${(event: Event) => {
         event.stopPropagation();
         if (this.disabled) return;
-        this.emit("lr-attachment-remove", {
+        this.emit('lr-attachment-remove', {
           attachmentId: attachment.attachmentId,
         });
       }}
       @lr-retry=${(event: CustomEvent<LyraAttachmentIdDetail>) =>
-        this.reemit(event, "lr-attachment-retry")}
+        this.reemit(event, 'lr-attachment-retry')}
       @lr-preview-request=${this.onAttachmentPreviewRequest}
     ></lr-attachment-chip>`;
   }
@@ -685,7 +691,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     return html`<div
       part="controls"
       role="group"
-      aria-label=${this.localize("promptInputControls")}
+      aria-label=${this.localize('promptInputControls')}
     >
       ${modelCatalog.length
         ? html`<lr-model-select
@@ -694,7 +700,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
             .disabled=${this.disabled}
             @lr-change=${(
               event: CustomEvent<{ value: string; inCatalog: boolean }>
-            ) => this.reemit(event, "lr-model-change")}
+            ) => this.reemit(event, 'lr-model-change')}
           ></lr-model-select>`
         : nothing}
       ${voiceCatalog.length
@@ -704,7 +710,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
             .disabled=${this.disabled}
             @lr-change=${(
               event: CustomEvent<{ value: string; inCatalog: boolean }>
-            ) => this.reemit(event, "lr-voice-change")}
+            ) => this.reemit(event, 'lr-voice-change')}
           ></lr-voice-picker>`
         : nothing}
       ${this.sources.length
@@ -714,7 +720,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
             aria-disabled=${String(this.disabled)}
           >
             <summary part="sources-summary">
-              ${this.localize("promptInputSources")}
+              ${this.localize('promptInputSources')}
             </summary>
             <lr-source-picker
               part="source-picker"
@@ -722,7 +728,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
               .selectedIds=${this.selectedSourceIds}
               @lr-sources-change=${(
                 event: CustomEvent<{ selectedIds: string[] }>
-              ) => this.reemit(event, "lr-sources-change")}
+              ) => this.reemit(event, 'lr-sources-change')}
             ></lr-source-picker>
           </details>`
         : nothing}
@@ -746,9 +752,9 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
             .items=${this.queue}
             .disabled=${this.disabled}
             @lr-queue-change=${(event: CustomEvent<PromptQueueChangeDetail>) =>
-              this.reemit(event, "lr-queue-change")}
+              this.reemit(event, 'lr-queue-change')}
             @lr-send-now=${(event: CustomEvent<{ item: PromptQueueItem }>) =>
-              this.reemit(event, "lr-send-now")}
+              this.reemit(event, 'lr-send-now')}
           ></lr-prompt-queue>`
         : nothing}
       <slot name="controls">${this.renderControls()}</slot>
@@ -756,10 +762,10 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         part="composer"
         .spellcheck=${this.spellcheck}
         .autocapitalize=${this.autocapitalize}
-        autocorrect=${this.hasAttribute("autocorrect") || !this.autocorrect
+        autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
           ? this.autocorrect
-            ? "on"
-            : "off"
+            ? 'on'
+            : 'off'
           : nothing}
         .wrap=${this.wrap}
         .autocomplete=${this.autocomplete}
@@ -788,7 +794,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
               slot="chips"
               part="chips"
               role="group"
-              aria-label=${this.localize("promptInputAttachments")}
+              aria-label=${this.localize('promptInputAttachments')}
             >
               <slot name="chips"
                 >${repeat(
@@ -799,14 +805,14 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
               >
             </div>`
           : html`<slot name="chips" hidden aria-hidden="true"></slot>`}
-        ${this.slotPresence.has("end")
+        ${this.slotPresence.has('end')
           ? html`<slot name="end" slot="end"></slot>`
           : nothing}
       </lr-chat-composer>
       <lr-mention-popover
         .anchor=${this.suggestionAnchor}
         .items=${this.suggestions()}
-        .query=${this.activeSuggestion?.query ?? ""}
+        .query=${this.activeSuggestion?.query ?? ''}
         .open=${!this.disabled &&
         !this.readOnly &&
         this.activeSuggestion !== null}
@@ -816,7 +822,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
           this.closeSuggestions();
         }}
       ></lr-mention-popover>
-      ${this.slotPresence.has("footer")
+      ${this.slotPresence.has('footer')
         ? html`<div part="footer"><slot name="footer"></slot></div>`
         : html`<slot name="footer" hidden aria-hidden="true"></slot>`}
     </section>`;

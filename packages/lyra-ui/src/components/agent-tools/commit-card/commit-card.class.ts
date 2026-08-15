@@ -113,7 +113,7 @@ export interface LyraCommitCardEventMap {
  * @since 4.0.0
  */
 export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["files"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['files']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

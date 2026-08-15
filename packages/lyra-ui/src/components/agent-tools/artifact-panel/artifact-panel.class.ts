@@ -92,7 +92,7 @@ export interface LyraArtifactPanelEventMap {
  * @since 4.0.0
  */
 export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["versions"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['versions']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */

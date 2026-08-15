@@ -87,7 +87,7 @@ it("keeps the first unique nonempty document id before filtering, selection, row
         duplicate,
         { id: "other", name: "Other document" },
       ]}
-      .selectedIds=${["", "   ", "shared", "missing"]}
+      .selectedDocumentIds=${["", "   ", "shared", "missing"]}
     ></lr-document-library>`
   )) as LyraDocumentLibrary;
 
@@ -95,7 +95,7 @@ it("keeps the first unique nonempty document id before filtering, selection, row
     ["shared", "First document"],
     ["other", "Other document"],
   ]);
-  expect(el.selectedIds).to.deep.equal(["shared"]);
+  expect(el.selectedDocumentIds).to.deep.equal(["shared"]);
   const table = el.shadowRoot!.querySelector("lr-table")!;
   await waitUntil(() => table.shadowRoot!.querySelectorAll('[part="row"]').length === 2);
   expect(table.shadowRoot!.textContent).to.contain("First document");
@@ -130,7 +130,7 @@ it("is accessible with populated, tagged, selected, sorted rows", async () => {
   const el = (await fixture(
     html`<lr-document-library
       .documents=${docs}
-      .selectedIds=${["d1"]}
+      .selectedDocumentIds=${["d1"]}
     ></lr-document-library>`
   )) as LyraDocumentLibrary;
   await el.updateComplete;
@@ -146,7 +146,7 @@ it("announces post-mount selection counts as light-DOM additions while the visib
   const el = (await fixture(
     html`<lr-document-library
       .documents=${docs}
-      .selectedIds=${["d1"]}
+      .selectedDocumentIds=${["d1"]}
     ></lr-document-library>`
   )) as LyraDocumentLibrary;
   const bar = el.shadowRoot!.querySelector(
@@ -158,11 +158,11 @@ it("announces post-mount selection counts as light-DOM additions while the visib
   expect(bar.getAttribute("role")).to.equal(null);
   expect(bar.getAttribute("aria-live")).to.equal(null);
 
-  el.selectedIds = ["d2"];
+  el.selectedDocumentIds = ["d2"];
   await el.updateComplete;
-  el.selectedIds = ["d2"];
+  el.selectedDocumentIds = ["d2"];
   await el.updateComplete;
-  el.selectedIds = [];
+  el.selectedDocumentIds = [];
   await el.updateComplete;
   expect(sinkTexts()).to.deep.equal(["1 selected", "1 selected", "0 selected"]);
 
@@ -179,7 +179,7 @@ it("re-targets selection announcements after cross-document adoption", async () 
   const frameDocument = iframe.contentDocument!;
   try {
     frameDocument.body.append(el);
-    el.selectedIds = ["d1"];
+    el.selectedDocumentIds = ["d1"];
     await el.updateComplete;
     expect(
       sinkElement() === null,
@@ -438,7 +438,7 @@ it("toggles a row selection via its checkbox and emits lr-selection-change", asy
   findCheckbox(table, 0).click(); // sorted order: row 0 is Alpha (d1)
   const event = await listener;
   expect((event as CustomEvent).detail).to.deep.equal({ documentIds: ["d1"] });
-  expect(el.selectedIds).to.deep.equal(["d1"]);
+  expect(el.selectedDocumentIds).to.deep.equal(["d1"]);
 });
 
 it("select-all header checkbox selects/deselects every currently visible row and reflects indeterminate state", async () => {
@@ -473,11 +473,11 @@ it("select-all header checkbox selects/deselects every currently visible row and
   );
 });
 
-it('"Clear selection" empties selectedIds and emits lr-selection-change with an empty array', async () => {
+it('"Clear selection" empties selectedDocumentIds and emits lr-selection-change with an empty array', async () => {
   const el = (await fixture(
     html`<lr-document-library
       .documents=${docs}
-      .selectedIds=${["d1", "d2"]}
+      .selectedDocumentIds=${["d1", "d2"]}
     ></lr-document-library>`
   )) as LyraDocumentLibrary;
   await el.updateComplete;
@@ -488,7 +488,7 @@ it('"Clear selection" empties selectedIds and emits lr-selection-change with an 
   clearButton.click();
   const event = await listener;
   expect((event as CustomEvent).detail).to.deep.equal({ documentIds: [] });
-  expect(el.selectedIds).to.deep.equal([]);
+  expect(el.selectedDocumentIds).to.deep.equal([]);
   await el.updateComplete;
   expect((el.shadowRoot!.querySelector('[part="selection-bar"]')) == null).to.be.true;
 });
@@ -497,11 +497,11 @@ it("prunes a selected id that no longer exists in documents, without firing lr-s
   const el = (await fixture(
     html`<lr-document-library
       .documents=${docs}
-      .selectedIds=${["d1", "ghost-id"]}
+      .selectedDocumentIds=${["d1", "ghost-id"]}
     ></lr-document-library>`
   )) as LyraDocumentLibrary;
   await el.updateComplete;
-  expect(el.selectedIds).to.deep.equal(["d1"]);
+  expect(el.selectedDocumentIds).to.deep.equal(["d1"]);
 
   let fired = false;
   el.addEventListener("lr-selection-change", () => {
@@ -509,17 +509,17 @@ it("prunes a selected id that no longer exists in documents, without firing lr-s
   });
   el.documents = docs.filter((d) => d.id !== "d1");
   await el.updateComplete;
-  expect(el.selectedIds).to.deep.equal([]);
+  expect(el.selectedDocumentIds).to.deep.equal([]);
   expect(fired).to.be.false;
 });
 
-it("normalizes stale and duplicate selectedIds assigned after mount", async () => {
+it("normalizes stale and duplicate selectedDocumentIds assigned after mount", async () => {
   const el = (await fixture(
     html`<lr-document-library .documents=${docs}></lr-document-library>`
   )) as LyraDocumentLibrary;
-  el.selectedIds = ["ghost-id", "d1", "d1"];
+  el.selectedDocumentIds = ["ghost-id", "d1", "d1"];
   await el.updateComplete;
-  expect(el.selectedIds).to.deep.equal(["d1"]);
+  expect(el.selectedDocumentIds).to.deep.equal(["d1"]);
   expect(
     el
       .shadowRoot!.querySelector('[part="selection-count"]')!
@@ -540,7 +540,7 @@ it("formats the selected count with the effective locale", async function () {
     html`<lr-document-library
       locale="de-DE"
       .documents=${many}
-      .selectedIds=${many.map((document) => document.id)}
+      .selectedDocumentIds=${many.map((document) => document.id)}
     ></lr-document-library>`
   )) as LyraDocumentLibrary;
   await el.updateComplete;
@@ -714,7 +714,7 @@ describe("v9 controlled and immutable contracts", () => {
       html`<lr-document-library></lr-document-library>`
     )) as LyraDocumentLibrary;
     el.documents = inputDocuments;
-    el.selectedIds = inputSelected;
+    el.selectedDocumentIds = inputSelected;
     el.tagFilter = inputTags;
 
     inputDocuments[0]!.name = "Mutated.md";
@@ -729,12 +729,12 @@ describe("v9 controlled and immutable contracts", () => {
     expect(el.documents[0]!.name).to.equal("Owned.md");
     expect(el.documents[0]!.tags).to.deep.equal(["stable"]);
     expect((el.documents[0]!.updatedAt as Date).toISOString()).to.equal("2026-01-02T00:00:00.000Z");
-    expect(el.selectedIds).to.deep.equal(["owned"]);
+    expect(el.selectedDocumentIds).to.deep.equal(["owned"]);
     expect(el.tagFilter).to.deep.equal(["stable"]);
     expect(Object.isFrozen(el.documents)).to.equal(true);
     expect(Object.isFrozen(el.documents[0])).to.equal(true);
     expect(Object.isFrozen(el.documents[0]!.tags)).to.equal(true);
-    expect(Object.isFrozen(el.selectedIds)).to.equal(true);
+    expect(Object.isFrozen(el.selectedDocumentIds)).to.equal(true);
     expect(Object.isFrozen(el.tagFilter)).to.equal(true);
 
     const publicDate = el.documents[0]!.updatedAt as Date;
@@ -786,12 +786,12 @@ describe("v9 controlled and immutable contracts", () => {
     expect(details[0]!.documentIds).to.deep.equal(["d1"]);
     expect(details[1]!.documentIds).to.deep.equal(["d1", "d3"]);
     expect(details[0]!.documentIds === details[1]!.documentIds).to.equal(false);
-    expect([...el.selectedIds]).to.deep.equal(["d1", "d3"]);
+    expect([...el.selectedDocumentIds]).to.deep.equal(["d1", "d3"]);
   });
 
   it("puts the composed table in multiple selection mode so selected ids reach row semantics", async () => {
     const el = (await fixture(
-      html`<lr-document-library .documents=${docs} .selectedIds=${["d1"]}></lr-document-library>`
+      html`<lr-document-library .documents=${docs} .selectedDocumentIds=${["d1"]}></lr-document-library>`
     )) as LyraDocumentLibrary;
     const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement & { selectionMode: string };
     expect(table.selectionMode).to.equal("multiple");
@@ -801,7 +801,7 @@ describe("v9 controlled and immutable contracts", () => {
 
   it("contains the table selection event and keeps row activation from changing checkbox-owned selection", async () => {
     const el = (await fixture(
-      html`<lr-document-library .documents=${docs} .selectedIds=${["d1"]}></lr-document-library>`
+      html`<lr-document-library .documents=${docs} .selectedDocumentIds=${["d1"]}></lr-document-library>`
     )) as LyraDocumentLibrary;
     const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement & {
       selectedKeys: ReadonlySet<string | number>;
@@ -817,7 +817,7 @@ describe("v9 controlled and immutable contracts", () => {
     await table.updateComplete;
 
     expect(leakedTableSelections).to.equal(0);
-    expect(el.selectedIds).to.deep.equal(["d1"]);
+    expect(el.selectedDocumentIds).to.deep.equal(["d1"]);
     expect([...table.selectedKeys]).to.deep.equal(["d1"]);
   });
 
