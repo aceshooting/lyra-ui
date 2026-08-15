@@ -194,8 +194,8 @@ export const styles = css`
     cursor: pointer;
     color: var(--lr-color-text-quiet);
     padding: var(--lr-space-xs);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    min-inline-size: min(var(--lr-icon-button-size), var(--lr-form-control-height));
+    min-block-size: min(var(--lr-icon-button-size), var(--lr-form-control-height));
     line-height: var(--lr-line-height-none);
     font-size: var(--lr-font-size-m);
   }

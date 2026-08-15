@@ -1994,21 +1994,28 @@ animationName: string, options?: LyraGetAnimationOptions): LyraResolvedElementAn
   including because `display: none` is set on the host or an ancestor — releases inerting,
   focus-trap/stack ownership, and manager-owned scroll lock without changing the component's logical
   open state. It resumes in its original stack order when rendered again.
+  `deactivate`'s `deferScrollLockRelease` option (default `false`) skips releasing the entry's
+  scroll lock as part of deactivation and instead returns the release function, so a component with
+  a visible exit animation can hold the lock until that animation actually finishes rather than the
+  instant it starts closing; it is ignored (returns `undefined`) when the entry never requested
+  `lockScroll`.
   `OverlayActivationOptions` exposes `host`, `panel`, optional `modalRoot`, `modal`, `lockScroll`,
   `suspendWhenUnrendered`, `onEscape`, `onBackdrop`, `preferredInitialFocus`,
   `beforeInitialFocus`, `restoreFocusTo`, `trapFocus`, and `onTab`. `OverlayHandle` exposes
-  `focusInitial()`, `focusAutofocus()`, `updateRestoreFocusTo(target)`, `deactivate({ restoreFocus }?)`,
-  `suspend()`, `resume()`, `isTopmost()`, `isActive()`, and `dismissBackdrop()`; the deactivate
-  argument is the exported `OverlayDeactivateOptions` record.
+  `focusInitial()`, `focusAutofocus()`, `updateRestoreFocusTo(target)`,
+  `deactivate({ restoreFocus?, deferScrollLockRelease? }?)`, `suspend()`, `resume()`, `isTopmost()`,
+  `isActive()`, and `dismissBackdrop()`; the deactivate argument is the exported
+  `OverlayDeactivateOptions` record, and its return value is the deferred scroll-lock release
+  function (or `undefined`).
   Exact records are `OverlayActivationOptions { host: HTMLElement; panel: () => HTMLElement |
 null; modalRoot?: () => HTMLElement | null; onEscape: () => void; onBackdrop?: () => void;
 preferredInitialFocus?: () => HTMLElement | null; beforeInitialFocus?: () => boolean;
 restoreFocusTo?: OverlayRestoreFocusTarget; modal?: boolean; trapFocus?: boolean; onTab?: () =>
 void; suspendWhenUnrendered?: boolean; lockScroll?: boolean }`, `OverlayDeactivateOptions {
-restoreFocus?: boolean }`, and `OverlayHandle { focusInitial(): void; focusAutofocus(): boolean;
-updateRestoreFocusTo(target: OverlayRestoreFocusTarget): void; deactivate(options?:
-OverlayDeactivateOptions): void; suspend(): void; resume(): void; isTopmost(): boolean;
-isActive(): boolean; dismissBackdrop(): boolean }`.
+restoreFocus?: boolean; deferScrollLockRelease?: boolean }`, and `OverlayHandle { focusInitial():
+void; focusAutofocus(): boolean; updateRestoreFocusTo(target: OverlayRestoreFocusTarget): void;
+deactivate(options?: OverlayDeactivateOptions): (() => void) | undefined; suspend(): void;
+resume(): void; isTopmost(): boolean; isActive(): boolean; dismissBackdrop(): boolean }`.
   When a third-party modal must open above a Lyra modal, call the public helper after its root is
   connected, then release it when that modal closes:
 
