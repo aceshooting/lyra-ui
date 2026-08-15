@@ -1027,7 +1027,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-breadcrumb`, `lr-breadcrumb-item`, `lr-button`, `lr-document-preview`, `lr-empty`, `lr-entity-card`, `lr-source-card`, `lr-tab`, `lr-tab-group`, `lr-tab-panel`
 - Transitive Lyra dependencies: `lr-badge`, `lr-chip`, `lr-pan-zoom`, `lr-result-field`
-- Standalone gzip: 84.2 KiB (86202 bytes; bundle SHA-256 `fce514d2e65236f5295329b3c7e01d8bb1ee092ce5925532e8b6d26e4d3793f1`)
+- Standalone gzip: 84.2 KiB (86231 bytes; bundle SHA-256 `768fec060a00e52f18c8a4b22e2235907c308f3caa0ac87781063b353c16b931`)
 
 </details>
 
@@ -1147,7 +1147,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-chunk-inspector`, `lr-empty`, `lr-entity-card`, `lr-neighbor-list`, `lr-provenance-panel`, `lr-stat`, `lr-tab`, `lr-tab-group`, `lr-tab-panel`
 - Transitive Lyra dependencies: `lr-badge`, `lr-button`, `lr-chip`, `lr-community-card`, `lr-entity-chip`, `lr-path-strip`, `lr-result-field`, `lr-scroller`, `lr-virtual-list`
-- Standalone gzip: 106.3 KiB (108902 bytes; bundle SHA-256 `5fc47ee77f0a86d25704cc67b6c51d5918117a3a7e083ca83ba796c955bf5829`)
+- Standalone gzip: 106.4 KiB (108920 bytes; bundle SHA-256 `f3503b30efb3316fbf03213e8e8020f1aaf4a104d5e684cad06bc3323e7b80d6`)
 
 </details>
 
@@ -2779,7 +2779,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `xlsx`
 - Direct Lyra dependencies: `lr-tab`, `lr-tab-group`, `lr-tab-panel`, `lr-virtual-list`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 66.1 KiB (67709 bytes; bundle SHA-256 `eab67281afd499d433a947818a8f9949967ed925f475426fe15e35971cf18134`)
+- Standalone gzip: 66.1 KiB (67732 bytes; bundle SHA-256 `10dc305bfb364e2e00d3673b1ea5eff97aa0b1d3d2ac548fbe3617e9c524a237`)
 
 </details>
 
@@ -2923,7 +2923,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 41.7 KiB (42711 bytes; bundle SHA-256 `eb49f12259cb4d98de0de7f536104dc1078bb2d812031be5a57a92407cd45e39`)
+- Standalone gzip: 41.7 KiB (42731 bytes; bundle SHA-256 `b247931789b497005e0320ccfc3501329dfa1ed79219e12f1a933b6573f7646f`)
 
 </details>
 

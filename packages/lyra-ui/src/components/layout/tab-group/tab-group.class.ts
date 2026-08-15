@@ -1161,6 +1161,15 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   }
 }
 
+// `updated()` measures the rendered `[part~="tablist"]`'s actual scrollWidth/clientWidth --
+// unknowable until after that render commits -- and only writes `scrollStartAvailable`/
+// `scrollEndAvailable` (via `setTabScrollEdges()`) when the measured value actually changed. That
+// single guarded correction is exactly Lit's own documented exception to this warning ("unless the
+// next update can only be scheduled as a side effect of the previous update"), not an unguarded
+// loop; `disableWarning` is Lit's sanctioned per-class opt-out for it. Optional chaining: absent in
+// production (non-DEV_MODE) builds.
+LyraTabGroup.disableWarning?.('change-in-update');
+
 declare global {
   interface HTMLElementTagNameMap {
     'lr-tab-group': LyraTabGroup;
