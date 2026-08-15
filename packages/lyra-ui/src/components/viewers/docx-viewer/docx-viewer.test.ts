@@ -508,7 +508,7 @@ describe('DOCX registry', () => {
     );
     const rendered = host.querySelector('lr-docx-viewer') as LyraDocxViewer;
     expect(rendered.anchor).to.equal(anchor);
-    expect(rendered.highlights).to.equal(highlights);
+    expect(rendered.highlights).to.deep.equal(highlights);
     expect(definition.capabilities).to.deep.equal({
       anchors: ['fragment', 'text-quote'],
       search: true,

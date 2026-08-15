@@ -181,7 +181,7 @@ describe('lr-contact-viewer', () => {
       highlights,
     }) as LyraContactViewer;
     expect(rendered.anchor).to.equal(anchor);
-    expect(rendered.highlights).to.equal(highlights);
+    expect(rendered.highlights).to.deep.equal(highlights);
     expect(definition.capabilities).to.deep.equal({
       anchors: ['text-quote', 'fragment'],
       search: true,

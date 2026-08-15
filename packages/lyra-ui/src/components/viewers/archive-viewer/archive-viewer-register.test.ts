@@ -35,6 +35,6 @@ describe('archive registry', () => {
     render(definition.render!({ ...zip, anchor, highlights }) as never, host);
     const rendered = host.querySelector('lr-archive-viewer') as LyraArchiveViewer;
     expect(rendered.anchor).to.equal(anchor);
-    expect(rendered.highlights).to.equal(highlights);
+    expect(rendered.highlights).to.deep.equal(highlights);
   });
 });

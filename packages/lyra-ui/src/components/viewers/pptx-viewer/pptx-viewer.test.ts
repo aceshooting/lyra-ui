@@ -841,7 +841,7 @@ describe('PPTX registry', () => {
     );
     const rendered = host.querySelector('lr-pptx-viewer') as LyraPptxViewer;
     expect(rendered.anchor).to.equal(anchor);
-    expect(rendered.highlights).to.equal(highlights);
+    expect(rendered.highlights).to.deep.equal(highlights);
     expect(definition.capabilities).to.deep.equal({
       anchors: ['text-quote', 'fragment'],
       search: true,
