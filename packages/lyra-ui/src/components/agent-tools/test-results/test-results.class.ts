@@ -203,6 +203,13 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['suites', 'statusFilter']);
+  /** Each suite (and its nested tests) is caller-owned data -- only the outer sequence is
+   *  bounded/detached/frozen. A generic structural clone would silently drop an accessor-defined
+   *  `status` (no data descriptor to copy) before `rebuildNormalizedSuites()` ever saw it, so a
+   *  foreign provider's status would default to `skipped` without the single normalizing read the
+   *  class contract promises. Preserving item identity keeps the real property live for that one
+   *  read. */
+  protected static override readonly identityCollectionProperties = Object.freeze(['suites']);
 
   static override styles = [LyraElement.styles, styles, srOnly];
   protected static override readonly immutableEventDetails = Object.freeze([

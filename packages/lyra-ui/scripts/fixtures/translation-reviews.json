@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "source": {
     "path": "src/internal/localization.ts#DEFAULT_STRINGS",
-    "keyCount": 1265,
-    "sha256": "sha256:b5884d7394ade6b465aa37790c3c1027bc6af02a7411e14d08deafb0350c5ff1"
+    "keyCount": 1266,
+    "sha256": "sha256:ec764a0fd36dca5bef5672a8f91e37daeddf6f8c383153c80f8157f8ec103977"
   },
   "upstreamLocaleBreadth": {
     "webAwesome": {
@@ -167,12 +167,12 @@
       "locale": "fa",
       "direction": "rtl",
       "source": {
-        "keyCount": 1265,
-        "sha256": "sha256:b5884d7394ade6b465aa37790c3c1027bc6af02a7411e14d08deafb0350c5ff1"
+        "keyCount": 1266,
+        "sha256": "sha256:ec764a0fd36dca5bef5672a8f91e37daeddf6f8c383153c80f8157f8ec103977"
       },
       "catalog": {
-        "keyCount": 1265,
-        "sha256": "sha256:fe9437cb0fe58d4ecb4718a285f63459d33b8fddd921d3122cd0430d0bcd6eda"
+        "keyCount": 1266,
+        "sha256": "sha256:a320074ef474d9ad48f62eaa9b83ea8b290e9f319d01c88897bff390a49be0c5"
       },
       "translator": {
         "status": "complete-original",
@@ -369,12 +369,12 @@
       "locale": "he",
       "direction": "rtl",
       "source": {
-        "keyCount": 1265,
-        "sha256": "sha256:b5884d7394ade6b465aa37790c3c1027bc6af02a7411e14d08deafb0350c5ff1"
+        "keyCount": 1266,
+        "sha256": "sha256:ec764a0fd36dca5bef5672a8f91e37daeddf6f8c383153c80f8157f8ec103977"
       },
       "catalog": {
-        "keyCount": 1265,
-        "sha256": "sha256:86dd2a595b2d413684f06edcf6146a3ea8b1e099928990d28bc61058dbfa54bd"
+        "keyCount": 1266,
+        "sha256": "sha256:f632bfe41700356f66326ad93d9c33982e01c2511eae7a633213138a5d1ee1bd"
       },
       "translator": {
         "status": "complete-original",

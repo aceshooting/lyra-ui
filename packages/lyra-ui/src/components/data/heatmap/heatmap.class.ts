@@ -564,6 +564,14 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     'legendStops',
     'colorSteps',
   ]);
+  /** `data` is a single opaque record (row/col labels plus a `values` matrix), not an item
+   *  sequence -- and a legitimately large matrix (tens of thousands of cells) can exceed the
+   *  generic snapshot machinery's node budget, which would otherwise silently replace the whole
+   *  object with an empty one. `rebuildCanonicalMatrixData()` already does this component's own
+   *  bounding (`MAX_HEATMAP_CELLS`) against the live object, so opting out of the generic
+   *  snapshot/freeze here loses no safety. */
+  protected static override readonly identityCollectionObjectProperties =
+    Object.freeze(['data']);
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
@@ -1923,14 +1931,23 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * explicitly-set `cellSize` is an exact request and is never clamped. With both clamps unset
    * this is exactly the `Math.max(FIT_MIN_CELL, …)` floor both call sites applied before they
    * existed, so an untouched consumer's geometry is unchanged.
+   *
+   * The floor and ceiling are applied as two sequential clamps — raise to `minCellSize` first,
+   * then cap to `maxCellSize` — rather than a single `finiteRange(size, fallback, min, max)` call.
+   * `finiteRange()` sorts its `min`/`max` arguments before clamping, so passing an inverted pair
+   * straight through would let whichever bound is numerically larger win, regardless of which
+   * property a caller actually set. Applying the ceiling last instead means `maxCellSize` always
+   * has final say once both clamps are set, even when it's set below `minCellSize`.
    */
   private clampFitCellSize(size: number): number {
-    return finiteRange(
+    const floored = finiteRange(
       size,
       FIT_MIN_CELL,
-      Math.max(FIT_MIN_CELL, this.minCellSize ?? FIT_MIN_CELL),
-      this.maxCellSize ?? Number.POSITIVE_INFINITY
+      Math.max(FIT_MIN_CELL, this.minCellSize ?? FIT_MIN_CELL)
     );
+    return this.maxCellSize == null
+      ? floored
+      : Math.min(floored, this.maxCellSize);
   }
 
   /**
@@ -3325,11 +3342,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // The indentation here, and the `<div part="legend">`-hugging interpolation in render(),
     // are deliberate: together they reproduce this branch's markup — whitespace included —
     // exactly as it was emitted inline before `legendStops` introduced the branch.
-    return html` <span part="legend-lo"
+    return html`<span part="legend-lo"
         >${range ? this.formatNumericValue(range[0]) : ''}</span
       >
-      <span class="bar"></span>
-      <span part="legend-hi"
+          <span class="bar"></span>
+          <span part="legend-hi"
         >${range ? this.formatNumericValue(range[1]) : ''}</span
       >`;
   }
@@ -3375,17 +3392,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
           style=${styleMap(
             this.hoverCell ? this.tooltipStyle(this.hoverCell) : {}
           )}
+          >${this.hoverCell ? this.resolveCellText(this.hoverCell) : ''}</div
         >
-          ${this.hoverCell ? this.resolveCellText(this.hoverCell) : ''}
-        </div>
         <div
           id="live-region"
           part="live-region"
           class="sr-only"
           aria-hidden="true"
+          >${this.liveText}</div
         >
-          ${this.liveText}
-        </div>
         <div part="legend">
           ${this.renderLegendScale(range)}
           <span part="legend-value-label">${this.localizedValueLabel()}</span>

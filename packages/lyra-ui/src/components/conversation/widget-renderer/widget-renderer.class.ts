@@ -16,6 +16,20 @@ import {
 import { type LyraWidgetTypeRegistry } from './registry.js';
 import { DEFAULT_WIDGET_TYPE_REGISTRY } from './default-registry.js';
 
+// `unsafeStatic()` must return the SAME StaticValue instance for the same tag string on every
+// render -- Lit's static-html caches a call site's expanded template by that instance's identity,
+// not its text, so creating a fresh StaticValue per render (one mapped tag can recur across many
+// nodes and re-renders) corrupts that cache. The registry bounds this to a small, finite tag set.
+const mappedTagCache = new Map<string, ReturnType<typeof unsafeStatic>>();
+function cachedMappedTag(tag: string): ReturnType<typeof unsafeStatic> {
+  let value = mappedTagCache.get(tag);
+  if (!value) {
+    value = unsafeStatic(tag);
+    mappedTagCache.set(tag, value);
+  }
+  return value;
+}
+
 const GAP_TOKEN: Record<string, string> = {
   s: 'var(--lr-space-s)',
   m: 'var(--lr-space-m)',
@@ -56,9 +70,39 @@ interface BindingHandlerState {
   handler: EventListener;
 }
 
+const DOCUMENT_RESOLUTION_FAILED_MESSAGE =
+  'lr-widget-renderer: document resolution failed';
+
 function normalizedRenderError(error: unknown): Error {
   if (error instanceof Error) return error;
-  return new Error('lr-widget-renderer: document resolution failed');
+  return new Error(DOCUMENT_RESOLUTION_FAILED_MESSAGE);
+}
+
+/** Sentinel for a `document.version`/`document.root` read that cannot be trusted: the key is
+ * absent from the assigned document. A throwing accessor lands here too -- `LyraElement`'s owned-
+ * collection snapshot (`snapshotDataRecord` in `internal/lyra-element.ts`) clones an assigned
+ * `document` by walking its enumerable own keys and skipping any whose descriptor has no `value`
+ * (i.e. an accessor), so a hostile `get version()`/`get root()` is silently dropped rather than
+ * invoked -- it never gets the chance to throw. By the time `willUpdate` reads `this.document`,
+ * that omission is indistinguishable from a document that never had the field. Both must fail the
+ * same way as any other unusable document instead of surfacing as a more specific -- and here
+ * misleading -- structural complaint (`unsupported document version`, a missing root treated as
+ * legitimately empty). */
+const DOCUMENT_FIELD_UNREADABLE = Symbol(
+  'lr-widget-renderer:document-field-unreadable'
+);
+
+function readDocumentField(
+  document: object,
+  key: 'version' | 'root'
+): unknown {
+  try {
+    return Object.hasOwn(document, key)
+      ? Reflect.get(document, key)
+      : DOCUMENT_FIELD_UNREADABLE;
+  } catch {
+    return DOCUMENT_FIELD_UNREADABLE;
+  }
 }
 
 export interface LyraWidgetRendererEventMap {
@@ -158,9 +202,9 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     HTMLElement,
     Map<string, unknown>
   >();
-  private readonly mappedTemplates = new WeakMap<
+  private readonly mappedElementRefs = new WeakMap<
     ResolvedElement,
-    TemplateResult
+    (element?: Element) => void
   >();
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -176,10 +220,18 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
         const widgetDocument = this.document;
         let root: LyraWidgetNode | null = null;
         if (widgetDocument !== null) {
-          if (widgetDocument.version !== '2') {
+          const version = readDocumentField(widgetDocument, 'version');
+          const rootField = readDocumentField(widgetDocument, 'root');
+          if (
+            version === DOCUMENT_FIELD_UNREADABLE ||
+            rootField === DOCUMENT_FIELD_UNREADABLE
+          ) {
+            throw new Error(DOCUMENT_RESOLUTION_FAILED_MESSAGE);
+          }
+          if (version !== '2') {
             throw new Error('lr-widget-renderer: unsupported document version');
           }
-          root = widgetDocument.root;
+          root = rootField as LyraWidgetNode;
         }
         if (
           this.warningScope?.root !== root ||
@@ -336,24 +388,27 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
   }
 
   /** Declarative dynamic tag path: serializable on the server, stable under hydration and keyed
-   * by the same identity as client-only property/listener attachment. Memoizing by the resolved
-   * node object also keeps the ref callback stable until that node is actually re-resolved. */
+   * by the same identity as client-only property/listener attachment. The ref callback is keyed
+   * by the resolved node object so it stays stable until that node is actually re-resolved; the
+   * template itself is never cached across renders -- reusing one `TemplateResult` instance
+   * across Lit's own re-render cycles is unsafe with `unsafeStatic`'s dynamic-tag interpolation. */
   private renderMapped(node: ResolvedElement): TemplateResult {
-    const cached = this.mappedTemplates.get(node);
-    if (cached) return cached;
-    const mappedTag = unsafeStatic(node.tag!);
-    const rendered = staticHtml`<${mappedTag}
+    let onRef = this.mappedElementRefs.get(node);
+    if (!onRef) {
+      onRef = this.mappedElementRef(node);
+      this.mappedElementRefs.set(node, onRef);
+    }
+    const mappedTag = cachedMappedTag(node.tag!);
+    return staticHtml`<${mappedTag}
       data-widget-node-key=${node.nodeKey}
       data-widget-node-path=${node.nodePath}
       slot=${node.slot ?? nothing}
-      ${ref(this.mappedElementRef(node))}
+      ${ref(onRef)}
     >${repeat(
       node.children,
       (child) => this.renderIdentity(child),
       (child) => this.renderChildValue(child)
     )}</${mappedTag}>`;
-    this.mappedTemplates.set(node, rendered);
-    return rendered;
   }
 
   private renderIdentity(node: ResolvedNode): string {

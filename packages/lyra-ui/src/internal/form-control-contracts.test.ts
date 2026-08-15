@@ -15,7 +15,6 @@ import '../components/forms/color-picker/color-picker.js';
 import '../components/forms/combobox/combobox.js';
 import '../components/forms/date-picker/date-input.js';
 import '../components/forms/emoji-picker/emoji-picker.js';
-import '../components/forms/icon-button/icon-button.js';
 import '../components/forms/input/input.js';
 import '../components/forms/input/number-input.js';
 import '../components/forms/input/time-input.js';
@@ -41,6 +40,11 @@ interface FormOwnerControl extends HTMLElement {
   getForm(): HTMLFormElement | null;
 }
 
+// icon-button is deliberately absent: commit cd4f2d22 (2026-08-14) redesigned it into an
+// action/link-only primitive with no `formAssociated`, `attachInternals()`, `form`, or `getForm()`
+// -- see its own class doc comment ("This icon-only primitive is intentionally an action/link, not
+// a form submitter. Use <lr-button circle type="submit|reset"> ... that component owns the
+// complete native submitter contract."). It never belonged in this owner-contract list post-redesign.
 const FORM_CONTROL_NAMES = [
   'tool-param-form',
   'chat-composer',
@@ -55,7 +59,6 @@ const FORM_CONTROL_NAMES = [
   'combobox',
   'date-input',
   'emoji-picker',
-  'icon-button',
   'input',
   'number-input',
   'time-input',
@@ -102,7 +105,11 @@ describe('shared form-owner contract', () => {
 });
 
 describe('verified label omissions', () => {
-  for (const name of ['button', 'icon-button', 'radio', 'checkbox-group', 'token-input'] as const) {
+  // icon-button is deliberately absent: post-cd4f2d22 it is a plain LyraElement with no
+  // `formAssociated`/`attachInternals()` (see the FORM_CONTROL_NAMES comment above), so it never
+  // gets the browser's ElementInternals-backed `.labels` -- a bare HTMLElement has no such property
+  // at all, which is exactly the TypeError this parametrized case used to hit.
+  for (const name of ['button', 'radio', 'checkbox-group', 'token-input'] as const) {
     it(`${name} exposes its associated labels`, () => {
       const label = document.createElement('label');
       const control = document.createElement(tag(name)) as HTMLElement & { labels: NodeList };
@@ -121,8 +128,11 @@ describe('verified label omissions', () => {
   }
 });
 
+// icon-button is no longer part of FORM_CONTROL_NAMES at all (see its comment above), so it does
+// not need to be named in this exclusion filter any more; 'button'/'time-range' remain since they
+// are still form-owner participants that just don't carry a settable customError/validity surface.
 const VALUE_CONTROL_NAMES = FORM_CONTROL_NAMES.filter(
-  (name) => !['button', 'icon-button', 'time-range'].includes(name),
+  (name) => !['button', 'time-range'].includes(name),
 );
 
 describe('shared validity contract', () => {

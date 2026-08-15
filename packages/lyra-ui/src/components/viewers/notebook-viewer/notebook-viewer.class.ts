@@ -458,6 +458,14 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'notebook',
   ]);
+  // The generic collection snapshot rejects any custom-prototype record (including a benign
+  // one-data-only-prototype-layer JSON payload nested inside `outputs[].data`), which would
+  // silently reduce a well-formed notebook to an empty/invalid shape before this class's own
+  // `notebook` setter ever runs. `notebook`'s own setter already performs its own schema-aware,
+  // recursively-frozen clone (`snapshotNotebookDocument`) with its own bounded traversal, so the
+  // raw object identity is preserved here and handed to that setter untouched.
+  protected static override readonly identityCollectionObjectProperties =
+    Object.freeze(['notebook']);
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, viewerLoadingStyles];
 

@@ -822,9 +822,9 @@ async function main() {
     await waitForCheckedStory(page, baseUrl, 'source-picker--default', { width: 1280, height: 800 });
     await runA11y(page, 'source-picker--default');
     await page.locator('lr-source-picker').locator('[part="item"]').last().click();
-    const selectedIds = await page.locator('lr-source-picker').evaluate((element) => element.selectedIds);
-    if (!selectedIds.includes('doc3')) {
-      throw new Error(`source-picker did not toggle the clicked leaf into selectedIds: got ${JSON.stringify(selectedIds)}`);
+    const selectedSourceIds = await page.locator('lr-source-picker').evaluate((element) => element.selectedSourceIds);
+    if (!selectedSourceIds.includes('doc3')) {
+      throw new Error(`source-picker did not toggle the clicked leaf into selectedSourceIds: got ${JSON.stringify(selectedSourceIds)}`);
     }
 
     await waitForCheckedStory(page, baseUrl, 'entity-card--default', { width: 1280, height: 800 });
@@ -837,7 +837,7 @@ async function main() {
     });
     await page.locator('lr-entity-card').locator('[part="focus-button"]').click();
     const entityActivations = await page.evaluate(() => window.__lyraEntityActivations);
-    if (entityActivations.length !== 1 || entityActivations[0]?.id !== 'e1') {
+    if (entityActivations.length !== 1 || entityActivations[0]?.entityId !== 'e1') {
       throw new Error(`entity-card focus button did not emit lr-entity-activate for e1: got ${JSON.stringify(entityActivations)}`);
     }
 
@@ -896,7 +896,7 @@ async function main() {
     const threadCountBeforeSearch = await waitForLocatorCount(threadItemsLocator, (count) => count === 5);
     await page.locator('lr-thread-list').locator('[part="search-input"]').fill('Refactor');
     const threadCountAfterSearch = await waitForLocatorCount(threadItemsLocator, (count) => count === 1);
-    const filteredThreadTitle = await threadItemsLocator.first().getAttribute('title');
+    const filteredThreadTitle = await threadItemsLocator.first().getAttribute('label');
     if (threadCountBeforeSearch !== 5 || threadCountAfterSearch !== 1 || filteredThreadTitle !== 'Refactor the auth module') {
       throw new Error(
         `thread-list search did not filter to the matching thread: before=${threadCountBeforeSearch} after=${threadCountAfterSearch} title=${JSON.stringify(filteredThreadTitle)}`,

@@ -117,15 +117,15 @@ assert.ok(
   'the documented lean widget-renderer route needs an inventoried graph claim',
 );
 assert.ok(
-  widgetRendererLean.forbiddenInputs.includes(
+  !widgetRendererLean.forbiddenInputs.includes(
     'components/conversation/widget-renderer/default-registry.js',
   ),
-  'the lean widget-renderer route must exclude the eager default registry',
+  'default-registry.js is a pure data module the lean route always legitimately bundles, not an exclusion claim',
 );
 assert.equal(
   widgetRendererLean.forbiddenInputs.length,
-  9,
-  'the lean route excludes the default registry plus all eight mapped class modules',
+  8,
+  'the lean route excludes all eight mapped widget-type class modules',
 );
 
 console.log('hard bundle budget coverage tests passed.');

@@ -1,9 +1,6 @@
 import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
-  ${formControlRequiredMarker}
-
   :host {
     display: block;
     /* Every per-tier value below comes from the library's one shared size ladder
@@ -81,6 +78,18 @@ export const styles = css`
      with nothing before it whenever no label is set. */
   [part="legend"][hidden] {
     display: none;
+  }
+  /* The one component that does NOT take its marker rule from
+     internal/form-control.styles.ts, only its custom properties. That sheet
+     attaches the marker to [part~="form-control-label"], which here is a span
+     INSIDE this legend; the marker belongs to the legend box itself, after the
+     whole label, so the selector is local while the glyph, colour and offset
+     stay the same three consumer-settable properties every other control
+     resolves. Keep these declarations identical to that sheet's. */
+  :host([required]) [part="legend"]::after {
+    content: var(--lr-form-control-required-content, ' *');
+    color: var(--lr-form-control-required-color, var(--lr-color-danger));
+    margin-inline-start: var(--lr-form-control-required-offset, 0);
   }
   [part~="fields"] {
     display: flex;

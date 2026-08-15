@@ -1072,8 +1072,8 @@ describe('required-field asterisk', () => {
   it('appears only when both required and a real label are set', async () => {
     const el = (await fixture(html`<lr-known-date label="Birth date" required></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;
-    const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
-    const after = getComputedStyle(label, '::after');
+    const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
+    const after = getComputedStyle(legend, '::after');
     expect(after.content).to.contain('*');
   });
 

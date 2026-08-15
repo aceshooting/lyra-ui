@@ -715,9 +715,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
             aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
             aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
             aria-label=${this.getAttribute('aria-label') ?? nothing}
-            aria-labelledby=${this.hasAttribute('aria-label') || !this.hasLabelSlot
-              ? nothing
-              : 'switch-label'}
+            aria-labelledby=${this.hasAttribute('aria-label') ? nothing : 'switch-label'}
             aria-describedby=${describedBy || nothing}
             @keydown=${this.onKeyDown}
             @focus=${this.onFocus}

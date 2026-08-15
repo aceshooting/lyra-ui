@@ -143,10 +143,6 @@ export interface LyraCodeBlockCoreEventMap {
  * @since 4.0.0
  */
 export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
-  protected static override readonly immutableEventDetails = Object.freeze([
-    'lr-text-select',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -163,6 +159,16 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     expandCode: LYRA_DEFAULT_expandCode,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-text-select',
+  ]);
+
+  /** `languages` grammar objects are caller-owned data read only through Shiki's own APIs --
+   *  bounded, detached, and frozen on assignment like every other public collection, so a later
+   *  in-place mutation of a caller's grammar object can never silently change what this instance
+   *  has already handed to `loadShikiHighlighterCore()`. */
+  protected static override readonly ownedCollectionProperties = Object.freeze(['languages']);
 
   static override styles = [LyraElement.styles, styles];
 

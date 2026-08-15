@@ -47,10 +47,17 @@ export class ScrollOverflowController implements ReactiveController {
    * @param host The component; registers itself so `hostUpdated`/`hostDisconnected` fire.
    * @param resolve Returns the scrollable track, re-resolved on every host update so a re-rendered
    *   (replaced) element is picked up rather than a stale reference kept alive.
+   * @param onResize Invoked from inside this controller's own `ResizeObserver` callback (never from
+   *   the synchronous `sync()` path, which the host's own `updated()` already covers) -- lets a
+   *   consumer with extra resize-driven bookkeeping (e.g. `<lr-tab-group>`'s scroll-edge
+   *   availability) piggyback on this controller's single observer instance instead of standing up
+   *   a second one, which would double-count in anything stubbing `ResizeObserver` globally and
+   *   need its own independent owner-realm rebind on adoption.
    */
   constructor(
     host: ReactiveControllerHost,
     private readonly resolve: () => Element | null | undefined,
+    private readonly onResize?: () => void,
   ) {
     host.addController(this);
   }
@@ -81,6 +88,7 @@ export class ScrollOverflowController implements ReactiveController {
             return;
           }
           this.measure();
+          this.onResize?.();
         });
         this.#observer = observer;
         observer.observe(element);
@@ -108,20 +116,39 @@ export class ScrollOverflowController implements ReactiveController {
     const overflows = element.scrollWidth - element.clientWidth > TOLERANCE_PX;
     element.toggleAttribute(SCROLL_OVERFLOW_ATTRIBUTE, overflows);
   }
+
+  /**
+   * Adds extra elements to this controller's single `ResizeObserver` instance -- for a consumer
+   * that also needs to react to a *descendant's* intrinsic geometry changing independently of the
+   * tracked element's own border box (e.g. a tab's label growing without the tablist's fixed-width
+   * container resizing). A no-op until `sync()` has a live observer (no owner realm yet, or the
+   * realm has no `ResizeObserver`); safe to call on every host update with the current element set
+   * -- observing an already-observed target is a spec-defined no-op, and a target dropped from a
+   * later call (e.g. a removed tab) simply stops mattering once it disconnects, matching the
+   * primary element's own lifecycle here.
+   */
+  observeExtra(elements: Iterable<Element>): void {
+    if (!this.#observer) return;
+    for (const element of elements) this.#observer.observe(element);
+  }
 }
 
 /**
- * Registers a `ScrollOverflowController` on `host` and keeps no reference to it — the controller
- * drives itself entirely from the host's own update/disconnect callbacks, so the four components
- * using it have nothing to call back into. Call from the constructor.
+ * Registers a `ScrollOverflowController` on `host`. Most callers (three of the four components
+ * using this) keep no reference to it — the controller drives itself entirely from the host's own
+ * update/disconnect callbacks, so a bare statement-expression call is enough; discarding the return
+ * value doesn't trip `noUnusedLocals` (TS6133), which only fires on an unread *binding*, not a
+ * discarded expression result. A caller with its own resize-driven bookkeeping to piggyback (see
+ * `onResize`/`observeExtra` on the class) stores the returned controller in its own `private` field
+ * instead of widening this one to `protected`/public, which would put an internal implementation
+ * detail on the component's documented member surface.
  *
- * Exists because storing the controller in an otherwise-unread `private` field is a `noUnusedLocals`
- * error (TS6133), and widening the field to `protected`/public to dodge that would put an internal
- * implementation detail on the component's documented member surface.
+ * @param onResize See `ScrollOverflowController`'s constructor param of the same name.
  */
 export function observeScrollOverflow(
   host: ReactiveControllerHost,
   resolve: () => Element | null | undefined,
-): void {
-  new ScrollOverflowController(host, resolve);
+  onResize?: () => void,
+): ScrollOverflowController {
+  return new ScrollOverflowController(host, resolve, onResize);
 }

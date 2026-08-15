@@ -389,10 +389,6 @@ export interface LyraMapEventMap {
  * @since 4.0.0
  */
 export class LyraMap extends LyraElement<LyraMapEventMap> {
-  protected static override readonly immutableEventDetails = Object.freeze([
-    'lr-map-click',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -409,6 +405,17 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     paginationSummary: LYRA_DEFAULT_paginationSummary,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-map-click',
+  ]);
+  /** `feature` is a maplibre-gl `queryRenderedFeatures()` result -- not a plain object the generic
+   *  event-detail snapshotter can structurally clone, so its identity is preserved instead of being
+   *  walked (which would otherwise silently collapse it to `undefined`). `lngLat` still gets the
+   *  normal detached-and-frozen snapshot treatment. */
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-map-click': Object.freeze(['feature']),
+  });
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'center',

@@ -112,6 +112,15 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
+  /** Item identity is a load-bearing public contract, not an incidental detail: `willUpdate()`
+   *  matches a surviving item across a reorder/filter by `===` to keep roving focus on it (see
+   *  `occurrenceAt`/`indexOfOccurrence` below), `confirmPendingReorder()` locates the pending
+   *  request's own item/neighbor the same way, and `icon` may carry an opaque `TemplateResult` --
+   *  a deep structural clone (the default for an owned collection) would silently corrupt its
+   *  internal `strings`/`.raw` template identity. Matches `<lr-command-palette>`'s identical
+   *  `commands` exception for the same reasons. */
+  protected static override readonly identityCollectionProperties =
+    Object.freeze(['items']);
 
   static override styles = [LyraElement.styles, styles, srOnly];
   protected static override readonly immutableEventDetails = Object.freeze([

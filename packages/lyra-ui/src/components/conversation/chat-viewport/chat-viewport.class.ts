@@ -612,6 +612,29 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     });
   }
 
+  /**
+   * A projected node's announcement text. `composedAccessibilityText()` computes an accessible
+   * *name*: a subtree rooted at an element that names itself via `aria-label` (e.g.
+   * `<lr-chat-message>`'s internal `role="article"` bubble, named after the message author)
+   * correctly stops there per ARIA accname semantics and never descends into its own content --
+   * exactly right for naming that landmark, but wrong for announcing a new chat message, where the
+   * actual composed (slotted) content is what a listener needs to hear alongside the author label.
+   * For a node with its own shadow root, also walk its light-DOM content directly -- bypassing the
+   * shadow tree's name-bearing landmark entirely -- and append whatever text that surfaces which
+   * the name-only pass didn't already include. Plain elements (no shadow root, e.g. the `<details>`
+   * and `<img>` cases this same sink announces) are unaffected: `composedAccessibilityText(node)`
+   * already walks their own light DOM directly, so there is nothing separate to add.
+   */
+  private announcementTextFor(node: Node): string {
+    const primary = composedAccessibilityText(node);
+    if (!(node instanceof Element) || !node.shadowRoot) return primary;
+    const content = composedAccessibilityText(node.childNodes);
+    const normalizedPrimary = primary.replace(/\s+/g, ' ').trim();
+    const normalizedContent = content.replace(/\s+/g, ' ').trim();
+    if (!normalizedContent || normalizedPrimary.includes(normalizedContent)) return primary;
+    return primary ? `${primary} ${content}` : content;
+  }
+
   private onContentMutations = (records: MutationRecord[]): void => {
     this.scheduleGrowthTick();
     const sink = this.announcementSink;
@@ -625,7 +648,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
           continue;
         }
         this.knownProjectedNodes.add(node);
-        const text = composedAccessibilityText(node).replace(/\s+/g, ' ').trim();
+        const text = this.announcementTextFor(node).replace(/\s+/g, ' ').trim();
         if (text) sink.announce(text);
       }
     }
@@ -637,7 +660,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
       if (this.knownProjectedNodes.has(node)) continue;
       this.knownProjectedNodes.add(node);
       if (!sink || !this.hasUpdated) continue;
-      const text = composedAccessibilityText(node).replace(/\s+/g, ' ').trim();
+      const text = this.announcementTextFor(node).replace(/\s+/g, ' ').trim();
       if (text) sink.announce(text);
     }
   }

@@ -26,7 +26,6 @@ import {
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldMustBeBoolean, LYRA_DEFAULT_fieldMustBeInteger, LYRA_DEFAULT_fieldMustBeNumber, LYRA_DEFAULT_fieldMustBeOneOf, LYRA_DEFAULT_fieldMustBeString, LYRA_DEFAULT_fieldMustEqual, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_schemaMustBeObject, LYRA_DEFAULT_schemaPropertiesMustBeFlat, LYRA_DEFAULT_toolParamBooleanFalse, LYRA_DEFAULT_toolParamBooleanTrue, LYRA_DEFAULT_toolParamBooleanUnset, LYRA_DEFAULT_toolParamMissingProperty, LYRA_DEFAULT_toolParamSchemaLimit, LYRA_DEFAULT_unsupportedFieldType, LYRA_DEFAULT_valueMustBeSerializable } from '../../../internal/default-strings.generated.js';
@@ -441,10 +440,11 @@ export interface LyraToolParamFormEventMap {
  * context — a second, redundant outer label here would just repeat it. A
  * form-wide validation summary is still available via the `error` part
  * (`class="form-error"`), driven by `reportValidity()`.
- * When the host has no name, the `base` wrapper is the accessible `role="group"`; a native external
- * `<label for>` can name the form-associated host. A non-empty host `aria-label` stays on that host
- * as the sole aggregate semantic owner, so the nested wrapper omits its duplicate role/name. Every
- * generated field retains its own more specific name either way.
+ * The `base` wrapper is always the accessible `role="group"`, so a native external `<label for>`
+ * pointing at this form-associated host can name it via the external-label bridge. A host
+ * `aria-label` wins by attribute presence (including an explicitly empty value), forwarded onto
+ * that same `base` wrapper — matching `<lr-rubric-form>`'s identical pattern. Every generated field
+ * retains its own more specific name either way.
  *
  * This component owns no Submit/Cancel/Approve chrome — a consumer composes
  * it inside their own dialog (e.g. a tool-approval dialog) and reads
@@ -1393,10 +1393,11 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     const props = this.schemaProperties;
     const entries = Object.entries(props);
     const missingRequiredKeys = this.missingRequiredKeys.filter((key) => this.touchedFields.has(key));
+    const hostLabel = this.getAttribute('aria-label');
     return html`<div
       part="base"
-      role=${overallSemanticRole(this, 'group') ?? nothing}
-      aria-label=${overallSemanticLabel(this) ?? nothing}
+      role="group"
+      aria-label=${hostLabel ?? nothing}
     >
       ${entries.length === 0
         ? html`<p part="empty">${this.localize('noData')}</p>`

@@ -1002,6 +1002,7 @@
     "./localization.js": "./dist/localization.js",
     "./events": "./dist/events.js",
     "./utilities": "./dist/utilities/index.js",
+    "./utilities/*": null,
     "./utilities/a11y.js": "./dist/utilities/a11y.js",
     "./utilities/anchor-target.js": "./dist/utilities/anchor-target.js",
     "./utilities/animation-registry.js": "./dist/utilities/animation-registry.js",

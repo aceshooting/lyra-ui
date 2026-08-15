@@ -396,17 +396,8 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.addEventListener('focusin', this.handleFocusIn);
     this.addEventListener('focusout', this.handleFocusOut);
     this.syncOptionState();
-    // `defaultLabel` derives from light-DOM content, so direct text mutations need their own
-    // observer to notify a parent combobox/select that its cached row data is stale.
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
-    this.labelObserver = MutationObserverCtor
-      ? new MutationObserverCtor(() => {
-          this.bindLabelObserverTargets();
-          this.handleLabelMutation();
-        })
-      : undefined;
     this.addEventListener('slotchange', this.handleLabelSlotChange);
-    this.bindLabelObserverTargets();
+    this.rebuildLabelObserver();
     this.observedDefaultLabel = this.defaultLabel;
   }
 
@@ -422,6 +413,36 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.hasCurrent = false;
     this.syncOptionState();
     super.disconnectedCallback();
+  }
+
+  /**
+   * `MutationObserver` instances are bound to the realm (`window`) that constructed them, not to
+   * the node they observe: one built from a stale `window.MutationObserver` keeps delivering
+   * through that window's microtask queue even after this element is adopted into a different
+   * document, instead of the adopted document's own. Adoption (`document.adoptNode()`, or an
+   * implicit cross-document `appendChild`) always runs `adoptedCallback()` -- while this element is
+   * momentarily disconnected, ahead of any later `connectedCallback()` -- so this rebuilds the
+   * observer here rather than only lazily on the next connect.
+   */
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.rebuildLabelObserver();
+  }
+
+  /** Tears down and reconstructs `labelObserver` bound to the current `ownerDocument`'s realm, then
+   *  rebinds every current target. Called on connect and on adoption -- see `adoptedCallback()`. */
+  private rebuildLabelObserver(): void {
+    this.labelObserver?.disconnect();
+    // `defaultLabel` derives from light-DOM content, so direct text mutations need their own
+    // observer to notify a parent combobox/select that its cached row data is stale.
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    this.labelObserver = MutationObserverCtor
+      ? new MutationObserverCtor(() => {
+          this.bindLabelObserverTargets();
+          this.handleLabelMutation();
+        })
+      : undefined;
+    this.bindLabelObserverTargets();
   }
 
   protected override updated(changed: PropertyValues): void {

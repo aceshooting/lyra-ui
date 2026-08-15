@@ -119,13 +119,6 @@ export interface LyraMenuEventMap {
  * @since 4.0.0
  */
 export class LyraMenu extends LyraElement<LyraMenuEventMap> {
-  protected static override readonly immutableEventDetails = Object.freeze([
-    'lr-select',
-  ]);
-  protected static override readonly identityEventDetailProperties = Object.freeze({
-    'lr-select': Object.freeze(['item']),
-  });
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -133,6 +126,13 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     menuLabel: LYRA_DEFAULT_menuLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-select',
+  ]);
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-select': Object.freeze(['item']),
+  });
 
   static override styles = [LyraElement.styles, styles];
 

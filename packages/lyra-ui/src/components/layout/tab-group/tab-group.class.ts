@@ -289,18 +289,15 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   private rehomeTabFocus = false;
   @state() private scrollStartAvailable = false;
   @state() private scrollEndAvailable = false;
-  private tabScrollResizeObserver?: ResizeObserver;
-  private tabScrollResizeObserverDocument?: Document;
-  private tabScrollResizeObserverGeneration = 0;
-
-  constructor() {
-    super();
-    // Gates the [part="tablist"] edge fade on the strip genuinely overflowing -- see
-    // --lr-scroll-fade-size and tabs.styles.ts.
-    observeScrollOverflow(this, () =>
-      this.renderRoot.querySelector('[part~="tablist"]')
-    );
-  }
+  /** Shares its single `ResizeObserver` instance with the tab-scroll-edge bookkeeping below via
+   *  `onResize`/`observeExtra` -- a separate second observer on the very same `[part~="tablist"]`
+   *  element would double the observer count anything stubbing `ResizeObserver` globally sees, and
+   *  need its own independent owner-realm rebind on adoption instead of reusing this one's. */
+  private scrollOverflow = observeScrollOverflow(
+    this,
+    () => this.renderRoot.querySelector('[part~="tablist"]'),
+    () => this.measureTabScrollEdges()
+  );
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -398,7 +395,6 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   override disconnectedCallback(): void {
     this.resetMutationObserver();
     this.resetProjectedSourceObserver();
-    this.resetTabScrollResizeObserver();
     this.restoreProjectedSources();
     this.restoreProjectedSlots();
     super.disconnectedCallback();
@@ -408,7 +404,6 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     super.adoptedCallback();
     this.resetMutationObserver();
     this.resetProjectedSourceObserver();
-    this.resetTabScrollResizeObserver();
   }
 
   private resetMutationObserver(): void {
@@ -725,7 +720,13 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     super.updated(changed);
     if (changed.has('active') || changed.has('tabs'))
       this.syncElementActiveState();
-    this.armTabScrollResizeObserver();
+    // Each tab's own intrinsic geometry (a label, image, font, or slot change) can alter scroll
+    // reachability without the fixed-width tablist's own border box changing at all -- the shared
+    // `[part~="tablist"]` observer above only watches that one container, so every current tab
+    // rides along on its single ResizeObserver instance instead of a second one of its own.
+    this.scrollOverflow.observeExtra(
+      this.renderRoot.querySelectorAll('[part="tab"]')
+    );
     this.measureTabScrollEdges();
     if (!this.rehomeTabFocus) return;
     this.rehomeTabFocus = false;
@@ -926,50 +927,6 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     return this.withoutScrollControls || this.noScrollControls;
   }
 
-  private resetTabScrollResizeObserver(): void {
-    this.tabScrollResizeObserverGeneration += 1;
-    this.tabScrollResizeObserver?.disconnect();
-    this.tabScrollResizeObserver = undefined;
-    this.tabScrollResizeObserverDocument = undefined;
-  }
-
-  /** Watches both the allocation and each rendered tab's intrinsic geometry. A label, image, font,
-   * or slot can therefore change scroll reachability without needing a host property update. */
-  private armTabScrollResizeObserver(): void {
-    const tablist =
-      this.renderRoot.querySelector<HTMLElement>('[part~="tablist"]');
-    if (!tablist || !this.isConnected) return;
-    const ownerDocument = this.ownerDocument;
-    if (
-      !this.tabScrollResizeObserver ||
-      this.tabScrollResizeObserverDocument !== ownerDocument
-    ) {
-      this.resetTabScrollResizeObserver();
-      const ResizeObserverCtor = ownerDocument.defaultView?.ResizeObserver;
-      if (!ResizeObserverCtor) return;
-      const generation = this.tabScrollResizeObserverGeneration;
-      const observer = new ResizeObserverCtor(() => {
-        if (
-          this.tabScrollResizeObserver !== observer ||
-          this.tabScrollResizeObserverDocument !== ownerDocument ||
-          this.tabScrollResizeObserverGeneration !== generation ||
-          !this.isConnected ||
-          this.ownerDocument !== ownerDocument
-        ) {
-          return;
-        }
-        this.measureTabScrollEdges();
-      });
-      this.tabScrollResizeObserver = observer;
-      this.tabScrollResizeObserverDocument = ownerDocument;
-    }
-    this.tabScrollResizeObserver.disconnect();
-    this.tabScrollResizeObserver.observe(tablist);
-    for (const tab of this.renderRoot.querySelectorAll('[part="tab"]')) {
-      this.tabScrollResizeObserver.observe(tab);
-    }
-  }
-
   private measureTabScrollEdges(): void {
     const tablist =
       this.renderRoot.querySelector<HTMLElement>('[part~="tablist"]');
@@ -1012,8 +969,13 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   };
 
   /**
-   * Scrolls the tab row one step toward `edge`. Native scrolling does the work; the lightweight
-   * scroll listener only refreshes logical edge availability for controls and fades.
+   * Scrolls the tab row one step toward `edge`, unconditionally -- native scrolling does the work;
+   * the lightweight scroll listener only refreshes logical edge availability for controls and
+   * fades. This method itself does not consult `scrollStartAvailable`/`scrollEndAvailable`; the one
+   * rendered caller (`renderScrollControl()`'s `@click`) checks that first so a user clicking a
+   * boundary-adjacent control never issues a no-op native `scrollBy()`, but a direct/programmatic
+   * caller always gets a real attempt -- e.g. a track with no tabs yet still needs its reduced-motion
+   * resolution exercised the moment a caller does invoke this.
    *
    * `edge` is logical, so it is `effectiveDirection` that turns it into a physical delta: per the
    * CSSOM View spec (what every browser this library targets implements) `scrollLeft` under RTL
@@ -1025,9 +987,6 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    * preference asks not to animate.
    */
   private scrollTabs(edge: 'start' | 'end'): void {
-    const available =
-      edge === 'start' ? this.scrollStartAvailable : this.scrollEndAvailable;
-    if (!available) return;
     const tablist = this.renderRoot.querySelector('[part~="tablist"]');
     if (
       !tablist ||
@@ -1075,7 +1034,9 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       @pointercancel=${this.onScrollControlPointerEnd}
       @lostpointercapture=${this.onScrollControlPointerEnd}
       @mousedown=${this.onScrollControlMouseDown}
-      @click=${() => this.scrollTabs(edge)}
+      @click=${() => {
+        if (available) this.scrollTabs(edge);
+      }}
     >
       <span part="scroll-button-glyph" aria-hidden="true"
         >${chevronIcon()}</span
@@ -1110,6 +1071,14 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     }
   };
 
+  /** The projected `<slot>` below carries the rich, author-visible content across the shadow
+   *  boundary for *rendering*, but a `<slot>`'s assigned nodes are never part of its own DOM
+   *  subtree, so `Node.textContent` read on this button (or any ancestor of the slot) cannot see
+   *  through it -- unlike `aria-label` above, which the accessibility tree resolves independently.
+   *  The hidden span mirrors the same already-computed `tab.label` as a genuine light/shadow-tree
+   *  text node purely so `textContent` has something real to read; `hidden` (a real UA-default
+   *  `display: none`) keeps it invisible and out of the accessibility tree, so it never doubles the
+   *  visible label or the `aria-label` name. */
   private renderTab(tab: TabDef): TemplateResult {
     const selected = tab.slotName === this.active;
     const closable = this.isNavigable(tab) && tab.element.closable;
@@ -1128,7 +1097,9 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       tabindex=${tab.slotName === this.rovingTab ? '0' : '-1'}
       @click=${() => this.selectTab(tab)}
     >
-      ${html`<slot name=${this.tabSlotName(tab.slotName)}></slot>`}${selected
+      ${html`<slot name=${this.tabSlotName(tab.slotName)}></slot>`}${tab.label
+        ? html`<span hidden aria-hidden="true">${tab.label}</span>`
+        : nothing}${selected
         ? html`<span part="active-tab-indicator" aria-hidden="true"></span>`
         : nothing}
     </button>`;

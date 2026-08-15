@@ -480,16 +480,15 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
       role=${header ? 'row' : 'presentation'}
       aria-rowindex=${header ? '1' : nothing}
       style=${`grid-template-columns:repeat(${count},minmax(var(--lr-size-8rem),1fr))`}
-    >
-      ${Array.from({ length: count }, (_unused, index) =>
+      >${Array.from({ length: count }, (_unused, index) =>
         this.renderCell(
           row[index],
           index,
           rowHighlights,
           header ? 'columnheader' : 'cell'
         )
-      )}
-    </div>`;
+      )}</div
+    >`;
   }
 
   private renderSheet(sheet: SpreadsheetSheet, index: number): TemplateResult {
@@ -768,11 +767,11 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
         ? renderViewerLoading(this.localize('loadingDocument'))
         : this.fetchState.kind === 'error'
         ? html`<div part="error">${this.fetchState.message}</div>`
-        : html`<p class="empty-note">
-            ${this.localize('documentPreviewEmpty', undefined, {
-              type: this.localize('documentPreviewTypeDocument'),
-            })}
-          </p>`;
+        : html`<p class="empty-note">${this.localize(
+            'documentPreviewEmpty',
+            undefined,
+            { type: this.localize('documentPreviewTypeDocument') }
+          )}</p>`;
     const maxHeight = sanitizeCssLength(this.maxHeight);
     return html`<div
       part="base"

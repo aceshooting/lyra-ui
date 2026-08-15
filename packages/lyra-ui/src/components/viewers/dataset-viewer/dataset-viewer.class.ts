@@ -704,18 +704,18 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
       case 'loading':
         return renderViewerLoading(this.localize('loadingDocument'));
       case 'empty':
-        return html`<p class="empty-note">
-          ${this.localize('datasetViewerEmpty')}
-        </p>`;
+        return html`<p class="empty-note">${this.localize(
+          'datasetViewerEmpty'
+        )}</p>`;
       case 'error':
         return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle':
       default:
-        return html`<p class="empty-note">
-          ${this.localize('documentPreviewEmpty', undefined, {
-            type: this.localize('documentPreviewTypeDataset'),
-          })}
-        </p>`;
+        return html`<p class="empty-note">${this.localize(
+          'documentPreviewEmpty',
+          undefined,
+          { type: this.localize('documentPreviewTypeDataset') }
+        )}</p>`;
     }
   }
 

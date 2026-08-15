@@ -87,7 +87,10 @@ const FACE_CASES: FaceCase[] = [
   { name: 'combobox' },
   { name: 'date-input' },
   { name: 'emoji-picker' },
-  { name: 'icon-button', setup: (control) => { control.type = 'button'; } },
+  // icon-button is deliberately excluded here: since 9.0 (cd4f2d22) it is intentionally not
+  // form-associated (see its class JSDoc -- "an action/link, not a form submitter") and
+  // LyraElement only installs an ExternalLabelController for a `formAssociated` constructor, so
+  // the external-label-name/activation contract this array feeds no longer applies to it.
   { name: 'input' },
   { name: 'native-time-input' },
   { name: 'number-input' },
@@ -910,7 +913,10 @@ describe('external FACE label contract', () => {
     });
   }
 
-  for (const name of ['button', 'icon-button'] as const) {
+  // icon-button dropped `type`/submit-reset handling in 9.0 (cd4f2d22) along with form
+  // association -- its class JSDoc points submit/reset use cases at
+  // `<lr-button circle type="submit|reset">` instead, so it no longer belongs in this loop.
+  for (const name of ['button'] as const) {
     it(`${name} preserves one submit and one reset activation`, async () => {
       const testCase = FACE_CASES.find((entry) => entry.name === name)!;
       const { container, control, label } = mountFace(testCase);

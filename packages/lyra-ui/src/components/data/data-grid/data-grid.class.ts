@@ -469,11 +469,6 @@ function normalizedGroupBy(
 export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   LyraDataGridEventMap<Row>
 > {
-  protected static override readonly immutableEventDetails = Object.freeze([
-    'request',
-    'lr-column-move',
-    'lr-data-error',
-  ]);
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -506,6 +501,19 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'request',
+    'lr-column-move',
+    'lr-data-error',
+  ]);
+  /** `signal` is an `AbortSignal`, and `error`/`request` are an opaque rejection reason and an
+   *  already-frozen `DataGridRequest` snapshot -- none of the three has a structural clone the
+   *  generic event-detail snapshotter can produce, so their identity is preserved instead of
+   *  being walked (which would otherwise omit the whole detail down to `null`). */
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    request: Object.freeze(['signal']),
+    'lr-data-error': Object.freeze(['error', 'request']),
+  });
   static override styles = [LyraElement.styles, sizes, srOnly, styles];
 
   /** Bordered or borderless container treatment. */
@@ -3872,9 +3880,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
             `
           : nothing}
         ${this.renderPager()}
-        <div part="live-region" class="sr-only" aria-hidden="true">
-          ${this.liveText}
-        </div>
+        <div part="live-region" class="sr-only" aria-hidden="true">${this.liveText}</div>
         ${this.dragGhost
           ? html`<div part="drag-ghost">${this.dragGhost}</div>`
           : nothing}

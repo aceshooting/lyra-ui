@@ -463,12 +463,6 @@ export interface LyraComboboxEventMap {
  * @since 4.0.0
  */
 export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
-  protected static override readonly immutableEventDetails = Object.freeze([
-    'lr-change',
-    'input',
-    'change',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -497,6 +491,12 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-change',
+    'input',
+    'change',
+  ]);
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];

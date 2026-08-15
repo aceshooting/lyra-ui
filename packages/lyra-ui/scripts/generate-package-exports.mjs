@@ -156,6 +156,12 @@ export function deriveExplicitUtilityExports(
     const target = `./dist/utilities/${basename}.js`;
     addRoute(routes, exportPath, target, 'curated public utility');
   }
+  // A documented, closed door: `null` is Node's documented way to declare a subpath pattern while
+  // explicitly blocking resolution through it. This keeps `./utilities/*` present in the exports
+  // map (so `src/package-entrypoints.test.ts` can assert the boundary is documented) without
+  // actually reopening deep-import access to anything under src/utilities/ beyond the curated
+  // routes above.
+  addRoute(routes, './utilities/*', null, 'documented closed utility subpath boundary');
   return Object.fromEntries(
     [...routes.entries()]
       .sort(([left], [right]) => left.localeCompare(right))
@@ -227,7 +233,11 @@ export function checkPackageExports(packageDir = defaultPackageDir) {
   const findings = [];
   if (Object.hasOwn(current, './components/*')) findings.push('package.json still exposes ./components/*');
   if (Object.hasOwn(current, './ai/*')) findings.push('package.json still exposes ./ai/*');
-  if (Object.hasOwn(current, './utilities/*')) findings.push('package.json still exposes ./utilities/*');
+  // A `null` target is the documented closed door (see deriveExplicitUtilityExports) -- only a
+  // real, resolvable target here means the wildcard subpath was reopened.
+  if (Object.hasOwn(current, './utilities/*') && current['./utilities/*'] !== null) {
+    findings.push('package.json still exposes ./utilities/*');
+  }
   if (JSON.stringify(current) !== JSON.stringify(expected.exports)) {
     findings.push('package.json#exports is stale');
   }

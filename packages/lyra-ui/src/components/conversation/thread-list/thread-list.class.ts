@@ -134,6 +134,35 @@ function defaultFilter(
   );
 }
 
+// `threads` is an owned collection property (see `ownedCollectionProperties` on the class below):
+// `LyraElement`'s snapshot machinery detaches a caller-supplied `Date` into a frozen, read-only
+// proxy wrapping a private clone, so a later mutation of the caller's own `Date` (or of the array)
+// can never leak into what's already rendered. That proxy still satisfies `instanceof Date` and a
+// normal `date.getTime()` *method* call -- its own `get` trap forwards to a correctly-bound copy --
+// but it has no `[[DateValue]]` internal slot of its own, so the shared `normalizeLyraTimestamp()`
+// helper's `Date.prototype.getTime.call(value)` (a borrowed, unbound method call) throws a
+// TypeError for it and silently normalizes to `undefined`. Every `thread.timestamp` read here or
+// forwarded to the row goes through this first, so both this component's own date-bucket math and
+// the child `lr-conversation-item`'s later `normalizeLyraTimestamp()` call see a real `Date`
+// instance again rather than the snapshot proxy. Strings/numbers/`undefined` pass through as-is.
+function rehydrateThreadTimestamp(
+  value: LyraTimestamp | undefined
+): LyraTimestamp | undefined {
+  if (value === undefined) return undefined;
+  if (
+    typeof value !== 'object' ||
+    typeof (value as { getTime?: unknown }).getTime !== 'function'
+  )
+    return value;
+  let epoch: number;
+  try {
+    epoch = (value as { getTime(): number }).getTime();
+  } catch {
+    return undefined;
+  }
+  return Number.isFinite(epoch) ? new Date(epoch) : undefined;
+}
+
 /**
  * `<lr-thread-list>` — the conversation sidebar: a grouped, searchable list of chat sessions with
  * pin/archive/delete/rename affordances. *Data mode* (non-empty `threads`, or empty `threads` with
@@ -569,7 +598,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const ts =
       thread.timestamp == null
         ? undefined
-        : normalizeLyraTimestamp(thread.timestamp);
+        : normalizeLyraTimestamp(rehydrateThreadTimestamp(thread.timestamp));
     if (!ts) return 'previous30';
     const dayMs = 86_400_000;
     const startOfDay = (d: Date) =>
@@ -1079,7 +1108,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         conversation-id=${thread.id}
         label=${thread.title}
         excerpt=${thread.excerpt ?? ''}
-        .timestamp=${thread.timestamp}
+        .timestamp=${rehydrateThreadTimestamp(thread.timestamp)}
         ?active=${thread.id === this.activeConversationId}
         ?compact=${this.compact}
         .renamable=${this.renamable}

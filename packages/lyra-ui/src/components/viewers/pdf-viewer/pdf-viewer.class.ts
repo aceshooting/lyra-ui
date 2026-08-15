@@ -1023,21 +1023,30 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         || remainingNormalizationWork <= 0
         || workBudget.remainingCodeUnits <= 0
       ) break;
-      let text: string;
-      try {
-        text = await this.getPageText(pageNumber);
-      } catch {
-        continue;
+      // A page whose text layer is already mounted (the current page, or one a prior search
+      // already visited) reflects exactly what's on screen -- reuse that index instead of an
+      // independent raw re-extraction through the peer stream. This avoids a redundant
+      // `streamTextContent()` read (which can be arbitrarily slow, or on a page whose stream the
+      // peer never resumes, never resolve at all) for text this component has already indexed.
+      let pageIndex = this.mountedPageTextIndex(pageNumber);
+      if (!pageIndex) {
+        let text: string;
+        try {
+          text = await this.getPageText(pageNumber);
+        } catch {
+          continue;
+        }
+        if (!this.isCurrentAnchorOperation(operation, doc)) return false;
+        pageIndex = this.rawPageTextIndex(
+          pageNumber,
+          text,
+          Math.min(remainingCorpus, TEXT_QUOTE_LIMITS.maxCorpusCodeUnits),
+          Math.min(remainingNormalizationWork, TEXT_QUOTE_LIMITS.maxNormalizationWorkCodeUnits),
+        );
+        remainingCorpus -= pageIndex.scope.text.length;
+        remainingNormalizationWork -= pageIndex.sourceWorkCodeUnits;
       }
       if (!this.isCurrentAnchorOperation(operation, doc)) return false;
-      const pageIndex = this.rawPageTextIndex(
-        pageNumber,
-        text,
-        Math.min(remainingCorpus, TEXT_QUOTE_LIMITS.maxCorpusCodeUnits),
-        Math.min(remainingNormalizationWork, TEXT_QUOTE_LIMITS.maxNormalizationWorkCodeUnits),
-      );
-      remainingCorpus -= pageIndex.scope.text.length;
-      remainingNormalizationWork -= pageIndex.sourceWorkCodeUnits;
       if (pageIndex.index.resolve(anchor, workBudget)) {
         matchedPage = pageNumber;
         break;

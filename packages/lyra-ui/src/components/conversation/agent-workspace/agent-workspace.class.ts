@@ -125,10 +125,6 @@ export interface LyraAgentWorkspaceEventMap {
  * @since 4.2.0
  */
 export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> {
-  protected static override readonly immutableEventDetails = Object.freeze([
-    'lr-retrieval-select',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -145,6 +141,10 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     composerPlaceholder: LYRA_DEFAULT_composerPlaceholder,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-retrieval-select',
+  ]);
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'messages',

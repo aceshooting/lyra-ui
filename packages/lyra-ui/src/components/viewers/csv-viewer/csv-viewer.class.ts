@@ -654,11 +654,11 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     else if (this.fetchState.kind === 'error')
       content = html`<div part="error">${this.fetchState.message}</div>`;
     else
-      content = html`<p class="empty-note">
-        ${this.localize('documentPreviewEmpty', undefined, {
-          type: this.localize('documentPreviewTypeDocument'),
-        })}
-      </p>`;
+      content = html`<p class="empty-note">${this.localize(
+        'documentPreviewEmpty',
+        undefined,
+        { type: this.localize('documentPreviewTypeDocument') }
+      )}</p>`;
     const maxHeight = sanitizeCssLength(this.maxHeight);
     return html`<div
       part="base"

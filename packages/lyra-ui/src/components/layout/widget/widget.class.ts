@@ -49,6 +49,58 @@ export interface LyraWidgetView {
   ariaLabel?: string;
 }
 
+const MAX_WIDGET_VIEWS = 256;
+
+/** Duplicate view IDs cannot identify distinct slots or public active states. Keep the first
+ * occurrence so the rendered controls and body expose one deterministic target per view ID.
+ *
+ * `icon` is deliberately preserved by reference, never deep-cloned. It commonly carries a Lit
+ * `TemplateResult` (see `LyraWidgetView.icon`'s own doc), whose `strings` is the exact array the
+ * JS engine attaches to a tagged-template-literal call, including its non-enumerable `raw`
+ * field. A generic recursive collection snapshot (as `LyraElement`'s `ownedCollectionProperties`
+ * machinery applies) would rebuild that array as an ordinary `Array`, silently dropping `raw` --
+ * lit-html's `trustFromTemplateString` then rejects the clone as a faked template-strings array.
+ * Shallow-copying each view record here, the same way `LyraSegmentedItem`/`LyraStepItem` handle
+ * their own `icon` field, keeps `viewId`/`label`/`ariaLabel` bounded and frozen while passing
+ * `icon` through untouched. */
+function snapshotWidgetViews(value: unknown): readonly Readonly<LyraWidgetView>[] {
+  if (!Array.isArray(value)) return Object.freeze([]);
+  const seen = new Set<string>();
+  const normalized: Readonly<LyraWidgetView>[] = [];
+  for (const candidate of value.slice(0, MAX_WIDGET_VIEWS)) {
+    try {
+      if (!candidate || typeof candidate !== 'object') continue;
+      const record = candidate as Record<string, unknown>;
+      const viewId = record['viewId'];
+      if (
+        typeof viewId !== 'string' ||
+        viewId.length === 0 ||
+        viewId !== viewId.trim() ||
+        seen.has(viewId)
+      ) {
+        continue;
+      }
+      const label = record['label'];
+      const ariaLabel = record['ariaLabel'];
+      const icon = record['icon'];
+      if (label !== undefined && typeof label !== 'string') continue;
+      if (ariaLabel !== undefined && typeof ariaLabel !== 'string') continue;
+      seen.add(viewId);
+      normalized.push(
+        Object.freeze({
+          viewId,
+          ...(label !== undefined ? { label } : {}),
+          ...(icon !== undefined ? { icon } : {}),
+          ...(ariaLabel !== undefined ? { ariaLabel } : {}),
+        })
+      );
+    } catch {
+      // Hostile accessors are malformed input, not an update failure.
+    }
+  }
+  return Object.freeze(normalized);
+}
+
 export interface LyraWidgetEventMap {
   'lr-collapse-request': CustomEvent<{ collapsed: boolean }>;
   'lr-collapse-change': CustomEvent<{ collapsed: boolean }>;
@@ -156,10 +208,6 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'views',
-  ]);
-
   static override styles = [LyraElement.styles, styles];
 
   constructor() {
@@ -195,12 +243,23 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   @property({ attribute: 'backdrop-inset' }) backdropInset = '';
   /** Tighter header/body padding for constrained spaces. */
   @property({ type: Boolean, reflect: true }) compact = false;
+  private effectiveViews: readonly Readonly<LyraWidgetView>[] = Object.freeze([]);
+
   /** Named alternate views for the panel body. Assignment takes a bounded, recursively frozen
-   *  snapshot; mutate a copy and reassign it to update. For example, a chart/table toggle inside the same card
+   *  snapshot (except `icon`, preserved by reference -- see `snapshotWidgetViews`'s doc); mutate a
+   *  copy and reassign it to update. For example, a chart/table toggle inside the same card
    *  chrome. Each entry gets a header toggle button and a `<slot name="view-${viewId}">`. Empty (the
    *  default) renders today's single unnamed default slot as the sole view, unchanged. An entry's
    *  `label` is optional -- see `LyraWidgetView`'s own doc for the icon-only (`ariaLabel`) case. */
-  @property({ attribute: false }) views: readonly LyraWidgetView[] = [];
+  @property({ attribute: false })
+  get views(): readonly LyraWidgetView[] {
+    return this.effectiveViews;
+  }
+  set views(value: readonly LyraWidgetView[]) {
+    const previous = this.effectiveViews;
+    this.effectiveViews = snapshotWidgetViews(value);
+    this.requestUpdate('views', previous);
+  }
 
   /** The currently active view's `viewId` -- defaults to the first entry of `views` (or `''` when
    *  `views` is empty). Settable directly by a consumer wanting to control the active view
@@ -226,45 +285,6 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
 
   private get storageFullKey(): string | undefined {
     return this.storageKey ? `lr-widget:${this.storageKey}` : undefined;
-  }
-
-  /** Duplicate view IDs cannot identify distinct slots or public active states. Keep the first
-   * occurrence so the rendered controls and body expose one deterministic target per view ID. */
-  private get normalizedViews(): readonly Readonly<LyraWidgetView>[] {
-    if (!Array.isArray(this.views)) return [];
-    const seen = new Set<string>();
-    const normalized: Readonly<LyraWidgetView>[] = [];
-    for (const candidate of this.views.slice(0, 256)) {
-      try {
-        if (!candidate || typeof candidate !== 'object') continue;
-        const viewId = candidate.viewId;
-        if (
-          typeof viewId !== 'string' ||
-          viewId.length === 0 ||
-          viewId !== viewId.trim() ||
-          seen.has(viewId)
-        ) {
-          continue;
-        }
-        const label = candidate.label;
-        const ariaLabel = candidate.ariaLabel;
-        const icon = candidate.icon;
-        if (label !== undefined && typeof label !== 'string') continue;
-        if (ariaLabel !== undefined && typeof ariaLabel !== 'string') continue;
-        seen.add(viewId);
-        normalized.push(
-          Object.freeze({
-            viewId,
-            ...(label !== undefined ? { label } : {}),
-            ...(icon !== undefined ? { icon } : {}),
-            ...(ariaLabel !== undefined ? { ariaLabel } : {}),
-          })
-        );
-      } catch {
-        // Hostile accessors are malformed input, not an update failure.
-      }
-    }
-    return Object.freeze(normalized);
   }
 
   /** Skips the very first `updated()` pass so mounting never writes to storage -- `willUpdate()`
@@ -314,7 +334,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         '[part="view-toggle"]:focus'
       );
       this.focusedViewIdBeforeUpdate = focused?.dataset['viewId'];
-      const views = this.normalizedViews;
+      const views = this.views;
       if (!views.some((view) => view.viewId === this.activeViewId)) {
         this.activeViewId = views[0]?.viewId ?? '';
       }
@@ -363,7 +383,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       this.focusedViewIdBeforeUpdate = undefined;
       if (
         focusedId &&
-        !this.normalizedViews.some((view) => view.viewId === focusedId)
+        !this.views.some((view) => view.viewId === focusedId)
       ) {
         Array.from(
           this.renderRoot.querySelectorAll<HTMLElement>('[part="view-toggle"]')
@@ -579,7 +599,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   override render(): TemplateResult {
     const hasLabel = this.label.length > 0;
     const hasSublabel = this.sublabel.length > 0;
-    const views = this.normalizedViews;
+    const views = this.views;
     const fullscreenInset = sanitizeCssInset(this.fullscreenInset);
     const backdropInset = sanitizeCssInset(this.backdropInset);
     return html`

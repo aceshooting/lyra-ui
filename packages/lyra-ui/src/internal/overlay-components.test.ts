@@ -83,7 +83,10 @@ const adapters: OverlayAdapter[] = [
   },
   {
     tag: 'lr-app-rail',
-    setup: (element) => (element.mode = 'mobile'),
+    // `mode` is read-only since 9.0 (see `forceMode`, which has no equivalent for `'mobile'` --
+    // the mobile breakpoint is always tracked automatically). Force the real matchMedia() query
+    // to resolve mobile deterministically instead, via the already-public `mobileBreakpoint`.
+    setup: (element) => (element.mobileBreakpoint = '99999px'),
     activate: (element) => (element.open = true),
     deactivate: (element) => (element.open = false),
   },

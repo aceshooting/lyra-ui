@@ -334,13 +334,6 @@ function isInertWithin(node: Element, root: Element): boolean {
  * @since 4.0.0
  */
 export class LyraTree extends LyraElement<LyraTreeEventMap> {
-  protected static override readonly immutableEventDetails = Object.freeze([
-    'lr-selection-change',
-  ]);
-  protected static override readonly identityEventDetailProperties = Object.freeze({
-    'lr-selection-change': Object.freeze(['selection']),
-  });
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -350,6 +343,13 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     treeNodeMoved: LYRA_DEFAULT_treeNodeMoved,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-selection-change',
+  ]);
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-selection-change': Object.freeze(['selection']),
+  });
 
   static override styles = [LyraElement.styles, styles];
 

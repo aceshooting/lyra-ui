@@ -185,7 +185,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['tools', 'selected']);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['tools', 'selectedToolIds']);
 
   static override styles = [LyraElement.styles, styles, srOnly];
   protected static override readonly immutableEventDetails = Object.freeze([

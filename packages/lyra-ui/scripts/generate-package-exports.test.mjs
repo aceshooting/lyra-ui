@@ -110,7 +110,9 @@ const closed = closeWildcardPackageExports(
 assert.equal(closed['./components/*'], undefined);
 assert.equal(closed['./ai/*'], undefined);
 assert.equal(closed['./ai'], './dist/ai/index.js');
-assert.equal(closed['./utilities/*'], undefined);
+// `./utilities/*` stays present with a `null` target: a documented, closed door (see
+// deriveExplicitUtilityExports) rather than a fully removed key.
+assert.equal(closed['./utilities/*'], null);
 assert.equal(closed['./utilities'], './dist/utilities/index.js');
 assert.equal(closed['./utilities/defined.js'], './dist/utilities/defined.js');
 assert.equal(closed['./localization.js'], './dist/localization.js');
@@ -204,7 +206,9 @@ try {
   const pkg = JSON.parse(first);
   assert.equal(pkg.exports['./components/*'], undefined);
   assert.equal(pkg.exports['./ai/*'], undefined);
-  assert.equal(pkg.exports['./utilities/*'], undefined);
+  // Present-but-closed, not removed: a documented door, matching src/package-entrypoints.test.ts's
+  // "does not publish src/internal as a deep-import subpath" assertion.
+  assert.equal(pkg.exports['./utilities/*'], null);
   assert.equal(
     pkg.exports['./utilities/catalog.js'],
     './dist/utilities/catalog.js'

@@ -98,6 +98,30 @@ export class LyraProgressBar extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.addEventListener('slotchange', this.onLabelSlotChange);
+    this.rebuildLabelObserver();
+    if (this.hasUpdated) this.recomputeVisibleLabelText();
+    else this.seedFirstRenderState(() => this.recomputeVisibleLabelText());
+  }
+
+  /**
+   * `MutationObserver` instances are bound to the realm (`window`) that constructed them, not to
+   * the node they observe: one built from a stale `window.MutationObserver` keeps delivering
+   * through that window's microtask queue even after this element is adopted into a different
+   * document, instead of the adopted document's own. Adoption (`document.adoptNode()`, or an
+   * implicit cross-document `appendChild`) always runs `adoptedCallback()` -- while this element is
+   * momentarily disconnected, ahead of any later `connectedCallback()` -- so this rebuilds the
+   * observer here rather than only lazily on the next connect.
+   */
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.rebuildLabelObserver();
+  }
+
+  /** Tears down and reconstructs `labelObserver` bound to the current `ownerDocument`'s realm, then
+   *  rebinds every current target. Called on connect and on adoption -- see `adoptedCallback()`. */
+  private rebuildLabelObserver(): void {
+    this.labelObserver?.disconnect();
     const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
     this.labelObserver = MutationObserverCtor
       ? new MutationObserverCtor(() => {
@@ -107,10 +131,7 @@ export class LyraProgressBar extends LyraElement {
           this.scheduleCascadeLabelRefresh();
         })
       : undefined;
-    this.addEventListener('slotchange', this.onLabelSlotChange);
     this.bindLabelObserverTargets();
-    if (this.hasUpdated) this.recomputeVisibleLabelText();
-    else this.seedFirstRenderState(() => this.recomputeVisibleLabelText());
   }
 
   private scheduleCascadeLabelRefresh(): void {

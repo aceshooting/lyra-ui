@@ -78,6 +78,11 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['events']);
+  /** Each `CalendarEvent` is caller-owned data (often correlated back to a caller-side record via
+   *  `id`/`data`, or matched by reference in an imperative callback) -- only the sequence itself
+   *  is bounded/detached/frozen; the emitted `lr-event-select` detail must carry the exact object
+   *  the caller passed in `events`, not a structural clone. */
+  protected static override readonly identityCollectionProperties = Object.freeze(['events']);
 
   static override styles = [LyraElement.styles, styles];
   @property({ attribute: false }) events: readonly CalendarEvent[] = [];

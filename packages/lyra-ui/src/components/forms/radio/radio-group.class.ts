@@ -100,14 +100,6 @@ const RADIO_TAGS = (): string[] => [tag('radio'), tag('radio-button')];
  * @since 4.0.0
  */
 export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
-  protected static override readonly immutableEventDetails = Object.freeze([
-    'lr-input',
-    'lr-change',
-  ]);
-  protected static override readonly identityEventDetailProperties = Object.freeze({
-    'lr-input': Object.freeze(['radio']),
-    'lr-change': Object.freeze(['radio']),
-  });
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -116,6 +108,14 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-input',
+    'lr-change',
+  ]);
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-input': Object.freeze(['radio']),
+    'lr-change': Object.freeze(['radio']),
+  });
   /** Public WA-compatible intrinsic validator catalog. */
   static get validators(): LyraFormValidator<LyraRadioGroup>[] {
     return [currentValidityValidator('required', 'disabled', 'value')];

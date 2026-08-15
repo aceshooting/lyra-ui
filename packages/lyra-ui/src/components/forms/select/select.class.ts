@@ -298,11 +298,6 @@ export interface LyraSelectEventMap {
  * @since 4.0.0
  */
 export class LyraSelect extends LyraElement<LyraSelectEventMap> {
-  protected static override readonly immutableEventDetails = Object.freeze([
-    'lr-input',
-    'lr-change',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -314,6 +309,11 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     selectValueMissing: LYRA_DEFAULT_selectValueMissing,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-input',
+    'lr-change',
+  ]);
 
   /** Public WA-compatible intrinsic validator catalog. */
   static get validators(): LyraFormValidator<LyraSelect>[] {
@@ -1884,9 +1884,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       if (currentGroup) {
         const labelId = `${this.listId}-group-${groupIndex++}`;
         out.push(html`<div role="group" aria-labelledby=${labelId}>
-          <div id=${labelId} class="group-label" part="group-label">
-            ${currentGroup}
-          </div>
+          <div id=${labelId} class="group-label" part="group-label">${currentGroup}</div>
           ${groupRows}
         </div>`);
       } else {

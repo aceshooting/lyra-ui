@@ -202,6 +202,14 @@ export interface LyraTreeItemEventMap {
  * @since 8.0.0
  */
 export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-expand',
     'lr-after-expand',
@@ -218,14 +226,6 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     'lr-lazy-change': Object.freeze(['item']),
     'lr-lazy-load': Object.freeze(['item']),
   });
-
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
 
@@ -577,19 +577,8 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     // The observer is intentionally absent while detached. A reconnect must therefore sample once
     // before relying on future mutations; first connections remain hydration-aware in willUpdate().
     if (this.hasUpdated) this.sampleLightDomState();
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
-    this.childObserver = MutationObserverCtor
-      ? new MutationObserverCtor(() => {
-          this.assignChildSlots();
-          this.bindChildObserverTargets();
-          this.requestUpdate();
-          if (this._loading && this.actualChildItems().length > 0) {
-            this.finishLazyLoad(this.lazyGeneration);
-          }
-        })
-      : undefined;
+    this.rebuildChildObserver();
     this.addEventListener('slotchange', this.handleLabelSlotChange);
-    this.bindChildObserverTargets();
   }
 
   override disconnectedCallback(): void {
@@ -604,6 +593,40 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     this._loading = false;
     if (this.lazy) this.expanded = false;
     super.disconnectedCallback();
+  }
+
+  /**
+   * `MutationObserver` instances are bound to the realm (`window`) that constructed them, not to
+   * the node they observe: one built from a stale `window.MutationObserver` keeps delivering
+   * through that window's microtask queue even after this element is adopted into a different
+   * document, instead of the adopted document's own. Adoption (`document.adoptNode()`, or an
+   * implicit cross-document `appendChild`) always runs `adoptedCallback()` -- while this element is
+   * momentarily disconnected, ahead of any later `connectedCallback()` -- so this rebuilds the
+   * observer here rather than only lazily on the next connect, the same realm-follows-adoption
+   * treatment this file's own lifecycle timer already gives the owner realm in
+   * `scheduleAfterEvent()`.
+   */
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.rebuildChildObserver();
+  }
+
+  /** Tears down and reconstructs `childObserver` bound to the current `ownerDocument`'s realm, then
+   *  rebinds every current target. Called on connect and on adoption -- see `adoptedCallback()`. */
+  private rebuildChildObserver(): void {
+    this.childObserver?.disconnect();
+    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    this.childObserver = MutationObserverCtor
+      ? new MutationObserverCtor(() => {
+          this.assignChildSlots();
+          this.bindChildObserverTargets();
+          this.requestUpdate();
+          if (this._loading && this.actualChildItems().length > 0) {
+            this.finishLazyLoad(this.lazyGeneration);
+          }
+        })
+      : undefined;
+    this.bindChildObserverTargets();
   }
 
   private actualChildItems(): LyraTreeItem[] {

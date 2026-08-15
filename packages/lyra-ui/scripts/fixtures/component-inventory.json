@@ -61567,8 +61567,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": null
+            "hasDefault": false
           },
           {
             "name": "selectedPath",
@@ -129094,8 +129093,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           }
         ],
         "slots": [

@@ -89,6 +89,95 @@ function isReadonlyArray<Value>(
   return Array.isArray(value);
 }
 
+function isSchemaRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** Node-count ceiling for the caller-owned schema snapshot below, mirroring `LyraElement`'s own
+ *  generic per-assignment collection budget -- generous enough that a legitimately wide schema
+ *  never notices it, while still bounding a truly pathological caller. */
+const SCHEMA_SNAPSHOT_NODE_LIMIT = 50_000;
+
+/**
+ * Bounded, cycle-safe, depth-clamped clone of a caller-supplied schema tree, run in place of
+ * `LyraElement`'s generic `ownedCollectionProperties` snapshot. That generic machinery treats every
+ * nested value uniformly and abandons the *entire* assignment the moment its own depth ceiling is
+ * crossed anywhere in the tree (a `properties`/node pair costs it two levels per schema level, so a
+ * schema nested only a little past that ceiling collapses the whole viewer to an empty object) --
+ * defeating the bounded, partially-rendered tree `renderNode()`'s own `maxDepth` clamp already
+ * promises for a hostile request. This clone keeps an identity-preserving `seen` cache (so a
+ * genuinely circular schema freezes into an equally circular snapshot, exactly as `renderNode()`'s
+ * ancestor check expects) but stops descending at `MAX_SCHEMA_DEPTH` -- the deepest depth any
+ * `maxDepth` request can ever reach -- so a far deeper caller schema is bounded here, once, before
+ * assignment, rather than being carried in full on every future render.
+ */
+function snapshotSchemaNode(
+  value: unknown,
+  depth: number,
+  seen: Map<object, JsonSchemaNode>,
+  budget: { remaining: number },
+): JsonSchemaNode | undefined {
+  if (!isSchemaRecord(value)) return undefined;
+  const cached = seen.get(value);
+  if (cached) return cached;
+  if (budget.remaining <= 0) return undefined;
+  budget.remaining--;
+  const output: Record<string, unknown> = { ...value };
+  seen.set(value, output as JsonSchemaNode);
+  delete output['properties'];
+  delete output['items'];
+  delete output['allOf'];
+  delete output['anyOf'];
+  delete output['oneOf'];
+  if (depth < MAX_SCHEMA_DEPTH) {
+    const properties = (value as JsonSchemaNode).properties;
+    if (isSchemaRecord(properties)) {
+      const nextProperties: Record<string, JsonSchemaNode> = {};
+      for (const key in properties) {
+        if (!Object.prototype.hasOwnProperty.call(properties, key)) continue;
+        if (budget.remaining <= 0) break;
+        const child = snapshotSchemaNode(properties[key], depth + 1, seen, budget);
+        if (child) nextProperties[key] = child;
+      }
+      output['properties'] = nextProperties;
+    }
+    for (const keyword of ['allOf', 'anyOf', 'oneOf'] as const) {
+      const nodes = (value as JsonSchemaNode)[keyword];
+      if (!isReadonlyArray(nodes)) continue;
+      const next: JsonSchemaNode[] = [];
+      for (const node of nodes) {
+        if (budget.remaining <= 0) break;
+        const child = snapshotSchemaNode(node, depth + 1, seen, budget);
+        if (child) next.push(child);
+      }
+      output[keyword] = next;
+    }
+    const items = (value as JsonSchemaNode).items;
+    if (isReadonlyArray(items)) {
+      const next: JsonSchemaNode[] = [];
+      for (const node of items) {
+        if (budget.remaining <= 0) break;
+        const child = snapshotSchemaNode(node, depth + 1, seen, budget);
+        if (child) next.push(child);
+      }
+      output['items'] = next;
+    } else if (isSchemaRecord(items)) {
+      const child = snapshotSchemaNode(items, depth + 1, seen, budget);
+      if (child) output['items'] = child;
+    }
+  }
+  return Object.freeze(output) as JsonSchemaNode;
+}
+
+/** Bounded, clone-owned root entry point for {@link snapshotSchemaNode}. */
+function snapshotSchema(value: unknown): JsonSchemaNode | null {
+  return (
+    snapshotSchemaNode(value, 0, new Map<object, JsonSchemaNode>(), {
+      remaining: SCHEMA_SNAPSHOT_NODE_LIMIT,
+    }) ?? null
+  );
+}
+
 /**
  * `<lr-json-schema-viewer>` — a recursive, selectable JSON Schema inspector with required-state,
  * constraints, composition branches, `$ref` display, validation issues, cycle protection, and a
@@ -141,15 +230,27 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['schema', 'issues']);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['issues']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-schema-select',
   ]);
 
-  /** Clone-owned recursive schema snapshot. Reassign a new record after changing any branch. */
-  @property({ attribute: false }) schema: JsonSchemaNode | null = null;
+  private schemaValue: JsonSchemaNode | null = null;
+
+  /** Clone-owned recursive schema snapshot. Reassign a new record after changing any branch.
+   *  Bounded and depth-clamped by {@link snapshotSchemaNode} rather than `LyraElement`'s generic
+   *  `ownedCollectionProperties` machinery -- see that function for why. */
+  @property({ attribute: false })
+  get schema(): JsonSchemaNode | null {
+    return this.schemaValue;
+  }
+  set schema(value: JsonSchemaNode | null) {
+    const previous = this.schemaValue;
+    this.schemaValue = snapshotSchema(value);
+    this.requestUpdate('schema', previous);
+  }
   @property({ attribute: false }) issues: readonly SchemaValidationIssue[] = [];
   /** Controlled JSON Pointer selection. `null` means no selection; the empty
    *  string is the valid JSON Pointer for the schema root. */

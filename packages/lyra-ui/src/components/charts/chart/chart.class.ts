@@ -587,11 +587,6 @@ function labelText(value: unknown): string {
  * @since 4.0.0
  */
 export class LyraChart extends LyraElement<LyraChartEventMap> {
-  protected static override readonly immutableEventDetails = Object.freeze([
-    'lr-before-legend-visibility-change',
-    'lr-legend-visibility-change',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -644,6 +639,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-before-legend-visibility-change',
+    'lr-legend-visibility-change',
+  ]);
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 

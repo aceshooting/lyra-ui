@@ -66,7 +66,9 @@ export type LyraTourTarget = string | HTMLElement | (() => HTMLElement | null);
 
 export interface LyraTourStep {
   /** Stable business id for this step, never shown to the user. Collection occurrences remain
-   *  unambiguous through the public `index`/`activeIndex` contract even when ids repeat. */
+   *  unambiguous through the public `index`/`activeIndex` contract even when ids repeat. A step
+   *  object still carrying the pre-rename `id` field (this property's former name) is accepted as
+   *  a fallback when `stepId` itself is absent -- see `snapshotTourSteps()`. */
   readonly stepId: string;
   /** The element this step spotlights and anchors its popover to. */
   readonly target: LyraTourTarget;
@@ -223,7 +225,11 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
   for (let index = 0; index < length; index += 1) {
     const candidate = arrayItem(value, index);
     if (!isPlainRecord(candidate)) continue;
-    const stepId = boundedString(ownDataValue(candidate, 'stepId'), MAX_STEP_ID_LENGTH);
+    // `id` is the pre-rename field this replaced -- accepted as a fallback so a caller still on
+    // the old shape keeps working; `stepId` wins when both are present.
+    const stepId =
+      boundedString(ownDataValue(candidate, 'stepId'), MAX_STEP_ID_LENGTH) ??
+      boundedString(ownDataValue(candidate, 'id'), MAX_STEP_ID_LENGTH);
     const target = normalizeTourTarget(ownDataValue(candidate, 'target'));
     const heading = boundedString(ownDataValue(candidate, 'heading'), MAX_HEADING_LENGTH);
     if (!stepId || stepId !== stepId.trim() || !target || heading === undefined) continue;

@@ -72,7 +72,7 @@ describe('anchors.ts', () => {
     const select: TextSelectDetail = { text: 'hello', anchor: null, rects: [] };
     const result: AnchorResultDetail = { found: true };
     expect(capabilities.anchors).to.deep.equal(['page', 'text-quote']);
-    expect(activate.id).to.equal('cite-1');
+    expect(activate.highlightId).to.equal('cite-1');
     expect(select.anchor).to.be.null;
     expect(result.found).to.be.true;
   });

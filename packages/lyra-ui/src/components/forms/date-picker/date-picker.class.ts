@@ -1250,11 +1250,10 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
               type="button"
               ?disabled=${this.disabled || this.readonly}
               @click=${this.advanceView}
-            >
-              <span part="month-label"
+              ><span part="month-label"
                 >${monthTitle(year, month, this.effectiveLocale)}</span
-              >
-            </button>
+              ></button
+            >
             ${isLast
               ? html`<button
                   part="next"

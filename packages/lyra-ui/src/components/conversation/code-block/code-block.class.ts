@@ -178,10 +178,6 @@ export interface LyraCodeBlockEventMap {
  * @since 4.0.0
  */
 export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
-  protected static override readonly immutableEventDetails = Object.freeze([
-    'lr-text-select',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -198,6 +194,10 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     expandCode: LYRA_DEFAULT_expandCode,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-text-select',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
 

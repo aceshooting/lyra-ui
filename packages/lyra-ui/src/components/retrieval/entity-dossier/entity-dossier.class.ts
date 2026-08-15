@@ -211,8 +211,17 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
    *  reason (see `lr-spreadsheet-viewer`'s identical `activeSheetIndex` pattern). */
   @state() private activeTab: LyraEntityDossierTab = 'relationships';
 
-  private onTabsChange = (e: CustomEvent<{ tabId: string }>): void => {
-    this.activeTab = e.detail.tabId as LyraEntityDossierTab;
+  /** `<lr-tab-group>`'s own raw `lr-tab-show` carries `detail: { name }` (its upstream-mirrored
+   *  shape). This component's own documented/typed event contract instead promises `detail: {
+   *  tabId }` -- matching `LyraEntityDossierTab` naming rather than the generic upstream `name` --
+   *  so the raw child event is swallowed here (never forwarded as-is) and a correctly-shaped one is
+   *  dispatched in its place, the same swap `lr-spreadsheet-viewer`'s own internal `lr-tab-group`
+   *  consumer already makes for its own tab-change handling. */
+  private onTabsChange = (e: CustomEvent<{ name: string }>): void => {
+    e.stopPropagation();
+    const tabId = e.detail.name as LyraEntityDossierTab;
+    this.activeTab = tabId;
+    this.emit('lr-tab-show', { tabId });
   };
 
   override render(): TemplateResult {

@@ -88,8 +88,6 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     'highlights',
     'registry',
   ]);
-  protected static override readonly identityCollectionProperties =
-    Object.freeze(['registry']);
 
   static override styles = [LyraElement.styles, styles];
 

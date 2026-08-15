@@ -91,11 +91,16 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  // `registry`'s values are renderer-definition records carrying `render`/`matches`/`load`
+  // callbacks alongside plain data. The (default) recursive-clone snapshot path already keeps a
+  // function's own identity intact -- it only ever clones+freezes the *containing* plain record --
+  // so this deliberately stays out of `identityCollectionProperties`: that mode would instead keep
+  // each definition object itself live (unfrozen, still the caller's own reference), which is
+  // exactly what the class doc's "Definition records are cloned and frozen; their callback
+  // identities are retained" contract rules out.
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'registry',
   ]);
-  protected static override readonly identityCollectionProperties =
-    Object.freeze(['registry']);
 
   static override styles = [LyraElement.styles, styles, srOnly];
 

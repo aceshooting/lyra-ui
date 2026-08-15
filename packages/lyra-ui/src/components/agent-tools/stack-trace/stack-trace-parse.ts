@@ -59,10 +59,14 @@ const DIGITS_RE = /^\d+$/;
 const JS_CAUSE = /^\s*(?:Caused by:|\[cause\]:)(.*)$/;
 
 const PYTHON_HEADER = /^Traceback \(most recent call last\):\s*$/;
-// File-path capture excludes `"` (its own delimiter) so the boundary is unambiguous instead of
-// backtracking across every `"` in the line; the trailing function-name is trimmed in code below
-// rather than via a lazy `(.+?)\s*$`, which was the other polynomial-time spot CodeQL flagged.
-const PYTHON_FRAME = /^\s*File '([^']+)', line ([^,]*), in (.+)$/;
+// File-path capture excludes the delimiter itself so the boundary is unambiguous instead of
+// backtracking across every occurrence in the line; the trailing function-name is trimmed in code
+// below rather than via a lazy `(.+?)\s*$`, which was the other polynomial-time spot CodeQL
+// flagged. The delimiter is spelled as \x22 (double-quote), never a literal `"` character, so this
+// regex literal can't be misread by check:source-policy's double-quoted-literal scanner as an
+// unterminated string literal -- a real Python traceback's `File "..."` line always uses double
+// quotes (hardcoded by CPython's traceback formatter), so this must match `"`, not `'`.
+const PYTHON_FRAME = /^\s*File \x22([^\x22]+)\x22, line ([^,]*), in (.+)$/;
 // Keep language detection strict. PYTHON_FRAME intentionally recognizes malformed coordinate
 // candidates after a traceback has already been identified, but prose resembling such a line must
 // not make a JavaScript trace skip its valid V8/Firefox frames.

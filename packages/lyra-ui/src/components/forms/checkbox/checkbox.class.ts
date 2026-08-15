@@ -850,9 +850,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
             aria-invalid=${invalid ? 'true' : 'false'}
             aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
             aria-label=${this.getAttribute('aria-label') ?? nothing}
-            aria-labelledby=${this.hasAttribute('aria-label') || !this.hasLabelSlot
-              ? nothing
-              : 'checkbox-label'}
+            aria-labelledby=${this.hasAttribute('aria-label') ? nothing : 'checkbox-label'}
             aria-describedby=${describedBy || nothing}
             @keydown=${this.onKeyDown}
             @focus=${this.onFocus}

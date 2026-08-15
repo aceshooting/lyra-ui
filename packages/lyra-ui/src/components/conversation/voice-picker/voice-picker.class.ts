@@ -841,11 +841,25 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     this.stopInternalPreview();
   };
 
-  /** Releases exactly the resource that failed. A rejection while pending is silent because no
-   *  public start was published; an error after fulfillment publishes the matching terminal stop.
-   *  A superseded resource cannot mutate the newer generation. */
+  /**
+   * Releases exactly the resource that failed. A superseded resource cannot mutate the newer
+   * generation.
+   *
+   * Two distinct callers reach this, and they publish differently:
+   *  - A rejected `play()` (or a synchronous throw from calling it) means the browser never
+   *    genuinely attempted playback -- silent, because no public start was ever published for the
+   *    still-pending candidate.
+   *  - A genuine `error` event on `<audio>` means the browser *did* attempt to fetch/decode the
+   *    resource and that attempt failed -- distinct from `play()` merely rejecting (autoplay
+   *    policy, an interrupted request). If that arrives before the `play()` promise itself has
+   *    settled (a real race: `play()` resolving is not ordered against the element's own `error`
+   *    event), the still-pending candidate is published as started and immediately as stopped, so a
+   *    consumer never observes a bare stop with no matching start. Once already `previewingId`, the
+   *    existing publish stands and only the terminal stop is new.
+   */
   private onAudioLoadFailure = (eventOrAudio: Event | HTMLAudioElement): void => {
     const direct = eventOrAudio as unknown as { localName?: string };
+    const isDomErrorEvent = direct.localName !== 'audio';
     const candidate =
       direct.localName === 'audio' ? eventOrAudio : (eventOrAudio as Event).currentTarget;
     const audioLike = candidate as
@@ -866,9 +880,14 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     failedAudio.removeEventListener('error', this.onAudioLoadFailure);
     failedAudio.pause();
     if (failedAudio !== this.audioEl) return;
+    const pendingVoiceId = this.pendingPreviewId;
     this.previewGeneration++;
     this.audioEl = undefined;
     this.pendingPreviewId = null;
+    if (isDomErrorEvent && this.previewingId === null && pendingVoiceId !== null) {
+      this.previewingId = pendingVoiceId;
+      this.emit('lr-preview-change', { voiceId: pendingVoiceId });
+    }
     if (this.previewingId !== null) {
       this.previewingId = null;
       this.emit('lr-preview-change', { voiceId: null });
