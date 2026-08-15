@@ -668,6 +668,23 @@ describe('accessibility', () => {
     await useDeterministicMapStyle(el);
     await expect(el).to.be.accessible();
   });
+
+  it('is accessible once loaded through the canonical lr-geojson-viewer tag', async () => {
+    stubFetch(FEATURE_COLLECTION);
+    const el = (await fixture(
+      html`<lr-geojson-viewer
+        src=${GEOJSON_URL}
+        name="zones.geojson"
+      ></lr-geojson-viewer>`
+    )) as LyraGeoJsonViewer;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="status"]') != null,
+      'geojson-viewer never reached the loaded state',
+      { timeout: 2000 }
+    );
+    await useDeterministicMapStyle(el);
+    await expect(el).to.be.accessible();
+  });
 });
 
 describe('responsive metadata', () => {

@@ -27,9 +27,14 @@ function walk(directory) {
   return files;
 }
 
-const classFiles = walk(componentsRoot)
+const allClassFiles = walk(componentsRoot)
   .filter((file) => file.endsWith('.class.ts'))
   .sort();
+// Shared implementation bases (for example Markdown's two-tag runtime base) are deliberately
+// class modules without a sibling registration entry. They are not components and must not be
+// forced into the inventory or package sideEffects list. Registered class modules retain the
+// invariant below: every one has an inventory entry and a side-effectful sibling registration.
+const classFiles = allClassFiles.filter((file) => existsSync(file.replace(/\.class\.ts$/, '.ts')));
 assert.ok(classFiles.length >= 80, 'expected pure class modules for the component families');
 
 const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
