@@ -283,7 +283,7 @@ function csvCell(value: unknown, delimiter: string, escapeFormulas: boolean): st
   // its text can only ever be a number literal, and text-prefixing it would break every
   // downstream sum.
   if (escapeFormulas && typeof value !== 'number' && UNSAFE_LEADING.test(text)) text = `'${text}`;
-  if (text.includes(delimiter) || /["\r\n]/u.test(text)) text = `"${text.replaceAll('"', '""')}"`;
+  if (text.includes(delimiter) || /[\x22\r\n]/u.test(text)) text = `\x22${text.replaceAll('\x22', '\x22\x22')}\x22`;
   return text;
 }
 
